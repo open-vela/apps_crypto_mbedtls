@@ -30,12 +30,12 @@
 #else
 #include <stdio.h>
 #include <stdlib.h>
-#define mbedtls_fprintf         fprintf
-#define mbedtls_printf          printf
-#define mbedtls_exit            exit
-#define MBEDTLS_EXIT_SUCCESS    EXIT_SUCCESS
-#define MBEDTLS_EXIT_FAILURE    EXIT_FAILURE
-#endif /* MBEDTLS_PLATFORM_C */
+#define mbedtls_fprintf    fprintf
+#define mbedtls_printf     printf
+#define mbedtls_exit       exit
+#define MBEDTLS_EXIT_SUCCESS EXIT_SUCCESS
+#define MBEDTLS_EXIT_FAILURE EXIT_FAILURE
+#endif
 
 #if defined(MBEDTLS_BIGNUM_C) && defined(MBEDTLS_RSA_C) && \
     defined(MBEDTLS_ENTROPY_C) && defined(MBEDTLS_FS_IO) && \
@@ -58,24 +58,10 @@ int main( void )
     return( 0 );
 }
 #else
-
-#if defined(MBEDTLS_CHECK_PARAMS)
-#include "mbedtls/platform_util.h"
-void mbedtls_param_failed( const char *failure_condition,
-                           const char *file,
-                           int line )
-{
-    mbedtls_printf( "%s:%i: Input param failed - %s\n",
-                    file, line, failure_condition );
-    mbedtls_exit( MBEDTLS_EXIT_FAILURE );
-}
-#endif
-
 int main( int argc, char *argv[] )
 {
     FILE *f;
-    int ret = 1;
-    int exit_code = MBEDTLS_EXIT_FAILURE;
+    int return_val, exit_val;
     size_t i;
     mbedtls_rsa_context rsa;
     mbedtls_entropy_context entropy;
@@ -85,6 +71,8 @@ int main( int argc, char *argv[] )
     const char *pers = "rsa_encrypt";
     mbedtls_mpi N, E;
 
+    exit_val = MBEDTLS_EXIT_SUCCESS;
+
     if( argc != 2 )
     {
         mbedtls_printf( "usage: rsa_encrypt <string of max 100 characters>\n" );
@@ -93,7 +81,7 @@ int main( int argc, char *argv[] )
         mbedtls_printf( "\n" );
 #endif
 
-        mbedtls_exit( exit_code );
+        mbedtls_exit( MBEDTLS_EXIT_FAILURE );
     }
 
     mbedtls_printf( "\n  . Seeding the random number generator..." );
@@ -104,13 +92,14 @@ int main( int argc, char *argv[] )
     mbedtls_ctr_drbg_init( &ctr_drbg );
     mbedtls_entropy_init( &entropy );
 
-    ret = mbedtls_ctr_drbg_seed( &ctr_drbg, mbedtls_entropy_func,
-                                 &entropy, (const unsigned char *) pers,
-                                 strlen( pers ) );
-    if( ret != 0 )
+    return_val = mbedtls_ctr_drbg_seed( &ctr_drbg, mbedtls_entropy_func,
+                                        &entropy, (const unsigned char *) pers,
+                                        strlen( pers ) );
+    if( return_val != 0 )
     {
+        exit_val = MBEDTLS_EXIT_FAILURE;
         mbedtls_printf( " failed\n  ! mbedtls_ctr_drbg_seed returned %d\n",
-                        ret );
+                        return_val );
         goto exit;
     }
 
@@ -119,30 +108,35 @@ int main( int argc, char *argv[] )
 
     if( ( f = fopen( "rsa_pub.txt", "rb" ) ) == NULL )
     {
+        exit_val = MBEDTLS_EXIT_FAILURE;
         mbedtls_printf( " failed\n  ! Could not open rsa_pub.txt\n" \
                 "  ! Please run rsa_genkey first\n\n" );
         goto exit;
     }
 
-    if( ( ret = mbedtls_mpi_read_file( &N, 16, f ) ) != 0 ||
-        ( ret = mbedtls_mpi_read_file( &E, 16, f ) ) != 0 )
+    if( ( return_val = mbedtls_mpi_read_file( &N, 16, f ) ) != 0 ||
+        ( return_val = mbedtls_mpi_read_file( &E, 16, f ) ) != 0 )
     {
+        exit_val = MBEDTLS_EXIT_FAILURE;
         mbedtls_printf( " failed\n  ! mbedtls_mpi_read_file returned %d\n\n",
-                        ret );
+                        return_val );
         fclose( f );
         goto exit;
     }
     fclose( f );
 
-    if( ( ret = mbedtls_rsa_import( &rsa, &N, NULL, NULL, NULL, &E ) ) != 0 )
+    if( ( return_val = mbedtls_rsa_import( &rsa, &N, NULL,
+                                           NULL, NULL, &E ) ) != 0 )
     {
+        exit_val = MBEDTLS_EXIT_FAILURE;
         mbedtls_printf( " failed\n  ! mbedtls_rsa_import returned %d\n\n",
-                        ret );
+                        return_val );
         goto exit;
     }
 
     if( strlen( argv[1] ) > 100 )
     {
+        exit_val = MBEDTLS_EXIT_FAILURE;
         mbedtls_printf( " Input data larger than 100 characters.\n\n" );
         goto exit;
     }
@@ -155,13 +149,14 @@ int main( int argc, char *argv[] )
     mbedtls_printf( "\n  . Generating the RSA encrypted value" );
     fflush( stdout );
 
-    ret = mbedtls_rsa_pkcs1_encrypt( &rsa, mbedtls_ctr_drbg_random,
-                                     &ctr_drbg, MBEDTLS_RSA_PUBLIC,
-                                     strlen( argv[1] ), input, buf );
-    if( ret != 0 )
+    return_val = mbedtls_rsa_pkcs1_encrypt( &rsa, mbedtls_ctr_drbg_random,
+                                            &ctr_drbg, MBEDTLS_RSA_PUBLIC,
+                                            strlen( argv[1] ), input, buf );
+    if( return_val != 0 )
     {
+        exit_val = MBEDTLS_EXIT_FAILURE;
         mbedtls_printf( " failed\n  ! mbedtls_rsa_pkcs1_encrypt returned %d\n\n",
-                        ret );
+                        return_val );
         goto exit;
     }
 
@@ -170,6 +165,7 @@ int main( int argc, char *argv[] )
      */
     if( ( f = fopen( "result-enc.txt", "wb+" ) ) == NULL )
     {
+        exit_val = MBEDTLS_EXIT_FAILURE;
         mbedtls_printf( " failed\n  ! Could not create %s\n\n", "result-enc.txt" );
         goto exit;
     }
@@ -182,8 +178,6 @@ int main( int argc, char *argv[] )
 
     mbedtls_printf( "\n  . Done (created \"%s\")\n\n", "result-enc.txt" );
 
-    exit_code = MBEDTLS_EXIT_SUCCESS;
-
 exit:
     mbedtls_mpi_free( &N ); mbedtls_mpi_free( &E );
     mbedtls_ctr_drbg_free( &ctr_drbg );
@@ -195,7 +189,7 @@ exit:
     fflush( stdout ); getchar();
 #endif
 
-    return( exit_code );
+    return( exit_val );
 }
 #endif /* MBEDTLS_BIGNUM_C && MBEDTLS_RSA_C && MBEDTLS_ENTROPY_C &&
           MBEDTLS_FS_IO && MBEDTLS_CTR_DRBG_C */

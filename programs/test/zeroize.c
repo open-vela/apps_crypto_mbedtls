@@ -66,7 +66,7 @@ int main( int argc, char** argv )
     char buf[BUFFER_LEN];
     char *p = buf;
     char *end = p + BUFFER_LEN;
-    int c;
+    char c;
 
     if( argc != 2 )
     {
@@ -83,7 +83,7 @@ int main( int argc, char** argv )
     }
 
     while( ( c = fgetc( fp ) ) != EOF && p < end - 1 )
-        *p++ = (char)c;
+        *p++ = c;
     *p = '\0';
 
     if( p - buf != 0 )
