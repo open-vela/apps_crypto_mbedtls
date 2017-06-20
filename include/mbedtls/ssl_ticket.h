@@ -44,7 +44,7 @@ extern "C" {
 /**
  * \brief   Information for session ticket protection
  */
-typedef struct mbedtls_ssl_ticket_key
+typedef struct
 {
     unsigned char name[4];          /*!< random key identifier              */
     uint32_t generation_time;       /*!< key generation timestamp (seconds) */
@@ -55,7 +55,7 @@ mbedtls_ssl_ticket_key;
 /**
  * \brief   Context for session ticket handling functions
  */
-typedef struct mbedtls_ssl_ticket_context
+typedef struct
 {
     mbedtls_ssl_ticket_key keys[2]; /*!< ticket protection keys             */
     unsigned char active;           /*!< index of the currently active key  */

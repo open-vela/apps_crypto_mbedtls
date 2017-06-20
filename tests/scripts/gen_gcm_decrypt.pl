@@ -1,4 +1,4 @@
-#!/usr/bin/env perl
+#!/usr/bin/perl
 #
 # Based on NIST gcmDecryptxxx.rsp validation files
 # Only first 3 of every set used for compile time saving

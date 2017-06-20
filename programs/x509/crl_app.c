@@ -29,12 +29,8 @@
 #include "mbedtls/platform.h"
 #else
 #include <stdio.h>
-#include <stdlib.h>
-#define mbedtls_printf          printf
-#define mbedtls_exit            exit
-#define MBEDTLS_EXIT_SUCCESS    EXIT_SUCCESS
-#define MBEDTLS_EXIT_FAILURE    EXIT_FAILURE
-#endif /* MBEDTLS_PLATFORM_C */
+#define mbedtls_printf     printf
+#endif
 
 #if !defined(MBEDTLS_BIGNUM_C) || !defined(MBEDTLS_RSA_C) ||  \
     !defined(MBEDTLS_X509_CRL_PARSE_C) || !defined(MBEDTLS_FS_IO)
@@ -61,18 +57,6 @@ int main( void )
     "    filename=%%s         default: crl.pem\n"      \
     "\n"
 
-#if defined(MBEDTLS_CHECK_PARAMS)
-#define mbedtls_exit            exit
-void mbedtls_param_failed( const char *failure_condition,
-                           const char *file,
-                           int line )
-{
-    mbedtls_printf( "%s:%i: Input param failed - %s\n",
-                    file, line, failure_condition );
-    mbedtls_exit( MBEDTLS_EXIT_FAILURE );
-}
-#endif
-
 /*
  * global options
  */
@@ -83,8 +67,7 @@ struct options
 
 int main( int argc, char *argv[] )
 {
-    int ret = 1;
-    int exit_code = MBEDTLS_EXIT_FAILURE;
+    int ret = 0;
     unsigned char buf[100000];
     mbedtls_x509_crl crl;
     int i;
@@ -148,8 +131,6 @@ int main( int argc, char *argv[] )
 
     mbedtls_printf( "%s\n", buf );
 
-    exit_code = MBEDTLS_EXIT_SUCCESS;
-
 exit:
     mbedtls_x509_crl_free( &crl );
 
@@ -158,7 +139,7 @@ exit:
     fflush( stdout ); getchar();
 #endif
 
-    return( exit_code );
+    return( ret );
 }
 #endif /* MBEDTLS_BIGNUM_C && MBEDTLS_RSA_C && MBEDTLS_X509_CRL_PARSE_C &&
           MBEDTLS_FS_IO */

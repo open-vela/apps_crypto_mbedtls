@@ -51,7 +51,7 @@ struct mbedtls_timing_hr_time
 /**
  * \brief          Context for mbedtls_timing_set/get_delay()
  */
-typedef struct mbedtls_timing_delay_context
+typedef struct
 {
     struct mbedtls_timing_hr_time   timer;
     uint32_t                        int_ms;

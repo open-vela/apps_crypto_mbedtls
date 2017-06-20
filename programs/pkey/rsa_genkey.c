@@ -29,12 +29,8 @@
 #include "mbedtls/platform.h"
 #else
 #include <stdio.h>
-#include <stdlib.h>
-#define mbedtls_printf          printf
-#define mbedtls_exit            exit
-#define MBEDTLS_EXIT_SUCCESS    EXIT_SUCCESS
-#define MBEDTLS_EXIT_FAILURE    EXIT_FAILURE
-#endif /* MBEDTLS_PLATFORM_C */
+#define mbedtls_printf     printf
+#endif
 
 #if defined(MBEDTLS_BIGNUM_C) && defined(MBEDTLS_ENTROPY_C) && \
     defined(MBEDTLS_RSA_C) && defined(MBEDTLS_GENPRIME) && \
@@ -63,23 +59,9 @@ int main( void )
     return( 0 );
 }
 #else
-
-#if defined(MBEDTLS_CHECK_PARAMS)
-#include "mbedtls/platform_util.h"
-void mbedtls_param_failed( const char *failure_condition,
-                           const char *file,
-                           int line )
-{
-    mbedtls_printf( "%s:%i: Input param failed - %s\n",
-                    file, line, failure_condition );
-    mbedtls_exit( MBEDTLS_EXIT_FAILURE );
-}
-#endif
-
 int main( void )
 {
-    int ret = 1;
-    int exit_code = MBEDTLS_EXIT_FAILURE;
+    int ret;
     mbedtls_rsa_context rsa;
     mbedtls_entropy_context entropy;
     mbedtls_ctr_drbg_context ctr_drbg;
@@ -123,12 +105,14 @@ int main( void )
         ( ret = mbedtls_rsa_export_crt( &rsa, &DP, &DQ, &QP ) )      != 0 )
     {
         mbedtls_printf( " failed\n  ! could not export RSA parameters\n\n" );
+        ret = 1;
         goto exit;
     }
 
     if( ( fpub = fopen( "rsa_pub.txt", "wb+" ) ) == NULL )
     {
         mbedtls_printf( " failed\n  ! could not open rsa_pub.txt for writing\n\n" );
+        ret = 1;
         goto exit;
     }
 
@@ -145,6 +129,7 @@ int main( void )
     if( ( fpriv = fopen( "rsa_priv.txt", "wb+" ) ) == NULL )
     {
         mbedtls_printf( " failed\n  ! could not open rsa_priv.txt for writing\n" );
+        ret = 1;
         goto exit;
     }
 
@@ -175,8 +160,6 @@ int main( void )
 */
     mbedtls_printf( " ok\n\n" );
 
-    exit_code = MBEDTLS_EXIT_SUCCESS;
-
 exit:
 
     if( fpub  != NULL )
@@ -197,7 +180,7 @@ exit:
     fflush( stdout ); getchar();
 #endif
 
-    return( exit_code );
+    return( ret );
 }
 #endif /* MBEDTLS_BIGNUM_C && MBEDTLS_ENTROPY_C && MBEDTLS_RSA_C &&
           MBEDTLS_GENPRIME && MBEDTLS_FS_IO && MBEDTLS_CTR_DRBG_C */

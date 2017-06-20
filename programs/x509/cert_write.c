@@ -29,12 +29,8 @@
 #include "mbedtls/platform.h"
 #else
 #include <stdio.h>
-#include <stdlib.h>
-#define mbedtls_printf          printf
-#define mbedtls_exit            exit
-#define MBEDTLS_EXIT_SUCCESS    EXIT_SUCCESS
-#define MBEDTLS_EXIT_FAILURE    EXIT_FAILURE
-#endif /* MBEDTLS_PLATFORM_C */
+#define mbedtls_printf     printf
+#endif
 
 #if !defined(MBEDTLS_X509_CRT_WRITE_C) || \
     !defined(MBEDTLS_X509_CRT_PARSE_C) || !defined(MBEDTLS_FS_IO) || \
@@ -154,18 +150,6 @@ int main( void )
     "                            object_signing_ca\n"     \
     "\n"
 
-#if defined(MBEDTLS_CHECK_PARAMS)
-#define mbedtls_exit            exit
-void mbedtls_param_failed( const char *failure_condition,
-                           const char *file,
-                           int line )
-{
-    mbedtls_printf( "%s:%i: Input param failed - %s\n",
-                    file, line, failure_condition );
-    mbedtls_exit( MBEDTLS_EXIT_FAILURE );
-}
-#endif
-
 /*
  * global options
  */
@@ -177,7 +161,7 @@ struct options
     const char *issuer_key;     /* filename of the issuer key file      */
     const char *subject_pwd;    /* password for the subject key file    */
     const char *issuer_pwd;     /* password for the issuer key file     */
-    const char *output_file;    /* where to store the constructed CRT   */
+    const char *output_file;    /* where to store the constructed key file  */
     const char *subject_name;   /* subject name for certificate         */
     const char *issuer_name;    /* issuer name for certificate          */
     const char *not_before;     /* validity period not before           */
@@ -227,8 +211,7 @@ int write_certificate( mbedtls_x509write_cert *crt, const char *output_file,
 
 int main( int argc, char *argv[] )
 {
-    int ret = 1;
-    int exit_code = MBEDTLS_EXIT_FAILURE;
+    int ret = 0;
     mbedtls_x509_crt issuer_crt;
     mbedtls_pk_context loaded_issuer_key, loaded_subject_key;
     mbedtls_pk_context *issuer_key = &loaded_issuer_key,
@@ -255,7 +238,6 @@ int main( int argc, char *argv[] )
     mbedtls_pk_init( &loaded_subject_key );
     mbedtls_mpi_init( &serial );
     mbedtls_ctr_drbg_init( &ctr_drbg );
-    mbedtls_entropy_init( &entropy );
 #if defined(MBEDTLS_X509_CSR_PARSE_C)
     mbedtls_x509_csr_init( &csr );
 #endif
@@ -266,6 +248,7 @@ int main( int argc, char *argv[] )
     {
     usage:
         mbedtls_printf( USAGE );
+        ret = 1;
         goto exit;
     }
 
@@ -489,6 +472,7 @@ int main( int argc, char *argv[] )
     mbedtls_printf( "  . Seeding the random number generator..." );
     fflush( stdout );
 
+    mbedtls_entropy_init( &entropy );
     if( ( ret = mbedtls_ctr_drbg_seed( &ctr_drbg, mbedtls_entropy_func, &entropy,
                                (const unsigned char *) pers,
                                strlen( pers ) ) ) != 0 )
@@ -623,10 +607,15 @@ int main( int argc, char *argv[] )
     //
     if( strlen( opt.issuer_crt ) )
     {
-        if( mbedtls_pk_check_pair( &issuer_crt.pk, issuer_key ) != 0 )
+        if( !mbedtls_pk_can_do( &issuer_crt.pk, MBEDTLS_PK_RSA ) ||
+            mbedtls_mpi_cmp_mpi( &mbedtls_pk_rsa( issuer_crt.pk )->N,
+                         &mbedtls_pk_rsa( *issuer_key )->N ) != 0 ||
+            mbedtls_mpi_cmp_mpi( &mbedtls_pk_rsa( issuer_crt.pk )->E,
+                         &mbedtls_pk_rsa( *issuer_key )->E ) != 0 )
         {
             mbedtls_printf( " failed\n  !  issuer_key does not match "
                             "issuer certificate\n\n" );
+            ret = -1;
             goto exit;
         }
     }
@@ -783,7 +772,7 @@ int main( int argc, char *argv[] )
     }
 
     /*
-     * 1.2. Writing the certificate
+     * 1.2. Writing the request
      */
     mbedtls_printf( "  . Writing the certificate..." );
     fflush( stdout );
@@ -799,13 +788,7 @@ int main( int argc, char *argv[] )
 
     mbedtls_printf( " ok\n" );
 
-    exit_code = MBEDTLS_EXIT_SUCCESS;
-
 exit:
-#if defined(MBEDTLS_X509_CSR_PARSE_C)
-    mbedtls_x509_csr_free( &csr );
-#endif /* MBEDTLS_X509_CSR_PARSE_C */
-    mbedtls_x509_crt_free( &issuer_crt );
     mbedtls_x509write_crt_free( &crt );
     mbedtls_pk_free( &loaded_subject_key );
     mbedtls_pk_free( &loaded_issuer_key );
@@ -818,7 +801,7 @@ exit:
     fflush( stdout ); getchar();
 #endif
 
-    return( exit_code );
+    return( ret );
 }
 #endif /* MBEDTLS_X509_CRT_WRITE_C && MBEDTLS_X509_CRT_PARSE_C &&
           MBEDTLS_FS_IO && MBEDTLS_ENTROPY_C && MBEDTLS_CTR_DRBG_C &&

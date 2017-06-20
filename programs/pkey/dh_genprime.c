@@ -30,12 +30,9 @@
 #else
 #include <stdio.h>
 #include <stdlib.h>
-#define mbedtls_printf          printf
-#define mbedtls_time_t          time_t
-#define mbedtls_exit            exit
-#define MBEDTLS_EXIT_SUCCESS    EXIT_SUCCESS
-#define MBEDTLS_EXIT_FAILURE    EXIT_FAILURE
-#endif /* MBEDTLS_PLATFORM_C */
+#define mbedtls_printf     printf
+#define mbedtls_time_t     time_t
+#endif
 
 #if !defined(MBEDTLS_BIGNUM_C) || !defined(MBEDTLS_ENTROPY_C) ||   \
     !defined(MBEDTLS_FS_IO) || !defined(MBEDTLS_CTR_DRBG_C) ||     \
@@ -69,22 +66,9 @@ int main( void )
  */
 #define GENERATOR "4"
 
-#if defined(MBEDTLS_CHECK_PARAMS)
-#include "mbedtls/platform_util.h"
-void mbedtls_param_failed( const char *failure_condition,
-                           const char *file,
-                           int line )
-{
-    mbedtls_printf( "%s:%i: Input param failed - %s\n",
-                    file, line, failure_condition );
-    mbedtls_exit( MBEDTLS_EXIT_FAILURE );
-}
-#endif
-
 int main( int argc, char **argv )
 {
     int ret = 1;
-    int exit_code = MBEDTLS_EXIT_FAILURE;
     mbedtls_mpi G, P, Q;
     mbedtls_entropy_context entropy;
     mbedtls_ctr_drbg_context ctr_drbg;
@@ -102,7 +86,7 @@ int main( int argc, char **argv )
     {
     usage:
         mbedtls_printf( USAGE );
-        return( exit_code );
+        return( 1 );
     }
 
     for( i = 1; i < argc; i++ )
@@ -169,7 +153,7 @@ int main( int argc, char **argv )
         goto exit;
     }
 
-    if( ( ret = mbedtls_mpi_is_prime_ext( &Q, 50, mbedtls_ctr_drbg_random, &ctr_drbg ) ) != 0 )
+    if( ( ret = mbedtls_mpi_is_prime( &Q, mbedtls_ctr_drbg_random, &ctr_drbg ) ) != 0 )
     {
         mbedtls_printf( " failed\n  ! mbedtls_mpi_is_prime returned %d\n\n", ret );
         goto exit;
@@ -180,6 +164,7 @@ int main( int argc, char **argv )
 
     if( ( fout = fopen( "dh_prime.txt", "wb+" ) ) == NULL )
     {
+        ret = 1;
         mbedtls_printf( " failed\n  ! Could not create dh_prime.txt\n\n" );
         goto exit;
     }
@@ -195,8 +180,6 @@ int main( int argc, char **argv )
     mbedtls_printf( " ok\n\n" );
     fclose( fout );
 
-    exit_code = MBEDTLS_EXIT_SUCCESS;
-
 exit:
 
     mbedtls_mpi_free( &G ); mbedtls_mpi_free( &P ); mbedtls_mpi_free( &Q );
@@ -208,7 +191,7 @@ exit:
     fflush( stdout ); getchar();
 #endif
 
-    return( exit_code );
+    return( ret );
 }
 #endif /* MBEDTLS_BIGNUM_C && MBEDTLS_ENTROPY_C && MBEDTLS_FS_IO &&
           MBEDTLS_CTR_DRBG_C && MBEDTLS_GENPRIME */

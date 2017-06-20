@@ -1,4 +1,4 @@
-#!/usr/bin/env perl
+#!/usr/bin/perl
 
 # Detect comment blocks that are likely meant to be doxygen blocks but aren't.
 #

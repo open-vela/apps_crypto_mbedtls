@@ -29,13 +29,9 @@
 #include "mbedtls/platform.h"
 #else
 #include <stdio.h>
-#include <stdlib.h>
-#define mbedtls_printf          printf
-#define mbedtls_snprintf        snprintf
-#define mbedtls_exit            exit
-#define MBEDTLS_EXIT_SUCCESS    EXIT_SUCCESS
-#define MBEDTLS_EXIT_FAILURE    EXIT_FAILURE
-#endif /* MBEDTLS_PLATFORM_C */
+#define mbedtls_printf     printf
+#define mbedtls_snprintf   snprintf
+#endif
 
 #if !defined(MBEDTLS_BIGNUM_C) || !defined(MBEDTLS_RSA_C) ||  \
     !defined(MBEDTLS_SHA256_C) || !defined(MBEDTLS_MD_C) || \
@@ -55,23 +51,10 @@ int main( void )
 #include <stdio.h>
 #include <string.h>
 
-#if defined(MBEDTLS_CHECK_PARAMS)
-#include "mbedtls/platform_util.h"
-void mbedtls_param_failed( const char *failure_condition,
-                           const char *file,
-                           int line )
-{
-    mbedtls_printf( "%s:%i: Input param failed - %s\n",
-                    file, line, failure_condition );
-    mbedtls_exit( MBEDTLS_EXIT_FAILURE );
-}
-#endif
-
 int main( int argc, char *argv[] )
 {
     FILE *f;
-    int ret = 1, c;
-    int exit_code = MBEDTLS_EXIT_FAILURE;
+    int ret, c;
     size_t i;
     mbedtls_rsa_context rsa;
     unsigned char hash[32];
@@ -79,6 +62,7 @@ int main( int argc, char *argv[] )
     char filename[512];
 
     mbedtls_rsa_init( &rsa, MBEDTLS_RSA_PKCS_V15, 0 );
+    ret = 1;
 
     if( argc != 2 )
     {
@@ -116,6 +100,7 @@ int main( int argc, char *argv[] )
     /*
      * Extract the RSA signature from the text file
      */
+    ret = 1;
     mbedtls_snprintf( filename, sizeof(filename), "%s.sig", argv[1] );
 
     if( ( f = fopen( filename, "rb" ) ) == NULL )
@@ -161,7 +146,7 @@ int main( int argc, char *argv[] )
 
     mbedtls_printf( "\n  . OK (the signature is valid)\n\n" );
 
-    exit_code = MBEDTLS_EXIT_SUCCESS;
+    ret = 0;
 
 exit:
 
@@ -172,7 +157,7 @@ exit:
     fflush( stdout ); getchar();
 #endif
 
-    return( exit_code );
+    return( ret );
 }
 #endif /* MBEDTLS_BIGNUM_C && MBEDTLS_RSA_C && MBEDTLS_SHA256_C &&
           MBEDTLS_FS_IO */

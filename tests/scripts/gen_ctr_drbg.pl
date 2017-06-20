@@ -1,4 +1,4 @@
-#!/usr/bin/env perl
+#!/usr/bin/perl
 #
 # Based on NIST CTR_DRBG.rsp validation file
 # Only uses AES-256-CTR cases that use a Derivation function

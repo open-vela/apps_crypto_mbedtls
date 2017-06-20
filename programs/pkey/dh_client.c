@@ -29,13 +29,9 @@
 #include "mbedtls/platform.h"
 #else
 #include <stdio.h>
-#include <stdlib.h>
-#define mbedtls_printf          printf
-#define mbedtls_time_t          time_t
-#define mbedtls_exit            exit
-#define MBEDTLS_EXIT_SUCCESS    EXIT_SUCCESS
-#define MBEDTLS_EXIT_FAILURE    EXIT_FAILURE
-#endif /* MBEDTLS_PLATFORM_C */
+#define mbedtls_printf     printf
+#define mbedtls_time_t     time_t
+#endif
 
 #if defined(MBEDTLS_AES_C) && defined(MBEDTLS_DHM_C) && \
     defined(MBEDTLS_ENTROPY_C) && defined(MBEDTLS_NET_C) && \
@@ -71,25 +67,11 @@ int main( void )
     return( 0 );
 }
 #else
-
-#if defined(MBEDTLS_CHECK_PARAMS)
-#include "mbedtls/platform_util.h"
-void mbedtls_param_failed( const char *failure_condition,
-                           const char *file,
-                           int line )
-{
-    mbedtls_printf( "%s:%i: Input param failed - %s\n",
-                    file, line, failure_condition );
-    mbedtls_exit( MBEDTLS_EXIT_FAILURE );
-}
-#endif
-
 int main( void )
 {
     FILE *f;
 
-    int ret = 1;
-    int exit_code = MBEDTLS_EXIT_FAILURE;
+    int ret;
     size_t n, buflen;
     mbedtls_net_context server_fd;
 
@@ -133,6 +115,7 @@ int main( void )
 
     if( ( f = fopen( "rsa_pub.txt", "rb" ) ) == NULL )
     {
+        ret = 1;
         mbedtls_printf( " failed\n  ! Could not open rsa_pub.txt\n" \
                 "  ! Please run rsa_genkey first\n\n" );
         goto exit;
@@ -208,6 +191,7 @@ int main( void )
 
     if( dhm.len < 64 || dhm.len > 512 )
     {
+        ret = 1;
         mbedtls_printf( " failed\n  ! Invalid DHM modulus size\n\n" );
         goto exit;
     }
@@ -223,6 +207,7 @@ int main( void )
 
     if( ( n = (size_t) ( end - p ) ) != rsa.len )
     {
+        ret = 1;
         mbedtls_printf( " failed\n  ! Invalid RSA signature size\n\n" );
         goto exit;
     }
@@ -301,8 +286,6 @@ int main( void )
     buf[16] = '\0';
     mbedtls_printf( "\n  . Plaintext is \"%s\"\n\n", (char *) buf );
 
-    exit_code = MBEDTLS_EXIT_SUCCESS;
-
 exit:
 
     mbedtls_net_free( &server_fd );
@@ -318,7 +301,7 @@ exit:
     fflush( stdout ); getchar();
 #endif
 
-    return( exit_code );
+    return( ret );
 }
 #endif /* MBEDTLS_AES_C && MBEDTLS_DHM_C && MBEDTLS_ENTROPY_C &&
           MBEDTLS_NET_C && MBEDTLS_RSA_C && MBEDTLS_SHA256_C &&
