@@ -40,7 +40,7 @@
 #endif
 
 #if defined(MBEDTLS_HAVE_TIME)
-#include "mbedtls/platform_time.h"
+#include "platform_time.h"
 #endif
 
 #ifdef __cplusplus
@@ -55,35 +55,15 @@ extern "C" {
  * \{
  */
 
-/* The older Microsoft Windows common runtime provides non-conforming
- * implementations of some standard library functions, including snprintf
- * and vsnprintf. This affects MSVC and MinGW builds.
- */
-#if defined(_MSC_VER) && _MSC_VER <= 1900
-#define MBEDTLS_PLATFORM_HAS_NON_CONFORMING_SNPRINTF
-#define MBEDTLS_PLATFORM_HAS_NON_CONFORMING_VSNPRINTF
-#endif
-
-#if defined(__MINGW32__) && !defined(__USE_MINGW_ANSI_STDIO)
-#define __USE_MINGW_ANSI_STDIO 1
-#endif
-
 #if !defined(MBEDTLS_PLATFORM_NO_STD_FUNCTIONS)
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 #if !defined(MBEDTLS_PLATFORM_STD_SNPRINTF)
-#if defined(MBEDTLS_PLATFORM_HAS_NON_CONFORMING_SNPRINTF)
+#if defined(_WIN32)
 #define MBEDTLS_PLATFORM_STD_SNPRINTF   mbedtls_platform_win32_snprintf /**< The default \c snprintf function to use.  */
 #else
 #define MBEDTLS_PLATFORM_STD_SNPRINTF   snprintf /**< The default \c snprintf function to use.  */
-#endif
-#endif
-#if !defined(MBEDTLS_PLATFORM_STD_VSNPRINTF)
-#if defined(MBEDTLS_PLATFORM_HAS_NON_CONFORMING_VSNPRINTF)
-#define MBEDTLS_PLATFORM_STD_VSNPRINTF   mbedtls_platform_win32_vsnprintf /**< The default \c vsnprintf function to use.  */
-#else
-#define MBEDTLS_PLATFORM_STD_VSNPRINTF   vsnprintf /**< The default \c vsnprintf function to use.  */
 #endif
 #endif
 #if !defined(MBEDTLS_PLATFORM_STD_PRINTF)
@@ -221,7 +201,7 @@ int mbedtls_platform_set_printf( int (*printf_func)( const char *, ... ) );
  * - however it is acceptable to return -1 instead of the required length when
  *   the destination buffer is too short.
  */
-#if defined(MBEDTLS_PLATFORM_HAS_NON_CONFORMING_SNPRINTF)
+#if defined(_WIN32)
 /* For Windows (inc. MSYS2), we provide our own fixed implementation */
 int mbedtls_platform_win32_snprintf( char *s, size_t n, const char *fmt, ... );
 #endif
@@ -246,41 +226,6 @@ int mbedtls_platform_set_snprintf( int (*snprintf_func)( char * s, size_t n,
 #define mbedtls_snprintf   MBEDTLS_PLATFORM_STD_SNPRINTF
 #endif /* MBEDTLS_PLATFORM_SNPRINTF_MACRO */
 #endif /* MBEDTLS_PLATFORM_SNPRINTF_ALT */
-
-/*
- * The function pointers for vsnprintf
- *
- * The vsnprintf implementation should conform to C99:
- * - it *must* always correctly zero-terminate the buffer
- *   (except when n == 0, then it must leave the buffer untouched)
- * - however it is acceptable to return -1 instead of the required length when
- *   the destination buffer is too short.
- */
-#if defined(MBEDTLS_PLATFORM_HAS_NON_CONFORMING_VSNPRINTF)
-/* For Older Windows (inc. MSYS2), we provide our own fixed implementation */
-int mbedtls_platform_win32_vsnprintf( char *s, size_t n, const char *fmt, va_list arg );
-#endif
-
-#if defined(MBEDTLS_PLATFORM_VSNPRINTF_ALT)
-#include <stdarg.h>
-extern int (*mbedtls_vsnprintf)( char * s, size_t n, const char * format, va_list arg );
-
-/**
- * \brief   Set your own snprintf function pointer
- *
- * \param vsnprintf_func   the snprintf function implementation
- *
- * \return              0
- */
-int mbedtls_platform_set_vsnprintf( int (*vsnprintf_func)( char * s, size_t n,
-                                                 const char * format, va_list arg ) );
-#else /* MBEDTLS_PLATFORM_VSNPRINTF_ALT */
-#if defined(MBEDTLS_PLATFORM_VSNPRINTF_MACRO)
-#define mbedtls_vsnprintf   MBEDTLS_PLATFORM_VSNPRINTF_MACRO
-#else
-#define mbedtls_vsnprintf   vsnprintf
-#endif /* MBEDTLS_PLATFORM_VSNPRINTF_MACRO */
-#endif /* MBEDTLS_PLATFORM_VSNPRINTF_ALT */
 
 /*
  * The function pointers for exit
@@ -370,7 +315,8 @@ int mbedtls_platform_set_nv_seed(
  * \note    This structure may be used to assist platform-specific
  *          setup or teardown operations.
  */
-typedef struct {
+typedef struct mbedtls_platform_context
+{
     char dummy; /**< A placeholder member, as empty structs are not portable. */
 }
 mbedtls_platform_context;
