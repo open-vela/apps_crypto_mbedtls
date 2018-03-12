@@ -162,7 +162,6 @@ typedef uint32_t psa_key_type_t;
 #define PSA_KEY_TYPE_DSA_KEYPAIR                ((psa_key_type_t)0x07020000)
 #define PSA_KEY_TYPE_ECC_PUBLIC_KEY_BASE        ((psa_key_type_t)0x06030000)
 #define PSA_KEY_TYPE_ECC_KEYPAIR_BASE           ((psa_key_type_t)0x07030000)
-#define PSA_KEY_TYPE_ECC_CURVE_NISTP256R1       ((psa_key_type_t)0x00000001)
 #define PSA_KEY_TYPE_ECC_CURVE_MASK             ((psa_key_type_t)0x0000ffff)
 #define PSA_KEY_TYPE_ECC_KEYPAIR(curve)         \
     (PSA_KEY_TYPE_ECC_KEYPAIR_BASE | (curve))
@@ -181,8 +180,8 @@ typedef uint32_t psa_key_type_t;
     (((type) & PSA_KEY_TYPE_CATEGORY_MASK) == PSA_KEY_TYPE_CATEGORY_ASYMMETRIC)
 /** Whether a key type is the public part of a key pair. */
 #define PSA_KEY_TYPE_IS_PUBLIC_KEY(type)                                \
-    (((type) & (PSA_KEY_TYPE_CATEGORY_MASK | PSA_KEY_TYPE_PAIR_FLAG)) == \
-      PSA_KEY_TYPE_CATEGORY_ASYMMETRIC)
+    (((type) & (PSA_KEY_TYPE_CATEGORY_MASK | PSA_KEY_TYPE_PAIR_FLAG) == \
+      PSA_KEY_TYPE_CATEGORY_ASYMMETRIC))
 /** Whether a key type is a key pair containing a private part and a public
  * part. */
 #define PSA_KEY_TYPE_IS_KEYPAIR(type)                                   \
@@ -340,8 +339,6 @@ typedef uint32_t psa_algorithm_t;
 #define PSA_ALG_RSA_GET_HASH(alg)                                       \
     (((alg) & PSA_ALG_HASH_MASK) | PSA_ALG_CATEGORY_HASH)
 
-#define PSA_ALG_ECDSA_RAW                       ((psa_algorithm_t)0x10030000)
-
 /**@}*/
 
 /** \defgroup key_management Key management
@@ -466,7 +463,7 @@ psa_status_t psa_export_key(psa_key_slot_t key,
  * For standard key types, the output format is as follows:
  *
  * - For RSA keys (#PSA_KEY_TYPE_RSA_KEYPAIR or #PSA_KEY_TYPE_RSA_PUBLIC_KEY),
- *   the format is the DER representation of the public key defined by RFC 5280
+ *   is the DER representation of the public key defined by RFC 5280
  *   as SubjectPublicKeyInfo.
  *
  * \param key           Slot whose content is to be exported. This must
@@ -1049,8 +1046,7 @@ psa_status_t psa_decrypt_setup(psa_cipher_operation_t *operation,
                                psa_key_slot_t key,
                                psa_algorithm_t alg);
 
-psa_status_t psa_encrypt_generate_iv(psa_cipher_operation_t *operation,
-                                     unsigned char *iv,
+psa_status_t psa_encrypt_generate_iv(unsigned char *iv,
                                      size_t iv_size,
                                      size_t *iv_length);
 
@@ -1060,12 +1056,15 @@ psa_status_t psa_encrypt_set_iv(psa_cipher_operation_t *operation,
 
 psa_status_t psa_cipher_update(psa_cipher_operation_t *operation,
                                const uint8_t *input,
-                               size_t input_length);
+                               size_t input_length,
+                               unsigned char *output, 
+                               size_t output_size, 
+                               size_t *output_length);
 
 psa_status_t psa_cipher_finish(psa_cipher_operation_t *operation,
-                               uint8_t *mac,
-                               size_t mac_size,
-                               size_t *mac_length);
+                               uint8_t *output,
+                               size_t output_size,
+                               size_t *output_length);
 
 psa_status_t psa_cipher_abort(psa_cipher_operation_t *operation);
 
