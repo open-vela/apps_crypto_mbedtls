@@ -1319,7 +1319,7 @@ psa_status_t psa_asymmetric_sign(psa_key_slot_t key,
 
 psa_status_t psa_decrypt_setup(psa_cipher_operation_t *operation,
                                psa_key_slot_t key,
-                               psa_algorithm_t alg);
+                               psa_algorithm_t alg)
 {
     int ret = MBEDTLS_ERR_CIPHER_FEATURE_UNAVAILABLE;
     psa_status_t status;
@@ -1367,13 +1367,12 @@ psa_status_t psa_decrypt_setup(psa_cipher_operation_t *operation,
     return ( PSA_SUCCESS );
 }
 
-psa_status_t psa_encrypt_generate_iv(psa_cipher_operation_t *operation,
-                                     unsigned char *iv,
+psa_status_t psa_encrypt_generate_iv(unsigned char *iv,
                                      size_t iv_size,
                                      size_t *iv_length)
 {
     int ret = MBEDTLS_ERR_CIPHER_FEATURE_UNAVAILABLE;
-
+    
     ret = mbedtls_ctr_drbg_random( &global_data.ctr_drbg, iv, iv_size);
     if (ret != 0)
     {
@@ -1381,7 +1380,7 @@ psa_status_t psa_encrypt_generate_iv(psa_cipher_operation_t *operation,
     }
     
     *iv_length = iv_size;
-    retuen ( PSA_SUCCESS );
+    return ( PSA_SUCCESS );
 }
 
 psa_status_t psa_encrypt_set_iv(psa_cipher_operation_t *operation,
@@ -1412,6 +1411,9 @@ psa_status_t psa_cipher_update(psa_cipher_operation_t *operation,
 {
     int ret = MBEDTLS_ERR_CIPHER_FEATURE_UNAVAILABLE;
 
+    if ( output_size < input_length )
+        return ( PSA_ERROR_BUFFER_TOO_SMALL );
+
     ret = mbedtls_cipher_update( &operation->ctx.cipher, input,
                    input_length, output, output_length );
     if (ret != 0)
@@ -1429,6 +1431,9 @@ psa_status_t psa_cipher_finish(psa_cipher_operation_t *operation,
                                size_t *output_length)
 {
     int ret = MBEDTLS_ERR_CIPHER_FEATURE_UNAVAILABLE;
+
+    if ( output_size < operation->block_size )
+        return ( PSA_ERROR_BUFFER_TOO_SMALL );
     
     if( ! operation->key_set )
         return( PSA_ERROR_BAD_STATE );
