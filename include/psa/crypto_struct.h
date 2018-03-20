@@ -50,7 +50,6 @@ struct psa_hash_operation_s
     psa_algorithm_t alg;
     union
     {
-        unsigned dummy; /* Make the union non-empty even with no supported algorithms. */
 #if defined(MBEDTLS_MD2_C)
         mbedtls_md2_context md2;
 #endif
@@ -85,7 +84,6 @@ struct psa_mac_operation_s
     uint8_t mac_size;
     union
     {
-        unsigned dummy; /* Make the union non-empty even with no supported algorithms. */
 #if defined(MBEDTLS_MD_C)
         mbedtls_md_context_t hmac;
 #endif
@@ -104,7 +102,6 @@ struct psa_cipher_operation_s
     uint8_t block_size;
     union
     {
-        unsigned dummy; /* Make the union non-empty even with no supported algorithms. */
     } ctx;
 };
 
@@ -118,7 +115,6 @@ struct psa_aead_operation_s
     uint8_t block_size;
     union
     {
-        unsigned dummy; /* Make the union non-empty even with no supported algorithms. */
     } ctx;
 };
 
