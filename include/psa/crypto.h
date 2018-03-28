@@ -324,13 +324,14 @@ typedef uint32_t psa_algorithm_t;
 #define PSA_ALG_CCM                             ((psa_algorithm_t)0x06000001)
 #define PSA_ALG_GCM                             ((psa_algorithm_t)0x06000002)
 
-#define PSA_ALG_RSA_PKCS1V15_RAW                ((psa_algorithm_t)0x10010000)
+#define PSA_ALG_RSA_PKCS1V15_SIGN_RAW           ((psa_algorithm_t)0x10010000)
 #define PSA_ALG_RSA_PSS_MGF1                    ((psa_algorithm_t)0x10020000)
-#define PSA_ALG_RSA_OAEP                        ((psa_algorithm_t)0x12020000)
-#define PSA_ALG_RSA_PKCS1V15(hash_alg)                                  \
-    (PSA_ALG_RSA_PKCS1V15_RAW | ((hash_alg) & PSA_ALG_HASH_MASK))
-#define PSA_ALG_IS_RSA_PKCS1V15(alg)                                    \
-    (((alg) & 0x7fffff00) == PSA_ALG_RSA_PKCS1V15_RAW)
+#define PSA_ALG_RSA_PKCS1V15_CRYPT              ((psa_algorithm_t)0x12010000)
+#define PSA_ALG_RSA_OAEP_MGF1_BASE              ((psa_algorithm_t)0x12020000)
+#define PSA_ALG_RSA_PKCS1V15_SIGN(hash_alg)                             \
+    (PSA_ALG_RSA_PKCS1V15_SIGN_RAW | ((hash_alg) & PSA_ALG_HASH_MASK))
+#define PSA_ALG_IS_RSA_PKCS1V15_SIGN(alg)                               \
+    (((alg) & 0x7fffff00) == PSA_ALG_RSA_PKCS1V15_SIGN_RAW)
 #define PSA_ALG_RSA_GET_HASH(alg)                                       \
     (((alg) & PSA_ALG_HASH_MASK) | PSA_ALG_CATEGORY_HASH)
 
@@ -1238,7 +1239,7 @@ psa_status_t psa_aead_abort(psa_aead_operation_t *operation);
 #define PSA_ASYMMETRIC_SIGN_OUTPUT_SIZE(key_type, key_bits, alg)        \
     (PSA_KEY_TYPE_IS_RSA(key_type) ? ((void)alg, PSA_BITS_TO_BYTES(key_bits)) : \
      PSA_KEY_TYPE_IS_ECC(key_type) ? PSA_ECDSA_SIGNATURE_SIZE(key_bits) : \
-     0)
+     ((void)alg, 0))
 
 /**
  * \brief Sign a hash or short message with a private key.
@@ -1261,8 +1262,6 @@ psa_status_t psa_aead_abort(psa_aead_operation_t *operation);
  * \param signature_size    Size of the \c signature buffer in bytes.
  * \param signature_length  On success, the number of bytes
  *                          that make up the returned signature value.
- *                          This is at most #PSA_HASH_FINAL_SIZE(alg)
- *                          (note that it may be less).
  *
  * \retval PSA_SUCCESS
  * \retval PSA_ERROR_BUFFER_TOO_SMALL
@@ -1330,6 +1329,114 @@ psa_status_t psa_asymmetric_verify(psa_key_slot_t key,
                                    size_t salt_length,
                                    uint8_t *signature,
                                    size_t signature_size);
+
+#define PSA_ASYMMETRIC_ENCRYPT_OUTPUT_SIZE(key_type, key_bits, alg)     \
+    (PSA_KEY_TYPE_IS_RSA(key_type) ? ((void)alg, PSA_BITS_TO_BYTES(key_bits)) : \
+     ((void)alg, 0))
+#define PSA_ASYMMETRIC_DECRYPT_OUTPUT_SIZE(key_type, key_bits, alg) \
+    PSA_ASYMMETRIC_ENCRYPT_OUTPUT_SIZE(key_type, key_bits, alg)
+
+/**
+ * \brief Encrypt a short message with a public key.
+ *
+ * \param key               Key slot containing a public key or an asymmetric
+ *                          key pair.
+ * \param alg               An asymmetric encryption algorithm that is
+ *                          compatible with the type of \c key.
+ * \param input             The message to encrypt.
+ * \param input_length      Size of the \c input buffer in bytes.
+ * \param salt              A salt or label, if supported by the encryption
+ *                          algorithm.
+ *                          If the algorithm does not support a
+ *                          salt, pass \c NULL.
+ *                          If the algorithm supports an optional
+ *                          salt and you do not want to pass a salt,
+ *                          pass \c NULL.
+ *
+ *                          - For #PSA_ALG_RSA_PKCS1V15_CRYPT, no salt is
+ *                            supported.
+ * \param salt_length       Size of the \c salt buffer in bytes.
+ *                          If \c salt is \c NULL, pass 0.
+ * \param output            Buffer where the encrypted message is to be written.
+ * \param output_size       Size of the \c output buffer in bytes.
+ * \param output_length     On success, the number of bytes
+ *                          that make up the returned output.
+ *
+ * \retval PSA_SUCCESS
+ * \retval PSA_ERROR_BUFFER_TOO_SMALL
+ *         The size of the \c output buffer is too small. You can
+ *         determine a sufficient buffer size by calling
+ *         #PSA_ASYMMETRIC_ENCRYPT_OUTPUT_SIZE(key_type, key_bits, alg)
+ *         where \c key_type and \c key_bits are the type and bit-size
+ *         respectively of \c key.
+ * \retval PSA_ERROR_NOT_SUPPORTED
+ * \retval PSA_ERROR_INVALID_ARGUMENT
+ * \retval PSA_ERROR_INSUFFICIENT_MEMORY
+ * \retval PSA_ERROR_COMMUNICATION_FAILURE
+ * \retval PSA_ERROR_HARDWARE_FAILURE
+ * \retval PSA_ERROR_TAMPERING_DETECTED
+ * \retval PSA_ERROR_INSUFFICIENT_ENTROPY
+ */
+psa_status_t psa_asymmetric_encrypt(psa_key_slot_t key,
+                                    psa_algorithm_t alg,
+                                    const uint8_t *input,
+                                    size_t input_length,
+                                    const uint8_t *salt,
+                                    size_t salt_length,
+                                    uint8_t *output,
+                                    size_t output_size,
+                                    size_t *output_length);
+
+/**
+ * \brief Decrypt a short message with a private key.
+ *
+ * \param key               Key slot containing an asymmetric key pair.
+ * \param alg               An asymmetric encryption algorithm that is
+ *                          compatible with the type of \c key.
+ * \param input             The message to decrypt.
+ * \param input_length      Size of the \c input buffer in bytes.
+ * \param salt              A salt or label, if supported by the encryption
+ *                          algorithm.
+ *                          If the algorithm does not support a
+ *                          salt, pass \c NULL.
+ *                          If the algorithm supports an optional
+ *                          salt and you do not want to pass a salt,
+ *                          pass \c NULL.
+ *
+ *                          - For #PSA_ALG_RSA_PKCS1V15_CRYPT, no salt is
+ *                            supported.
+ * \param salt_length       Size of the \c salt buffer in bytes.
+ *                          If \c salt is \c NULL, pass 0.
+ * \param output            Buffer where the encrypted message is to be written.
+ * \param output_size       Size of the \c output buffer in bytes.
+ * \param output_length     On success, the number of bytes
+ *                          that make up the returned output.
+ *
+ * \retval PSA_SUCCESS
+ * \retval PSA_ERROR_BUFFER_TOO_SMALL
+ *         The size of the \c output buffer is too small. You can
+ *         determine a sufficient buffer size by calling
+ *         #PSA_ASYMMETRIC_DECRYPT_OUTPUT_SIZE(key_type, key_bits, alg)
+ *         where \c key_type and \c key_bits are the type and bit-size
+ *         respectively of \c key.
+ * \retval PSA_ERROR_NOT_SUPPORTED
+ * \retval PSA_ERROR_INVALID_ARGUMENT
+ * \retval PSA_ERROR_INSUFFICIENT_MEMORY
+ * \retval PSA_ERROR_COMMUNICATION_FAILURE
+ * \retval PSA_ERROR_HARDWARE_FAILURE
+ * \retval PSA_ERROR_TAMPERING_DETECTED
+ * \retval PSA_ERROR_INSUFFICIENT_ENTROPY
+ * \retval PSA_ERROR_INVALID_PADDING
+ */
+psa_status_t psa_asymmetric_decrypt(psa_key_slot_t key,
+                                    psa_algorithm_t alg,
+                                    const uint8_t *input,
+                                    size_t input_length,
+                                    const uint8_t *salt,
+                                    size_t salt_length,
+                                    uint8_t *output,
+                                    size_t output_size,
+                                    size_t *output_length);
 
 /**@}*/
 
