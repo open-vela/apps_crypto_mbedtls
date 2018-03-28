@@ -89,8 +89,6 @@ typedef enum {
     PSA_ERROR_INVALID_SIGNATURE,
     /** The decrypted padding is incorrect. */
     PSA_ERROR_INVALID_PADDING,
-    /** The key policy is incorrect. */
-    PSA_ERROR_INVALID_KEY_POLICY,
     /** An error occurred that does not correspond to any defined
         failure cause. */
     PSA_ERROR_UNKNOWN_ERROR,
@@ -326,13 +324,13 @@ typedef uint32_t psa_algorithm_t;
 #define PSA_ALG_CCM                             ((psa_algorithm_t)0x06000001)
 #define PSA_ALG_GCM                             ((psa_algorithm_t)0x06000002)
 
-#define PSA_ALG_RSA_PKCS1V15_RAW                ((psa_algorithm_t)0x10010000)
+#define PSA_ALG_RSA_PKCS1V15_SIGN_RAW           ((psa_algorithm_t)0x10010000)
 #define PSA_ALG_RSA_PSS_MGF1                    ((psa_algorithm_t)0x10020000)
 #define PSA_ALG_RSA_OAEP                        ((psa_algorithm_t)0x12020000)
-#define PSA_ALG_RSA_PKCS1V15(hash_alg)                                  \
-    (PSA_ALG_RSA_PKCS1V15_RAW | ((hash_alg) & PSA_ALG_HASH_MASK))
-#define PSA_ALG_IS_RSA_PKCS1V15(alg)                                    \
-    (((alg) & 0x7fffff00) == PSA_ALG_RSA_PKCS1V15_RAW)
+#define PSA_ALG_RSA_PKCS1V15_SIGN(hash_alg)                             \
+    (PSA_ALG_RSA_PKCS1V15_SIGN_RAW | ((hash_alg) & PSA_ALG_HASH_MASK))
+#define PSA_ALG_IS_RSA_PKCS1V15_SIGN(alg)                               \
+    (((alg) & 0x7fffff00) == PSA_ALG_RSA_PKCS1V15_SIGN_RAW)
 #define PSA_ALG_RSA_GET_HASH(alg)                                       \
     (((alg) & PSA_ALG_HASH_MASK) | PSA_ALG_CATEGORY_HASH)
 
@@ -394,7 +392,7 @@ psa_status_t psa_destroy_key(psa_key_slot_t key);
  *                      This may be a null pointer, in which case the key type
  *                      is not written.
  * \param bits          On success, the key size in bits.
- *                      This may be a null pointer, in which case the key type
+ *                      This may be a null pointer, in which case the key size
  *                      is not written.
  *
  * \retval PSA_SUCCESS
@@ -490,10 +488,6 @@ psa_status_t psa_export_public_key(psa_key_slot_t key,
 
 /** \brief Encoding of permitted usage on a key. */
 typedef uint32_t psa_key_usage_t;
-
-/** An invalid key usage value.
- * */
-#define PSA_KEY_USAGE_NONE                      ((psa_key_usage_t)0x00000000)
 
 /** Whether the key may be exported.
  *

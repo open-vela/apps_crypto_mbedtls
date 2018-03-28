@@ -96,7 +96,6 @@ static inline int safer_memcmp( const uint8_t *a, const uint8_t *b, size_t n )
 
 typedef struct {
     psa_key_type_t type;
-    psa_key_policy_t policy;
     union {
         struct raw_data {
             uint8_t *data;
@@ -469,9 +468,6 @@ psa_status_t psa_export_key(psa_key_slot_t key,
     if( slot->type == PSA_KEY_TYPE_NONE )
         return( PSA_ERROR_EMPTY_SLOT );
 
-    if( !( slot->policy.usage & PSA_KEY_USAGE_EXPORT ) )
-        return( PSA_ERROR_NOT_PERMITTED );
-
     if( PSA_KEY_TYPE_IS_RAW_BYTES( slot->type ) )
     {
         if( slot->data.raw.bytes > data_size )
@@ -592,7 +588,7 @@ static psa_algorithm_t mbedtls_md_alg_to_psa( mbedtls_md_type_t md_alg )
         case MBEDTLS_MD_RIPEMD160:
             return( PSA_ALG_RIPEMD160 );
         default:
-            return( MBEDTLS_MD_NOT_SUPPORTED );
+            return( 0 );
     }
 }
 #endif
@@ -1043,7 +1039,7 @@ psa_status_t psa_mac_start( psa_mac_operation_t *operation,
         return( mbedtls_to_psa_error( ret ) );
     }
     operation->key_set = 1;
-    return( 0 );
+    return( PSA_SUCCESS );
 }
 
 psa_status_t psa_mac_update( psa_mac_operation_t *operation,
@@ -1188,8 +1184,6 @@ psa_status_t psa_asymmetric_sign(psa_key_slot_t key,
         return( PSA_ERROR_EMPTY_SLOT );
     if( ! PSA_KEY_TYPE_IS_KEYPAIR( slot->type ) )
         return( PSA_ERROR_INVALID_ARGUMENT );
-    if( !( slot->policy.usage & PSA_KEY_USAGE_SIGN ) )
-        return( PSA_ERROR_NOT_PERMITTED );
 
 #if defined(MBEDTLS_RSA_C)
     if( slot->type == PSA_KEY_TYPE_RSA_KEYPAIR )
@@ -1217,7 +1211,7 @@ psa_status_t psa_asymmetric_sign(psa_key_slot_t key,
         if( signature_size < rsa->len )
             return( PSA_ERROR_BUFFER_TOO_SMALL );
 #if defined(MBEDTLS_PKCS1_V15)
-        if( PSA_ALG_IS_RSA_PKCS1V15( alg ) )
+        if( PSA_ALG_IS_RSA_PKCS1V15_SIGN( alg ) )
         {
             mbedtls_rsa_set_padding( rsa, MBEDTLS_RSA_PKCS_V15,
                                      MBEDTLS_MD_NONE );
@@ -1266,81 +1260,6 @@ psa_status_t psa_asymmetric_sign(psa_key_slot_t key,
 }
 
 
-/****************************************************************/
-/* Key Policy */
-/****************************************************************/
-
-void psa_key_policy_init(psa_key_policy_t *policy)
-{
-    mbedtls_zeroize( policy, sizeof( policy ) );
-}
-
-void psa_key_policy_set_usage(psa_key_policy_t *policy,
-                              psa_key_usage_t usage,
-                              psa_algorithm_t alg)
-{
-    policy->usage = usage;
-    policy->alg = alg;
-}
-
-psa_key_usage_t psa_key_policy_get_usage(psa_key_policy_t *policy)
-{
-    return policy->usage;
-}
-
-psa_algorithm_t psa_key_policy_get_algorithm(psa_key_policy_t *policy)
-{
-    return policy->alg;
-}
-
-psa_status_t psa_set_key_policy(psa_key_slot_t key,
-                                const psa_key_policy_t *policy)
-{
-    key_slot_t *slot;
-    psa_key_usage_t usage = PSA_KEY_USAGE_NONE;
-
-    if( key == 0 || key > MBEDTLS_PSA_KEY_SLOT_COUNT || policy == NULL )
-        return( PSA_ERROR_INVALID_ARGUMENT );
-    
-    slot = &global_data.key_slots[key];
-    if( slot->type != PSA_KEY_TYPE_NONE )
-        return( PSA_ERROR_OCCUPIED_SLOT );
-
-    usage |= policy->usage & PSA_KEY_USAGE_EXPORT;
-    usage |= policy->usage & PSA_KEY_USAGE_ENCRYPT;
-    usage |= policy->usage & PSA_KEY_USAGE_DECRYPT;
-    usage |= policy->usage & PSA_KEY_USAGE_SIGN;
-    usage |= policy->usage & PSA_KEY_USAGE_VERIFY;
-
-    if( usage == PSA_KEY_USAGE_NONE )
-    {
-        return( PSA_ERROR_INVALID_KEY_POLICY );
-    }
-
-    //TODO: is there any check over the algorithm before setting the policy?
-    slot->policy.usage = policy->usage;
-    slot->policy.alg = policy->alg;
-
-    return( PSA_SUCCESS );
-}
-
-psa_status_t psa_get_key_policy(psa_key_slot_t key,
-                                psa_key_policy_t *policy)
-{
-    key_slot_t *slot;
-
-    if( key == 0 || key > MBEDTLS_PSA_KEY_SLOT_COUNT || policy == NULL )
-        return( PSA_ERROR_INVALID_ARGUMENT );
-
-    slot = &global_data.key_slots[key];
-    if( slot->type == PSA_KEY_TYPE_NONE )
-        return( PSA_ERROR_EMPTY_SLOT );
-    
-    policy->usage = slot->policy.usage;
-    policy->alg = slot->policy.alg;
-
-    return( PSA_SUCCESS );
-}
 
 /****************************************************************/
 /* Module setup */
