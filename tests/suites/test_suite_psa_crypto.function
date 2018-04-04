@@ -527,49 +527,61 @@ exit:
 }
 /* END_CASE */
 
+
 /* BEGIN_CASE */
-void asymmetric_verify( int key_type_arg, char *key_hex,
-                         int alg_arg, char *hash_hex, char *signature_hex )
+void import_export_public_key( char *hex,
+                                int type_arg,
+                                int expected_bits,
+                                int expected_export_status )
 {
     int slot = 1;
-    psa_key_type_t key_type = key_type_arg;
-    psa_algorithm_t alg = alg_arg;
-    unsigned char *key_data = NULL;
-    size_t key_size;
-    unsigned char *hash_data = NULL;
-    size_t hash_size;
-    unsigned char *signature_data = NULL;
-    size_t signature_size;
-    psa_key_policy_t policy = {0};
+    psa_key_type_t type = type_arg;
+    psa_status_t status;
+    unsigned char *data = NULL;
+    unsigned char *exported = NULL;
+    size_t data_size;
+    size_t export_size;
+    size_t exported_length;
+    psa_key_type_t got_type;
+    size_t got_bits;
 
-    key_data = unhexify_alloc( key_hex, &key_size );
-    TEST_ASSERT( key_data != NULL );
-    hash_data = unhexify_alloc( hash_hex, &hash_size );
-    TEST_ASSERT( hash_data != NULL );
-    signature_data = unhexify_alloc( signature_hex, &signature_size );
-    TEST_ASSERT( signature_data != NULL );
+    data = unhexify_alloc( hex, &data_size );
+    TEST_ASSERT( data != NULL );
+    export_size = (ssize_t) data_size ;
+    exported = mbedtls_calloc( 1, export_size );
+    TEST_ASSERT( exported != NULL );
 
     TEST_ASSERT( psa_crypto_init( ) == PSA_SUCCESS );
 
-    psa_key_policy_init( &policy );
+    /* Import the key */
+    TEST_ASSERT( psa_import_key( slot, type,
+                                 data, data_size ) == PSA_SUCCESS );
 
-    psa_key_policy_set_usage( &policy, PSA_KEY_USAGE_VERIFY, alg_arg );
+    /* Test the key information */
+    TEST_ASSERT( psa_get_key_information( slot,
+                 &got_type, &got_bits ) == PSA_SUCCESS );
+    TEST_ASSERT( got_type == type );
+    TEST_ASSERT( got_bits == (size_t) expected_bits );
 
-    TEST_ASSERT( psa_set_key_policy( slot, &policy ) == PSA_SUCCESS );
+    /* Export the key */
+    status = psa_export_public_key( slot,
+                             exported, export_size,
+                             &exported_length );
+    TEST_ASSERT( status == (psa_status_t) expected_export_status );
+    if( status != PSA_SUCCESS )
+        goto destroy;
 
-    TEST_ASSERT( psa_import_key( slot, key_type,
-                                 key_data, key_size ) == PSA_SUCCESS );
+ 
+    TEST_ASSERT( exported_length == data_size );
 
-    TEST_ASSERT( psa_asymmetric_verify( slot, alg,
-                                        hash_data, hash_size,
-                                        NULL, 0,
-                                        signature_data, signature_size ) ==
-                                        PSA_SUCCESS );
+destroy:
+    /* Destroy the key */
+    TEST_ASSERT( psa_destroy_key( slot ) == PSA_SUCCESS );
+    TEST_ASSERT( psa_get_key_information(
+                     slot, NULL, NULL ) == PSA_ERROR_EMPTY_SLOT );
+
 exit:
-    psa_destroy_key( slot );
-    mbedtls_free( key_data );
-    mbedtls_free( hash_data );
-    mbedtls_free( signature_data );
+    mbedtls_free( data );
     mbedtls_psa_crypto_free( );
 }
 /* END_CASE */
