@@ -89,6 +89,8 @@ typedef enum {
     PSA_ERROR_INVALID_SIGNATURE,
     /** The decrypted padding is incorrect. */
     PSA_ERROR_INVALID_PADDING,
+    /** The key policy is incorrect. */
+    PSA_ERROR_INVALID_KEY_POLICY,
     /** An error occurred that does not correspond to any defined
         failure cause. */
     PSA_ERROR_UNKNOWN_ERROR,
@@ -1238,7 +1240,7 @@ psa_status_t psa_aead_abort(psa_aead_operation_t *operation);
 #define PSA_ASYMMETRIC_SIGN_OUTPUT_SIZE(key_type, key_bits, alg)        \
     (PSA_KEY_TYPE_IS_RSA(key_type) ? ((void)alg, PSA_BITS_TO_BYTES(key_bits)) : \
      PSA_KEY_TYPE_IS_ECC(key_type) ? PSA_ECDSA_SIGNATURE_SIZE(key_bits) : \
-     ((void)alg, 0))
+     0)
 
 /**
  * \brief Sign a hash or short message with a private key.
@@ -1261,6 +1263,8 @@ psa_status_t psa_aead_abort(psa_aead_operation_t *operation);
  * \param signature_size    Size of the \c signature buffer in bytes.
  * \param signature_length  On success, the number of bytes
  *                          that make up the returned signature value.
+ *                          This is at most #PSA_HASH_FINAL_SIZE(alg)
+ *                          (note that it may be less).
  *
  * \retval PSA_SUCCESS
  * \retval PSA_ERROR_BUFFER_TOO_SMALL
