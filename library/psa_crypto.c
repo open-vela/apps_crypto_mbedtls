@@ -1778,6 +1778,9 @@ psa_status_t psa_aead_encrypt( psa_key_slot_t key,
     const mbedtls_cipher_info_t *cipher_info = NULL;
     unsigned char tag[16];
 
+    if( ciphertext_size < ( plaintext_length + sizeof( tag ) ) )
+            return( PSA_ERROR_INVALID_ARGUMENT );
+
     status = psa_get_key_information( key, &key_type, &key_bits );
     if( status != PSA_SUCCESS )
         return( status );
@@ -1797,9 +1800,6 @@ psa_status_t psa_aead_encrypt( psa_key_slot_t key,
     if( alg == PSA_ALG_GCM )
     {
         mbedtls_gcm_context gcm;
-        if( ciphertext_size < ( plaintext_length + sizeof( tag ) ) )
-            return( PSA_ERROR_INVALID_ARGUMENT );
-
         mbedtls_gcm_init( &gcm );
         ret = mbedtls_gcm_setkey( &gcm, cipher_info->base->cipher, 
                                 ( const unsigned char * )slot->data.raw.data, key_bits );
@@ -1825,8 +1825,6 @@ psa_status_t psa_aead_encrypt( psa_key_slot_t key,
     else if( alg == PSA_ALG_CCM )
     {
         mbedtls_ccm_context ccm;
-        if( ciphertext_size < ( plaintext_length + sizeof( tag ) ) )
-            return( PSA_ERROR_INVALID_ARGUMENT );
         if( nonce_length < 7 || nonce_length > 13 )
             return( PSA_ERROR_INVALID_ARGUMENT );
 
@@ -1876,6 +1874,9 @@ psa_status_t psa_aead_decrypt( psa_key_slot_t key,
     const mbedtls_cipher_info_t *cipher_info = NULL;
     unsigned char tag[16];
 
+    if( plaintext_size < ( ciphertext_length + sizeof( tag ) ) )
+            return( PSA_ERROR_INVALID_ARGUMENT );
+
     status = psa_get_key_information( key, &key_type, &key_bits );
     if( status != PSA_SUCCESS )
         return( status );
@@ -1895,8 +1896,6 @@ psa_status_t psa_aead_decrypt( psa_key_slot_t key,
     if( alg == PSA_ALG_GCM )
     {
         mbedtls_gcm_context gcm;
-        if( plaintext_size < ( ciphertext_length + 8 + sizeof( tag ) ) )
-            return( PSA_ERROR_INVALID_ARGUMENT );
 
         mbedtls_gcm_init( &gcm );
         ret = mbedtls_gcm_setkey( &gcm, cipher_info->base->cipher, 
@@ -1924,8 +1923,7 @@ psa_status_t psa_aead_decrypt( psa_key_slot_t key,
     else if( alg == PSA_ALG_CCM )
     {
         mbedtls_ccm_context ccm;
-        if( plaintext_size < ( ciphertext_length + sizeof( tag ) ) )
-            return( PSA_ERROR_INVALID_ARGUMENT );
+        
         if( nonce_length < 7 || nonce_length > 13 )
             return( PSA_ERROR_INVALID_ARGUMENT );
 
