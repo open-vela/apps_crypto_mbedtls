@@ -4,12 +4,14 @@
  * This is a simple test application used for debugger-driven testing to check
  * whether calls to mbedtls_platform_zeroize() are being eliminated by compiler
  * optimizations. This application is used by the GDB script at
- * tests/scripts/test_zeroize.gdb: the script sets a breakpoint at the last
- * return statement in the main() function of this program. The debugger
- * facilities are then used to manually inspect the memory and verify that the
- * call to mbedtls_platform_zeroize() was not eliminated.
+ * tests/scripts/test_zeroize.gdb under the assumption that the code does not
+ * change often (as opposed to the library code) because the script sets a
+ * breakpoint at the last return statement in the main() function of this
+ * program. The debugger facilities are then used to manually inspect the
+ * memory and verify that the call to mbedtls_platform_zeroize() was not
+ * eliminated.
  *
- *  Copyright The Mbed TLS Contributors
+ *  Copyright (C) 2018, Arm Limited, All Rights Reserved
  *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -23,9 +25,15 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
+ *
+ *  This file is part of mbed TLS (https://tls.mbed.org)
  */
 
-#include "mbedtls/build_info.h"
+#if !defined(MBEDTLS_CONFIG_FILE)
+#include "mbedtls/config.h"
+#else
+#include MBEDTLS_CONFIG_FILE
+#endif
 
 #include <stdio.h>
 
@@ -34,7 +42,6 @@
 #else
 #include <stdlib.h>
 #define mbedtls_printf     printf
-#define mbedtls_exit       exit
 #define MBEDTLS_EXIT_SUCCESS EXIT_SUCCESS
 #define MBEDTLS_EXIT_FAILURE EXIT_FAILURE
 #endif
@@ -59,24 +66,24 @@ int main( int argc, char** argv )
     char buf[BUFFER_LEN];
     char *p = buf;
     char *end = p + BUFFER_LEN;
-    int c;
+    char c;
 
     if( argc != 2 )
     {
         mbedtls_printf( "This program takes exactly 1 agument\n" );
         usage();
-        mbedtls_exit( exit_code );
+        return( exit_code );
     }
 
     fp = fopen( argv[1], "r" );
     if( fp == NULL )
     {
         mbedtls_printf( "Could not open file '%s'\n", argv[1] );
-        mbedtls_exit( exit_code );
+        return( exit_code );
     }
 
     while( ( c = fgetc( fp ) ) != EOF && p < end - 1 )
-        *p++ = (char)c;
+        *p++ = c;
     *p = '\0';
 
     if( p - buf != 0 )
@@ -90,5 +97,5 @@ int main( int argc, char** argv )
     fclose( fp );
     mbedtls_platform_zeroize( buf, sizeof( buf ) );
 
-    mbedtls_exit( exit_code ); // GDB_BREAK_HERE -- don't remove this comment!
+    return( exit_code );
 }
