@@ -1,7 +1,7 @@
 /**
  *  \brief Use and generate random data into a file via the CTR_DBRG based on AES
  *
- *  Copyright The Mbed TLS Contributors
+ *  Copyright (C) 2006-2015, ARM Limited, All Rights Reserved
  *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -15,21 +15,23 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
+ *
+ *  This file is part of mbed TLS (https://tls.mbed.org)
  */
 
-#include "mbedtls/build_info.h"
+#if !defined(MBEDTLS_CONFIG_FILE)
+#include "mbedtls/config.h"
+#else
+#include MBEDTLS_CONFIG_FILE
+#endif
 
 #if defined(MBEDTLS_PLATFORM_C)
 #include "mbedtls/platform.h"
 #else
 #include <stdio.h>
-#include <stdlib.h>
-#define mbedtls_fprintf         fprintf
-#define mbedtls_printf          printf
-#define mbedtls_exit            exit
-#define MBEDTLS_EXIT_SUCCESS    EXIT_SUCCESS
-#define MBEDTLS_EXIT_FAILURE    EXIT_FAILURE
-#endif /* MBEDTLS_PLATFORM_C */
+#define mbedtls_fprintf    fprintf
+#define mbedtls_printf     printf
+#endif
 
 #if defined(MBEDTLS_CTR_DRBG_C) && defined(MBEDTLS_ENTROPY_C) && \
  defined(MBEDTLS_FS_IO)
@@ -44,16 +46,13 @@
 int main( void )
 {
     mbedtls_printf("MBEDTLS_CTR_DRBG_C and/or MBEDTLS_ENTROPY_C and/or MBEDTLS_FS_IO not defined.\n");
-    mbedtls_exit( 0 );
+    return( 0 );
 }
 #else
-
-
 int main( int argc, char *argv[] )
 {
     FILE *f;
-    int i, k, ret = 1;
-    int exit_code = MBEDTLS_EXIT_FAILURE;
+    int i, k, ret;
     mbedtls_ctr_drbg_context ctr_drbg;
     mbedtls_entropy_context entropy;
     unsigned char buf[1024];
@@ -63,13 +62,13 @@ int main( int argc, char *argv[] )
     if( argc < 2 )
     {
         mbedtls_fprintf( stderr, "usage: %s <output filename>\n", argv[0] );
-        mbedtls_exit( exit_code );
+        return( 1 );
     }
 
     if( ( f = fopen( argv[1], "wb+" ) ) == NULL )
     {
         mbedtls_printf( "failed to open '%s' for writing.\n", argv[1] );
-        mbedtls_exit( exit_code );
+        return( 1 );
     }
 
     mbedtls_entropy_init( &entropy );
@@ -117,7 +116,7 @@ int main( int argc, char *argv[] )
         fflush( stdout );
     }
 
-    exit_code = MBEDTLS_EXIT_SUCCESS;
+    ret = 0;
 
 cleanup:
     mbedtls_printf("\n");
@@ -126,6 +125,6 @@ cleanup:
     mbedtls_ctr_drbg_free( &ctr_drbg );
     mbedtls_entropy_free( &entropy );
 
-    mbedtls_exit( exit_code );
+    return( ret );
 }
 #endif /* MBEDTLS_CTR_DRBG_C && MBEDTLS_ENTROPY_C */
