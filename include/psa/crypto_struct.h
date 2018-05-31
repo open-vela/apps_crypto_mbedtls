@@ -101,13 +101,26 @@ struct psa_cipher_operation_s
 {
     psa_algorithm_t alg;
     int key_set : 1;
-    int iv_required : 1;
     int iv_set : 1;
     uint8_t iv_size;
     uint8_t block_size;
     union
     {
-        mbedtls_cipher_context_t cipher;
+        unsigned dummy; /* Make the union non-empty even with no supported algorithms. */
+    } ctx;
+};
+
+struct psa_aead_operation_s
+{
+    psa_algorithm_t alg;
+    int key_set : 1;
+    int iv_set : 1;
+    int ad_set : 1;
+    uint8_t iv_size;
+    uint8_t block_size;
+    union
+    {
+        unsigned dummy; /* Make the union non-empty even with no supported algorithms. */
     } ctx;
 };
 
