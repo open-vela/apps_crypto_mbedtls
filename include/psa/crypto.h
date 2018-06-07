@@ -162,6 +162,7 @@ typedef uint32_t psa_key_type_t;
 #define PSA_KEY_TYPE_DSA_KEYPAIR                ((psa_key_type_t)0x07020000)
 #define PSA_KEY_TYPE_ECC_PUBLIC_KEY_BASE        ((psa_key_type_t)0x06030000)
 #define PSA_KEY_TYPE_ECC_KEYPAIR_BASE           ((psa_key_type_t)0x07030000)
+#define PSA_KEY_TYPE_ECC_CURVE_NISTP256R1       ((psa_key_type_t)0x00000001)
 #define PSA_KEY_TYPE_ECC_CURVE_MASK             ((psa_key_type_t)0x0000ffff)
 #define PSA_KEY_TYPE_ECC_KEYPAIR(curve)         \
     (PSA_KEY_TYPE_ECC_KEYPAIR_BASE | (curve))
@@ -338,6 +339,8 @@ typedef uint32_t psa_algorithm_t;
     (((alg) & ~PSA_ALG_HASH_MASK) == PSA_ALG_RSA_OAEP_MGF1_RAW)
 #define PSA_ALG_RSA_GET_HASH(alg)                                       \
     (((alg) & PSA_ALG_HASH_MASK) | PSA_ALG_CATEGORY_HASH)
+
+#define PSA_ALG_ECDSA_RAW                       ((psa_algorithm_t)0x10030000)
 
 /**@}*/
 
@@ -1046,7 +1049,8 @@ psa_status_t psa_decrypt_setup(psa_cipher_operation_t *operation,
                                psa_key_slot_t key,
                                psa_algorithm_t alg);
 
-psa_status_t psa_encrypt_generate_iv(unsigned char *iv,
+psa_status_t psa_encrypt_generate_iv(psa_cipher_operation_t *operation,
+                                     unsigned char *iv,
                                      size_t iv_size,
                                      size_t *iv_length);
 
@@ -1056,15 +1060,12 @@ psa_status_t psa_encrypt_set_iv(psa_cipher_operation_t *operation,
 
 psa_status_t psa_cipher_update(psa_cipher_operation_t *operation,
                                const uint8_t *input,
-                               size_t input_length,
-                               unsigned char *output, 
-                               size_t output_size, 
-                               size_t *output_length);
+                               size_t input_length);
 
 psa_status_t psa_cipher_finish(psa_cipher_operation_t *operation,
-                               uint8_t *output,
-                               size_t output_size,
-                               size_t *output_length);
+                               uint8_t *mac,
+                               size_t mac_size,
+                               size_t *mac_length);
 
 psa_status_t psa_cipher_abort(psa_cipher_operation_t *operation);
 
