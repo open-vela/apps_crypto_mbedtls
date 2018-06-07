@@ -106,7 +106,7 @@ struct psa_cipher_operation_s
     uint8_t block_size;
     union
     {
-        mbedtls_cipher_context_t cipher;
+        unsigned dummy; /* Make the union non-empty even with no supported algorithms. */
     } ctx;
 };
 
