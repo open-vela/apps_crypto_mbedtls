@@ -54,43 +54,206 @@ typedef enum {
     /** The action was completed successfully. */
     PSA_SUCCESS = 0,
     /** The requested operation or a parameter is not supported
-        by this implementation. */
+     * by this implementation.
+     *
+     * Implementations should return this error code when an enumeration
+     * parameter such as a key type, algorithm, etc. is not recognized.
+     * If a combination of parameters is recognized and identified as
+     * not valid, return #PSA_ERROR_INVALID_ARGUMENT instead. */
     PSA_ERROR_NOT_SUPPORTED,
-    /** The requested action is denied by a policy. */
+    /** The requested action is denied by a policy.
+     *
+     * Implementations should return this error code when the parameters
+     * are recognized as valid and supported, and a policy explicitly
+     * denies the requested operation.
+     *
+     * If a subset of the parameters of a function call identify a
+     * forbidden operation, and another subset of the parameters are
+     * not valid or not supported, it is unspecified whether the function
+     * returns #PSA_ERROR_NOT_PERMITTED, #PSA_ERROR_NOT_SUPPORTED or
+     * #PSA_ERROR_INVALID_ARGUMENT. */
     PSA_ERROR_NOT_PERMITTED,
-    /** An output buffer is too small. */
+    /** An output buffer is too small.
+     *
+     * Applications can call the `PSA_xxx_SIZE` macro listed in the function
+     * description to determine a sufficient buffer size.
+     *
+     * Implementations should preferably return this error code only
+     * in cases when performing the operation with a larger output
+     * buffer would succeed. However implementations may return this
+     * error if a function has invalid or unsupported parameters in addition
+     * to the parameters that determine the necessary output buffer size. */
     PSA_ERROR_BUFFER_TOO_SMALL,
     /** A slot is occupied, but must be empty to carry out the
-        requested action. */
+     * requested action.
+     *
+     * If the slot number is invalid (i.e. the requested action could
+     * not be performed even after erasing the slot's content),
+     * implementations shall return #PSA_ERROR_INVALID_ARGUMENT instead. */
     PSA_ERROR_OCCUPIED_SLOT,
     /** A slot is empty, but must be occupied to carry out the
-        requested action. */
+     * requested action.
+     *
+     * If the slot number is invalid (i.e. the requested action could
+     * not be performed even after creating appropriate content in the slot),
+     * implementations shall return #PSA_ERROR_INVALID_ARGUMENT instead. */
     PSA_ERROR_EMPTY_SLOT,
-    /** The requested action cannot be performed in the current state. */
+    /** The requested action cannot be performed in the current state.
+     *
+     * Multipart operations return this error when one of the
+     * functions is called out of sequence. Refer to the function
+     * descriptions for permitted sequencing of functions.
+     *
+     * Implementations shall not return this error code to indicate
+     * that a key slot is occupied when it needs to be free or vice versa,
+     * but shall return #PSA_ERROR_OCCUPIED_SLOT or #PSA_ERROR_EMPTY_SLOT
+     * as applicable. */
     PSA_ERROR_BAD_STATE,
-    /** The parameters passed to the function are invalid. */
+    /** The parameters passed to the function are invalid.
+     *
+     * Implementations may return this error any time a parameter or
+     * combination of parameters are recognized as invalid.
+     *
+     * Implementations shall not return this error code to indicate
+     * that a key slot is occupied when it needs to be free or vice versa,
+     * but shall return #PSA_ERROR_OCCUPIED_SLOT or #PSA_ERROR_EMPTY_SLOT
+     * as applicable. */
     PSA_ERROR_INVALID_ARGUMENT,
-    /** There is not enough runtime memory. */
+    /** There is not enough runtime memory.
+     *
+     * If the action is carried out across multiple security realms, this
+     * error can refer to available memory in any of the security realms. */
     PSA_ERROR_INSUFFICIENT_MEMORY,
-    /** There is not enough persistent storage. */
+    /** There is not enough persistent storage.
+     *
+     * Functions that modify the key storage return this error code if
+     * there is insufficient storage space on the host media. In addition,
+     * many functions that do not otherwise access storage may return this
+     * error code if the implementation requires a mandatory log entry for
+     * the requested action and the log storage space is full. */
     PSA_ERROR_INSUFFICIENT_STORAGE,
-    /** There was a communication failure inside the implementation. */
+    /** There was a communication failure inside the implementation.
+     *
+     * This can indicate a communication failure between the application
+     * and an external cryptoprocessor or between the cryptoprocessor and
+     * an external volatile or persistent memory. A communication failure
+     * may be transient or permanent depending on the cause.
+     *
+     * \warning If a function returns this error, it is undetermined
+     * whether the requested action has completed or not. Implementations
+     * should return #PSA_SUCCESS on successful completion whenver
+     * possible, however functions may return #PSA_ERROR_COMMUNICATION_FAILURE
+     * if the requested action was completed successfully in an external
+     * cryptoprocessor but there was a breakdown of communication before
+     * the cryptoprocessor could report the status to the application.
+     */
     PSA_ERROR_COMMUNICATION_FAILURE,
-    /** There was a storage failure that may have led to data loss. */
+    /** There was a storage failure that may have led to data loss.
+     *
+     * This error indicates that some persistent storage is corrupted.
+     * It should not be used for a corruption of volatile memory
+     * (use #PSA_ERROR_TAMPERING_DETECTED), for a communication error
+     * between the cryptoprocessor and its external storage (use
+     * #PSA_ERROR_COMMUNICATION_FAILURE), or when the storage is
+     * in a valid state but is full (use #PSA_ERROR_INSUFFICIENT_STORAGE).
+     *
+     * Note that a storage failure does not indicate that any data that was
+     * previously read is invalid. However this previously read data may no
+     * longer be readable from storage.
+     *
+     * When a storage failure occurs, it is no longer possible to ensure
+     * the global integrity of the keystore. Depending on the global
+     * integrity guarantees offered by the implementation, access to other
+     * data may or may not fail even if the data is still readable but
+     * its integrity canont be guaranteed.
+     *
+     * Implementations should only use this error code to report a
+     * permanent storage corruption. However application writers should
+     * keep in mind that transient errors while reading the storage may be
+     * reported using this error code. */
     PSA_ERROR_STORAGE_FAILURE,
-    /** A hardware failure was detected. */
+    /** A hardware failure was detected.
+     *
+     * A hardware failure may be transient or permanent depending on the
+     * cause. */
     PSA_ERROR_HARDWARE_FAILURE,
-    /** A tampering attempt was detected. */
+    /** A tampering attempt was detected.
+     *
+     * If an application receives this error code, there is no guarantee
+     * that previously accessed or computed data was correct and remains
+     * confidential. Applications should not perform any security function
+     * and should enter a safe failure state.
+     *
+     * Implementations may return this error code if they detect an invalid
+     * state that cannot happen during normal operation and that indicates
+     * that the implementation's security guarantees no longer hold. Depending
+     * on the implementation architecture and on its security and safety goals,
+     * the implementation may forcibly terminate the application.
+     *
+     * This error code is intended as a last resort when a security breach
+     * is detected and it is unsure whether the keystore data is still
+     * protected. Implementations shall only return this error code
+     * to report an alarm from a tampering detector, to indicate that
+     * the confidentiality of stored data can no longer be guaranteed,
+     * or to indicate that the integrity of previously returned data is now
+     * considered compromised. Implementations shall not use this error code
+     * to indicate a hardware failure that merely makes it impossible to
+     * perform the requested operation (use #PSA_ERROR_COMMUNICATION_FAILURE,
+     * #PSA_ERROR_STORAGE_FAILURE, #PSA_ERROR_HARDWARE_FAILURE,
+     * #PSA_ERROR_INSUFFICIENT_ENTROPY or other applicable error code
+     * instead).
+     *
+     * This error indicates an attack against the application. Implementations
+     * shall not return this error code as a consequence of the behavior of
+     * the application itself. */
     PSA_ERROR_TAMPERING_DETECTED,
     /** There is not enough entropy to generate random data needed
-        for the requested action. */
+     * for the requested action.
+     *
+     * This error indicates a failure of a hardware random generator.
+     * Application writers should note that this error can be returned not
+     * only by functions whose purpose is to generate random data, such
+     * as key, IV or nonce generation, but also by functions that execute
+     * an algorithm with a randomized result, as well as functions that
+     * use randomization of intermediate computations as a countermeasure
+     * to certain attacks.
+     *
+     * Implementations should avoid returning this error after psa_crypto_init()
+     * has succeeded. Implementations should generate sufficient
+     * entropy during initialization and subsequently use a cryptographically
+     * secure pseudorandom generator (PRNG). However implementations may return
+     * this error at any time if a policy requires the PRNG to be reseeded
+     * during normal operation. */
     PSA_ERROR_INSUFFICIENT_ENTROPY,
-    /** The signature, MAC or hash is incorrect. */
+    /** The signature, MAC or hash is incorrect.
+     *
+     * Verification functions return this error if the verification
+     * calculations completed successfully, and the value to be verified
+     * was determined to be incorrect.
+     *
+     * If the value to verify has an invalid size, implementations may return
+     * either #PSA_ERROR_INVALID_ARGUMENT or #PSA_ERROR_INVALID_SIGNATURE. */
     PSA_ERROR_INVALID_SIGNATURE,
-    /** The decrypted padding is incorrect. */
+    /** The decrypted padding is incorrect.
+     *
+     * \warning In some protocols, when decrypting data, it is essential that
+     * the behavior of the application does not depend on whether the padding
+     * is correct, down to precise timing. Applications should prefer
+     * protocols that use authenticated encryption rather than plain
+     * encryption. If the application must perform a decryption of
+     * unauthenticated data, the application writer should take care not
+     * to reveal whether the padding is invalid.
+     *
+     * Implementations should strive to make valid and invalid padding
+     * as close as possible to indistinguishable to an external observer.
+     * In particular, the timing of a decryption operation should not
+     * depend on the validity of the padding. */
     PSA_ERROR_INVALID_PADDING,
     /** An error occurred that does not correspond to any defined
-        failure cause. */
+     * failure cause.
+     *
+     * Implementations may use this error code if none of the other standard
+     * error codes are applicable. */
     PSA_ERROR_UNKNOWN_ERROR,
 } psa_status_t;
 
@@ -141,15 +304,47 @@ typedef uint32_t psa_key_type_t;
 #define PSA_KEY_TYPE_VENDOR_FLAG                ((psa_key_type_t)0x80000000)
 
 #define PSA_KEY_TYPE_CATEGORY_MASK              ((psa_key_type_t)0x7e000000)
+/** Raw data.
+ *
+ * A "key" of this type cannot be used for any cryptographic operation.
+ * Applications may use this type to store arbitrary data in the keystore. */
 #define PSA_KEY_TYPE_RAW_DATA                   ((psa_key_type_t)0x02000000)
 #define PSA_KEY_TYPE_CATEGORY_SYMMETRIC         ((psa_key_type_t)0x04000000)
 #define PSA_KEY_TYPE_CATEGORY_ASYMMETRIC        ((psa_key_type_t)0x06000000)
 #define PSA_KEY_TYPE_PAIR_FLAG                  ((psa_key_type_t)0x01000000)
 
+/** HMAC key.
+ *
+ * The key policy determines which underlying hash algorithm the key can be
+ * used for.
+ *
+ * HMAC keys should generally have the same size as the underlying hash.
+ * This size can be calculated with `PSA_HASH_SIZE(alg)` where
+ * `alg` is the HMAC algorithm or the underlying hash algorithm. */
 #define PSA_KEY_TYPE_HMAC                       ((psa_key_type_t)0x02000001)
+/** Key for an cipher, AEAD or MAC algorithm based on the AES block cipher.
+ *
+ * The size of the key can be 16 bytes (AES-128), 24 bytes (AES-192) or
+ * 32 bytes (AES-256).
+ */
 #define PSA_KEY_TYPE_AES                        ((psa_key_type_t)0x04000001)
+/** Key for a cipher or MAC algorithm based on DES or 3DES (Triple-DES).
+ *
+ * The size of the key can be 8 bytes (single DES), 16 bytes (2-key 3DES) or
+ * 24 bytes (3-key 3DES).
+ *
+ * Note that single DES and 2-key 3DES are weak and strongly
+ * deprecated and should only be used to decrypt legacy data. 3-key 3DES
+ * is weak and deprecated and should only be used in legacy protocols.
+ */
 #define PSA_KEY_TYPE_DES                        ((psa_key_type_t)0x04000002)
+/** Key for an cipher, AEAD or MAC algorithm based on the
+ * Camellia block cipher. */
 #define PSA_KEY_TYPE_CAMELLIA                   ((psa_key_type_t)0x04000003)
+/** Key for the RC4 stream cipher.
+ *
+ * Note that RC4 is weak and deprecated and should only be used in
+ * legacy protocols. */
 #define PSA_KEY_TYPE_ARC4                       ((psa_key_type_t)0x04000004)
 
 /** RSA public key. */
@@ -181,8 +376,8 @@ typedef uint32_t psa_key_type_t;
     (((type) & PSA_KEY_TYPE_CATEGORY_MASK) == PSA_KEY_TYPE_CATEGORY_ASYMMETRIC)
 /** Whether a key type is the public part of a key pair. */
 #define PSA_KEY_TYPE_IS_PUBLIC_KEY(type)                                \
-    (((type) & (PSA_KEY_TYPE_CATEGORY_MASK | PSA_KEY_TYPE_PAIR_FLAG) == \
-      PSA_KEY_TYPE_CATEGORY_ASYMMETRIC))
+    (((type) & (PSA_KEY_TYPE_CATEGORY_MASK | PSA_KEY_TYPE_PAIR_FLAG)) == \
+      PSA_KEY_TYPE_CATEGORY_ASYMMETRIC)
 /** Whether a key type is a key pair containing a private part and a public
  * part. */
 #define PSA_KEY_TYPE_IS_KEYPAIR(type)                                   \
@@ -207,8 +402,14 @@ typedef uint32_t psa_key_type_t;
  * \param type  A cipher key type (value of type #psa_key_type_t).
  *
  * \return      The block size for a block cipher, or 1 for a stream cipher.
- *              The return value is undefined if \c type does not identify
- *              a cipher algorithm.
+ *              The return value is undefined if \c type is not a supported
+ *              cipher key type.
+ *
+ * \note It is possible to build stream cipher algorithms on top of a block
+ *       cipher, for example CTR mode (#PSA_ALG_CTR).
+ *       This macro only takes the key type into account, so it cannot be
+ *       used to determine the size of the data that #psa_cipher_update()
+ *       might buffer for future processing in general.
  *
  * \note This macro returns a compile-time constant if its argument is one.
  *
@@ -289,7 +490,17 @@ typedef uint32_t psa_algorithm_t;
 
 #define PSA_ALG_MAC_SUBCATEGORY_MASK            ((psa_algorithm_t)0x00c00000)
 #define PSA_ALG_HMAC_BASE                       ((psa_algorithm_t)0x02800000)
-#define PSA_ALG_HMAC(hash_alg)                  \
+/** Macro to build an HMAC algorithm.
+ *
+ * For example, `PSA_ALG_HMAC(PSA_ALG_SHA256)` is HMAC-SHA-256.
+ *
+ * \param alg   A hash algorithm (\c PSA_ALG_XXX value such that
+ *              #PSA_ALG_IS_HASH(alg) is true).
+ *
+ * \return      The corresponding HMAC algorithm.
+ * \return      Unspecified if \p alg is not a hash algorithm.
+ */
+#define PSA_ALG_HMAC(hash_alg)                                  \
     (PSA_ALG_HMAC_BASE | ((hash_alg) & PSA_ALG_HASH_MASK))
 #define PSA_ALG_HMAC_HASH(hmac_alg)                             \
     (PSA_ALG_CATEGORY_HASH | ((hmac_alg) & PSA_ALG_HASH_MASK))
@@ -322,6 +533,10 @@ typedef uint32_t psa_algorithm_t;
 #define PSA_ALG_CTR                             ((psa_algorithm_t)0x04800001)
 #define PSA_ALG_ARC4                            ((psa_algorithm_t)0x04800002)
 
+#define PSA_ALG_IS_STREAM_CIPHER(alg)            \
+    (((alg) & (PSA_ALG_CATEGORY_MASK | PSA_ALG_CIPHER_SUBCATEGORY_MASK)) == \
+        PSA_ALG_STREAM_CIPHER)
+
 #define PSA_ALG_CCM                             ((psa_algorithm_t)0x06000001)
 #define PSA_ALG_GCM                             ((psa_algorithm_t)0x06000002)
 
@@ -339,6 +554,8 @@ typedef uint32_t psa_algorithm_t;
     (((alg) & ~PSA_ALG_HASH_MASK) == PSA_ALG_RSA_OAEP_MGF1_BASE)
 #define PSA_ALG_RSA_GET_HASH(alg)                                       \
     (((alg) & PSA_ALG_HASH_MASK) | PSA_ALG_CATEGORY_HASH)
+
+#define PSA_ALG_ECDSA_RAW                       ((psa_algorithm_t)0x10030000)
 
 /**@}*/
 
@@ -362,13 +579,15 @@ typedef uint32_t psa_algorithm_t;
  * \retval PSA_SUCCESS
  *         Success.
  * \retval PSA_ERROR_NOT_SUPPORTED
- *         The key type or key size is not supported.
+ *         The key type or key size is not supported, either by the
+ *         implementation in general or in this particular slot.
  * \retval PSA_ERROR_INVALID_ARGUMENT
  *         The key slot is invalid,
  *         or the key data is not correctly formatted.
  * \retval PSA_ERROR_OCCUPIED_SLOT
-           There is already a key in the specified slot.
+ *         There is already a key in the specified slot.
  * \retval PSA_ERROR_INSUFFICIENT_MEMORY
+ * \retval PSA_ERROR_INSUFFICIENT_STORAGE
  * \retval PSA_ERROR_COMMUNICATION_FAILURE
  * \retval PSA_ERROR_HARDWARE_FAILURE
  * \retval PSA_ERROR_TAMPERING_DETECTED
@@ -379,13 +598,37 @@ psa_status_t psa_import_key(psa_key_slot_t key,
                             size_t data_length);
 
 /**
- * \brief Destroy a key.
+ * \brief Destroy a key and restore the slot to its default state.
+ *
+ * This function destroys the content of the key slot from both volatile
+ * memory and, if applicable, non-volatile storage. Implementations shall
+ * make a best effort to ensure that any previous content of the slot is
+ * unrecoverable.
+ *
+ * This function also erases any metadata such as policies. It returns the
+ * specified slot to its default state.
+ *
+ * \param key           The key slot to erase.
  *
  * \retval PSA_SUCCESS
- * \retval PSA_ERROR_EMPTY_SLOT
+ *         The slot's content, if any, has been erased.
+ * \retval PSA_ERROR_NOT_PERMITTED
+ *         The slot holds content and cannot be erased because it is
+ *         read-only, either due to a policy or due to physical restrictions.
+ * \retval PSA_ERROR_INVALID_ARGUMENT
+ *         The specified slot number does not designate a valid slot.
  * \retval PSA_ERROR_COMMUNICATION_FAILURE
- * \retval PSA_ERROR_HARDWARE_FAILURE
+ *         There was an failure in communication with the cryptoprocessor.
+ *         The key material may still be present in the cryptoprocessor.
+ * \retval PSA_ERROR_STORAGE_FAILURE
+ *         The storage is corrupted. Implementations shall make a best effort
+ *         to erase key material even in this stage, however applications
+ *         should be aware that it may be impossible to guarantee that the
+ *         key material is not recoverable in such cases.
  * \retval PSA_ERROR_TAMPERING_DETECTED
+ *         An unexpected condition which is not a storage corruption or
+ *         a communication failure occurred. The cryptoprocessor may have
+ *         been compromised.
  */
 psa_status_t psa_destroy_key(psa_key_slot_t key);
 
@@ -464,7 +707,7 @@ psa_status_t psa_export_key(psa_key_slot_t key,
  * For standard key types, the output format is as follows:
  *
  * - For RSA keys (#PSA_KEY_TYPE_RSA_KEYPAIR or #PSA_KEY_TYPE_RSA_PUBLIC_KEY),
- *   is the DER representation of the public key defined by RFC 5280
+ *   the format is the DER representation of the public key defined by RFC 5280
  *   as SubjectPublicKeyInfo.
  *
  * \param key           Slot whose content is to be exported. This must
@@ -662,30 +905,32 @@ typedef struct psa_hash_operation_s psa_hash_operation_t;
  * This is also the hash size that psa_hash_verify() expects.
  *
  * \param alg   A hash algorithm (\c PSA_ALG_XXX value such that
- *              #PSA_ALG_IS_HASH(alg) is true).
+ *              #PSA_ALG_IS_HASH(alg) is true), or an HMAC algorithm
+ *              (`PSA_ALG_HMAC(hash_alg)` where `hash_alg` is a
+ *              hash algorithm).
  *
  * \return The hash size for the specified hash algorithm.
  *         If the hash algorithm is not recognized, return 0.
  *         An implementation may return either 0 or the correct size
  *         for a hash algorithm that it recognizes, but does not support.
  */
-#define PSA_HASH_FINAL_SIZE(alg)                \
-    (                                           \
-        (alg) == PSA_ALG_MD2 ? 16 :             \
-        (alg) == PSA_ALG_MD4 ? 16 :             \
-        (alg) == PSA_ALG_MD5 ? 16 :             \
-        (alg) == PSA_ALG_RIPEMD160 ? 20 :       \
-        (alg) == PSA_ALG_SHA_1 ? 20 :           \
-        (alg) == PSA_ALG_SHA_224 ? 28 :         \
-        (alg) == PSA_ALG_SHA_256 ? 32 :         \
-        (alg) == PSA_ALG_SHA_384 ? 48 :         \
-        (alg) == PSA_ALG_SHA_512 ? 64 :         \
-        (alg) == PSA_ALG_SHA_512_224 ? 28 :     \
-        (alg) == PSA_ALG_SHA_512_256 ? 32 :     \
-        (alg) == PSA_ALG_SHA3_224 ? 28 :        \
-        (alg) == PSA_ALG_SHA3_256 ? 32 :        \
-        (alg) == PSA_ALG_SHA3_384 ? 48 :        \
-        (alg) == PSA_ALG_SHA3_512 ? 64 :        \
+#define PSA_HASH_SIZE(alg)                                            \
+    (                                                                 \
+        PSA_ALG_RSA_GET_HASH(alg) == PSA_ALG_MD2 ? 16 :               \
+        PSA_ALG_RSA_GET_HASH(alg) == PSA_ALG_MD4 ? 16 :               \
+        PSA_ALG_RSA_GET_HASH(alg) == PSA_ALG_MD5 ? 16 :               \
+        PSA_ALG_RSA_GET_HASH(alg) == PSA_ALG_RIPEMD160 ? 20 :         \
+        PSA_ALG_RSA_GET_HASH(alg) == PSA_ALG_SHA_1 ? 20 :             \
+        PSA_ALG_RSA_GET_HASH(alg) == PSA_ALG_SHA_224 ? 28 :           \
+        PSA_ALG_RSA_GET_HASH(alg) == PSA_ALG_SHA_256 ? 32 :           \
+        PSA_ALG_RSA_GET_HASH(alg) == PSA_ALG_SHA_384 ? 48 :           \
+        PSA_ALG_RSA_GET_HASH(alg) == PSA_ALG_SHA_512 ? 64 :           \
+        PSA_ALG_RSA_GET_HASH(alg) == PSA_ALG_SHA_512_224 ? 28 :       \
+        PSA_ALG_RSA_GET_HASH(alg) == PSA_ALG_SHA_512_256 ? 32 :       \
+        PSA_ALG_RSA_GET_HASH(alg) == PSA_ALG_SHA3_224 ? 28 :          \
+        PSA_ALG_RSA_GET_HASH(alg) == PSA_ALG_SHA3_256 ? 32 :          \
+        PSA_ALG_RSA_GET_HASH(alg) == PSA_ALG_SHA3_384 ? 48 :          \
+        PSA_ALG_RSA_GET_HASH(alg) == PSA_ALG_SHA3_512 ? 64 :          \
         0)
 
 /** Start a multipart hash operation.
@@ -710,7 +955,7 @@ typedef struct psa_hash_operation_s psa_hash_operation_t;
  * - A failed call to psa_hash_update().
  * - A call to psa_hash_finish(), psa_hash_verify() or psa_hash_abort().
  *
- * \param operation
+ * \param operation The operation object to use.
  * \param alg       The hash algorithm to compute (\c PSA_ALG_XXX value
  *                  such that #PSA_ALG_IS_HASH(alg) is true).
  *
@@ -770,7 +1015,7 @@ psa_status_t psa_hash_update(psa_hash_operation_t *operation,
  * \param hash_size     Size of the \c hash buffer in bytes.
  * \param hash_length   On success, the number of bytes
  *                      that make up the hash value. This is always
- *                      #PSA_HASH_FINAL_SIZE(alg) where \c alg is the
+ *                      #PSA_HASH_SIZE(alg) where \c alg is the
  *                      hash algorithm that is calculated.
  *
  * \retval PSA_SUCCESS
@@ -779,7 +1024,7 @@ psa_status_t psa_hash_update(psa_hash_operation_t *operation,
  *         The operation state is not valid (not started, or already completed).
  * \retval PSA_ERROR_BUFFER_TOO_SMALL
  *         The size of the \c hash buffer is too small. You can determine a
- *         sufficient buffer size by calling #PSA_HASH_FINAL_SIZE(alg)
+ *         sufficient buffer size by calling #PSA_HASH_SIZE(alg)
  *         where \c alg is the hash algorithm that is calculated.
  * \retval PSA_ERROR_INSUFFICIENT_MEMORY
  * \retval PSA_ERROR_COMMUNICATION_FAILURE
@@ -875,7 +1120,7 @@ typedef struct psa_mac_operation_s psa_mac_operation_t;
  *         for a MAC algorithm that it recognizes, but does not support.
  */
 #define PSA_MAC_FINAL_SIZE(key_type, key_bits, alg)                     \
-    (PSA_ALG_IS_HMAC(alg) ? PSA_HASH_FINAL_SIZE(PSA_ALG_HMAC_HASH(alg)) : \
+    (PSA_ALG_IS_HMAC(alg) ? PSA_HASH_SIZE(PSA_ALG_HMAC_HASH(alg)) : \
      PSA_ALG_IS_BLOCK_CIPHER_MAC(alg) ? PSA_BLOCK_CIPHER_BLOCK_SIZE(key_type) : \
      0)
 
@@ -903,7 +1148,7 @@ typedef struct psa_mac_operation_s psa_mac_operation_t;
  * - A failed call to psa_mac_update().
  * - A call to psa_mac_finish(), psa_mac_verify() or psa_mac_abort().
  *
- * \param operation
+ * \param operation The operation object to use.
  * \param alg       The MAC algorithm to compute (\c PSA_ALG_XXX value
  *                  such that #PSA_ALG_IS_MAC(alg) is true).
  *
@@ -979,7 +1224,7 @@ typedef struct psa_cipher_operation_s psa_cipher_operation_t;
  *   or psa_cipher_update().
  * - A call to psa_cipher_finish() or psa_cipher_abort().
  *
- * \param operation
+ * \param operation The operation object to use.
  * \param alg       The cipher algorithm to compute (\c PSA_ALG_XXX value
  *                  such that #PSA_ALG_IS_CIPHER(alg) is true).
  *
@@ -1026,7 +1271,7 @@ psa_status_t psa_encrypt_setup(psa_cipher_operation_t *operation,
  * - A failed call to psa_cipher_update().
  * - A call to psa_cipher_finish() or psa_cipher_abort().
  *
- * \param operation
+ * \param operation The operation object to use.
  * \param alg       The cipher algorithm to compute (\c PSA_ALG_XXX value
  *                  such that #PSA_ALG_IS_CIPHER(alg) is true).
  *
@@ -1058,12 +1303,15 @@ psa_status_t psa_encrypt_set_iv(psa_cipher_operation_t *operation,
 
 psa_status_t psa_cipher_update(psa_cipher_operation_t *operation,
                                const uint8_t *input,
-                               size_t input_length);
+                               size_t input_length,
+                               unsigned char *output, 
+                               size_t output_size, 
+                               size_t *output_length);
 
 psa_status_t psa_cipher_finish(psa_cipher_operation_t *operation,
-                               uint8_t *mac,
-                               size_t mac_size,
-                               size_t *mac_length);
+                               uint8_t *output,
+                               size_t output_size,
+                               size_t *output_length);
 
 psa_status_t psa_cipher_abort(psa_cipher_operation_t *operation);
 
@@ -1073,46 +1321,77 @@ psa_status_t psa_cipher_abort(psa_cipher_operation_t *operation);
  * @{
  */
 
-/** The type of the state data structure for multipart AEAD operations.
+/** The tag size for an AEAD algorithm, in bytes.
  *
- * This is an implementation-defined \c struct. Applications should not
- * make any assumptions about the content of this structure except
- * as directed by the documentation of a specific implementation. */
-typedef struct psa_aead_operation_s psa_aead_operation_t;
+ * \param alg                 An AEAD algorithm
+ *                            (\c PSA_ALG_XXX value such that
+ *                            #PSA_ALG_IS_AEAD(alg) is true).
+ *
+ * \return                    The tag size for the specified algorithm.
+ *                            If the AEAD algorithm does not have an identified
+ *                            tag that can be distinguished from the rest of
+ *                            the ciphertext, return 0.
+ *                            If the AEAD algorithm is not recognized, return 0.
+ *                            An implementation may return either 0 or a
+ *                            correct size for an AEAD algorithm that it
+ *                            recognizes, but does not support.
+ */
+#define PSA_AEAD_TAG_SIZE(alg)             \
+    ((alg) == PSA_ALG_GCM ? 16 :           \
+     (alg) == PSA_ALG_CCM ? 16 :           \
+     0)
 
-/** Set the key for a multipart authenticated encryption operation.
+/** The maximum size of the output of psa_aead_encrypt(), in bytes.
  *
- * The sequence of operations to authenticate-and-encrypt a message
- * is as follows:
- * -# Allocate an operation object which will be passed to all the functions
- *    listed here.
- * -# Call psa_aead_encrypt_setup() to specify the algorithm and key.
- *    The key remains associated with the operation even if the content
- *    of the key slot changes.
- * -# Call either psa_aead_generate_iv() or psa_aead_set_iv() to
- *    generate or set the IV (initialization vector). You should use
- *    psa_encrypt_generate_iv() unless the protocol you are implementing
- *    requires a specific IV value.
- * -# Call psa_aead_update_ad() to pass the associated data that is
- *    to be authenticated but not encrypted. You may omit this step if
- *    there is no associated data.
- * -# Call psa_aead_update() zero, one or more times, passing a fragment
- *    of the data to encrypt each time.
- * -# Call psa_aead_finish().
+ * If the size of the ciphertext buffer is at least this large, it is
+ * guaranteed that psa_aead_encrypt() will not fail due to an
+ * insufficient buffer size. Depending on the algorithm, the actual size of
+ * the ciphertext may be smaller.
  *
- * The application may call psa_aead_abort() at any time after the operation
- * has been initialized with psa_aead_encrypt_setup().
+ * \param alg                 An AEAD algorithm
+ *                            (\c PSA_ALG_XXX value such that
+ *                            #PSA_ALG_IS_AEAD(alg) is true).
+ * \param plaintext_length    Size of the plaintext in bytes.
  *
- * After a successful call to psa_aead_encrypt_setup(), the application must
- * eventually terminate the operation. The following events terminate an
- * operation:
- * - A failed call to psa_aead_generate_iv(), psa_aead_set_iv(),
- *   psa_aead_update_ad() or psa_aead_update().
- * - A call to psa_aead_finish() or psa_aead_abort().
+ * \return                    The AEAD ciphertext size for the specified
+ *                            algorithm.
+ *                            If the AEAD algorithm is not recognized, return 0.
+ *                            An implementation may return either 0 or a
+ *                            correct size for an AEAD algorithm that it
+ *                            recognizes, but does not support.
+ */
+#define PSA_AEAD_ENCRYPT_OUTPUT_SIZE(alg, plaintext_length)     \
+    (PSA_AEAD_TAG_SIZE(alg) != 0 ?                              \
+     (plaintext_length) + PSA_AEAD_TAG_SIZE(alg) :              \
+     0)
+
+/** Process an authenticated encryption operation.
  *
- * \param operation
- * \param alg       The AEAD algorithm to compute (\c PSA_ALG_XXX value
- *                  such that #PSA_ALG_IS_AEAD(alg) is true).
+ * \param key                     Slot containing the key to use.
+ * \param alg                     The AEAD algorithm to compute
+ *                                (\c PSA_ALG_XXX value such that
+ *                                #PSA_ALG_IS_AEAD(alg) is true).
+ * \param nonce                   Nonce or IV to use.
+ * \param nonce_length            Size of the \p nonce buffer in bytes.
+ * \param additional_data         Additional data that will be authenticated
+ *                                but not encrypted.
+ * \param additional_data_length  Size of \p additional_data in bytes.
+ * \param plaintext               Data that will be authenticated and
+ *                                encrypted.
+ * \param plaintext_length        Size of \p plaintext in bytes.
+ * \param ciphertext              Output buffer for the authenticated and
+ *                                encrypted data. The additional data is not
+ *                                part of this output. For algorithms where the
+ *                                encrypted data and the authentication tag
+ *                                are defined as separate outputs, the
+ *                                authentication tag is appended to the
+ *                                encrypted data.
+ * \param ciphertext_size         Size of the \p ciphertext buffer in bytes.
+ *                                This must be at least
+ *                                #PSA_AEAD_ENCRYPT_OUTPUT_SIZE(\p alg,
+ *                                \p plaintext_length).
+ * \param ciphertext_length       On success, the size of the output
+ *                                in the \b ciphertext buffer.
  *
  * \retval PSA_SUCCESS
  *         Success.
@@ -1127,44 +1406,73 @@ typedef struct psa_aead_operation_s psa_aead_operation_t;
  * \retval PSA_ERROR_HARDWARE_FAILURE
  * \retval PSA_ERROR_TAMPERING_DETECTED
  */
-psa_status_t psa_aead_encrypt_setup(psa_aead_operation_t *operation,
-                                    psa_key_slot_t key,
-                                    psa_algorithm_t alg);
+psa_status_t psa_aead_encrypt( psa_key_slot_t key,
+                               psa_algorithm_t alg,
+                               const uint8_t *nonce,
+                               size_t nonce_length,
+                               const uint8_t *additional_data,
+                               size_t additional_data_length,
+                               const uint8_t *plaintext,
+                               size_t plaintext_length,
+                               uint8_t *ciphertext,
+                               size_t ciphertext_size,
+                               size_t *ciphertext_length );
 
-/** Set the key for a multipart authenticated decryption operation.
+/** The maximum size of the output of psa_aead_decrypt(), in bytes.
  *
- * The sequence of operations to authenticated and decrypt a message
- * is as follows:
- * -# Allocate an operation object which will be passed to all the functions
- *    listed here.
- * -# Call psa_aead_decrypt_setup() to specify the algorithm and key.
- *    The key remains associated with the operation even if the content
- *    of the key slot changes.
- * -# Call psa_aead_set_iv() to pass the initialization vector (IV)
- *    for the authenticated decryption.
- * -# Call psa_aead_update_ad() to pass the associated data that is
- *    to be authenticated but not encrypted. You may omit this step if
- *    there is no associated data.
- * -# Call psa_aead_update() zero, one or more times, passing a fragment
- *    of the data to decrypt each time.
- * -# Call psa_aead_finish().
+ * If the size of the plaintext buffer is at least this large, it is
+ * guaranteed that psa_aead_decrypt() will not fail due to an
+ * insufficient buffer size. Depending on the algorithm, the actual size of
+ * the plaintext may be smaller.
  *
- * The application may call psa_aead_abort() at any time after the operation
- * has been initialized with psa_aead_decrypt_setup().
+ * \param alg                 An AEAD algorithm
+ *                            (\c PSA_ALG_XXX value such that
+ *                            #PSA_ALG_IS_AEAD(alg) is true).
+ * \param ciphertext_length   Size of the plaintext in bytes.
  *
- * After a successful call to psa_aead_decrypt_setup(), the application must
- * eventually terminate the operation. The following events terminate an
- * operation:
- * - A failed call to psa_aead_update().
- * - A call to psa_aead_finish() or psa_aead_abort().
+ * \return                    The AEAD ciphertext size for the specified
+ *                            algorithm.
+ *                            If the AEAD algorithm is not recognized, return 0.
+ *                            An implementation may return either 0 or a
+ *                            correct size for an AEAD algorithm that it
+ *                            recognizes, but does not support.
+ */
+#define PSA_AEAD_DECRYPT_OUTPUT_SIZE(alg, ciphertext_length)    \
+    (PSA_AEAD_TAG_SIZE(alg) != 0 ?                              \
+     (plaintext_length) - PSA_AEAD_TAG_SIZE(alg) :              \
+     0)
+
+/** Process an authenticated decryption operation.
  *
- * \param operation
- * \param alg       The AEAD algorithm to compute (\c PSA_ALG_XXX value
- *                  such that #PSA_ALG_IS_AEAD(alg) is true).
+ * \param key                     Slot containing the key to use.
+ * \param alg                     The AEAD algorithm to compute
+ *                                (\c PSA_ALG_XXX value such that
+ *                                #PSA_ALG_IS_AEAD(alg) is true).
+ * \param nonce                   Nonce or IV to use.
+ * \param nonce_length            Size of the \p nonce buffer in bytes.
+ * \param additional_data         Additional data that has been authenticated
+ *                                but not encrypted.
+ * \param additional_data_length  Size of \p additional_data in bytes.
+ * \param ciphertext              Data that has been authenticated and
+ *                                encrypted. For algorithms where the
+ *                                encrypted data and the authentication tag
+ *                                are defined as separate inputs, the buffer
+ *                                must contain the encrypted data followed
+ *                                by the authentication tag.
+ * \param ciphertext_length       Size of \p ciphertext in bytes.
+ * \param plaintext               Output buffer for the decrypted data.
+ * \param plaintext_size          Size of the \p plaintext buffer in bytes.
+ *                                This must be at least
+ *                                #PSA_AEAD_DECRYPT_OUTPUT_SIZE(\p alg,
+ *                                \p ciphertext_length).
+ * \param plaintext_length        On success, the size of the output
+ *                                in the \b plaintext buffer.
  *
  * \retval PSA_SUCCESS
  *         Success.
  * \retval PSA_ERROR_EMPTY_SLOT
+ * \retval PSA_ERROR_INVALID_SIGNATURE
+ *         The ciphertext is not authentic.
  * \retval PSA_ERROR_NOT_PERMITTED
  * \retval PSA_ERROR_INVALID_ARGUMENT
  *         \c key is not compatible with \c alg.
@@ -1175,37 +1483,17 @@ psa_status_t psa_aead_encrypt_setup(psa_aead_operation_t *operation,
  * \retval PSA_ERROR_HARDWARE_FAILURE
  * \retval PSA_ERROR_TAMPERING_DETECTED
  */
-psa_status_t psa_aead_decrypt_setup(psa_aead_operation_t *operation,
-                                    psa_key_slot_t key,
-                                    psa_algorithm_t alg);
-
-psa_status_t psa_aead_generate_iv(psa_aead_operation_t *operation,
-                                  unsigned char *iv,
-                                  size_t iv_size,
-                                  size_t *iv_length);
-
-psa_status_t psa_aead_set_iv(psa_aead_operation_t *operation,
-                             const unsigned char *iv,
-                             size_t iv_length);
-
-psa_status_t psa_aead_update_ad(psa_aead_operation_t *operation,
-                                const uint8_t *input,
-                                size_t input_length);
-
-psa_status_t psa_aead_update(psa_aead_operation_t *operation,
-                             const uint8_t *input,
-                             size_t input_length);
-
-psa_status_t psa_aead_finish(psa_aead_operation_t *operation,
-                             uint8_t *tag,
-                             size_t tag_size,
-                             size_t *tag_length);
-
-psa_status_t psa_aead_verify(psa_aead_operation_t *operation,
-                             uint8_t *tag,
-                             size_t tag_length);
-
-psa_status_t psa_aead_abort(psa_aead_operation_t *operation);
+psa_status_t psa_aead_decrypt( psa_key_slot_t key,
+                               psa_algorithm_t alg,
+                               const uint8_t *nonce,
+                               size_t nonce_length,
+                               const uint8_t *additional_data,
+                               size_t additional_data_length,
+                               const uint8_t *ciphertext,
+                               size_t ciphertext_length,
+                               uint8_t *plaintext,
+                               size_t plaintext_size,
+                               size_t *plaintext_length );
 
 /**@}*/
 
