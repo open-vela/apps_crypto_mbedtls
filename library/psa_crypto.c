@@ -1134,6 +1134,7 @@ psa_status_t psa_mac_abort( psa_mac_operation_t *operation )
     return( PSA_SUCCESS );
 }
 
+#if defined(MBEDTLS_CMAC_C)
 static int psa_cmac_start( psa_mac_operation_t *operation,
                            size_t key_bits,
                            key_slot_t *slot,
@@ -1154,6 +1155,7 @@ static int psa_cmac_start( psa_mac_operation_t *operation,
                                       key_bits );
     return( ret );
 }
+#endif /* MBEDTLS_CMAC_C */
 
 static int psa_hmac_start( psa_mac_operation_t *operation,
                            psa_key_type_t key_type,
