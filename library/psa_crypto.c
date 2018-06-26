@@ -409,17 +409,10 @@ static psa_status_t prepare_raw_data_slot( psa_key_type_t type,
     switch( type )
     {
         case PSA_KEY_TYPE_RAW_DATA:
-            if( bits == 0 )
-            {
-                raw->bytes = 0;
-                raw->data = NULL;
-                return( PSA_SUCCESS );
-            }
-            break;
 #if defined(MBEDTLS_MD_C)
         case PSA_KEY_TYPE_HMAC:
-            break;
 #endif
+            break;
 #if defined(MBEDTLS_AES_C)
         case PSA_KEY_TYPE_AES:
             if( bits != 128 && bits != 192 && bits != 256 )
@@ -485,8 +478,7 @@ psa_status_t psa_import_key( psa_key_slot_t key,
                                         &slot->data.raw );
         if( status != PSA_SUCCESS )
             return( status );
-        if( data_length != 0 )
-            memcpy( slot->data.raw.data, data, data_length );
+        memcpy( slot->data.raw.data, data, data_length );
     }
     else
 #if defined(MBEDTLS_PK_PARSE_C)
@@ -514,10 +506,7 @@ psa_status_t psa_import_key( psa_key_slot_t key,
                     mbedtls_rsa_context *rsa = mbedtls_pk_rsa( pk );
                     size_t bits = mbedtls_rsa_get_bitlen( rsa );
                     if( bits > PSA_VENDOR_RSA_MAX_KEY_BITS )
-                    {
-                        status = PSA_ERROR_NOT_SUPPORTED;
-                        break;
-                    }
+                        return( PSA_ERROR_NOT_SUPPORTED );
                     slot->data.rsa = rsa;
                 }
                 else
@@ -690,8 +679,7 @@ static  psa_status_t psa_internal_export_key( psa_key_slot_t key,
     {
         if( slot->data.raw.bytes > data_size )
             return( PSA_ERROR_BUFFER_TOO_SMALL );
-        if( slot->data.raw.bytes != 0 )
-            memcpy( data, slot->data.raw.data, slot->data.raw.bytes );
+        memcpy( data, slot->data.raw.data, slot->data.raw.bytes );
         *data_length = slot->data.raw.bytes;
         return( PSA_SUCCESS );
     }
@@ -722,10 +710,7 @@ static  psa_status_t psa_internal_export_key( psa_key_slot_t key,
                 ret = mbedtls_pk_write_key_der( &pk, data, data_size );
             if( ret < 0 )
             {
-                /* If data_size is 0 then data may be NULL and then the
-                 * call to memset would have undefined behavior. */
-                if( data_size != 0 )
-                    memset( data, 0, data_size );
+                memset( data, 0, data_size );
                 return( mbedtls_to_psa_error( ret ) );
             }
             /* The mbedtls_pk_xxx functions write to the end of the buffer.
@@ -1013,11 +998,8 @@ psa_status_t psa_hash_finish( psa_hash_operation_t *operation,
     /* Fill the output buffer with something that isn't a valid hash
      * (barring an attack on the hash and deliberately-crafted input),
      * in case the caller doesn't check the return status properly. */
-    *hash_length = hash_size;
-    /* If hash_size is 0 then hash may be NULL and then the
-     * call to memset would have undefined behavior. */
-    if( hash_size != 0 )
-        memset( hash, '!', hash_size );
+    *hash_length = actual_hash_length;
+    memset( hash, '!', hash_size );
 
     if( hash_size < actual_hash_length )
         return( PSA_ERROR_BUFFER_TOO_SMALL );
@@ -1068,7 +1050,6 @@ psa_status_t psa_hash_finish( psa_hash_operation_t *operation,
 
     if( ret == 0 )
     {
-        *hash_length = actual_hash_length;
         return( psa_hash_abort( operation ) );
     }
     else
@@ -1518,11 +1499,8 @@ static psa_status_t psa_mac_finish_internal( psa_mac_operation_t *operation,
     /* Fill the output buffer with something that isn't a valid mac
      * (barring an attack on the mac and deliberately-crafted input),
      * in case the caller doesn't check the return status properly. */
-    *mac_length = mac_size;
-    /* If mac_size is 0 then mac may be NULL and then the
-     * call to memset would have undefined behavior. */
-    if( mac_size != 0 )
-        memset( mac, '!', mac_size );
+    *mac_length = operation->mac_size;
+    memset( mac, '!', mac_size );
 
     if( mac_size < operation->mac_size )
         return( PSA_ERROR_BUFFER_TOO_SMALL );
@@ -1584,7 +1562,6 @@ cleanup:
 
     if( ret == 0 && status == PSA_SUCCESS )
     {
-        *mac_length = operation->mac_size;
         return( psa_mac_abort( operation ) );
     }
     else
@@ -1967,10 +1944,8 @@ exit:
     if( status == PSA_SUCCESS )
         memset( signature + *signature_length, '!',
                 signature_size - *signature_length );
-    else if( signature_size != 0 )
+    else
         memset( signature, '!', signature_size );
-    /* If signature_size is 0 then we have nothing to do. We must not call
-     * memset because signature may be NULL in this case. */
     return( status );
 }
 
@@ -2435,9 +2410,7 @@ psa_status_t psa_cipher_finish( psa_cipher_operation_t *operation,
         psa_cipher_abort( operation );
         return( mbedtls_to_psa_error( ret ) );
     }
-    if( *output_length == 0 )
-        /* Nothing to copy. Note that output may be NULL in this case. */ ;
-    else if( output_size >= *output_length )
+    if( output_size >= *output_length )
         memcpy( output, temp_output_buffer, *output_length );
     else
     {
@@ -2711,10 +2684,7 @@ psa_status_t psa_aead_encrypt( psa_key_slot_t key,
 
     if( ret != 0 )
     {
-        /* If ciphertext_size is 0 then ciphertext may be NULL and then the
-         * call to memset would have undefined behavior. */
-        if( ciphertext_size != 0 )
-            memset( ciphertext, 0, ciphertext_size );
+        memset( ciphertext, 0, ciphertext_size );
         return( mbedtls_to_psa_error( ret ) );
     }
 
@@ -2853,12 +2823,7 @@ psa_status_t psa_aead_decrypt( psa_key_slot_t key,
     }
 
     if( ret != 0 )
-    {
-        /* If plaintext_size is 0 then plaintext may be NULL and then the
-         * call to memset has undefined behavior. */
-        if( plaintext_size != 0 )
-            memset( plaintext, 0, plaintext_size );
-    }
+        memset( plaintext, 0, plaintext_size );
     else
         *plaintext_length = ciphertext_length - tag_length;
 
