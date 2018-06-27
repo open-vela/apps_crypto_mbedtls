@@ -610,14 +610,13 @@ typedef uint32_t psa_algorithm_t;
 #define PSA_ALG_CFB_BASE                        ((psa_algorithm_t)0x04000002)
 #define PSA_ALG_OFB_BASE                        ((psa_algorithm_t)0x04000003)
 #define PSA_ALG_XTS_BASE                        ((psa_algorithm_t)0x04000004)
-
-#define PSA_ALG_STREAM_CIPHER_BASE              ((psa_algorithm_t)0x04800000)
+#define PSA_ALG_STREAM_CIPHER                   ((psa_algorithm_t)0x04800000)
 #define PSA_ALG_CTR                             ((psa_algorithm_t)0x04800001)
 #define PSA_ALG_ARC4                            ((psa_algorithm_t)0x04800002)
 
 #define PSA_ALG_IS_STREAM_CIPHER(alg)            \
     (((alg) & (PSA_ALG_CATEGORY_MASK | PSA_ALG_CIPHER_SUBCATEGORY_MASK)) == \
-        PSA_ALG_STREAM_CIPHER_BASE)
+        PSA_ALG_STREAM_CIPHER)
 
 #define PSA_ALG_CCM                             ((psa_algorithm_t)0x06000001)
 #define PSA_ALG_GCM                             ((psa_algorithm_t)0x06000002)
@@ -699,6 +698,12 @@ typedef uint32_t psa_algorithm_t;
  * This is the ECDSA signature scheme defined by ANSI X9.62,
  * with a random per-message secret number (*k*).
  *
+ * The representation of the signature as a byte string consists of
+ * the concatentation of the signature values *r* and *s*. Each of
+ * *r* and *s* is encoded as an *N*-octet string, where *N* is the length
+ * of the base point of the curve in octets. Each value is represented
+ * in big-endian order (most significant octet first).
+ *
  * \param hash_alg      A hash algorithm (\c PSA_ALG_XXX value such that
  *                      #PSA_ALG_IS_HASH(alg) is true).
  *
@@ -710,7 +715,7 @@ typedef uint32_t psa_algorithm_t;
     (PSA_ALG_ECDSA_BASE | ((hash_alg) & PSA_ALG_HASH_MASK))
 /** ECDSA signature without hashing.
  *
- * This is the signature scheme defined by ANSI X9.62,
+ * This is the same signature scheme as #PSA_ALG_ECDSA(), but
  * without specifying a hash algorithm. This algorithm may only be
  * used to sign or verify a sequence of bytes that should be an
  * already-calculated hash. Note that the input is padded with
@@ -722,6 +727,8 @@ typedef uint32_t psa_algorithm_t;
 /** Deterministic ECDSA signature with hashing.
  *
  * This is the deterministic ECDSA signature scheme defined by RFC 6979.
+ *
+ * The representation of a signature is the same as with #PSA_ALG_ECDSA().
  *
  * Note that when this algorithm is used for verification, signatures
  * made with randomized ECDSA (#PSA_ALG_ECDSA(\c hash_alg)) with the
@@ -1326,28 +1333,6 @@ psa_status_t psa_hash_abort(psa_hash_operation_t *operation);
  * as directed by the documentation of a specific implementation. */
 typedef struct psa_mac_operation_s psa_mac_operation_t;
 
-/** The size of the output of psa_mac_finish(), in bytes.
- *
- * This is also the MAC size that psa_mac_verify() expects.
- *
- * \param key_type      The type of the MAC key.
- * \param key_bits      The size of the MAC key in bits.
- * \param alg           A MAC algorithm (\c PSA_ALG_XXX value such that
- *                      #PSA_ALG_IS_MAC(alg) is true).
- *
- * \return              The MAC size for the specified algorithm with
- *                      the specified key parameters.
- * \return              0 if the MAC algorithm is not recognized.
- * \return              Either 0 or the correct size for a MAC algorithm that
- *                      the implementation recognizes, but does not support.
- * \return              Unspecified if the key parameters are not consistent
- *                      with the algorithm.
- */
-#define PSA_MAC_FINAL_SIZE(key_type, key_bits, alg)                     \
-    (PSA_ALG_IS_HMAC(alg) ? PSA_HASH_SIZE(PSA_ALG_HMAC_HASH(alg)) : \
-     PSA_ALG_IS_BLOCK_CIPHER_MAC(alg) ? PSA_BLOCK_CIPHER_BLOCK_SIZE(key_type) : \
-     0)
-
 /** Start a multipart MAC operation.
  *
  * The sequence of operations to calculate a MAC (message authentication code)
@@ -1568,30 +1553,6 @@ psa_status_t psa_cipher_abort(psa_cipher_operation_t *operation);
      (alg) == PSA_ALG_CCM ? 16 :           \
      0)
 
-/** The maximum size of the output of psa_aead_encrypt(), in bytes.
- *
- * If the size of the ciphertext buffer is at least this large, it is
- * guaranteed that psa_aead_encrypt() will not fail due to an
- * insufficient buffer size. Depending on the algorithm, the actual size of
- * the ciphertext may be smaller.
- *
- * \param alg                 An AEAD algorithm
- *                            (\c PSA_ALG_XXX value such that
- *                            #PSA_ALG_IS_AEAD(alg) is true).
- * \param plaintext_length    Size of the plaintext in bytes.
- *
- * \return                    The AEAD ciphertext size for the specified
- *                            algorithm.
- *                            If the AEAD algorithm is not recognized, return 0.
- *                            An implementation may return either 0 or a
- *                            correct size for an AEAD algorithm that it
- *                            recognizes, but does not support.
- */
-#define PSA_AEAD_ENCRYPT_OUTPUT_SIZE(alg, plaintext_length)     \
-    (PSA_AEAD_TAG_SIZE(alg) != 0 ?                              \
-     (plaintext_length) + PSA_AEAD_TAG_SIZE(alg) :              \
-     0)
-
 /** Process an authenticated encryption operation.
  *
  * \param key                     Slot containing the key to use.
@@ -1644,30 +1605,6 @@ psa_status_t psa_aead_encrypt( psa_key_slot_t key,
                                uint8_t *ciphertext,
                                size_t ciphertext_size,
                                size_t *ciphertext_length );
-
-/** The maximum size of the output of psa_aead_decrypt(), in bytes.
- *
- * If the size of the plaintext buffer is at least this large, it is
- * guaranteed that psa_aead_decrypt() will not fail due to an
- * insufficient buffer size. Depending on the algorithm, the actual size of
- * the plaintext may be smaller.
- *
- * \param alg                 An AEAD algorithm
- *                            (\c PSA_ALG_XXX value such that
- *                            #PSA_ALG_IS_AEAD(alg) is true).
- * \param ciphertext_length   Size of the plaintext in bytes.
- *
- * \return                    The AEAD ciphertext size for the specified
- *                            algorithm.
- *                            If the AEAD algorithm is not recognized, return 0.
- *                            An implementation may return either 0 or a
- *                            correct size for an AEAD algorithm that it
- *                            recognizes, but does not support.
- */
-#define PSA_AEAD_DECRYPT_OUTPUT_SIZE(alg, ciphertext_length)    \
-    (PSA_AEAD_TAG_SIZE(alg) != 0 ?                              \
-     (plaintext_length) - PSA_AEAD_TAG_SIZE(alg) :              \
-     0)
 
 /** Process an authenticated decryption operation.
  *
@@ -1729,66 +1666,15 @@ psa_status_t psa_aead_decrypt( psa_key_slot_t key,
  */
 
 /**
- * \brief Maximum ECDSA signature size for a given curve bit size
+ * \brief ECDSA signature size for a given curve bit size
  *
- * \param curve_bits    Curve size in bits
- * \return              Maximum signature size in bytes
+ * \param curve_bits    Curve size in bits.
+ * \return              Signature size in bytes.
  *
  * \note This macro returns a compile-time constant if its argument is one.
- *
- * \warning This macro may evaluate its argument multiple times.
  */
-/*
- * RFC 4492 page 20:
- *
- *     Ecdsa-Sig-Value ::= SEQUENCE {
- *         r       INTEGER,
- *         s       INTEGER
- *     }
- *
- * Size is at most
- *    1 (tag) + 1 (len) + 1 (initial 0) + curve_bytes for each of r and s,
- *    twice that + 1 (tag) + 2 (len) for the sequence
- * (assuming curve_bytes is less than 126 for r and s,
- * and less than 124 (total len <= 255) for the sequence)
- */
-#define PSA_ECDSA_SIGNATURE_SIZE(curve_bits)                          \
-    ( /*T,L of SEQUENCE*/ ((curve_bits) >= 61 * 8 ? 3 : 2) +          \
-      /*T,L of r,s*/       2 * (((curve_bits) >= 127 * 8 ? 3 : 2) +   \
-      /*V of r,s*/               ((curve_bits) + 8) / 8))
-
-
-/** Safe signature buffer size for psa_asymmetric_sign().
- *
- * This macro returns a safe buffer size for a signature using a key
- * of the specified type and size, with the specified algorithm.
- * Note that the actual size of the signature may be smaller
- * (some algorithms produce a variable-size signature).
- *
- * \warning This function may call its arguments multiple times or
- *          zero times, so you should not pass arguments that contain
- *          side effects.
- *
- * \param key_type  An asymmetric key type (this may indifferently be a
- *                  key pair type or a public key type).
- * \param key_bits  The size of the key in bits.
- * \param alg       The signature algorithm.
- *
- * \return If the parameters are valid and supported, return
- *         a buffer size in bytes that guarantees that
- *         psa_asymmetric_sign() will not fail with
- *         #PSA_ERROR_BUFFER_TOO_SMALL.
- *         If the parameters are a valid combination that is not supported
- *         by the implementation, this macro either shall return either a
- *         sensible size or 0.
- *         If the parameters are not valid, the
- *         return value is unspecified.
- *
- */
-#define PSA_ASYMMETRIC_SIGN_OUTPUT_SIZE(key_type, key_bits, alg)        \
-    (PSA_KEY_TYPE_IS_RSA(key_type) ? ((void)alg, PSA_BITS_TO_BYTES(key_bits)) : \
-     PSA_KEY_TYPE_IS_ECC(key_type) ? PSA_ECDSA_SIGNATURE_SIZE(key_bits) : \
-     ((void)alg, 0))
+#define PSA_ECDSA_SIGNATURE_SIZE(curve_bits)    \
+    (PSA_BITS_TO_BYTES(curve_bits) * 2)
 
 /**
  * \brief Sign a hash or short message with a private key.
@@ -1892,18 +1778,10 @@ psa_status_t psa_asymmetric_verify(psa_key_slot_t key,
                                    const uint8_t *signature,
                                    size_t signature_length);
 
-#define PSA_ASYMMETRIC_ENCRYPT_OUTPUT_SIZE(key_type, key_bits, alg)     \
-    (PSA_KEY_TYPE_IS_RSA(key_type) ?                                    \
-     ((void)alg, PSA_BITS_TO_BYTES(key_bits)) :                         \
-     0)
 #define PSA_RSA_MINIMUM_PADDING_SIZE(alg)                               \
     (PSA_ALG_IS_RSA_OAEP_MGF1(alg) ?                                    \
      2 * PSA_HASH_FINAL_SIZE(PSA_ALG_RSA_GET_HASH(alg)) + 1 :           \
      11 /*PKCS#1v1.5*/)
-#define PSA_ASYMMETRIC_DECRYPT_OUTPUT_SIZE(key_type, key_bits, alg)     \
-    (PSA_KEY_TYPE_IS_RSA(key_type) ?                                    \
-     PSA_BITS_TO_BYTES(key_bits) - PSA_RSA_MINIMUM_PADDING_SIZE(alg) :  \
-     0)
 
 /**
  * \brief Encrypt a short message with a public key.
@@ -2081,6 +1959,10 @@ psa_status_t psa_generate_key(psa_key_slot_t key,
 #ifdef __cplusplus
 }
 #endif
+
+/* The file "crypto_sizes.h" contains definitions for size calculation
+ * macros whose definitions are implementation-specific. */
+#include "crypto_sizes.h"
 
 /* The file "crypto_struct.h" contains definitions for
  * implementation-specific structs that are declared above. */
