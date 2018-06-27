@@ -1253,7 +1253,7 @@ psa_status_t psa_mac_abort( psa_mac_operation_t *operation )
 #if defined(MBEDTLS_MD_C)
             if( PSA_ALG_IS_HMAC( operation->alg ) )
             {
-                size_t block_size =
+                unsigned int block_size =
                     psa_get_hash_block_size( PSA_ALG_HMAC_HASH( operation->alg ) );
 
                 if( block_size == 0 )
@@ -2513,7 +2513,7 @@ psa_status_t psa_get_key_lifetime( psa_key_slot_t key,
 }
 
 psa_status_t psa_set_key_lifetime( psa_key_slot_t key,
-                                   psa_key_lifetime_t lifetime )
+                                   const psa_key_lifetime_t lifetime )
 {
     key_slot_t *slot;
 
@@ -2941,7 +2941,7 @@ psa_status_t psa_generate_key( psa_key_slot_t key,
 
 void mbedtls_psa_crypto_free( void )
 {
-    psa_key_slot_t key;
+    size_t key;
     for( key = 1; key < PSA_KEY_SLOT_COUNT; key++ )
         psa_destroy_key( key );
     mbedtls_ctr_drbg_free( &global_data.ctr_drbg );
