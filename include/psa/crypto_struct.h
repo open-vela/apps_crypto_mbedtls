@@ -2,16 +2,6 @@
  * \file psa/crypto_struct.h
  *
  * \brief PSA cryptography module: Mbed TLS structured type implementations
- *
- * \note This file may not be included directly. Applications must
- * include psa/crypto.h.
- *
- * This file contains the definitions of some data structures with
- * implementation-specific definitions.
- *
- * In implementations with isolation between the application and the
- * cryptography module, it is expected that the front-end and the back-end
- * would have different versions of this file.
  */
 /*
  *  Copyright (C) 2018, ARM Limited, All Rights Reserved
@@ -102,7 +92,8 @@ struct psa_mac_operation_s
     int iv_required : 1;
     int iv_set : 1;
     int has_input : 1;
-    int is_sign : 1;
+    int key_usage_sign : 1;
+    int key_usage_verify : 1;
     uint8_t mac_size;
     union
     {
