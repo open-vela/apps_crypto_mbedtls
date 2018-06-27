@@ -502,13 +502,7 @@ psa_status_t psa_import_key( psa_key_slot_t key,
             case MBEDTLS_PK_RSA:
                 if( type == PSA_KEY_TYPE_RSA_PUBLIC_KEY ||
                     type == PSA_KEY_TYPE_RSA_KEYPAIR )
-                {
-                    mbedtls_rsa_context *rsa = mbedtls_pk_rsa( pk );
-                    size_t bits = mbedtls_rsa_get_bitlen( rsa );
-                    if( bits > PSA_VENDOR_RSA_MAX_KEY_BITS )
-                        return( PSA_ERROR_NOT_SUPPORTED );
-                    slot->data.rsa = rsa;
-                }
+                    slot->data.rsa = mbedtls_pk_rsa( pk );
                 else
                     status = PSA_ERROR_INVALID_ARGUMENT;
                 break;
@@ -1585,6 +1579,10 @@ psa_status_t psa_mac_finish( psa_mac_operation_t *operation,
                                      mac_size, mac_length ) );
 }
 
+#define PSA_MAC_MAX_SIZE                                \
+    ( MBEDTLS_MD_MAX_SIZE > MBEDTLS_MAX_BLOCK_LENGTH ?  \
+      MBEDTLS_MD_MAX_SIZE :                             \
+      MBEDTLS_MAX_BLOCK_LENGTH )
 psa_status_t psa_mac_verify( psa_mac_operation_t *operation,
                              const uint8_t *mac,
                              size_t mac_length )
@@ -1768,6 +1766,7 @@ static psa_status_t psa_ecdsa_sign( mbedtls_ecp_keypair *ecp,
     mbedtls_mpi_init( &r );
     mbedtls_mpi_init( &s );
 
+    *signature_length = 0;
     if( signature_size < 2 * curve_bytes )
     {
         ret = MBEDTLS_ERR_ECP_BUFFER_TOO_SMALL;
@@ -1803,6 +1802,8 @@ cleanup:
     mbedtls_mpi_free( &s );
     if( ret == 0 )
         *signature_length = 2 * curve_bytes;
+    memset( signature + *signature_length, 0,
+            signature_size - *signature_length );
     return( mbedtls_to_psa_error( ret ) );
 }
 
@@ -1849,43 +1850,28 @@ psa_status_t psa_asymmetric_sign( psa_key_slot_t key,
                                   size_t *signature_length )
 {
     key_slot_t *slot;
-    psa_status_t status;
-
-    *signature_length = signature_size;
-
+    *signature_length = 0;
     (void) salt;
     (void) salt_length;
 
     if( key == 0 || key > PSA_KEY_SLOT_COUNT )
-    {
-        status = PSA_ERROR_EMPTY_SLOT;
-        goto exit;
-    }
+        return( PSA_ERROR_EMPTY_SLOT );
     slot = &global_data.key_slots[key];
     if( slot->type == PSA_KEY_TYPE_NONE )
-    {
-        status = PSA_ERROR_EMPTY_SLOT;
-        goto exit;
-    }
+        return( PSA_ERROR_EMPTY_SLOT );
     if( ! PSA_KEY_TYPE_IS_KEYPAIR( slot->type ) )
-    {
-        status = PSA_ERROR_INVALID_ARGUMENT;
-        goto exit;
-    }
+        return( PSA_ERROR_INVALID_ARGUMENT );
     if( ! ( slot->policy.usage & PSA_KEY_USAGE_SIGN ) )
-    {
-        status = PSA_ERROR_NOT_PERMITTED;
-        goto exit;
-    }
+        return( PSA_ERROR_NOT_PERMITTED );
 
 #if defined(MBEDTLS_RSA_C)
     if( slot->type == PSA_KEY_TYPE_RSA_KEYPAIR )
     {
-        status = psa_rsa_sign( slot->data.rsa,
-                               alg,
-                               hash, hash_length,
-                               signature, signature_size,
-                               signature_length );
+        return( psa_rsa_sign( slot->data.rsa,
+                              alg,
+                              hash, hash_length,
+                              signature, signature_size,
+                              signature_length ) );
     }
     else
 #endif /* defined(MBEDTLS_RSA_C) */
@@ -1894,34 +1880,22 @@ psa_status_t psa_asymmetric_sign( psa_key_slot_t key,
     {
 #if defined(MBEDTLS_ECDSA_C)
         if( PSA_ALG_IS_ECDSA( alg ) )
-            status = psa_ecdsa_sign( slot->data.ecp,
-                                     alg,
-                                     hash, hash_length,
-                                     signature, signature_size,
-                                     signature_length );
+            return( psa_ecdsa_sign( slot->data.ecp,
+                                    alg,
+                                    hash, hash_length,
+                                    signature, signature_size,
+                                    signature_length ) );
         else
 #endif /* defined(MBEDTLS_ECDSA_C) */
         {
-            status = PSA_ERROR_INVALID_ARGUMENT;
+            return( PSA_ERROR_INVALID_ARGUMENT );
         }
     }
     else
 #endif /* defined(MBEDTLS_ECP_C) */
     {
-        status = PSA_ERROR_NOT_SUPPORTED;
+        return( PSA_ERROR_NOT_SUPPORTED );
     }
-
-exit:
-    /* Fill the unused part of the output buffer (the whole buffer on error,
-     * the trailing part on success) with something that isn't a valid mac
-     * (barring an attack on the mac and deliberately-crafted input),
-     * in case the caller doesn't check the return status properly. */
-    if( status == PSA_SUCCESS )
-        memset( signature + *signature_length, '!',
-                signature_size - *signature_length );
-    else
-        memset( signature, '!', signature_size );
-    return( status );
 }
 
 psa_status_t psa_asymmetric_verify( psa_key_slot_t key,
@@ -2864,8 +2838,6 @@ psa_status_t psa_generate_key( psa_key_slot_t key,
         mbedtls_rsa_context *rsa;
         int ret;
         int exponent = 65537;
-        if( bits > PSA_VENDOR_RSA_MAX_KEY_BITS )
-            return( PSA_ERROR_NOT_SUPPORTED );
         if( parameters != NULL )
         {
             const unsigned *p = parameters;
