@@ -574,12 +574,11 @@ typedef uint32_t psa_algorithm_t;
  *
  * For example, `PSA_ALG_HMAC(PSA_ALG_SHA256)` is HMAC-SHA-256.
  *
- * \param hash_alg      A hash algorithm (\c PSA_ALG_XXX value such that
- *                      #PSA_ALG_IS_HASH(alg) is true).
+ * \param alg   A hash algorithm (\c PSA_ALG_XXX value such that
+ *              #PSA_ALG_IS_HASH(alg) is true).
  *
- * \return              The corresponding HMAC algorithm.
- * \return              Unspecified if \p alg is not a supported
- *                      hash algorithm.
+ * \return      The corresponding HMAC algorithm.
+ * \return      Unspecified if \p alg is not a hash algorithm.
  */
 #define PSA_ALG_HMAC(hash_alg)                                  \
     (PSA_ALG_HMAC_BASE | ((hash_alg) & PSA_ALG_HASH_MASK))
