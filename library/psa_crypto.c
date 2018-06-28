@@ -487,6 +487,7 @@ psa_status_t psa_import_key( psa_key_slot_t key,
     {
         int ret;
         mbedtls_pk_context pk;
+        psa_status_t status = PSA_SUCCESS;
         mbedtls_pk_init( &pk );
         if( PSA_KEY_TYPE_IS_KEYPAIR( type ) )
             ret = mbedtls_pk_parse_key( &pk, data, data_length, NULL, 0 );
@@ -502,7 +503,7 @@ psa_status_t psa_import_key( psa_key_slot_t key,
                     type == PSA_KEY_TYPE_RSA_KEYPAIR )
                     slot->data.rsa = mbedtls_pk_rsa( pk );
                 else
-                    return( PSA_ERROR_INVALID_ARGUMENT );
+                    status = PSA_ERROR_INVALID_ARGUMENT;
                 break;
 #endif /* MBEDTLS_RSA_C */
 #if defined(MBEDTLS_ECP_C)
@@ -515,15 +516,26 @@ psa_status_t psa_import_key( psa_key_slot_t key,
                     psa_ecc_curve_t expected_curve =
                         PSA_KEY_TYPE_GET_CURVE( type );
                     if( actual_curve != expected_curve )
-                        return( PSA_ERROR_INVALID_ARGUMENT );
+                    {
+                        status = PSA_ERROR_INVALID_ARGUMENT;
+                        break;
+                    }
                     slot->data.ecp = ecp;
                 }
                 else
-                    return( PSA_ERROR_INVALID_ARGUMENT );
+                    status = PSA_ERROR_INVALID_ARGUMENT;
                 break;
 #endif /* MBEDTLS_ECP_C */
             default:
-                return( PSA_ERROR_INVALID_ARGUMENT );
+                status = PSA_ERROR_INVALID_ARGUMENT;
+                break;
+        }
+        /* Free the content of the pk object only on error. On success,
+         * the content of the object has been stored in the slot. */
+        if( status != PSA_SUCCESS )
+        {
+            mbedtls_pk_free( &pk );
+            return( status );
         }
     }
     else
@@ -635,6 +647,12 @@ static  psa_status_t psa_internal_export_key( psa_key_slot_t key,
                                               int export_public_key )
 {
     key_slot_t *slot;
+
+    /* Set the key to empty now, so that even when there are errors, we always
+     * set data_length to a value between 0 and data_size. On error, setting
+     * the key to empty is a good choice because an empty key representation is
+     * unlikely to be accepted anywhere. */
+    *data_length = 0;
 
     if( key == 0 || key > PSA_KEY_SLOT_COUNT )
         return( PSA_ERROR_EMPTY_SLOT );
@@ -1599,7 +1617,7 @@ static psa_status_t psa_rsa_decode_md_type( psa_algorithm_t alg,
                                             size_t hash_length,
                                             mbedtls_md_type_t *md_alg )
 {
-    psa_algorithm_t hash_alg = PSA_ALG_SIGN_GET_HASH( alg );
+    psa_algorithm_t hash_alg = PSA_ALG_RSA_GET_HASH( alg );
     const mbedtls_md_info_t *md_info = mbedtls_md_info_from_psa( hash_alg );
     *md_alg = hash_alg == 0 ? MBEDTLS_MD_NONE : mbedtls_md_get_type( md_info );
     if( *md_alg == MBEDTLS_MD_NONE )
