@@ -1163,8 +1163,7 @@ static const mbedtls_cipher_info_t *mbedtls_cipher_info_from_psa(
     if( cipher_id != NULL )
         *cipher_id = cipher_id_tmp;
 
-    return( mbedtls_cipher_info_from_values( cipher_id_tmp,
-                                             (int) key_bits, mode ) );
+    return( mbedtls_cipher_info_from_values( cipher_id_tmp, key_bits, mode ) );
 }
 
 static size_t psa_get_hash_block_size( psa_algorithm_t alg )
@@ -1254,7 +1253,7 @@ psa_status_t psa_mac_abort( psa_mac_operation_t *operation )
 #if defined(MBEDTLS_MD_C)
             if( PSA_ALG_IS_HMAC( operation->alg ) )
             {
-                size_t block_size =
+                unsigned int block_size =
                     psa_get_hash_block_size( PSA_ALG_HMAC_HASH( operation->alg ) );
 
                 if( block_size == 0 )
@@ -1661,15 +1660,6 @@ static psa_status_t psa_rsa_sign( mbedtls_rsa_context *rsa,
     if( signature_size < rsa->len )
         return( PSA_ERROR_BUFFER_TOO_SMALL );
 
-    /* The Mbed TLS RSA module uses an unsigned int for hash_length. See if
-     * hash_length will fit and return an error if it doesn't. */
-#if defined(MBEDTLS_PKCS1_V15) || defined(MBEDTLS_PKCS1_V21)
-#if SIZE_MAX > UINT_MAX
-    if( hash_length > UINT_MAX )
-        return( PSA_ERROR_NOT_SUPPORTED );
-#endif
-#endif
-
 #if defined(MBEDTLS_PKCS1_V15)
     if( PSA_ALG_IS_RSA_PKCS1V15_SIGN( alg ) )
     {
@@ -1679,9 +1669,7 @@ static psa_status_t psa_rsa_sign( mbedtls_rsa_context *rsa,
                                       mbedtls_ctr_drbg_random,
                                       &global_data.ctr_drbg,
                                       MBEDTLS_RSA_PRIVATE,
-                                      md_alg,
-                                      (unsigned int) hash_length,
-                                      hash,
+                                      md_alg, hash_length, hash,
                                       signature );
     }
     else
@@ -1694,9 +1682,7 @@ static psa_status_t psa_rsa_sign( mbedtls_rsa_context *rsa,
                                            mbedtls_ctr_drbg_random,
                                            &global_data.ctr_drbg,
                                            MBEDTLS_RSA_PRIVATE,
-                                           md_alg,
-                                           (unsigned int) hash_length,
-                                           hash,
+                                           md_alg, hash_length, hash,
                                            signature );
     }
     else
@@ -1728,15 +1714,6 @@ static psa_status_t psa_rsa_verify( mbedtls_rsa_context *rsa,
     if( signature_length < rsa->len )
         return( PSA_ERROR_BUFFER_TOO_SMALL );
 
-#if defined(MBEDTLS_PKCS1_V15) || defined(MBEDTLS_PKCS1_V21)
-#if SIZE_MAX > UINT_MAX
-    /* The Mbed TLS RSA module uses an unsigned int for hash_length. See if
-     * hash_length will fit and return an error if it doesn't. */
-    if( hash_length > UINT_MAX )
-        return( PSA_ERROR_NOT_SUPPORTED );
-#endif
-#endif
-
 #if defined(MBEDTLS_PKCS1_V15)
     if( PSA_ALG_IS_RSA_PKCS1V15_SIGN( alg ) )
     {
@@ -1747,7 +1724,7 @@ static psa_status_t psa_rsa_verify( mbedtls_rsa_context *rsa,
                                         &global_data.ctr_drbg,
                                         MBEDTLS_RSA_PUBLIC,
                                         md_alg,
-                                        (unsigned int) hash_length,
+                                        hash_length,
                                         hash,
                                         signature );
     }
@@ -1761,9 +1738,7 @@ static psa_status_t psa_rsa_verify( mbedtls_rsa_context *rsa,
                                              mbedtls_ctr_drbg_random,
                                              &global_data.ctr_drbg,
                                              MBEDTLS_RSA_PUBLIC,
-                                             md_alg,
-                                             (unsigned int) hash_length,
-                                             hash,
+                                             md_alg, hash_length, hash,
                                              signature );
     }
     else
@@ -2213,7 +2188,7 @@ static psa_status_t psa_cipher_setup( psa_cipher_operation_t *operation,
     {
         ret = mbedtls_cipher_setkey( &operation->ctx.cipher,
                                      slot->data.raw.data,
-                                     (int) key_bits, cipher_operation );
+                                     key_bits, cipher_operation );
     }
     if( ret != 0 )
     {
@@ -2538,7 +2513,7 @@ psa_status_t psa_get_key_lifetime( psa_key_slot_t key,
 }
 
 psa_status_t psa_set_key_lifetime( psa_key_slot_t key,
-                                   psa_key_lifetime_t lifetime )
+                                   const psa_key_lifetime_t lifetime )
 {
     key_slot_t *slot;
 
@@ -2629,7 +2604,7 @@ psa_status_t psa_aead_encrypt( psa_key_slot_t key,
         mbedtls_gcm_init( &gcm );
         ret = mbedtls_gcm_setkey( &gcm, cipher_id,
                                   slot->data.raw.data,
-                                  (unsigned int) key_bits );
+                                  key_bits );
         if( ret != 0 )
         {
             mbedtls_gcm_free( &gcm );
@@ -2662,8 +2637,7 @@ psa_status_t psa_aead_encrypt( psa_key_slot_t key,
 
         mbedtls_ccm_init( &ccm );
         ret = mbedtls_ccm_setkey( &ccm, cipher_id,
-                                  slot->data.raw.data,
-                                  (unsigned int) key_bits );
+                                  slot->data.raw.data, key_bits );
         if( ret != 0 )
         {
             mbedtls_ccm_free( &ccm );
@@ -2769,8 +2743,7 @@ psa_status_t psa_aead_decrypt( psa_key_slot_t key,
 
         mbedtls_gcm_init( &gcm );
         ret = mbedtls_gcm_setkey( &gcm, cipher_id,
-                                  slot->data.raw.data,
-                                  (unsigned int) key_bits );
+                                  slot->data.raw.data, key_bits );
         if( ret != 0 )
         {
             mbedtls_gcm_free( &gcm );
@@ -2802,8 +2775,7 @@ psa_status_t psa_aead_decrypt( psa_key_slot_t key,
 
         mbedtls_ccm_init( &ccm );
         ret = mbedtls_ccm_setkey( &ccm, cipher_id,
-                                  slot->data.raw.data,
-                                  (unsigned int) key_bits );
+                                  slot->data.raw.data, key_bits );
         if( ret != 0 )
         {
             mbedtls_ccm_free( &ccm );
@@ -2910,7 +2882,7 @@ psa_status_t psa_generate_key( psa_key_slot_t key,
         ret = mbedtls_rsa_gen_key( rsa,
                                    mbedtls_ctr_drbg_random,
                                    &global_data.ctr_drbg,
-                                   (unsigned int) bits,
+                                   bits,
                                    exponent );
         if( ret != 0 )
         {
@@ -2969,7 +2941,7 @@ psa_status_t psa_generate_key( psa_key_slot_t key,
 
 void mbedtls_psa_crypto_free( void )
 {
-    psa_key_slot_t key;
+    size_t key;
     for( key = 1; key < PSA_KEY_SLOT_COUNT; key++ )
         psa_destroy_key( key );
     mbedtls_ctr_drbg_free( &global_data.ctr_drbg );
