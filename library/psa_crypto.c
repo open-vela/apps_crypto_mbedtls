@@ -1655,7 +1655,7 @@ static psa_status_t psa_rsa_sign( mbedtls_rsa_context *rsa,
     if( status != PSA_SUCCESS )
         return( status );
 
-    if( signature_size < rsa->len )
+    if( signature_size < mbedtls_rsa_get_len( rsa ) )
         return( PSA_ERROR_BUFFER_TOO_SMALL );
 
 #if defined(MBEDTLS_PKCS1_V15)
@@ -1690,7 +1690,7 @@ static psa_status_t psa_rsa_sign( mbedtls_rsa_context *rsa,
     }
 
     if( ret == 0 )
-        *signature_length = rsa->len;
+        *signature_length = mbedtls_rsa_get_len( rsa );
     return( mbedtls_to_psa_error( ret ) );
 }
 
@@ -1709,7 +1709,7 @@ static psa_status_t psa_rsa_verify( mbedtls_rsa_context *rsa,
     if( status != PSA_SUCCESS )
         return( status );
 
-    if( signature_length < rsa->len )
+    if( signature_length < mbedtls_rsa_get_len( rsa ) )
         return( PSA_ERROR_BUFFER_TOO_SMALL );
 
 #if defined(MBEDTLS_PKCS1_V15)
@@ -2007,7 +2007,7 @@ psa_status_t psa_asymmetric_encrypt( psa_key_slot_t key,
     {
         mbedtls_rsa_context *rsa = slot->data.rsa;
         int ret;
-        if( output_size < rsa->len )
+        if( output_size < mbedtls_rsa_get_len( rsa ) )
             return( PSA_ERROR_INVALID_ARGUMENT );
 #if defined(MBEDTLS_PKCS1_V15)
         if( alg == PSA_ALG_RSA_PKCS1V15_CRYPT )
@@ -2033,7 +2033,7 @@ psa_status_t psa_asymmetric_encrypt( psa_key_slot_t key,
             return( PSA_ERROR_INVALID_ARGUMENT );
         }
         if( ret == 0 )
-            *output_length = rsa->len;
+            *output_length = mbedtls_rsa_get_len( rsa );
         return( mbedtls_to_psa_error( ret ) );
     }
     else
@@ -2074,7 +2074,7 @@ psa_status_t psa_asymmetric_decrypt( psa_key_slot_t key,
         mbedtls_rsa_context *rsa = slot->data.rsa;
         int ret;
 
-        if( input_length != rsa->len )
+        if( input_length != mbedtls_rsa_get_len( rsa ) )
             return( PSA_ERROR_INVALID_ARGUMENT );
 
 #if defined(MBEDTLS_PKCS1_V15)
