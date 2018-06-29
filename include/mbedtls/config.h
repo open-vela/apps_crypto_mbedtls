@@ -217,7 +217,6 @@
 //#define MBEDTLS_PLATFORM_FPRINTF_ALT
 //#define MBEDTLS_PLATFORM_PRINTF_ALT
 //#define MBEDTLS_PLATFORM_SNPRINTF_ALT
-//#define MBEDTLS_PLATFORM_VSNPRINTF_ALT
 //#define MBEDTLS_PLATFORM_NV_SEED_ALT
 //#define MBEDTLS_PLATFORM_SETUP_TEARDOWN_ALT
 
@@ -309,6 +308,7 @@
 //#define MBEDTLS_DHM_ALT
 //#define MBEDTLS_ECJPAKE_ALT
 //#define MBEDTLS_GCM_ALT
+//#define MBEDTLS_NIST_KW_ALT
 //#define MBEDTLS_MD2_ALT
 //#define MBEDTLS_MD4_ALT
 //#define MBEDTLS_MD5_ALT
@@ -2250,6 +2250,19 @@
 #define MBEDTLS_HMAC_DRBG_C
 
 /**
+ * \def MBEDTLS_NIST_KW_C
+ *
+ * Enable the Key Wrapping mode for 128-bit block ciphers,
+ * as defined in NIST SP 800-38F. Only KW and KWP modes
+ * are supported. At the moment, only AES is approved by NIST.
+ *
+ * Module:  library/nist_kw.c
+ *
+ * Requires: MBEDTLS_AES_C and MBEDTLS_CIPHER_C
+ */
+//#define MBEDTLS_NIST_KW_C
+
+/**
  * \def MBEDTLS_MD_C
  *
  * Enable the generic message digest layer.
@@ -2944,7 +2957,6 @@
 //#define MBEDTLS_PLATFORM_PRINTF_MACRO        printf /**< Default printf macro to use, can be undefined */
 /* Note: your snprintf must correclty zero-terminate the buffer! */
 //#define MBEDTLS_PLATFORM_SNPRINTF_MACRO    snprintf /**< Default snprintf macro to use, can be undefined */
-//#define MBEDTLS_PLATFORM_VSNPRINTF_MACRO    vsnprintf /**< Default vsnprintf macro to use, can be undefined */
 //#define MBEDTLS_PLATFORM_NV_SEED_READ_MACRO   mbedtls_platform_std_nv_seed_read /**< Default nv_seed_read function to use, can be undefined */
 //#define MBEDTLS_PLATFORM_NV_SEED_WRITE_MACRO  mbedtls_platform_std_nv_seed_write /**< Default nv_seed_write function to use, can be undefined */
 
@@ -2953,7 +2965,51 @@
 //#define MBEDTLS_SSL_CACHE_DEFAULT_MAX_ENTRIES      50 /**< Maximum entries in cache */
 
 /* SSL options */
-//#define MBEDTLS_SSL_MAX_CONTENT_LEN             16384 /**< Maxium fragment length in bytes, determines the size of each of the two internal I/O buffers */
+
+/** \def MBEDTLS_SSL_MAX_CONTENT_LEN
+ *
+ * Maximum fragment length in bytes.
+ *
+ * Determines the size of both the incoming and outgoing TLS I/O buffers.
+ *
+ * Uncommenting MBEDTLS_SSL_IN_CONTENT_LEN and/or MBEDTLS_SSL_OUT_CONTENT_LEN
+ * will override this length by setting maximum incoming and/or outgoing
+ * fragment length, respectively.
+ */
+//#define MBEDTLS_SSL_MAX_CONTENT_LEN             16384
+
+/** \def MBEDTLS_SSL_IN_CONTENT_LEN
+ *
+ * Maximum incoming fragment length in bytes.
+ *
+ * Uncomment to set the size of the inward TLS buffer independently of the
+ * outward buffer.
+ */
+//#define MBEDTLS_SSL_IN_CONTENT_LEN              16384
+
+/** \def MBEDTLS_SSL_OUT_CONTENT_LEN
+ *
+ * Maximum outgoing fragment length in bytes.
+ *
+ * Uncomment to set the size of the outward TLS buffer independently of the
+ * inward buffer.
+ *
+ * It is possible to save RAM by setting a smaller outward buffer, while keeping
+ * the default inward 16384 byte buffer to conform to the TLS specification.
+ *
+ * The minimum required outward buffer size is determined by the handshake
+ * protocol's usage. Handshaking will fail if the outward buffer is too small.
+ * The specific size requirement depends on the configured ciphers and any
+ * certificate data which is sent during the handshake.
+ *
+ * For absolute minimum RAM usage, it's best to enable
+ * MBEDTLS_SSL_MAX_FRAGMENT_LENGTH and reduce MBEDTLS_SSL_MAX_CONTENT_LEN. This
+ * reduces both incoming and outgoing buffer sizes. However this is only
+ * guaranteed if the other end of the connection also supports the TLS
+ * max_fragment_len extension. Otherwise the connection may fail.
+ */
+//#define MBEDTLS_SSL_OUT_CONTENT_LEN             16384
+
 //#define MBEDTLS_SSL_DEFAULT_TICKET_LIFETIME     86400 /**< Lifetime of session tickets (if enabled) */
 //#define MBEDTLS_PSK_MAX_LEN               32 /**< Max size of TLS pre-shared keys, in bytes (default 256 bits) */
 //#define MBEDTLS_SSL_COOKIE_TIMEOUT        60 /**< Default expiration delay of DTLS cookies, in seconds if HAVE_TIME, or in number of cookies issued */
@@ -3030,7 +3086,7 @@
 /* \} name SECTION: Customisation configuration options */
 
 /* Target and application specific configurations */
-//#define YOTTA_CFG_MBEDTLS_TARGET_CONFIG_FILE "mbedtls/target_config.h"
+//#define YOTTA_CFG_MBEDTLS_TARGET_CONFIG_FILE "target_config.h"
 
 #if defined(TARGET_LIKE_MBED) && defined(YOTTA_CFG_MBEDTLS_TARGET_CONFIG_FILE)
 #include YOTTA_CFG_MBEDTLS_TARGET_CONFIG_FILE

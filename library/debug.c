@@ -35,7 +35,6 @@
 #define mbedtls_free        free
 #define mbedtls_time_t      time_t
 #define mbedtls_snprintf    snprintf
-#define mbedtls_vsnprintf   vsnprintf
 #endif
 
 #include "mbedtls/debug.h"
@@ -96,7 +95,20 @@ void mbedtls_debug_print_msg( const mbedtls_ssl_context *ssl, int level,
     }
 
     va_start( argp, format );
-    ret = mbedtls_vsnprintf( str, DEBUG_BUF_SIZE, format, argp );
+#if defined(_WIN32)
+#if defined(_TRUNCATE) && !defined(__MINGW32__)
+    ret = _vsnprintf_s( str, DEBUG_BUF_SIZE, _TRUNCATE, format, argp );
+#else
+    ret = _vsnprintf( str, DEBUG_BUF_SIZE, format, argp );
+    if( ret < 0 || (size_t) ret == DEBUG_BUF_SIZE )
+    {
+        str[DEBUG_BUF_SIZE-1] = '\0';
+        ret = -1;
+    }
+#endif
+#else
+    ret = vsnprintf( str, DEBUG_BUF_SIZE, format, argp );
+#endif
     va_end( argp );
 
     if( ret >= 0 && ret < DEBUG_BUF_SIZE - 1 )
