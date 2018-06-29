@@ -72,9 +72,6 @@ static const char *features[] = {
 #if defined(MBEDTLS_PLATFORM_SNPRINTF_ALT)
     "MBEDTLS_PLATFORM_SNPRINTF_ALT",
 #endif /* MBEDTLS_PLATFORM_SNPRINTF_ALT */
-#if defined(MBEDTLS_PLATFORM_VSNPRINTF_ALT)
-    "MBEDTLS_PLATFORM_VSNPRINTF_ALT",
-#endif /* MBEDTLS_PLATFORM_VSNPRINTF_ALT */
 #if defined(MBEDTLS_PLATFORM_NV_SEED_ALT)
     "MBEDTLS_PLATFORM_NV_SEED_ALT",
 #endif /* MBEDTLS_PLATFORM_NV_SEED_ALT */
@@ -129,6 +126,9 @@ static const char *features[] = {
 #if defined(MBEDTLS_GCM_ALT)
     "MBEDTLS_GCM_ALT",
 #endif /* MBEDTLS_GCM_ALT */
+#if defined(MBEDTLS_NIST_KW_ALT)
+    "MBEDTLS_NIST_KW_ALT",
+#endif /* MBEDTLS_NIST_KW_ALT */
 #if defined(MBEDTLS_MD2_ALT)
     "MBEDTLS_MD2_ALT",
 #endif /* MBEDTLS_MD2_ALT */
@@ -621,6 +621,9 @@ static const char *features[] = {
 #if defined(MBEDTLS_HMAC_DRBG_C)
     "MBEDTLS_HMAC_DRBG_C",
 #endif /* MBEDTLS_HMAC_DRBG_C */
+#if defined(MBEDTLS_NIST_KW_C)
+    "MBEDTLS_NIST_KW_C",
+#endif /* MBEDTLS_NIST_KW_C */
 #if defined(MBEDTLS_MD_C)
     "MBEDTLS_MD_C",
 #endif /* MBEDTLS_MD_C */
