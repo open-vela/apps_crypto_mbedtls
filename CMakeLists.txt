@@ -20,7 +20,7 @@
 #   mbedtls, mbedx509, mbedcrypto and apidoc targets.
 #
 
-cmake_minimum_required(VERSION 2.6)
+cmake_minimum_required(VERSION 2.8.12)
 if(TEST_CPP)
     project("mbed TLS" C CXX)
 else()
