@@ -1983,6 +1983,8 @@ psa_status_t psa_asymmetric_sign( psa_key_slot_t key,
                                   psa_algorithm_t alg,
                                   const uint8_t *hash,
                                   size_t hash_length,
+                                  const uint8_t *salt,
+                                  size_t salt_length,
                                   uint8_t *signature,
                                   size_t signature_size,
                                   size_t *signature_length )
@@ -1991,6 +1993,9 @@ psa_status_t psa_asymmetric_sign( psa_key_slot_t key,
     psa_status_t status;
 
     *signature_length = signature_size;
+
+    (void) salt;
+    (void) salt_length;
 
     status = psa_get_key_from_slot( key, &slot, PSA_KEY_USAGE_SIGN, alg );
     if( status != PSA_SUCCESS )
@@ -2053,11 +2058,16 @@ psa_status_t psa_asymmetric_verify( psa_key_slot_t key,
                                     psa_algorithm_t alg,
                                     const uint8_t *hash,
                                     size_t hash_length,
+                                    const uint8_t *salt,
+                                    size_t salt_length,
                                     const uint8_t *signature,
                                     size_t signature_length )
 {
     key_slot_t *slot;
     psa_status_t status;
+
+    (void) salt;
+    (void) salt_length;
 
     status = psa_get_key_from_slot( key, &slot, PSA_KEY_USAGE_VERIFY, alg );
     if( status != PSA_SUCCESS )
@@ -2954,13 +2964,13 @@ psa_status_t psa_generate_random( uint8_t *output,
 psa_status_t psa_generate_key( psa_key_slot_t key,
                                psa_key_type_t type,
                                size_t bits,
-                               const void *extra,
-                               size_t extra_size )
+                               const void *parameters,
+                               size_t parameters_size )
 {
     key_slot_t *slot;
     psa_status_t status;
 
-    if( extra == NULL && extra_size != 0 )
+    if( parameters == NULL && parameters_size != 0 )
         return( PSA_ERROR_INVALID_ARGUMENT );
 
     status = psa_get_empty_key_slot( key, &slot );
@@ -3000,18 +3010,14 @@ psa_status_t psa_generate_key( psa_key_slot_t key,
         int exponent = 65537;
         if( bits > PSA_VENDOR_RSA_MAX_KEY_BITS )
             return( PSA_ERROR_NOT_SUPPORTED );
-        if( extra != NULL )
+        if( parameters != NULL )
         {
-            const psa_generate_key_extra_rsa *p = extra;
-            if( extra_size != sizeof( *p ) )
+            const unsigned *p = parameters;
+            if( parameters_size != sizeof( *p ) )
                 return( PSA_ERROR_INVALID_ARGUMENT );
-#if INT_MAX < 0xffffffff
-            /* Check that the uint32_t value passed by the caller fits
-             * in the range supported by this implementation. */
-            if( p->e > INT_MAX )
-                return( PSA_ERROR_NOT_SUPPORTED );
-#endif
-            exponent = p->e;
+            if( *p > INT_MAX )
+                return( PSA_ERROR_INVALID_ARGUMENT );
+            exponent = *p;
         }
         rsa = mbedtls_calloc( 1, sizeof( *rsa ) );
         if( rsa == NULL )
@@ -3042,7 +3048,7 @@ psa_status_t psa_generate_key( psa_key_slot_t key,
             mbedtls_ecp_curve_info_from_grp_id( grp_id );
         mbedtls_ecp_keypair *ecp;
         int ret;
-        if( extra != NULL )
+        if( parameters != NULL )
             return( PSA_ERROR_NOT_SUPPORTED );
         if( grp_id == MBEDTLS_ECP_DP_NONE || curve_info == NULL )
             return( PSA_ERROR_NOT_SUPPORTED );
