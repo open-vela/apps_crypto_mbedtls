@@ -1774,7 +1774,7 @@ static psa_status_t psa_rsa_sign( mbedtls_rsa_context *rsa,
     if( status != PSA_SUCCESS )
         return( status );
 
-    if( signature_size < mbedtls_rsa_get_len( rsa ) )
+    if( signature_size < rsa->len )
         return( PSA_ERROR_BUFFER_TOO_SMALL );
 
     /* The Mbed TLS RSA module uses an unsigned int for hash_length. See if
@@ -1822,7 +1822,7 @@ static psa_status_t psa_rsa_sign( mbedtls_rsa_context *rsa,
     }
 
     if( ret == 0 )
-        *signature_length = mbedtls_rsa_get_len( rsa );
+        *signature_length = rsa->len;
     return( mbedtls_to_psa_error( ret ) );
 }
 
@@ -1841,7 +1841,7 @@ static psa_status_t psa_rsa_verify( mbedtls_rsa_context *rsa,
     if( status != PSA_SUCCESS )
         return( status );
 
-    if( signature_length < mbedtls_rsa_get_len( rsa ) )
+    if( signature_length < rsa->len )
         return( PSA_ERROR_BUFFER_TOO_SMALL );
 
 #if defined(MBEDTLS_PKCS1_V15) || defined(MBEDTLS_PKCS1_V21)
@@ -1983,6 +1983,8 @@ psa_status_t psa_asymmetric_sign( psa_key_slot_t key,
                                   psa_algorithm_t alg,
                                   const uint8_t *hash,
                                   size_t hash_length,
+                                  const uint8_t *salt,
+                                  size_t salt_length,
                                   uint8_t *signature,
                                   size_t signature_size,
                                   size_t *signature_length )
@@ -1991,6 +1993,9 @@ psa_status_t psa_asymmetric_sign( psa_key_slot_t key,
     psa_status_t status;
 
     *signature_length = signature_size;
+
+    (void) salt;
+    (void) salt_length;
 
     status = psa_get_key_from_slot( key, &slot, PSA_KEY_USAGE_SIGN, alg );
     if( status != PSA_SUCCESS )
@@ -2053,11 +2058,16 @@ psa_status_t psa_asymmetric_verify( psa_key_slot_t key,
                                     psa_algorithm_t alg,
                                     const uint8_t *hash,
                                     size_t hash_length,
+                                    const uint8_t *salt,
+                                    size_t salt_length,
                                     const uint8_t *signature,
                                     size_t signature_length )
 {
     key_slot_t *slot;
     psa_status_t status;
+
+    (void) salt;
+    (void) salt_length;
 
     status = psa_get_key_from_slot( key, &slot, PSA_KEY_USAGE_VERIFY, alg );
     if( status != PSA_SUCCESS )
@@ -2124,7 +2134,7 @@ psa_status_t psa_asymmetric_encrypt( psa_key_slot_t key,
     {
         mbedtls_rsa_context *rsa = slot->data.rsa;
         int ret;
-        if( output_size < mbedtls_rsa_get_len( rsa ) )
+        if( output_size < rsa->len )
             return( PSA_ERROR_INVALID_ARGUMENT );
 #if defined(MBEDTLS_PKCS1_V15)
         if( alg == PSA_ALG_RSA_PKCS1V15_CRYPT )
@@ -2150,7 +2160,7 @@ psa_status_t psa_asymmetric_encrypt( psa_key_slot_t key,
             return( PSA_ERROR_INVALID_ARGUMENT );
         }
         if( ret == 0 )
-            *output_length = mbedtls_rsa_get_len( rsa );
+            *output_length = rsa->len;
         return( mbedtls_to_psa_error( ret ) );
     }
     else
@@ -2189,7 +2199,7 @@ psa_status_t psa_asymmetric_decrypt( psa_key_slot_t key,
         mbedtls_rsa_context *rsa = slot->data.rsa;
         int ret;
 
-        if( input_length != mbedtls_rsa_get_len( rsa ) )
+        if( input_length != rsa->len )
             return( PSA_ERROR_INVALID_ARGUMENT );
 
 #if defined(MBEDTLS_PKCS1_V15)
@@ -3002,16 +3012,12 @@ psa_status_t psa_generate_key( psa_key_slot_t key,
             return( PSA_ERROR_NOT_SUPPORTED );
         if( extra != NULL )
         {
-            const psa_generate_key_extra_rsa *p = extra;
+            const unsigned *p = extra;
             if( extra_size != sizeof( *p ) )
                 return( PSA_ERROR_INVALID_ARGUMENT );
-#if INT_MAX < 0xffffffff
-            /* Check that the uint32_t value passed by the caller fits
-             * in the range supported by this implementation. */
-            if( p->e > INT_MAX )
-                return( PSA_ERROR_NOT_SUPPORTED );
-#endif
-            exponent = p->e;
+            if( *p > INT_MAX )
+                return( PSA_ERROR_INVALID_ARGUMENT );
+            exponent = *p;
         }
         rsa = mbedtls_calloc( 1, sizeof( *rsa ) );
         if( rsa == NULL )
