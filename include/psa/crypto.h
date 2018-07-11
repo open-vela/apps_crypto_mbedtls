@@ -301,12 +301,12 @@ typedef int32_t psa_status_t;
  * Applications may call this function more than once. Once a call
  * succeeds, subsequent calls are guaranteed to succeed.
  *
- * \retval PSA_SUCCESS
- * \retval PSA_ERROR_INSUFFICIENT_MEMORY
- * \retval PSA_ERROR_COMMUNICATION_FAILURE
- * \retval PSA_ERROR_HARDWARE_FAILURE
- * \retval PSA_ERROR_TAMPERING_DETECTED
- * \retval PSA_ERROR_INSUFFICIENT_ENTROPY
+ * \retval #PSA_SUCCESS
+ * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
+ * \retval #PSA_ERROR_COMMUNICATION_FAILURE
+ * \retval #PSA_ERROR_HARDWARE_FAILURE
+ * \retval #PSA_ERROR_TAMPERING_DETECTED
+ * \retval #PSA_ERROR_INSUFFICIENT_ENTROPY
  */
 psa_status_t psa_crypto_init(void);
 
@@ -354,7 +354,7 @@ typedef uint32_t psa_key_type_t;
  * used for.
  *
  * HMAC keys should generally have the same size as the underlying hash.
- * This size can be calculated with `PSA_HASH_SIZE(alg)` where
+ * This size can be calculated with #PSA_HASH_SIZE(`alg`) where
  * `alg` is the HMAC algorithm or the underlying hash algorithm. */
 #define PSA_KEY_TYPE_HMAC                       ((psa_key_type_t)0x02000001)
 /** Key for an cipher, AEAD or MAC algorithm based on the AES block cipher.
@@ -414,13 +414,13 @@ typedef uint32_t psa_key_type_t;
 #define PSA_KEY_TYPE_IS_KEYPAIR(type)                                   \
     (((type) & (PSA_KEY_TYPE_CATEGORY_MASK | PSA_KEY_TYPE_PAIR_FLAG)) == \
      (PSA_KEY_TYPE_CATEGORY_ASYMMETRIC | PSA_KEY_TYPE_PAIR_FLAG))
-/** Whether a key type is an RSA key pair or public key. */
 /** The key pair type corresponding to a public key type. */
 #define PSA_KEY_TYPE_KEYPAIR_OF_PUBLIC_KEY(type)        \
     ((type) | PSA_KEY_TYPE_PAIR_FLAG)
 /** The public key type corresponding to a key pair type. */
 #define PSA_KEY_TYPE_PUBLIC_KEY_OF_KEYPAIR(type)        \
     ((type) & ~PSA_KEY_TYPE_PAIR_FLAG)
+/** Whether a key type is an RSA key pair or public key. */
 #define PSA_KEY_TYPE_IS_RSA(type)                                       \
     (PSA_KEY_TYPE_PUBLIC_KEY_OF_KEYPAIR(type) == PSA_KEY_TYPE_RSA_PUBLIC_KEY)
 /** Whether a key type is an elliptic curve key pair or public key. */
@@ -698,6 +698,12 @@ typedef uint32_t psa_algorithm_t;
  * This is the ECDSA signature scheme defined by ANSI X9.62,
  * with a random per-message secret number (*k*).
  *
+ * The representation of the signature as a byte string consists of
+ * the concatentation of the signature values *r* and *s*. Each of
+ * *r* and *s* is encoded as an *N*-octet string, where *N* is the length
+ * of the base point of the curve in octets. Each value is represented
+ * in big-endian order (most significant octet first).
+ *
  * \param hash_alg      A hash algorithm (\c PSA_ALG_XXX value such that
  *                      #PSA_ALG_IS_HASH(alg) is true).
  *
@@ -709,7 +715,7 @@ typedef uint32_t psa_algorithm_t;
     (PSA_ALG_ECDSA_BASE | ((hash_alg) & PSA_ALG_HASH_MASK))
 /** ECDSA signature without hashing.
  *
- * This is the signature scheme defined by ANSI X9.62,
+ * This is the same signature scheme as #PSA_ALG_ECDSA(), but
  * without specifying a hash algorithm. This algorithm may only be
  * used to sign or verify a sequence of bytes that should be an
  * already-calculated hash. Note that the input is padded with
@@ -721,6 +727,8 @@ typedef uint32_t psa_algorithm_t;
 /** Deterministic ECDSA signature with hashing.
  *
  * This is the deterministic ECDSA signature scheme defined by RFC 6979.
+ *
+ * The representation of a signature is the same as with #PSA_ALG_ECDSA().
  *
  * Note that when this algorithm is used for verification, signatures
  * made with randomized ECDSA (#PSA_ALG_ECDSA(\c hash_alg)) with the
@@ -794,21 +802,21 @@ typedef uint32_t psa_algorithm_t;
  * \param data        Buffer containing the key data.
  * \param data_length Size of the \c data buffer in bytes.
  *
- * \retval PSA_SUCCESS
+ * \retval #PSA_SUCCESS
  *         Success.
- * \retval PSA_ERROR_NOT_SUPPORTED
+ * \retval #PSA_ERROR_NOT_SUPPORTED
  *         The key type or key size is not supported, either by the
  *         implementation in general or in this particular slot.
- * \retval PSA_ERROR_INVALID_ARGUMENT
+ * \retval #PSA_ERROR_INVALID_ARGUMENT
  *         The key slot is invalid,
  *         or the key data is not correctly formatted.
- * \retval PSA_ERROR_OCCUPIED_SLOT
+ * \retval #PSA_ERROR_OCCUPIED_SLOT
  *         There is already a key in the specified slot.
- * \retval PSA_ERROR_INSUFFICIENT_MEMORY
- * \retval PSA_ERROR_INSUFFICIENT_STORAGE
- * \retval PSA_ERROR_COMMUNICATION_FAILURE
- * \retval PSA_ERROR_HARDWARE_FAILURE
- * \retval PSA_ERROR_TAMPERING_DETECTED
+ * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
+ * \retval #PSA_ERROR_INSUFFICIENT_STORAGE
+ * \retval #PSA_ERROR_COMMUNICATION_FAILURE
+ * \retval #PSA_ERROR_HARDWARE_FAILURE
+ * \retval #PSA_ERROR_TAMPERING_DETECTED
  */
 psa_status_t psa_import_key(psa_key_slot_t key,
                             psa_key_type_t type,
@@ -828,22 +836,22 @@ psa_status_t psa_import_key(psa_key_slot_t key,
  *
  * \param key           The key slot to erase.
  *
- * \retval PSA_SUCCESS
+ * \retval #PSA_SUCCESS
  *         The slot's content, if any, has been erased.
- * \retval PSA_ERROR_NOT_PERMITTED
+ * \retval #PSA_ERROR_NOT_PERMITTED
  *         The slot holds content and cannot be erased because it is
  *         read-only, either due to a policy or due to physical restrictions.
- * \retval PSA_ERROR_INVALID_ARGUMENT
+ * \retval #PSA_ERROR_INVALID_ARGUMENT
  *         The specified slot number does not designate a valid slot.
- * \retval PSA_ERROR_COMMUNICATION_FAILURE
+ * \retval #PSA_ERROR_COMMUNICATION_FAILURE
  *         There was an failure in communication with the cryptoprocessor.
  *         The key material may still be present in the cryptoprocessor.
- * \retval PSA_ERROR_STORAGE_FAILURE
+ * \retval #PSA_ERROR_STORAGE_FAILURE
  *         The storage is corrupted. Implementations shall make a best effort
  *         to erase key material even in this stage, however applications
  *         should be aware that it may be impossible to guarantee that the
  *         key material is not recoverable in such cases.
- * \retval PSA_ERROR_TAMPERING_DETECTED
+ * \retval #PSA_ERROR_TAMPERING_DETECTED
  *         An unexpected condition which is not a storage corruption or
  *         a communication failure occurred. The cryptoprocessor may have
  *         been compromised.
@@ -862,11 +870,11 @@ psa_status_t psa_destroy_key(psa_key_slot_t key);
  *                      This may be a null pointer, in which case the key size
  *                      is not written.
  *
- * \retval PSA_SUCCESS
- * \retval PSA_ERROR_EMPTY_SLOT
- * \retval PSA_ERROR_COMMUNICATION_FAILURE
- * \retval PSA_ERROR_HARDWARE_FAILURE
- * \retval PSA_ERROR_TAMPERING_DETECTED
+ * \retval #PSA_SUCCESS
+ * \retval #PSA_ERROR_EMPTY_SLOT
+ * \retval #PSA_ERROR_COMMUNICATION_FAILURE
+ * \retval #PSA_ERROR_HARDWARE_FAILURE
+ * \retval #PSA_ERROR_TAMPERING_DETECTED
  */
 psa_status_t psa_get_key_information(psa_key_slot_t key,
                                      psa_key_type_t *type,
@@ -892,8 +900,8 @@ psa_status_t psa_get_key_information(psa_key_slot_t key,
  * - For Triple-DES, the format is the concatenation of the
  *   two or three DES keys.
  * - For RSA key pairs (#PSA_KEY_TYPE_RSA_KEYPAIR), the format
- *   is the non-encrypted DER representation defined by PKCS\#8 (RFC 5208)
- *   as PrivateKeyInfo.
+ *   is the non-encrypted DER representation defined by PKCS\#1 (RFC 8017)
+ *   as RSAPrivateKey.
  * - For RSA public keys (#PSA_KEY_TYPE_RSA_PUBLIC_KEY), the format
  *   is the DER representation defined by RFC 5280 as SubjectPublicKeyInfo.
  *
@@ -904,12 +912,12 @@ psa_status_t psa_get_key_information(psa_key_slot_t key,
  * \param data_length   On success, the number of bytes
  *                      that make up the key data.
  *
- * \retval PSA_SUCCESS
- * \retval PSA_ERROR_EMPTY_SLOT
- * \retval PSA_ERROR_NOT_PERMITTED
- * \retval PSA_ERROR_COMMUNICATION_FAILURE
- * \retval PSA_ERROR_HARDWARE_FAILURE
- * \retval PSA_ERROR_TAMPERING_DETECTED
+ * \retval #PSA_SUCCESS
+ * \retval #PSA_ERROR_EMPTY_SLOT
+ * \retval #PSA_ERROR_NOT_PERMITTED
+ * \retval #PSA_ERROR_COMMUNICATION_FAILURE
+ * \retval #PSA_ERROR_HARDWARE_FAILURE
+ * \retval #PSA_ERROR_TAMPERING_DETECTED
  */
 psa_status_t psa_export_key(psa_key_slot_t key,
                             uint8_t *data,
@@ -935,12 +943,12 @@ psa_status_t psa_export_key(psa_key_slot_t key,
  * \param data_length   On success, the number of bytes
  *                      that make up the key data.
  *
- * \retval PSA_SUCCESS
- * \retval PSA_ERROR_EMPTY_SLOT
- * \retval PSA_ERROR_INVALID_ARGUMENT
- * \retval PSA_ERROR_COMMUNICATION_FAILURE
- * \retval PSA_ERROR_HARDWARE_FAILURE
- * \retval PSA_ERROR_TAMPERING_DETECTED
+ * \retval #PSA_SUCCESS
+ * \retval #PSA_ERROR_EMPTY_SLOT
+ * \retval #PSA_ERROR_INVALID_ARGUMENT
+ * \retval #PSA_ERROR_COMMUNICATION_FAILURE
+ * \retval #PSA_ERROR_HARDWARE_FAILURE
+ * \retval #PSA_ERROR_TAMPERING_DETECTED
  */
 psa_status_t psa_export_public_key(psa_key_slot_t key,
                                    uint8_t *data,
@@ -1067,13 +1075,13 @@ typedef uint32_t psa_key_lifetime_t;
  * \param key           Slot to query.
  * \param lifetime      On success, the lifetime value.
  *
- * \retval PSA_SUCCESS
+ * \retval #PSA_SUCCESS
  *         Success.
- * \retval PSA_ERROR_INVALID_ARGUMENT
+ * \retval #PSA_ERROR_INVALID_ARGUMENT
  *         The key slot is invalid.
- * \retval PSA_ERROR_COMMUNICATION_FAILURE
- * \retval PSA_ERROR_HARDWARE_FAILURE
- * \retval PSA_ERROR_TAMPERING_DETECTED
+ * \retval #PSA_ERROR_COMMUNICATION_FAILURE
+ * \retval #PSA_ERROR_HARDWARE_FAILURE
+ * \retval #PSA_ERROR_TAMPERING_DETECTED
  */
 psa_status_t psa_get_key_lifetime(psa_key_slot_t key,
                                   psa_key_lifetime_t *lifetime);
@@ -1087,20 +1095,20 @@ psa_status_t psa_get_key_lifetime(psa_key_slot_t key,
  * \param key           Slot whose lifetime is to be changed.
  * \param lifetime      The lifetime value to set for the given key slot.
  *
- * \retval PSA_SUCCESS
+ * \retval #PSA_SUCCESS
  *         Success.
- * \retval PSA_ERROR_INVALID_ARGUMENT
+ * \retval #PSA_ERROR_INVALID_ARGUMENT
  *         The key slot is invalid,
  *         or the lifetime value is invalid.
- * \retval PSA_ERROR_NOT_SUPPORTED
+ * \retval #PSA_ERROR_NOT_SUPPORTED
  *         The implementation does not support the specified lifetime value,
  *         at least for the specified key slot.
- * \retval PSA_ERROR_OCCUPIED_SLOT
+ * \retval #PSA_ERROR_OCCUPIED_SLOT
  *         The slot contains a key, and the implementation does not support
  *         changing the lifetime of an occupied slot.
- * \retval PSA_ERROR_COMMUNICATION_FAILURE
- * \retval PSA_ERROR_HARDWARE_FAILURE
- * \retval PSA_ERROR_TAMPERING_DETECTED
+ * \retval #PSA_ERROR_COMMUNICATION_FAILURE
+ * \retval #PSA_ERROR_HARDWARE_FAILURE
+ * \retval #PSA_ERROR_TAMPERING_DETECTED
  */
 psa_status_t psa_set_key_lifetime(psa_key_slot_t key,
                                   psa_key_lifetime_t lifetime);
@@ -1124,7 +1132,7 @@ typedef struct psa_hash_operation_s psa_hash_operation_t;
  *
  * \param alg   A hash algorithm (\c PSA_ALG_XXX value such that
  *              #PSA_ALG_IS_HASH(alg) is true), or an HMAC algorithm
- *              (`PSA_ALG_HMAC(hash_alg)` where `hash_alg` is a
+ *              (#PSA_ALG_HMAC(`hash_alg`) where `hash_alg` is a
  *              hash algorithm).
  *
  * \return The hash size for the specified hash algorithm.
@@ -1157,7 +1165,7 @@ typedef struct psa_hash_operation_s psa_hash_operation_t;
  * is as follows:
  * -# Allocate an operation object which will be passed to all the functions
  *    listed here.
- * -# Call psa_hash_start() to specify the algorithm.
+ * -# Call psa_hash_setup() to specify the algorithm.
  * -# Call psa_hash_update() zero, one or more times, passing a fragment
  *    of the message each time. The hash that is calculated is the hash
  *    of the concatenation of these messages in order.
@@ -1165,9 +1173,9 @@ typedef struct psa_hash_operation_s psa_hash_operation_t;
  *    To compare the hash with an expected value, call psa_hash_verify().
  *
  * The application may call psa_hash_abort() at any time after the operation
- * has been initialized with psa_hash_start().
+ * has been initialized with psa_hash_setup().
  *
- * After a successful call to psa_hash_start(), the application must
+ * After a successful call to psa_hash_setup(), the application must
  * eventually terminate the operation. The following events terminate an
  * operation:
  * - A failed call to psa_hash_update().
@@ -1177,21 +1185,21 @@ typedef struct psa_hash_operation_s psa_hash_operation_t;
  * \param alg       The hash algorithm to compute (\c PSA_ALG_XXX value
  *                  such that #PSA_ALG_IS_HASH(alg) is true).
  *
- * \retval PSA_SUCCESS
+ * \retval #PSA_SUCCESS
  *         Success.
- * \retval PSA_ERROR_NOT_SUPPORTED
+ * \retval #PSA_ERROR_NOT_SUPPORTED
  *         \c alg is not supported or is not a hash algorithm.
- * \retval PSA_ERROR_INSUFFICIENT_MEMORY
- * \retval PSA_ERROR_COMMUNICATION_FAILURE
- * \retval PSA_ERROR_HARDWARE_FAILURE
- * \retval PSA_ERROR_TAMPERING_DETECTED
+ * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
+ * \retval #PSA_ERROR_COMMUNICATION_FAILURE
+ * \retval #PSA_ERROR_HARDWARE_FAILURE
+ * \retval #PSA_ERROR_TAMPERING_DETECTED
  */
-psa_status_t psa_hash_start(psa_hash_operation_t *operation,
+psa_status_t psa_hash_setup(psa_hash_operation_t *operation,
                             psa_algorithm_t alg);
 
 /** Add a message fragment to a multipart hash operation.
  *
- * The application must call psa_hash_start() before calling this function.
+ * The application must call psa_hash_setup() before calling this function.
  *
  * If this function returns an error status, the operation becomes inactive.
  *
@@ -1199,14 +1207,14 @@ psa_status_t psa_hash_start(psa_hash_operation_t *operation,
  * \param input         Buffer containing the message fragment to hash.
  * \param input_length  Size of the \c input buffer in bytes.
  *
- * \retval PSA_SUCCESS
+ * \retval #PSA_SUCCESS
  *         Success.
- * \retval PSA_ERROR_BAD_STATE
+ * \retval #PSA_ERROR_BAD_STATE
  *         The operation state is not valid (not started, or already completed).
- * \retval PSA_ERROR_INSUFFICIENT_MEMORY
- * \retval PSA_ERROR_COMMUNICATION_FAILURE
- * \retval PSA_ERROR_HARDWARE_FAILURE
- * \retval PSA_ERROR_TAMPERING_DETECTED
+ * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
+ * \retval #PSA_ERROR_COMMUNICATION_FAILURE
+ * \retval #PSA_ERROR_HARDWARE_FAILURE
+ * \retval #PSA_ERROR_TAMPERING_DETECTED
  */
 psa_status_t psa_hash_update(psa_hash_operation_t *operation,
                              const uint8_t *input,
@@ -1214,7 +1222,7 @@ psa_status_t psa_hash_update(psa_hash_operation_t *operation,
 
 /** Finish the calculation of the hash of a message.
  *
- * The application must call psa_hash_start() before calling this function.
+ * The application must call psa_hash_setup() before calling this function.
  * This function calculates the hash of the message formed by concatenating
  * the inputs passed to preceding calls to psa_hash_update().
  *
@@ -1236,18 +1244,18 @@ psa_status_t psa_hash_update(psa_hash_operation_t *operation,
  *                      #PSA_HASH_SIZE(alg) where \c alg is the
  *                      hash algorithm that is calculated.
  *
- * \retval PSA_SUCCESS
+ * \retval #PSA_SUCCESS
  *         Success.
- * \retval PSA_ERROR_BAD_STATE
+ * \retval #PSA_ERROR_BAD_STATE
  *         The operation state is not valid (not started, or already completed).
- * \retval PSA_ERROR_BUFFER_TOO_SMALL
+ * \retval #PSA_ERROR_BUFFER_TOO_SMALL
  *         The size of the \c hash buffer is too small. You can determine a
  *         sufficient buffer size by calling #PSA_HASH_SIZE(alg)
  *         where \c alg is the hash algorithm that is calculated.
- * \retval PSA_ERROR_INSUFFICIENT_MEMORY
- * \retval PSA_ERROR_COMMUNICATION_FAILURE
- * \retval PSA_ERROR_HARDWARE_FAILURE
- * \retval PSA_ERROR_TAMPERING_DETECTED
+ * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
+ * \retval #PSA_ERROR_COMMUNICATION_FAILURE
+ * \retval #PSA_ERROR_HARDWARE_FAILURE
+ * \retval #PSA_ERROR_TAMPERING_DETECTED
  */
 psa_status_t psa_hash_finish(psa_hash_operation_t *operation,
                              uint8_t *hash,
@@ -1257,7 +1265,7 @@ psa_status_t psa_hash_finish(psa_hash_operation_t *operation,
 /** Finish the calculation of the hash of a message and compare it with
  * an expected value.
  *
- * The application must call psa_hash_start() before calling this function.
+ * The application must call psa_hash_setup() before calling this function.
  * This function calculates the hash of the message formed by concatenating
  * the inputs passed to preceding calls to psa_hash_update(). It then
  * compares the calculated hash with the expected hash passed as a
@@ -1273,17 +1281,17 @@ psa_status_t psa_hash_finish(psa_hash_operation_t *operation,
  * \param hash          Buffer containing the expected hash value.
  * \param hash_length   Size of the \c hash buffer in bytes.
  *
- * \retval PSA_SUCCESS
+ * \retval #PSA_SUCCESS
  *         The expected hash is identical to the actual hash of the message.
- * \retval PSA_ERROR_INVALID_SIGNATURE
+ * \retval #PSA_ERROR_INVALID_SIGNATURE
  *         The hash of the message was calculated successfully, but it
  *         differs from the expected hash.
- * \retval PSA_ERROR_BAD_STATE
+ * \retval #PSA_ERROR_BAD_STATE
  *         The operation state is not valid (not started, or already completed).
- * \retval PSA_ERROR_INSUFFICIENT_MEMORY
- * \retval PSA_ERROR_COMMUNICATION_FAILURE
- * \retval PSA_ERROR_HARDWARE_FAILURE
- * \retval PSA_ERROR_TAMPERING_DETECTED
+ * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
+ * \retval #PSA_ERROR_COMMUNICATION_FAILURE
+ * \retval #PSA_ERROR_HARDWARE_FAILURE
+ * \retval #PSA_ERROR_TAMPERING_DETECTED
  */
 psa_status_t psa_hash_verify(psa_hash_operation_t *operation,
                              const uint8_t *hash,
@@ -1291,7 +1299,7 @@ psa_status_t psa_hash_verify(psa_hash_operation_t *operation,
 
 /** Abort a hash operation.
  *
- * This function may be called at any time after psa_hash_start().
+ * This function may be called at any time after psa_hash_setup().
  * Aborting an operation frees all associated resources except for the
  * \c operation structure itself.
  *
@@ -1303,12 +1311,12 @@ psa_status_t psa_hash_verify(psa_hash_operation_t *operation,
  *
  * \param operation     Active hash operation.
  *
- * \retval PSA_SUCCESS
- * \retval PSA_ERROR_BAD_STATE
+ * \retval #PSA_SUCCESS
+ * \retval #PSA_ERROR_BAD_STATE
  *         \c operation is not an active hash operation.
- * \retval PSA_ERROR_COMMUNICATION_FAILURE
- * \retval PSA_ERROR_HARDWARE_FAILURE
- * \retval PSA_ERROR_TAMPERING_DETECTED
+ * \retval #PSA_ERROR_COMMUNICATION_FAILURE
+ * \retval #PSA_ERROR_HARDWARE_FAILURE
+ * \retval #PSA_ERROR_TAMPERING_DETECTED
  */
 psa_status_t psa_hash_abort(psa_hash_operation_t *operation);
 
@@ -1325,86 +1333,115 @@ psa_status_t psa_hash_abort(psa_hash_operation_t *operation);
  * as directed by the documentation of a specific implementation. */
 typedef struct psa_mac_operation_s psa_mac_operation_t;
 
-/** The size of the output of psa_mac_finish(), in bytes.
+/** Start a multipart MAC calculation operation.
  *
- * This is also the MAC size that psa_mac_verify() expects.
+ * This function sets up the calculation of the MAC
+ * (message authentication code) of a byte string.
+ * To verify the MAC of a message against an
+ * expected value, use psa_mac_verify_setup() instead.
  *
- * \param key_type      The type of the MAC key.
- * \param key_bits      The size of the MAC key in bits.
- * \param alg           A MAC algorithm (\c PSA_ALG_XXX value such that
- *                      #PSA_ALG_IS_MAC(alg) is true).
- *
- * \return              The MAC size for the specified algorithm with
- *                      the specified key parameters.
- * \return              0 if the MAC algorithm is not recognized.
- * \return              Either 0 or the correct size for a MAC algorithm that
- *                      the implementation recognizes, but does not support.
- * \return              Unspecified if the key parameters are not consistent
- *                      with the algorithm.
- */
-#define PSA_MAC_FINAL_SIZE(key_type, key_bits, alg)                     \
-    (PSA_ALG_IS_HMAC(alg) ? PSA_HASH_SIZE(PSA_ALG_HMAC_HASH(alg)) : \
-     PSA_ALG_IS_BLOCK_CIPHER_MAC(alg) ? PSA_BLOCK_CIPHER_BLOCK_SIZE(key_type) : \
-     0)
-
-/** Start a multipart MAC operation.
- *
- * The sequence of operations to calculate a MAC (message authentication code)
- * is as follows:
+ * The sequence of operations to calculate a MAC is as follows:
  * -# Allocate an operation object which will be passed to all the functions
  *    listed here.
- * -# Call psa_mac_start() to specify the algorithm and key.
+ * -# Call psa_mac_sign_setup() to specify the algorithm and key.
  *    The key remains associated with the operation even if the content
  *    of the key slot changes.
  * -# Call psa_mac_update() zero, one or more times, passing a fragment
  *    of the message each time. The MAC that is calculated is the MAC
  *    of the concatenation of these messages in order.
- * -# To calculate the MAC, call psa_mac_finish().
- *    To compare the MAC with an expected value, call psa_mac_verify().
+ * -# At the end of the message, call psa_mac_sign_finish() to finish
+ *    calculating the MAC value and retrieve it.
  *
  * The application may call psa_mac_abort() at any time after the operation
- * has been initialized with psa_mac_start().
+ * has been initialized with psa_mac_sign_setup().
  *
- * After a successful call to psa_mac_start(), the application must
- * eventually terminate the operation. The following events terminate an
- * operation:
+ * After a successful call to psa_mac_sign_setup(), the application must
+ * eventually terminate the operation through one of the following methods:
  * - A failed call to psa_mac_update().
- * - A call to psa_mac_finish(), psa_mac_verify() or psa_mac_abort().
+ * - A call to psa_mac_sign_finish() or psa_mac_abort().
  *
  * \param operation The operation object to use.
  * \param key       Slot containing the key to use for the operation.
  * \param alg       The MAC algorithm to compute (\c PSA_ALG_XXX value
  *                  such that #PSA_ALG_IS_MAC(alg) is true).
  *
- * \retval PSA_SUCCESS
+ * \retval #PSA_SUCCESS
  *         Success.
- * \retval PSA_ERROR_EMPTY_SLOT
- * \retval PSA_ERROR_NOT_PERMITTED
- * \retval PSA_ERROR_INVALID_ARGUMENT
+ * \retval #PSA_ERROR_EMPTY_SLOT
+ * \retval #PSA_ERROR_NOT_PERMITTED
+ * \retval #PSA_ERROR_INVALID_ARGUMENT
  *         \c key is not compatible with \c alg.
- * \retval PSA_ERROR_NOT_SUPPORTED
+ * \retval #PSA_ERROR_NOT_SUPPORTED
  *         \c alg is not supported or is not a MAC algorithm.
- * \retval PSA_ERROR_INSUFFICIENT_MEMORY
- * \retval PSA_ERROR_COMMUNICATION_FAILURE
- * \retval PSA_ERROR_HARDWARE_FAILURE
- * \retval PSA_ERROR_TAMPERING_DETECTED
+ * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
+ * \retval #PSA_ERROR_COMMUNICATION_FAILURE
+ * \retval #PSA_ERROR_HARDWARE_FAILURE
+ * \retval #PSA_ERROR_TAMPERING_DETECTED
  */
-psa_status_t psa_mac_start(psa_mac_operation_t *operation,
-                           psa_key_slot_t key,
-                           psa_algorithm_t alg);
+psa_status_t psa_mac_sign_setup(psa_mac_operation_t *operation,
+                                psa_key_slot_t key,
+                                psa_algorithm_t alg);
+
+/** Start a multipart MAC verification operation.
+ *
+ * This function sets up the verification of the MAC
+ * (message authentication code) of a byte string against an expected value.
+ *
+ * The sequence of operations to verify a MAC is as follows:
+ * -# Allocate an operation object which will be passed to all the functions
+ *    listed here.
+ * -# Call psa_mac_verify_setup() to specify the algorithm and key.
+ *    The key remains associated with the operation even if the content
+ *    of the key slot changes.
+ * -# Call psa_mac_update() zero, one or more times, passing a fragment
+ *    of the message each time. The MAC that is calculated is the MAC
+ *    of the concatenation of these messages in order.
+ * -# At the end of the message, call psa_mac_verify_finish() to finish
+ *    calculating the actual MAC of the message and verify it against
+ *    the expected value.
+ *
+ * The application may call psa_mac_abort() at any time after the operation
+ * has been initialized with psa_mac_verify_setup().
+ *
+ * After a successful call to psa_mac_verify_setup(), the application must
+ * eventually terminate the operation through one of the following methods:
+ * - A failed call to psa_mac_update().
+ * - A call to psa_mac_verify_finish() or psa_mac_abort().
+ *
+ * \param operation The operation object to use.
+ * \param key       Slot containing the key to use for the operation.
+ * \param alg       The MAC algorithm to compute (\c PSA_ALG_XXX value
+ *                  such that #PSA_ALG_IS_MAC(alg) is true).
+ *
+ * \retval #PSA_SUCCESS
+ *         Success.
+ * \retval #PSA_ERROR_EMPTY_SLOT
+ * \retval #PSA_ERROR_NOT_PERMITTED
+ * \retval #PSA_ERROR_INVALID_ARGUMENT
+ *         \c key is not compatible with \c alg.
+ * \retval #PSA_ERROR_NOT_SUPPORTED
+ *         \c alg is not supported or is not a MAC algorithm.
+ * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
+ * \retval #PSA_ERROR_COMMUNICATION_FAILURE
+ * \retval #PSA_ERROR_HARDWARE_FAILURE
+ * \retval #PSA_ERROR_TAMPERING_DETECTED
+ */
+psa_status_t psa_mac_verify_setup(psa_mac_operation_t *operation,
+                                  psa_key_slot_t key,
+                                  psa_algorithm_t alg);
 
 psa_status_t psa_mac_update(psa_mac_operation_t *operation,
                             const uint8_t *input,
                             size_t input_length);
 
-psa_status_t psa_mac_finish(psa_mac_operation_t *operation,
-                            uint8_t *mac,
-                            size_t mac_size,
-                            size_t *mac_length);
+psa_status_t psa_mac_sign_finish(psa_mac_operation_t *operation,
+                                 uint8_t *mac,
+                                 size_t mac_size,
+                                 size_t *mac_length);
 
-psa_status_t psa_mac_verify(psa_mac_operation_t *operation,
-                            const uint8_t *mac,
-                            size_t mac_length);
+psa_status_t psa_mac_verify_finish(psa_mac_operation_t *operation,
+                                   const uint8_t *mac,
+                                   size_t mac_length);
 
 psa_status_t psa_mac_abort(psa_mac_operation_t *operation);
 
@@ -1427,10 +1464,10 @@ typedef struct psa_cipher_operation_s psa_cipher_operation_t;
  * is as follows:
  * -# Allocate an operation object which will be passed to all the functions
  *    listed here.
- * -# Call psa_encrypt_setup() to specify the algorithm and key.
+ * -# Call psa_cipher_encrypt_setup() to specify the algorithm and key.
  *    The key remains associated with the operation even if the content
  *    of the key slot changes.
- * -# Call either psa_encrypt_generate_iv() or psa_encrypt_set_iv() to
+ * -# Call either psa_encrypt_generate_iv() or psa_cipher_set_iv() to
  *    generate or set the IV (initialization vector). You should use
  *    psa_encrypt_generate_iv() unless the protocol you are implementing
  *    requires a specific IV value.
@@ -1439,12 +1476,12 @@ typedef struct psa_cipher_operation_s psa_cipher_operation_t;
  * -# Call psa_cipher_finish().
  *
  * The application may call psa_cipher_abort() at any time after the operation
- * has been initialized with psa_encrypt_setup().
+ * has been initialized with psa_cipher_encrypt_setup().
  *
- * After a successful call to psa_encrypt_setup(), the application must
+ * After a successful call to psa_cipher_encrypt_setup(), the application must
  * eventually terminate the operation. The following events terminate an
  * operation:
- * - A failed call to psa_encrypt_generate_iv(), psa_encrypt_set_iv()
+ * - A failed call to psa_encrypt_generate_iv(), psa_cipher_set_iv()
  *   or psa_cipher_update().
  * - A call to psa_cipher_finish() or psa_cipher_abort().
  *
@@ -1453,22 +1490,22 @@ typedef struct psa_cipher_operation_s psa_cipher_operation_t;
  * \param alg       The cipher algorithm to compute (\c PSA_ALG_XXX value
  *                  such that #PSA_ALG_IS_CIPHER(alg) is true).
  *
- * \retval PSA_SUCCESS
+ * \retval #PSA_SUCCESS
  *         Success.
- * \retval PSA_ERROR_EMPTY_SLOT
- * \retval PSA_ERROR_NOT_PERMITTED
- * \retval PSA_ERROR_INVALID_ARGUMENT
+ * \retval #PSA_ERROR_EMPTY_SLOT
+ * \retval #PSA_ERROR_NOT_PERMITTED
+ * \retval #PSA_ERROR_INVALID_ARGUMENT
  *         \c key is not compatible with \c alg.
- * \retval PSA_ERROR_NOT_SUPPORTED
+ * \retval #PSA_ERROR_NOT_SUPPORTED
  *         \c alg is not supported or is not a cipher algorithm.
- * \retval PSA_ERROR_INSUFFICIENT_MEMORY
- * \retval PSA_ERROR_COMMUNICATION_FAILURE
- * \retval PSA_ERROR_HARDWARE_FAILURE
- * \retval PSA_ERROR_TAMPERING_DETECTED
+ * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
+ * \retval #PSA_ERROR_COMMUNICATION_FAILURE
+ * \retval #PSA_ERROR_HARDWARE_FAILURE
+ * \retval #PSA_ERROR_TAMPERING_DETECTED
  */
-psa_status_t psa_encrypt_setup(psa_cipher_operation_t *operation,
-                               psa_key_slot_t key,
-                               psa_algorithm_t alg);
+psa_status_t psa_cipher_encrypt_setup(psa_cipher_operation_t *operation,
+                                      psa_key_slot_t key,
+                                      psa_algorithm_t alg);
 
 /** Set the key for a multipart symmetric decryption operation.
  *
@@ -1476,7 +1513,7 @@ psa_status_t psa_encrypt_setup(psa_cipher_operation_t *operation,
  * is as follows:
  * -# Allocate an operation object which will be passed to all the functions
  *    listed here.
- * -# Call psa_decrypt_setup() to specify the algorithm and key.
+ * -# Call psa_cipher_decrypt_setup() to specify the algorithm and key.
  *    The key remains associated with the operation even if the content
  *    of the key slot changes.
  * -# Call psa_cipher_update() with the IV (initialization vector) for the
@@ -1488,9 +1525,9 @@ psa_status_t psa_encrypt_setup(psa_cipher_operation_t *operation,
  * -# Call psa_cipher_finish().
  *
  * The application may call psa_cipher_abort() at any time after the operation
- * has been initialized with psa_encrypt_setup().
+ * has been initialized with psa_cipher_decrypt_setup().
  *
- * After a successful call to psa_decrypt_setup(), the application must
+ * After a successful call to psa_cipher_decrypt_setup(), the application must
  * eventually terminate the operation. The following events terminate an
  * operation:
  * - A failed call to psa_cipher_update().
@@ -1501,31 +1538,31 @@ psa_status_t psa_encrypt_setup(psa_cipher_operation_t *operation,
  * \param alg       The cipher algorithm to compute (\c PSA_ALG_XXX value
  *                  such that #PSA_ALG_IS_CIPHER(alg) is true).
  *
- * \retval PSA_SUCCESS
+ * \retval #PSA_SUCCESS
  *         Success.
- * \retval PSA_ERROR_EMPTY_SLOT
- * \retval PSA_ERROR_NOT_PERMITTED
- * \retval PSA_ERROR_INVALID_ARGUMENT
+ * \retval #PSA_ERROR_EMPTY_SLOT
+ * \retval #PSA_ERROR_NOT_PERMITTED
+ * \retval #PSA_ERROR_INVALID_ARGUMENT
  *         \c key is not compatible with \c alg.
- * \retval PSA_ERROR_NOT_SUPPORTED
+ * \retval #PSA_ERROR_NOT_SUPPORTED
  *         \c alg is not supported or is not a cipher algorithm.
- * \retval PSA_ERROR_INSUFFICIENT_MEMORY
- * \retval PSA_ERROR_COMMUNICATION_FAILURE
- * \retval PSA_ERROR_HARDWARE_FAILURE
- * \retval PSA_ERROR_TAMPERING_DETECTED
+ * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
+ * \retval #PSA_ERROR_COMMUNICATION_FAILURE
+ * \retval #PSA_ERROR_HARDWARE_FAILURE
+ * \retval #PSA_ERROR_TAMPERING_DETECTED
  */
-psa_status_t psa_decrypt_setup(psa_cipher_operation_t *operation,
-                               psa_key_slot_t key,
-                               psa_algorithm_t alg);
+psa_status_t psa_cipher_decrypt_setup(psa_cipher_operation_t *operation,
+                                      psa_key_slot_t key,
+                                      psa_algorithm_t alg);
 
-psa_status_t psa_encrypt_generate_iv(psa_cipher_operation_t *operation,
-                                     unsigned char *iv,
-                                     size_t iv_size,
-                                     size_t *iv_length);
+psa_status_t psa_cipher_generate_iv(psa_cipher_operation_t *operation,
+                                    unsigned char *iv,
+                                    size_t iv_size,
+                                    size_t *iv_length);
 
-psa_status_t psa_encrypt_set_iv(psa_cipher_operation_t *operation,
-                                const unsigned char *iv,
-                                size_t iv_length);
+psa_status_t psa_cipher_set_iv(psa_cipher_operation_t *operation,
+                               const unsigned char *iv,
+                               size_t iv_length);
 
 psa_status_t psa_cipher_update(psa_cipher_operation_t *operation,
                                const uint8_t *input,
@@ -1567,30 +1604,6 @@ psa_status_t psa_cipher_abort(psa_cipher_operation_t *operation);
      (alg) == PSA_ALG_CCM ? 16 :           \
      0)
 
-/** The maximum size of the output of psa_aead_encrypt(), in bytes.
- *
- * If the size of the ciphertext buffer is at least this large, it is
- * guaranteed that psa_aead_encrypt() will not fail due to an
- * insufficient buffer size. Depending on the algorithm, the actual size of
- * the ciphertext may be smaller.
- *
- * \param alg                 An AEAD algorithm
- *                            (\c PSA_ALG_XXX value such that
- *                            #PSA_ALG_IS_AEAD(alg) is true).
- * \param plaintext_length    Size of the plaintext in bytes.
- *
- * \return                    The AEAD ciphertext size for the specified
- *                            algorithm.
- *                            If the AEAD algorithm is not recognized, return 0.
- *                            An implementation may return either 0 or a
- *                            correct size for an AEAD algorithm that it
- *                            recognizes, but does not support.
- */
-#define PSA_AEAD_ENCRYPT_OUTPUT_SIZE(alg, plaintext_length)     \
-    (PSA_AEAD_TAG_SIZE(alg) != 0 ?                              \
-     (plaintext_length) + PSA_AEAD_TAG_SIZE(alg) :              \
-     0)
-
 /** Process an authenticated encryption operation.
  *
  * \param key                     Slot containing the key to use.
@@ -1619,18 +1632,18 @@ psa_status_t psa_cipher_abort(psa_cipher_operation_t *operation);
  * \param ciphertext_length       On success, the size of the output
  *                                in the \b ciphertext buffer.
  *
- * \retval PSA_SUCCESS
+ * \retval #PSA_SUCCESS
  *         Success.
- * \retval PSA_ERROR_EMPTY_SLOT
- * \retval PSA_ERROR_NOT_PERMITTED
- * \retval PSA_ERROR_INVALID_ARGUMENT
+ * \retval #PSA_ERROR_EMPTY_SLOT
+ * \retval #PSA_ERROR_NOT_PERMITTED
+ * \retval #PSA_ERROR_INVALID_ARGUMENT
  *         \c key is not compatible with \c alg.
- * \retval PSA_ERROR_NOT_SUPPORTED
+ * \retval #PSA_ERROR_NOT_SUPPORTED
  *         \c alg is not supported or is not an AEAD algorithm.
- * \retval PSA_ERROR_INSUFFICIENT_MEMORY
- * \retval PSA_ERROR_COMMUNICATION_FAILURE
- * \retval PSA_ERROR_HARDWARE_FAILURE
- * \retval PSA_ERROR_TAMPERING_DETECTED
+ * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
+ * \retval #PSA_ERROR_COMMUNICATION_FAILURE
+ * \retval #PSA_ERROR_HARDWARE_FAILURE
+ * \retval #PSA_ERROR_TAMPERING_DETECTED
  */
 psa_status_t psa_aead_encrypt( psa_key_slot_t key,
                                psa_algorithm_t alg,
@@ -1643,30 +1656,6 @@ psa_status_t psa_aead_encrypt( psa_key_slot_t key,
                                uint8_t *ciphertext,
                                size_t ciphertext_size,
                                size_t *ciphertext_length );
-
-/** The maximum size of the output of psa_aead_decrypt(), in bytes.
- *
- * If the size of the plaintext buffer is at least this large, it is
- * guaranteed that psa_aead_decrypt() will not fail due to an
- * insufficient buffer size. Depending on the algorithm, the actual size of
- * the plaintext may be smaller.
- *
- * \param alg                 An AEAD algorithm
- *                            (\c PSA_ALG_XXX value such that
- *                            #PSA_ALG_IS_AEAD(alg) is true).
- * \param ciphertext_length   Size of the plaintext in bytes.
- *
- * \return                    The AEAD ciphertext size for the specified
- *                            algorithm.
- *                            If the AEAD algorithm is not recognized, return 0.
- *                            An implementation may return either 0 or a
- *                            correct size for an AEAD algorithm that it
- *                            recognizes, but does not support.
- */
-#define PSA_AEAD_DECRYPT_OUTPUT_SIZE(alg, ciphertext_length)    \
-    (PSA_AEAD_TAG_SIZE(alg) != 0 ?                              \
-     (plaintext_length) - PSA_AEAD_TAG_SIZE(alg) :              \
-     0)
 
 /** Process an authenticated decryption operation.
  *
@@ -1694,20 +1683,20 @@ psa_status_t psa_aead_encrypt( psa_key_slot_t key,
  * \param plaintext_length        On success, the size of the output
  *                                in the \b plaintext buffer.
  *
- * \retval PSA_SUCCESS
+ * \retval #PSA_SUCCESS
  *         Success.
- * \retval PSA_ERROR_EMPTY_SLOT
- * \retval PSA_ERROR_INVALID_SIGNATURE
+ * \retval #PSA_ERROR_EMPTY_SLOT
+ * \retval #PSA_ERROR_INVALID_SIGNATURE
  *         The ciphertext is not authentic.
- * \retval PSA_ERROR_NOT_PERMITTED
- * \retval PSA_ERROR_INVALID_ARGUMENT
+ * \retval #PSA_ERROR_NOT_PERMITTED
+ * \retval #PSA_ERROR_INVALID_ARGUMENT
  *         \c key is not compatible with \c alg.
- * \retval PSA_ERROR_NOT_SUPPORTED
+ * \retval #PSA_ERROR_NOT_SUPPORTED
  *         \c alg is not supported or is not an AEAD algorithm.
- * \retval PSA_ERROR_INSUFFICIENT_MEMORY
- * \retval PSA_ERROR_COMMUNICATION_FAILURE
- * \retval PSA_ERROR_HARDWARE_FAILURE
- * \retval PSA_ERROR_TAMPERING_DETECTED
+ * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
+ * \retval #PSA_ERROR_COMMUNICATION_FAILURE
+ * \retval #PSA_ERROR_HARDWARE_FAILURE
+ * \retval #PSA_ERROR_TAMPERING_DETECTED
  */
 psa_status_t psa_aead_decrypt( psa_key_slot_t key,
                                psa_algorithm_t alg,
@@ -1728,72 +1717,21 @@ psa_status_t psa_aead_decrypt( psa_key_slot_t key,
  */
 
 /**
- * \brief Maximum ECDSA signature size for a given curve bit size
+ * \brief ECDSA signature size for a given curve bit size
  *
- * \param curve_bits    Curve size in bits
- * \return              Maximum signature size in bytes
+ * \param curve_bits    Curve size in bits.
+ * \return              Signature size in bytes.
  *
  * \note This macro returns a compile-time constant if its argument is one.
- *
- * \warning This macro may evaluate its argument multiple times.
  */
-/*
- * RFC 4492 page 20:
- *
- *     Ecdsa-Sig-Value ::= SEQUENCE {
- *         r       INTEGER,
- *         s       INTEGER
- *     }
- *
- * Size is at most
- *    1 (tag) + 1 (len) + 1 (initial 0) + curve_bytes for each of r and s,
- *    twice that + 1 (tag) + 2 (len) for the sequence
- * (assuming curve_bytes is less than 126 for r and s,
- * and less than 124 (total len <= 255) for the sequence)
- */
-#define PSA_ECDSA_SIGNATURE_SIZE(curve_bits)                          \
-    ( /*T,L of SEQUENCE*/ ((curve_bits) >= 61 * 8 ? 3 : 2) +          \
-      /*T,L of r,s*/       2 * (((curve_bits) >= 127 * 8 ? 3 : 2) +   \
-      /*V of r,s*/               ((curve_bits) + 8) / 8))
-
-
-/** Safe signature buffer size for psa_asymmetric_sign().
- *
- * This macro returns a safe buffer size for a signature using a key
- * of the specified type and size, with the specified algorithm.
- * Note that the actual size of the signature may be smaller
- * (some algorithms produce a variable-size signature).
- *
- * \warning This function may call its arguments multiple times or
- *          zero times, so you should not pass arguments that contain
- *          side effects.
- *
- * \param key_type  An asymmetric key type (this may indifferently be a
- *                  key pair type or a public key type).
- * \param key_bits  The size of the key in bits.
- * \param alg       The signature algorithm.
- *
- * \return If the parameters are valid and supported, return
- *         a buffer size in bytes that guarantees that
- *         psa_asymmetric_sign() will not fail with
- *         #PSA_ERROR_BUFFER_TOO_SMALL.
- *         If the parameters are a valid combination that is not supported
- *         by the implementation, this macro either shall return either a
- *         sensible size or 0.
- *         If the parameters are not valid, the
- *         return value is unspecified.
- *
- */
-#define PSA_ASYMMETRIC_SIGN_OUTPUT_SIZE(key_type, key_bits, alg)        \
-    (PSA_KEY_TYPE_IS_RSA(key_type) ? ((void)alg, PSA_BITS_TO_BYTES(key_bits)) : \
-     PSA_KEY_TYPE_IS_ECC(key_type) ? PSA_ECDSA_SIGNATURE_SIZE(key_bits) : \
-     ((void)alg, 0))
+#define PSA_ECDSA_SIGNATURE_SIZE(curve_bits)    \
+    (PSA_BITS_TO_BYTES(curve_bits) * 2)
 
 /**
  * \brief Sign a hash or short message with a private key.
  *
  * Note that to perform a hash-and-sign signature algorithm, you must
- * first calculate the hash by calling psa_hash_start(), psa_hash_update()
+ * first calculate the hash by calling psa_hash_setup(), psa_hash_update()
  * and psa_hash_finish(). Then pass the resulting hash as the \p hash
  * parameter to this function. You can use #PSA_ALG_SIGN_GET_HASH(\p alg)
  * to determine the hash algorithm to use.
@@ -1817,20 +1755,20 @@ psa_status_t psa_aead_decrypt( psa_key_slot_t key,
  * \param signature_length  On success, the number of bytes
  *                          that make up the returned signature value.
  *
- * \retval PSA_SUCCESS
- * \retval PSA_ERROR_BUFFER_TOO_SMALL
+ * \retval #PSA_SUCCESS
+ * \retval #PSA_ERROR_BUFFER_TOO_SMALL
  *         The size of the \c signature buffer is too small. You can
  *         determine a sufficient buffer size by calling
  *         #PSA_ASYMMETRIC_SIGN_OUTPUT_SIZE(key_type, key_bits, alg)
  *         where \c key_type and \c key_bits are the type and bit-size
  *         respectively of \c key.
- * \retval PSA_ERROR_NOT_SUPPORTED
- * \retval PSA_ERROR_INVALID_ARGUMENT
- * \retval PSA_ERROR_INSUFFICIENT_MEMORY
- * \retval PSA_ERROR_COMMUNICATION_FAILURE
- * \retval PSA_ERROR_HARDWARE_FAILURE
- * \retval PSA_ERROR_TAMPERING_DETECTED
- * \retval PSA_ERROR_INSUFFICIENT_ENTROPY
+ * \retval #PSA_ERROR_NOT_SUPPORTED
+ * \retval #PSA_ERROR_INVALID_ARGUMENT
+ * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
+ * \retval #PSA_ERROR_COMMUNICATION_FAILURE
+ * \retval #PSA_ERROR_HARDWARE_FAILURE
+ * \retval #PSA_ERROR_TAMPERING_DETECTED
+ * \retval #PSA_ERROR_INSUFFICIENT_ENTROPY
  */
 psa_status_t psa_asymmetric_sign(psa_key_slot_t key,
                                  psa_algorithm_t alg,
@@ -1846,7 +1784,7 @@ psa_status_t psa_asymmetric_sign(psa_key_slot_t key,
  * \brief Verify the signature a hash or short message using a public key.
  *
  * Note that to perform a hash-and-sign signature algorithm, you must
- * first calculate the hash by calling psa_hash_start(), psa_hash_update()
+ * first calculate the hash by calling psa_hash_setup(), psa_hash_update()
  * and psa_hash_finish(). Then pass the resulting hash as the \p hash
  * parameter to this function. You can use #PSA_ALG_SIGN_GET_HASH(\p alg)
  * to determine the hash algorithm to use.
@@ -1870,17 +1808,17 @@ psa_status_t psa_asymmetric_sign(psa_key_slot_t key,
  * \param signature         Buffer containing the signature to verify.
  * \param signature_length  Size of the \c signature buffer in bytes.
  *
- * \retval PSA_SUCCESS
+ * \retval #PSA_SUCCESS
  *         The signature is valid.
- * \retval PSA_ERROR_INVALID_SIGNATURE
+ * \retval #PSA_ERROR_INVALID_SIGNATURE
  *         The calculation was perfomed successfully, but the passed
  *         signature is not a valid signature.
- * \retval PSA_ERROR_NOT_SUPPORTED
- * \retval PSA_ERROR_INVALID_ARGUMENT
- * \retval PSA_ERROR_INSUFFICIENT_MEMORY
- * \retval PSA_ERROR_COMMUNICATION_FAILURE
- * \retval PSA_ERROR_HARDWARE_FAILURE
- * \retval PSA_ERROR_TAMPERING_DETECTED
+ * \retval #PSA_ERROR_NOT_SUPPORTED
+ * \retval #PSA_ERROR_INVALID_ARGUMENT
+ * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
+ * \retval #PSA_ERROR_COMMUNICATION_FAILURE
+ * \retval #PSA_ERROR_HARDWARE_FAILURE
+ * \retval #PSA_ERROR_TAMPERING_DETECTED
  */
 psa_status_t psa_asymmetric_verify(psa_key_slot_t key,
                                    psa_algorithm_t alg,
@@ -1891,18 +1829,10 @@ psa_status_t psa_asymmetric_verify(psa_key_slot_t key,
                                    const uint8_t *signature,
                                    size_t signature_length);
 
-#define PSA_ASYMMETRIC_ENCRYPT_OUTPUT_SIZE(key_type, key_bits, alg)     \
-    (PSA_KEY_TYPE_IS_RSA(key_type) ?                                    \
-     ((void)alg, PSA_BITS_TO_BYTES(key_bits)) :                         \
-     0)
 #define PSA_RSA_MINIMUM_PADDING_SIZE(alg)                               \
     (PSA_ALG_IS_RSA_OAEP_MGF1(alg) ?                                    \
      2 * PSA_HASH_FINAL_SIZE(PSA_ALG_RSA_GET_HASH(alg)) + 1 :           \
      11 /*PKCS#1v1.5*/)
-#define PSA_ASYMMETRIC_DECRYPT_OUTPUT_SIZE(key_type, key_bits, alg)     \
-    (PSA_KEY_TYPE_IS_RSA(key_type) ?                                    \
-     PSA_BITS_TO_BYTES(key_bits) - PSA_RSA_MINIMUM_PADDING_SIZE(alg) :  \
-     0)
 
 /**
  * \brief Encrypt a short message with a public key.
@@ -1930,20 +1860,20 @@ psa_status_t psa_asymmetric_verify(psa_key_slot_t key,
  * \param output_length     On success, the number of bytes
  *                          that make up the returned output.
  *
- * \retval PSA_SUCCESS
- * \retval PSA_ERROR_BUFFER_TOO_SMALL
+ * \retval #PSA_SUCCESS
+ * \retval #PSA_ERROR_BUFFER_TOO_SMALL
  *         The size of the \c output buffer is too small. You can
  *         determine a sufficient buffer size by calling
  *         #PSA_ASYMMETRIC_ENCRYPT_OUTPUT_SIZE(key_type, key_bits, alg)
  *         where \c key_type and \c key_bits are the type and bit-size
  *         respectively of \c key.
- * \retval PSA_ERROR_NOT_SUPPORTED
- * \retval PSA_ERROR_INVALID_ARGUMENT
- * \retval PSA_ERROR_INSUFFICIENT_MEMORY
- * \retval PSA_ERROR_COMMUNICATION_FAILURE
- * \retval PSA_ERROR_HARDWARE_FAILURE
- * \retval PSA_ERROR_TAMPERING_DETECTED
- * \retval PSA_ERROR_INSUFFICIENT_ENTROPY
+ * \retval #PSA_ERROR_NOT_SUPPORTED
+ * \retval #PSA_ERROR_INVALID_ARGUMENT
+ * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
+ * \retval #PSA_ERROR_COMMUNICATION_FAILURE
+ * \retval #PSA_ERROR_HARDWARE_FAILURE
+ * \retval #PSA_ERROR_TAMPERING_DETECTED
+ * \retval #PSA_ERROR_INSUFFICIENT_ENTROPY
  */
 psa_status_t psa_asymmetric_encrypt(psa_key_slot_t key,
                                     psa_algorithm_t alg,
@@ -1980,21 +1910,21 @@ psa_status_t psa_asymmetric_encrypt(psa_key_slot_t key,
  * \param output_length     On success, the number of bytes
  *                          that make up the returned output.
  *
- * \retval PSA_SUCCESS
- * \retval PSA_ERROR_BUFFER_TOO_SMALL
+ * \retval #PSA_SUCCESS
+ * \retval #PSA_ERROR_BUFFER_TOO_SMALL
  *         The size of the \c output buffer is too small. You can
  *         determine a sufficient buffer size by calling
  *         #PSA_ASYMMETRIC_DECRYPT_OUTPUT_SIZE(key_type, key_bits, alg)
  *         where \c key_type and \c key_bits are the type and bit-size
  *         respectively of \c key.
- * \retval PSA_ERROR_NOT_SUPPORTED
- * \retval PSA_ERROR_INVALID_ARGUMENT
- * \retval PSA_ERROR_INSUFFICIENT_MEMORY
- * \retval PSA_ERROR_COMMUNICATION_FAILURE
- * \retval PSA_ERROR_HARDWARE_FAILURE
- * \retval PSA_ERROR_TAMPERING_DETECTED
- * \retval PSA_ERROR_INSUFFICIENT_ENTROPY
- * \retval PSA_ERROR_INVALID_PADDING
+ * \retval #PSA_ERROR_NOT_SUPPORTED
+ * \retval #PSA_ERROR_INVALID_ARGUMENT
+ * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
+ * \retval #PSA_ERROR_COMMUNICATION_FAILURE
+ * \retval #PSA_ERROR_HARDWARE_FAILURE
+ * \retval #PSA_ERROR_TAMPERING_DETECTED
+ * \retval #PSA_ERROR_INSUFFICIENT_ENTROPY
+ * \retval #PSA_ERROR_INVALID_PADDING
  */
 psa_status_t psa_asymmetric_decrypt(psa_key_slot_t key,
                                     psa_algorithm_t alg,
@@ -2024,12 +1954,12 @@ psa_status_t psa_asymmetric_decrypt(psa_key_slot_t key,
  * \param output            Output buffer for the generated data.
  * \param output_size       Number of bytes to generate and output.
  *
- * \retval PSA_SUCCESS
- * \retval PSA_ERROR_NOT_SUPPORTED
- * \retval PSA_ERROR_INSUFFICIENT_ENTROPY
- * \retval PSA_ERROR_COMMUNICATION_FAILURE
- * \retval PSA_ERROR_HARDWARE_FAILURE
- * \retval PSA_ERROR_TAMPERING_DETECTED
+ * \retval #PSA_SUCCESS
+ * \retval #PSA_ERROR_NOT_SUPPORTED
+ * \retval #PSA_ERROR_INSUFFICIENT_ENTROPY
+ * \retval #PSA_ERROR_COMMUNICATION_FAILURE
+ * \retval #PSA_ERROR_HARDWARE_FAILURE
+ * \retval #PSA_ERROR_TAMPERING_DETECTED
  */
 psa_status_t psa_generate_random(uint8_t *output,
                                  size_t output_size);
@@ -2049,8 +1979,8 @@ psa_status_t psa_generate_random(uint8_t *output,
  * \param parameters_size   Size of the buffer that \p parameters
  *                          points to, in bytes.
  *
- * For any symmetric key type (type such that
- * `PSA_KEY_TYPE_IS_ASYMMETRIC(type)` is false), \c parameters must be
+ * For any symmetric key type (a type such that
+ * #PSA_KEY_TYPE_IS_ASYMMETRIC(`type`) is false), \c parameters must be
  * \c NULL. For asymmetric key types defined by this specification,
  * the parameter type and the default parameters are defined by the
  * table below. For vendor-defined key types, the vendor documentation
@@ -2060,14 +1990,14 @@ psa_status_t psa_generate_random(uint8_t *output,
  * ---- | -------------- | ------- | ---------------------------------------
  * `PSA_KEY_TYPE_RSA_KEYPAIR` | `unsigned int` | Public exponent | 65537
  *
- * \retval PSA_SUCCESS
- * \retval PSA_ERROR_NOT_SUPPORTED
- * \retval PSA_ERROR_INVALID_ARGUMENT
- * \retval PSA_ERROR_INSUFFICIENT_MEMORY
- * \retval PSA_ERROR_INSUFFICIENT_ENTROPY
- * \retval PSA_ERROR_COMMUNICATION_FAILURE
- * \retval PSA_ERROR_HARDWARE_FAILURE
- * \retval PSA_ERROR_TAMPERING_DETECTED
+ * \retval #PSA_SUCCESS
+ * \retval #PSA_ERROR_NOT_SUPPORTED
+ * \retval #PSA_ERROR_INVALID_ARGUMENT
+ * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
+ * \retval #PSA_ERROR_INSUFFICIENT_ENTROPY
+ * \retval #PSA_ERROR_COMMUNICATION_FAILURE
+ * \retval #PSA_ERROR_HARDWARE_FAILURE
+ * \retval #PSA_ERROR_TAMPERING_DETECTED
  */
 psa_status_t psa_generate_key(psa_key_slot_t key,
                               psa_key_type_t type,
@@ -2080,6 +2010,10 @@ psa_status_t psa_generate_key(psa_key_slot_t key,
 #ifdef __cplusplus
 }
 #endif
+
+/* The file "crypto_sizes.h" contains definitions for size calculation
+ * macros whose definitions are implementation-specific. */
+#include "crypto_sizes.h"
 
 /* The file "crypto_struct.h" contains definitions for
  * implementation-specific structs that are declared above. */
