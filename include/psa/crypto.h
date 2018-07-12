@@ -97,7 +97,7 @@ typedef int32_t psa_status_t;
 
 /** An output buffer is too small.
  *
- * Applications can call the \c PSA_xxx_SIZE macro listed in the function
+ * Applications can call the `PSA_xxx_SIZE` macro listed in the function
  * description to determine a sufficient buffer size.
  *
  * Implementations should preferably return this error code only
@@ -356,8 +356,8 @@ typedef uint32_t psa_key_type_t;
  * used for.
  *
  * HMAC keys should generally have the same size as the underlying hash.
- * This size can be calculated with #PSA_HASH_SIZE(\c alg) where
- * \c alg is the HMAC algorithm or the underlying hash algorithm. */
+ * This size can be calculated with #PSA_HASH_SIZE(\p alg) where
+ * `alg` is the HMAC algorithm or the underlying hash algorithm. */
 #define PSA_KEY_TYPE_HMAC                       ((psa_key_type_t)0x02000001)
 
 /** Key for an cipher, AEAD or MAC algorithm based on the AES block cipher.
@@ -433,11 +433,7 @@ typedef uint32_t psa_key_type_t;
 /** Whether a key type is an RSA key pair or public key. */
 #define PSA_KEY_TYPE_IS_RSA(type)                                       \
     (PSA_KEY_TYPE_PUBLIC_KEY_OF_KEYPAIR(type) == PSA_KEY_TYPE_RSA_PUBLIC_KEY)
-/** Whether a key type is an RSA key (pair or public-only). */
-#define PSA_KEY_TYPE_IS_RSA(type)                                       \
-    (PSA_KEY_TYPE_PUBLIC_KEY_OF_KEYPAIR(type) ==                        \
-     PSA_KEY_TYPE_RSA_PUBLIC_KEY)
-/** Whether a key type is an elliptic curve key (pair or public-only). */
+/** Whether a key type is an elliptic curve key pair or public key. */
 #define PSA_KEY_TYPE_IS_ECC(type)                                       \
     ((PSA_KEY_TYPE_PUBLIC_KEY_OF_KEYPAIR(type) &                        \
       ~PSA_KEY_TYPE_ECC_CURVE_MASK) == PSA_KEY_TYPE_ECC_PUBLIC_KEY_BASE)
@@ -686,8 +682,6 @@ typedef uint32_t psa_algorithm_t;
 #define PSA_ALG_GMAC                            ((psa_algorithm_t)0x02c00003)
 
 /** Whether the specified algorithm is a MAC algorithm based on a block cipher.
- *
- * \param alg An algorithm identifier (value of type #psa_algorithm_t).
  *
  * \return 1 if \p alg is a MAC algorithm based on a block cipher, 0 otherwise.
  *         This macro may return either 0 or 1 if \p alg is not a supported
@@ -1200,10 +1194,7 @@ typedef uint32_t psa_key_usage_t;
 typedef struct psa_key_policy_s psa_key_policy_t;
 
 /** \brief Initialize a key policy structure to a default that forbids all
- * usage of the key.
- *
- * \param[out] policy   The policy object to initialize.
- */
+ * usage of the key. */
 void psa_key_policy_init(psa_key_policy_t *policy);
 
 /** \brief Set the standard fields of a policy structure.
@@ -1211,29 +1202,15 @@ void psa_key_policy_init(psa_key_policy_t *policy);
  * Note that this function does not make any consistency check of the
  * parameters. The values are only checked when applying the policy to
  * a key slot with psa_set_key_policy().
- *
- * \param[out] policy   The policy object to modify.
- * \param usage         The permitted uses for the key.
- * \param alg           The algorithm that the key may be used for.
  */
 void psa_key_policy_set_usage(psa_key_policy_t *policy,
                               psa_key_usage_t usage,
                               psa_algorithm_t alg);
 
-/** \brief Retrieve the usage field of a policy structure.
- *
- * \param[in] policy    The policy object to query.
- *
- * \return The permitted uses for a key with this policy.
- */
+/** \brief Retrieve the usage field of a policy structure. */
 psa_key_usage_t psa_key_policy_get_usage(const psa_key_policy_t *policy);
 
-/** \brief Retrieve the algorithm field of a policy structure.
- *
- * \param[in] policy    The policy object to query.
- *
- * \return The permitted algorithm for a key with this policy.
- */
+/** \brief Retrieve the algorithm field of a policy structure. */
 psa_algorithm_t psa_key_policy_get_algorithm(const psa_key_policy_t *policy);
 
 /** \brief Set the usage policy on a key slot.
@@ -1244,30 +1221,11 @@ psa_algorithm_t psa_key_policy_get_algorithm(const psa_key_policy_t *policy);
  *
  * Implementations may set restrictions on supported key policies
  * depending on the key type and the key slot.
- *
- * \param key           The key slot whose policy is to be changed.
- * \param[in] policy    The policy object to query.
- *
- * \retval #PSA_SUCCESS
- * \retval #PSA_ERROR_OCCUPIED_SLOT
- * \retval #PSA_ERROR_NOT_SUPPORTED
- * \retval #PSA_ERROR_INVALID_ARGUMENT
- * \retval #PSA_ERROR_COMMUNICATION_FAILURE
- * \retval #PSA_ERROR_HARDWARE_FAILURE
- * \retval #PSA_ERROR_TAMPERING_DETECTED
  */
 psa_status_t psa_set_key_policy(psa_key_slot_t key,
                                 const psa_key_policy_t *policy);
 
 /** \brief Get the usage policy for a key slot.
- *
- * \param key           The key slot whose policy is being queried.
- * \param[out] policy   On success, the key's policy.
- *
- * \retval #PSA_SUCCESS
- * \retval #PSA_ERROR_COMMUNICATION_FAILURE
- * \retval #PSA_ERROR_HARDWARE_FAILURE
- * \retval #PSA_ERROR_TAMPERING_DETECTED
  */
 psa_status_t psa_get_key_policy(psa_key_slot_t key,
                                 psa_key_policy_t *policy);
@@ -1361,7 +1319,7 @@ typedef struct psa_hash_operation_s psa_hash_operation_t;
  *
  * \param alg   A hash algorithm (\c PSA_ALG_XXX value such that
  *              #PSA_ALG_IS_HASH(\p alg) is true), or an HMAC algorithm
- *              (#PSA_ALG_HMAC(\c hash_alg) where \c hash_alg is a
+ *              (#PSA_ALG_HMAC(`hash_alg`) where `hash_alg` is a
  *              hash algorithm).
  *
  * \return The hash size for the specified hash algorithm.
@@ -1470,7 +1428,7 @@ psa_status_t psa_hash_update(psa_hash_operation_t *operation,
  * \param hash_size             Size of the \p hash buffer in bytes.
  * \param[out] hash_length      On success, the number of bytes
  *                              that make up the hash value. This is always
- *                              #PSA_HASH_SIZE(\c alg) where \c alg is the
+ *                              #PSA_HASH_SIZE(`alg`) where `alg` is the
  *                              hash algorithm that is calculated.
  *
  * \retval #PSA_SUCCESS
@@ -1528,23 +1486,17 @@ psa_status_t psa_hash_verify(psa_hash_operation_t *operation,
 
 /** Abort a hash operation.
  *
+ * This function may be called at any time after psa_hash_setup().
  * Aborting an operation frees all associated resources except for the
- * \p operation structure itself. Once aborted, the operation object
- * can be reused for another operation by calling
- * psa_hash_setup() again.
+ * \p operation structure itself.
  *
- * You may call this function any time after the operation object has
- * been initialized by any of the following methods:
- * - A call to psa_hash_setup(), whether it succeeds or not.
- * - Initializing the \c struct to all-bits-zero.
- * - Initializing the \c struct to logical zeros, e.g.
- *   `psa_hash_operation_t operation = {0}`.
+ * Implementation should strive to be robust and handle inactive hash
+ * operations safely (do nothing and return #PSA_ERROR_BAD_STATE). However,
+ * application writers should beware that uninitialized memory may happen
+ * to be indistinguishable from an active hash operation, and the behavior
+ * of psa_hash_abort() is undefined in this case.
  *
- * In particular, calling psa_hash_abort() after the operation has been
- * terminated by a call to psa_hash_abort(), psa_hash_finish() or
- * psa_hash_verify() is safe and has no effect.
- *
- * \param[in,out] operation     Initialized hash operation.
+ * \param[in,out] operation     Active hash operation.
  *
  * \retval #PSA_SUCCESS
  * \retval #PSA_ERROR_BAD_STATE
@@ -1770,24 +1722,18 @@ psa_status_t psa_mac_verify_finish(psa_mac_operation_t *operation,
 
 /** Abort a MAC operation.
  *
+ * This function may be called at any time after psa_mac_sign_setup()
+ * or psa_mac_verify_setup().
  * Aborting an operation frees all associated resources except for the
- * \p operation structure itself. Once aborted, the operation object
- * can be reused for another operation by calling
- * psa_mac_sign_setup() or psa_mac_verify_setup() again.
+ * \p operation structure itself.
  *
- * You may call this function any time after the operation object has
- * been initialized by any of the following methods:
- * - A call to psa_mac_sign_setup() or psa_mac_verify_setup(), whether
- *   it succeeds or not.
- * - Initializing the \c struct to all-bits-zero.
- * - Initializing the \c struct to logical zeros, e.g.
- *   `psa_mac_operation_t operation = {0}`.
+ * Implementation should strive to be robust and handle inactive MAC
+ * operations safely (do nothing and return #PSA_ERROR_BAD_STATE). However,
+ * application writers should beware that uninitialized memory may happen
+ * to be indistinguishable from an active MAC operation, and the behavior
+ * of psa_mac_abort() is undefined in this case.
  *
- * In particular, calling psa_mac_abort() after the operation has been
- * terminated by a call to psa_mac_abort(), psa_mac_sign_finish() or
- * psa_mac_verify_finish() is safe and has no effect.
- *
- * \param[in,out] operation Initialized MAC operation.
+ * \param[in,out] operation Active MAC operation.
  *
  * \retval #PSA_SUCCESS
  * \retval #PSA_ERROR_BAD_STATE
@@ -1979,12 +1925,12 @@ psa_status_t psa_cipher_set_iv(psa_cipher_operation_t *operation,
 
 /** Encrypt or decrypt a message fragment in an active cipher operation.
  *
- * Before calling this function, you must:
- * 1. Call either psa_cipher_encrypt_setup() or psa_cipher_decrypt_setup().
- *    The choice of setup function determines whether this function
- *    encrypts or decrypts its input.
- * 2. If the algorithm requires an IV, call psa_cipher_generate_iv()
- *    (recommended when encrypting) or psa_cipher_set_iv().
+ * The application must call psa_cipher_encrypt_setup() or
+ * psa_cipher_decrypt_setup() before calling this function. The choice
+ * of setup function determines whether this function encrypts or
+ * decrypts its input. After calling a setup function, if the chosen
+ * algorithm requires an IV, the application must call
+ * psa_cipher_generate_iv() or psa_cipher_set_iv().
  *
  * If this function returns an error status, the operation becomes inactive.
  *
@@ -2054,24 +2000,18 @@ psa_status_t psa_cipher_finish(psa_cipher_operation_t *operation,
 
 /** Abort a cipher operation.
  *
+ * This function may be called at any time after
+ * psa_cipher_encrypt_setup() or psa_cipher_decrypt_setup().
  * Aborting an operation frees all associated resources except for the
- * \p operation structure itself. Once aborted, the operation object
- * can be reused for another operation by calling
- * psa_cipher_encrypt_setup() or psa_cipher_decrypt_setup() again.
+ * \p operation structure itself.
  *
- * You may call this function any time after the operation object has
- * been initialized by any of the following methods:
- * - A call to psa_cipher_encrypt_setup() or psa_cipher_decrypt_setup(),
- *   whether it succeeds or not.
- * - Initializing the \c struct to all-bits-zero.
- * - Initializing the \c struct to logical zeros, e.g.
- *   `psa_cipher_operation_t operation = {0}`.
+ * Implementation should strive to be robust and handle inactive cipher
+ * operations safely (do nothing and return #PSA_ERROR_BAD_STATE). However,
+ * application writers should beware that uninitialized memory may happen
+ * to be indistinguishable from an active cipher operation, and the behavior
+ * of psa_cipher_abort() is undefined in this case.
  *
- * In particular, calling psa_cipher_abort() after the operation has been
- * terminated by a call to psa_cipher_abort() or psa_cipher_finish()
- * is safe and has no effect.
- *
- * \param[in,out] operation     Initialized cipher operation.
+ * \param[in,out] operation     Active cipher operation.
  *
  * \retval #PSA_SUCCESS
  * \retval #PSA_ERROR_BAD_STATE
@@ -2245,6 +2185,15 @@ psa_status_t psa_aead_decrypt( psa_key_slot_t key,
  *                              the type of \p key.
  * \param[in] hash              The hash or message to sign.
  * \param hash_length           Size of the \p hash buffer in bytes.
+ * \param[in] salt              A salt or label, if supported by the
+ *                              signature algorithm.
+ *                              If the signature algorithm does not support
+ *                              a salt, pass \c NULL.
+ *                              If the signature algorithm supports an
+ *                              optional salt and you do not want to pass
+ *                              a salt, pass \c NULL.
+ * \param salt_length           Size of the \p salt buffer in bytes.
+ *                              If \p salt is \c NULL, pass 0.
  * \param[out] signature        Buffer where the signature is to be written.
  * \param signature_size        Size of the \p signature buffer in bytes.
  * \param[out] signature_length On success, the number of bytes
@@ -2269,6 +2218,8 @@ psa_status_t psa_asymmetric_sign(psa_key_slot_t key,
                                  psa_algorithm_t alg,
                                  const uint8_t *hash,
                                  size_t hash_length,
+                                 const uint8_t *salt,
+                                 size_t salt_length,
                                  uint8_t *signature,
                                  size_t signature_size,
                                  size_t *signature_length);
@@ -2289,6 +2240,15 @@ psa_status_t psa_asymmetric_sign(psa_key_slot_t key,
  * \param[in] hash          The hash or message whose signature is to be
  *                          verified.
  * \param hash_length       Size of the \p hash buffer in bytes.
+ * \param[in] salt          A salt or label, if supported by the signature
+ *                          algorithm.
+ *                          If the signature algorithm does not support a
+ *                          salt, pass \c NULL.
+ *                          If the signature algorithm supports an optional
+ *                          salt and you do not want to pass a salt,
+ *                          pass \c NULL.
+ * \param salt_length       Size of the \p salt buffer in bytes.
+ *                          If \p salt is \c NULL, pass 0.
  * \param[in] signature     Buffer containing the signature to verify.
  * \param signature_length  Size of the \p signature buffer in bytes.
  *
@@ -2308,6 +2268,8 @@ psa_status_t psa_asymmetric_verify(psa_key_slot_t key,
                                    psa_algorithm_t alg,
                                    const uint8_t *hash,
                                    size_t hash_length,
+                                   const uint8_t *salt,
+                                   size_t salt_length,
                                    const uint8_t *signature,
                                    size_t signature_length);
 
@@ -2450,7 +2412,7 @@ psa_status_t psa_generate_random(uint8_t *output,
 
 /** Extra parameters for RSA key generation.
  *
- * You may pass a pointer to a structure of this type as the \c extra
+ * You may pass a pointer to a structure of this type as the `extra`
  * parameter to psa_generate_key().
  */
 typedef struct {
