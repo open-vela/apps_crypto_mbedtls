@@ -282,8 +282,6 @@ MBEDTLS_DEPRECATED void mbedtls_md2( const unsigned char *input,
 #undef MBEDTLS_DEPRECATED
 #endif /* !MBEDTLS_DEPRECATED_REMOVED */
 
-#if defined(MBEDTLS_SELF_TEST)
-
 /**
  * \brief          Checkup routine
  *
@@ -295,8 +293,6 @@ MBEDTLS_DEPRECATED void mbedtls_md2( const unsigned char *input,
  *
  */
 int mbedtls_md2_self_test( int verbose );
-
-#endif /* MBEDTLS_SELF_TEST */
 
 #ifdef __cplusplus
 }
