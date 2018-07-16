@@ -100,6 +100,7 @@ YOTTA=1
 # Default commands, can be overriden by the environment
 : ${OPENSSL:="openssl"}
 : ${OPENSSL_LEGACY:="$OPENSSL"}
+: ${OPENSSL_NEXT:="$OPENSSL"}
 : ${GNUTLS_CLI:="gnutls-cli"}
 : ${GNUTLS_SERV:="gnutls-serv"}
 : ${GNUTLS_LEGACY_CLI:="$GNUTLS_CLI"}
@@ -144,15 +145,26 @@ Tool path options:
      --gnutls-legacy-serv=<GnuTLS_serv_path>    GnuTLS server executable to use for legacy tests.
      --openssl=<OpenSSL_path>                   OpenSSL executable to use for most tests.
      --openssl-legacy=<OpenSSL_path>            OpenSSL executable to use for legacy tests e.g. SSLv3.
+     --openssl-next=<OpenSSL_path>              OpenSSL executable to use for recent things like ARIA
 EOF
 }
 
 # remove built files as well as the cmake cache/config
 cleanup()
 {
+    if [ -n "${MBEDTLS_ROOT_DIR+set}" ]; then
+        cd "$MBEDTLS_ROOT_DIR"
+    fi
+
     command make clean
 
-    find . -name yotta -prune -o -iname '*cmake*' -not -name CMakeLists.txt -exec rm -rf {} \+
+    # Remove CMake artefacts
+    find . -name .git -prune -o -name yotta -prune -o \
+           -iname CMakeFiles -exec rm -rf {} \+ -o \
+           \( -iname cmake_install.cmake -o \
+              -iname CTestTestfile.cmake -o \
+              -iname CMakeCache.txt \) -exec rm {} \+
+    # Recover files overwritten by in-tree CMake builds
     rm -f include/Makefile include/mbedtls/Makefile programs/*/Makefile
     git update-index --no-skip-worktree Makefile library/Makefile programs/Makefile tests/Makefile
     git checkout -- Makefile library/Makefile programs/Makefile tests/Makefile
@@ -235,6 +247,7 @@ while [ $# -gt 0 ]; do
         --no-yotta) YOTTA=0;;
         --openssl) shift; OPENSSL="$1";;
         --openssl-legacy) shift; OPENSSL_LEGACY="$1";;
+        --openssl-next) shift; OPENSSL_NEXT="$1";;
         --out-of-source-dir) shift; OUT_OF_SOURCE_DIR="$1";;
         --random-seed) unset SEED;;
         --release-test|-r) SEED=1;;
@@ -344,12 +357,19 @@ if_build_succeeded () {
     fi
 }
 
+# to be used instead of ! for commands run with
+# record_status or if_build_succeeded
+not() {
+    ! "$@"
+}
+
 msg "info: $0 configuration"
 echo "MEMORY: $MEMORY"
 echo "FORCE: $FORCE"
 echo "SEED: ${SEED-"UNSET"}"
 echo "OPENSSL: $OPENSSL"
 echo "OPENSSL_LEGACY: $OPENSSL_LEGACY"
+echo "OPENSSL_NEXT: $OPENSSL_NEXT"
 echo "GNUTLS_CLI: $GNUTLS_CLI"
 echo "GNUTLS_SERV: $GNUTLS_SERV"
 echo "GNUTLS_LEGACY_CLI: $GNUTLS_LEGACY_CLI"
@@ -374,7 +394,8 @@ if [ -n "${SEED-}" ]; then
 fi
 
 # Make sure the tools we need are available.
-check_tools "$OPENSSL" "$OPENSSL_LEGACY" "$GNUTLS_CLI" "$GNUTLS_SERV" \
+check_tools "$OPENSSL" "$OPENSSL_LEGACY" "$OPENSSL_NEXT" \
+            "$GNUTLS_CLI" "$GNUTLS_SERV" \
             "$GNUTLS_LEGACY_CLI" "$GNUTLS_LEGACY_SERV" "doxygen" "dot" \
             "arm-none-eabi-gcc" "i686-w64-mingw32-gcc" "gdb"
 if [ $RUN_ARMCC -ne 0 ]; then
@@ -412,6 +433,10 @@ tests/scripts/check-generated-files.sh
 
 msg "test: doxygen markup outside doxygen blocks" # < 1s
 tests/scripts/check-doxy-blocks.pl
+
+msg "test: check-files.py" # < 1s
+cleanup
+tests/scripts/check-files.py
 
 msg "test/build: declared and exported names" # < 3s
 cleanup
@@ -512,11 +537,32 @@ make
 msg "test: main suites (full config)" # ~ 5s
 make test
 
-msg "test: ssl-opt.sh default (full config)" # ~ 1s
-if_build_succeeded tests/ssl-opt.sh -f Default
+msg "test: ssl-opt.sh default, ECJPAKE, SSL async (full config)" # ~ 1s
+if_build_succeeded tests/ssl-opt.sh -f 'Default\|ECJPAKE\|SSL async private'
 
 msg "test: compat.sh RC4, DES & NULL (full config)" # ~ 2 min
 if_build_succeeded env OPENSSL_CMD="$OPENSSL_LEGACY" GNUTLS_CLI="$GNUTLS_LEGACY_CLI" GNUTLS_SERV="$GNUTLS_LEGACY_SERV" tests/compat.sh -e '3DES\|DES-CBC3' -f 'NULL\|DES\|RC4\|ARCFOUR'
+
+msg "test: compat.sh ARIA"
+if_build_succeeded env OPENSSL_CMD="$OPENSSL_NEXT" tests/compat.sh -e '^$' -f 'ARIA'
+
+msg "build: make, full config + DEPRECATED_WARNING, gcc -O" # ~ 30s
+cleanup
+cp "$CONFIG_H" "$CONFIG_BAK"
+scripts/config.pl full
+scripts/config.pl set MBEDTLS_DEPRECATED_WARNING
+# Build with -O -Wextra to catch a maximum of issues.
+make CC=gcc CFLAGS='-O -Werror -Wall -Wextra' lib programs
+make CC=gcc CFLAGS='-O -Werror -Wall -Wextra -Wno-unused-function' tests
+
+msg "build: make, full config + DEPRECATED_REMOVED, clang -O" # ~ 30s
+# No cleanup, just tweak the configuration and rebuild
+make clean
+scripts/config.pl unset MBEDTLS_DEPRECATED_WARNING
+scripts/config.pl set MBEDTLS_DEPRECATED_REMOVED
+# Build with -O -Wextra to catch a maximum of issues.
+make CC=clang CFLAGS='-O -Werror -Wall -Wextra' lib programs
+make CC=clang CFLAGS='-O -Werror -Wall -Wextra -Wno-unused-function' tests
 
 msg "test/build: curves.pl (gcc)" # ~ 4 min
 cleanup
@@ -691,6 +737,31 @@ make CC=gcc CFLAGS='-Werror -Wall -Wextra -DMBEDTLS_HAVE_INT64'
 msg "test: gcc, force 64-bit bignum limbs"
 make test
 
+
+msg "build: MBEDTLS_NO_UDBL_DIVISION native" # ~ 10s
+cleanup
+cp "$CONFIG_H" "$CONFIG_BAK"
+scripts/config.pl full
+scripts/config.pl unset MBEDTLS_MEMORY_BACKTRACE # too slow for tests
+scripts/config.pl set MBEDTLS_NO_UDBL_DIVISION
+make CFLAGS='-Werror -O1'
+
+msg "test: MBEDTLS_NO_UDBL_DIVISION native" # ~ 10s
+make test
+
+
+msg "build: MBEDTLS_NO_64BIT_MULTIPLICATION native" # ~ 10s
+cleanup
+cp "$CONFIG_H" "$CONFIG_BAK"
+scripts/config.pl full
+scripts/config.pl unset MBEDTLS_MEMORY_BACKTRACE # too slow for tests
+scripts/config.pl set MBEDTLS_NO_64BIT_MULTIPLICATION
+make CFLAGS='-Werror -O1'
+
+msg "test: MBEDTLS_NO_64BIT_MULTIPLICATION native" # ~ 10s
+make test
+
+
 msg "build: arm-none-eabi-gcc, make" # ~ 10s
 cleanup
 cp "$CONFIG_H" "$CONFIG_BAK"
@@ -726,7 +797,27 @@ scripts/config.pl unset MBEDTLS_MEMORY_BUFFER_ALLOC_C # calls exit
 scripts/config.pl set MBEDTLS_NO_UDBL_DIVISION
 make CC=arm-none-eabi-gcc AR=arm-none-eabi-ar LD=arm-none-eabi-ld CFLAGS='-Werror -Wall -Wextra' lib
 echo "Checking that software 64-bit division is not required"
-! grep __aeabi_uldiv library/*.o
+if_build_succeeded not grep __aeabi_uldiv library/*.o
+
+msg "build: arm-none-eabi-gcc MBEDTLS_NO_64BIT_MULTIPLICATION, make" # ~ 10s
+cleanup
+cp "$CONFIG_H" "$CONFIG_BAK"
+scripts/config.pl full
+scripts/config.pl unset MBEDTLS_NET_C
+scripts/config.pl unset MBEDTLS_TIMING_C
+scripts/config.pl unset MBEDTLS_FS_IO
+scripts/config.pl unset MBEDTLS_ENTROPY_NV_SEED
+scripts/config.pl set MBEDTLS_NO_PLATFORM_ENTROPY
+# following things are not in the default config
+scripts/config.pl unset MBEDTLS_HAVEGE_C # depends on timing.c
+scripts/config.pl unset MBEDTLS_THREADING_PTHREAD
+scripts/config.pl unset MBEDTLS_THREADING_C
+scripts/config.pl unset MBEDTLS_MEMORY_BACKTRACE # execinfo.h
+scripts/config.pl unset MBEDTLS_MEMORY_BUFFER_ALLOC_C # calls exit
+scripts/config.pl set MBEDTLS_NO_64BIT_MULTIPLICATION
+make CC=arm-none-eabi-gcc AR=arm-none-eabi-ar LD=arm-none-eabi-ld CFLAGS='-Werror -O1 -march=armv6-m -mthumb' lib
+echo "Checking that software 64-bit multiplication is not required"
+if_build_succeeded not grep __aeabi_lmul library/*.o
 
 msg "build: ARM Compiler 5, make"
 cleanup
@@ -859,8 +950,20 @@ make
 
 msg "test: cmake 'out-of-source' build"
 make test
+# Test an SSL option that requires an auxiliary script in test/scripts/.
+# Also ensure that there are no error messages such as
+# "No such file or directory", which would indicate that some required
+# file is missing (ssl-opt.sh tolerates the absence of some files so
+# may exit with status 0 but emit errors).
+if_build_succeeded ./tests/ssl-opt.sh -f 'Fallback SCSV: beginning of list' 2>ssl-opt.err
+if [ -s ssl-opt.err ]; then
+  cat ssl-opt.err >&2
+  record_status [ ! -s ssl-opt.err ]
+  rm ssl-opt.err
+fi
 cd "$MBEDTLS_ROOT_DIR"
 rm -rf "$OUT_OF_SOURCE_DIR"
+unset MBEDTLS_ROOT_DIR
 
 for optimization_flag in -O2 -O3 -Ofast -Os; do
     for compiler in clang gcc; do

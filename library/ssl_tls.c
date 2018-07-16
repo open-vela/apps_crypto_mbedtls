@@ -1272,7 +1272,7 @@ static void ssl_mac( mbedtls_md_context_t *md_ctx,
 
 #if defined(MBEDTLS_ARC4_C) || defined(MBEDTLS_CIPHER_NULL_CIPHER) ||     \
     ( defined(MBEDTLS_CIPHER_MODE_CBC) &&                                  \
-      ( defined(MBEDTLS_AES_C) || defined(MBEDTLS_CAMELLIA_C) ) )
+      ( defined(MBEDTLS_AES_C) || defined(MBEDTLS_CAMELLIA_C) || defined(MBEDTLS_ARIA_C)) )
 #define SSL_SOME_MODES_USE_MAC
 #endif
 
@@ -1473,7 +1473,7 @@ static int ssl_encrypt_buf( mbedtls_ssl_context *ssl )
     else
 #endif /* MBEDTLS_GCM_C || MBEDTLS_CCM_C */
 #if defined(MBEDTLS_CIPHER_MODE_CBC) &&                                    \
-    ( defined(MBEDTLS_AES_C) || defined(MBEDTLS_CAMELLIA_C) )
+    ( defined(MBEDTLS_AES_C) || defined(MBEDTLS_CAMELLIA_C) || defined(MBEDTLS_ARIA_C) )
     if( mode == MBEDTLS_MODE_CBC )
     {
         int ret;
@@ -1589,7 +1589,7 @@ static int ssl_encrypt_buf( mbedtls_ssl_context *ssl )
     }
     else
 #endif /* MBEDTLS_CIPHER_MODE_CBC &&
-          ( MBEDTLS_AES_C || MBEDTLS_CAMELLIA_C ) */
+          ( MBEDTLS_AES_C || MBEDTLS_CAMELLIA_C || MBEDTLS_ARIA_C ) */
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
         return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
@@ -1733,7 +1733,7 @@ static int ssl_decrypt_buf( mbedtls_ssl_context *ssl )
     else
 #endif /* MBEDTLS_GCM_C || MBEDTLS_CCM_C */
 #if defined(MBEDTLS_CIPHER_MODE_CBC) &&                                    \
-    ( defined(MBEDTLS_AES_C) || defined(MBEDTLS_CAMELLIA_C) )
+    ( defined(MBEDTLS_AES_C) || defined(MBEDTLS_CAMELLIA_C) || defined(MBEDTLS_ARIA_C) )
     if( mode == MBEDTLS_MODE_CBC )
     {
         /*
@@ -1945,7 +1945,7 @@ static int ssl_decrypt_buf( mbedtls_ssl_context *ssl )
     }
     else
 #endif /* MBEDTLS_CIPHER_MODE_CBC &&
-          ( MBEDTLS_AES_C || MBEDTLS_CAMELLIA_C ) */
+          ( MBEDTLS_AES_C || MBEDTLS_CAMELLIA_C || MBEDTLS_ARIA_C ) */
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
         return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
@@ -5202,7 +5202,7 @@ static void ssl_handshake_wrapup_free_hs_transform( mbedtls_ssl_context *ssl )
     /*
      * Free our handshake params
      */
-    mbedtls_ssl_handshake_free( ssl->handshake );
+    mbedtls_ssl_handshake_free( ssl );
     mbedtls_free( ssl->handshake );
     ssl->handshake = NULL;
 
@@ -5557,7 +5557,7 @@ static int ssl_handshake_init( mbedtls_ssl_context *ssl )
     if( ssl->session_negotiate )
         mbedtls_ssl_session_free( ssl->session_negotiate );
     if( ssl->handshake )
-        mbedtls_ssl_handshake_free( ssl->handshake );
+        mbedtls_ssl_handshake_free( ssl );
 
     /*
      * Either the pointers are now NULL or cleared properly and can be freed.
@@ -5995,27 +5995,27 @@ static int ssl_append_key_cert( mbedtls_ssl_key_cert **head,
                                 mbedtls_x509_crt *cert,
                                 mbedtls_pk_context *key )
 {
-    mbedtls_ssl_key_cert *new;
+    mbedtls_ssl_key_cert *new_cert;
 
-    new = mbedtls_calloc( 1, sizeof( mbedtls_ssl_key_cert ) );
-    if( new == NULL )
+    new_cert = mbedtls_calloc( 1, sizeof( mbedtls_ssl_key_cert ) );
+    if( new_cert == NULL )
         return( MBEDTLS_ERR_SSL_ALLOC_FAILED );
 
-    new->cert = cert;
-    new->key  = key;
-    new->next = NULL;
+    new_cert->cert = cert;
+    new_cert->key  = key;
+    new_cert->next = NULL;
 
     /* Update head is the list was null, else add to the end */
     if( *head == NULL )
     {
-        *head = new;
+        *head = new_cert;
     }
     else
     {
         mbedtls_ssl_key_cert *cur = *head;
         while( cur->next != NULL )
             cur = cur->next;
-        cur->next = new;
+        cur->next = new_cert;
     }
 
     return( 0 );
@@ -6479,6 +6479,43 @@ void mbedtls_ssl_conf_export_keys_cb( mbedtls_ssl_config *conf,
     conf->p_export_keys = p_export_keys;
 }
 #endif
+
+#if defined(MBEDTLS_SSL_ASYNC_PRIVATE)
+void mbedtls_ssl_conf_async_private_cb(
+    mbedtls_ssl_config *conf,
+    mbedtls_ssl_async_sign_t *f_async_sign,
+    mbedtls_ssl_async_decrypt_t *f_async_decrypt,
+    mbedtls_ssl_async_resume_t *f_async_resume,
+    mbedtls_ssl_async_cancel_t *f_async_cancel,
+    void *async_config_data )
+{
+    conf->f_async_sign_start = f_async_sign;
+    conf->f_async_decrypt_start = f_async_decrypt;
+    conf->f_async_resume = f_async_resume;
+    conf->f_async_cancel = f_async_cancel;
+    conf->p_async_config_data = async_config_data;
+}
+
+void *mbedtls_ssl_conf_get_async_config_data( const mbedtls_ssl_config *conf )
+{
+    return( conf->p_async_config_data );
+}
+
+void *mbedtls_ssl_get_async_operation_data( const mbedtls_ssl_context *ssl )
+{
+    if( ssl->handshake == NULL )
+        return( NULL );
+    else
+        return( ssl->handshake->user_async_ctx );
+}
+
+void mbedtls_ssl_set_async_operation_data( mbedtls_ssl_context *ssl,
+                                 void *ctx )
+{
+    if( ssl->handshake != NULL )
+        ssl->handshake->user_async_ctx = ctx;
+}
+#endif /* MBEDTLS_SSL_ASYNC_PRIVATE */
 
 /*
  * SSL get accessors
@@ -7194,8 +7231,16 @@ int mbedtls_ssl_read( mbedtls_ssl_context *ssl, unsigned char *buf, size_t len )
 }
 
 /*
- * Send application data to be encrypted by the SSL layer,
- * taking care of max fragment length and buffer size
+ * Send application data to be encrypted by the SSL layer, taking care of max
+ * fragment length and buffer size.
+ *
+ * According to RFC 5246 Section 6.2.1:
+ *
+ *      Zero-length fragments of Application data MAY be sent as they are
+ *      potentially useful as a traffic analysis countermeasure.
+ *
+ * Therefore, it is possible that the input message length is 0 and the
+ * corresponding return code is 0 on success.
  */
 static int ssl_write_real( mbedtls_ssl_context *ssl,
                            const unsigned char *buf, size_t len )
@@ -7223,6 +7268,12 @@ static int ssl_write_real( mbedtls_ssl_context *ssl,
 
     if( ssl->out_left != 0 )
     {
+        /*
+         * The user has previously tried to send the data and
+         * MBEDTLS_ERR_SSL_WANT_WRITE or the message was only partially
+         * written. In this case, we expect the high-level write function
+         * (e.g. mbedtls_ssl_write()) to be called with the same parameters
+         */
         if( ( ret = mbedtls_ssl_flush_output( ssl ) ) != 0 )
         {
             MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_flush_output", ret );
@@ -7231,6 +7282,11 @@ static int ssl_write_real( mbedtls_ssl_context *ssl,
     }
     else
     {
+        /*
+         * The user is trying to send a message the first time, so we need to
+         * copy the data into the internal buffers and setup the data structure
+         * to keep track of partial writes
+         */
         ssl->out_msglen  = len;
         ssl->out_msgtype = MBEDTLS_SSL_MSG_APPLICATION_DATA;
         memcpy( ssl->out_msg, buf, len );
@@ -7387,10 +7443,20 @@ static void ssl_key_cert_free( mbedtls_ssl_key_cert *key_cert )
 }
 #endif /* MBEDTLS_X509_CRT_PARSE_C */
 
-void mbedtls_ssl_handshake_free( mbedtls_ssl_handshake_params *handshake )
+void mbedtls_ssl_handshake_free( mbedtls_ssl_context *ssl )
 {
+    mbedtls_ssl_handshake_params *handshake = ssl->handshake;
+
     if( handshake == NULL )
         return;
+
+#if defined(MBEDTLS_SSL_ASYNC_PRIVATE)
+    if( ssl->conf->f_async_cancel != NULL && handshake->async_in_progress != 0 )
+    {
+        ssl->conf->f_async_cancel( ssl );
+        handshake->async_in_progress = 0;
+    }
+#endif /* MBEDTLS_SSL_ASYNC_PRIVATE */
 
 #if defined(MBEDTLS_SSL_PROTO_SSL3) || defined(MBEDTLS_SSL_PROTO_TLS1) || \
     defined(MBEDTLS_SSL_PROTO_TLS1_1)
@@ -7522,7 +7588,7 @@ void mbedtls_ssl_free( mbedtls_ssl_context *ssl )
 
     if( ssl->handshake )
     {
-        mbedtls_ssl_handshake_free( ssl->handshake );
+        mbedtls_ssl_handshake_free( ssl );
         mbedtls_ssl_transform_free( ssl->transform_negotiate );
         mbedtls_ssl_session_free( ssl->session_negotiate );
 
@@ -8289,13 +8355,14 @@ exit:
 #if defined(MBEDTLS_SSL_PROTO_TLS1) || defined(MBEDTLS_SSL_PROTO_TLS1_1) || \
     defined(MBEDTLS_SSL_PROTO_TLS1_2)
 int mbedtls_ssl_get_key_exchange_md_tls1_2( mbedtls_ssl_context *ssl,
-                                       unsigned char *output,
-                                       unsigned char *data, size_t data_len,
-                                       mbedtls_md_type_t md_alg )
+                                            unsigned char *hash, size_t *hashlen,
+                                            unsigned char *data, size_t data_len,
+                                            mbedtls_md_type_t md_alg )
 {
     int ret = 0;
     mbedtls_md_context_t ctx;
     const mbedtls_md_info_t *md_info = mbedtls_md_info_from_type( md_alg );
+    *hashlen = mbedtls_md_get_size( md_info );
 
     mbedtls_md_init( &ctx );
 
@@ -8326,7 +8393,7 @@ int mbedtls_ssl_get_key_exchange_md_tls1_2( mbedtls_ssl_context *ssl,
         MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_md_update", ret );
         goto exit;
     }
-    if( ( ret = mbedtls_md_finish( &ctx, output ) ) != 0 )
+    if( ( ret = mbedtls_md_finish( &ctx, hash ) ) != 0 )
     {
         MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_md_finish", ret );
         goto exit;

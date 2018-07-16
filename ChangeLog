@@ -2,6 +2,65 @@ mbed TLS ChangeLog (Sorted per branch, date)
 
 = mbed TLS x.x.x branch released xxxx-xx-xx
 
+Features
+   * Add new crypto primitives from RFC 7539: stream cipher Chacha20, one-time
+   authenticator Poly1305 and AEAD construct Chacha20-Poly1305. Contributed by
+   Daniel King (#485).
+
+Bugfix
+   * Fix the key_app_writer example which was writing a leading zero byte which
+     was creating an invalid ASN.1 tag. Found by Aryeh R. Fixes #1257.
+   * Fix compilation error on C++, because of a variable named new.
+     Found and fixed by Hirotaka Niisato in #1783.
+   * Fix "no symbols" warning issued by ranlib when building on Mac OS X. Fix
+     contributed by tabascoeye in pull request #1600.
+   * Clarify documentation for mbedtls_ssl_write() to include 0 as a valid
+     return value. Found by @davidwu2000. #839
+   * Fix a memory leak in mbedtls_x509_csr_parse(), found by catenacyber,
+     Philippe Antoine. Fixes #1623.
+
+Changes
+   * Change the shebang line in Perl scripts to look up perl in the PATH.
+     Contributed by fbrosson.
+   * Provide Mbed TLS wrapper for vsnprintf used in debug.c. Based on
+     contributions by Joris Aerts in #761 and Nathaniel Wesley Filardo in
+     #1381.
+
+= mbed TLS 2.11.0 branch released 2018-06-18
+
+Features
+   * Add additional block mode, OFB (Output Feedback), to the AES module and
+     cipher abstraction module.
+   * Implement the HMAC-based extract-and-expand key derivation function
+     (HKDF) per RFC 5869. Contributed by Thomas Fossati.
+   * Add support for the CCM* block cipher mode as defined in IEEE Std. 802.15.4.
+   * Add support for the XTS block cipher mode with AES (AES-XTS).
+     Contributed by Aorimn in pull request #414.
+   * In TLS servers, support offloading private key operations to an external
+     cryptoprocessor. Private key operations can be asynchronous to allow
+     non-blocking operation of the TLS server stack.
+
+Bugfix
+   * Fix the cert_write example to handle certificates signed with elliptic
+     curves as well as RSA. Fixes #777 found by dbedev.
+   * Fix for redefinition of _WIN32_WINNT to avoid overriding a definition
+     used by user applications. Found and fixed by Fabio Alessandrelli.
+   * Fix compilation warnings with IAR toolchain, on 32 bit platform.
+     Reported by rahmanih in #683
+   * Fix braces in mbedtls_memory_buffer_alloc_status(). Found by sbranden, #552.
+
+Changes
+   * Changed CMake defaults for IAR to treat all compiler warnings as errors.
+   * Changed the Clang parameters used in the CMake build files to work for
+     versions later than 3.6. Versions of Clang earlier than this may no longer
+     work. Fixes #1072
+
+= mbed TLS 2.10.0 branch released 2018-06-06
+
+Features
+   * Add support for ARIA cipher (RFC 5794) and associated TLS ciphersuites
+     (RFC 6209). Disabled by default, see MBEDTLS_ARIA_C in config.h
+
 API Changes
    * Extend the platform module with a util component that contains
      functionality shared by multiple Mbed TLS modules. At this stage
@@ -14,8 +73,13 @@ API Changes
      facilitate testing and maintenance.
 
 Bugfix
-   * Add `MBEDTLS_SELF_TEST` for the mbedtls_self_test functions
-     in the header files, which missed the precompilation check. #971
+   * Fix an issue with MicroBlaze support in bn_mul.h which was causing the
+     build to fail. Found by zv-io. Fixes #1651.
+
+Changes
+   * Support TLS testing in out-of-source builds using cmake. Fixes #1193.
+   * Fix redundant declaration of mbedtls_ssl_list_ciphersuites. Raised by
+     TrinityTonic. #1359.
 
 = mbed TLS 2.9.0 branch released 2018-04-30
 
