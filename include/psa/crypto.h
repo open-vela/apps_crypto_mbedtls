@@ -430,20 +430,13 @@ typedef uint32_t psa_key_type_t;
 /** The public key type corresponding to a key pair type. */
 #define PSA_KEY_TYPE_PUBLIC_KEY_OF_KEYPAIR(type)        \
     ((type) & ~PSA_KEY_TYPE_PAIR_FLAG)
-/** Whether a key type is an RSA key (pair or public-only). */
+/** Whether a key type is an RSA key pair or public key. */
 #define PSA_KEY_TYPE_IS_RSA(type)                                       \
     (PSA_KEY_TYPE_PUBLIC_KEY_OF_KEYPAIR(type) == PSA_KEY_TYPE_RSA_PUBLIC_KEY)
-
-/** Whether a key type is an elliptic curve key (pair or public-only). */
+/** Whether a key type is an elliptic curve key pair or public key. */
 #define PSA_KEY_TYPE_IS_ECC(type)                                       \
     ((PSA_KEY_TYPE_PUBLIC_KEY_OF_KEYPAIR(type) &                        \
       ~PSA_KEY_TYPE_ECC_CURVE_MASK) == PSA_KEY_TYPE_ECC_PUBLIC_KEY_BASE)
-#define PSA_KEY_TYPE_IS_ECC_KEYPAIR(type)                               \
-    (((type) & ~PSA_KEY_TYPE_ECC_CURVE_MASK) ==                         \
-     PSA_KEY_TYPE_ECC_KEYPAIR_BASE)
-#define PSA_KEY_TYPE_IS_ECC_PUBLIC_KEY(type)                            \
-    (((type) & ~PSA_KEY_TYPE_ECC_CURVE_MASK) ==                         \
-     PSA_KEY_TYPE_ECC_PUBLIC_KEY_BASE)
 
 /** The type of PSA elliptic curve identifiers. */
 typedef uint16_t psa_ecc_curve_t;
@@ -810,8 +803,7 @@ typedef uint32_t psa_algorithm_t;
  *
  * This is the signature scheme defined by RFC 8017
  * (PKCS#1: RSA Cryptography Specifications) under the name
- * RSASSA-PSS, with the message generation function MGF1, and with
- * a salt length equal to the length of the hash. The specified
+ * RSASSA-PSS, with the message generation function MGF1. The specified
  * hash algorithm is used to hash the input message, to create the
  * salted hash, and for the mask generation.
  *
@@ -851,10 +843,6 @@ typedef uint32_t psa_algorithm_t;
      PSA_ALG_DSA_BASE)
 #define PSA_ALG_DSA_IS_DETERMINISTIC(alg)               \
     (((alg) & PSA_ALG_DSA_DETERMINISTIC_FLAG) != 0)
-#define PSA_ALG_IS_DETERMINISTIC_DSA(alg)                       \
-    (PSA_ALG_IS_DSA(alg) && PSA_ALG_DSA_IS_DETERMINISTIC(alg))
-#define PSA_ALG_IS_RANDOMIZED_DSA(alg)                          \
-    (PSA_ALG_IS_DSA(alg) && !PSA_ALG_DSA_IS_DETERMINISTIC(alg))
 
 #define PSA_ALG_ECDSA_BASE                      ((psa_algorithm_t)0x10060000)
 /** ECDSA signature with hashing.
@@ -915,10 +903,6 @@ typedef uint32_t psa_algorithm_t;
      PSA_ALG_ECDSA_BASE)
 #define PSA_ALG_ECDSA_IS_DETERMINISTIC(alg)             \
     (((alg) & PSA_ALG_DSA_DETERMINISTIC_FLAG) != 0)
-#define PSA_ALG_IS_DETERMINISTIC_ECDSA(alg)                             \
-    (PSA_ALG_IS_ECDSA(alg) && PSA_ALG_ECDSA_IS_DETERMINISTIC(alg))
-#define PSA_ALG_IS_RANDOMIZED_ECDSA(alg)                                \
-    (PSA_ALG_IS_ECDSA(alg) && !PSA_ALG_ECDSA_IS_DETERMINISTIC(alg))
 
 /** Get the hash used by a hash-and-sign signature algorithm.
  *
@@ -941,7 +925,6 @@ typedef uint32_t psa_algorithm_t;
 #define PSA_ALG_SIGN_GET_HASH(alg)                                     \
     (PSA_ALG_IS_RSA_PSS(alg) || PSA_ALG_IS_RSA_PKCS1V15_SIGN(alg) ||   \
      PSA_ALG_IS_DSA(alg) || PSA_ALG_IS_ECDSA(alg) ?                    \
-     ((alg) & PSA_ALG_HASH_MASK) == 0 ? /*"raw" algorithm*/ 0 :        \
      ((alg) & PSA_ALG_HASH_MASK) | PSA_ALG_CATEGORY_HASH :             \
      0)
 
@@ -968,10 +951,6 @@ typedef uint32_t psa_algorithm_t;
     (PSA_ALG_RSA_OAEP_BASE | ((hash_alg) & PSA_ALG_HASH_MASK))
 #define PSA_ALG_IS_RSA_OAEP(alg)                                \
     (((alg) & ~PSA_ALG_HASH_MASK) == PSA_ALG_RSA_OAEP_BASE)
-#define PSA_ALG_RSA_OAEP_GET_HASH(alg)                          \
-    (PSA_ALG_IS_RSA_OAEP(alg) ?                                 \
-     ((alg) & PSA_ALG_HASH_MASK) | PSA_ALG_CATEGORY_HASH :      \
-     0)
 
 /**@}*/
 
@@ -2262,6 +2241,15 @@ psa_status_t psa_aead_decrypt( psa_key_slot_t key,
  *                              the type of \p key.
  * \param[in] hash              The hash or message to sign.
  * \param hash_length           Size of the \p hash buffer in bytes.
+ * \param[in] salt              A salt or label, if supported by the
+ *                              signature algorithm.
+ *                              If the signature algorithm does not support
+ *                              a salt, pass \c NULL.
+ *                              If the signature algorithm supports an
+ *                              optional salt and you do not want to pass
+ *                              a salt, pass \c NULL.
+ * \param salt_length           Size of the \p salt buffer in bytes.
+ *                              If \p salt is \c NULL, pass 0.
  * \param[out] signature        Buffer where the signature is to be written.
  * \param signature_size        Size of the \p signature buffer in bytes.
  * \param[out] signature_length On success, the number of bytes
@@ -2286,6 +2274,8 @@ psa_status_t psa_asymmetric_sign(psa_key_slot_t key,
                                  psa_algorithm_t alg,
                                  const uint8_t *hash,
                                  size_t hash_length,
+                                 const uint8_t *salt,
+                                 size_t salt_length,
                                  uint8_t *signature,
                                  size_t signature_size,
                                  size_t *signature_length);
@@ -2306,6 +2296,15 @@ psa_status_t psa_asymmetric_sign(psa_key_slot_t key,
  * \param[in] hash          The hash or message whose signature is to be
  *                          verified.
  * \param hash_length       Size of the \p hash buffer in bytes.
+ * \param[in] salt          A salt or label, if supported by the signature
+ *                          algorithm.
+ *                          If the signature algorithm does not support a
+ *                          salt, pass \c NULL.
+ *                          If the signature algorithm supports an optional
+ *                          salt and you do not want to pass a salt,
+ *                          pass \c NULL.
+ * \param salt_length       Size of the \p salt buffer in bytes.
+ *                          If \p salt is \c NULL, pass 0.
  * \param[in] signature     Buffer containing the signature to verify.
  * \param signature_length  Size of the \p signature buffer in bytes.
  *
@@ -2325,12 +2324,14 @@ psa_status_t psa_asymmetric_verify(psa_key_slot_t key,
                                    psa_algorithm_t alg,
                                    const uint8_t *hash,
                                    size_t hash_length,
+                                   const uint8_t *salt,
+                                   size_t salt_length,
                                    const uint8_t *signature,
                                    size_t signature_length);
 
 #define PSA_RSA_MINIMUM_PADDING_SIZE(alg)                               \
-    (PSA_ALG_IS_RSA_OAEP(alg) ?                                         \
-     2 * PSA_HASH_FINAL_SIZE(PSA_ALG_RSA_OAEP_GET_HASH(alg)) + 1 :      \
+    (PSA_ALG_IS_RSA_OAEP_MGF1(alg) ?                                    \
+     2 * PSA_HASH_FINAL_SIZE(PSA_ALG_RSA_GET_HASH(alg)) + 1 :           \
      11 /*PKCS#1v1.5*/)
 
 /**
