@@ -785,25 +785,16 @@ static  psa_status_t psa_internal_export_key( psa_key_slot_t key,
         {
             mbedtls_pk_context pk;
             int ret;
+            mbedtls_pk_init( &pk );
             if( PSA_KEY_TYPE_IS_RSA( slot->type ) )
             {
-#if defined(MBEDTLS_RSA_C)
-                mbedtls_pk_init( &pk );
                 pk.pk_info = &mbedtls_rsa_info;
                 pk.pk_ctx = slot->data.rsa;
-#else
-                return( PSA_ERROR_NOT_SUPPORTED );
-#endif
             }
             else
             {
-#if defined(MBEDTLS_ECP_C)
-                mbedtls_pk_init( &pk );
                 pk.pk_info = &mbedtls_eckey_info;
                 pk.pk_ctx = slot->data.ecp;
-#else
-                return( PSA_ERROR_NOT_SUPPORTED );
-#endif
             }
             if( export_public_key || PSA_KEY_TYPE_IS_PUBLIC_KEY( slot->type ) )
                 ret = mbedtls_pk_write_pubkey_der( &pk, data, data_size );
@@ -3266,7 +3257,7 @@ static psa_status_t psa_generator_hkdf_setup( psa_hkdf_generator_t *hkdf,
 }
 
 psa_status_t psa_key_derivation( psa_crypto_generator_t *generator,
-                                 psa_key_slot_t key,
+                                 psa_key_type_t key,
                                  psa_algorithm_t alg,
                                  const uint8_t *salt,
                                  size_t salt_length,
