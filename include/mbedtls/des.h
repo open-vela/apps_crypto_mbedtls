@@ -61,7 +61,7 @@ extern "C" {
  *                 security risk. We recommend considering stronger ciphers
  *                 instead.
  */
-typedef struct mbedtls_des_context
+typedef struct
 {
     uint32_t sk[32];            /*!<  DES subkeys       */
 }
@@ -70,7 +70,7 @@ mbedtls_des_context;
 /**
  * \brief          Triple-DES context structure
  */
-typedef struct mbedtls_des3_context
+typedef struct
 {
     uint32_t sk[96];            /*!<  3DES subkeys      */
 }

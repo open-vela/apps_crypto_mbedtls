@@ -55,7 +55,7 @@ extern "C" {
  *                 stronger message digests instead.
  *
  */
-typedef struct mbedtls_md2_context
+typedef struct
 {
     unsigned char cksum[16];    /*!< checksum of the data block */
     unsigned char state[48];    /*!< intermediate digest state  */

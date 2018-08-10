@@ -53,7 +53,7 @@ extern "C" {
  *            security risk. We recommend considering stronger ciphers instead.
  *
  */
-typedef struct mbedtls_arc4_context
+typedef struct
 {
     int x;                      /*!< permutation index */
     int y;                      /*!< permutation index */

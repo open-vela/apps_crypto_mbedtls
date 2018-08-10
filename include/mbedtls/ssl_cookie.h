@@ -50,7 +50,7 @@ extern "C" {
 /**
  * \brief          Context for the default cookie functions.
  */
-typedef struct mbedtls_ssl_cookie_ctx
+typedef struct
 {
     mbedtls_md_context_t    hmac_ctx;   /*!< context for the HMAC portion   */
 #if !defined(MBEDTLS_HAVE_TIME)
