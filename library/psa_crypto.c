@@ -82,6 +82,8 @@
 
 
 
+#define ARRAY_LENGTH( array ) ( sizeof( array ) / sizeof( *( array ) ) )
+
 /* Implementation that should never be optimized out by the compiler */
 static void mbedtls_zeroize( void *v, size_t n )
 {
@@ -133,9 +135,7 @@ typedef struct
 
 static int key_type_is_raw_bytes( psa_key_type_t type )
 {
-    psa_key_type_t category = type & PSA_KEY_TYPE_CATEGORY_MASK;
-    return( category == PSA_KEY_TYPE_RAW_DATA ||
-            category == PSA_KEY_TYPE_CATEGORY_SYMMETRIC );
+    return( PSA_KEY_TYPE_IS_UNSTRUCTURED( type ) );
 }
 
 typedef struct
@@ -343,10 +343,13 @@ static psa_status_t mbedtls_to_psa_error( int ret )
 static psa_status_t psa_get_key_slot( psa_key_slot_t key,
                                       key_slot_t **p_slot )
 {
-    if( key == 0 || key > PSA_KEY_SLOT_COUNT )
+    /* 0 is not a valid slot number under any circumstance. This
+     * implementation provides slots number 1 to N where N is the
+     * number of available slots. */
+    if( key == 0 || key > ARRAY_LENGTH( global_data.key_slots ) )
         return( PSA_ERROR_INVALID_ARGUMENT );
 
-    *p_slot = &global_data.key_slots[key];
+    *p_slot = &global_data.key_slots[key - 1];
     return( PSA_SUCCESS );
 }
 
@@ -1105,6 +1108,7 @@ psa_status_t psa_hash_finish( psa_hash_operation_t *operation,
                               size_t hash_size,
                               size_t *hash_length )
 {
+    psa_status_t status;
     int ret;
     size_t actual_hash_length = PSA_HASH_SIZE( operation->alg );
 
@@ -1118,7 +1122,10 @@ psa_status_t psa_hash_finish( psa_hash_operation_t *operation,
         memset( hash, '!', hash_size );
 
     if( hash_size < actual_hash_length )
-        return( PSA_ERROR_BUFFER_TOO_SMALL );
+    {
+        status = PSA_ERROR_BUFFER_TOO_SMALL;
+        goto exit;
+    }
 
     switch( operation->alg )
     {
@@ -1163,8 +1170,10 @@ psa_status_t psa_hash_finish( psa_hash_operation_t *operation,
             ret = MBEDTLS_ERR_MD_BAD_INPUT_DATA;
             break;
     }
+    status = mbedtls_to_psa_error( ret );
 
-    if( ret == 0 )
+exit:
+    if( status == PSA_SUCCESS )
     {
         *hash_length = actual_hash_length;
         return( psa_hash_abort( operation ) );
@@ -1172,7 +1181,7 @@ psa_status_t psa_hash_finish( psa_hash_operation_t *operation,
     else
     {
         psa_hash_abort( operation );
-        return( mbedtls_to_psa_error( ret ) );
+        return( status );
     }
 }
 
@@ -2467,53 +2476,59 @@ psa_status_t psa_cipher_generate_iv( psa_cipher_operation_t *operation,
                                      size_t iv_size,
                                      size_t *iv_length )
 {
-    int ret = PSA_SUCCESS;
+    psa_status_t status;
+    int ret;
     if( operation->iv_set || ! operation->iv_required )
-        return( PSA_ERROR_BAD_STATE );
+    {
+        status = PSA_ERROR_BAD_STATE;
+        goto exit;
+    }
     if( iv_size < operation->iv_size )
     {
-        ret = PSA_ERROR_BUFFER_TOO_SMALL;
+        status = PSA_ERROR_BUFFER_TOO_SMALL;
         goto exit;
     }
     ret = mbedtls_ctr_drbg_random( &global_data.ctr_drbg,
                                    iv, operation->iv_size );
     if( ret != 0 )
     {
-        ret = mbedtls_to_psa_error( ret );
+        status = mbedtls_to_psa_error( ret );
         goto exit;
     }
 
     *iv_length = operation->iv_size;
-    ret = psa_cipher_set_iv( operation, iv, *iv_length );
+    status = psa_cipher_set_iv( operation, iv, *iv_length );
 
 exit:
-    if( ret != PSA_SUCCESS )
+    if( status != PSA_SUCCESS )
         psa_cipher_abort( operation );
-    return( ret );
+    return( status );
 }
 
 psa_status_t psa_cipher_set_iv( psa_cipher_operation_t *operation,
                                 const unsigned char *iv,
                                 size_t iv_length )
 {
-    int ret = PSA_SUCCESS;
+    psa_status_t status;
+    int ret;
     if( operation->iv_set || ! operation->iv_required )
-        return( PSA_ERROR_BAD_STATE );
+    {
+        status = PSA_ERROR_BAD_STATE;
+        goto exit;
+    }
     if( iv_length != operation->iv_size )
     {
-        psa_cipher_abort( operation );
-        return( PSA_ERROR_INVALID_ARGUMENT );
+        status = PSA_ERROR_INVALID_ARGUMENT;
+        goto exit;
     }
-    ret =  mbedtls_cipher_set_iv( &operation->ctx.cipher, iv, iv_length );
-    if( ret != 0 )
-    {
+    ret = mbedtls_cipher_set_iv( &operation->ctx.cipher, iv, iv_length );
+    status = mbedtls_to_psa_error( ret );
+exit:
+    if( status == PSA_SUCCESS )
+        operation->iv_set = 1;
+    else
         psa_cipher_abort( operation );
-        return( mbedtls_to_psa_error( ret ) );
-    }
-
-    operation->iv_set = 1;
-
-    return( PSA_SUCCESS );
+    return( status );
 }
 
 psa_status_t psa_cipher_update( psa_cipher_operation_t *operation,
@@ -2523,7 +2538,8 @@ psa_status_t psa_cipher_update( psa_cipher_operation_t *operation,
                                 size_t output_size,
                                 size_t *output_length )
 {
-    int ret = MBEDTLS_ERR_CIPHER_FEATURE_UNAVAILABLE;
+    psa_status_t status;
+    int ret;
     size_t expected_output_size;
     if( PSA_ALG_IS_BLOCK_CIPHER( operation->alg ) )
     {
@@ -2539,18 +2555,20 @@ psa_status_t psa_cipher_update( psa_cipher_operation_t *operation,
     {
         expected_output_size = input_length;
     }
+
     if( output_size < expected_output_size )
-        return( PSA_ERROR_BUFFER_TOO_SMALL );
+    {
+        status = PSA_ERROR_BUFFER_TOO_SMALL;
+        goto exit;
+    }
 
     ret = mbedtls_cipher_update( &operation->ctx.cipher, input,
                                  input_length, output, output_length );
-    if( ret != 0 )
-    {
+    status = mbedtls_to_psa_error( ret );
+exit:
+    if( status != PSA_SUCCESS )
         psa_cipher_abort( operation );
-        return( mbedtls_to_psa_error( ret ) );
-    }
-
-    return( PSA_SUCCESS );
+    return( status );
 }
 
 psa_status_t psa_cipher_finish( psa_cipher_operation_t *operation,
@@ -3471,7 +3489,7 @@ psa_status_t psa_generate_key( psa_key_slot_t key,
 void mbedtls_psa_crypto_free( void )
 {
     psa_key_slot_t key;
-    for( key = 1; key < PSA_KEY_SLOT_COUNT; key++ )
+    for( key = 1; key <= PSA_KEY_SLOT_COUNT; key++ )
         psa_destroy_key( key );
     mbedtls_ctr_drbg_free( &global_data.ctr_drbg );
     mbedtls_entropy_free( &global_data.entropy );
