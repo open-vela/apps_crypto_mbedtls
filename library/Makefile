@@ -35,7 +35,7 @@ LOCAL_CFLAGS += -fPIC -fpic
 endif
 endif
 
-SOEXT_TLS=so.12
+SOEXT_TLS=so.11
 SOEXT_X509=so.0
 SOEXT_CRYPTO=so.3
 
@@ -81,7 +81,6 @@ OBJS_CRYPTO=	aes.o		aesni.o		arc4.o		\
 		pk.o		pk_wrap.o	pkcs12.o	\
 		pkcs5.o		pkparse.o	pkwrite.o	\
 		platform.o	platform_util.o	poly1305.o	\
-		psa_crypto.o					\
 		ripemd160.o	rsa_internal.o	rsa.o  		\
 		sha1.o		sha256.o	sha512.o	\
 		threading.o	timing.o	version.o	\

@@ -56,7 +56,7 @@ extern "C" {
  *                 stronger message digests instead.
  *
  */
-typedef struct mbedtls_md4_context
+typedef struct
 {
     uint32_t total[2];          /*!< number of bytes processed  */
     uint32_t state[4];          /*!< intermediate digest state  */

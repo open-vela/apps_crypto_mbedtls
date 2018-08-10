@@ -92,7 +92,7 @@ typedef enum
 /**
  * Curve information, for use by other modules.
  */
-typedef struct mbedtls_ecp_curve_info
+typedef struct
 {
     mbedtls_ecp_group_id grp_id;    /*!< An internal identifier. */
     uint16_t tls_id;                /*!< The TLS NamedCurve identifier. */
@@ -111,7 +111,7 @@ typedef struct mbedtls_ecp_curve_info
  *                  Otherwise, \p X and \p Y are its standard (affine)
  *                  coordinates.
  */
-typedef struct mbedtls_ecp_point
+typedef struct
 {
     mbedtls_mpi X;          /*!< The X coordinate of the ECP point. */
     mbedtls_mpi Y;          /*!< The Y coordinate of the ECP point. */
@@ -156,7 +156,7 @@ mbedtls_ecp_point;
  * reduction. It must return 0 on success and non-zero on failure.
  *
  */
-typedef struct mbedtls_ecp_group
+typedef struct
 {
     mbedtls_ecp_group_id id;    /*!< An internal group identifier. */
     mbedtls_mpi P;              /*!< The prime modulus of the base field. */
@@ -251,7 +251,7 @@ mbedtls_ecp_group;
  * \note    Members are deliberately in the same order as in the
  *          ::mbedtls_ecdsa_context structure.
  */
-typedef struct mbedtls_ecp_keypair
+typedef struct
 {
     mbedtls_ecp_group grp;      /*!<  Elliptic curve and base point     */
     mbedtls_mpi d;              /*!<  our secret value                  */
