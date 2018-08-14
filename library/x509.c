@@ -29,6 +29,10 @@
  *  http://www.itu.int/ITU-T/studygroups/com17/languages/X.690-0207.pdf
  */
 
+/* Ensure gmtime_r is available even with -std=c99; must be included before
+ * config.h, which pulls in glibc's features.h. Harmless on other platforms. */
+#define _POSIX_C_SOURCE 200112L
+
 #if !defined(MBEDTLS_CONFIG_FILE)
 #include "mbedtls/config.h"
 #else
@@ -63,7 +67,6 @@
 #include "mbedtls/platform_time.h"
 #endif
 #if defined(MBEDTLS_HAVE_TIME_DATE)
-#include "mbedtls/platform_util.h"
 #include <time.h>
 #endif
 
@@ -898,7 +901,11 @@ static int x509_get_current_time( mbedtls_x509_time *now )
     int ret = 0;
 
     tt = mbedtls_time( NULL );
-    lt = mbedtls_platform_gmtime_r( &tt, &tm_buf );
+#if defined(_WIN32) && !defined(EFIX64) && !defined(EFI32)
+    lt = gmtime_s( &tm_buf, &tt ) == 0 ? &tm_buf : NULL;
+#else
+    lt = gmtime_r( &tt, &tm_buf );
+#endif
 
     if( lt == NULL )
         ret = -1;
