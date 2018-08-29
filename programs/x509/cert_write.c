@@ -29,11 +29,8 @@
 #include "mbedtls/platform.h"
 #else
 #include <stdio.h>
-#include <stdlib.h>
-#define mbedtls_printf          printf
-#define MBEDTLS_EXIT_SUCCESS    EXIT_SUCCESS
-#define MBEDTLS_EXIT_FAILURE    EXIT_FAILURE
-#endif /* MBEDTLS_PLATFORM_C */
+#define mbedtls_printf     printf
+#endif
 
 #if !defined(MBEDTLS_X509_CRT_WRITE_C) || \
     !defined(MBEDTLS_X509_CRT_PARSE_C) || !defined(MBEDTLS_FS_IO) || \
@@ -214,8 +211,7 @@ int write_certificate( mbedtls_x509write_cert *crt, const char *output_file,
 
 int main( int argc, char *argv[] )
 {
-    int ret = 1;
-    int exit_code = MBEDTLS_EXIT_FAILURE;
+    int ret = 0;
     mbedtls_x509_crt issuer_crt;
     mbedtls_pk_context loaded_issuer_key, loaded_subject_key;
     mbedtls_pk_context *issuer_key = &loaded_issuer_key,
@@ -252,6 +248,7 @@ int main( int argc, char *argv[] )
     {
     usage:
         mbedtls_printf( USAGE );
+        ret = 1;
         goto exit;
     }
 
@@ -614,6 +611,7 @@ int main( int argc, char *argv[] )
         {
             mbedtls_printf( " failed\n  !  issuer_key does not match "
                             "issuer certificate\n\n" );
+            ret = -1;
             goto exit;
         }
     }
@@ -786,8 +784,6 @@ int main( int argc, char *argv[] )
 
     mbedtls_printf( " ok\n" );
 
-    exit_code = MBEDTLS_EXIT_SUCCESS;
-
 exit:
     mbedtls_x509write_crt_free( &crt );
     mbedtls_pk_free( &loaded_subject_key );
@@ -801,7 +797,7 @@ exit:
     fflush( stdout ); getchar();
 #endif
 
-    return( exit_code );
+    return( ret );
 }
 #endif /* MBEDTLS_X509_CRT_WRITE_C && MBEDTLS_X509_CRT_PARSE_C &&
           MBEDTLS_FS_IO && MBEDTLS_ENTROPY_C && MBEDTLS_CTR_DRBG_C &&

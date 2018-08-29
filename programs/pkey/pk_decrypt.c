@@ -29,11 +29,8 @@
 #include "mbedtls/platform.h"
 #else
 #include <stdio.h>
-#include <stdlib.h>
-#define mbedtls_printf          printf
-#define MBEDTLS_EXIT_SUCCESS    EXIT_SUCCESS
-#define MBEDTLS_EXIT_FAILURE    EXIT_FAILURE
-#endif /* MBEDTLS_PLATFORM_C */
+#define mbedtls_printf     printf
+#endif
 
 #if defined(MBEDTLS_BIGNUM_C) && defined(MBEDTLS_PK_PARSE_C) && \
     defined(MBEDTLS_FS_IO) && defined(MBEDTLS_ENTROPY_C) && \
@@ -62,8 +59,7 @@ int main( void )
 int main( int argc, char *argv[] )
 {
     FILE *f;
-    int ret = 1, c;
-    int exit_code = MBEDTLS_EXIT_FAILURE;
+    int ret, c;
     size_t i, olen = 0;
     mbedtls_pk_context pk;
     mbedtls_entropy_context entropy;
@@ -75,6 +71,7 @@ int main( int argc, char *argv[] )
 
     mbedtls_ctr_drbg_init( &ctr_drbg );
     memset(result, 0, sizeof( result ) );
+    ret = 1;
 
     if( argc != 2 )
     {
@@ -113,6 +110,8 @@ int main( int argc, char *argv[] )
     /*
      * Extract the RSA encrypted value from the text file
      */
+    ret = 1;
+
     if( ( f = fopen( "result-enc.txt", "rb" ) ) == NULL )
     {
         mbedtls_printf( "\n  ! Could not open %s\n\n", "result-enc.txt" );
@@ -144,14 +143,14 @@ int main( int argc, char *argv[] )
 
     mbedtls_printf( "The decrypted result is: '%s'\n\n", result );
 
-    exit_code = MBEDTLS_EXIT_SUCCESS;
+    ret = 0;
 
 exit:
     mbedtls_ctr_drbg_free( &ctr_drbg );
     mbedtls_entropy_free( &entropy );
 
 #if defined(MBEDTLS_ERROR_C)
-    if( exit_code != MBEDTLS_EXIT_SUCCESS )
+    if( ret != 0 )
     {
         mbedtls_strerror( ret, (char *) buf, sizeof(buf) );
         mbedtls_printf( "  !  Last error was: %s\n", buf );
@@ -163,7 +162,7 @@ exit:
     fflush( stdout ); getchar();
 #endif
 
-    return( exit_code );
+    return( ret );
 }
 #endif /* MBEDTLS_BIGNUM_C && MBEDTLS_PK_PARSE_C && MBEDTLS_FS_IO &&
           MBEDTLS_ENTROPY_C && MBEDTLS_CTR_DRBG_C */
