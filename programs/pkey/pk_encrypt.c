@@ -29,12 +29,9 @@
 #include "mbedtls/platform.h"
 #else
 #include <stdio.h>
-#include <stdlib.h>
-#define mbedtls_fprintf         fprintf
-#define mbedtls_printf          printf
-#define MBEDTLS_EXIT_SUCCESS    EXIT_SUCCESS
-#define MBEDTLS_EXIT_FAILURE    EXIT_FAILURE
-#endif /* MBEDTLS_PLATFORM_C */
+#define mbedtls_fprintf    fprintf
+#define mbedtls_printf     printf
+#endif
 
 #if defined(MBEDTLS_BIGNUM_C) && defined(MBEDTLS_PK_PARSE_C) && \
     defined(MBEDTLS_ENTROPY_C) && defined(MBEDTLS_FS_IO) && \
@@ -62,8 +59,7 @@ int main( void )
 int main( int argc, char *argv[] )
 {
     FILE *f;
-    int ret = 1;
-    int exit_code = MBEDTLS_EXIT_FAILURE;
+    int ret;
     size_t i, olen = 0;
     mbedtls_pk_context pk;
     mbedtls_entropy_context entropy;
@@ -72,6 +68,7 @@ int main( int argc, char *argv[] )
     unsigned char buf[512];
     const char *pers = "mbedtls_pk_encrypt";
 
+    ret = 1;
     mbedtls_ctr_drbg_init( &ctr_drbg );
 
     if( argc != 3 )
@@ -135,6 +132,7 @@ int main( int argc, char *argv[] )
      */
     if( ( f = fopen( "result-enc.txt", "wb+" ) ) == NULL )
     {
+        ret = 1;
         mbedtls_printf( " failed\n  ! Could not create %s\n\n", "result-enc.txt" );
         goto exit;
     }
@@ -147,14 +145,12 @@ int main( int argc, char *argv[] )
 
     mbedtls_printf( "\n  . Done (created \"%s\")\n\n", "result-enc.txt" );
 
-    exit_code = MBEDTLS_EXIT_SUCCESS;
-
 exit:
     mbedtls_ctr_drbg_free( &ctr_drbg );
     mbedtls_entropy_free( &entropy );
 
 #if defined(MBEDTLS_ERROR_C)
-    if( exit_code != MBEDTLS_EXIT_SUCCESS )
+    if( ret != 0 )
     {
         mbedtls_strerror( ret, (char *) buf, sizeof(buf) );
         mbedtls_printf( "  !  Last error was: %s\n", buf );
@@ -166,7 +162,7 @@ exit:
     fflush( stdout ); getchar();
 #endif
 
-    return( exit_code );
+    return( ret );
 }
 #endif /* MBEDTLS_BIGNUM_C && MBEDTLS_PK_PARSE_C && MBEDTLS_ENTROPY_C &&
           MBEDTLS_FS_IO && MBEDTLS_CTR_DRBG_C */

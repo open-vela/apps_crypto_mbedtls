@@ -37,12 +37,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
-#define mbedtls_time            time
-#define mbedtls_time_t          time_t
-#define mbedtls_printf          printf
-#define MBEDTLS_EXIT_SUCCESS    EXIT_SUCCESS
-#define MBEDTLS_EXIT_FAILURE    EXIT_FAILURE
-#endif /* MBEDTLS_PLATFORM_C */
+#define mbedtls_time       time
+#define mbedtls_time_t     time_t
+#define mbedtls_printf     printf
+#endif
 
 #if !defined(MBEDTLS_NET_C)
 int main( void )
@@ -602,8 +600,7 @@ int handle_message( const char *way,
 
 int main( int argc, char *argv[] )
 {
-    int ret = 1;
-    int exit_code = MBEDTLS_EXIT_FAILURE;
+    int ret;
 
     mbedtls_net_context listen_fd, client_fd, server_fd;
 
@@ -784,12 +781,10 @@ accept:
 
     }
 
-    exit_code = MBEDTLS_EXIT_SUCCESS;
-
 exit:
 
 #ifdef MBEDTLS_ERROR_C
-    if( exit_code != MBEDTLS_EXIT_SUCCESS )
+    if( ret != 0 )
     {
         char error_buf[100];
         mbedtls_strerror( ret, error_buf, 100 );
@@ -807,7 +802,7 @@ exit:
     fflush( stdout ); getchar();
 #endif
 
-    return( exit_code );
+    return( ret != 0 );
 }
 
 #endif /* MBEDTLS_NET_C */
