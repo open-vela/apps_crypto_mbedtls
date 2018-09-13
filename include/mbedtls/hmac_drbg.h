@@ -27,7 +27,7 @@
 #include "md.h"
 
 #if defined(MBEDTLS_THREADING_C)
-#include "threading.h"
+#include "mbedtls/threading.h"
 #endif
 
 /*
@@ -74,7 +74,7 @@ extern "C" {
 /**
  * HMAC_DRBG context.
  */
-typedef struct mbedtls_hmac_drbg_context
+typedef struct
 {
     /* Working state: the key K is not stored explicitely,
      * but is implied by the HMAC context */
