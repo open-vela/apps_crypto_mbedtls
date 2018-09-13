@@ -50,8 +50,7 @@ extern "C" {
 /**
  * Context for PKCS #11 private keys.
  */
-typedef struct mbedtls_pkcs11_context
-{
+typedef struct {
         pkcs11h_certificate_t pkcs11h_cert;
         int len;
 } mbedtls_pkcs11_context;

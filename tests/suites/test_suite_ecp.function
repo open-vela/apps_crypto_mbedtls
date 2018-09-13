@@ -10,7 +10,7 @@
  */
 
 /* BEGIN_CASE */
-void mbedtls_ecp_curve_info( int id, int tls_id, int size, char * name )
+void mbedtls_ecp_curve_info( int id, int tls_id, int size, char *name )
 {
     const mbedtls_ecp_curve_info *by_id, *by_tls, *by_name;
 
@@ -29,8 +29,7 @@ void mbedtls_ecp_curve_info( int id, int tls_id, int size, char * name )
 /* END_CASE */
 
 /* BEGIN_CASE */
-void ecp_check_pub( int grp_id, char * x_hex, char * y_hex, char * z_hex,
-                    int ret )
+void ecp_check_pub( int grp_id, char *x_hex, char *y_hex, char *z_hex, int ret )
 {
     mbedtls_ecp_group grp;
     mbedtls_ecp_point P;
@@ -53,9 +52,9 @@ exit:
 /* END_CASE */
 
 /* BEGIN_CASE */
-void ecp_test_vect( int id, char * dA_str, char * xA_str, char * yA_str,
-                    char * dB_str, char * xB_str, char * yB_str,
-                    char * xZ_str, char * yZ_str )
+void ecp_test_vect( int id, char *dA_str, char *xA_str, char *yA_str,
+                    char *dB_str, char *xB_str, char *yB_str, char *xZ_str,
+                    char *yZ_str )
 {
     mbedtls_ecp_group grp;
     mbedtls_ecp_point R;
@@ -108,8 +107,8 @@ exit:
 /* END_CASE */
 
 /* BEGIN_CASE */
-void ecp_test_vec_x( int id, char * dA_hex, char * xA_hex, char * dB_hex,
-                     char * xB_hex, char * xS_hex )
+void ecp_test_vec_x( int id, char *dA_hex, char *xA_hex,
+                     char *dB_hex, char *xB_hex, char *xS_hex )
 {
     mbedtls_ecp_group grp;
     mbedtls_ecp_point R;
@@ -159,7 +158,7 @@ exit:
 /* END_CASE */
 
 /* BEGIN_CASE */
-void ecp_fast_mod( int id, char * N_str )
+void ecp_fast_mod( int id, char *N_str )
 {
     mbedtls_ecp_group grp;
     mbedtls_mpi N, R;
@@ -192,15 +191,16 @@ exit:
 /* END_CASE */
 
 /* BEGIN_CASE */
-void ecp_write_binary( int id, char * x, char * y, char * z, int format,
-                       data_t * out, int blen, int ret )
+void ecp_write_binary( int id, char *x, char *y, char *z, int format,
+                       char *out, int blen, int ret )
 {
     mbedtls_ecp_group grp;
     mbedtls_ecp_point P;
-    unsigned char buf[256];
+    unsigned char buf[256], str[512];
     size_t olen;
 
     memset( buf, 0, sizeof( buf ) );
+    memset( str, 0, sizeof( str ) );
 
     mbedtls_ecp_group_init( &grp ); mbedtls_ecp_point_init( &P );
 
@@ -215,7 +215,8 @@ void ecp_write_binary( int id, char * x, char * y, char * z, int format,
 
     if( ret == 0 )
     {
-        TEST_ASSERT( hexcmp( buf, out->x, olen, out->len ) == 0 );
+        hexify( str, buf, olen );
+        TEST_ASSERT( strcasecmp( (char *) str, out ) == 0 );
     }
 
 exit:
@@ -224,13 +225,16 @@ exit:
 /* END_CASE */
 
 /* BEGIN_CASE */
-void ecp_read_binary( int id, data_t * buf, char * x, char * y, char * z,
+void ecp_read_binary( int id, char *input, char *x, char *y, char *z,
                       int ret )
 {
     mbedtls_ecp_group grp;
     mbedtls_ecp_point P;
     mbedtls_mpi X, Y, Z;
+    int ilen;
+    unsigned char buf[256];
 
+    memset( buf, 0, sizeof( buf ) );
 
     mbedtls_ecp_group_init( &grp ); mbedtls_ecp_point_init( &P );
     mbedtls_mpi_init( &X ); mbedtls_mpi_init( &Y ); mbedtls_mpi_init( &Z );
@@ -241,7 +245,9 @@ void ecp_read_binary( int id, data_t * buf, char * x, char * y, char * z,
     TEST_ASSERT( mbedtls_mpi_read_string( &Y, 16, y ) == 0 );
     TEST_ASSERT( mbedtls_mpi_read_string( &Z, 16, z ) == 0 );
 
-    TEST_ASSERT( mbedtls_ecp_point_read_binary( &grp, &P, buf->x, buf->len ) == ret );
+    ilen = unhexify( buf, input );
+
+    TEST_ASSERT( mbedtls_ecp_point_read_binary( &grp, &P, buf, ilen ) == ret );
 
     if( ret == 0 )
     {
@@ -257,14 +263,17 @@ exit:
 /* END_CASE */
 
 /* BEGIN_CASE */
-void mbedtls_ecp_tls_read_point( int id, data_t * buf, char * x, char * y,
-                                 char * z, int ret )
+void mbedtls_ecp_tls_read_point( int id, char *input, char *x, char *y, char *z,
+                         int ret )
 {
     mbedtls_ecp_group grp;
     mbedtls_ecp_point P;
     mbedtls_mpi X, Y, Z;
-    const unsigned char *vbuf = buf->x;
+    size_t ilen;
+    unsigned char buf[256];
+    const unsigned char *vbuf = buf;
 
+    memset( buf, 0, sizeof( buf ) );
 
     mbedtls_ecp_group_init( &grp ); mbedtls_ecp_point_init( &P );
     mbedtls_mpi_init( &X ); mbedtls_mpi_init( &Y ); mbedtls_mpi_init( &Z );
@@ -275,14 +284,16 @@ void mbedtls_ecp_tls_read_point( int id, data_t * buf, char * x, char * y,
     TEST_ASSERT( mbedtls_mpi_read_string( &Y, 16, y ) == 0 );
     TEST_ASSERT( mbedtls_mpi_read_string( &Z, 16, z ) == 0 );
 
-    TEST_ASSERT( mbedtls_ecp_tls_read_point( &grp, &P, &vbuf, buf->len ) == ret );
+    ilen = unhexify( buf, input );
+
+    TEST_ASSERT( mbedtls_ecp_tls_read_point( &grp, &P, &vbuf, ilen ) == ret );
 
     if( ret == 0 )
     {
         TEST_ASSERT( mbedtls_mpi_cmp_mpi( &P.X, &X ) == 0 );
         TEST_ASSERT( mbedtls_mpi_cmp_mpi( &P.Y, &Y ) == 0 );
         TEST_ASSERT( mbedtls_mpi_cmp_mpi( &P.Z, &Z ) == 0 );
-        TEST_ASSERT( (uint32_t)( vbuf - buf->x ) == buf->len );
+        TEST_ASSERT( *vbuf == 0x00 );
     }
 
 exit:
@@ -344,22 +355,25 @@ exit:
 /* END_CASE */
 
 /* BEGIN_CASE */
-void mbedtls_ecp_tls_read_group( data_t * buf, int result, int bits,
-                                 int record_len )
+void mbedtls_ecp_tls_read_group( char *record, int result, int bits )
 {
     mbedtls_ecp_group grp;
-    const unsigned char *vbuf = buf->x;
-    int ret;
+    unsigned char buf[10];
+    const unsigned char *vbuf = buf;
+    int len, ret;
 
     mbedtls_ecp_group_init( &grp );
+    memset( buf, 0x00, sizeof( buf ) );
 
-    ret = mbedtls_ecp_tls_read_group( &grp, &vbuf, buf->len );
+    len = unhexify( buf, record );
+
+    ret = mbedtls_ecp_tls_read_group( &grp, &vbuf, len );
 
     TEST_ASSERT( ret == result );
     if( ret == 0)
     {
         TEST_ASSERT( mbedtls_mpi_bitlen( &grp.P ) == (size_t) bits );
-        TEST_ASSERT( vbuf - buf->x ==  record_len);
+        TEST_ASSERT( *vbuf == 0x00 );
     }
 
 exit:
@@ -399,7 +413,7 @@ exit:
 /* END_CASE */
 
 /* BEGIN_CASE */
-void mbedtls_ecp_check_privkey( int id, char * key_hex, int ret )
+void mbedtls_ecp_check_privkey( int id, char *key_hex, int ret )
 {
     mbedtls_ecp_group grp;
     mbedtls_mpi d;
@@ -419,9 +433,8 @@ exit:
 /* END_CASE */
 
 /* BEGIN_CASE */
-void mbedtls_ecp_check_pub_priv( int id_pub, char * Qx_pub, char * Qy_pub,
-                                 int id, char * d, char * Qx, char * Qy,
-                                 int ret )
+void mbedtls_ecp_check_pub_priv( int id_pub, char *Qx_pub, char *Qy_pub,
+                         int id, char *d, char *Qx, char *Qy, int ret )
 {
     mbedtls_ecp_keypair pub, prv;
 
@@ -493,7 +506,7 @@ exit:
 /* END_CASE */
 
 /* BEGIN_CASE depends_on:MBEDTLS_SELF_TEST */
-void ecp_selftest(  )
+void ecp_selftest()
 {
     TEST_ASSERT( mbedtls_ecp_self_test( 1 ) == 0 );
 }
