@@ -34,7 +34,6 @@
 extern "C" {
 #endif
 
-/* MBEDTLS_ERR_CMAC_HW_ACCEL_FAILED is deprecated and should not be used. */
 #define MBEDTLS_ERR_CMAC_HW_ACCEL_FAILED -0x007A  /**< CMAC hardware accelerator failed. */
 
 #define MBEDTLS_AES_BLOCK_SIZE          16

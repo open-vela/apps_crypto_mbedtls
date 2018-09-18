@@ -159,6 +159,7 @@ class IntegrityChecker(object):
         self.excluded_paths = list(map(os.path.normpath, [
             'cov-int',
             'examples',
+            'yotta/module'
         ]))
         self.issues_to_check = [
             PermissionIssueTracker(),
