@@ -1555,7 +1555,7 @@ static psa_status_t psa_mac_setup( psa_mac_operation_t *operation,
 #if defined(MBEDTLS_MD_C)
     if( PSA_ALG_IS_HMAC( alg ) )
     {
-        psa_algorithm_t hash_alg = PSA_ALG_HMAC_GET_HASH( alg );
+        psa_algorithm_t hash_alg = PSA_ALG_HMAC_HASH( alg );
         if( hash_alg == 0 )
         {
             status = PSA_ERROR_NOT_SUPPORTED;
@@ -1957,12 +1957,6 @@ static psa_status_t psa_rsa_verify( mbedtls_rsa_context *rsa,
     {
         return( PSA_ERROR_INVALID_ARGUMENT );
     }
-
-    /* Mbed TLS distinguishes "invalid padding" from "valid padding but
-     * the rest of the signature is invalid". This has little use in
-     * practice and PSA doesn't report this distinction. */
-    if( ret == MBEDTLS_ERR_RSA_INVALID_PADDING )
-        return( PSA_ERROR_INVALID_SIGNATURE );
     return( mbedtls_to_psa_error( ret ) );
 }
 #endif /* MBEDTLS_RSA_C */
@@ -3265,7 +3259,7 @@ static psa_status_t psa_generator_hkdf_setup( psa_hkdf_generator_t *hkdf,
     psa_status_t status;
     status = psa_hmac_setup_internal( &hkdf->hmac,
                                       salt, salt_length,
-                                      PSA_ALG_HMAC_GET_HASH( hash_alg ) );
+                                      PSA_ALG_HMAC_HASH( hash_alg ) );
     if( status != PSA_SUCCESS )
         return( status );
     status = psa_hash_update( &hkdf->hmac.hash_ctx,
