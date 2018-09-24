@@ -96,7 +96,7 @@ extern "C" {
 /**
  * \brief          The DHM context structure.
  */
-typedef struct mbedtls_dhm_context
+typedef struct
 {
     size_t len;         /*!<  The size of \p P in Bytes. */
     mbedtls_mpi P;      /*!<  The prime modulus. */
