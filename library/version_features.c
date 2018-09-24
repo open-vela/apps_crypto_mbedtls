@@ -72,6 +72,9 @@ static const char *features[] = {
 #if defined(MBEDTLS_PLATFORM_SNPRINTF_ALT)
     "MBEDTLS_PLATFORM_SNPRINTF_ALT",
 #endif /* MBEDTLS_PLATFORM_SNPRINTF_ALT */
+#if defined(MBEDTLS_PLATFORM_VSNPRINTF_ALT)
+    "MBEDTLS_PLATFORM_VSNPRINTF_ALT",
+#endif /* MBEDTLS_PLATFORM_VSNPRINTF_ALT */
 #if defined(MBEDTLS_PLATFORM_NV_SEED_ALT)
     "MBEDTLS_PLATFORM_NV_SEED_ALT",
 #endif /* MBEDTLS_PLATFORM_NV_SEED_ALT */
@@ -126,9 +129,6 @@ static const char *features[] = {
 #if defined(MBEDTLS_GCM_ALT)
     "MBEDTLS_GCM_ALT",
 #endif /* MBEDTLS_GCM_ALT */
-#if defined(MBEDTLS_NIST_KW_ALT)
-    "MBEDTLS_NIST_KW_ALT",
-#endif /* MBEDTLS_NIST_KW_ALT */
 #if defined(MBEDTLS_MD2_ALT)
     "MBEDTLS_MD2_ALT",
 #endif /* MBEDTLS_MD2_ALT */
@@ -414,9 +414,6 @@ static const char *features[] = {
 #if defined(MBEDTLS_PKCS1_V21)
     "MBEDTLS_PKCS1_V21",
 #endif /* MBEDTLS_PKCS1_V21 */
-#if defined(MBEDTLS_PSA_CRYPTO_SPM)
-    "MBEDTLS_PSA_CRYPTO_SPM",
-#endif /* MBEDTLS_PSA_CRYPTO_SPM */
 #if defined(MBEDTLS_RSA_NO_CRT)
     "MBEDTLS_RSA_NO_CRT",
 #endif /* MBEDTLS_RSA_NO_CRT */
@@ -624,9 +621,6 @@ static const char *features[] = {
 #if defined(MBEDTLS_HMAC_DRBG_C)
     "MBEDTLS_HMAC_DRBG_C",
 #endif /* MBEDTLS_HMAC_DRBG_C */
-#if defined(MBEDTLS_NIST_KW_C)
-    "MBEDTLS_NIST_KW_C",
-#endif /* MBEDTLS_NIST_KW_C */
 #if defined(MBEDTLS_MD_C)
     "MBEDTLS_MD_C",
 #endif /* MBEDTLS_MD_C */
@@ -681,9 +675,6 @@ static const char *features[] = {
 #if defined(MBEDTLS_POLY1305_C)
     "MBEDTLS_POLY1305_C",
 #endif /* MBEDTLS_POLY1305_C */
-#if defined(MBEDTLS_PSA_CRYPTO_C)
-    "MBEDTLS_PSA_CRYPTO_C",
-#endif /* MBEDTLS_PSA_CRYPTO_C */
 #if defined(MBEDTLS_RIPEMD160_C)
     "MBEDTLS_RIPEMD160_C",
 #endif /* MBEDTLS_RIPEMD160_C */

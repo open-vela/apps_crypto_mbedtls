@@ -29,11 +29,8 @@
 #include "mbedtls/platform.h"
 #else
 #include <stdio.h>
-#include <stdlib.h>
-#define mbedtls_printf          printf
-#define MBEDTLS_EXIT_SUCCESS    EXIT_SUCCESS
-#define MBEDTLS_EXIT_FAILURE    EXIT_FAILURE
-#endif /* MBEDTLS_PLATFORM_C */
+#define mbedtls_printf     printf
+#endif
 
 #if defined(MBEDTLS_ECDSA_C) && \
     defined(MBEDTLS_ENTROPY_C) && defined(MBEDTLS_CTR_DRBG_C)
@@ -101,8 +98,7 @@ static void dump_pubkey( const char *title, mbedtls_ecdsa_context *key )
 
 int main( int argc, char *argv[] )
 {
-    int ret = 1;
-    int exit_code = MBEDTLS_EXIT_FAILURE;
+    int ret;
     mbedtls_ecdsa_context ctx_sign, ctx_verify;
     mbedtls_entropy_context entropy;
     mbedtls_ctr_drbg_context ctr_drbg;
@@ -119,6 +115,7 @@ int main( int argc, char *argv[] )
 
     memset( sig, 0, sizeof( sig ) );
     memset( message, 0x25, sizeof( message ) );
+    ret = 1;
 
     if( argc != 1 )
     {
@@ -216,6 +213,8 @@ int main( int argc, char *argv[] )
         goto exit;
     }
 
+    ret = 0;
+
     /*
      * Verify signature
      */
@@ -232,8 +231,6 @@ int main( int argc, char *argv[] )
 
     mbedtls_printf( " ok\n" );
 
-    exit_code = MBEDTLS_EXIT_SUCCESS;
-
 exit:
 
 #if defined(_WIN32)
@@ -246,7 +243,7 @@ exit:
     mbedtls_ctr_drbg_free( &ctr_drbg );
     mbedtls_entropy_free( &entropy );
 
-    return( exit_code );
+    return( ret );
 }
 #endif /* MBEDTLS_ECDSA_C && MBEDTLS_ENTROPY_C && MBEDTLS_CTR_DRBG_C &&
           ECPARAMS */

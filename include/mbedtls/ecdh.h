@@ -52,7 +52,7 @@ typedef enum
 /**
  * \brief           The ECDH context structure.
  */
-typedef struct mbedtls_ecdh_context
+typedef struct
 {
     mbedtls_ecp_group grp;   /*!< The elliptic curve used. */
     mbedtls_mpi d;           /*!< The private key. */

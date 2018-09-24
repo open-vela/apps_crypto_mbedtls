@@ -19,11 +19,6 @@
  *  This file is part of mbed TLS (https://tls.mbed.org)
  */
 
-/* Enable definition of fileno() even when compiling with -std=c99. Must be
- * set before config.h, which pulls in glibc's features.h indirectly.
- * Harmless on other platforms. */
-#define _POSIX_C_SOURCE 1
-
 #if !defined(MBEDTLS_CONFIG_FILE)
 #include "mbedtls/config.h"
 #else
@@ -34,12 +29,9 @@
 #include "mbedtls/platform.h"
 #else
 #include <stdio.h>
-#include <stdlib.h>
-#define mbedtls_fprintf         fprintf
-#define mbedtls_printf          printf
-#define MBEDTLS_EXIT_SUCCESS    EXIT_SUCCESS
-#define MBEDTLS_EXIT_FAILURE    EXIT_FAILURE
-#endif /* MBEDTLS_PLATFORM_C */
+#define mbedtls_fprintf    fprintf
+#define mbedtls_printf     printf
+#endif
 
 #include "mbedtls/aes.h"
 #include "mbedtls/md.h"
@@ -79,8 +71,7 @@ int main( void )
 #else
 int main( int argc, char *argv[] )
 {
-    int ret = 0;
-    int exit_code = MBEDTLS_EXIT_FAILURE;
+    int ret = 1;
 
     unsigned int i, n;
     int mode, lastn;
@@ -438,7 +429,7 @@ int main( int argc, char *argv[] )
         }
     }
 
-    exit_code = MBEDTLS_EXIT_SUCCESS;
+    ret = 0;
 
 exit:
     if( fin )
@@ -461,6 +452,6 @@ exit:
     mbedtls_aes_free( &aes_ctx );
     mbedtls_md_free( &sha_ctx );
 
-    return( exit_code );
+    return( ret );
 }
 #endif /* MBEDTLS_AES_C && MBEDTLS_SHA256_C && MBEDTLS_FS_IO */
