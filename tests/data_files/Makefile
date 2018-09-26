@@ -153,7 +153,7 @@ test-int-ca3-badsign.crt: test-int-ca3.crt
 all_final += test-int-ca3-badsign.crt
 server10_int3-bs.pem: server10.crt test-int-ca3-badsign.crt
 	cat server10.crt test-int-ca3-badsign.crt > $@
-all_final += server10_int3-bs.pem
+all_final += server10-bs_int3-bs.pem
 
 rsa_pkcs1_2048_public.pem: server8.key
 	$(OPENSSL)  rsa -in $< -outform PEM -RSAPublicKey_out -out $@
@@ -784,14 +784,6 @@ all_final += server1.req.key_usage
 server1.req.ku-ct: server1.key
 	$(MBEDTLS_CERT_REQ) output_file=$@ filename=$< key_usage=digital_signature,non_repudiation,key_encipherment ns_cert_type=ssl_server subject_name="C=NL,O=PolarSSL,CN=PolarSSL Server 1" md=SHA1
 all_final += server1.req.ku-ct
-
-server1.req.key_usage_empty: server1.key
-	$(MBEDTLS_CERT_REQ) output_file=$@ filename=$< subject_name="C=NL,O=PolarSSL,CN=PolarSSL Server 1" md=SHA1 force_key_usage=1
-all_final += server1.req.key_usage_empty
-
-server1.req.cert_type_empty: server1.key
-	$(MBEDTLS_CERT_REQ) output_file=$@ filename=$< subject_name="C=NL,O=PolarSSL,CN=PolarSSL Server 1" md=SHA1 force_ns_cert_type=1
-all_final += server1.req.cert_type_empty
 
 # server2*
 
