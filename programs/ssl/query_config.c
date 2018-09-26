@@ -1130,22 +1130,6 @@ int query_config( const char *config )
     }
 #endif /* MBEDTLS_ENTROPY_NV_SEED */
 
-#if defined(MBEDTLS_PSA_HAS_ITS_IO)
-    if( strcmp( "MBEDTLS_PSA_HAS_ITS_IO", config ) == 0 )
-    {
-        MACRO_EXPANSION_TO_STR( MBEDTLS_PSA_HAS_ITS_IO );
-        return( 0 );
-    }
-#endif /* MBEDTLS_PSA_HAS_ITS_IO */
-
-#if defined(MBEDTLS_PSA_CRYPTO_KEY_FILE_ID_ENCODES_OWNER)
-    if( strcmp( "MBEDTLS_PSA_CRYPTO_KEY_FILE_ID_ENCODES_OWNER", config ) == 0 )
-    {
-        MACRO_EXPANSION_TO_STR( MBEDTLS_PSA_CRYPTO_KEY_FILE_ID_ENCODES_OWNER );
-        return( 0 );
-    }
-#endif /* MBEDTLS_PSA_CRYPTO_KEY_FILE_ID_ENCODES_OWNER */
-
 #if defined(MBEDTLS_MEMORY_DEBUG)
     if( strcmp( "MBEDTLS_MEMORY_DEBUG", config ) == 0 )
     {
