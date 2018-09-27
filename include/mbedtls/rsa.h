@@ -92,7 +92,7 @@ extern "C" {
  *          is deprecated. All manipulation should instead be done through
  *          the public interface functions.
  */
-typedef struct
+typedef struct mbedtls_rsa_context
 {
     int ver;                    /*!<  Always 0.*/
     size_t len;                 /*!<  The size of \p N in Bytes. */
@@ -402,6 +402,16 @@ void mbedtls_rsa_set_padding( mbedtls_rsa_context *ctx, int padding,
  *
  */
 size_t mbedtls_rsa_get_len( const mbedtls_rsa_context *ctx );
+
+/**
+ * \brief          This function retrieves the length of the RSA modulus in bits.
+ *
+ * \param ctx      The initialized RSA context.
+ *
+ * \return         The length of the RSA modulus in bits.
+ *
+ */
+size_t mbedtls_rsa_get_bitlen( const mbedtls_rsa_context *ctx );
 
 /**
  * \brief          This function generates an RSA keypair.
