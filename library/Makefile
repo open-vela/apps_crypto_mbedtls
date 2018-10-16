@@ -5,8 +5,7 @@ CFLAGS	?= -O2
 WARNING_CFLAGS ?=  -Wall -W -Wdeclaration-after-statement
 LDFLAGS ?=
 
-CRYPTO_INCLUDES ?= -I../include
-LOCAL_CFLAGS = $(WARNING_CFLAGS) $(CRYPTO_INCLUDES) -D_FILE_OFFSET_BITS=64
+LOCAL_CFLAGS = $(WARNING_CFLAGS) -I../include -D_FILE_OFFSET_BITS=64
 LOCAL_LDFLAGS =
 
 ifdef DEBUG
@@ -40,7 +39,7 @@ SOEXT_TLS=so.12
 SOEXT_X509=so.0
 SOEXT_CRYPTO=so.3
 
-# Set AR_DASH= (empty string) to use an ar implentation that does not accept
+# Set AR_DASH= (empty string) to use an ar implementation that does not accept
 # the - prefix for command line options (e.g. llvm-ar)
 AR_DASH ?= -
 
@@ -82,11 +81,6 @@ OBJS_CRYPTO=	aes.o		aesni.o		arc4.o		\
 		pk.o		pk_wrap.o	pkcs12.o	\
 		pkcs5.o		pkparse.o	pkwrite.o	\
 		platform.o	platform_util.o	poly1305.o	\
-		psa_crypto.o					\
-		psa_crypto_slot_management.o			\
-		psa_crypto_storage.o				\
-		psa_crypto_storage_file.o			\
-		psa_crypto_storage_its.o			\
 		ripemd160.o	rsa_internal.o	rsa.o  		\
 		sha1.o		sha256.o	sha512.o	\
 		threading.o	timing.o	version.o	\
@@ -205,6 +199,5 @@ clean:
 ifndef WINDOWS
 	rm -f *.o libmbed*
 else
-	if exist *.o del /Q /F *.o
-	if exist libmbed* del /Q /F libmbed*
+	del /Q /F *.o libmbed*
 endif
