@@ -480,17 +480,10 @@ void mbedtls_rsa_set_padding( mbedtls_rsa_context *ctx, int padding, int hash_id
 /*
  * Get length in bytes of RSA modulus
  */
+
 size_t mbedtls_rsa_get_len( const mbedtls_rsa_context *ctx )
 {
     return( ctx->len );
-}
-
-/*
- * Get length in bits of RSA modulus
- */
-size_t mbedtls_rsa_get_bitlen( const mbedtls_rsa_context *ctx )
-{
-    return( mbedtls_mpi_bitlen( &ctx->N ) );
 }
 
 
@@ -1122,8 +1115,7 @@ int mbedtls_rsa_rsaes_oaep_encrypt( mbedtls_rsa_context *ctx,
     p += hlen;
     p += olen - 2 * hlen - 2 - ilen;
     *p++ = 1;
-    if( ilen != 0 )
-        memcpy( p, input, ilen );
+    memcpy( p, input, ilen );
 
     mbedtls_md_init( &md_ctx );
     if( ( ret = mbedtls_md_setup( &md_ctx, md_info, 0 ) ) != 0 )
@@ -1170,9 +1162,7 @@ int mbedtls_rsa_rsaes_pkcs1_v15_encrypt( mbedtls_rsa_context *ctx,
         return( MBEDTLS_ERR_RSA_BAD_INPUT_DATA );
 
     // We don't check p_rng because it won't be dereferenced here
-    if( f_rng == NULL || output == NULL )
-        return( MBEDTLS_ERR_RSA_BAD_INPUT_DATA );
-    if( ilen != 0 && input == NULL )
+    if( f_rng == NULL || input == NULL || output == NULL )
         return( MBEDTLS_ERR_RSA_BAD_INPUT_DATA );
 
     olen = ctx->len;
@@ -1212,8 +1202,7 @@ int mbedtls_rsa_rsaes_pkcs1_v15_encrypt( mbedtls_rsa_context *ctx,
     }
 
     *p++ = 0;
-    if( ilen != 0 )
-        memcpy( p, input, ilen );
+    memcpy( p, input, ilen );
 
     return( ( mode == MBEDTLS_RSA_PUBLIC )
             ? mbedtls_rsa_public(  ctx, output, output )
@@ -1377,8 +1366,7 @@ int mbedtls_rsa_rsaes_oaep_decrypt( mbedtls_rsa_context *ctx,
     }
 
     *olen = ilen - (p - buf);
-    if( *olen != 0 )
-        memcpy( output, p, *olen );
+    memcpy( output, p, *olen );
     ret = 0;
 
 cleanup:
@@ -1476,8 +1464,7 @@ int mbedtls_rsa_rsaes_pkcs1_v15_decrypt( mbedtls_rsa_context *ctx,
     }
 
     *olen = ilen - (p - buf);
-    if( *olen != 0 )
-        memcpy( output, p, *olen );
+    memcpy( output, p, *olen );
     ret = 0;
 
 cleanup:
@@ -1534,7 +1521,7 @@ int mbedtls_rsa_rsassa_pss_sign( mbedtls_rsa_context *ctx,
     size_t olen;
     unsigned char *p = sig;
     unsigned char salt[MBEDTLS_MD_MAX_SIZE];
-    unsigned int slen, hlen, offset = 0;
+    size_t slen, min_slen, hlen, offset = 0;
     int ret;
     size_t msb;
     const mbedtls_md_info_t *md_info;
@@ -1563,10 +1550,20 @@ int mbedtls_rsa_rsassa_pss_sign( mbedtls_rsa_context *ctx,
         return( MBEDTLS_ERR_RSA_BAD_INPUT_DATA );
 
     hlen = mbedtls_md_get_size( md_info );
-    slen = hlen;
 
-    if( olen < hlen + slen + 2 )
+    /* Calculate the largest possible salt length. Normally this is the hash
+     * length, which is the maximum length the salt can have. If there is not
+     * enough room, use the maximum salt length that fits. The constraint is
+     * that the hash length plus the salt length plus 2 bytes must be at most
+     * the key length. This complies with FIPS 186-4 §5.5 (e) and RFC 8017
+     * (PKCS#1 v2.2) §9.1.1 step 3. */
+    min_slen = hlen - 2;
+    if( olen < hlen + min_slen + 2 )
         return( MBEDTLS_ERR_RSA_BAD_INPUT_DATA );
+    else if( olen >= hlen + hlen + 2 )
+        slen = hlen;
+    else
+        slen = olen - hlen - 2;
 
     memset( sig, 0, olen );
 
@@ -1576,7 +1573,7 @@ int mbedtls_rsa_rsassa_pss_sign( mbedtls_rsa_context *ctx,
 
     /* Note: EMSA-PSS encoding is over the length of N - 1 bits */
     msb = mbedtls_mpi_bitlen( &ctx->N ) - 1;
-    p += olen - hlen * 2 - 2;
+    p += olen - hlen - slen - 2;
     *p++ = 0x01;
     memcpy( p, salt, slen );
     p += slen;
