@@ -29,11 +29,8 @@
 #include "mbedtls/platform.h"
 #else
 #include <stdio.h>
-#include <stdlib.h>
-#define mbedtls_printf          printf
-#define MBEDTLS_EXIT_SUCCESS    EXIT_SUCCESS
-#define MBEDTLS_EXIT_FAILURE    EXIT_FAILURE
-#endif /* MBEDTLS_PLATFORM_C */
+#define mbedtls_printf     printf
+#endif
 
 #if defined(MBEDTLS_PK_WRITE_C) && defined(MBEDTLS_FS_IO)
 #include "mbedtls/error.h"
@@ -192,8 +189,7 @@ static int write_private_key( mbedtls_pk_context *key, const char *output_file )
 
 int main( int argc, char *argv[] )
 {
-    int ret = 1;
-    int exit_code = MBEDTLS_EXIT_FAILURE;
+    int ret = 0;
     char buf[1024];
     int i;
     char *p, *q;
@@ -214,6 +210,7 @@ int main( int argc, char *argv[] )
     if( argc == 0 )
     {
     usage:
+        ret = 1;
         mbedtls_printf( USAGE );
         goto exit;
     }
@@ -406,11 +403,9 @@ int main( int argc, char *argv[] )
         write_private_key( &key, opt.output_file );
     }
 
-    exit_code = MBEDTLS_EXIT_SUCCESS;
-
 exit:
 
-    if( exit_code != MBEDTLS_EXIT_SUCCESS )
+    if( ret != 0 && ret != 1)
     {
 #ifdef MBEDTLS_ERROR_C
         mbedtls_strerror( ret, buf, sizeof( buf ) );
@@ -431,6 +426,6 @@ exit:
     fflush( stdout ); getchar();
 #endif
 
-    return( exit_code );
+    return( ret );
 }
 #endif /* MBEDTLS_PK_WRITE_C && MBEDTLS_FS_IO */
