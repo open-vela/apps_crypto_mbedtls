@@ -191,6 +191,7 @@
     <ClInclude Include="..\..\include\mbedtls\memory_buffer_alloc.h" />
     <ClInclude Include="..\..\include\mbedtls\net.h" />
     <ClInclude Include="..\..\include\mbedtls\net_sockets.h" />
+    <ClInclude Include="..\..\include\mbedtls\nist_kw.h" />
     <ClInclude Include="..\..\include\mbedtls\oid.h" />
     <ClInclude Include="..\..\include\mbedtls\padlock.h" />
     <ClInclude Include="..\..\include\mbedtls\pem.h" />
@@ -223,6 +224,11 @@
     <ClInclude Include="..\..\include\mbedtls\x509_crt.h" />
     <ClInclude Include="..\..\include\mbedtls\x509_csr.h" />
     <ClInclude Include="..\..\include\mbedtls\xtea.h" />
+    <ClInclude Include="..\..\include\psa\crypto.h" />
+    <ClInclude Include="..\..\include\psa\crypto_extra.h" />
+    <ClInclude Include="..\..\include\psa\crypto_platform.h" />
+    <ClInclude Include="..\..\include\psa\crypto_sizes.h" />
+    <ClInclude Include="..\..\include\psa\crypto_struct.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\library\aes.c" />
@@ -265,6 +271,7 @@
     <ClCompile Include="..\..\library\md_wrap.c" />
     <ClCompile Include="..\..\library\memory_buffer_alloc.c" />
     <ClCompile Include="..\..\library\net_sockets.c" />
+    <ClCompile Include="..\..\library\nist_kw.c" />
     <ClCompile Include="..\..\library\oid.c" />
     <ClCompile Include="..\..\library\padlock.c" />
     <ClCompile Include="..\..\library\pem.c" />
@@ -278,6 +285,7 @@
     <ClCompile Include="..\..\library\platform.c" />
     <ClCompile Include="..\..\library\platform_util.c" />
     <ClCompile Include="..\..\library\poly1305.c" />
+    <ClCompile Include="..\..\library\psa_crypto.c" />
     <ClCompile Include="..\..\library\ripemd160.c" />
     <ClCompile Include="..\..\library\rsa.c" />
     <ClCompile Include="..\..\library\rsa_internal.c" />
