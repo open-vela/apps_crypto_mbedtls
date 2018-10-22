@@ -29,12 +29,9 @@
 #include "mbedtls/platform.h"
 #else
 #include <stdio.h>
-#include <stdlib.h>
-#define mbedtls_printf          printf
-#define mbedtls_time_t          time_t
-#define MBEDTLS_EXIT_SUCCESS    EXIT_SUCCESS
-#define MBEDTLS_EXIT_FAILURE    EXIT_FAILURE
-#endif /* MBEDTLS_PLATFORM_C */
+#define mbedtls_printf     printf
+#define mbedtls_time_t     time_t
+#endif
 
 #if defined(MBEDTLS_AES_C) && defined(MBEDTLS_DHM_C) && \
     defined(MBEDTLS_ENTROPY_C) && defined(MBEDTLS_NET_C) && \
@@ -74,8 +71,7 @@ int main( void )
 {
     FILE *f;
 
-    int ret = 1;
-    int exit_code = MBEDTLS_EXIT_FAILURE;
+    int ret;
     size_t n, buflen;
     mbedtls_net_context listen_fd, client_fd;
 
@@ -125,6 +121,7 @@ int main( void )
 
     if( ( f = fopen( "rsa_priv.txt", "rb" ) ) == NULL )
     {
+        ret = 1;
         mbedtls_printf( " failed\n  ! Could not open rsa_priv.txt\n" \
                 "  ! Please run rsa_genkey first\n\n" );
         goto exit;
@@ -167,6 +164,7 @@ int main( void )
 
     if( ( f = fopen( "dh_prime.txt", "rb" ) ) == NULL )
     {
+        ret = 1;
         mbedtls_printf( " failed\n  ! Could not open dh_prime.txt\n" \
                 "  ! Please run dh_genprime first\n\n" );
         goto exit;
@@ -306,8 +304,6 @@ int main( void )
 
     mbedtls_printf( "\n\n" );
 
-    exit_code = MBEDTLS_EXIT_SUCCESS;
-
 exit:
 
     mbedtls_mpi_free( &N ); mbedtls_mpi_free( &P ); mbedtls_mpi_free( &Q );
@@ -327,7 +323,7 @@ exit:
     fflush( stdout ); getchar();
 #endif
 
-    return( exit_code );
+    return( ret );
 }
 #endif /* MBEDTLS_AES_C && MBEDTLS_DHM_C && MBEDTLS_ENTROPY_C &&
           MBEDTLS_NET_C && MBEDTLS_RSA_C && MBEDTLS_SHA256_C &&

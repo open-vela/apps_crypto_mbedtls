@@ -4,11 +4,9 @@
 
 CFLAGS	?= -O2
 WARNING_CFLAGS ?= -Wall -W -Wdeclaration-after-statement
-WARNING_CXXFLAGS ?= -Wall -W
 LDFLAGS ?=
 
 LOCAL_CFLAGS = $(WARNING_CFLAGS) -I../include -D_FILE_OFFSET_BITS=64
-LOCAL_CXXFLAGS = $(WARNING_CXXFLAGS) -I../include -D_FILE_OFFSET_BITS=64
 LOCAL_LDFLAGS = -L../library 			\
 		-lmbedtls$(SHARED_SUFFIX)	\
 		-lmbedx509$(SHARED_SUFFIX)	\
@@ -60,8 +58,6 @@ APPS =	aes/aescrypt2$(EXEXT)		aes/crypt_and_hash$(EXEXT)	\
 	pkey/rsa_decrypt$(EXEXT)	pkey/rsa_encrypt$(EXEXT)	\
 	pkey/rsa_sign$(EXEXT)		pkey/rsa_verify$(EXEXT)		\
 	pkey/rsa_sign_pss$(EXEXT)	pkey/rsa_verify_pss$(EXEXT)	\
-	psa/crypto_examples$(EXEXT)					\
-	psa/key_ladder_demo$(EXEXT)	psa/psa_constant_names$(EXEXT)	\
 	ssl/dtls_client$(EXEXT)		ssl/dtls_server$(EXEXT)		\
 	ssl/ssl_client1$(EXEXT)		ssl/ssl_client2$(EXEXT)		\
 	ssl/ssl_server$(EXEXT)		ssl/ssl_server2$(EXEXT)		\
@@ -81,12 +77,6 @@ ifdef PTHREAD
 APPS +=	ssl/ssl_pthread_server$(EXEXT)
 endif
 
-ifdef TEST_CPP
-APPS += test/cpp_dummy_build$(EXEXT)
-endif
-
-EXTRA_GENERATED =
-
 .SILENT:
 
 .PHONY: all clean list
@@ -95,11 +85,6 @@ all: $(APPS)
 
 $(DEP):
 	$(MAKE) -C ../library
-
-EXTRA_GENERATED += psa/psa_constant_names_generated.c
-psa/psa_constant_names$(EXEXT): psa/psa_constant_names_generated.c
-psa/psa_constant_names_generated.c: ../scripts/generate_psa_constants.py ../include/psa/crypto.h
-	../scripts/generate_psa_constants.py
 
 aes/aescrypt2$(EXEXT): aes/aescrypt2.c $(DEP)
 	echo "  CC    aes/aescrypt2.c"
@@ -197,14 +182,6 @@ pkey/rsa_encrypt$(EXEXT): pkey/rsa_encrypt.c $(DEP)
 	echo "  CC    pkey/rsa_encrypt.c"
 	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) pkey/rsa_encrypt.c    $(LOCAL_LDFLAGS) $(LDFLAGS) -o $@
 
-psa/key_ladder_demo$(EXEXT): psa/key_ladder_demo.c $(DEP)
-	echo "  CC    psa/key_ladder_demo.c"
-	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) psa/key_ladder_demo.c    $(LOCAL_LDFLAGS) $(LDFLAGS) -o $@
-
-psa/psa_constant_names$(EXEXT): psa/psa_constant_names.c $(DEP)
-	echo "  CC    psa/psa_constant_names.c"
-	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) psa/psa_constant_names.c    $(LOCAL_LDFLAGS) $(LDFLAGS) -o $@
-
 random/gen_entropy$(EXEXT): random/gen_entropy.c $(DEP)
 	echo "  CC    random/gen_entropy.c"
 	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) random/gen_entropy.c $(LOCAL_LDFLAGS) $(LDFLAGS) -o $@
@@ -265,10 +242,6 @@ test/benchmark$(EXEXT): test/benchmark.c $(DEP)
 	echo "  CC    test/benchmark.c"
 	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) test/benchmark.c   $(LOCAL_LDFLAGS) $(LDFLAGS) -o $@
 
-test/cpp_dummy_build$(EXEXT): test/cpp_dummy_build.cpp $(DEP)
-	echo "  CXX   test/cpp_dummy_build.cpp"
-	$(CXX) $(LOCAL_CXXFLAGS) $(CXXFLAGS) test/cpp_dummy_build.cpp   $(LOCAL_LDFLAGS) $(LDFLAGS) -o $@
-
 test/selftest$(EXEXT): test/selftest.c $(DEP)
 	echo "  CC    test/selftest.c"
 	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) test/selftest.c    $(LOCAL_LDFLAGS) $(LDFLAGS) -o $@
@@ -309,15 +282,11 @@ x509/req_app$(EXEXT): x509/req_app.c $(DEP)
 	echo "  CC    x509/req_app.c"
 	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) x509/req_app.c    $(LOCAL_LDFLAGS) $(LDFLAGS) -o $@
 
-psa/crypto_examples$(EXEXT): psa/crypto_examples.c $(DEP)
-	echo "  CC    psa/crypto_examples.c"
-	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) psa/crypto_examples.c    $(LOCAL_LDFLAGS) $(LDFLAGS) -o $@
-
 clean:
 ifndef WINDOWS
-	rm -f $(APPS) $(EXTRA_GENERATED)
+	rm -f $(APPS)
 else
-	del /S /Q /F *.o *.exe $(EXTRA_GENERATED)
+	del /S /Q /F *.o *.exe
 endif
 
 list:
