@@ -1160,20 +1160,6 @@
 #define MBEDTLS_PKCS1_V21
 
 /**
- * \def MBEDTLS_PSA_CRYPTO_SPM
- *
- * When MBEDTLS_PSA_CRYPTO_SPM is defined, the code is built for SPM (Secure
- * Partition Manager) integration which separates the code into two parts: a
- * NSPE (Non-Secure Process Environment) and an SPE (Secure Process
- * Environment).
- *
- * Module:  library/psa_crypto.c
- * Requires: MBEDTLS_PSA_CRYPTO_C
- *
- */
-//#define MBEDTLS_PSA_CRYPTO_SPM
-
-/**
  * \def MBEDTLS_RSA_NO_CRT
  *
  * Do not use the Chinese Remainder Theorem
@@ -2060,7 +2046,7 @@
  * Requires: MBEDTLS_AES_C or MBEDTLS_DES_C
  *
  */
-#define MBEDTLS_CMAC_C
+//#define MBEDTLS_CMAC_C
 
 /**
  * \def MBEDTLS_CTR_DRBG_C
@@ -2603,43 +2589,6 @@
  * Caller:  library/chachapoly.c
  */
 #define MBEDTLS_POLY1305_C
-
-/**
- * \def MBEDTLS_PSA_CRYPTO_C
- *
- * Enable the Platform Security Architecture cryptography API.
- *
- * Module:  library/psa_crypto.c
- *
- * Requires: MBEDTLS_CTR_DRBG_C, MBEDTLS_ENTROPY_C
- *
- */
-#define MBEDTLS_PSA_CRYPTO_C
-
-/**
- * \def MBEDTLS_PSA_CRYPTO_STORAGE_C
- *
- * Enable the Platform Security Architecture persistent key storage.
- *
- * Module:  library/psa_crypto_storage.c
- *
- * Requires: MBEDTLS_PSA_CRYPTO_C, MBEDTLS_PSA_CRYPTO_STORAGE_FILE_C
- *
- */
-#define MBEDTLS_PSA_CRYPTO_STORAGE_C
-
-/**
- * \def MBEDTLS_PSA_CRYPTO_STORAGE_FILE_C
- *
- * Enable persistent key storage over files for the
- * Platform Security Architecture cryptography API.
- *
- * Module:  library/psa_crypto_storage_file.c
- *
- * Requires: MBEDTLS_PSA_CRYPTO_C, MBEDTLS_FS_IO
- *
- */
-#define MBEDTLS_PSA_CRYPTO_STORAGE_FILE_C
 
 /**
  * \def MBEDTLS_RIPEMD160_C
