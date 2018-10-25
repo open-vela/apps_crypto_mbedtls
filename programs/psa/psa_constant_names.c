@@ -4,35 +4,6 @@
 
 #include "psa/crypto.h"
 
-/* This block is present to support Visual Studio builds prior to 2015 */
-#if defined(_MSC_VER) && _MSC_VER < 1900
-#include <stdarg.h>
-int snprintf( char *s, size_t n, const char *fmt, ... )
-{
-    int ret;
-    va_list argp;
-
-    /* Avoid calling the invalid parameter handler by checking ourselves */
-    if( s == NULL || n == 0 || fmt == NULL )
-        return( -1 );
-
-    va_start( argp, fmt );
-#if defined(_TRUNCATE) && !defined(__MINGW32__)
-    ret = _vsnprintf_s( s, n, _TRUNCATE, fmt, argp );
-#else
-    ret = _vsnprintf( s, n, fmt, argp );
-    if( ret < 0 || (size_t) ret == n )
-    {
-        s[n-1] = '\0';
-        ret = -1;
-    }
-#endif
-    va_end( argp );
-
-    return( ret );
-}
-#endif
-
 /* There are different GET_HASH macros for different kinds of algorithms
  * built from hashes, but the values are all constructed on the
  * same model. */
@@ -112,9 +83,9 @@ static int psa_snprint_status(char *buffer, size_t buffer_size,
         size_t length = strlen(name);
         if (length < buffer_size) {
             memcpy(buffer, name, length + 1);
-            return (int) length;
+            return length;
         } else {
-            return (int) buffer_size;
+            return buffer_size;
         }
     }
 }
@@ -129,9 +100,9 @@ static int psa_snprint_ecc_curve(char *buffer, size_t buffer_size,
         size_t length = strlen(name);
         if (length < buffer_size) {
             memcpy(buffer, name, length + 1);
-            return (int) length;
+            return length;
         } else {
-            return (int) buffer_size;
+            return buffer_size;
         }
     }
 }
@@ -173,15 +144,15 @@ int main(int argc, char *argv[])
     }
 
     if (!strcmp(argv[1], "error") || !strcmp(argv[1], "status"))
-        psa_snprint_status(buffer, sizeof(buffer), (psa_status_t) value);
+        psa_snprint_status(buffer, sizeof(buffer), value);
     else if (!strcmp(argv[1], "alg") || !strcmp(argv[1], "algorithm"))
-        psa_snprint_algorithm(buffer, sizeof(buffer), (psa_algorithm_t) value);
+        psa_snprint_algorithm(buffer, sizeof(buffer), value);
     else if (!strcmp(argv[1], "curve") || !strcmp(argv[1], "ecc_curve"))
-        psa_snprint_ecc_curve(buffer, sizeof(buffer), (psa_ecc_curve_t) value);
+        psa_snprint_ecc_curve(buffer, sizeof(buffer), value);
     else if (!strcmp(argv[1], "type") || !strcmp(argv[1], "key_type"))
-        psa_snprint_key_type(buffer, sizeof(buffer), (psa_key_type_t) value);
+        psa_snprint_key_type(buffer, sizeof(buffer), value);
     else if (!strcmp(argv[1], "usage") || !strcmp(argv[1], "key_usage"))
-        psa_snprint_key_usage(buffer, sizeof(buffer), (psa_key_usage_t) value);
+        psa_snprint_key_usage(buffer, sizeof(buffer), value);
     else {
         printf("Unknown type: %s\n", argv[1]);
         return EXIT_FAILURE;
