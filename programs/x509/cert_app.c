@@ -467,12 +467,9 @@ int main( int argc, char *argv[] )
         /*
          * 5. Print the certificate
          */
-#if !defined(MBEDTLS_SSL_KEEP_PEER_CERTIFICATE)
-        mbedtls_printf( "  . Peer certificate information    ... skipped\n" );
-#else
         mbedtls_printf( "  . Peer certificate information    ...\n" );
         ret = mbedtls_x509_crt_info( (char *) buf, sizeof( buf ) - 1, "      ",
-                                     mbedtls_ssl_get_peer_cert( &ssl ) );
+                             ssl.session->peer_cert );
         if( ret == -1 )
         {
             mbedtls_printf( " failed\n  !  mbedtls_x509_crt_info returned %d\n\n", ret );
@@ -480,7 +477,6 @@ int main( int argc, char *argv[] )
         }
 
         mbedtls_printf( "%s\n", buf );
-#endif /* MBEDTLS_SSL_KEEP_PEER_CERTIFICATE */
 
         mbedtls_ssl_close_notify( &ssl );
 
