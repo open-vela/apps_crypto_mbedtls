@@ -96,12 +96,7 @@ all: $(APPS)
 $(DEP):
 	$(MAKE) -C ../library
 
-ifdef WINDOWS
-EXTRA_GENERATED += psa\psa_constant_names_generated.c
-else
 EXTRA_GENERATED += psa/psa_constant_names_generated.c
-endif
-
 psa/psa_constant_names$(EXEXT): psa/psa_constant_names_generated.c
 psa/psa_constant_names_generated.c: ../scripts/generate_psa_constants.py ../include/psa/crypto.h
 	../scripts/generate_psa_constants.py
@@ -322,9 +317,7 @@ clean:
 ifndef WINDOWS
 	rm -f $(APPS) $(EXTRA_GENERATED)
 else
-	if exist *.o del /S /Q /F *.o
-	if exist *.exe del /S /Q /F *.exe
-	if exist $(EXTRA_GENERATED) del /S /Q /F $(EXTRA_GENERATED)
+	del /S /Q /F *.o *.exe $(EXTRA_GENERATED)
 endif
 
 list:
