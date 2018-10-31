@@ -44,47 +44,24 @@ static int psa_snprint_key_type(char *buffer, size_t buffer_size,
         break;
     }
     buffer[0] = 0;
-    return (int) required_size;
+    return required_size;
 }
 
 static int psa_snprint_algorithm(char *buffer, size_t buffer_size,
                                  psa_algorithm_t alg)
 {
     size_t required_size = 0;
-    psa_algorithm_t core_alg = alg;
-    unsigned long length_modifier = 0;
-    if (PSA_ALG_IS_MAC(alg)) {
-        core_alg = PSA_ALG_TRUNCATED_MAC(alg, 0);
-        if (core_alg != alg) {
-            append(&buffer, buffer_size, &required_size,
-                   "PSA_ALG_TRUNCATED_MAC(", 22);
-            length_modifier = PSA_MAC_TRUNCATED_LENGTH(alg);
-        }
-    } else if (PSA_ALG_IS_AEAD(alg)) {
-        core_alg = PSA_ALG_AEAD_WITH_DEFAULT_TAG_LENGTH(alg);
-        if (core_alg != alg) {
-            append(&buffer, buffer_size, &required_size,
-                   "PSA_ALG_AEAD_WITH_TAG_LENGTH(", 29);
-            length_modifier = PSA_AEAD_TAG_LENGTH(alg);
-        }
-    }
-    switch (core_alg) {
+    switch (alg) {
     %(algorithm_cases)s
     default:
         %(algorithm_code)s{
-            append_integer(&buffer, buffer_size, &required_size,
-                           "0x%%08lx", (unsigned long) alg);
+            return snprintf(buffer, buffer_size,
+                            "0x%%08lx", (unsigned long) alg);
         }
         break;
     }
-    if (core_alg != alg) {
-        append(&buffer, buffer_size, &required_size, ", ", 2);
-        append_integer(&buffer, buffer_size, &required_size,
-                       "%%lu", length_modifier);
-        append(&buffer, buffer_size, &required_size, ")", 1);
-    }
     buffer[0] = 0;
-    return (int) required_size;
+    return required_size;
 }
 
 static int psa_snprint_key_usage(char *buffer, size_t buffer_size,
@@ -105,12 +82,12 @@ static int psa_snprint_key_usage(char *buffer, size_t buffer_size,
         if (required_size != 0) {
             append(&buffer, buffer_size, &required_size, " | ", 3);
         }
-        append_integer(&buffer, buffer_size, &required_size,
-                       "0x%%08lx", (unsigned long) usage);
+        required_size += snprintf(buffer, buffer_size - required_size,
+                                  "0x%%08x", usage);
     } else {
         buffer[0] = 0;
     }
-    return (int) required_size;
+    return required_size;
 }
 
 /* End of automatically generated file. */
@@ -122,10 +99,10 @@ key_type_from_curve_template = '''if (%(tester)s(type)) {
                               PSA_KEY_TYPE_GET_CURVE(type));
         } else '''
 
-algorithm_from_hash_template = '''if (%(tester)s(core_alg)) {
+algorithm_from_hash_template = '''if (%(tester)s(alg)) {
             append_with_hash(&buffer, buffer_size, &required_size,
                              "%(builder)s", %(builder_length)s,
-                             PSA_ALG_GET_HASH(core_alg));
+                             PSA_ALG_GET_HASH(alg));
         } else '''
 
 bit_test_template = '''\
