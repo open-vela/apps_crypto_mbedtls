@@ -107,9 +107,7 @@ clean:
 ifndef WINDOWS
 	rm -rf $(BINARIES) *.c *.datax TESTS
 else
-	if exist *.c del /Q /F *.c
-	if exist *.exe del /Q /F *.exe
-	if exist *.datax del /Q /F *.datax
+	del /Q /F *.c *.exe *.datax
 ifneq ($(wildcard TESTS/.*),)
 	rmdir /Q /S TESTS
 endif
