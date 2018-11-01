@@ -30,13 +30,12 @@ massif-*
 # Exported Mbed Crypto files
 crypto/LICENSE
 crypto/VERSION.txt
-crypto/include/mbedcrypto/*.h
-crypto/include/psa/*.h
+crypto/include
 crypto/library/*.c
-crypto/programs/psa/*.c
-crypto/programs/psa/*.sh
+crypto/library/libmbedcrypto*
 crypto/scripts
 crypto/tests/scripts
-crypto/tests/suites/*.data
-crypto/tests/suites/*.function
+crypto/tests/suites
+crypto/tests/test_suite*
+crypto/programs/psa
 mbedcrypto.tar.gz
