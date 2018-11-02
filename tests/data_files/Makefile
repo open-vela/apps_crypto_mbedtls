@@ -13,8 +13,6 @@
 ## Tools
 OPENSSL ?= openssl
 FAKETIME ?= faketime
-MBEDTLS_CERT_WRITE ?= $(PWD)/../../programs/x509/cert_write
-MBEDTLS_CERT_REQ ?= $(PWD)/../../programs/x509/cert_req
 
 
 ## Build the generated test data. Note that since the final outputs
@@ -153,7 +151,7 @@ test-int-ca3-badsign.crt: test-int-ca3.crt
 all_final += test-int-ca3-badsign.crt
 server10_int3-bs.pem: server10.crt test-int-ca3-badsign.crt
 	cat server10.crt test-int-ca3-badsign.crt > $@
-all_final += server10-bs_int3-bs.pem
+all_final += server10_int3-bs.pem
 
 rsa_pkcs1_2048_public.pem: server8.key
 	$(OPENSSL)  rsa -in $< -outform PEM -RSAPublicKey_out -out $@

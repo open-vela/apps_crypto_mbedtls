@@ -2,14 +2,6 @@ set(libs
     mbedtls
 )
 
-if(USE_PKCS11_HELPER_LIBRARY)
-    set(libs ${libs} pkcs11-helper)
-endif(USE_PKCS11_HELPER_LIBRARY)
-
-if(ENABLE_ZLIB_SUPPORT)
-    set(libs ${libs} ${ZLIB_LIBRARIES})
-endif(ENABLE_ZLIB_SUPPORT)
-
 find_package(Perl)
 if(NOT PERL_FOUND)
     message(FATAL_ERROR "Cannot build test suites without Perl")
@@ -97,6 +89,7 @@ add_test_suite(cipher cipher.chachapoly)
 add_test_suite(cipher cipher.des)
 add_test_suite(cipher cipher.gcm)
 add_test_suite(cipher cipher.misc)
+add_test_suite(cipher cipher.nist_kw)
 add_test_suite(cipher cipher.null)
 add_test_suite(cipher cipher.padding)
 add_test_suite(cmac)
