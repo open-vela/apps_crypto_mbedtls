@@ -74,7 +74,7 @@ extern "C" {
 /**
  * HMAC_DRBG context.
  */
-typedef struct mbedtls_hmac_drbg_context
+typedef struct
 {
     /* Working state: the key K is not stored explicitely,
      * but is implied by the HMAC context */
