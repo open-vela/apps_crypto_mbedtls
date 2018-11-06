@@ -756,6 +756,82 @@ typedef uint32_t psa_algorithm_t;
     (((alg) & (PSA_ALG_CATEGORY_MASK | PSA_ALG_MAC_SUBCATEGORY_MASK)) == \
      PSA_ALG_HMAC_BASE)
 
+/* In the encoding of a MAC algorithm, the bits corresponding to
+ * PSA_ALG_MAC_TRUNCATION_MASK encode the length to which the MAC is
+ * truncated. As an exception, the value 0 means the untruncated algorithm,
+ * whatever its length is. The length is encoded in 6 bits, so it can
+ * reach up to 63; the largest MAC is 64 bytes so its trivial truncation
+ * to full length is correctly encoded as 0 and any non-trivial truncation
+ * is correctly encoded as a value between 1 and 63. */
+#define PSA_ALG_MAC_TRUNCATION_MASK             ((psa_algorithm_t)0x00003f00)
+#define PSA_MAC_TRUNCATION_OFFSET 8
+
+/** Macro to build a truncated MAC algorithm.
+ *
+ * A truncated MAC algorithm is identical to the corresponding MAC
+ * algorithm except that the MAC value for the truncated algorithm
+ * consists of only the first \p mac_length bytes of the MAC value
+ * for the untruncated algorithm.
+ *
+ * \note    This macro may allow constructing algorithm identifiers that
+ *          are not valid, either because the specified length is larger
+ *          than the untruncated MAC or because the specified length is
+ *          smaller than permitted by the implementation.
+ *
+ * \note    It is implementation-defined whether a truncated MAC that
+ *          is truncated to the same length as the MAC of the untruncated
+ *          algorithm is considered identical to the untruncated algorithm
+ *          for policy comparison purposes.
+ *
+ * \param alg           A MAC algorithm identifier (value of type
+ *                      #psa_algorithm_t such that #PSA_ALG_IS_MAC(\p alg)
+ *                      is true). This may be a truncated or untruncated
+ *                      MAC algorithm.
+ * \param mac_length    Desired length of the truncated MAC in bytes.
+ *                      This must be at most the full length of the MAC
+ *                      and must be at least an implementation-specified
+ *                      minimum. The implementation-specified minimum
+ *                      shall not be zero.
+ *
+ * \return              The corresponding MAC algorithm with the specified
+ *                      length.
+ * \return              Unspecified if \p alg is not a supported
+ *                      MAC algorithm or if \p mac_length is too small or
+ *                      too large for the specified MAC algorithm.
+ */
+#define PSA_ALG_TRUNCATED_MAC(alg, mac_length)                          \
+    (((alg) & ~PSA_ALG_MAC_TRUNCATION_MASK) |                           \
+     ((mac_length) << PSA_MAC_TRUNCATION_OFFSET & PSA_ALG_MAC_TRUNCATION_MASK))
+
+/** Macro to build the base MAC algorithm corresponding to a truncated
+ * MAC algorithm.
+ *
+ * \param alg           A MAC algorithm identifier (value of type
+ *                      #psa_algorithm_t such that #PSA_ALG_IS_MAC(\p alg)
+ *                      is true). This may be a truncated or untruncated
+ *                      MAC algorithm.
+ *
+ * \return              The corresponding base MAC algorithm.
+ * \return              Unspecified if \p alg is not a supported
+ *                      MAC algorithm.
+ */
+#define PSA_ALG_FULL_LENGTH_MAC(alg)            \
+    ((alg) & ~PSA_ALG_MAC_TRUNCATION_MASK)
+
+/** Length to which a MAC algorithm is truncated.
+ *
+ * \param alg           A MAC algorithm identifier (value of type
+ *                      #psa_algorithm_t such that #PSA_ALG_IS_MAC(\p alg)
+ *                      is true).
+ *
+ * \return              Length of the truncated MAC in bytes.
+ * \return              0 if \p alg is a non-truncated MAC algorithm.
+ * \return              Unspecified if \p alg is not a supported
+ *                      MAC algorithm.
+ */
+#define PSA_MAC_TRUNCATED_LENGTH(alg)           \
+    (((alg) & PSA_ALG_MAC_TRUNCATION_MASK) >> PSA_MAC_TRUNCATION_OFFSET)
+
 #define PSA_ALG_CIPHER_MAC_BASE                 ((psa_algorithm_t)0x02c00000)
 #define PSA_ALG_CBC_MAC                         ((psa_algorithm_t)0x02c00001)
 #define PSA_ALG_CMAC                            ((psa_algorithm_t)0x02c00002)
@@ -834,8 +910,56 @@ typedef uint32_t psa_algorithm_t;
  */
 #define PSA_ALG_CBC_PKCS7                       ((psa_algorithm_t)0x04600101)
 
-#define PSA_ALG_CCM                             ((psa_algorithm_t)0x06000001)
-#define PSA_ALG_GCM                             ((psa_algorithm_t)0x06000002)
+#define PSA_ALG_CCM                             ((psa_algorithm_t)0x06001001)
+#define PSA_ALG_GCM                             ((psa_algorithm_t)0x06001002)
+
+/* In the encoding of a AEAD algorithm, the bits corresponding to
+ * PSA_ALG_AEAD_TAG_LENGTH_MASK encode the length of the AEAD tag.
+ * The constants for default lengths follow this encoding.
+ */
+#define PSA_ALG_AEAD_TAG_LENGTH_MASK            ((psa_algorithm_t)0x00003f00)
+#define PSA_AEAD_TAG_LENGTH_OFFSET 8
+
+/** Macro to build a shortened AEAD algorithm.
+ *
+ * A shortened AEAD algorithm is similar to the corresponding AEAD
+ * algorithm, but has an authentication tag that consists of fewer bytes.
+ * Depending on the algorithm, the tag length may affect the calculation
+ * of the ciphertext.
+ *
+ * \param alg           A AEAD algorithm identifier (value of type
+ *                      #psa_algorithm_t such that #PSA_ALG_IS_AEAD(\p alg)
+ *                      is true).
+ * \param tag_length    Desired length of the authentication tag in bytes.
+ *
+ * \return              The corresponding AEAD algorithm with the specified
+ *                      length.
+ * \return              Unspecified if \p alg is not a supported
+ *                      AEAD algorithm or if \p tag_length is not valid
+ *                      for the specified AEAD algorithm.
+ */
+#define PSA_ALG_AEAD_WITH_TAG_LENGTH(alg, tag_length)                   \
+    (((alg) & ~PSA_ALG_AEAD_TAG_LENGTH_MASK) |                          \
+     ((tag_length) << PSA_AEAD_TAG_LENGTH_OFFSET &                      \
+      PSA_ALG_AEAD_TAG_LENGTH_MASK))
+
+/** Calculate the corresponding AEAD algorithm with the default tag length.
+ *
+ * \param alg   An AEAD algorithm (\c PSA_ALG_XXX value such that
+ *              #PSA_ALG_IS_AEAD(\p alg) is true).
+ *
+ * \return      The corresponding AEAD algorithm with the default tag length
+ *              for that algorithm.
+ */
+#define PSA_ALG_AEAD_WITH_DEFAULT_TAG_LENGTH(alg)                       \
+    (                                                                   \
+        PSA__ALG_AEAD_WITH_DEFAULT_TAG_LENGTH__CASE(alg, PSA_ALG_CCM)   \
+        PSA__ALG_AEAD_WITH_DEFAULT_TAG_LENGTH__CASE(alg, PSA_ALG_GCM)   \
+        0)
+#define PSA__ALG_AEAD_WITH_DEFAULT_TAG_LENGTH__CASE(alg, ref) \
+    PSA_ALG_AEAD_WITH_TAG_LENGTH(alg, 0) == \
+    PSA_ALG_AEAD_WITH_TAG_LENGTH(ref, 0) ?  \
+    ref :
 
 #define PSA_ALG_RSA_PKCS1V15_SIGN_BASE          ((psa_algorithm_t)0x10020000)
 /** RSA PKCS#1 v1.5 signature with hashing.
@@ -1071,13 +1195,27 @@ typedef uint32_t psa_algorithm_t;
  * \brief Import a key in binary format.
  *
  * This function supports any output from psa_export_key(). Refer to the
- * documentation of psa_export_key() for the format for each key type.
+ * documentation of psa_export_public_key() for the format of public keys
+ * and to the documentation of psa_export_key() for the format for
+ * other key types.
+ *
+ * This specification supports a single format for each key type.
+ * Implementations may support other formats as long as the standard
+ * format is supported. Implementations that support other formats
+ * should ensure that the formats are clearly unambiguous so as to
+ * minimize the risk that an invalid input is accidentally interpreted
+ * according to a different format.
  *
  * \param key         Slot where the key will be stored. This must be a
  *                    valid slot for a key of the chosen type. It must
  *                    be unoccupied.
- * \param type        Key type (a \c PSA_KEY_TYPE_XXX value).
- * \param[in] data    Buffer containing the key data.
+ * \param type        Key type (a \c PSA_KEY_TYPE_XXX value). On a successful
+ *                    import, the key slot will contain a key of this type.
+ * \param[in] data    Buffer containing the key data. The content of this
+ *                    buffer is interpreted according to \p type. It must
+ *                    contain the format described in the documentation
+ *                    of psa_export_key() or psa_export_public_key() for
+ *                    the chosen type.
  * \param data_length Size of the \p data buffer in bytes.
  *
  * \retval #PSA_SUCCESS
@@ -1176,10 +1314,10 @@ psa_status_t psa_get_key_information(psa_key_slot_t key,
  * The output of this function can be passed to psa_import_key() to
  * create an equivalent object.
  *
- * If a key is created with psa_import_key() and then exported with
- * this function, it is not guaranteed that the resulting data is
- * identical: the implementation may choose a different representation
- * of the same key if the format permits it.
+ * If the implementation of psa_import_key() supports other formats
+ * beyond the format specified here, the output from psa_export_key()
+ * must use the representation specified here, not the original
+ * representation.
  *
  * For standard key types, the output format is as follows:
  *
@@ -1219,23 +1357,11 @@ psa_status_t psa_get_key_information(psa_key_slot_t key,
  *   }
  *   ```
  * - For elliptic curve key pairs (key types for which
- *   #PSA_KEY_TYPE_IS_ECC_KEYPAIR is true), the format is the
- *   non-encrypted DER encoding of the representation defined by RFC 5915 as
- *   `ECPrivateKey`, version 1. The `ECParameters` field must be a
- *   `namedCurve` OID as specified in RFC 5480 &sect;2.1.1.1. The public key
- *   must be present and must be an `ECPoint` in the same format
- *   (uncompressed variant) an ECC public key of the
- *   corresponding type exported with psa_export_public_key().
- *   ```
- *   ECPrivateKey ::= SEQUENCE {
- *       version             INTEGER,  -- must be 1
- *       privateKey          OCTET STRING,
- *           -- `ceiling(log2(n)/8)`-byte string, big endian,
- *           -- where n is the order of the curve.
- *       parameters      [0] IMPLICIT ECParameters {{ namedCurve }},  -- mandatory
- *       publicKey       [1] IMPLICIT BIT STRING  -- mandatory
- *   }
- *   ```
+ *   #PSA_KEY_TYPE_IS_ECC_KEYPAIR is true), the format is
+ *   a big-endian representation of the private point as a
+ *   `ceiling(log2(n)/8)`-byte string where `n` is the order of the curve.
+ *   This is the content of the `privateKey` field of the `ECPrivateKey`
+ *   format defined by RFC 5915.
  * - For public keys (key types for which #PSA_KEY_TYPE_IS_PUBLIC_KEY is
  *   true), the format is the same as for psa_export_public_key().
  *
@@ -2382,9 +2508,9 @@ psa_status_t psa_cipher_abort(psa_cipher_operation_t *operation);
  *                            correct size for an AEAD algorithm that it
  *                            recognizes, but does not support.
  */
-#define PSA_AEAD_TAG_SIZE(alg)             \
-    ((alg) == PSA_ALG_GCM ? 16 :           \
-     (alg) == PSA_ALG_CCM ? 16 :           \
+#define PSA_AEAD_TAG_LENGTH(alg)                                        \
+    (PSA_ALG_IS_AEAD(alg) ?                                             \
+     (((alg) & PSA_ALG_AEAD_TAG_LENGTH_MASK) >> PSA_AEAD_TAG_LENGTH_OFFSET) : \
      0)
 
 /** Process an authenticated encryption operation.
