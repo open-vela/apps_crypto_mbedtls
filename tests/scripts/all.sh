@@ -436,26 +436,34 @@ OPENSSL="$OPENSSL" OPENSSL_LEGACY="$OPENSSL_LEGACY" GNUTLS_CLI="$GNUTLS_CLI" \
     ARMC6_CC="$ARMC6_CC" RUN_ARMCC="$RUN_ARMCC" scripts/output_env.sh
 
 msg "test: recursion.pl" # < 1s
-tests/scripts/recursion.pl library/*.c
+record_status tests/scripts/recursion.pl library/*.c
 
 msg "test: freshness of generated source files" # < 1s
-tests/scripts/check-generated-files.sh
+record_status tests/scripts/check-generated-files.sh
 
 msg "test: doxygen markup outside doxygen blocks" # < 1s
-tests/scripts/check-doxy-blocks.pl
+record_status tests/scripts/check-doxy-blocks.pl
 
 msg "test: check-files.py" # < 1s
 cleanup
-tests/scripts/check-files.py
+record_status tests/scripts/check-files.py
 
 msg "test/build: declared and exported names" # < 3s
 cleanup
-tests/scripts/check-names.sh
+record_status tests/scripts/check-names.sh
 
 msg "test: doxygen warnings" # ~ 3s
 cleanup
-tests/scripts/doxygen.sh
+record_status tests/scripts/doxygen.sh
 
+msg "test: Mbed Crypto exporter " # ~ 30s
+cleanup
+make -f scripts/mbed_crypto.make
+cd crypto
+make test
+make clean
+cd ..
+make -f scripts/mbed_crypto.make clean
 
 
 ################################################################
@@ -531,10 +539,10 @@ msg "test: RSA_NO_CRT - main suites (inc. selftests) (ASan build)" # ~ 50s
 make test
 
 msg "test: RSA_NO_CRT - RSA-related part of ssl-opt.sh (ASan build)" # ~ 5s
-tests/ssl-opt.sh -f RSA
+if_build_succeeded tests/ssl-opt.sh -f RSA
 
 msg "test: RSA_NO_CRT - RSA-related part of compat.sh (ASan build)" # ~ 3 min
-tests/compat.sh -t RSA
+if_build_succeeded tests/compat.sh -t RSA
 
 msg "build: small SSL_OUT_CONTENT_LEN (ASan build)"
 cleanup
@@ -557,6 +565,26 @@ make
 
 msg "test: small SSL_IN_CONTENT_LEN - ssl-opt.sh MFL tests"
 if_build_succeeded tests/ssl-opt.sh -f "Max fragment"
+
+msg "build: small MBEDTLS_SSL_DTLS_MAX_BUFFERING #0"
+cleanup
+cp "$CONFIG_H" "$CONFIG_BAK"
+scripts/config.pl set MBEDTLS_SSL_DTLS_MAX_BUFFERING 1000
+CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
+make
+
+msg "test: small MBEDTLS_SSL_DTLS_MAX_BUFFERING #0 - ssl-opt.sh specific reordering test"
+if_build_succeeded tests/ssl-opt.sh -f "DTLS reordering: Buffer out-of-order hs msg before reassembling next, free buffered msg"
+
+msg "build: small MBEDTLS_SSL_DTLS_MAX_BUFFERING #1"
+cleanup
+cp "$CONFIG_H" "$CONFIG_BAK"
+scripts/config.pl set MBEDTLS_SSL_DTLS_MAX_BUFFERING 240
+CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
+make
+
+msg "test: small MBEDTLS_SSL_DTLS_MAX_BUFFERING #1 - ssl-opt.sh specific reordering test"
+if_build_succeeded tests/ssl-opt.sh -f "DTLS reordering: Buffer encrypted Finished message, drop for fragmented NewSessionTicket"
 
 msg "build: cmake, full config, clang" # ~ 50s
 cleanup
@@ -1043,14 +1071,17 @@ for optimization_flag in -O2 -O3 -Ofast -Os; do
         cleanup
         make programs CC="$compiler" DEBUG=1 CFLAGS="$optimization_flag"
         if_build_succeeded gdb -x tests/scripts/test_zeroize.gdb -nw -batch -nx 2>&1 | tee test_zeroize.log
-        if_build_succeeded [ -s test_zeroize.log ]
         if_build_succeeded grep "The buffer was correctly zeroized" test_zeroize.log
         if_build_succeeded not grep -i "error" test_zeroize.log
         rm -f test_zeroize.log
     done
 done
 
+msg "Lint: Python scripts"
+record_status tests/scripts/check-python-files.sh
 
+msg "uint test: generate_test_code.py"
+record_status ./tests/scripts/test_generate_test_code.py
 
 ################################################################
 #### Termination
