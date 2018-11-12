@@ -404,6 +404,16 @@ void mbedtls_rsa_set_padding( mbedtls_rsa_context *ctx, int padding,
 size_t mbedtls_rsa_get_len( const mbedtls_rsa_context *ctx );
 
 /**
+ * \brief          This function retrieves the length of the RSA modulus in bits.
+ *
+ * \param ctx      The initialized RSA context.
+ *
+ * \return         The length of the RSA modulus in bits.
+ *
+ */
+size_t mbedtls_rsa_get_bitlen( const mbedtls_rsa_context *ctx );
+
+/**
  * \brief          This function generates an RSA keypair.
  *
  * \note           mbedtls_rsa_init() must be called before this function,
@@ -893,16 +903,6 @@ int mbedtls_rsa_rsassa_pkcs1_v15_sign( mbedtls_rsa_context *ctx,
  *                 Cryptography Standards (PKCS) #1 v2.1: RSA Cryptography
  *                 Specifications</em> it is advised to keep both hashes the
  *                 same.
- *
- * \note           This function always uses the maximum possible salt size,
- *                 up to the length of the payload hash. This choice of salt
- *                 size complies with FIPS 186-4 §5.5 (e) and RFC 8017 (PKCS#1
- *                 v2.2) §9.1.1 step 3. Furthermore this function enforces a
- *                 minimum salt size which is the hash size minus 2 bytes. If
- *                 this minimum size is too large given the key size (the salt
- *                 size, plus the hash size, plus 2 bytes must be no more than
- *                 the key size in bytes), this function returns
- *                 #MBEDTLS_ERR_RSA_BAD_INPUT_DATA.
  *
  * \deprecated     It is deprecated and discouraged to call this function
  *                 in #MBEDTLS_RSA_PUBLIC mode. Future versions of the library

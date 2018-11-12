@@ -29,6 +29,10 @@
  *  http://www.itu.int/ITU-T/studygroups/com17/languages/X.690-0207.pdf
  */
 
+/* Ensure gmtime_r is available even with -std=c99; must be included before
+ * config.h, which pulls in glibc's features.h. Harmless on other platforms. */
+#define _POSIX_C_SOURCE 200112L
+
 #if !defined(MBEDTLS_CONFIG_FILE)
 #include "mbedtls/config.h"
 #else
@@ -63,7 +67,6 @@
 #include "mbedtls/platform_time.h"
 #endif
 #if defined(MBEDTLS_HAVE_TIME_DATE)
-#include "mbedtls/platform_util.h"
 #include <time.h>
 #endif
 
@@ -898,7 +901,11 @@ static int x509_get_current_time( mbedtls_x509_time *now )
     int ret = 0;
 
     tt = mbedtls_time( NULL );
-    lt = mbedtls_platform_gmtime_r( &tt, &tm_buf );
+#if defined(_WIN32) && !defined(EFIX64) && !defined(EFI32)
+    lt = gmtime_s( &tm_buf, &tt ) == 0 ? &tm_buf : NULL;
+#else
+    lt = gmtime_r( &tt, &tm_buf );
+#endif
 
     if( lt == NULL )
         ret = -1;
@@ -1001,8 +1008,8 @@ int mbedtls_x509_time_is_future( const mbedtls_x509_time *from )
  */
 int mbedtls_x509_self_test( int verbose )
 {
-    int ret = 0;
 #if defined(MBEDTLS_CERTS_C) && defined(MBEDTLS_SHA256_C)
+    int ret;
     uint32_t flags;
     mbedtls_x509_crt cacert;
     mbedtls_x509_crt clicert;
@@ -1010,7 +1017,6 @@ int mbedtls_x509_self_test( int verbose )
     if( verbose != 0 )
         mbedtls_printf( "  X.509 certificate load: " );
 
-    mbedtls_x509_crt_init( &cacert );
     mbedtls_x509_crt_init( &clicert );
 
     ret = mbedtls_x509_crt_parse( &clicert, (const unsigned char *) mbedtls_test_cli_crt,
@@ -1020,8 +1026,10 @@ int mbedtls_x509_self_test( int verbose )
         if( verbose != 0 )
             mbedtls_printf( "failed\n" );
 
-        goto cleanup;
+        return( ret );
     }
+
+    mbedtls_x509_crt_init( &cacert );
 
     ret = mbedtls_x509_crt_parse( &cacert, (const unsigned char *) mbedtls_test_ca_crt,
                           mbedtls_test_ca_crt_len );
@@ -1030,7 +1038,7 @@ int mbedtls_x509_self_test( int verbose )
         if( verbose != 0 )
             mbedtls_printf( "failed\n" );
 
-        goto cleanup;
+        return( ret );
     }
 
     if( verbose != 0 )
@@ -1042,19 +1050,20 @@ int mbedtls_x509_self_test( int verbose )
         if( verbose != 0 )
             mbedtls_printf( "failed\n" );
 
-        goto cleanup;
+        return( ret );
     }
 
     if( verbose != 0 )
         mbedtls_printf( "passed\n\n");
 
-cleanup:
     mbedtls_x509_crt_free( &cacert  );
     mbedtls_x509_crt_free( &clicert );
+
+    return( 0 );
 #else
     ((void) verbose);
+    return( 0 );
 #endif /* MBEDTLS_CERTS_C && MBEDTLS_SHA1_C */
-    return( ret );
 }
 
 #endif /* MBEDTLS_SELF_TEST */
