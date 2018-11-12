@@ -46,7 +46,6 @@
  defined(MBEDTLS_FS_IO)
 #include "mbedtls/cipher.h"
 #include "mbedtls/md.h"
-#include "mbedtls/platform_util.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -548,13 +547,13 @@ exit:
        the case when the user has missed or reordered some,
        in which case the key might not be in argv[6]. */
     for( i = 0; i < argc; i++ )
-        mbedtls_platform_zeroize( argv[i], strlen( argv[i] ) );
+        memset( argv[i], 0, strlen( argv[i] ) );
 
-    mbedtls_platform_zeroize( IV,     sizeof( IV ) );
-    mbedtls_platform_zeroize( key,    sizeof( key ) );
-    mbedtls_platform_zeroize( buffer, sizeof( buffer ) );
-    mbedtls_platform_zeroize( output, sizeof( output ) );
-    mbedtls_platform_zeroize( digest, sizeof( digest ) );
+    memset( IV,     0, sizeof( IV ) );
+    memset( key,    0, sizeof( key ) );
+    memset( buffer, 0, sizeof( buffer ) );
+    memset( output, 0, sizeof( output ) );
+    memset( digest, 0, sizeof( digest ) );
 
     mbedtls_cipher_free( &cipher_ctx );
     mbedtls_md_free( &md_ctx );
