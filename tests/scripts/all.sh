@@ -156,7 +156,7 @@ cleanup()
     command make clean
 
     # Remove CMake artefacts
-    find . -name .git -prune -o \
+    find . -name .git -prune \
            -iname CMakeFiles -exec rm -rf {} \+ -o \
            \( -iname cmake_install.cmake -o \
               -iname CTestTestfile.cmake -o \
@@ -440,6 +440,14 @@ msg "test: doxygen warnings" # ~ 3s
 cleanup
 record_status tests/scripts/doxygen.sh
 
+msg "test: Mbed Crypto exporter " # ~ 30s
+cleanup
+make -f scripts/mbed_crypto.make
+cd crypto
+make test
+make clean
+cd ..
+make -f scripts/mbed_crypto.make clean
 
 
 ################################################################
@@ -636,6 +644,8 @@ scripts/config.pl unset MBEDTLS_PLATFORM_EXIT_ALT
 scripts/config.pl unset MBEDTLS_ENTROPY_NV_SEED
 scripts/config.pl unset MBEDTLS_MEMORY_BUFFER_ALLOC_C
 scripts/config.pl unset MBEDTLS_FS_IO
+scripts/config.pl unset MBEDTLS_PSA_CRYPTO_STORAGE_FILE_C
+scripts/config.pl unset MBEDTLS_PSA_CRYPTO_STORAGE_C
 # Note, _DEFAULT_SOURCE needs to be defined for platforms using glibc version >2.19,
 # to re-enable platform integration features otherwise disabled in C99 builds
 make CC=gcc CFLAGS='-Werror -Wall -Wextra -std=c99 -pedantic -O0 -D_DEFAULT_SOURCE' lib programs
@@ -851,6 +861,8 @@ scripts/config.pl unset MBEDTLS_THREADING_PTHREAD
 scripts/config.pl unset MBEDTLS_THREADING_C
 scripts/config.pl unset MBEDTLS_MEMORY_BACKTRACE # execinfo.h
 scripts/config.pl unset MBEDTLS_MEMORY_BUFFER_ALLOC_C # calls exit
+scripts/config.pl unset MBEDTLS_PSA_CRYPTO_STORAGE_FILE_C # depends on MBEDTLS_FS_IO
+scripts/config.pl unset MBEDTLS_PSA_CRYPTO_STORAGE_C # depends on MBEDTLS_PSA_CRYPTO_STORAGE_FILE_C
 make CC=arm-none-eabi-gcc AR=arm-none-eabi-ar LD=arm-none-eabi-ld CFLAGS='-Werror -Wall -Wextra' lib
 
 msg "build: arm-none-eabi-gcc -DMBEDTLS_NO_UDBL_DIVISION, make" # ~ 10s
@@ -869,6 +881,8 @@ scripts/config.pl unset MBEDTLS_THREADING_C
 scripts/config.pl unset MBEDTLS_MEMORY_BACKTRACE # execinfo.h
 scripts/config.pl unset MBEDTLS_MEMORY_BUFFER_ALLOC_C # calls exit
 scripts/config.pl set MBEDTLS_NO_UDBL_DIVISION
+scripts/config.pl unset MBEDTLS_PSA_CRYPTO_STORAGE_FILE_C # depends on MBEDTLS_FS_IO
+scripts/config.pl unset MBEDTLS_PSA_CRYPTO_STORAGE_C # depends on MBEDTLS_PSA_CRYPTO_STORAGE_FILE_C
 make CC=arm-none-eabi-gcc AR=arm-none-eabi-ar LD=arm-none-eabi-ld CFLAGS='-Werror -Wall -Wextra' lib
 echo "Checking that software 64-bit division is not required"
 if_build_succeeded not grep __aeabi_uldiv library/*.o
@@ -889,6 +903,8 @@ scripts/config.pl unset MBEDTLS_THREADING_C
 scripts/config.pl unset MBEDTLS_MEMORY_BACKTRACE # execinfo.h
 scripts/config.pl unset MBEDTLS_MEMORY_BUFFER_ALLOC_C # calls exit
 scripts/config.pl set MBEDTLS_NO_64BIT_MULTIPLICATION
+scripts/config.pl unset MBEDTLS_PSA_CRYPTO_STORAGE_FILE_C # depends on MBEDTLS_FS_IO
+scripts/config.pl unset MBEDTLS_PSA_CRYPTO_STORAGE_C # depends on MBEDTLS_PSA_CRYPTO_STORAGE_FILE_C
 make CC=arm-none-eabi-gcc AR=arm-none-eabi-ar LD=arm-none-eabi-ld CFLAGS='-Werror -O1 -march=armv6-m -mthumb' lib
 echo "Checking that software 64-bit multiplication is not required"
 if_build_succeeded not grep __aeabi_lmul library/*.o
@@ -912,6 +928,8 @@ scripts/config.pl unset MBEDTLS_THREADING_C
 scripts/config.pl unset MBEDTLS_MEMORY_BACKTRACE # execinfo.h
 scripts/config.pl unset MBEDTLS_MEMORY_BUFFER_ALLOC_C # calls exit
 scripts/config.pl unset MBEDTLS_PLATFORM_TIME_ALT # depends on MBEDTLS_HAVE_TIME
+scripts/config.pl unset MBEDTLS_PSA_CRYPTO_STORAGE_FILE_C # depends on MBEDTLS_FS_IO
+scripts/config.pl unset MBEDTLS_PSA_CRYPTO_STORAGE_C # depends on MBEDTLS_PSA_CRYPTO_STORAGE_FILE_C
 
 if [ $RUN_ARMCC -ne 0 ]; then
     make CC="$ARMC5_CC" AR="$ARMC5_AR" WARNING_CFLAGS='--strict --c99' lib
