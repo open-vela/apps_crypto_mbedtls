@@ -506,14 +506,9 @@
 #error "MBEDTLS_PSA_CRYPTO_SPM defined, but not all prerequisites"
 #endif
 
-#if defined(MBEDTLS_PSA_CRYPTO_STORAGE_FILE_C) && defined(MBEDTLS_PSA_CRYPTO_STORAGE_ITS_C)
-#error "Only one of MBEDTLS_PSA_CRYPTO_STORAGE_FILE_C or MBEDTLS_PSA_CRYPTO_STORAGE_ITS_C can be defined"
-#endif
-
 #if defined(MBEDTLS_PSA_CRYPTO_STORAGE_C) &&            \
-    !( defined(MBEDTLS_PSA_CRYPTO_C) &&                 \
-       ( defined(MBEDTLS_PSA_CRYPTO_STORAGE_FILE_C) ||  \
-         defined(MBEDTLS_PSA_CRYPTO_STORAGE_ITS_C) ) )
+    !( defined(MBEDTLS_PSA_CRYPTO_C) &&           \
+       defined(MBEDTLS_PSA_CRYPTO_STORAGE_FILE_C) )
 #error "MBEDTLS_PSA_CRYPTO_STORAGE_C defined, but not all prerequisites"
 #endif
 
@@ -521,11 +516,6 @@
     !( defined(MBEDTLS_PSA_CRYPTO_STORAGE_C) &&           \
        defined(MBEDTLS_FS_IO) )
 #error "MBEDTLS_PSA_CRYPTO_STORAGE_FILE_C defined, but not all prerequisites"
-#endif
-
-#if defined(MBEDTLS_PSA_CRYPTO_STORAGE_ITS_C) &&             \
-    ! defined(MBEDTLS_PSA_CRYPTO_STORAGE_C)
-#error "MBEDTLS_PSA_CRYPTO_STORAGE_ITS_C defined, but not all prerequisites"
 #endif
 
 #if defined(MBEDTLS_RSA_C) && ( !defined(MBEDTLS_BIGNUM_C) ||         \
