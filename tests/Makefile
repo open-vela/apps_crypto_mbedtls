@@ -6,18 +6,11 @@ CFLAGS	?= -O2
 WARNING_CFLAGS ?= -Wall -W -Wdeclaration-after-statement -Wno-unused-function -Wno-unused-value
 LDFLAGS ?=
 
-LOCAL_CFLAGS = $(WARNING_CFLAGS) -I../include -D_FILE_OFFSET_BITS=64
+LOCAL_CFLAGS = $(WARNING_CFLAGS) -I../include -I../library -D_FILE_OFFSET_BITS=64
 LOCAL_LDFLAGS = -L../library			\
 		-lmbedtls$(SHARED_SUFFIX)	\
 		-lmbedx509$(SHARED_SUFFIX)	\
 		-lmbedcrypto$(SHARED_SUFFIX)
-
-ifdef USE_CRYPTO_SUBMODULE
-LOCAL_LDFLAGS += -L../crypto/library
-CRYPTO := ../crypto/library/
-else
-CRYPTO := ../library/
-endif
 
 # Enable definition of various functions used throughout the testsuite
 # (gethostname, strdup, fileno...) even when compiling with -std=c99. Harmless
@@ -25,9 +18,9 @@ endif
 LOCAL_CFLAGS += -D_POSIX_C_SOURCE=200809L
 
 ifndef SHARED
-DEP=$(CRYPTO)libmbedcrypto.a ../library/libmbedx509.a ../library/libmbedtls.a
+DEP=../library/libmbedcrypto.a ../library/libmbedx509.a ../library/libmbedtls.a
 else
-DEP=$(CRYPTO)libmbedcrypto.$(DLEXT) ../library/libmbedx509.$(DLEXT) ../library/libmbedtls.$(DLEXT)
+DEP=../library/libmbedcrypto.$(DLEXT) ../library/libmbedx509.$(DLEXT) ../library/libmbedtls.$(DLEXT)
 endif
 
 ifdef DEBUG
@@ -114,7 +107,9 @@ clean:
 ifndef WINDOWS
 	rm -rf $(BINARIES) *.c *.datax TESTS
 else
-	del /Q /F *.c *.exe *.datax
+	if exist *.c del /Q /F *.c
+	if exist *.exe del /Q /F *.exe
+	if exist *.datax del /Q /F *.datax
 ifneq ($(wildcard TESTS/.*),)
 	rmdir /Q /S TESTS
 endif
