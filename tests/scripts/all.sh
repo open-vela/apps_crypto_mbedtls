@@ -441,7 +441,6 @@ cleanup
 record_status tests/scripts/doxygen.sh
 
 
-
 ################################################################
 #### Build and test many configurations and targets
 ################################################################
@@ -574,6 +573,35 @@ if_build_succeeded env OPENSSL_CMD="$OPENSSL_LEGACY" GNUTLS_CLI="$GNUTLS_LEGACY_
 msg "test: compat.sh ARIA + ChachaPoly"
 if_build_succeeded env OPENSSL_CMD="$OPENSSL_NEXT" tests/compat.sh -e '^$' -f 'ARIA\|CHACHA'
 
+# MBEDTLS_USE_PSA_CRYPTO: run the same set of tests as basic-build-test.sh
+msg "build: cmake, full config + MBEDTLS_USE_PSA_CRYPTO, ASan"
+cleanup
+cp "$CONFIG_H" "$CONFIG_BAK"
+scripts/config.pl full
+scripts/config.pl unset MBEDTLS_MEMORY_BACKTRACE # too slow for tests
+scripts/config.pl set MBEDTLS_PSA_CRYPTO_C
+scripts/config.pl set MBEDTLS_USE_PSA_CRYPTO
+CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
+make
+
+msg "test: main suites (MBEDTLS_USE_PSA_CRYPTO)"
+make test
+
+msg "test: ssl-opt.sh (MBEDTLS_USE_PSA_CRYPTO)"
+if_build_succeeded tests/ssl-opt.sh
+
+msg "test: compat.sh default (MBEDTLS_USE_PSA_CRYPTO)"
+if_build_succeeded tests/compat.sh
+
+msg "test: compat.sh ssl3 (MBEDTLS_USE_PSA_CRYPTO)"
+if_build_succeeded env OPENSSL_CMD="$OPENSSL_LEGACY" tests/compat.sh -m 'ssl3'
+
+msg "test: compat.sh RC4, DES & NULL (MBEDTLS_USE_PSA_CRYPTO)"
+if_build_succeeded env OPENSSL_CMD="$OPENSSL_LEGACY" GNUTLS_CLI="$GNUTLS_LEGACY_CLI" GNUTLS_SERV="$GNUTLS_LEGACY_SERV" tests/compat.sh -e '3DES\|DES-CBC3' -f 'NULL\|DES\|RC4\|ARCFOUR'
+
+msg "test: compat.sh ARIA + ChachaPoly (MBEDTLS_USE_PSA_CRYPTO)"
+if_build_succeeded env OPENSSL_CMD="$OPENSSL_NEXT" tests/compat.sh -e '^$' -f 'ARIA\|CHACHA'
+
 msg "build: make, full config + DEPRECATED_WARNING, gcc -O" # ~ 30s
 cleanup
 cp "$CONFIG_H" "$CONFIG_BAK"
@@ -636,6 +664,8 @@ scripts/config.pl unset MBEDTLS_PLATFORM_EXIT_ALT
 scripts/config.pl unset MBEDTLS_ENTROPY_NV_SEED
 scripts/config.pl unset MBEDTLS_MEMORY_BUFFER_ALLOC_C
 scripts/config.pl unset MBEDTLS_FS_IO
+scripts/config.pl unset MBEDTLS_PSA_CRYPTO_STORAGE_FILE_C
+scripts/config.pl unset MBEDTLS_PSA_CRYPTO_STORAGE_C
 # Note, _DEFAULT_SOURCE needs to be defined for platforms using glibc version >2.19,
 # to re-enable platform integration features otherwise disabled in C99 builds
 make CC=gcc CFLAGS='-Werror -Wall -Wextra -std=c99 -pedantic -O0 -D_DEFAULT_SOURCE' lib programs
@@ -851,6 +881,8 @@ scripts/config.pl unset MBEDTLS_THREADING_PTHREAD
 scripts/config.pl unset MBEDTLS_THREADING_C
 scripts/config.pl unset MBEDTLS_MEMORY_BACKTRACE # execinfo.h
 scripts/config.pl unset MBEDTLS_MEMORY_BUFFER_ALLOC_C # calls exit
+scripts/config.pl unset MBEDTLS_PSA_CRYPTO_STORAGE_FILE_C # depends on MBEDTLS_FS_IO
+scripts/config.pl unset MBEDTLS_PSA_CRYPTO_STORAGE_C # depends on MBEDTLS_PSA_CRYPTO_STORAGE_FILE_C
 make CC=arm-none-eabi-gcc AR=arm-none-eabi-ar LD=arm-none-eabi-ld CFLAGS='-Werror -Wall -Wextra' lib
 
 msg "build: arm-none-eabi-gcc -DMBEDTLS_NO_UDBL_DIVISION, make" # ~ 10s
@@ -869,6 +901,8 @@ scripts/config.pl unset MBEDTLS_THREADING_C
 scripts/config.pl unset MBEDTLS_MEMORY_BACKTRACE # execinfo.h
 scripts/config.pl unset MBEDTLS_MEMORY_BUFFER_ALLOC_C # calls exit
 scripts/config.pl set MBEDTLS_NO_UDBL_DIVISION
+scripts/config.pl unset MBEDTLS_PSA_CRYPTO_STORAGE_FILE_C # depends on MBEDTLS_FS_IO
+scripts/config.pl unset MBEDTLS_PSA_CRYPTO_STORAGE_C # depends on MBEDTLS_PSA_CRYPTO_STORAGE_FILE_C
 make CC=arm-none-eabi-gcc AR=arm-none-eabi-ar LD=arm-none-eabi-ld CFLAGS='-Werror -Wall -Wextra' lib
 echo "Checking that software 64-bit division is not required"
 if_build_succeeded not grep __aeabi_uldiv library/*.o
@@ -889,6 +923,8 @@ scripts/config.pl unset MBEDTLS_THREADING_C
 scripts/config.pl unset MBEDTLS_MEMORY_BACKTRACE # execinfo.h
 scripts/config.pl unset MBEDTLS_MEMORY_BUFFER_ALLOC_C # calls exit
 scripts/config.pl set MBEDTLS_NO_64BIT_MULTIPLICATION
+scripts/config.pl unset MBEDTLS_PSA_CRYPTO_STORAGE_FILE_C # depends on MBEDTLS_FS_IO
+scripts/config.pl unset MBEDTLS_PSA_CRYPTO_STORAGE_C # depends on MBEDTLS_PSA_CRYPTO_STORAGE_FILE_C
 make CC=arm-none-eabi-gcc AR=arm-none-eabi-ar LD=arm-none-eabi-ld CFLAGS='-Werror -O1 -march=armv6-m -mthumb' lib
 echo "Checking that software 64-bit multiplication is not required"
 if_build_succeeded not grep __aeabi_lmul library/*.o
@@ -912,6 +948,8 @@ scripts/config.pl unset MBEDTLS_THREADING_C
 scripts/config.pl unset MBEDTLS_MEMORY_BACKTRACE # execinfo.h
 scripts/config.pl unset MBEDTLS_MEMORY_BUFFER_ALLOC_C # calls exit
 scripts/config.pl unset MBEDTLS_PLATFORM_TIME_ALT # depends on MBEDTLS_HAVE_TIME
+scripts/config.pl unset MBEDTLS_PSA_CRYPTO_STORAGE_FILE_C # depends on MBEDTLS_FS_IO
+scripts/config.pl unset MBEDTLS_PSA_CRYPTO_STORAGE_C # depends on MBEDTLS_PSA_CRYPTO_STORAGE_FILE_C
 
 if [ $RUN_ARMCC -ne 0 ]; then
     make CC="$ARMC5_CC" AR="$ARMC5_AR" WARNING_CFLAGS='--strict --c99' lib
