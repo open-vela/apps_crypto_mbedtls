@@ -441,7 +441,6 @@ cleanup
 record_status tests/scripts/doxygen.sh
 
 
-
 ################################################################
 #### Build and test many configurations and targets
 ################################################################
@@ -618,32 +617,6 @@ record_status check_headers_in_cpp
 msg "build: Unix make, incremental g++"
 make TEST_CPP=1
 
-
-msg "build+test: MBEDTLS_CHECK_PARAMS without MBEDTLS_PLATFORM_C"
-cleanup
-cp "$CONFIG_H" "$CONFIG_BAK"
-scripts/config.pl full # includes CHECK_PARAMS
-scripts/config.pl unset MBEDTLS_MEMORY_BACKTRACE # too slow for tests
-scripts/config.pl unset MBEDTLS_MEMORY_BUFFER_ALLOC_C
-scripts/config.pl unset MBEDTLS_PLATFORM_EXIT_ALT
-scripts/config.pl unset MBEDTLS_PLATFORM_TIME_ALT
-scripts/config.pl unset MBEDTLS_PLATFORM_FPRINTF_ALT
-scripts/config.pl unset MBEDTLS_PLATFORM_MEMORY
-scripts/config.pl unset MBEDTLS_PLATFORM_PRINTF_ALT
-scripts/config.pl unset MBEDTLS_PLATFORM_SNPRINTF_ALT
-scripts/config.pl unset MBEDTLS_ENTROPY_NV_SEED
-scripts/config.pl unset MBEDTLS_PLATFORM_C
-make CC=gcc CFLAGS='-Werror -O1' all test
-
-msg "build+test: MBEDTLS_CHECK_PARAMS with alternative MBEDTLS_PARAM_FAILED()"
-cleanup
-cp "$CONFIG_H" "$CONFIG_BAK"
-scripts/config.pl full # includes CHECK_PARAMS
-scripts/config.pl unset MBEDTLS_MEMORY_BACKTRACE # too slow for tests
-sed -i 's/.*\(#define MBEDTLS_PARAM_FAILED( cond )\).*/\1/' "$CONFIG_H"
-make CC=gcc CFLAGS='-Werror -O1' all test
-
-
 # Full configuration build, without platform support, file IO and net sockets.
 # This should catch missing mbedtls_printf definitions, and by disabling file
 # IO, it should catch missing '#include <stdio.h>'
@@ -662,6 +635,8 @@ scripts/config.pl unset MBEDTLS_PLATFORM_EXIT_ALT
 scripts/config.pl unset MBEDTLS_ENTROPY_NV_SEED
 scripts/config.pl unset MBEDTLS_MEMORY_BUFFER_ALLOC_C
 scripts/config.pl unset MBEDTLS_FS_IO
+scripts/config.pl unset MBEDTLS_PSA_CRYPTO_STORAGE_FILE_C
+scripts/config.pl unset MBEDTLS_PSA_CRYPTO_STORAGE_C
 # Note, _DEFAULT_SOURCE needs to be defined for platforms using glibc version >2.19,
 # to re-enable platform integration features otherwise disabled in C99 builds
 make CC=gcc CFLAGS='-Werror -Wall -Wextra -std=c99 -pedantic -O0 -D_DEFAULT_SOURCE' lib programs
@@ -877,6 +852,8 @@ scripts/config.pl unset MBEDTLS_THREADING_PTHREAD
 scripts/config.pl unset MBEDTLS_THREADING_C
 scripts/config.pl unset MBEDTLS_MEMORY_BACKTRACE # execinfo.h
 scripts/config.pl unset MBEDTLS_MEMORY_BUFFER_ALLOC_C # calls exit
+scripts/config.pl unset MBEDTLS_PSA_CRYPTO_STORAGE_FILE_C # depends on MBEDTLS_FS_IO
+scripts/config.pl unset MBEDTLS_PSA_CRYPTO_STORAGE_C # depends on MBEDTLS_PSA_CRYPTO_STORAGE_FILE_C
 make CC=arm-none-eabi-gcc AR=arm-none-eabi-ar LD=arm-none-eabi-ld CFLAGS='-Werror -Wall -Wextra' lib
 
 msg "build: arm-none-eabi-gcc -DMBEDTLS_NO_UDBL_DIVISION, make" # ~ 10s
@@ -895,6 +872,8 @@ scripts/config.pl unset MBEDTLS_THREADING_C
 scripts/config.pl unset MBEDTLS_MEMORY_BACKTRACE # execinfo.h
 scripts/config.pl unset MBEDTLS_MEMORY_BUFFER_ALLOC_C # calls exit
 scripts/config.pl set MBEDTLS_NO_UDBL_DIVISION
+scripts/config.pl unset MBEDTLS_PSA_CRYPTO_STORAGE_FILE_C # depends on MBEDTLS_FS_IO
+scripts/config.pl unset MBEDTLS_PSA_CRYPTO_STORAGE_C # depends on MBEDTLS_PSA_CRYPTO_STORAGE_FILE_C
 make CC=arm-none-eabi-gcc AR=arm-none-eabi-ar LD=arm-none-eabi-ld CFLAGS='-Werror -Wall -Wextra' lib
 echo "Checking that software 64-bit division is not required"
 if_build_succeeded not grep __aeabi_uldiv library/*.o
@@ -915,6 +894,8 @@ scripts/config.pl unset MBEDTLS_THREADING_C
 scripts/config.pl unset MBEDTLS_MEMORY_BACKTRACE # execinfo.h
 scripts/config.pl unset MBEDTLS_MEMORY_BUFFER_ALLOC_C # calls exit
 scripts/config.pl set MBEDTLS_NO_64BIT_MULTIPLICATION
+scripts/config.pl unset MBEDTLS_PSA_CRYPTO_STORAGE_FILE_C # depends on MBEDTLS_FS_IO
+scripts/config.pl unset MBEDTLS_PSA_CRYPTO_STORAGE_C # depends on MBEDTLS_PSA_CRYPTO_STORAGE_FILE_C
 make CC=arm-none-eabi-gcc AR=arm-none-eabi-ar LD=arm-none-eabi-ld CFLAGS='-Werror -O1 -march=armv6-m -mthumb' lib
 echo "Checking that software 64-bit multiplication is not required"
 if_build_succeeded not grep __aeabi_lmul library/*.o
@@ -938,6 +919,8 @@ scripts/config.pl unset MBEDTLS_THREADING_C
 scripts/config.pl unset MBEDTLS_MEMORY_BACKTRACE # execinfo.h
 scripts/config.pl unset MBEDTLS_MEMORY_BUFFER_ALLOC_C # calls exit
 scripts/config.pl unset MBEDTLS_PLATFORM_TIME_ALT # depends on MBEDTLS_HAVE_TIME
+scripts/config.pl unset MBEDTLS_PSA_CRYPTO_STORAGE_FILE_C # depends on MBEDTLS_FS_IO
+scripts/config.pl unset MBEDTLS_PSA_CRYPTO_STORAGE_C # depends on MBEDTLS_PSA_CRYPTO_STORAGE_FILE_C
 
 if [ $RUN_ARMCC -ne 0 ]; then
     make CC="$ARMC5_CC" AR="$ARMC5_AR" WARNING_CFLAGS='--strict --c99' lib
