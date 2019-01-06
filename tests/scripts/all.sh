@@ -59,42 +59,29 @@
 # following naming conventions:
 #  * pre_XXX: things to do before running the tests, in order.
 #  * component_XXX: independent components. They can be run in any order.
-#      * component_check_XXX: quick tests that aren't worth parallelizing.
-#      * component_build_XXX: build things but don't run them.
-#      * component_test_XXX: build and test.
+#      * component_check_XXX: quick tests that aren't worth parallelizing
+#      * component_build_XXX: build things but don't run them
+#      * component_test_XXX: build and test
 #  * support_XXX: if support_XXX exists and returns false then
 #    component_XXX is not run by default.
 #  * post_XXX: things to do after running the tests.
 #  * other: miscellaneous support functions.
 #
-# Each component must start by invoking `msg` with a short informative message.
-#
-# The framework performs some cleanup tasks after each component. This
-# means that components can assume that the working directory is in a
-# cleaned-up state, and don't need to perform the cleanup themselves.
-# * Run `make clean`.
-# * Restore `include/mbedtks/config.h` from a backup made before running
-#   the component.
-# * Check out `Makefile`, `library/Makefile`, `programs/Makefile` and
-#   `tests/Makefile` from git. This cleans up after an in-tree use of
-#   CMake.
-#
-# Any command that is expected to fail must be protected so that the
-# script keeps running in --keep-going mode despite `set -e`. In keep-going
-# mode, if a protected command fails, this is logged as a failure and the
-# script will exit with a failure status once it has run all components.
-# Commands can be protected in any of the following ways:
-# * `make` is a function which runs the `make` command with protection.
-#   Note that you must write `make VAR=value`, not `VAR=value make`,
-#   because the `VAR=value make` syntax doesn't work with functions.
-# * Put `report_status` before the command to protect it.
-# * Put `if_build_successful` before a command. This protects it, and
-#   additionally skips it if a prior invocation of `make` in the same
-#   component failed.
-#
 # The tests are roughly in order from fastest to slowest. This doesn't
 # have to be exact, but in general you should add slower tests towards
 # the end and fast checks near the beginning.
+#
+# Sanity checks have the following form:
+#   1. msg "short description of what is about to be done"
+#   2. run sanity check (failure stops the script)
+#
+# Build or build-and-test steps have the following form:
+#   1. msg "short description of what is about to be done"
+#   2. cleanup
+#   3. preparation (config.pl, cmake, ...) (failure stops the script)
+#   4. make
+#   5. Run tests if relevant. All tests must be prefixed with
+#      if_build_successful for the sake of --keep-going.
 
 
 
@@ -116,9 +103,12 @@ pre_initialize_variables () {
     CONFIG_H='include/mbedtls/config.h'
     CONFIG_BAK="$CONFIG_H.bak"
 
+    COMPONENTS=
+    ALL_EXCEPT=0
     MEMORY=0
     FORCE=0
     KEEP_GOING=0
+    RUN_ARMCC=1
 
     # Default commands, can be overriden by the environment
     : ${OPENSSL:="openssl"}
@@ -154,11 +144,13 @@ pre_initialize_variables () {
     done
 }
 
-# Test whether the component $1 is included in the command line patterns.
-is_component_included()
+# Test whether $1 is excluded via the command line.
+is_component_excluded()
 {
+    # Is $1 excluded via $COMPONENTS (a space-separated list of wildcard
+    # patterns)?
     set -f
-    for pattern in $COMMAND_LINE_COMPONENTS; do
+    for pattern in $COMPONENTS; do
         set +f
         case ${1#component_} in $pattern) return 0;; esac
     done
@@ -172,13 +164,6 @@ usage()
 Usage: $0 [OPTION]... [COMPONENT]...
 Run mbedtls release validation tests.
 By default, run all tests. With one or more COMPONENT, run only those.
-COMPONENT can be the name of a component or a shell wildcard pattern.
-
-Examples:
-  $0 "check_*"
-    Run all sanity checks.
-  $0 --no-armcc --except test_memsan
-    Run everything except builds that require armcc and MemSan.
 
 Special options:
   -h|--help             Print this help and exit.
@@ -190,8 +175,11 @@ General options:
   -k|--keep-going       Run all tests and report errors at the end.
   -m|--memory           Additional optional memory tests.
      --armcc            Run ARM Compiler builds (on by default).
-     --except           Exclude the COMPONENTs listed on the command line,
-                        instead of running only those.
+     --except           If some components are passed on the command line,
+                        run all the tests except for these components. In
+                        this mode, you can pass shell wildcard patterns as
+                        component names, e.g. "$0 --except 'test_*'" to
+                        exclude all components that run tests.
      --no-armcc         Skip ARM Compiler builds.
      --no-force         Refuse to overwrite modified files (default).
      --no-keep-going    Stop at the first error (default).
@@ -303,16 +291,12 @@ check_headers_in_cpp () {
 }
 
 pre_parse_command_line () {
-    COMMAND_LINE_COMPONENTS=
-    all_except=0
-    no_armcc=
-
     while [ $# -gt 0 ]; do
         case "$1" in
-            --armcc) no_armcc=;;
+            --armcc) RUN_ARMCC=1;;
             --armc5-bin-dir) shift; ARMC5_BIN_DIR="$1";;
             --armc6-bin-dir) shift; ARMC6_BIN_DIR="$1";;
-            --except) all_except=1;;
+            --except) ALL_EXCEPT=1;;
             --force|-f) FORCE=1;;
             --gnutls-cli) shift; GNUTLS_CLI="$1";;
             --gnutls-legacy-cli) shift; GNUTLS_LEGACY_CLI="$1";;
@@ -323,7 +307,7 @@ pre_parse_command_line () {
             --list-all-components) printf '%s\n' $ALL_COMPONENTS; exit;;
             --list-components) printf '%s\n' $SUPPORTED_COMPONENTS; exit;;
             --memory|-m) MEMORY=1;;
-            --no-armcc) no_armcc=1;;
+            --no-armcc) RUN_ARMCC=0;;
             --no-force) FORCE=0;;
             --no-keep-going) KEEP_GOING=0;;
             --no-memory) MEMORY=0;;
@@ -339,37 +323,15 @@ pre_parse_command_line () {
                 echo >&2 "Run $0 --help for usage."
                 exit 120
                 ;;
-            *) COMMAND_LINE_COMPONENTS="$COMMAND_LINE_COMPONENTS $1";;
+            *)
+                COMPONENTS="$COMPONENTS $1";;
         esac
         shift
     done
-
-    # With no list of components, run everything.
-    if [ -z "$COMMAND_LINE_COMPONENTS" ]; then
-        all_except=1
-    fi
-
-    # --no-armcc is a legacy option. The modern way is --except '*_armcc*'.
-    # Ignore it if components are listed explicitly on the command line.
-    if [ -n "$no_armcc" ] && [ $all_except -eq 1 ]; then
-        COMMAND_LINE_COMPONENTS="$COMMAND_LINE_COMPONENTS *_armcc*"
-    fi
-
-    # Build the list of components to run.
-    RUN_COMPONENTS=
-    for component in $SUPPORTED_COMPONENTS; do
-        if is_component_included "$component"; [ $? -eq $all_except ]; then
-            RUN_COMPONENTS="$RUN_COMPONENTS $component"
-        fi
-    done
-
-    unset all_except
-    unset no_armcc
 }
 
 pre_check_git () {
     if [ $FORCE -eq 1 ]; then
-        rm -rf "$OUT_OF_SOURCE_DIR"
         git checkout-index -f -q $CONFIG_H
         cleanup
     else
@@ -381,7 +343,7 @@ pre_check_git () {
             exit 1
         fi
 
-        if ! git diff --quiet include/mbedtls/config.h; then
+        if ! git diff-files --quiet include/mbedtls/config.h; then
             err_msg "Warning - the configuration file 'include/mbedtls/config.h' has been edited. "
             echo "You can either delete or preserve your work, or force the test by rerunning the"
             echo "script as: $0 --force"
@@ -474,69 +436,32 @@ pre_print_configuration () {
     echo "ARMC6_BIN_DIR: $ARMC6_BIN_DIR"
 }
 
-# Make sure the tools we need are available.
 pre_check_tools () {
-    # Build the list of variables to pass to output_env.sh.
-    set env
+    ARMC5_CC="$ARMC5_BIN_DIR/armcc"
+    ARMC5_AR="$ARMC5_BIN_DIR/armar"
+    ARMC6_CC="$ARMC6_BIN_DIR/armclang"
+    ARMC6_AR="$ARMC6_BIN_DIR/armar"
 
-    case " $RUN_COMPONENTS " in
-        # Require OpenSSL and GnuTLS if running any tests (as opposed to
-        # only doing builds). Not all tests run OpenSSL and GnuTLS, but this
-        # is a good enough approximation in practice.
-        *" test_"*)
-            # To avoid setting OpenSSL and GnuTLS for each call to compat.sh
-            # and ssl-opt.sh, we just export the variables they require.
-            export OPENSSL_CMD="$OPENSSL"
-            export GNUTLS_CLI="$GNUTLS_CLI"
-            export GNUTLS_SERV="$GNUTLS_SERV"
-            # Avoid passing --seed flag in every call to ssl-opt.sh
-            if [ -n "${SEED-}" ]; then
-                export SEED
-            fi
-            set "$@" OPENSSL="$OPENSSL" OPENSSL_LEGACY="$OPENSSL_LEGACY"
-            set "$@" GNUTLS_CLI="$GNUTLS_CLI" GNUTLS_SERV="$GNUTLS_SERV"
-            set "$@" GNUTLS_LEGACY_CLI="$GNUTLS_LEGACY_CLI"
-            set "$@" GNUTLS_LEGACY_SERV="$GNUTLS_LEGACY_SERV"
-            check_tools "$OPENSSL" "$OPENSSL_LEGACY" "$OPENSSL_NEXT" \
-                        "$GNUTLS_CLI" "$GNUTLS_SERV" \
-                        "$GNUTLS_LEGACY_CLI" "$GNUTLS_LEGACY_SERV"
-            ;;
-    esac
+    # To avoid setting OpenSSL and GnuTLS for each call to compat.sh and ssl-opt.sh
+    # we just export the variables they require
+    export OPENSSL_CMD="$OPENSSL"
+    export GNUTLS_CLI="$GNUTLS_CLI"
+    export GNUTLS_SERV="$GNUTLS_SERV"
 
-    case " $RUN_COMPONENTS " in
-        *_doxygen[_\ ]*) check_tools "doxygen" "dot";;
-    esac
+    # Avoid passing --seed flag in every call to ssl-opt.sh
+    if [ -n "${SEED-}" ]; then
+        export SEED
+    fi
 
-    case " $RUN_COMPONENTS " in
-        *_arm_none_eabi_gcc[_\ ]*) check_tools "arm-none-eabi-gcc";;
-    esac
-
-    case " $RUN_COMPONENTS " in
-        *_mingw[_\ ]*) check_tools "i686-w64-mingw32-gcc";;
-    esac
-
-    case " $RUN_COMPONENTS " in
-        *" test_zeroize "*) check_tools "gdb";;
-    esac
-
-    case " $RUN_COMPONENTS " in
-        *_armcc*)
-            ARMC5_CC="$ARMC5_BIN_DIR/armcc"
-            ARMC5_AR="$ARMC5_BIN_DIR/armar"
-            ARMC6_CC="$ARMC6_BIN_DIR/armclang"
-            ARMC6_AR="$ARMC6_BIN_DIR/armar"
-            check_tools "$ARMC5_CC" "$ARMC5_AR" "$ARMC6_CC" "$ARMC6_AR";;
-    esac
-
-    msg "info: output_env.sh"
-    case $RUN_COMPONENTS in
-        *_armcc*)
-            set "$@" ARMC5_CC="$ARMC5_CC" ARMC6_CC="$ARMC6_CC" RUN_ARMCC=1;;
-        *) set "$@" RUN_ARMCC=0;;
-    esac
-    "$@" scripts/output_env.sh
+    # Make sure the tools we need are available.
+    check_tools "$OPENSSL" "$OPENSSL_LEGACY" "$OPENSSL_NEXT" \
+                "$GNUTLS_CLI" "$GNUTLS_SERV" \
+                "$GNUTLS_LEGACY_CLI" "$GNUTLS_LEGACY_SERV" "doxygen" "dot" \
+                "arm-none-eabi-gcc" "i686-w64-mingw32-gcc" "gdb"
+    if [ $RUN_ARMCC -ne 0 ]; then
+        check_tools "$ARMC5_CC" "$ARMC5_AR" "$ARMC6_CC" "$ARMC6_AR"
+    fi
 }
-
 
 
 ################################################################
@@ -553,6 +478,14 @@ pre_check_tools () {
 # 2. Minimize total running time, by avoiding useless rebuilds
 #
 # Indicative running times are given for reference.
+
+pre_print_tools () {
+    msg "info: output_env.sh"
+    OPENSSL="$OPENSSL" OPENSSL_LEGACY="$OPENSSL_LEGACY" GNUTLS_CLI="$GNUTLS_CLI" \
+           GNUTLS_SERV="$GNUTLS_SERV" GNUTLS_LEGACY_CLI="$GNUTLS_LEGACY_CLI" \
+           GNUTLS_LEGACY_SERV="$GNUTLS_LEGACY_SERV" ARMC5_CC="$ARMC5_CC" \
+           ARMC6_CC="$ARMC6_CC" RUN_ARMCC="$RUN_ARMCC" scripts/output_env.sh
+}
 
 component_check_recursion () {
     msg "test: recursion.pl" # < 1s
@@ -583,7 +516,6 @@ component_check_doxygen_warnings () {
     msg "test: doxygen warnings" # ~ 3s
     record_status tests/scripts/doxygen.sh
 }
-
 
 
 ################################################################
@@ -769,30 +701,6 @@ component_build_default_make_gcc_and_cxx () {
     make TEST_CPP=1
 }
 
-component_test_check_params_without_platform () {
-    msg "build+test: MBEDTLS_CHECK_PARAMS without MBEDTLS_PLATFORM_C"
-    scripts/config.pl full # includes CHECK_PARAMS
-    scripts/config.pl unset MBEDTLS_MEMORY_BACKTRACE # too slow for tests
-    scripts/config.pl unset MBEDTLS_MEMORY_BUFFER_ALLOC_C
-    scripts/config.pl unset MBEDTLS_PLATFORM_EXIT_ALT
-    scripts/config.pl unset MBEDTLS_PLATFORM_TIME_ALT
-    scripts/config.pl unset MBEDTLS_PLATFORM_FPRINTF_ALT
-    scripts/config.pl unset MBEDTLS_PLATFORM_MEMORY
-    scripts/config.pl unset MBEDTLS_PLATFORM_PRINTF_ALT
-    scripts/config.pl unset MBEDTLS_PLATFORM_SNPRINTF_ALT
-    scripts/config.pl unset MBEDTLS_ENTROPY_NV_SEED
-    scripts/config.pl unset MBEDTLS_PLATFORM_C
-    make CC=gcc CFLAGS='-Werror -O1' all test
-}
-
-component_test_check_params_silent () {
-    msg "build+test: MBEDTLS_CHECK_PARAMS with alternative MBEDTLS_PARAM_FAILED()"
-    scripts/config.pl full # includes CHECK_PARAMS
-    scripts/config.pl unset MBEDTLS_MEMORY_BACKTRACE # too slow for tests
-    sed -i 's/.*\(#define MBEDTLS_PARAM_FAILED( cond )\).*/\1/' "$CONFIG_H"
-    make CC=gcc CFLAGS='-Werror -O1' all test
-}
-
 component_test_no_platform () {
     # Full configuration build, without platform support, file IO and net sockets.
     # This should catch missing mbedtls_printf definitions, and by disabling file
@@ -810,6 +718,8 @@ component_test_no_platform () {
     scripts/config.pl unset MBEDTLS_ENTROPY_NV_SEED
     scripts/config.pl unset MBEDTLS_MEMORY_BUFFER_ALLOC_C
     scripts/config.pl unset MBEDTLS_FS_IO
+    scripts/config.pl unset MBEDTLS_PSA_CRYPTO_STORAGE_FILE_C
+    scripts/config.pl unset MBEDTLS_PSA_CRYPTO_STORAGE_C
     # Note, _DEFAULT_SOURCE needs to be defined for platforms using glibc version >2.19,
     # to re-enable platform integration features otherwise disabled in C99 builds
     make CC=gcc CFLAGS='-Werror -Wall -Wextra -std=c99 -pedantic -O0 -D_DEFAULT_SOURCE' lib programs
@@ -1026,6 +936,8 @@ component_build_arm_none_eabi_gcc () {
     scripts/config.pl unset MBEDTLS_NET_C
     scripts/config.pl unset MBEDTLS_TIMING_C
     scripts/config.pl unset MBEDTLS_FS_IO
+    scripts/config.pl unset MBEDTLS_PSA_CRYPTO_STORAGE_FILE_C
+    scripts/config.pl unset MBEDTLS_PSA_CRYPTO_STORAGE_C
     scripts/config.pl unset MBEDTLS_ENTROPY_NV_SEED
     scripts/config.pl set MBEDTLS_NO_PLATFORM_ENTROPY
     # following things are not in the default config
@@ -1043,6 +955,8 @@ component_build_arm_none_eabi_gcc_no_udbl_division () {
     scripts/config.pl unset MBEDTLS_NET_C
     scripts/config.pl unset MBEDTLS_TIMING_C
     scripts/config.pl unset MBEDTLS_FS_IO
+    scripts/config.pl unset MBEDTLS_PSA_CRYPTO_STORAGE_FILE_C
+    scripts/config.pl unset MBEDTLS_PSA_CRYPTO_STORAGE_C
     scripts/config.pl unset MBEDTLS_ENTROPY_NV_SEED
     scripts/config.pl set MBEDTLS_NO_PLATFORM_ENTROPY
     # following things are not in the default config
@@ -1063,6 +977,8 @@ component_build_arm_none_eabi_gcc_no_64bit_multiplication () {
     scripts/config.pl unset MBEDTLS_NET_C
     scripts/config.pl unset MBEDTLS_TIMING_C
     scripts/config.pl unset MBEDTLS_FS_IO
+    scripts/config.pl unset MBEDTLS_PSA_CRYPTO_STORAGE_FILE_C
+    scripts/config.pl unset MBEDTLS_PSA_CRYPTO_STORAGE_C
     scripts/config.pl unset MBEDTLS_ENTROPY_NV_SEED
     scripts/config.pl set MBEDTLS_NO_PLATFORM_ENTROPY
     # following things are not in the default config
@@ -1083,6 +999,8 @@ component_build_armcc () {
     scripts/config.pl unset MBEDTLS_NET_C
     scripts/config.pl unset MBEDTLS_TIMING_C
     scripts/config.pl unset MBEDTLS_FS_IO
+    scripts/config.pl unset MBEDTLS_PSA_CRYPTO_STORAGE_FILE_C
+    scripts/config.pl unset MBEDTLS_PSA_CRYPTO_STORAGE_C
     scripts/config.pl unset MBEDTLS_ENTROPY_NV_SEED
     scripts/config.pl unset MBEDTLS_HAVE_TIME
     scripts/config.pl unset MBEDTLS_HAVE_TIME_DATE
@@ -1096,23 +1014,25 @@ component_build_armcc () {
     scripts/config.pl unset MBEDTLS_MEMORY_BUFFER_ALLOC_C # calls exit
     scripts/config.pl unset MBEDTLS_PLATFORM_TIME_ALT # depends on MBEDTLS_HAVE_TIME
 
-    make CC="$ARMC5_CC" AR="$ARMC5_AR" WARNING_CFLAGS='--strict --c99' lib
-    make clean
+    if [ $RUN_ARMCC -ne 0 ]; then
+        make CC="$ARMC5_CC" AR="$ARMC5_AR" WARNING_CFLAGS='--strict --c99' lib
+        make clean
 
-    # ARM Compiler 6 - Target ARMv7-A
-    armc6_build_test "--target=arm-arm-none-eabi -march=armv7-a"
+        # ARM Compiler 6 - Target ARMv7-A
+        armc6_build_test "--target=arm-arm-none-eabi -march=armv7-a"
 
-    # ARM Compiler 6 - Target ARMv7-M
-    armc6_build_test "--target=arm-arm-none-eabi -march=armv7-m"
+        # ARM Compiler 6 - Target ARMv7-M
+        armc6_build_test "--target=arm-arm-none-eabi -march=armv7-m"
 
-    # ARM Compiler 6 - Target ARMv8-A - AArch32
-    armc6_build_test "--target=arm-arm-none-eabi -march=armv8.2-a"
+        # ARM Compiler 6 - Target ARMv8-A - AArch32
+        armc6_build_test "--target=arm-arm-none-eabi -march=armv8.2-a"
 
-    # ARM Compiler 6 - Target ARMv8-M
-    armc6_build_test "--target=arm-arm-none-eabi -march=armv8-m.main"
+        # ARM Compiler 6 - Target ARMv8-M
+        armc6_build_test "--target=arm-arm-none-eabi -march=armv8-m.main"
 
-    # ARM Compiler 6 - Target ARMv8-A - AArch64
-    armc6_build_test "--target=aarch64-arm-none-eabi -march=armv8.2-a"
+        # ARM Compiler 6 - Target ARMv8-A - AArch64
+        armc6_build_test "--target=aarch64-arm-none-eabi -march=armv8.2-a"
+    fi
 }
 
 component_test_allow_sha1 () {
@@ -1158,7 +1078,7 @@ component_test_memsan () {
     fi
 }
 
-component_test_valgrind () {
+component_test_memcheck () {
     msg "build: Release (clang)"
     CC=clang cmake -D CMAKE_BUILD_TYPE:String=Release .
     make
@@ -1290,12 +1210,22 @@ else
 fi
 pre_print_configuration
 pre_check_tools
+pre_print_tools
 cleanup
 
-# Run the requested tests.
-for component in $RUN_COMPONENTS; do
-    run_component "component_$component"
-done
+if [ -n "$COMPONENTS" ] && [ $ALL_EXCEPT -eq 0 ]; then
+    # Run the components passed on the command line.
+    for component in $COMPONENTS; do
+        run_component "component_$component"
+    done
+else
+    # Run all components except those excluded on the command line.
+    for component in $SUPPORTED_COMPONENTS; do
+        if ! is_component_excluded "$component"; then
+            run_component "component_$component"
+        fi
+    done
+fi
 
 # We're done.
 post_report
