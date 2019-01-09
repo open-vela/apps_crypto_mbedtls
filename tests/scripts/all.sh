@@ -91,7 +91,10 @@
 set -eu
 
 pre_check_environment () {
-    if [ -d library -a -d include -a -d tests ]; then :; else
+    if [ "$( uname )" != "Linux" ]; then
+        echo "This script only works in Linux" >&2
+        exit 1
+    elif [ -d library -a -d include -a -d tests ]; then :; else
         echo "Must be run from mbed TLS root" >&2
         exit 1
     fi
@@ -122,7 +125,7 @@ pre_initialize_variables () {
     : ${ARMC6_BIN_DIR:=/usr/bin}
 
     # if MAKEFLAGS is not set add the -j option to speed up invocations of make
-    if [ -z "${MAKEFLAGS+set}" ]; then
+    if [ -n "${MAKEFLAGS+set}" ]; then
         export MAKEFLAGS="-j"
     fi
 }
@@ -498,7 +501,6 @@ component_check_doxygen_warnings () {
 }
 
 
-
 ################################################################
 #### Build and test many configurations and targets
 ################################################################
@@ -682,30 +684,6 @@ component_build_default_make_gcc_and_cxx () {
     make TEST_CPP=1
 }
 
-component_test_check_params_without_platform () {
-    msg "build+test: MBEDTLS_CHECK_PARAMS without MBEDTLS_PLATFORM_C"
-    scripts/config.pl full # includes CHECK_PARAMS
-    scripts/config.pl unset MBEDTLS_MEMORY_BACKTRACE # too slow for tests
-    scripts/config.pl unset MBEDTLS_MEMORY_BUFFER_ALLOC_C
-    scripts/config.pl unset MBEDTLS_PLATFORM_EXIT_ALT
-    scripts/config.pl unset MBEDTLS_PLATFORM_TIME_ALT
-    scripts/config.pl unset MBEDTLS_PLATFORM_FPRINTF_ALT
-    scripts/config.pl unset MBEDTLS_PLATFORM_MEMORY
-    scripts/config.pl unset MBEDTLS_PLATFORM_PRINTF_ALT
-    scripts/config.pl unset MBEDTLS_PLATFORM_SNPRINTF_ALT
-    scripts/config.pl unset MBEDTLS_ENTROPY_NV_SEED
-    scripts/config.pl unset MBEDTLS_PLATFORM_C
-    make CC=gcc CFLAGS='-Werror -O1' all test
-}
-
-component_test_check_params_silent () {
-    msg "build+test: MBEDTLS_CHECK_PARAMS with alternative MBEDTLS_PARAM_FAILED()"
-    scripts/config.pl full # includes CHECK_PARAMS
-    scripts/config.pl unset MBEDTLS_MEMORY_BACKTRACE # too slow for tests
-    sed -i 's/.*\(#define MBEDTLS_PARAM_FAILED( cond )\).*/\1/' "$CONFIG_H"
-    make CC=gcc CFLAGS='-Werror -O1' all test
-}
-
 component_test_no_platform () {
     # Full configuration build, without platform support, file IO and net sockets.
     # This should catch missing mbedtls_printf definitions, and by disabling file
@@ -723,6 +701,8 @@ component_test_no_platform () {
     scripts/config.pl unset MBEDTLS_ENTROPY_NV_SEED
     scripts/config.pl unset MBEDTLS_MEMORY_BUFFER_ALLOC_C
     scripts/config.pl unset MBEDTLS_FS_IO
+    scripts/config.pl unset MBEDTLS_PSA_CRYPTO_STORAGE_FILE_C
+    scripts/config.pl unset MBEDTLS_PSA_CRYPTO_STORAGE_C
     # Note, _DEFAULT_SOURCE needs to be defined for platforms using glibc version >2.19,
     # to re-enable platform integration features otherwise disabled in C99 builds
     make CC=gcc CFLAGS='-Werror -Wall -Wextra -std=c99 -pedantic -O0 -D_DEFAULT_SOURCE' lib programs
@@ -793,7 +773,7 @@ component_test_null_entropy () {
     scripts/config.pl unset MBEDTLS_ENTROPY_NV_SEED
     scripts/config.pl unset MBEDTLS_ENTROPY_HARDWARE_ALT
     scripts/config.pl unset MBEDTLS_HAVEGE_C
-    CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan -D UNSAFE_BUILD=ON .
+    CC=gcc cmake  -D UNSAFE_BUILD=ON -D CMAKE_C_FLAGS:String="-fsanitize=address -fno-common -O3" .
     make
 
     msg "test: MBEDTLS_TEST_NULL_ENTROPY - main suites (inc. selftests) (ASan build)"
@@ -924,6 +904,8 @@ component_build_arm_none_eabi_gcc () {
     scripts/config.pl unset MBEDTLS_NET_C
     scripts/config.pl unset MBEDTLS_TIMING_C
     scripts/config.pl unset MBEDTLS_FS_IO
+    scripts/config.pl unset MBEDTLS_PSA_CRYPTO_STORAGE_FILE_C
+    scripts/config.pl unset MBEDTLS_PSA_CRYPTO_STORAGE_C
     scripts/config.pl unset MBEDTLS_ENTROPY_NV_SEED
     scripts/config.pl set MBEDTLS_NO_PLATFORM_ENTROPY
     # following things are not in the default config
@@ -941,6 +923,8 @@ component_build_arm_none_eabi_gcc_no_udbl_division () {
     scripts/config.pl unset MBEDTLS_NET_C
     scripts/config.pl unset MBEDTLS_TIMING_C
     scripts/config.pl unset MBEDTLS_FS_IO
+    scripts/config.pl unset MBEDTLS_PSA_CRYPTO_STORAGE_FILE_C
+    scripts/config.pl unset MBEDTLS_PSA_CRYPTO_STORAGE_C
     scripts/config.pl unset MBEDTLS_ENTROPY_NV_SEED
     scripts/config.pl set MBEDTLS_NO_PLATFORM_ENTROPY
     # following things are not in the default config
@@ -961,6 +945,8 @@ component_build_arm_none_eabi_gcc_no_64bit_multiplication () {
     scripts/config.pl unset MBEDTLS_NET_C
     scripts/config.pl unset MBEDTLS_TIMING_C
     scripts/config.pl unset MBEDTLS_FS_IO
+    scripts/config.pl unset MBEDTLS_PSA_CRYPTO_STORAGE_FILE_C
+    scripts/config.pl unset MBEDTLS_PSA_CRYPTO_STORAGE_C
     scripts/config.pl unset MBEDTLS_ENTROPY_NV_SEED
     scripts/config.pl set MBEDTLS_NO_PLATFORM_ENTROPY
     # following things are not in the default config
@@ -981,6 +967,8 @@ component_build_armcc () {
     scripts/config.pl unset MBEDTLS_NET_C
     scripts/config.pl unset MBEDTLS_TIMING_C
     scripts/config.pl unset MBEDTLS_FS_IO
+    scripts/config.pl unset MBEDTLS_PSA_CRYPTO_STORAGE_FILE_C
+    scripts/config.pl unset MBEDTLS_PSA_CRYPTO_STORAGE_C
     scripts/config.pl unset MBEDTLS_ENTROPY_NV_SEED
     scripts/config.pl unset MBEDTLS_HAVE_TIME
     scripts/config.pl unset MBEDTLS_HAVE_TIME_DATE
@@ -1114,27 +1102,17 @@ component_test_zeroize () {
     # system in all cases that the script fails, so we must manually search the
     # output to check whether the pass string is present and no failure strings
     # were printed.
-
-    # Don't try to disable ASLR. We don't care about ASLR here. We do care
-    # about a spurious message if Gdb tries and fails, so suppress that.
-    gdb_disable_aslr=
-    if [ -z "$(gdb -batch -nw -ex 'set disable-randomization off' 2>&1)" ]; then
-        gdb_disable_aslr='set disable-randomization off'
-    fi
-
     for optimization_flag in -O2 -O3 -Ofast -Os; do
         for compiler in clang gcc; do
             msg "test: $compiler $optimization_flag, mbedtls_platform_zeroize()"
             make programs CC="$compiler" DEBUG=1 CFLAGS="$optimization_flag"
-            if_build_succeeded gdb -ex "$gdb_disable_aslr" -x tests/scripts/test_zeroize.gdb -nw -batch -nx 2>&1 | tee test_zeroize.log
+            if_build_succeeded gdb -x tests/scripts/test_zeroize.gdb -nw -batch -nx 2>&1 | tee test_zeroize.log
             if_build_succeeded grep "The buffer was correctly zeroized" test_zeroize.log
             if_build_succeeded not grep -i "error" test_zeroize.log
             rm -f test_zeroize.log
             make clean
         done
     done
-
-    unset gdb_disable_aslr
 }
 
 component_check_python_files () {
@@ -1190,8 +1168,6 @@ run_all_components () {
     run_component component_test_depends_pkalgs
     run_component component_build_key_exchanges
     run_component component_build_default_make_gcc_and_cxx
-    run_component component_test_check_params_without_platform
-    run_component component_test_check_params_silent
     run_component component_test_no_platform
     run_component component_build_no_std_function
     run_component component_build_no_ssl_srv
@@ -1204,14 +1180,14 @@ run_all_components () {
     run_component component_test_aes_fewer_tables
     run_component component_test_aes_rom_tables
     run_component component_test_aes_fewer_tables_and_rom_tables
-    run_component component_test_make_shared
-    case $(uname -m) in
-        amd64|x86_64)
-            run_component component_test_m32_o0
-            run_component component_test_m32_o1
-            run_component component_test_mx32
-            ;;
-    esac
+    if uname -a | grep -F Linux >/dev/null; then
+        run_component component_test_make_shared
+    fi
+    if uname -a | grep -F x86_64 >/dev/null; then
+        run_component component_test_m32_o0
+        run_component component_test_m32_o1
+        run_component component_test_mx32
+    fi
     run_component component_test_have_int32
     run_component component_test_have_int64
     run_component component_test_no_udbl_division
@@ -1222,8 +1198,12 @@ run_all_components () {
     run_component component_build_armcc
     run_component component_test_allow_sha1
     run_component component_build_mingw
-    run_component component_test_memsan
-    run_component component_test_memcheck
+    # MemSan currently only available on Linux 64 bits
+    if uname -a | grep 'Linux.*x86_64' >/dev/null; then
+        run_component component_test_memsan
+    else # no MemSan
+        run_component component_test_memcheck
+    fi
     run_component component_test_cmake_out_of_source
 
     # More small things
