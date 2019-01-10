@@ -27,16 +27,15 @@
 
 #if defined(MBEDTLS_PSA_CRYPTO_C)
 /*
- * When MBEDTLS_PSA_CRYPTO_SPM is defined, the code is being built for SPM
- * (Secure Partition Manager) integration which separates the code into two
- * parts: NSPE (Non-Secure Processing Environment) and SPE (Secure Processing
- * Environment). When building for the SPE, an additional header file should be
- * included.
+ * In case MBEDTLS_PSA_CRYPTO_SPM is defined the code is built for SPM (Secure
+ * Partition Manager) integration which separate the code into two parts
+ * NSPE (Non-Secure Process Environment) and SPE (Secure Process Environment).
+ * In this mode an additional header file should be included.
  */
 #if defined(MBEDTLS_PSA_CRYPTO_SPM)
 /*
- * PSA_CRYPTO_SECURE means that this file is compiled for the SPE.
- * Some headers will be affected by this flag.
+ * PSA_CRYPTO_SECURE means that this file is compiled to the SPE side.
+ * some headers will be affected by this flag.
  */
 #define PSA_CRYPTO_SECURE 1
 #include "crypto_spe.h"
@@ -62,6 +61,7 @@
 
 #include "mbedtls/arc4.h"
 #include "mbedtls/asn1.h"
+#include "mbedtls/asn1write.h"
 #include "mbedtls/bignum.h"
 #include "mbedtls/blowfish.h"
 #include "mbedtls/camellia.h"
@@ -573,6 +573,7 @@ static psa_status_t psa_import_ec_private_key( psa_ecc_curve_t curve,
     ecp = mbedtls_calloc( 1, sizeof( mbedtls_ecp_keypair ) );
     if( ecp == NULL )
         return( PSA_ERROR_INSUFFICIENT_MEMORY );
+    mbedtls_ecp_keypair_init( ecp );
 
     /* Load the group. */
     status = mbedtls_to_psa_error(
@@ -899,6 +900,22 @@ psa_status_t psa_get_key_information( psa_key_handle_t handle,
     return( PSA_SUCCESS );
 }
 
+#if defined(MBEDTLS_RSA_C)
+static int pk_write_pubkey_simple( mbedtls_pk_context *key,
+                                   unsigned char *buf, size_t size )
+{
+    int ret;
+    unsigned char *c;
+    size_t len = 0;
+
+    c = buf + size;
+
+    MBEDTLS_ASN1_CHK_ADD( len, mbedtls_pk_write_pubkey( &c, buf, key ) );
+
+    return( (int) len );
+}
+#endif /* defined(MBEDTLS_RSA_C) */
+
 static  psa_status_t psa_internal_export_key( psa_key_slot_t *slot,
                                               uint8_t *data,
                                               size_t data_size,
@@ -969,9 +986,20 @@ static  psa_status_t psa_internal_export_key( psa_key_slot_t *slot,
 #endif
             }
             if( export_public_key || PSA_KEY_TYPE_IS_PUBLIC_KEY( slot->type ) )
-                ret = mbedtls_pk_write_pubkey_der( &pk, data, data_size );
+            {
+                if( PSA_KEY_TYPE_IS_RSA( slot->type ) )
+                {
+                    ret = pk_write_pubkey_simple( &pk, data, data_size );
+                }
+                else
+                {
+                    ret = mbedtls_pk_write_pubkey_der( &pk, data, data_size );
+                }
+            }
             else
+            {
                 ret = mbedtls_pk_write_key_der( &pk, data, data_size );
+            }
             if( ret < 0 )
             {
                 /* If data_size is 0 then data may be NULL and then the
@@ -1422,67 +1450,6 @@ psa_status_t psa_hash_verify( psa_hash_operation_t *operation,
     return( PSA_SUCCESS );
 }
 
-psa_status_t psa_hash_clone( const psa_hash_operation_t *source_operation,
-                             psa_hash_operation_t *target_operation )
-{
-    if( target_operation->alg != 0 )
-        return( PSA_ERROR_BAD_STATE );
-
-    switch( source_operation->alg )
-    {
-        case 0:
-            return( PSA_ERROR_BAD_STATE );
-#if defined(MBEDTLS_MD2_C)
-        case PSA_ALG_MD2:
-            mbedtls_md2_clone( &target_operation->ctx.md2,
-                               &source_operation->ctx.md2 );
-            break;
-#endif
-#if defined(MBEDTLS_MD4_C)
-        case PSA_ALG_MD4:
-            mbedtls_md4_clone( &target_operation->ctx.md4,
-                               &source_operation->ctx.md4 );
-            break;
-#endif
-#if defined(MBEDTLS_MD5_C)
-        case PSA_ALG_MD5:
-            mbedtls_md5_clone( &target_operation->ctx.md5,
-                               &source_operation->ctx.md5 );
-            break;
-#endif
-#if defined(MBEDTLS_RIPEMD160_C)
-        case PSA_ALG_RIPEMD160:
-            mbedtls_ripemd160_clone( &target_operation->ctx.ripemd160,
-                                     &source_operation->ctx.ripemd160 );
-            break;
-#endif
-#if defined(MBEDTLS_SHA1_C)
-        case PSA_ALG_SHA_1:
-            mbedtls_sha1_clone( &target_operation->ctx.sha1,
-                                &source_operation->ctx.sha1 );
-            break;
-#endif
-#if defined(MBEDTLS_SHA256_C)
-        case PSA_ALG_SHA_224:
-        case PSA_ALG_SHA_256:
-            mbedtls_sha256_clone( &target_operation->ctx.sha256,
-                                  &source_operation->ctx.sha256 );
-            break;
-#endif
-#if defined(MBEDTLS_SHA512_C)
-        case PSA_ALG_SHA_384:
-        case PSA_ALG_SHA_512:
-            mbedtls_sha512_clone( &target_operation->ctx.sha512,
-                                  &source_operation->ctx.sha512 );
-            break;
-#endif
-        default:
-            return( PSA_ERROR_NOT_SUPPORTED );
-    }
-
-    target_operation->alg = source_operation->alg;
-    return( PSA_SUCCESS );
-}
 
 
 /****************************************************************/
