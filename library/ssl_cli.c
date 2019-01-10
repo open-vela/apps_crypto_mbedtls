@@ -51,6 +51,44 @@
 #include "mbedtls/platform_util.h"
 #endif
 
+#if defined(MBEDTLS_KEY_EXCHANGE__SOME__PSK_ENABLED)
+static int ssl_conf_has_static_psk( mbedtls_ssl_config const *conf )
+{
+    if( conf->psk_identity     == NULL ||
+        conf->psk_identity_len == 0     )
+    {
+        return( 0 );
+    }
+
+    if( conf->psk != NULL && conf->psk_len != 0 )
+        return( 1 );
+
+#if defined(MBEDTLS_USE_PSA_CRYPTO)
+    if( conf->psk_opaque != 0 )
+        return( 1 );
+#endif /* MBEDTLS_USE_PSA_CRYPTO */
+
+    return( 0 );
+}
+
+#if defined(MBEDTLS_USE_PSA_CRYPTO)
+static int ssl_conf_has_static_raw_psk( mbedtls_ssl_config const *conf )
+{
+    if( conf->psk_identity     == NULL ||
+        conf->psk_identity_len == 0     )
+    {
+        return( 0 );
+    }
+
+    if( conf->psk != NULL && conf->psk_len != 0 )
+        return( 1 );
+
+    return( 0 );
+}
+#endif /* MBEDTLS_USE_PSA_CRYPTO */
+
+#endif /* MBEDTLS_KEY_EXCHANGE__SOME__PSK_ENABLED */
+
 #if defined(MBEDTLS_SSL_SERVER_NAME_INDICATION)
 static void ssl_write_hostname_ext( mbedtls_ssl_context *ssl,
                                     unsigned char *buf,
@@ -753,6 +791,15 @@ static int ssl_validate_ciphersuite( const mbedtls_ssl_ciphersuite_t * suite_inf
             mbedtls_ecjpake_check( &ssl->handshake->ecjpake_ctx ) != 0 )
         return( 1 );
 #endif
+
+    /* Don't suggest PSK-based ciphersuite if no PSK is available. */
+#if defined(MBEDTLS_KEY_EXCHANGE__SOME__PSK_ENABLED)
+    if( mbedtls_ssl_ciphersuite_uses_psk( suite_info ) &&
+        ssl_conf_has_static_psk( ssl->conf ) == 0 )
+    {
+        return( 1 );
+    }
+#endif /* MBEDTLS_KEY_EXCHANGE__SOME__PSK_ENABLED */
 
     return( 0 );
 }
@@ -2027,14 +2074,8 @@ static int ssl_parse_server_dh_params( mbedtls_ssl_context *ssl, unsigned char *
 static int ssl_check_server_ecdh_params( const mbedtls_ssl_context *ssl )
 {
     const mbedtls_ecp_curve_info *curve_info;
-    mbedtls_ecp_group_id grp_id;
-#if defined(MBEDTLS_ECDH_LEGACY_CONTEXT)
-    grp_id = ssl->handshake->ecdh_ctx.grp.id;
-#else
-    grp_id = ssl->handshake->ecdh_ctx.grp_id;
-#endif
 
-    curve_info = mbedtls_ecp_curve_info_from_grp_id( grp_id );
+    curve_info = mbedtls_ecp_curve_info_from_grp_id( ssl->handshake->ecdh_ctx.grp.id );
     if( curve_info == NULL )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
@@ -2044,15 +2085,14 @@ static int ssl_check_server_ecdh_params( const mbedtls_ssl_context *ssl )
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "ECDH curve: %s", curve_info->name ) );
 
 #if defined(MBEDTLS_ECP_C)
-    if( mbedtls_ssl_check_curve( ssl, grp_id ) != 0 )
+    if( mbedtls_ssl_check_curve( ssl, ssl->handshake->ecdh_ctx.grp.id ) != 0 )
 #else
     if( ssl->handshake->ecdh_ctx.grp.nbits < 163 ||
         ssl->handshake->ecdh_ctx.grp.nbits > 521 )
 #endif
         return( -1 );
 
-    MBEDTLS_SSL_DEBUG_ECDH( 3, &ssl->handshake->ecdh_ctx,
-                            MBEDTLS_DEBUG_ECDH_QP );
+    MBEDTLS_SSL_DEBUG_ECP( 3, "ECDH: Qp", &ssl->handshake->ecdh_ctx.Qp );
 
     return( 0 );
 }
@@ -2974,8 +3014,7 @@ static int ssl_write_client_key_exchange( mbedtls_ssl_context *ssl )
             return( ret );
         }
 
-        MBEDTLS_SSL_DEBUG_ECDH( 3, &ssl->handshake->ecdh_ctx,
-                                MBEDTLS_DEBUG_ECDH_Q );
+        MBEDTLS_SSL_DEBUG_ECP( 3, "ECDH: Q", &ssl->handshake->ecdh_ctx.Q );
 
 #if defined(MBEDTLS_SSL__ECP_RESTARTABLE)
         if( ssl->handshake->ecrs_enabled )
@@ -3002,8 +3041,7 @@ ecdh_calc_secret:
             return( ret );
         }
 
-        MBEDTLS_SSL_DEBUG_ECDH( 3, &ssl->handshake->ecdh_ctx,
-                                MBEDTLS_DEBUG_ECDH_Z );
+        MBEDTLS_SSL_DEBUG_MPI( 3, "ECDH: z", &ssl->handshake->ecdh_ctx.z );
     }
     else
 #endif /* MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED ||
@@ -3016,10 +3054,12 @@ ecdh_calc_secret:
         /*
          * opaque psk_identity<0..2^16-1>;
          */
-        if( ssl->conf->psk == NULL || ssl->conf->psk_identity == NULL )
+        if( ssl_conf_has_static_psk( ssl->conf ) == 0 )
         {
-            MBEDTLS_SSL_DEBUG_MSG( 1, ( "got no private key for PSK" ) );
-            return( MBEDTLS_ERR_SSL_PRIVATE_KEY_REQUIRED );
+            /* We don't offer PSK suites if we don't have a PSK,
+             * and we check that the server's choice is among the
+             * ciphersuites we offered, so this should never happen. */
+            return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
         }
 
         i = 4;
@@ -3048,6 +3088,12 @@ ecdh_calc_secret:
 #if defined(MBEDTLS_KEY_EXCHANGE_RSA_PSK_ENABLED)
         if( ciphersuite_info->key_exchange == MBEDTLS_KEY_EXCHANGE_RSA_PSK )
         {
+#if defined(MBEDTLS_USE_PSA_CRYPTO)
+            /* Opaque PSKs are currently only supported for PSK-only suites. */
+            if( ssl_conf_has_static_raw_psk( ssl->conf ) == 0 )
+                return( MBEDTLS_ERR_SSL_FEATURE_UNAVAILABLE );
+#endif /* MBEDTLS_USE_PSA_CRYPTO */
+
             if( ( ret = ssl_write_encrypted_pms( ssl, i, &n, 2 ) ) != 0 )
                 return( ret );
         }
@@ -3056,6 +3102,12 @@ ecdh_calc_secret:
 #if defined(MBEDTLS_KEY_EXCHANGE_DHE_PSK_ENABLED)
         if( ciphersuite_info->key_exchange == MBEDTLS_KEY_EXCHANGE_DHE_PSK )
         {
+#if defined(MBEDTLS_USE_PSA_CRYPTO)
+            /* Opaque PSKs are currently only supported for PSK-only suites. */
+            if( ssl_conf_has_static_raw_psk( ssl->conf ) == 0 )
+                return( MBEDTLS_ERR_SSL_FEATURE_UNAVAILABLE );
+#endif /* MBEDTLS_USE_PSA_CRYPTO */
+
             /*
              * ClientDiffieHellmanPublic public (DHM send G^X mod P)
              */
@@ -3086,6 +3138,12 @@ ecdh_calc_secret:
 #if defined(MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED)
         if( ciphersuite_info->key_exchange == MBEDTLS_KEY_EXCHANGE_ECDHE_PSK )
         {
+#if defined(MBEDTLS_USE_PSA_CRYPTO)
+            /* Opaque PSKs are currently only supported for PSK-only suites. */
+            if( ssl_conf_has_static_raw_psk( ssl->conf ) == 0 )
+                return( MBEDTLS_ERR_SSL_FEATURE_UNAVAILABLE );
+#endif /* MBEDTLS_USE_PSA_CRYPTO */
+
             /*
              * ClientECDiffieHellmanPublic public;
              */
@@ -3098,8 +3156,7 @@ ecdh_calc_secret:
                 return( ret );
             }
 
-            MBEDTLS_SSL_DEBUG_ECDH( 3, &ssl->handshake->ecdh_ctx,
-                                    MBEDTLS_DEBUG_ECDH_Q );
+            MBEDTLS_SSL_DEBUG_ECP( 3, "ECDH: Q", &ssl->handshake->ecdh_ctx.Q );
         }
         else
 #endif /* MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED */
@@ -3108,6 +3165,17 @@ ecdh_calc_secret:
             return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
         }
 
+#if defined(MBEDTLS_USE_PSA_CRYPTO) &&          \
+    defined(MBEDTLS_KEY_EXCHANGE_PSK_ENABLED)
+        if( ciphersuite_info->key_exchange == MBEDTLS_KEY_EXCHANGE_PSK &&
+            ssl->minor_ver == MBEDTLS_SSL_MINOR_VERSION_3 &&
+            ssl_conf_has_static_raw_psk( ssl->conf ) == 0 )
+        {
+            MBEDTLS_SSL_DEBUG_MSG( 1, ( "skip PMS generation for opaque PSK" ) );
+        }
+        else
+#endif /* MBEDTLS_USE_PSA_CRYPTO &&
+          MBEDTLS_KEY_EXCHANGE_PSK_ENABLED */
         if( ( ret = mbedtls_ssl_psk_derive_premaster( ssl,
                         ciphersuite_info->key_exchange ) ) != 0 )
         {
