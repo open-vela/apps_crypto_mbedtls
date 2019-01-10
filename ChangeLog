@@ -3,7 +3,8 @@ mbed TLS ChangeLog (Sorted per branch, date)
 = mbed TLS x.xx.x branch released xxxx-xx-xx
 
 Bugfix
-   * Fix returning the value 1 when mbedtls_ecdsa_genkey failed.
+   * Fix signed-to-unsigned integer conversion warning
+     in X.509 module. Fixes #2212.
 
 = mbed TLS 2.16.0 branch released 2018-12-21
 
