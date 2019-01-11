@@ -572,7 +572,6 @@ static psa_status_t psa_import_ec_private_key( psa_ecc_curve_t curve,
     ecp = mbedtls_calloc( 1, sizeof( mbedtls_ecp_keypair ) );
     if( ecp == NULL )
         return( PSA_ERROR_INSUFFICIENT_MEMORY );
-    mbedtls_ecp_keypair_init( ecp );
 
     /* Load the group. */
     status = mbedtls_to_psa_error(
@@ -2939,11 +2938,6 @@ psa_status_t psa_cipher_abort( psa_cipher_operation_t *operation )
 /****************************************************************/
 
 #if !defined(MBEDTLS_PSA_CRYPTO_SPM)
-void psa_key_policy_init( psa_key_policy_t *policy )
-{
-    memset( policy, 0, sizeof( *policy ) );
-}
-
 void psa_key_policy_set_usage( psa_key_policy_t *policy,
                                psa_key_usage_t usage,
                                psa_algorithm_t alg )
