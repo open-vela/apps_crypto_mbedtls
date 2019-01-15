@@ -84,6 +84,9 @@ static const char *features[] = {
 #if defined(MBEDTLS_DEPRECATED_REMOVED)
     "MBEDTLS_DEPRECATED_REMOVED",
 #endif /* MBEDTLS_DEPRECATED_REMOVED */
+#if defined(MBEDTLS_CHECK_PARAMS)
+    "MBEDTLS_CHECK_PARAMS",
+#endif /* MBEDTLS_CHECK_PARAMS */
 #if defined(MBEDTLS_TIMING_ALT)
     "MBEDTLS_TIMING_ALT",
 #endif /* MBEDTLS_TIMING_ALT */
@@ -513,9 +516,6 @@ static const char *features[] = {
 #if defined(MBEDTLS_THREADING_PTHREAD)
     "MBEDTLS_THREADING_PTHREAD",
 #endif /* MBEDTLS_THREADING_PTHREAD */
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
-    "MBEDTLS_USE_PSA_CRYPTO",
-#endif /* MBEDTLS_USE_PSA_CRYPTO */
 #if defined(MBEDTLS_VERSION_FEATURES)
     "MBEDTLS_VERSION_FEATURES",
 #endif /* MBEDTLS_VERSION_FEATURES */
@@ -684,9 +684,6 @@ static const char *features[] = {
 #if defined(MBEDTLS_POLY1305_C)
     "MBEDTLS_POLY1305_C",
 #endif /* MBEDTLS_POLY1305_C */
-#if defined(MBEDTLS_PSA_CRYPTO_C)
-    "MBEDTLS_PSA_CRYPTO_C",
-#endif /* MBEDTLS_PSA_CRYPTO_C */
 #if defined(MBEDTLS_RIPEMD160_C)
     "MBEDTLS_RIPEMD160_C",
 #endif /* MBEDTLS_RIPEMD160_C */
