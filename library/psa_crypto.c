@@ -61,7 +61,6 @@
 
 #include "mbedtls/arc4.h"
 #include "mbedtls/asn1.h"
-#include "mbedtls/asn1write.h"
 #include "mbedtls/bignum.h"
 #include "mbedtls/blowfish.h"
 #include "mbedtls/camellia.h"
@@ -512,112 +511,50 @@ static psa_status_t psa_check_rsa_key_byte_aligned(
     return( status );
 }
 
-static psa_status_t psa_import_rsa_key( psa_key_type_t type,
-                                        const uint8_t *data,
-                                        size_t data_length,
+static psa_status_t psa_import_rsa_key( mbedtls_pk_context *pk,
                                         mbedtls_rsa_context **p_rsa )
 {
-    psa_status_t status;
-    mbedtls_pk_context pk;
-    mbedtls_rsa_context *rsa;
-    size_t bits;
-
-    mbedtls_pk_init( &pk );
-
-    /* Parse the data. */
-    if( PSA_KEY_TYPE_IS_KEYPAIR( type ) )
-        status = mbedtls_to_psa_error(
-            mbedtls_pk_parse_key( &pk, data, data_length, NULL, 0 ) );
+    if( mbedtls_pk_get_type( pk ) != MBEDTLS_PK_RSA )
+        return( PSA_ERROR_INVALID_ARGUMENT );
     else
-        status = mbedtls_to_psa_error(
-            mbedtls_pk_parse_public_key( &pk, data, data_length ) );
-    if( status != PSA_SUCCESS )
-        goto exit;
-
-    /* We have something that the pkparse module recognizes. If it is a
-     * valid RSA key, store it. */
-    if( mbedtls_pk_get_type( &pk ) != MBEDTLS_PK_RSA )
     {
-        status = PSA_ERROR_INVALID_ARGUMENT;
-        goto exit;
+        mbedtls_rsa_context *rsa = mbedtls_pk_rsa( *pk );
+        /* The size of an RSA key doesn't have to be a multiple of 8.
+         * Mbed TLS supports non-byte-aligned key sizes, but not well.
+         * For example, mbedtls_rsa_get_len() returns the key size in
+         * bytes, not in bits. */
+        size_t bits = PSA_BYTES_TO_BITS( mbedtls_rsa_get_len( rsa ) );
+        psa_status_t status;
+        if( bits > PSA_VENDOR_RSA_MAX_KEY_BITS )
+            return( PSA_ERROR_NOT_SUPPORTED );
+        status = psa_check_rsa_key_byte_aligned( rsa );
+        if( status != PSA_SUCCESS )
+            return( status );
+        *p_rsa = rsa;
+        return( PSA_SUCCESS );
     }
-
-    rsa = mbedtls_pk_rsa( pk );
-    /* The size of an RSA key doesn't have to be a multiple of 8. Mbed TLS
-     * supports non-byte-aligned key sizes, but not well. For example,
-     * mbedtls_rsa_get_len() returns the key size in bytes, not in bits. */
-    bits = PSA_BYTES_TO_BITS( mbedtls_rsa_get_len( rsa ) );
-    if( bits > PSA_VENDOR_RSA_MAX_KEY_BITS )
-    {
-        status = PSA_ERROR_NOT_SUPPORTED;
-        goto exit;
-    }
-    status = psa_check_rsa_key_byte_aligned( rsa );
-
-exit:
-    /* Free the content of the pk object only on error. */
-    if( status != PSA_SUCCESS )
-    {
-        mbedtls_pk_free( &pk );
-        return( status );
-    }
-
-    /* On success, store the content of the object in the RSA context. */
-    *p_rsa = rsa;
-
-    return( PSA_SUCCESS );
 }
 #endif /* defined(MBEDTLS_RSA_C) && defined(MBEDTLS_PK_PARSE_C) */
 
-#if defined(MBEDTLS_ECP_C)
-
-/* Import a public key given as the uncompressed representation defined by SEC1
- * 2.3.3 as the content of an ECPoint. */
-static psa_status_t psa_import_ec_public_key( psa_ecc_curve_t curve,
-                                              const uint8_t *data,
-                                              size_t data_length,
-                                              mbedtls_ecp_keypair **p_ecp )
+#if defined(MBEDTLS_ECP_C) && defined(MBEDTLS_PK_PARSE_C)
+/* Import an elliptic curve parsed by the mbedtls pk module. */
+static psa_status_t psa_import_ecp_key( psa_ecc_curve_t expected_curve,
+                                        mbedtls_pk_context *pk,
+                                        mbedtls_ecp_keypair **p_ecp )
 {
-    psa_status_t status = PSA_ERROR_TAMPERING_DETECTED;
-    mbedtls_ecp_keypair *ecp = NULL;
-    mbedtls_ecp_group_id grp_id = mbedtls_ecc_group_of_psa( curve );
-
-    *p_ecp = NULL;
-    ecp = mbedtls_calloc( 1, sizeof( *ecp ) );
-    if( ecp == NULL )
-        return( PSA_ERROR_INSUFFICIENT_MEMORY );
-    mbedtls_ecp_keypair_init( ecp );
-
-    /* Load the group. */
-    status = mbedtls_to_psa_error(
-        mbedtls_ecp_group_load( &ecp->grp, grp_id ) );
-    if( status != PSA_SUCCESS )
-        goto exit;
-    /* Load the public value. */
-    status = mbedtls_to_psa_error(
-        mbedtls_ecp_point_read_binary( &ecp->grp, &ecp->Q,
-                                       data, data_length ) );
-    if( status != PSA_SUCCESS )
-        goto exit;
-
-    /* Check that the point is on the curve. */
-    status = mbedtls_to_psa_error(
-        mbedtls_ecp_check_pubkey( &ecp->grp, &ecp->Q ) );
-    if( status != PSA_SUCCESS )
-        goto exit;
-
-    *p_ecp = ecp;
-    return( PSA_SUCCESS );
-
-exit:
-    if( ecp != NULL )
+    if( mbedtls_pk_get_type( pk ) != MBEDTLS_PK_ECKEY )
+        return( PSA_ERROR_INVALID_ARGUMENT );
+    else
     {
-        mbedtls_ecp_keypair_free( ecp );
-        mbedtls_free( ecp );
+        mbedtls_ecp_keypair *ecp = mbedtls_pk_ec( *pk );
+        psa_ecc_curve_t actual_curve = mbedtls_ecc_group_to_psa( ecp->grp.id );
+        if( actual_curve != expected_curve )
+            return( PSA_ERROR_INVALID_ARGUMENT );
+        *p_ecp = ecp;
+        return( PSA_SUCCESS );
     }
-    return( status );
 }
-#endif /* defined(MBEDTLS_ECP_C) */
+#endif /* defined(MBEDTLS_ECP_C) && defined(MBEDTLS_PK_PARSE_C) */
 
 #if defined(MBEDTLS_ECP_C)
 /* Import a private key given as a byte string which is the private value
@@ -635,7 +572,6 @@ static psa_status_t psa_import_ec_private_key( psa_ecc_curve_t curve,
     ecp = mbedtls_calloc( 1, sizeof( mbedtls_ecp_keypair ) );
     if( ecp == NULL )
         return( PSA_ERROR_INSUFFICIENT_MEMORY );
-    mbedtls_ecp_keypair_init( ecp );
 
     /* Load the group. */
     status = mbedtls_to_psa_error(
@@ -701,33 +637,63 @@ psa_status_t psa_import_key_into_slot( psa_key_slot_t *slot,
         status = psa_import_ec_private_key( PSA_KEY_TYPE_GET_CURVE( slot->type ),
                                             data, data_length,
                                             &slot->data.ecp );
-    }
-    else if( PSA_KEY_TYPE_IS_ECC_PUBLIC_KEY( slot->type ) )
-    {
-        status = psa_import_ec_public_key(
-            PSA_KEY_TYPE_GET_CURVE( slot->type ),
-            data, data_length,
-            &slot->data.ecp );
+        if( status != PSA_SUCCESS )
+            return( status );
     }
     else
 #endif /* MBEDTLS_ECP_C */
-#if defined(MBEDTLS_RSA_C) && defined(MBEDTLS_PK_PARSE_C)
-    if( PSA_KEY_TYPE_IS_RSA( slot->type ) )
+#if defined(MBEDTLS_PK_PARSE_C)
+    if( PSA_KEY_TYPE_IS_RSA( slot->type ) ||
+        PSA_KEY_TYPE_IS_ECC( slot->type ) )
     {
-        status = psa_import_rsa_key( slot->type,
-            data, data_length,
-            &slot->data.rsa );
+        int ret;
+        mbedtls_pk_context pk;
+        mbedtls_pk_init( &pk );
+
+        /* Parse the data. */
+        if( PSA_KEY_TYPE_IS_KEYPAIR( slot->type ) )
+            ret = mbedtls_pk_parse_key( &pk, data, data_length, NULL, 0 );
+        else
+            ret = mbedtls_pk_parse_public_key( &pk, data, data_length );
+        if( ret != 0 )
+            return( mbedtls_to_psa_error( ret ) );
+
+        /* We have something that the pkparse module recognizes.
+         * If it has the expected type and passes any type-specific
+         * checks, store it. */
+#if defined(MBEDTLS_RSA_C)
+        if( PSA_KEY_TYPE_IS_RSA( slot->type ) )
+            status = psa_import_rsa_key( &pk, &slot->data.rsa );
+        else
+#endif /* MBEDTLS_RSA_C */
+#if defined(MBEDTLS_ECP_C)
+        if( PSA_KEY_TYPE_IS_ECC( slot->type ) )
+            status = psa_import_ecp_key( PSA_KEY_TYPE_GET_CURVE( slot->type ),
+                                         &pk, &slot->data.ecp );
+        else
+#endif /* MBEDTLS_ECP_C */
+        {
+            status = PSA_ERROR_NOT_SUPPORTED;
+        }
+
+        /* Free the content of the pk object only on error. On success,
+         * the content of the object has been stored in the slot. */
+        if( status != PSA_SUCCESS )
+        {
+            mbedtls_pk_free( &pk );
+            return( status );
+        }
     }
     else
-#endif /* defined(MBEDTLS_RSA_C) && defined(MBEDTLS_PK_PARSE_C) */
+#endif /* defined(MBEDTLS_PK_PARSE_C) */
     {
         return( PSA_ERROR_NOT_SUPPORTED );
     }
-    return( status );
+    return( PSA_SUCCESS );
 }
 
 /* Retrieve an empty key slot (slot with no key data, but possibly
- * with some metadata such as a policy or domain parameters). */
+ * with some metadata such as a policy). */
 static psa_status_t psa_get_empty_key_slot( psa_key_handle_t handle,
                                             psa_key_slot_t **p_slot )
 {
@@ -745,29 +711,6 @@ static psa_status_t psa_get_empty_key_slot( psa_key_handle_t handle,
 
     *p_slot = slot;
     return( status );
-}
-
-/** Test whether a policy permits an algorithm.
- *
- * The caller must test usage flags separately.
- */
-static int psa_key_policy_permits( const psa_key_policy_t *policy,
-                                   psa_algorithm_t alg )
-{
-    /* Common case: the policy only allows alg. */
-    if( alg == policy->alg )
-        return( 1 );
-    /* If policy->alg is a hash-and-sign with a wildcard for the hash,
-     * and alg is the same hash-and-sign family with any hash,
-     * then alg is compliant with policy->alg. */
-    if( PSA_ALG_IS_HASH_AND_SIGN( alg ) &&
-        PSA_ALG_SIGN_GET_HASH( policy->alg ) == PSA_ALG_ANY_HASH )
-    {
-        return( ( policy->alg & ~PSA_ALG_HASH_MASK ) ==
-                (         alg & ~PSA_ALG_HASH_MASK ) );
-    }
-    /* If it isn't permitted, it's forbidden. */
-    return( 0 );
 }
 
 /** Retrieve a slot which must contain a key. The key must have allow all the
@@ -797,9 +740,7 @@ static psa_status_t psa_get_key_from_slot( psa_key_handle_t handle,
         usage &= ~PSA_KEY_USAGE_EXPORT;
     if( ( slot->policy.usage & usage ) != usage )
         return( PSA_ERROR_NOT_PERMITTED );
-
-    /* Enforce that the usage policy permits the requested algortihm. */
-    if( alg != 0 && ! psa_key_policy_permits( &slot->policy, alg ) )
+    if( alg != 0 && ( alg != slot->policy.alg ) )
         return( PSA_ERROR_NOT_PERMITTED );
 
     *p_slot = slot;
@@ -843,18 +784,11 @@ static psa_status_t psa_remove_key_data_from_memory( psa_key_slot_t *slot )
     return( PSA_SUCCESS );
 }
 
-static void psa_abort_operations_using_key( psa_key_slot_t *slot )
-{
-    /*TODO*/
-    (void) slot;
-}
-
 /** Completely wipe a slot in memory, including its policy.
  * Persistent storage is not affected. */
 psa_status_t psa_wipe_key_slot( psa_key_slot_t *slot )
 {
     psa_status_t status = psa_remove_key_data_from_memory( slot );
-    psa_abort_operations_using_key( slot );
     /* At this point, key material and other type-specific content has
      * been wiped. Clear remaining metadata. We can call memset and not
      * zeroize because the metadata is not particularly sensitive. */
@@ -964,22 +898,6 @@ psa_status_t psa_get_key_information( psa_key_handle_t handle,
     return( PSA_SUCCESS );
 }
 
-#if defined(MBEDTLS_RSA_C) || defined(MBEDTLS_ECP_C)
-static int pk_write_pubkey_simple( mbedtls_pk_context *key,
-                                   unsigned char *buf, size_t size )
-{
-    int ret;
-    unsigned char *c;
-    size_t len = 0;
-
-    c = buf + size;
-
-    MBEDTLS_ASN1_CHK_ADD( len, mbedtls_pk_write_pubkey( &c, buf, key ) );
-
-    return( (int) len );
-}
-#endif /* defined(MBEDTLS_RSA_C) || defined(MBEDTLS_ECP_C) */
-
 static  psa_status_t psa_internal_export_key( psa_key_slot_t *slot,
                                               uint8_t *data,
                                               size_t data_size,
@@ -1050,13 +968,9 @@ static  psa_status_t psa_internal_export_key( psa_key_slot_t *slot,
 #endif
             }
             if( export_public_key || PSA_KEY_TYPE_IS_PUBLIC_KEY( slot->type ) )
-            {
-                ret = pk_write_pubkey_simple( &pk, data, data_size );
-            }
+                ret = mbedtls_pk_write_pubkey_der( &pk, data, data_size );
             else
-            {
                 ret = mbedtls_pk_write_key_der( &pk, data, data_size );
-            }
             if( ret < 0 )
             {
                 /* If data_size is 0 then data may be NULL and then the
@@ -3132,7 +3046,7 @@ typedef struct
     uint8_t tag_length;
 } aead_operation_t;
 
-static void psa_aead_abort_internal( aead_operation_t *operation )
+static void psa_aead_abort( aead_operation_t *operation )
 {
     switch( operation->core_alg )
     {
@@ -3219,7 +3133,7 @@ static psa_status_t psa_aead_setup( aead_operation_t *operation,
     return( PSA_SUCCESS );
 
 cleanup:
-    psa_aead_abort_internal( operation );
+    psa_aead_abort( operation );
     return( status );
 }
 
@@ -3290,7 +3204,7 @@ psa_status_t psa_aead_encrypt( psa_key_handle_t handle,
         memset( ciphertext, 0, ciphertext_size );
 
 exit:
-    psa_aead_abort_internal( &operation );
+    psa_aead_abort( &operation );
     if( status == PSA_SUCCESS )
         *ciphertext_length = plaintext_length + operation.tag_length;
     return( status );
@@ -3387,7 +3301,7 @@ psa_status_t psa_aead_decrypt( psa_key_handle_t handle,
         memset( plaintext, 0, plaintext_size );
 
 exit:
-    psa_aead_abort_internal( &operation );
+    psa_aead_abort( &operation );
     if( status == PSA_SUCCESS )
         *plaintext_length = ciphertext_length - operation.tag_length;
     return( status );
@@ -3404,17 +3318,28 @@ exit:
 #define HKDF_STATE_KEYED 2 /* got key */
 #define HKDF_STATE_OUTPUT 3 /* output started */
 
+static psa_algorithm_t psa_generator_get_kdf_alg(
+    const psa_crypto_generator_t *generator )
+{
+    if ( PSA_ALG_IS_KEY_AGREEMENT( generator->alg ) )
+        return( PSA_ALG_KEY_AGREEMENT_GET_KDF( generator->alg ) );
+    else
+        return( generator->alg );
+}
+
+
 psa_status_t psa_generator_abort( psa_crypto_generator_t *generator )
 {
     psa_status_t status = PSA_SUCCESS;
-    if( generator->alg == 0 )
+    psa_algorithm_t kdf_alg = psa_generator_get_kdf_alg( generator );
+    if( kdf_alg == 0 )
     {
         /* The object has (apparently) been initialized but it is not
          * in use. It's ok to call abort on such an object, and there's
          * nothing to do. */
     }
     else
-    if( generator->alg == PSA_ALG_SELECT_RAW )
+    if( kdf_alg == PSA_ALG_SELECT_RAW )
     {
         if( generator->ctx.buffer.data != NULL )
         {
@@ -3425,14 +3350,14 @@ psa_status_t psa_generator_abort( psa_crypto_generator_t *generator )
     }
     else
 #if defined(MBEDTLS_MD_C)
-    if( PSA_ALG_IS_HKDF( generator->alg ) )
+    if( PSA_ALG_IS_HKDF( kdf_alg ) )
     {
         mbedtls_free( generator->ctx.hkdf.info );
         status = psa_hmac_abort_internal( &generator->ctx.hkdf.hmac );
     }
-    else if( PSA_ALG_IS_TLS12_PRF( generator->alg ) ||
+    else if( PSA_ALG_IS_TLS12_PRF( kdf_alg ) ||
              /* TLS-1.2 PSK-to-MS KDF uses the same generator as TLS-1.2 PRF */
-             PSA_ALG_IS_TLS12_PSK_TO_MS( generator->alg ) )
+             PSA_ALG_IS_TLS12_PSK_TO_MS( kdf_alg ) )
     {
         if( generator->ctx.tls12_prf.key != NULL )
         {
@@ -3703,6 +3628,7 @@ psa_status_t psa_generator_read( psa_crypto_generator_t *generator,
                                  size_t output_length )
 {
     psa_status_t status;
+    psa_algorithm_t kdf_alg = psa_generator_get_kdf_alg( generator );
 
     if( output_length > generator->capacity )
     {
@@ -3713,7 +3639,7 @@ psa_status_t psa_generator_read( psa_crypto_generator_t *generator,
         goto exit;
     }
     if( output_length == 0 &&
-        generator->capacity == 0 && generator->alg == 0 )
+        generator->capacity == 0 && kdf_alg == 0 )
     {
         /* Edge case: this is a blank or finished generator, and 0
          * bytes were requested. The right error in this case could
@@ -3725,7 +3651,7 @@ psa_status_t psa_generator_read( psa_crypto_generator_t *generator,
     }
     generator->capacity -= output_length;
 
-    if( generator->alg == PSA_ALG_SELECT_RAW )
+    if( kdf_alg == PSA_ALG_SELECT_RAW )
     {
         /* Initially, the capacity of a selection generator is always
          * the size of the buffer, i.e. `generator->ctx.buffer.size`,
@@ -3743,17 +3669,17 @@ psa_status_t psa_generator_read( psa_crypto_generator_t *generator,
     }
     else
 #if defined(MBEDTLS_MD_C)
-    if( PSA_ALG_IS_HKDF( generator->alg ) )
+    if( PSA_ALG_IS_HKDF( kdf_alg ) )
     {
-        psa_algorithm_t hash_alg = PSA_ALG_HKDF_GET_HASH( generator->alg );
+        psa_algorithm_t hash_alg = PSA_ALG_HKDF_GET_HASH( kdf_alg );
         status = psa_generator_hkdf_read( &generator->ctx.hkdf, hash_alg,
                                           output, output_length );
     }
-    else if( PSA_ALG_IS_TLS12_PRF( generator->alg ) ||
-             PSA_ALG_IS_TLS12_PSK_TO_MS( generator->alg ) )
+    else if( PSA_ALG_IS_TLS12_PRF( kdf_alg ) ||
+             PSA_ALG_IS_TLS12_PSK_TO_MS( kdf_alg ) )
     {
         status = psa_generator_tls12_prf_read( &generator->ctx.tls12_prf,
-                                               generator->alg, output,
+                                               kdf_alg, output,
                                                output_length );
     }
     else
@@ -4105,38 +4031,66 @@ psa_status_t psa_key_derivation( psa_crypto_generator_t *generator,
     return( status );
 }
 
-psa_status_t psa_key_derivation_setup( psa_crypto_generator_t *generator,
-                                       psa_algorithm_t alg )
+static psa_status_t psa_key_derivation_setup_kdf(
+    psa_crypto_generator_t *generator,
+    psa_algorithm_t kdf_alg )
 {
-    if( generator->alg != 0 )
-        return( PSA_ERROR_BAD_STATE );
-    /* Make sure that alg is a supported key derivation algorithm.
-     * Key agreement algorithms and key selection algorithms are not
-     * supported by this function. */
+    /* Make sure that kdf_alg is a supported key derivation algorithm. */
 #if defined(MBEDTLS_MD_C)
-    if( PSA_ALG_IS_HKDF( alg ) ||
-        PSA_ALG_IS_TLS12_PRF( alg ) ||
-        PSA_ALG_IS_TLS12_PSK_TO_MS( alg ) )
+    if( PSA_ALG_IS_HKDF( kdf_alg ) ||
+        PSA_ALG_IS_TLS12_PRF( kdf_alg ) ||
+        PSA_ALG_IS_TLS12_PSK_TO_MS( kdf_alg ) )
     {
-        psa_algorithm_t hash_alg = PSA_ALG_HKDF_GET_HASH( alg );
+        psa_algorithm_t hash_alg = PSA_ALG_HKDF_GET_HASH( kdf_alg );
         size_t hash_size = PSA_HASH_SIZE( hash_alg );
         if( hash_size == 0 )
             return( PSA_ERROR_NOT_SUPPORTED );
-        if( ( PSA_ALG_IS_TLS12_PRF( alg ) ||
-              PSA_ALG_IS_TLS12_PSK_TO_MS( alg ) ) &&
+        if( ( PSA_ALG_IS_TLS12_PRF( kdf_alg ) ||
+              PSA_ALG_IS_TLS12_PSK_TO_MS( kdf_alg ) ) &&
             ! ( hash_alg == PSA_ALG_SHA_256 && hash_alg == PSA_ALG_SHA_384 ) )
         {
             return( PSA_ERROR_NOT_SUPPORTED );
         }
         generator->capacity = 255 * hash_size;
+        return( PSA_SUCCESS );
     }
 #endif /* MBEDTLS_MD_C */
-    else if( PSA_ALG_IS_KEY_DERIVATION( alg ) )
+    else
         return( PSA_ERROR_NOT_SUPPORTED );
+}
+
+psa_status_t psa_key_derivation_setup( psa_crypto_generator_t *generator,
+                                       psa_algorithm_t alg )
+{
+    psa_status_t status;
+
+    if( generator->alg != 0 )
+        return( PSA_ERROR_BAD_STATE );
+
+    if( PSA_ALG_IS_KEY_AGREEMENT( alg ) )
+    {
+        psa_algorithm_t kdf_alg = PSA_ALG_KEY_AGREEMENT_GET_KDF( alg );
+        if( kdf_alg == PSA_ALG_SELECT_RAW )
+        {
+            /* It's too early to set the generator's capacity since it
+             * depends on the key size for the key agreement. */
+            status = PSA_SUCCESS;
+        }
+        else
+        {
+            status = psa_key_derivation_setup_kdf( generator, kdf_alg );
+        }
+    }
+    else if( PSA_ALG_IS_KEY_DERIVATION( alg ) )
+    {
+        status = psa_key_derivation_setup_kdf( generator, alg );
+    }
     else
         return( PSA_ERROR_INVALID_ARGUMENT );
-    generator->alg = alg;
-    return( PSA_SUCCESS );
+
+    if( status == PSA_SUCCESS )
+        generator->alg = alg;
+    return( status );
 }
 
 #if defined(MBEDTLS_MD_C)
@@ -4221,27 +4175,40 @@ static psa_status_t psa_key_derivation_input_raw(
     size_t data_length )
 {
     psa_status_t status;
+    psa_algorithm_t kdf_alg = psa_generator_get_kdf_alg( generator );
 
+    if( kdf_alg == PSA_ALG_SELECT_RAW )
+    {
+        if( generator->capacity != 0 )
+            return( PSA_ERROR_INVALID_ARGUMENT );
+        generator->ctx.buffer.data = mbedtls_calloc( 1, data_length );
+        if( generator->ctx.buffer.data == NULL )
+            return( PSA_ERROR_INSUFFICIENT_MEMORY );
+        memcpy( generator->ctx.buffer.data, data, data_length );
+        generator->ctx.buffer.size = data_length;
+        generator->capacity = data_length;
+        status = PSA_SUCCESS;
+    }
+    else
 #if defined(MBEDTLS_MD_C)
-    if( PSA_ALG_IS_HKDF( generator->alg ) )
+    if( PSA_ALG_IS_HKDF( kdf_alg ) )
     {
         status = psa_hkdf_input( &generator->ctx.hkdf,
-                                 PSA_ALG_HKDF_GET_HASH( generator->alg ),
+                                 PSA_ALG_HKDF_GET_HASH( kdf_alg ),
                                  step, data, data_length );
     }
+    else
 #endif /* MBEDTLS_MD_C */
-
 #if defined(MBEDTLS_MD_C)
     /* TLS-1.2 PRF and TLS-1.2 PSK-to-MS are very similar, so share code. */
-    else if( PSA_ALG_IS_TLS12_PRF( generator->alg ) ||
-             PSA_ALG_IS_TLS12_PSK_TO_MS( generator->alg ) )
+    if( PSA_ALG_IS_TLS12_PRF( kdf_alg ) ||
+             PSA_ALG_IS_TLS12_PSK_TO_MS( kdf_alg ) )
     {
         // TODO
         status = PSA_ERROR_NOT_SUPPORTED;
     }
     else
 #endif /* MBEDTLS_MD_C */
-
     {
         /* This can't happen unless the generator object was not initialized */
         return( PSA_ERROR_BAD_STATE );
@@ -4311,39 +4278,49 @@ static psa_status_t psa_key_agreement_ecdh( const uint8_t *peer_key,
                                             size_t shared_secret_size,
                                             size_t *shared_secret_length )
 {
+    mbedtls_pk_context pk;
     mbedtls_ecp_keypair *their_key = NULL;
     mbedtls_ecdh_context ecdh;
-    psa_status_t status;
+    int ret;
     mbedtls_ecdh_init( &ecdh );
+    mbedtls_pk_init( &pk );
 
-    status = psa_import_ec_public_key(
-        mbedtls_ecc_group_to_psa( our_key->grp.id ),
-        peer_key, peer_key_length,
-        &their_key );
-    if( status != PSA_SUCCESS )
+    ret = mbedtls_pk_parse_public_key( &pk, peer_key, peer_key_length );
+    if( ret != 0 )
+        goto exit;
+    switch( mbedtls_pk_get_type( &pk ) )
+    {
+        case MBEDTLS_PK_ECKEY:
+        case MBEDTLS_PK_ECKEY_DH:
+            break;
+        default:
+            ret = MBEDTLS_ERR_ECP_INVALID_KEY;
+            goto exit;
+    }
+    their_key = mbedtls_pk_ec( pk );
+    if( their_key->grp.id != our_key->grp.id )
+    {
+        ret = MBEDTLS_ERR_ECP_INVALID_KEY;
+        goto exit;
+    }
+
+    ret = mbedtls_ecdh_get_params( &ecdh, their_key, MBEDTLS_ECDH_THEIRS );
+    if( ret != 0 )
+        goto exit;
+    ret = mbedtls_ecdh_get_params( &ecdh, our_key, MBEDTLS_ECDH_OURS );
+    if( ret != 0 )
         goto exit;
 
-    status = mbedtls_to_psa_error(
-        mbedtls_ecdh_get_params( &ecdh, their_key, MBEDTLS_ECDH_THEIRS ) );
-    if( status != PSA_SUCCESS )
-        goto exit;
-    status = mbedtls_to_psa_error(
-        mbedtls_ecdh_get_params( &ecdh, our_key, MBEDTLS_ECDH_OURS ) );
-    if( status != PSA_SUCCESS )
-        goto exit;
-
-    status = mbedtls_to_psa_error(
-        mbedtls_ecdh_calc_secret( &ecdh,
-                                  shared_secret_length,
-                                  shared_secret, shared_secret_size,
-                                  mbedtls_ctr_drbg_random,
-                                  &global_data.ctr_drbg ) );
+    ret = mbedtls_ecdh_calc_secret( &ecdh,
+                                    shared_secret_length,
+                                    shared_secret, shared_secret_size,
+                                    mbedtls_ctr_drbg_random,
+                                    &global_data.ctr_drbg );
 
 exit:
+    mbedtls_pk_free( &pk );
     mbedtls_ecdh_free( &ecdh );
-    mbedtls_ecp_keypair_free( their_key );
-    mbedtls_free( their_key );
-    return( status );
+    return( mbedtls_to_psa_error( ret ) );
 }
 #endif /* MBEDTLS_ECDH_C */
 
@@ -4353,10 +4330,10 @@ exit:
  * to potentially free embedded data structures and wipe confidential data.
  */
 static psa_status_t psa_key_agreement_internal( psa_crypto_generator_t *generator,
+                                                psa_key_derivation_step_t step,
                                                 psa_key_slot_t *private_key,
                                                 const uint8_t *peer_key,
-                                                size_t peer_key_length,
-                                                psa_algorithm_t alg )
+                                                size_t peer_key_length )
 {
     psa_status_t status;
     uint8_t shared_secret[PSA_KEY_AGREEMENT_MAX_SHARED_SECRET_SIZE];
@@ -4364,7 +4341,7 @@ static psa_status_t psa_key_agreement_internal( psa_crypto_generator_t *generato
 
     /* Step 1: run the secret agreement algorithm to generate the shared
      * secret. */
-    switch( PSA_ALG_KEY_AGREEMENT_GET_BASE( alg ) )
+    switch( PSA_ALG_KEY_AGREEMENT_GET_BASE( generator->alg ) )
     {
 #if defined(MBEDTLS_ECDH_C)
         case PSA_ALG_ECDH_BASE:
@@ -4388,34 +4365,31 @@ static psa_status_t psa_key_agreement_internal( psa_crypto_generator_t *generato
 
     /* Step 2: set up the key derivation to generate key material from
      * the shared secret. */
-    status = psa_key_derivation_internal( generator,
-                                          shared_secret, shared_secret_length,
-                                          PSA_ALG_KEY_AGREEMENT_GET_KDF( alg ),
-                                          NULL, 0, NULL, 0,
-                                          PSA_GENERATOR_UNBRIDLED_CAPACITY );
+    status = psa_key_derivation_input_raw( generator, step,
+                                           shared_secret, shared_secret_length );
+
 exit:
     mbedtls_platform_zeroize( shared_secret, shared_secret_length );
     return( status );
 }
 
 psa_status_t psa_key_agreement( psa_crypto_generator_t *generator,
+                                psa_key_derivation_step_t step,
                                 psa_key_handle_t private_key,
                                 const uint8_t *peer_key,
-                                size_t peer_key_length,
-                                psa_algorithm_t alg )
+                                size_t peer_key_length )
 {
     psa_key_slot_t *slot;
     psa_status_t status;
-    if( ! PSA_ALG_IS_KEY_AGREEMENT( alg ) )
+    if( ! PSA_ALG_IS_KEY_AGREEMENT( generator->alg ) )
         return( PSA_ERROR_INVALID_ARGUMENT );
     status = psa_get_key_from_slot( private_key, &slot,
-                                    PSA_KEY_USAGE_DERIVE, alg );
+                                    PSA_KEY_USAGE_DERIVE, generator->alg );
     if( status != PSA_SUCCESS )
         return( status );
-    status = psa_key_agreement_internal( generator,
+    status = psa_key_agreement_internal( generator, step,
                                          slot,
-                                         peer_key, peer_key_length,
-                                         alg );
+                                         peer_key, peer_key_length );
     if( status != PSA_SUCCESS )
         psa_generator_abort( generator );
     return( status );
