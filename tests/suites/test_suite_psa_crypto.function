@@ -643,27 +643,6 @@ static int exported_key_sanity_check( psa_key_type_t type, size_t bits,
         uint8_t *p = exported;
         uint8_t *end = exported + exported_length;
         size_t len;
-        mbedtls_asn1_buf alg;
-        mbedtls_asn1_buf params;
-        mbedtls_asn1_bitstring bitstring;
-        /* SubjectPublicKeyInfo  ::=  SEQUENCE  {
-         *      algorithm          AlgorithmIdentifier,
-         *      subjectPublicKey   BIT STRING  }
-         * AlgorithmIdentifier  ::=  SEQUENCE  {
-         *      algorithm          OBJECT IDENTIFIER,
-         *      parameters         ANY DEFINED BY algorithm OPTIONAL  }
-         */
-        TEST_EQUAL( mbedtls_asn1_get_tag( &p, end, &len,
-                                          MBEDTLS_ASN1_SEQUENCE |
-                                          MBEDTLS_ASN1_CONSTRUCTED ),
-                    0 );
-        TEST_EQUAL( p + len, end );
-        TEST_EQUAL( mbedtls_asn1_get_alg( &p, end, &alg, &params ), 0 );
-        if( ! is_oid_of_key_type( type, alg.p, alg.len ) )
-            goto exit;
-        TEST_EQUAL( mbedtls_asn1_get_bitstring( &p, end, &bitstring ), 0 );
-        TEST_EQUAL( p, end );
-        p = bitstring.p;
 #if defined(MBEDTLS_RSA_C)
         if( type == PSA_KEY_TYPE_RSA_PUBLIC_KEY )
         {
@@ -671,7 +650,6 @@ static int exported_key_sanity_check( psa_key_type_t type, size_t bits,
              *      modulus            INTEGER,    -- n
              *      publicExponent     INTEGER  }  -- e
              */
-            TEST_EQUAL( bitstring.unused_bits, 0 );
             TEST_EQUAL( mbedtls_asn1_get_tag( &p, end, &len,
                                               MBEDTLS_ASN1_SEQUENCE |
                                               MBEDTLS_ASN1_CONSTRUCTED ),
@@ -688,13 +666,12 @@ static int exported_key_sanity_check( psa_key_type_t type, size_t bits,
 #if defined(MBEDTLS_ECP_C)
         if( PSA_KEY_TYPE_IS_ECC_PUBLIC_KEY( type ) )
         {
-            /*   ECPoint ::= ...
-             *      -- first 8 bits: 0x04 (uncompressed representation);
-             *      -- then x_P as an n-bit string, big endian;
-             *      -- then y_P as a n-bit string, big endian,
-             *      -- where n is the order of the curve.
+            /* The representation of an ECC public key is:
+             *      - The byte 0x04;
+             *      - `x_P` as a `ceiling(m/8)`-byte string, big-endian;
+             *      - `y_P` as a `ceiling(m/8)`-byte string, big-endian;
+             *      - where m is the bit size associated with the curve.
              */
-            TEST_EQUAL( bitstring.unused_bits, 0 );
             TEST_EQUAL( p + 1 + 2 * PSA_BITS_TO_BYTES( bits ), end );
             TEST_EQUAL( p[0], 4 );
         }
@@ -1678,13 +1655,19 @@ void asymmetric_signature_key_policy( int policy_usage,
                                       int policy_alg,
                                       int key_type,
                                       data_t *key_data,
-                                      int exercise_alg )
+                                      int exercise_alg,
+                                      int payload_length_arg )
 {
     psa_key_handle_t handle = 0;
     psa_key_policy_t policy = PSA_KEY_POLICY_INIT;
     psa_status_t status;
-    unsigned char payload[16] = {1};
-    size_t payload_length = sizeof( payload );
+    unsigned char payload[PSA_HASH_MAX_SIZE] = {1};
+    /* If `payload_length_arg > 0`, `exercise_alg` is supposed to be
+     * compatible with the policy and `payload_length_arg` is supposed to be
+     * a valid input length to sign. If `payload_length_arg <= 0`,
+     * `exercise_alg` is supposed to be forbidden by the policy. */
+    int compatible_alg = payload_length_arg > 0;
+    size_t payload_length = compatible_alg ? payload_length_arg : 0;
     unsigned char signature[PSA_ASYMMETRIC_SIGNATURE_MAX_SIZE] = {0};
     size_t signature_length;
 
@@ -1703,8 +1686,7 @@ void asymmetric_signature_key_policy( int policy_usage,
                                   payload, payload_length,
                                   signature, sizeof( signature ),
                                   &signature_length );
-    if( policy_alg == exercise_alg &&
-        ( policy_usage & PSA_KEY_USAGE_SIGN ) != 0 )
+    if( compatible_alg && ( policy_usage & PSA_KEY_USAGE_SIGN ) != 0 )
         PSA_ASSERT( status );
     else
         TEST_EQUAL( status, PSA_ERROR_NOT_PERMITTED );
@@ -1713,8 +1695,7 @@ void asymmetric_signature_key_policy( int policy_usage,
     status = psa_asymmetric_verify( handle, exercise_alg,
                                     payload, payload_length,
                                     signature, sizeof( signature ) );
-    if( policy_alg == exercise_alg &&
-        ( policy_usage & PSA_KEY_USAGE_VERIFY ) != 0 )
+    if( compatible_alg && ( policy_usage & PSA_KEY_USAGE_VERIFY ) != 0 )
         TEST_EQUAL( status, PSA_ERROR_INVALID_SIGNATURE );
     else
         TEST_EQUAL( status, PSA_ERROR_NOT_PERMITTED );
