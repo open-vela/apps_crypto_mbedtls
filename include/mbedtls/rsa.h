@@ -150,13 +150,13 @@ mbedtls_rsa_context;
  * \note           The choice of padding mode is strictly enforced for private key
  *                 operations, since there might be security concerns in
  *                 mixing padding modes. For public key operations it is
- *                 a default value, which can be overridden by calling specific
+ *                 a default value, which can be overriden by calling specific
  *                 \c rsa_rsaes_xxx or \c rsa_rsassa_xxx functions.
  *
  * \note           The hash selected in \p hash_id is always used for OEAP
  *                 encryption. For PSS signatures, it is always used for
- *                 making signatures, but can be overridden for verifying them.
- *                 If set to #MBEDTLS_MD_NONE, it is always overridden.
+ *                 making signatures, but can be overriden for verifying them.
+ *                 If set to #MBEDTLS_MD_NONE, it is always overriden.
  *
  * \param ctx      The RSA context to initialize. This must not be \c NULL.
  * \param padding  The padding mode to use. This must be either
@@ -601,8 +601,7 @@ int mbedtls_rsa_private( mbedtls_rsa_context *ctx,
  *                 #MBEDTLS_RSA_PUBLIC or #MBEDTLS_RSA_PRIVATE (deprecated).
  * \param ilen     The length of the plaintext in Bytes.
  * \param input    The input data to encrypt. This must be a readable
- *                 buffer of size \p ilen Bytes. It may be \c NULL if
- *                 `ilen == 0`.
+ *                 buffer of size \p ilen Bytes. This must not be \c NULL.
  * \param output   The output buffer. This must be a writable buffer
  *                 of length \c ctx->len Bytes. For example, \c 256 Bytes
  *                 for an 2048-bit RSA modulus.
@@ -642,8 +641,7 @@ int mbedtls_rsa_pkcs1_encrypt( mbedtls_rsa_context *ctx,
  *                 #MBEDTLS_RSA_PUBLIC or #MBEDTLS_RSA_PRIVATE (deprecated).
  * \param ilen     The length of the plaintext in Bytes.
  * \param input    The input data to encrypt. This must be a readable
- *                 buffer of size \p ilen Bytes. It may be \c NULL if
- *                 `ilen == 0`.
+ *                 buffer of size \p ilen Bytes. This must not be \c NULL.
  * \param output   The output buffer. This must be a writable buffer
  *                 of length \c ctx->len Bytes. For example, \c 256 Bytes
  *                 for an 2048-bit RSA modulus.
@@ -687,8 +685,7 @@ int mbedtls_rsa_rsaes_pkcs1_v15_encrypt( mbedtls_rsa_context *ctx,
  * \param label_len  The length of the label in Bytes.
  * \param ilen       The length of the plaintext buffer \p input in Bytes.
  * \param input      The input data to encrypt. This must be a readable
- *                   buffer of size \p ilen Bytes. It may be \c NULL if
- *                   `ilen == 0`.
+ *                   buffer of size \p ilen Bytes. This must not be \c NULL.
  * \param output     The output buffer. This must be a writable buffer
  *                   of length \c ctx->len Bytes. For example, \c 256 Bytes
  *                   for an 2048-bit RSA modulus.

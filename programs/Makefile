@@ -14,12 +14,6 @@ LOCAL_LDFLAGS = -L../library 			\
 		-lmbedx509$(SHARED_SUFFIX)	\
 		-lmbedcrypto$(SHARED_SUFFIX)
 
-ifdef USE_CRYPTO_SUBMODULE
-LOCAL_LDFLAGS += -L../crypto/library
-LOCAL_CFLAGS += -I../crypto/include
-LOCAL_CXXFLAGS += -I../crypto/include
-endif
-
 ifndef SHARED
 DEP=../library/libmbedcrypto.a ../library/libmbedx509.a ../library/libmbedtls.a
 else
@@ -76,7 +70,6 @@ APPS =	aes/aescrypt2$(EXEXT)		aes/crypt_and_hash$(EXEXT)	\
 	test/ssl_cert_test$(EXEXT)	test/benchmark$(EXEXT)		\
 	test/selftest$(EXEXT)		test/udp_proxy$(EXEXT)		\
 	test/zeroize$(EXEXT)						\
-	test/query_compile_time_config$(EXEXT)				\
 	util/pem2der$(EXEXT)		util/strerror$(EXEXT)		\
 	x509/cert_app$(EXEXT)		x509/crl_app$(EXEXT)		\
 	x509/cert_req$(EXEXT)		x509/cert_write$(EXEXT)		\
@@ -219,17 +212,17 @@ ssl/ssl_client1$(EXEXT): ssl/ssl_client1.c $(DEP)
 	echo "  CC    ssl/ssl_client1.c"
 	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) ssl/ssl_client1.c  $(LOCAL_LDFLAGS) $(LDFLAGS) -o $@
 
-ssl/ssl_client2$(EXEXT): ssl/ssl_client2.c ssl/query_config.c $(DEP)
+ssl/ssl_client2$(EXEXT): ssl/ssl_client2.c $(DEP)
 	echo "  CC    ssl/ssl_client2.c"
-	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) ssl/ssl_client2.c ssl/query_config.c $(LOCAL_LDFLAGS) $(LDFLAGS) -o $@
+	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) ssl/ssl_client2.c  $(LOCAL_LDFLAGS) $(LDFLAGS) -o $@
 
 ssl/ssl_server$(EXEXT): ssl/ssl_server.c $(DEP)
 	echo "  CC    ssl/ssl_server.c"
 	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) ssl/ssl_server.c   $(LOCAL_LDFLAGS) $(LDFLAGS) -o $@
 
-ssl/ssl_server2$(EXEXT): ssl/ssl_server2.c ssl/query_config.c $(DEP)
+ssl/ssl_server2$(EXEXT): ssl/ssl_server2.c $(DEP)
 	echo "  CC    ssl/ssl_server2.c"
-	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) ssl/ssl_server2.c ssl/query_config.c $(LOCAL_LDFLAGS) $(LDFLAGS) -o $@
+	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) ssl/ssl_server2.c   $(LOCAL_LDFLAGS) $(LDFLAGS) -o $@
 
 ssl/ssl_fork_server$(EXEXT): ssl/ssl_fork_server.c $(DEP)
 	echo "  CC    ssl/ssl_fork_server.c"
@@ -270,10 +263,6 @@ test/udp_proxy$(EXEXT): test/udp_proxy.c $(DEP)
 test/zeroize$(EXEXT): test/zeroize.c $(DEP)
 	echo "  CC    test/zeroize.c"
 	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) test/zeroize.c    $(LOCAL_LDFLAGS) $(LDFLAGS) -o $@
-
-test/query_compile_time_config$(EXEXT): test/query_compile_time_config.c ssl/query_config.c $(DEP)
-	echo "  CC    test/query_compile_time_config.c"
-	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) test/query_compile_time_config.c ssl/query_config.c $(LOCAL_LDFLAGS) $(LDFLAGS) -o $@
 
 util/pem2der$(EXEXT): util/pem2der.c $(DEP)
 	echo "  CC    util/pem2der.c"
