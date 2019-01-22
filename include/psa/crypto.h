@@ -124,6 +124,14 @@ psa_status_t psa_get_key_lifetime(psa_key_handle_t handle,
  * application calls psa_close_key() or psa_destroy_key() or until the
  * application terminates.
  *
+ * This function takes a key type and maximum size as arguments so that
+ * the implementation can reserve a corresponding amount of memory.
+ * Implementations are not required to enforce this limit: if the application
+ * later tries to create a larger key or a key of a different type, it
+ * is implementation-defined whether this may succeed.
+ *
+ * \param type          The type of key that the slot will contain.
+ * \param max_bits      The maximum key size that the slot will contain.
  * \param[out] handle   On success, a handle to a volatile key slot.
  *
  * \retval #PSA_SUCCESS
@@ -132,8 +140,13 @@ psa_status_t psa_get_key_lifetime(psa_key_handle_t handle,
  * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
  *         There was not enough memory, or the maximum number of key slots
  *         has been reached.
+ * \retval #PSA_ERROR_INVALID_ARGUMENT
+ *         This implementation does not support this key type.
  */
-psa_status_t psa_allocate_key(psa_key_handle_t *handle);
+
+psa_status_t psa_allocate_key(psa_key_type_t type,
+                              size_t max_bits,
+                              psa_key_handle_t *handle);
 
 /** Open a handle to an existing persistent key.
  *
@@ -179,6 +192,8 @@ psa_status_t psa_open_key(psa_key_lifetime_t lifetime,
  *                      area where the key material is stored. This must not
  *                      be #PSA_KEY_LIFETIME_VOLATILE.
  * \param id            The persistent identifier of the key.
+ * \param type          The type of key that the slot will contain.
+ * \param max_bits      The maximum key size that the slot will contain.
  * \param[out] handle   On success, a handle to the newly created key slot.
  *                      When key material is later created in this key slot,
  *                      it will be saved to the specified persistent location.
@@ -203,6 +218,8 @@ psa_status_t psa_open_key(psa_key_lifetime_t lifetime,
  */
 psa_status_t psa_create_key(psa_key_lifetime_t lifetime,
                             psa_key_id_t id,
+                            psa_key_type_t type,
+                            size_t max_bits,
                             psa_key_handle_t *handle);
 
 /** Close a key handle.
@@ -244,9 +261,11 @@ psa_status_t psa_close_key(psa_key_handle_t handle);
  * according to a different format.
  *
  * \param handle      Handle to the slot where the key will be stored.
- *                    It must have been obtained by calling
- *                    psa_allocate_key() or psa_create_key() and must
- *                    not contain key material yet.
+ *                    This must be a valid slot for a key of the chosen
+ *                    type: it must have been obtained by calling
+ *                    psa_allocate_key() or psa_create_key() with the
+ *                    correct \p type and with a maximum size that is
+ *                    compatible with \p data.
  * \param type        Key type (a \c PSA_KEY_TYPE_XXX value). On a successful
  *                    import, the key slot will contain a key of this type.
  * \param[in] data    Buffer containing the key data. The content of this
@@ -901,6 +920,33 @@ psa_status_t psa_hash_verify(psa_hash_operation_t *operation,
  * \retval #PSA_ERROR_TAMPERING_DETECTED
  */
 psa_status_t psa_hash_abort(psa_hash_operation_t *operation);
+
+/** Clone a hash operation.
+ *
+ * This function copies the state of an ongoing hash operation to
+ * a new operation object. In other words, this function is equivalent
+ * to calling psa_hash_setup() on \p target_operation with the same
+ * algorithm that \p source_operation was set up for, then
+ * psa_hash_update() on \p target_operation with the same input that
+ * that was passed to \p source_operation. After this function returns, the
+ * two objects are independent, i.e. subsequent calls involving one of
+ * the objects do not affect the other object.
+ *
+ * \param[in] source_operation      The active hash operation to clone.
+ * \param[in,out] target_operation  The operation object to set up.
+ *                                  It must be initialized but not active.
+ *
+ * \retval #PSA_SUCCESS
+ * \retval #PSA_ERROR_BAD_STATE
+ *         \p source_operation is not an active hash operation.
+ * \retval #PSA_ERROR_BAD_STATE
+ *         \p target_operation is active.
+ * \retval #PSA_ERROR_COMMUNICATION_FAILURE
+ * \retval #PSA_ERROR_HARDWARE_FAILURE
+ * \retval #PSA_ERROR_TAMPERING_DETECTED
+ */
+psa_status_t psa_hash_clone(const psa_hash_operation_t *source_operation,
+                            psa_hash_operation_t *target_operation);
 
 /**@}*/
 
@@ -1986,9 +2032,12 @@ psa_status_t psa_generator_read(psa_crypto_generator_t *generator,
  * the key material is not exposed outside the isolation boundary.
  *
  * \param handle            Handle to the slot where the key will be stored.
- *                          It must have been obtained by calling
- *                          psa_allocate_key() or psa_create_key() and must
- *                          not contain key material yet.
+ *                          This must be a valid slot for a key of the chosen
+ *                          type: it must have been obtained by calling
+ *                          psa_allocate_key() or psa_create_key() with the
+ *                          correct \p type and with a maximum size that is
+ *                          compatible with \p bits.
+ *                          It must not contain any key material yet.
  * \param type              Key type (a \c PSA_KEY_TYPE_XXX value).
  *                          This must be a symmetric key type.
  * \param bits              Key size in bits.
@@ -2210,9 +2259,12 @@ typedef struct {
  * \brief Generate a key or key pair.
  *
  * \param handle            Handle to the slot where the key will be stored.
- *                          It must have been obtained by calling
- *                          psa_allocate_key() or psa_create_key() and must
- *                          not contain key material yet.
+ *                          This must be a valid slot for a key of the chosen
+ *                          type: it must have been obtained by calling
+ *                          psa_allocate_key() or psa_create_key() with the
+ *                          correct \p type and with a maximum size that is
+ *                          compatible with \p bits.
+ *                          It must not contain any key material yet.
  * \param type              Key type (a \c PSA_KEY_TYPE_XXX value).
  * \param bits              Key size in bits.
  * \param[in] extra         Extra parameters for key generation. The
