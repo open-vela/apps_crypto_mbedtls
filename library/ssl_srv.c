@@ -149,6 +149,48 @@ static int ssl_parse_servername_ext( mbedtls_ssl_context *ssl,
 }
 #endif /* MBEDTLS_SSL_SERVER_NAME_INDICATION */
 
+#if defined(MBEDTLS_KEY_EXCHANGE__SOME__PSK_ENABLED)
+static int ssl_conf_has_psk_or_cb( mbedtls_ssl_config const *conf )
+{
+    if( conf->f_psk != NULL )
+        return( 1 );
+
+    if( conf->psk_identity_len == 0 || conf->psk_identity == NULL )
+        return( 0 );
+
+    if( conf->psk != NULL && conf->psk_len != 0 )
+        return( 1 );
+
+#if defined(MBEDTLS_USE_PSA_CRYPTO)
+    if( conf->psk_opaque != 0 )
+        return( 1 );
+#endif /* MBEDTLS_USE_PSA_CRYPTO */
+
+    return( 0 );
+}
+
+#if defined(MBEDTLS_USE_PSA_CRYPTO)
+static int ssl_use_opaque_psk( mbedtls_ssl_context const *ssl )
+{
+    if( ssl->conf->f_psk != NULL )
+    {
+        /* If we've used a callback to select the PSK,
+         * the static configuration is irrelevant. */
+
+        if( ssl->handshake->psk_opaque != 0 )
+            return( 1 );
+
+        return( 0 );
+    }
+
+    if( ssl->conf->psk_opaque != 0 )
+        return( 1 );
+
+    return( 0 );
+}
+#endif /* MBEDTLS_USE_PSA_CRYPTO */
+#endif /* MBEDTLS_KEY_EXCHANGE__SOME__PSK_ENABLED */
+
 static int ssl_parse_renegotiation_info( mbedtls_ssl_context *ssl,
                                          const unsigned char *buf,
                                          size_t len )
@@ -867,9 +909,7 @@ static int ssl_ciphersuite_match( mbedtls_ssl_context *ssl, int suite_id,
     /* If the ciphersuite requires a pre-shared key and we don't
      * have one, skip it now rather than failing later */
     if( mbedtls_ssl_ciphersuite_uses_psk( suite_info ) &&
-        ssl->conf->f_psk == NULL &&
-        ( ssl->conf->psk == NULL || ssl->conf->psk_identity == NULL ||
-          ssl->conf->psk_identity_len == 0 || ssl->conf->psk_len == 0 ) )
+        ssl_conf_has_psk_or_cb( ssl->conf ) == 0 )
     {
         MBEDTLS_SSL_DEBUG_MSG( 3, ( "ciphersuite mismatch: no pre-shared key" ) );
         return( 0 );
@@ -1449,7 +1489,7 @@ read_record_header:
      */
 
     /*
-     * Minimal length (with everything empty and extensions omitted) is
+     * Minimal length (with everything empty and extensions ommitted) is
      * 2 + 32 + 1 + 2 + 1 = 38 bytes. Check that first, so that we can
      * read at least up to session id length without worrying.
      */
@@ -3048,8 +3088,8 @@ curve_matching_done:
 
         MBEDTLS_SSL_DEBUG_MSG( 2, ( "ECDHE curve: %s", (*curve)->name ) );
 
-        if( ( ret = mbedtls_ecdh_setup( &ssl->handshake->ecdh_ctx,
-                                        (*curve)->grp_id ) ) != 0 )
+        if( ( ret = mbedtls_ecp_group_load( &ssl->handshake->ecdh_ctx.grp,
+                                       (*curve)->grp_id ) ) != 0 )
         {
             MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ecp_group_load", ret );
             return( ret );
@@ -3071,8 +3111,7 @@ curve_matching_done:
 
         ssl->out_msglen += len;
 
-        MBEDTLS_SSL_DEBUG_ECDH( 3, &ssl->handshake->ecdh_ctx,
-                                MBEDTLS_DEBUG_ECDH_Q );
+        MBEDTLS_SSL_DEBUG_ECP( 3, "ECDH: Q ", &ssl->handshake->ecdh_ctx.Q );
     }
 #endif /* MBEDTLS_KEY_EXCHANGE__SOME__ECDHE_ENABLED */
 
@@ -3649,9 +3688,7 @@ static int ssl_parse_client_psk_identity( mbedtls_ssl_context *ssl, unsigned cha
     int ret = 0;
     size_t n;
 
-    if( ssl->conf->f_psk == NULL &&
-        ( ssl->conf->psk == NULL || ssl->conf->psk_identity == NULL ||
-          ssl->conf->psk_identity_len == 0 || ssl->conf->psk_len == 0 ) )
+    if( ssl_conf_has_psk_or_cb( ssl->conf ) == 0 )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "got no pre-shared key" ) );
         return( MBEDTLS_ERR_SSL_PRIVATE_KEY_REQUIRED );
@@ -3795,8 +3832,7 @@ static int ssl_parse_client_key_exchange( mbedtls_ssl_context *ssl )
             return( MBEDTLS_ERR_SSL_BAD_HS_CLIENT_KEY_EXCHANGE_RP );
         }
 
-        MBEDTLS_SSL_DEBUG_ECDH( 3, &ssl->handshake->ecdh_ctx,
-                                MBEDTLS_DEBUG_ECDH_QP );
+        MBEDTLS_SSL_DEBUG_ECP( 3, "ECDH: Qp ", &ssl->handshake->ecdh_ctx.Qp );
 
         if( ( ret = mbedtls_ecdh_calc_secret( &ssl->handshake->ecdh_ctx,
                                       &ssl->handshake->pmslen,
@@ -3808,8 +3844,7 @@ static int ssl_parse_client_key_exchange( mbedtls_ssl_context *ssl )
             return( MBEDTLS_ERR_SSL_BAD_HS_CLIENT_KEY_EXCHANGE_CS );
         }
 
-        MBEDTLS_SSL_DEBUG_ECDH( 3, &ssl->handshake->ecdh_ctx,
-                                MBEDTLS_DEBUG_ECDH_Z );
+        MBEDTLS_SSL_DEBUG_MPI( 3, "ECDH: z  ", &ssl->handshake->ecdh_ctx.z );
     }
     else
 #endif /* MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED ||
@@ -3831,6 +3866,13 @@ static int ssl_parse_client_key_exchange( mbedtls_ssl_context *ssl )
             return( MBEDTLS_ERR_SSL_BAD_HS_CLIENT_KEY_EXCHANGE );
         }
 
+#if defined(MBEDTLS_USE_PSA_CRYPTO)
+        /* For opaque PSKs, we perform the PSK-to-MS derivation atomatically
+         * and skip the intermediate PMS. */
+        if( ssl_use_opaque_psk( ssl ) == 1 )
+            MBEDTLS_SSL_DEBUG_MSG( 1, ( "skip PMS generation for opaque PSK" ) );
+        else
+#endif /* MBEDTLS_USE_PSA_CRYPTO */
         if( ( ret = mbedtls_ssl_psk_derive_premaster( ssl,
                         ciphersuite_info->key_exchange ) ) != 0 )
         {
@@ -3862,6 +3904,12 @@ static int ssl_parse_client_key_exchange( mbedtls_ssl_context *ssl )
             return( ret );
         }
 
+#if defined(MBEDTLS_USE_PSA_CRYPTO)
+        /* Opaque PSKs are currently only supported for PSK-only. */
+        if( ssl_use_opaque_psk( ssl ) == 1 )
+            return( MBEDTLS_ERR_SSL_FEATURE_UNAVAILABLE );
+#endif
+
         if( ( ret = ssl_parse_encrypted_pms( ssl, p, end, 2 ) ) != 0 )
         {
             MBEDTLS_SSL_DEBUG_RET( 1, ( "ssl_parse_encrypted_pms" ), ret );
@@ -3890,6 +3938,12 @@ static int ssl_parse_client_key_exchange( mbedtls_ssl_context *ssl )
             MBEDTLS_SSL_DEBUG_RET( 1, ( "ssl_parse_client_dh_public" ), ret );
             return( ret );
         }
+
+#if defined(MBEDTLS_USE_PSA_CRYPTO)
+        /* Opaque PSKs are currently only supported for PSK-only. */
+        if( ssl_use_opaque_psk( ssl ) == 1 )
+            return( MBEDTLS_ERR_SSL_FEATURE_UNAVAILABLE );
+#endif
 
         if( p != end )
         {
@@ -3922,8 +3976,13 @@ static int ssl_parse_client_key_exchange( mbedtls_ssl_context *ssl )
             return( MBEDTLS_ERR_SSL_BAD_HS_CLIENT_KEY_EXCHANGE_RP );
         }
 
-        MBEDTLS_SSL_DEBUG_ECDH( 3, &ssl->handshake->ecdh_ctx,
-                                MBEDTLS_DEBUG_ECDH_QP );
+#if defined(MBEDTLS_USE_PSA_CRYPTO)
+        /* Opaque PSKs are currently only supported for PSK-only. */
+        if( ssl_use_opaque_psk( ssl ) == 1 )
+            return( MBEDTLS_ERR_SSL_FEATURE_UNAVAILABLE );
+#endif
+
+        MBEDTLS_SSL_DEBUG_ECP( 3, "ECDH: Qp ", &ssl->handshake->ecdh_ctx.Qp );
 
         if( ( ret = mbedtls_ssl_psk_derive_premaster( ssl,
                         ciphersuite_info->key_exchange ) ) != 0 )
