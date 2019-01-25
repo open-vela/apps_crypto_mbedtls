@@ -1,18 +1,6 @@
 mbed TLS ChangeLog (Sorted per branch, date)
 
-= mbed TLS 2.15.1 branch released 2018-11-30
-
-Changes
-   * Update the Mbed Crypto submodule to version 0.1.0b2.
-
-= mbed TLS 2.15.0 branch released 2018-11-23
-
-Features
-   * Add an experimental build option, USE_CRYPTO_SUBMODULE, to enable use of
-     Mbed Crypto as the source of the cryptography implementation.
-   * Add an experimental configuration option, MBEDTLS_PSA_CRYPTO_C, to enable
-     the PSA Crypto API from Mbed Crypto when additionally used with the
-     USE_CRYPTO_SUBMODULE build option.
+= mbed TLS 2.xx.x branch released xxxx-xx-xx
 
 Changes
    * Add unit tests for AES-GCM when called through mbedtls_cipher_auth_xxx()
