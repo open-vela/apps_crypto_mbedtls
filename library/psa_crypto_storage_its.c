@@ -68,7 +68,7 @@ static psa_status_t its_to_psa_error( psa_its_status_t ret )
     }
 }
 
-static uint32_t psa_its_identifier_of_slot( psa_key_id_t key )
+static psa_its_uid_t psa_its_identifier_of_slot( psa_key_id_t key )
 {
     return( key );
 }
@@ -78,7 +78,7 @@ psa_status_t psa_crypto_storage_load( const psa_key_id_t key, uint8_t *data,
 {
     psa_its_status_t ret;
     psa_status_t status;
-    uint32_t data_identifier = psa_its_identifier_of_slot( key );
+    psa_its_uid_t data_identifier = psa_its_identifier_of_slot( key );
     struct psa_its_info_t data_identifier_info;
 
     ret = psa_its_get_info( data_identifier, &data_identifier_info );
@@ -95,7 +95,7 @@ psa_status_t psa_crypto_storage_load( const psa_key_id_t key, uint8_t *data,
 int psa_is_key_present_in_storage( const psa_key_id_t key )
 {
     psa_its_status_t ret;
-    uint32_t data_identifier = psa_its_identifier_of_slot( key );
+    psa_its_uid_t data_identifier = psa_its_identifier_of_slot( key );
     struct psa_its_info_t data_identifier_info;
 
     ret = psa_its_get_info( data_identifier, &data_identifier_info );
@@ -111,7 +111,7 @@ psa_status_t psa_crypto_storage_store( const psa_key_id_t key,
 {
     psa_its_status_t ret;
     psa_status_t status;
-    uint32_t data_identifier = psa_its_identifier_of_slot( key );
+    psa_its_uid_t data_identifier = psa_its_identifier_of_slot( key );
     struct psa_its_info_t data_identifier_info;
 
     if( psa_is_key_present_in_storage( key ) == 1 )
@@ -146,7 +146,7 @@ exit:
 psa_status_t psa_destroy_persistent_key( const psa_key_id_t key )
 {
     psa_its_status_t ret;
-    uint32_t data_identifier = psa_its_identifier_of_slot( key );
+    psa_its_uid_t data_identifier = psa_its_identifier_of_slot( key );
     struct psa_its_info_t data_identifier_info;
 
     ret = psa_its_get_info( data_identifier, &data_identifier_info );
@@ -168,7 +168,7 @@ psa_status_t psa_crypto_storage_get_data_length( const psa_key_id_t key,
 {
     psa_its_status_t ret;
     psa_status_t status;
-    uint32_t data_identifier = psa_its_identifier_of_slot( key );
+    psa_its_uid_t data_identifier = psa_its_identifier_of_slot( key );
     struct psa_its_info_t data_identifier_info;
 
     ret = psa_its_get_info( data_identifier, &data_identifier_info );
