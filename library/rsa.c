@@ -1124,8 +1124,7 @@ int mbedtls_rsa_rsaes_oaep_encrypt( mbedtls_rsa_context *ctx,
     p += hlen;
     p += olen - 2 * hlen - 2 - ilen;
     *p++ = 1;
-    if( ilen != 0 )
-        memcpy( p, input, ilen );
+    memcpy( p, input, ilen );
 
     mbedtls_md_init( &md_ctx );
     if( ( ret = mbedtls_md_setup( &md_ctx, md_info, 0 ) ) != 0 )
@@ -1172,9 +1171,7 @@ int mbedtls_rsa_rsaes_pkcs1_v15_encrypt( mbedtls_rsa_context *ctx,
         return( MBEDTLS_ERR_RSA_BAD_INPUT_DATA );
 
     // We don't check p_rng because it won't be dereferenced here
-    if( f_rng == NULL || output == NULL )
-        return( MBEDTLS_ERR_RSA_BAD_INPUT_DATA );
-    if( ilen != 0 && input == NULL )
+    if( f_rng == NULL || input == NULL || output == NULL )
         return( MBEDTLS_ERR_RSA_BAD_INPUT_DATA );
 
     olen = ctx->len;
@@ -1214,8 +1211,7 @@ int mbedtls_rsa_rsaes_pkcs1_v15_encrypt( mbedtls_rsa_context *ctx,
     }
 
     *p++ = 0;
-    if( ilen != 0 )
-        memcpy( p, input, ilen );
+    memcpy( p, input, ilen );
 
     return( ( mode == MBEDTLS_RSA_PUBLIC )
             ? mbedtls_rsa_public(  ctx, output, output )
@@ -1379,8 +1375,7 @@ int mbedtls_rsa_rsaes_oaep_decrypt( mbedtls_rsa_context *ctx,
     }
 
     *olen = ilen - (p - buf);
-    if( *olen != 0 )
-        memcpy( output, p, *olen );
+    memcpy( output, p, *olen );
     ret = 0;
 
 cleanup:
@@ -1478,8 +1473,7 @@ int mbedtls_rsa_rsaes_pkcs1_v15_decrypt( mbedtls_rsa_context *ctx,
     }
 
     *olen = ilen - (p - buf);
-    if( *olen != 0 )
-        memcpy( output, p, *olen );
+    memcpy( output, p, *olen );
     ret = 0;
 
 cleanup:
