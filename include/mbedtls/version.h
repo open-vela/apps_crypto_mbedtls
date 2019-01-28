@@ -39,7 +39,7 @@
  * Major, Minor, Patchlevel
  */
 #define MBEDTLS_VERSION_MAJOR  2
-#define MBEDTLS_VERSION_MINOR  15
+#define MBEDTLS_VERSION_MINOR  13
 #define MBEDTLS_VERSION_PATCH  1
 
 /**
@@ -47,9 +47,9 @@
  *    MMNNPP00
  *    Major version | Minor version | Patch version
  */
-#define MBEDTLS_VERSION_NUMBER         0x020F0100
-#define MBEDTLS_VERSION_STRING         "2.15.1"
-#define MBEDTLS_VERSION_STRING_FULL    "mbed TLS 2.15.1"
+#define MBEDTLS_VERSION_NUMBER         0x020D0100
+#define MBEDTLS_VERSION_STRING         "2.13.1"
+#define MBEDTLS_VERSION_STRING_FULL    "mbed TLS 2.13.1"
 
 #if defined(MBEDTLS_VERSION_C)
 

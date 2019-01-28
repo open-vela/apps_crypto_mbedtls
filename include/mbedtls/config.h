@@ -1583,24 +1583,6 @@
 //#define MBEDTLS_THREADING_PTHREAD
 
 /**
- * \def MBEDTLS_USE_PSA_CRYPTO
- *
- * Make the X.509 and TLS library use PSA for cryptographic operations, see
- * #MBEDTLS_PSA_CRYPTO_C.
- *
- * Note: this option is still in progress, the full X.509 and TLS modules are
- * not covered yet, but parts that are not ported to PSA yet will still work
- * as usual, so enabling this option should not break backwards compatibility.
- *
- * \warning  Support for PSA is still an experimental feature.
- *           Any public API that depends on this option may change
- *           at any time until this warning is removed.
- *
- * Requires: MBEDTLS_PSA_CRYPTO_C.
- */
-//#define MBEDTLS_USE_PSA_CRYPTO
-
-/**
  * \def MBEDTLS_VERSION_FEATURES
  *
  * Allow run-time checking of compile-time enabled features. Thus allowing users
@@ -2607,25 +2589,6 @@
  * Caller:  library/chachapoly.c
  */
 #define MBEDTLS_POLY1305_C
-
-/**
- * \def MBEDTLS_PSA_CRYPTO_C
- *
- * Enable the Platform Security Architecture cryptography API.
- *
- * \note This option only has an effect when the build option
- * USE_CRYPTO_SUBMODULE is also in use.
- *
- * \warning This feature is experimental and available on an opt-in basis only.
- * PSA APIs are subject to change at any time. The implementation comes with
- * less assurance and support than the rest of Mbed TLS.
- *
- * Module:  crypto/library/psa_crypto.c
- *
- * Requires: MBEDTLS_CTR_DRBG_C, MBEDTLS_ENTROPY_C
- *
- */
-//#define MBEDTLS_PSA_CRYPTO_C
 
 /**
  * \def MBEDTLS_RIPEMD160_C
