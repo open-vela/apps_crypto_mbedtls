@@ -502,21 +502,12 @@ int mbedtls_rsa_gen_key( mbedtls_rsa_context *ctx,
 {
     int ret;
     mbedtls_mpi H, G, L;
-    int prime_quality = 0;
 
     if( f_rng == NULL || nbits < 128 || exponent < 3 )
         return( MBEDTLS_ERR_RSA_BAD_INPUT_DATA );
 
     if( nbits % 2 )
         return( MBEDTLS_ERR_RSA_BAD_INPUT_DATA );
-
-    /*
-     * If the modulus is 1024 bit long or shorter, then the security strength of
-     * the RSA algorithm is less than or equal to 80 bits and therefore an error
-     * rate of 2^-80 is sufficient.
-     */
-    if( nbits > 1024 )
-        prime_quality = MBEDTLS_MPI_GEN_PRIME_FLAG_LOW_ERR;
 
     mbedtls_mpi_init( &H );
     mbedtls_mpi_init( &G );
@@ -532,11 +523,11 @@ int mbedtls_rsa_gen_key( mbedtls_rsa_context *ctx,
 
     do
     {
-        MBEDTLS_MPI_CHK( mbedtls_mpi_gen_prime( &ctx->P, nbits >> 1,
-                                                prime_quality, f_rng, p_rng ) );
+        MBEDTLS_MPI_CHK( mbedtls_mpi_gen_prime( &ctx->P, nbits >> 1, 0,
+                                                f_rng, p_rng ) );
 
-        MBEDTLS_MPI_CHK( mbedtls_mpi_gen_prime( &ctx->Q, nbits >> 1,
-                                                prime_quality, f_rng, p_rng ) );
+        MBEDTLS_MPI_CHK( mbedtls_mpi_gen_prime( &ctx->Q, nbits >> 1, 0,
+                                                f_rng, p_rng ) );
 
         /* make sure the difference between p and q is not too small (FIPS 186-4 §B.3.3 step 5.4) */
         MBEDTLS_MPI_CHK( mbedtls_mpi_sub_mpi( &H, &ctx->P, &ctx->Q ) );
@@ -1124,8 +1115,7 @@ int mbedtls_rsa_rsaes_oaep_encrypt( mbedtls_rsa_context *ctx,
     p += hlen;
     p += olen - 2 * hlen - 2 - ilen;
     *p++ = 1;
-    if( ilen != 0 )
-        memcpy( p, input, ilen );
+    memcpy( p, input, ilen );
 
     mbedtls_md_init( &md_ctx );
     if( ( ret = mbedtls_md_setup( &md_ctx, md_info, 0 ) ) != 0 )
@@ -1172,9 +1162,7 @@ int mbedtls_rsa_rsaes_pkcs1_v15_encrypt( mbedtls_rsa_context *ctx,
         return( MBEDTLS_ERR_RSA_BAD_INPUT_DATA );
 
     // We don't check p_rng because it won't be dereferenced here
-    if( f_rng == NULL || output == NULL )
-        return( MBEDTLS_ERR_RSA_BAD_INPUT_DATA );
-    if( ilen != 0 && input == NULL )
+    if( f_rng == NULL || input == NULL || output == NULL )
         return( MBEDTLS_ERR_RSA_BAD_INPUT_DATA );
 
     olen = ctx->len;
@@ -1214,8 +1202,7 @@ int mbedtls_rsa_rsaes_pkcs1_v15_encrypt( mbedtls_rsa_context *ctx,
     }
 
     *p++ = 0;
-    if( ilen != 0 )
-        memcpy( p, input, ilen );
+    memcpy( p, input, ilen );
 
     return( ( mode == MBEDTLS_RSA_PUBLIC )
             ? mbedtls_rsa_public(  ctx, output, output )
@@ -1379,8 +1366,7 @@ int mbedtls_rsa_rsaes_oaep_decrypt( mbedtls_rsa_context *ctx,
     }
 
     *olen = ilen - (p - buf);
-    if( *olen != 0 )
-        memcpy( output, p, *olen );
+    memcpy( output, p, *olen );
     ret = 0;
 
 cleanup:
@@ -1478,8 +1464,7 @@ int mbedtls_rsa_rsaes_pkcs1_v15_decrypt( mbedtls_rsa_context *ctx,
     }
 
     *olen = ilen - (p - buf);
-    if( *olen != 0 )
-        memcpy( output, p, *olen );
+    memcpy( output, p, *olen );
     ret = 0;
 
 cleanup:
