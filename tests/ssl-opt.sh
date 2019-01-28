@@ -167,7 +167,7 @@ requires_config_disabled() {
 get_config_value_or_default() {
     NAME="$1"
     DEF_VAL=$( grep ".*#define.*${NAME}" ../include/mbedtls/config.h |
-               sed 's/^.*\s\([0-9]*\)$/\1/' )
+               sed 's/^.* \([0-9]*\)$/\1/' )
     ../scripts/config.pl get $NAME || echo "$DEF_VAL"
 }
 
@@ -765,7 +765,6 @@ run_test_psa() {
                 -C "Failed to setup PSA-based cipher context"\
                 -S "Failed to setup PSA-based cipher context"\
                 -s "Protocol is TLSv1.2" \
-                -c "Perform PSA-based computation of digest of ServerKeyExchange" \
                 -S "error" \
                 -C "error"
 }
