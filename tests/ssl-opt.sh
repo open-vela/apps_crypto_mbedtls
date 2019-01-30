@@ -26,7 +26,7 @@ if cd $( dirname $0 ); then :; else
     exit 1
 fi
 
-# default values, can be overriden by the environment
+# default values, can be overridden by the environment
 : ${P_SRV:=../programs/ssl/ssl_server2}
 : ${P_CLI:=../programs/ssl/ssl_client2}
 : ${P_PXY:=../programs/test/udp_proxy}
@@ -182,12 +182,6 @@ requires_config_value_at_most() {
     VAL=$( get_config_value_or_default "$1" )
     if [ "$VAL" -gt "$2" ]; then
        SKIP_NEXT="YES"
-    fi
-}
-
-requires_ciphersuite_enabled() {
-    if [ -z "$($P_CLI --help | grep $1)" ]; then
-        SKIP_NEXT="YES"
     fi
 }
 
@@ -525,6 +519,14 @@ run_test() {
         SKIP_NEXT="YES"
     fi
 
+    # should we skip?
+    if [ "X$SKIP_NEXT" = "XYES" ]; then
+        SKIP_NEXT="NO"
+        echo "SKIP"
+        SKIPS=$(( $SKIPS + 1 ))
+        return
+    fi
+
     # does this test use a proxy?
     if [ "X$1" = "X-p" ]; then
         PXY_CMD="$2"
@@ -538,26 +540,6 @@ run_test() {
     CLI_CMD="$2"
     CLI_EXPECT="$3"
     shift 3
-
-    # Check if server forces ciphersuite
-    FORCE_CIPHERSUITE=$(echo "$SRV_CMD" | sed -n 's/^.*force_ciphersuite=\([a-zA-Z0-9\-]*\).*$/\1/p')
-    if [ ! -z "$FORCE_CIPHERSUITE" ]; then
-       requires_ciphersuite_enabled $FORCE_CIPHERSUITE
-    fi
-
-    # Check if client forces ciphersuite
-    FORCE_CIPHERSUITE=$(echo "$CLI_CMD" | sed -n 's/^.*force_ciphersuite=\([a-zA-Z0-9\-]*\).*$/\1/p')
-    if [ ! -z "$FORCE_CIPHERSUITE" ]; then
-       requires_ciphersuite_enabled $FORCE_CIPHERSUITE
-    fi
-
-    # should we skip?
-    if [ "X$SKIP_NEXT" = "XYES" ]; then
-        SKIP_NEXT="NO"
-        echo "SKIP"
-        SKIPS=$(( $SKIPS + 1 ))
-        return
-    fi
 
     # fix client port
     if [ -n "$PXY_CMD" ]; then
@@ -689,7 +671,7 @@ run_test() {
 
                 # The filtering in the following two options (-u and -U) do the following
                 #   - ignore valgrind output
-                #   - filter out everything but lines right after the pattern occurances
+                #   - filter out everything but lines right after the pattern occurrences
                 #   - keep one of each non-unique line
                 #   - count how many lines remain
                 # A line with '--' will remain in the result from previous outputs, so the number of lines in the result will be 1
@@ -750,27 +732,6 @@ run_test() {
     fi
 
     rm -f $SRV_OUT $CLI_OUT $PXY_OUT
-}
-
-run_test_psa() {
-    requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
-    run_test    "PSA-supported ciphersuite: $1" \
-                "$P_SRV debug_level=2 force_version=tls1_2" \
-                "$P_CLI debug_level=2 force_version=tls1_2 force_ciphersuite=$1" \
-                0 \
-                -c "Successfully setup PSA-based decryption cipher context" \
-                -c "Successfully setup PSA-based encryption cipher context" \
-                -c "PSA calc verify" \
-                -c "calc PSA finished" \
-                -s "Successfully setup PSA-based decryption cipher context" \
-                -s "Successfully setup PSA-based encryption cipher context" \
-                -s "PSA calc verify" \
-                -s "calc PSA finished" \
-                -C "Failed to setup PSA-based cipher context"\
-                -S "Failed to setup PSA-based cipher context"\
-                -s "Protocol is TLSv1.2" \
-                -S "error" \
-                -C "error"
 }
 
 cleanup() {
@@ -903,33 +864,6 @@ run_test    "Default, DTLS" \
             0 \
             -s "Protocol is DTLSv1.2" \
             -s "Ciphersuite is TLS-ECDHE-RSA-WITH-CHACHA20-POLY1305-SHA256"
-
-# Test using an opaque private key for client authentication
-requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
-requires_config_enabled MBEDTLS_X509_CRT_PARSE_C
-requires_config_enabled MBEDTLS_ECDSA_C
-requires_config_enabled MBEDTLS_SHA256_C
-run_test    "Opaque key for client authentication" \
-            "$P_SRV auth_mode=required" \
-            "$P_CLI key_opaque=1 crt_file=data_files/server5.crt \
-             key_file=data_files/server5.key" \
-            0 \
-            -c "key type: Opaque" \
-            -s "Verifying peer X.509 certificate... ok" \
-            -S "error" \
-            -C "error"
-
-# Test ciphersuites which we expect to be fully supported by PSA Crypto
-# and check that we don't fall back to Mbed TLS' internal crypto primitives.
-run_test_psa TLS-ECDHE-ECDSA-WITH-AES-128-CCM
-run_test_psa TLS-ECDHE-ECDSA-WITH-AES-128-CCM-8
-run_test_psa TLS-ECDHE-ECDSA-WITH-AES-256-CCM
-run_test_psa TLS-ECDHE-ECDSA-WITH-AES-256-CCM-8
-run_test_psa TLS-ECDHE-ECDSA-WITH-AES-128-GCM-SHA256
-run_test_psa TLS-ECDHE-ECDSA-WITH-AES-256-GCM-SHA384
-run_test_psa TLS-ECDHE-ECDSA-WITH-AES-128-CBC-SHA
-run_test_psa TLS-ECDHE-ECDSA-WITH-AES-128-CBC-SHA256
-run_test_psa TLS-ECDHE-ECDSA-WITH-AES-256-CBC-SHA384
 
 # Test current time in ServerHello
 requires_config_enabled MBEDTLS_HAVE_TIME
@@ -2806,7 +2740,7 @@ run_test    "Authentication: server max_int chain, client default" \
                     key_file=data_files/dir-maxpath/09.key" \
             "$P_CLI server_name=CA09 ca_file=data_files/dir-maxpath/00.crt" \
             0 \
-            -C "X509 - A fatal error occured"
+            -C "X509 - A fatal error occurred"
 
 requires_full_size_output_buffer
 run_test    "Authentication: server max_int+1 chain, client default" \
@@ -2814,7 +2748,7 @@ run_test    "Authentication: server max_int+1 chain, client default" \
                     key_file=data_files/dir-maxpath/10.key" \
             "$P_CLI server_name=CA10 ca_file=data_files/dir-maxpath/00.crt" \
             1 \
-            -c "X509 - A fatal error occured"
+            -c "X509 - A fatal error occurred"
 
 requires_full_size_output_buffer
 run_test    "Authentication: server max_int+1 chain, client optional" \
@@ -2823,7 +2757,7 @@ run_test    "Authentication: server max_int+1 chain, client optional" \
             "$P_CLI server_name=CA10 ca_file=data_files/dir-maxpath/00.crt \
                     auth_mode=optional" \
             1 \
-            -c "X509 - A fatal error occured"
+            -c "X509 - A fatal error occurred"
 
 requires_full_size_output_buffer
 run_test    "Authentication: server max_int+1 chain, client none" \
@@ -2832,7 +2766,7 @@ run_test    "Authentication: server max_int+1 chain, client none" \
             "$P_CLI server_name=CA10 ca_file=data_files/dir-maxpath/00.crt \
                     auth_mode=none" \
             0 \
-            -C "X509 - A fatal error occured"
+            -C "X509 - A fatal error occurred"
 
 requires_full_size_output_buffer
 run_test    "Authentication: client max_int+1 chain, server default" \
@@ -2840,7 +2774,7 @@ run_test    "Authentication: client max_int+1 chain, server default" \
             "$P_CLI crt_file=data_files/dir-maxpath/c10.pem \
                     key_file=data_files/dir-maxpath/10.key" \
             0 \
-            -S "X509 - A fatal error occured"
+            -S "X509 - A fatal error occurred"
 
 requires_full_size_output_buffer
 run_test    "Authentication: client max_int+1 chain, server optional" \
@@ -2848,7 +2782,7 @@ run_test    "Authentication: client max_int+1 chain, server optional" \
             "$P_CLI crt_file=data_files/dir-maxpath/c10.pem \
                     key_file=data_files/dir-maxpath/10.key" \
             1 \
-            -s "X509 - A fatal error occured"
+            -s "X509 - A fatal error occurred"
 
 requires_full_size_output_buffer
 run_test    "Authentication: client max_int+1 chain, server required" \
@@ -2856,7 +2790,7 @@ run_test    "Authentication: client max_int+1 chain, server required" \
             "$P_CLI crt_file=data_files/dir-maxpath/c10.pem \
                     key_file=data_files/dir-maxpath/10.key" \
             1 \
-            -s "X509 - A fatal error occured"
+            -s "X509 - A fatal error occurred"
 
 requires_full_size_output_buffer
 run_test    "Authentication: client max_int chain, server required" \
@@ -2864,7 +2798,7 @@ run_test    "Authentication: client max_int chain, server required" \
             "$P_CLI crt_file=data_files/dir-maxpath/c09.pem \
                     key_file=data_files/dir-maxpath/09.key" \
             0 \
-            -S "X509 - A fatal error occured"
+            -S "X509 - A fatal error occurred"
 
 # Tests for CA list in CertificateRequest messages
 
@@ -3895,240 +3829,6 @@ run_test    "PSK callback: psk, no callback" \
             -S "SSL - None of the common ciphersuites is usable" \
             -S "SSL - Unknown identity received" \
             -S "SSL - Verification of the message MAC failed"
-
-requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
-run_test    "PSK callback: opaque psk on client, no callback" \
-            "$P_SRV extended_ms=0 debug_level=1 psk=abc123 psk_identity=foo" \
-            "$P_CLI extended_ms=0 debug_level=1 min_version=tls1_2 force_ciphersuite=TLS-PSK-WITH-AES-128-CBC-SHA \
-            psk_identity=foo psk=abc123 psk_opaque=1" \
-            0 \
-            -c "skip PMS generation for opaque PSK"\
-            -S "skip PMS generation for opaque PSK"\
-            -C "using extended master secret"\
-            -S "using extended master secret"\
-            -S "SSL - None of the common ciphersuites is usable" \
-            -S "SSL - Unknown identity received" \
-            -S "SSL - Verification of the message MAC failed"
-
-requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
-run_test    "PSK callback: opaque psk on client, no callback, SHA-384" \
-            "$P_SRV extended_ms=0 debug_level=1 psk=abc123 psk_identity=foo" \
-            "$P_CLI extended_ms=0 debug_level=1 min_version=tls1_2 force_ciphersuite=TLS-PSK-WITH-AES-256-CBC-SHA384 \
-            psk_identity=foo psk=abc123 psk_opaque=1" \
-            0 \
-            -c "skip PMS generation for opaque PSK"\
-            -S "skip PMS generation for opaque PSK"\
-            -C "using extended master secret"\
-            -S "using extended master secret"\
-            -S "SSL - None of the common ciphersuites is usable" \
-            -S "SSL - Unknown identity received" \
-            -S "SSL - Verification of the message MAC failed"
-
-requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
-run_test    "PSK callback: opaque psk on client, no callback, EMS" \
-            "$P_SRV extended_ms=1 debug_level=3 psk=abc123 psk_identity=foo" \
-            "$P_CLI extended_ms=1 debug_level=3 min_version=tls1_2 force_ciphersuite=TLS-PSK-WITH-AES-128-CBC-SHA \
-            psk_identity=foo psk=abc123 psk_opaque=1" \
-            0 \
-            -c "skip PMS generation for opaque PSK"\
-            -S "skip PMS generation for opaque PSK"\
-            -c "using extended master secret"\
-            -s "using extended master secret"\
-            -S "SSL - None of the common ciphersuites is usable" \
-            -S "SSL - Unknown identity received" \
-            -S "SSL - Verification of the message MAC failed"
-
-requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
-run_test    "PSK callback: opaque psk on client, no callback, SHA-384, EMS" \
-            "$P_SRV extended_ms=1 debug_level=3 psk=abc123 psk_identity=foo" \
-            "$P_CLI extended_ms=1 debug_level=3 min_version=tls1_2 force_ciphersuite=TLS-PSK-WITH-AES-256-CBC-SHA384 \
-            psk_identity=foo psk=abc123 psk_opaque=1" \
-            0 \
-            -c "skip PMS generation for opaque PSK"\
-            -S "skip PMS generation for opaque PSK"\
-            -c "using extended master secret"\
-            -s "using extended master secret"\
-            -S "SSL - None of the common ciphersuites is usable" \
-            -S "SSL - Unknown identity received" \
-            -S "SSL - Verification of the message MAC failed"
-
-requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
-run_test    "PSK callback: raw psk on client, static opaque on server, no callback" \
-            "$P_SRV extended_ms=0 debug_level=1 psk=abc123 psk_identity=foo psk_opaque=1 min_version=tls1_2 force_ciphersuite=TLS-PSK-WITH-AES-128-CBC-SHA" \
-            "$P_CLI extended_ms=0 debug_level=1 min_version=tls1_2 force_ciphersuite=TLS-PSK-WITH-AES-128-CBC-SHA \
-            psk_identity=foo psk=abc123" \
-            0 \
-            -C "skip PMS generation for opaque PSK"\
-            -s "skip PMS generation for opaque PSK"\
-            -C "using extended master secret"\
-            -S "using extended master secret"\
-            -S "SSL - None of the common ciphersuites is usable" \
-            -S "SSL - Unknown identity received" \
-            -S "SSL - Verification of the message MAC failed"
-
-requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
-run_test    "PSK callback: raw psk on client, static opaque on server, no callback, SHA-384" \
-            "$P_SRV extended_ms=0 debug_level=1 psk=abc123 psk_identity=foo psk_opaque=1 min_version=tls1_2 force_ciphersuite=TLS-PSK-WITH-AES-256-CBC-SHA384" \
-            "$P_CLI extended_ms=0 debug_level=1 min_version=tls1_2 force_ciphersuite=TLS-PSK-WITH-AES-256-CBC-SHA384 \
-            psk_identity=foo psk=abc123" \
-            0 \
-            -C "skip PMS generation for opaque PSK"\
-            -s "skip PMS generation for opaque PSK"\
-            -C "using extended master secret"\
-            -S "using extended master secret"\
-            -S "SSL - None of the common ciphersuites is usable" \
-            -S "SSL - Unknown identity received" \
-            -S "SSL - Verification of the message MAC failed"
-
-requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
-run_test    "PSK callback: raw psk on client, static opaque on server, no callback, EMS" \
-            "$P_SRV debug_level=3 psk=abc123 psk_identity=foo psk_opaque=1 min_version=tls1_2 \
-            force_ciphersuite=TLS-PSK-WITH-AES-128-CBC-SHA extended_ms=1" \
-            "$P_CLI debug_level=3 min_version=tls1_2 force_ciphersuite=TLS-PSK-WITH-AES-128-CBC-SHA \
-            psk_identity=foo psk=abc123 extended_ms=1" \
-            0 \
-            -c "using extended master secret"\
-            -s "using extended master secret"\
-            -C "skip PMS generation for opaque PSK"\
-            -s "skip PMS generation for opaque PSK"\
-            -S "SSL - None of the common ciphersuites is usable" \
-            -S "SSL - Unknown identity received" \
-            -S "SSL - Verification of the message MAC failed"
-
-requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
-run_test    "PSK callback: raw psk on client, static opaque on server, no callback, EMS, SHA384" \
-            "$P_SRV debug_level=3 psk=abc123 psk_identity=foo psk_opaque=1 min_version=tls1_2 \
-            force_ciphersuite=TLS-PSK-WITH-AES-256-CBC-SHA384 extended_ms=1" \
-            "$P_CLI debug_level=3 min_version=tls1_2 force_ciphersuite=TLS-PSK-WITH-AES-256-CBC-SHA384 \
-            psk_identity=foo psk=abc123 extended_ms=1" \
-            0 \
-            -c "using extended master secret"\
-            -s "using extended master secret"\
-            -C "skip PMS generation for opaque PSK"\
-            -s "skip PMS generation for opaque PSK"\
-            -S "SSL - None of the common ciphersuites is usable" \
-            -S "SSL - Unknown identity received" \
-            -S "SSL - Verification of the message MAC failed"
-
-requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
-run_test    "PSK callback: raw psk on client, no static PSK on server, opaque PSK from callback" \
-            "$P_SRV extended_ms=0 debug_level=3 psk_list=abc,dead,def,beef psk_list_opaque=1 min_version=tls1_2 force_ciphersuite=TLS-PSK-WITH-AES-128-CBC-SHA" \
-            "$P_CLI extended_ms=0 debug_level=3 min_version=tls1_2 force_ciphersuite=TLS-PSK-WITH-AES-128-CBC-SHA \
-            psk_identity=def psk=beef" \
-            0 \
-            -C "skip PMS generation for opaque PSK"\
-            -s "skip PMS generation for opaque PSK"\
-            -C "using extended master secret"\
-            -S "using extended master secret"\
-            -S "SSL - None of the common ciphersuites is usable" \
-            -S "SSL - Unknown identity received" \
-            -S "SSL - Verification of the message MAC failed"
-
-requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
-run_test    "PSK callback: raw psk on client, no static PSK on server, opaque PSK from callback, SHA-384" \
-            "$P_SRV extended_ms=0 debug_level=3 psk_list=abc,dead,def,beef psk_list_opaque=1 min_version=tls1_2 force_ciphersuite=TLS-PSK-WITH-AES-256-CBC-SHA384" \
-            "$P_CLI extended_ms=0 debug_level=3 min_version=tls1_2 force_ciphersuite=TLS-PSK-WITH-AES-256-CBC-SHA384 \
-            psk_identity=def psk=beef" \
-            0 \
-            -C "skip PMS generation for opaque PSK"\
-            -s "skip PMS generation for opaque PSK"\
-            -C "using extended master secret"\
-            -S "using extended master secret"\
-            -S "SSL - None of the common ciphersuites is usable" \
-            -S "SSL - Unknown identity received" \
-            -S "SSL - Verification of the message MAC failed"
-
-requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
-run_test    "PSK callback: raw psk on client, no static PSK on server, opaque PSK from callback, EMS" \
-            "$P_SRV debug_level=3 psk_list=abc,dead,def,beef psk_list_opaque=1 min_version=tls1_2 \
-            force_ciphersuite=TLS-PSK-WITH-AES-128-CBC-SHA extended_ms=1" \
-            "$P_CLI debug_level=3 min_version=tls1_2 force_ciphersuite=TLS-PSK-WITH-AES-128-CBC-SHA \
-            psk_identity=abc psk=dead extended_ms=1" \
-            0 \
-            -c "using extended master secret"\
-            -s "using extended master secret"\
-            -C "skip PMS generation for opaque PSK"\
-            -s "skip PMS generation for opaque PSK"\
-            -S "SSL - None of the common ciphersuites is usable" \
-            -S "SSL - Unknown identity received" \
-            -S "SSL - Verification of the message MAC failed"
-
-requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
-run_test    "PSK callback: raw psk on client, no static PSK on server, opaque PSK from callback, EMS, SHA384" \
-            "$P_SRV debug_level=3 psk_list=abc,dead,def,beef psk_list_opaque=1 min_version=tls1_2 \
-            force_ciphersuite=TLS-PSK-WITH-AES-256-CBC-SHA384 extended_ms=1" \
-            "$P_CLI debug_level=3 min_version=tls1_2 force_ciphersuite=TLS-PSK-WITH-AES-256-CBC-SHA384 \
-            psk_identity=abc psk=dead extended_ms=1" \
-            0 \
-            -c "using extended master secret"\
-            -s "using extended master secret"\
-            -C "skip PMS generation for opaque PSK"\
-            -s "skip PMS generation for opaque PSK"\
-            -S "SSL - None of the common ciphersuites is usable" \
-            -S "SSL - Unknown identity received" \
-            -S "SSL - Verification of the message MAC failed"
-
-requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
-run_test    "PSK callback: raw psk on client, mismatching static raw PSK on server, opaque PSK from callback" \
-            "$P_SRV extended_ms=0 psk_identity=foo psk=abc123 debug_level=3 psk_list=abc,dead,def,beef psk_list_opaque=1 min_version=tls1_2 force_ciphersuite=TLS-PSK-WITH-AES-128-CBC-SHA" \
-            "$P_CLI extended_ms=0 debug_level=3 min_version=tls1_2 force_ciphersuite=TLS-PSK-WITH-AES-128-CBC-SHA \
-            psk_identity=def psk=beef" \
-            0 \
-            -C "skip PMS generation for opaque PSK"\
-            -s "skip PMS generation for opaque PSK"\
-            -C "using extended master secret"\
-            -S "using extended master secret"\
-            -S "SSL - None of the common ciphersuites is usable" \
-            -S "SSL - Unknown identity received" \
-            -S "SSL - Verification of the message MAC failed"
-
-requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
-run_test    "PSK callback: raw psk on client, mismatching static opaque PSK on server, opaque PSK from callback" \
-            "$P_SRV extended_ms=0 psk_opaque=1 psk_identity=foo psk=abc123 debug_level=3 psk_list=abc,dead,def,beef psk_list_opaque=1 min_version=tls1_2 force_ciphersuite=TLS-PSK-WITH-AES-128-CBC-SHA" \
-            "$P_CLI extended_ms=0 debug_level=3 min_version=tls1_2 force_ciphersuite=TLS-PSK-WITH-AES-128-CBC-SHA \
-            psk_identity=def psk=beef" \
-            0 \
-            -C "skip PMS generation for opaque PSK"\
-            -s "skip PMS generation for opaque PSK"\
-            -C "using extended master secret"\
-            -S "using extended master secret"\
-            -S "SSL - None of the common ciphersuites is usable" \
-            -S "SSL - Unknown identity received" \
-            -S "SSL - Verification of the message MAC failed"
-
-requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
-run_test    "PSK callback: raw psk on client, mismatching static opaque PSK on server, raw PSK from callback" \
-            "$P_SRV extended_ms=0 psk_opaque=1 psk_identity=foo psk=abc123 debug_level=3 psk_list=abc,dead,def,beef min_version=tls1_2 force_ciphersuite=TLS-PSK-WITH-AES-128-CBC-SHA" \
-            "$P_CLI extended_ms=0 debug_level=3 min_version=tls1_2 force_ciphersuite=TLS-PSK-WITH-AES-128-CBC-SHA \
-            psk_identity=def psk=beef" \
-            0 \
-            -C "skip PMS generation for opaque PSK"\
-            -C "using extended master secret"\
-            -S "using extended master secret"\
-            -S "SSL - None of the common ciphersuites is usable" \
-            -S "SSL - Unknown identity received" \
-            -S "SSL - Verification of the message MAC failed"
-
-requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
-run_test    "PSK callback: raw psk on client, id-matching but wrong raw PSK on server, opaque PSK from callback" \
-            "$P_SRV extended_ms=0 psk_opaque=1 psk_identity=def psk=abc123 debug_level=3 psk_list=abc,dead,def,beef min_version=tls1_2 force_ciphersuite=TLS-PSK-WITH-AES-128-CBC-SHA" \
-            "$P_CLI extended_ms=0 debug_level=3 min_version=tls1_2 force_ciphersuite=TLS-PSK-WITH-AES-128-CBC-SHA \
-            psk_identity=def psk=beef" \
-            0 \
-            -C "skip PMS generation for opaque PSK"\
-            -C "using extended master secret"\
-            -S "using extended master secret"\
-            -S "SSL - None of the common ciphersuites is usable" \
-            -S "SSL - Unknown identity received" \
-            -S "SSL - Verification of the message MAC failed"
-
-requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
-run_test    "PSK callback: raw psk on client, matching opaque PSK on server, wrong opaque PSK from callback" \
-            "$P_SRV extended_ms=0 psk_opaque=1 psk_identity=def psk=beef debug_level=3 psk_list=abc,dead,def,abc123 min_version=tls1_2 force_ciphersuite=TLS-PSK-WITH-AES-128-CBC-SHA" \
-            "$P_CLI extended_ms=0 debug_level=3 min_version=tls1_2 force_ciphersuite=TLS-PSK-WITH-AES-128-CBC-SHA \
-            psk_identity=def psk=beef" \
-            1 \
-            -s "SSL - Verification of the message MAC failed"
 
 run_test    "PSK callback: no psk, no callback" \
             "$P_SRV" \
@@ -7606,6 +7306,11 @@ run_test    "DTLS proxy: 3d, gnutls server" \
             -s "Extra-header:" \
             -c "Extra-header:"
 
+# The next two test are disabled because they tend to trigger a bug in the
+# version of GnuTLS that's currently installed on our CI. The bug occurs when
+# different fragments of the same handshake message are received out-of-order
+# by GnuTLS and results in a timeout. It's been fixed in GnuTLS 3.5.2.
+skip_next_test
 requires_gnutls
 client_needs_more_time 8
 not_with_valgrind # risk of non-mbedtls peer timing out
@@ -7617,6 +7322,7 @@ run_test    "DTLS proxy: 3d, gnutls server, fragmentation" \
             -s "Extra-header:" \
             -c "Extra-header:"
 
+skip_next_test
 requires_gnutls
 client_needs_more_time 8
 not_with_valgrind # risk of non-mbedtls peer timing out

@@ -88,11 +88,6 @@ elif [ -d library -a -d include -a -d tests ]; then :; else
     exit 1
 fi
 
-if ! [ -f crypto/Makefile ]; then
-    echo "Please initialize the crypto submodule" >&2
-    exit 1
-fi
-
 CONFIG_H='include/mbedtls/config.h'
 CONFIG_BAK="$CONFIG_H.bak"
 
@@ -101,7 +96,7 @@ FORCE=0
 KEEP_GOING=0
 RUN_ARMCC=1
 
-# Default commands, can be overriden by the environment
+# Default commands, can be overridden by the environment
 : ${OPENSSL:="openssl"}
 : ${OPENSSL_LEGACY:="$OPENSSL"}
 : ${OPENSSL_NEXT:="$OPENSSL"}
@@ -159,12 +154,9 @@ cleanup()
     fi
 
     command make clean
-    cd crypto
-    command make clean
-    cd ..
 
     # Remove CMake artefacts
-    find . -name .git -prune -o \
+    find . -name .git -prune \
            -iname CMakeFiles -exec rm -rf {} \+ -o \
            \( -iname cmake_install.cmake -o \
               -iname CTestTestfile.cmake -o \
@@ -173,11 +165,6 @@ cleanup()
     rm -f include/Makefile include/mbedtls/Makefile programs/*/Makefile
     git update-index --no-skip-worktree Makefile library/Makefile programs/Makefile tests/Makefile
     git checkout -- Makefile library/Makefile programs/Makefile tests/Makefile
-    cd crypto
-    rm -f include/Makefile include/mbedtls/Makefile programs/*/Makefile
-    git update-index --no-skip-worktree Makefile library/Makefile programs/Makefile tests/Makefile
-    git checkout -- Makefile library/Makefile programs/Makefile tests/Makefile
-    cd ..
 
     if [ -f "$CONFIG_BAK" ]; then
         mv "$CONFIG_BAK" "$CONFIG_H"
@@ -587,95 +574,6 @@ if_build_succeeded env OPENSSL_CMD="$OPENSSL_LEGACY" GNUTLS_CLI="$GNUTLS_LEGACY_
 msg "test: compat.sh ARIA + ChachaPoly"
 if_build_succeeded env OPENSSL_CMD="$OPENSSL_NEXT" tests/compat.sh -e '^$' -f 'ARIA\|CHACHA'
 
-# USE_CRYPTO_SUBMODULE: check that the build works with CMake
-msg "build: cmake, full config + USE_CRYPTO_SUBMODULE, gcc+debug"
-cleanup
-cp "$CONFIG_H" "$CONFIG_BAK"
-scripts/config.pl full # enables md4 and submodule doesn't enable md4
-scripts/config.pl unset MBEDTLS_MEMORY_BACKTRACE # too slow for tests
-CC=gcc cmake -D USE_CRYPTO_SUBMODULE=1 -D CMAKE_BUILD_TYPE=Debug .
-make
-msg "test: top-level libmbedcrypto wasn't built (USE_CRYPTO_SUBMODULE, cmake)"
-if_build_succeeded not test -f library/libmbedcrypto.a
-msg "test: libmbedcrypto symbols are from crypto files (USE_CRYPTO_SUBMODULE, cmake)"
-if_build_succeeded objdump -g crypto/library/libmbedcrypto.a | grep -E 'crypto/library$' > /dev/null
-msg "test: libmbedcrypto uses top-level config (USE_CRYPTO_SUBMODULE, cmake)"
-if_build_succeeded objdump -g crypto/library/libmbedcrypto.a | grep 'md4.c' > /dev/null
-msg "test: main suites (USE_CRYPTO_SUBMODULE, cmake)"
-make test
-msg "test: ssl-opt.sh (USE_CRYPTO_SUBMODULE, cmake)"
-if_build_succeeded tests/ssl-opt.sh
-
-# USE_CRYPTO_SUBMODULE: check that the build works with make
-msg "build: make, full config + USE_CRYPTO_SUBMODULE, gcc+debug"
-cleanup
-cp "$CONFIG_H" "$CONFIG_BAK"
-scripts/config.pl full # enables md4 and submodule doesn't enable md4
-scripts/config.pl unset MBEDTLS_MEMORY_BACKTRACE # too slow for tests
-make CC=gcc CFLAGS='-g' USE_CRYPTO_SUBMODULE=1
-msg "test: top-level libmbedcrypto wasn't built (USE_CRYPTO_SUBMODULE, make)"
-if_build_succeeded not test -f library/libmbedcrypto.a
-msg "test: libmbedcrypto symbols are from crypto files (USE_CRYPTO_SUBMODULE, make)"
-if_build_succeeded objdump -g crypto/library/libmbedcrypto.a | grep -E 'crypto/library$' > /dev/null
-msg "test: libmbedcrypto uses top-level config (USE_CRYPTO_SUBMODULE, make)"
-if_build_succeeded objdump -g crypto/library/libmbedcrypto.a | grep 'md4.c' > /dev/null
-msg "test: main suites (USE_CRYPTO_SUBMODULE, make)"
-make CC=gcc USE_CRYPTO_SUBMODULE=1 test
-msg "test: ssl-opt.sh (USE_CRYPTO_SUBMODULE, make)"
-if_build_succeeded tests/ssl-opt.sh
-
-# Don't USE_CRYPTO_SUBMODULE: check that the submodule is not used with make
-msg "build: make, full config - USE_CRYPTO_SUBMODULE, gcc+debug"
-cleanup
-cp "$CONFIG_H" "$CONFIG_BAK"
-scripts/config.pl full
-make CC=gcc CFLAGS='-g'
-msg "test: submodule libmbedcrypto wasn't built (USE_CRYPTO_SUBMODULE, make)"
-if_build_succeeded not test -f crypto/library/libmbedcrypto.a
-msg "test: libmbedcrypto symbols are from library files (USE_CRYPTO_SUBMODULE, make)"
-if_build_succeeded objdump -g library/libmbedcrypto.a | grep -E 'library$' | not grep 'crypto' > /dev/null
-
-# Don't USE_CRYPTO_SUBMODULE: check that the submodule is not used with CMake
-msg "build: cmake, full config - USE_CRYPTO_SUBMODULE, gcc+debug"
-cleanup
-cp "$CONFIG_H" "$CONFIG_BAK"
-scripts/config.pl full
-CC=gcc cmake -D CMAKE_BUILD_TYPE=Debug .
-make
-msg "test: submodule libmbedcrypto wasn't built (USE_CRYPTO_SUBMODULE, cmake)"
-if_build_succeeded not test -f crypto/library/libmbedcrypto.a
-msg "test: libmbedcrypto symbols are from library files (USE_CRYPTO_SUBMODULE, cmake)"
-if_build_succeeded objdump -g library/libmbedcrypto.a | grep -E 'library$' | not grep 'crypto' > /dev/null
-
-# MBEDTLS_USE_PSA_CRYPTO: run the same set of tests as basic-build-test.sh
-msg "build: cmake, full config + MBEDTLS_USE_PSA_CRYPTO, ASan"
-cleanup
-cp "$CONFIG_H" "$CONFIG_BAK"
-scripts/config.pl full
-scripts/config.pl unset MBEDTLS_MEMORY_BACKTRACE # too slow for tests
-scripts/config.pl set MBEDTLS_PSA_CRYPTO_C
-scripts/config.pl set MBEDTLS_USE_PSA_CRYPTO
-CC=gcc cmake -D USE_CRYPTO_SUBMODULE=1 -D CMAKE_BUILD_TYPE:String=Asan .
-make
-
-msg "test: main suites (MBEDTLS_USE_PSA_CRYPTO)"
-make test
-
-msg "test: ssl-opt.sh (MBEDTLS_USE_PSA_CRYPTO)"
-if_build_succeeded tests/ssl-opt.sh
-
-msg "test: compat.sh default (MBEDTLS_USE_PSA_CRYPTO)"
-if_build_succeeded tests/compat.sh
-
-msg "test: compat.sh ssl3 (MBEDTLS_USE_PSA_CRYPTO)"
-if_build_succeeded env OPENSSL_CMD="$OPENSSL_LEGACY" tests/compat.sh -m 'ssl3'
-
-msg "test: compat.sh RC4, DES & NULL (MBEDTLS_USE_PSA_CRYPTO)"
-if_build_succeeded env OPENSSL_CMD="$OPENSSL_LEGACY" GNUTLS_CLI="$GNUTLS_LEGACY_CLI" GNUTLS_SERV="$GNUTLS_LEGACY_SERV" tests/compat.sh -e '3DES\|DES-CBC3' -f 'NULL\|DES\|RC4\|ARCFOUR'
-
-msg "test: compat.sh ARIA + ChachaPoly (MBEDTLS_USE_PSA_CRYPTO)"
-if_build_succeeded env OPENSSL_CMD="$OPENSSL_NEXT" tests/compat.sh -e '^$' -f 'ARIA\|CHACHA'
-
 msg "build: make, full config + DEPRECATED_WARNING, gcc -O" # ~ 30s
 cleanup
 cp "$CONFIG_H" "$CONFIG_BAK"
@@ -719,6 +617,32 @@ record_status check_headers_in_cpp
 
 msg "build: Unix make, incremental g++"
 make TEST_CPP=1
+
+
+msg "build+test: MBEDTLS_CHECK_PARAMS without MBEDTLS_PLATFORM_C"
+cleanup
+cp "$CONFIG_H" "$CONFIG_BAK"
+scripts/config.pl full # includes CHECK_PARAMS
+scripts/config.pl unset MBEDTLS_MEMORY_BACKTRACE # too slow for tests
+scripts/config.pl unset MBEDTLS_MEMORY_BUFFER_ALLOC_C
+scripts/config.pl unset MBEDTLS_PLATFORM_EXIT_ALT
+scripts/config.pl unset MBEDTLS_PLATFORM_TIME_ALT
+scripts/config.pl unset MBEDTLS_PLATFORM_FPRINTF_ALT
+scripts/config.pl unset MBEDTLS_PLATFORM_MEMORY
+scripts/config.pl unset MBEDTLS_PLATFORM_PRINTF_ALT
+scripts/config.pl unset MBEDTLS_PLATFORM_SNPRINTF_ALT
+scripts/config.pl unset MBEDTLS_ENTROPY_NV_SEED
+scripts/config.pl unset MBEDTLS_PLATFORM_C
+make CC=gcc CFLAGS='-Werror -O1' all test
+
+msg "build+test: MBEDTLS_CHECK_PARAMS with alternative MBEDTLS_PARAM_FAILED()"
+cleanup
+cp "$CONFIG_H" "$CONFIG_BAK"
+scripts/config.pl full # includes CHECK_PARAMS
+scripts/config.pl unset MBEDTLS_MEMORY_BACKTRACE # too slow for tests
+sed -i 's/.*\(#define MBEDTLS_PARAM_FAILED( cond )\).*/\1/' "$CONFIG_H"
+make CC=gcc CFLAGS='-Werror -O1' all test
+
 
 # Full configuration build, without platform support, file IO and net sockets.
 # This should catch missing mbedtls_printf definitions, and by disabling file
