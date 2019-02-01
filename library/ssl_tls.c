@@ -1499,8 +1499,7 @@ int mbedtls_ssl_psk_derive_premaster( mbedtls_ssl_context *ssl, mbedtls_key_exch
         *(p++) = (unsigned char)( zlen      );
         p += zlen;
 
-        MBEDTLS_SSL_DEBUG_ECDH( 3, &ssl->handshake->ecdh_ctx,
-                                MBEDTLS_DEBUG_ECDH_Z );
+        MBEDTLS_SSL_DEBUG_MPI( 3, "ECDH: z", &ssl->handshake->ecdh_ctx.z );
     }
     else
 #endif /* MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED */
@@ -2772,7 +2771,7 @@ int mbedtls_ssl_fetch_input( mbedtls_ssl_context *ssl, size_t nb_want )
         }
 
         /*
-         * A record can't be split across datagrams. If we need to read but
+         * A record can't be split accross datagrams. If we need to read but
          * are not at the beginning of a new record, the caller did something
          * wrong.
          */
@@ -3367,10 +3366,8 @@ int mbedtls_ssl_write_handshake_msg( mbedtls_ssl_context *ssl )
         }
     }
 
-    /* Whenever we send anything different from a
-     * HelloRequest we should be in a handshake - double check. */
-    if( ! ( ssl->out_msgtype == MBEDTLS_SSL_MSG_HANDSHAKE &&
-            hs_type          == MBEDTLS_SSL_HS_HELLO_REQUEST ) &&
+    if( ssl->out_msgtype == MBEDTLS_SSL_MSG_HANDSHAKE &&
+        hs_type != MBEDTLS_SSL_HS_HELLO_REQUEST &&
         ssl->handshake == NULL )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
@@ -3464,8 +3461,8 @@ int mbedtls_ssl_write_handshake_msg( mbedtls_ssl_context *ssl )
     /* Either send now, or just save to be sent (and resent) later */
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
     if( ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM &&
-        ! ( ssl->out_msgtype == MBEDTLS_SSL_MSG_HANDSHAKE &&
-            hs_type          == MBEDTLS_SSL_HS_HELLO_REQUEST ) )
+        ( ssl->out_msgtype != MBEDTLS_SSL_MSG_HANDSHAKE ||
+          hs_type != MBEDTLS_SSL_HS_HELLO_REQUEST ) )
     {
         if( ( ret = ssl_flight_append( ssl ) ) != 0 )
         {
