@@ -50,6 +50,11 @@
 
 #include <string.h>
 
+#if defined(MBEDTLS_USE_PSA_CRYPTO)
+#include "mbedtls/psa_util.h"
+#include "psa/crypto.h"
+#endif
+
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
 #include "mbedtls/oid.h"
 #endif
@@ -1499,8 +1504,7 @@ int mbedtls_ssl_psk_derive_premaster( mbedtls_ssl_context *ssl, mbedtls_key_exch
         *(p++) = (unsigned char)( zlen      );
         p += zlen;
 
-        MBEDTLS_SSL_DEBUG_ECDH( 3, &ssl->handshake->ecdh_ctx,
-                                MBEDTLS_DEBUG_ECDH_Z );
+        MBEDTLS_SSL_DEBUG_MPI( 3, "ECDH: z", &ssl->handshake->ecdh_ctx.z );
     }
     else
 #endif /* MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED */
@@ -2772,7 +2776,7 @@ int mbedtls_ssl_fetch_input( mbedtls_ssl_context *ssl, size_t nb_want )
         }
 
         /*
-         * A record can't be split across datagrams. If we need to read but
+         * A record can't be split accross datagrams. If we need to read but
          * are not at the beginning of a new record, the caller did something
          * wrong.
          */
@@ -3367,10 +3371,8 @@ int mbedtls_ssl_write_handshake_msg( mbedtls_ssl_context *ssl )
         }
     }
 
-    /* Whenever we send anything different from a
-     * HelloRequest we should be in a handshake - double check. */
-    if( ! ( ssl->out_msgtype == MBEDTLS_SSL_MSG_HANDSHAKE &&
-            hs_type          == MBEDTLS_SSL_HS_HELLO_REQUEST ) &&
+    if( ssl->out_msgtype == MBEDTLS_SSL_MSG_HANDSHAKE &&
+        hs_type != MBEDTLS_SSL_HS_HELLO_REQUEST &&
         ssl->handshake == NULL )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
@@ -3464,8 +3466,8 @@ int mbedtls_ssl_write_handshake_msg( mbedtls_ssl_context *ssl )
     /* Either send now, or just save to be sent (and resent) later */
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
     if( ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM &&
-        ! ( ssl->out_msgtype == MBEDTLS_SSL_MSG_HANDSHAKE &&
-            hs_type          == MBEDTLS_SSL_HS_HELLO_REQUEST ) )
+        ( ssl->out_msgtype != MBEDTLS_SSL_MSG_HANDSHAKE ||
+          hs_type != MBEDTLS_SSL_HS_HELLO_REQUEST ) )
     {
         if( ( ret = ssl_flight_append( ssl ) ) != 0 )
         {
@@ -9975,6 +9977,70 @@ exit:
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1) || defined(MBEDTLS_SSL_PROTO_TLS1_1) || \
     defined(MBEDTLS_SSL_PROTO_TLS1_2)
+
+#if defined(MBEDTLS_USE_PSA_CRYPTO)
+int mbedtls_ssl_get_key_exchange_md_tls1_2( mbedtls_ssl_context *ssl,
+                                            unsigned char *hash, size_t *hashlen,
+                                            unsigned char *data, size_t data_len,
+                                            mbedtls_md_type_t md_alg )
+{
+    psa_status_t status;
+    psa_hash_operation_t hash_operation;
+    psa_algorithm_t hash_alg = mbedtls_psa_translate_md( md_alg );
+
+    MBEDTLS_SSL_DEBUG_MSG( 1, ( "Perform PSA-based computation of digest of ServerKeyExchange" ) );
+
+    if( ( status = psa_hash_setup( &hash_operation,
+                                   hash_alg ) ) != PSA_SUCCESS )
+    {
+        MBEDTLS_SSL_DEBUG_RET( 1, "psa_hash_setup", status );
+        goto exit;
+    }
+
+    if( ( status = psa_hash_update( &hash_operation, ssl->handshake->randbytes,
+                                    64 ) ) != PSA_SUCCESS )
+    {
+        MBEDTLS_SSL_DEBUG_RET( 1, "psa_hash_update", status );
+        goto exit;
+    }
+
+    if( ( status = psa_hash_update( &hash_operation,
+                                    data, data_len ) ) != PSA_SUCCESS )
+    {
+        MBEDTLS_SSL_DEBUG_RET( 1, "psa_hash_update", status );
+        goto exit;
+    }
+
+    if( ( status = psa_hash_finish( &hash_operation, hash, MBEDTLS_MD_MAX_SIZE,
+                                    hashlen ) ) != PSA_SUCCESS )
+    {
+         MBEDTLS_SSL_DEBUG_RET( 1, "psa_hash_finish", status );
+         goto exit;
+    }
+
+exit:
+    if( status != PSA_SUCCESS )
+    {
+        mbedtls_ssl_send_alert_message( ssl, MBEDTLS_SSL_ALERT_LEVEL_FATAL,
+                                        MBEDTLS_SSL_ALERT_MSG_INTERNAL_ERROR );
+        switch( status )
+        {
+            case PSA_ERROR_NOT_SUPPORTED:
+                return( MBEDTLS_ERR_MD_FEATURE_UNAVAILABLE );
+            case PSA_ERROR_BAD_STATE: /* Intentional fallthrough */
+            case PSA_ERROR_BUFFER_TOO_SMALL:
+                return( MBEDTLS_ERR_MD_BAD_INPUT_DATA );
+            case PSA_ERROR_INSUFFICIENT_MEMORY:
+                return( MBEDTLS_ERR_MD_ALLOC_FAILED );
+            default:
+                return( MBEDTLS_ERR_MD_HW_ACCEL_FAILED );
+        }
+    }
+    return( 0 );
+}
+
+#else
+
 int mbedtls_ssl_get_key_exchange_md_tls1_2( mbedtls_ssl_context *ssl,
                                             unsigned char *hash, size_t *hashlen,
                                             unsigned char *data, size_t data_len,
@@ -9984,6 +10050,8 @@ int mbedtls_ssl_get_key_exchange_md_tls1_2( mbedtls_ssl_context *ssl,
     mbedtls_md_context_t ctx;
     const mbedtls_md_info_t *md_info = mbedtls_md_info_from_type( md_alg );
     *hashlen = mbedtls_md_get_size( md_info );
+
+    MBEDTLS_SSL_DEBUG_MSG( 1, ( "Perform mbedtls-based computation of digest of ServerKeyExchange" ) );
 
     mbedtls_md_init( &ctx );
 
@@ -10029,6 +10097,8 @@ exit:
 
     return( ret );
 }
+#endif /* MBEDTLS_USE_PSA_CRYPTO */
+
 #endif /* MBEDTLS_SSL_PROTO_TLS1 || MBEDTLS_SSL_PROTO_TLS1_1 || \
           MBEDTLS_SSL_PROTO_TLS1_2 */
 
