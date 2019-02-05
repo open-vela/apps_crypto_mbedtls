@@ -19,8 +19,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\programs\test\query_compile_time_config.c" />
-    <ClCompile Include="..\..\programs\ssl\query_config.c" />
+    <ClCompile Include="..\..\programs\psa\psa_constant_names.c" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="mbedTLS.vcxproj">
@@ -29,9 +28,9 @@
     </ProjectReference>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{D6F58AF2-9D80-562A-E2B0-F743281522B9}</ProjectGuid>
+    <ProjectGuid>{A0BAD8F0-69B5-8382-86ED-C36ACBE54117}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
-    <RootNamespace>query_compile_time_config</RootNamespace>
+    <RootNamespace>psa_constant_names</RootNamespace>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
