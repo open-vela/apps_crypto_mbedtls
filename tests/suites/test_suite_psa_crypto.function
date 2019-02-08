@@ -282,38 +282,13 @@ static int exercise_signature_key( psa_key_handle_t handle,
     size_t payload_length = 16;
     unsigned char signature[PSA_ASYMMETRIC_SIGNATURE_MAX_SIZE] = {0};
     size_t signature_length = sizeof( signature );
-    psa_algorithm_t hash_alg = PSA_ALG_SIGN_GET_HASH( alg );
-
-    /* If the policy allows signing with any hash, just pick one. */
-    if( PSA_ALG_IS_HASH_AND_SIGN( alg ) && hash_alg == PSA_ALG_ANY_HASH )
-    {
-#if defined(MBEDTLS_MD2_C)
-        hash_alg = PSA_ALG_MD2;
-#elif defined(MBEDTLS_MD4_C)
-        hash_alg = PSA_ALG_MD4;
-#elif defined(MBEDTLS_MD5_C)
-        hash_alg = PSA_ALG_MD5;
-        /* MBEDTLS_RIPEMD160_C omitted because Mbed TLS doesn't
-         * support it in RSA PKCS#1v1.5 signatures. */
-#elif defined(MBEDTLS_SHA1_C)
-        hash_alg = PSA_ALG_SHA_1;
-#elif defined(MBEDTLS_SHA256_C)
-        hash_alg = PSA_ALG_SHA_256;
-#elif defined(MBEDTLS_SHA512_C)
-        hash_alg = PSA_ALG_SHA_384;
-#elif defined(MBEDTLS_SHA3_C)
-        hash_alg = PSA_ALG_SHA3_256;
-#else
-        test_fail( "No hash algorithm for hash-and-sign testing", __LINE__, __FILE__ );
-#endif
-        alg ^= PSA_ALG_ANY_HASH ^ hash_alg;
-    }
 
     if( usage & PSA_KEY_USAGE_SIGN )
     {
         /* Some algorithms require the payload to have the size of
          * the hash encoded in the algorithm. Use this input size
          * even for algorithms that allow other input sizes. */
+        psa_algorithm_t hash_alg = PSA_ALG_SIGN_GET_HASH( alg );
         if( hash_alg != 0 )
             payload_length = PSA_HASH_SIZE( hash_alg );
         PSA_ASSERT( psa_asymmetric_sign( handle, alg,
@@ -391,11 +366,30 @@ static int exercise_key_derivation_key( psa_key_handle_t handle,
 
     if( usage & PSA_KEY_USAGE_DERIVE )
     {
-        PSA_ASSERT( psa_key_derivation( &generator,
-                                        handle, alg,
-                                        label, label_length,
-                                        seed, seed_length,
-                                        sizeof( output ) ) );
+        if( PSA_ALG_IS_HKDF( alg ) )
+        {
+            PSA_ASSERT( psa_key_derivation_setup( &generator, alg ) );
+            PSA_ASSERT( psa_key_derivation_input_bytes( &generator,
+                                                        PSA_KDF_STEP_SALT,
+                                                        label,
+                                                        label_length ) );
+            PSA_ASSERT( psa_key_derivation_input_key( &generator,
+                                                      PSA_KDF_STEP_SECRET,
+                                                      handle ) );
+            PSA_ASSERT( psa_key_derivation_input_bytes( &generator,
+                                                        PSA_KDF_STEP_INFO,
+                                                        seed,
+                                                        seed_length ) );
+        }
+        else
+        {
+            // legacy
+            PSA_ASSERT( psa_key_derivation( &generator,
+                                            handle, alg,
+                                            label, label_length,
+                                            seed, seed_length,
+                                            sizeof( output ) ) );
+        }
         PSA_ASSERT( psa_generator_read( &generator,
                                         output,
                                         sizeof( output ) ) );
@@ -411,8 +405,7 @@ exit:
 /* We need two keys to exercise key agreement. Exercise the
  * private key against its own public key. */
 static psa_status_t key_agreement_with_self( psa_crypto_generator_t *generator,
-                                             psa_key_handle_t handle,
-                                             psa_algorithm_t alg )
+                                             psa_key_handle_t handle )
 {
     psa_key_type_t private_key_type;
     psa_key_type_t public_key_type;
@@ -434,9 +427,8 @@ static psa_status_t key_agreement_with_self( psa_crypto_generator_t *generator,
                                        public_key, public_key_length,
                                        &public_key_length ) );
 
-    status = psa_key_agreement( generator, handle,
-                                public_key, public_key_length,
-                                alg );
+    status = psa_key_agreement( generator, PSA_KDF_STEP_SECRET, handle,
+                                public_key, public_key_length );
 exit:
     mbedtls_free( public_key );
     return( status );
@@ -454,7 +446,8 @@ static int exercise_key_agreement_key( psa_key_handle_t handle,
     {
         /* We need two keys to exercise key agreement. Exercise the
          * private key against its own public key. */
-        PSA_ASSERT( key_agreement_with_self( &generator, handle, alg ) );
+        PSA_ASSERT( psa_key_derivation_setup( &generator, alg ) );
+        PSA_ASSERT( key_agreement_with_self( &generator, handle ) );
         PSA_ASSERT( psa_generator_read( &generator,
                                         output,
                                         sizeof( output ) ) );
@@ -771,33 +764,6 @@ exit:
     return( ok );
 }
 
-/** Do smoke tests on a key.
- *
- * Perform one of each operation indicated by \p alg (decrypt/encrypt,
- * sign/verify, or derivation) that is permitted according to \p usage.
- * \p usage and \p alg should correspond to the expected policy on the
- * key.
- *
- * Export the key if permitted by \p usage, and check that the output
- * looks sensible. If \p usage forbids export, check that
- * \p psa_export_key correctly rejects the attempt. If the key is
- * asymmetric, also check \p psa_export_public_key.
- *
- * If the key fails the tests, this function calls the test framework's
- * `test_fail` function and returns false. Otherwise this function returns
- * true. Therefore it should be used as follows:
- * ```
- * if( ! exercise_key( ... ) ) goto exit;
- * ```
- *
- * \param handle    The key to exercise. It should be capable of performing
- *                  \p alg.
- * \param usage     The usage flags to assume.
- * \param alg       The algorithm to exercise.
- *
- * \retval 0 The key failed the smoke tests.
- * \retval 1 The key passed the smoke tests.
- */
 static int exercise_key( psa_key_handle_t handle,
                          psa_key_usage_t usage,
                          psa_algorithm_t alg )
@@ -947,8 +913,7 @@ void import_twice( int alg_arg, int usage_arg,
     if( expected_import1_status == PSA_SUCCESS ||
         expected_import2_status == PSA_SUCCESS )
     {
-        if( ! exercise_key( handle, usage, alg ) )
-            goto exit;
+        TEST_ASSERT( exercise_key( handle, usage, alg ) );
     }
 
 exit:
@@ -1779,7 +1744,8 @@ void agreement_key_policy( int policy_usage,
     PSA_ASSERT( psa_import_key( handle, key_type,
                                 key_data->x, key_data->len ) );
 
-    status = key_agreement_with_self( &generator, handle, exercise_alg );
+    PSA_ASSERT( psa_key_derivation_setup( &generator, exercise_alg ) );
+    status = key_agreement_with_self( &generator, handle );
 
     if( policy_alg == exercise_alg &&
         ( policy_usage & PSA_KEY_USAGE_DERIVE ) != 0 )
@@ -1790,159 +1756,6 @@ void agreement_key_policy( int policy_usage,
 exit:
     psa_generator_abort( &generator );
     psa_destroy_key( handle );
-    mbedtls_psa_crypto_free( );
-}
-/* END_CASE */
-
-/* BEGIN_CASE */
-void copy_key_policy( int source_usage_arg, int source_alg_arg,
-                      int type_arg, data_t *material,
-                      int target_usage_arg, int target_alg_arg,
-                      int constraint_usage_arg, int constraint_alg_arg,
-                      int expected_usage_arg, int expected_alg_arg )
-{
-    psa_key_usage_t source_usage = source_usage_arg;
-    psa_algorithm_t source_alg = source_alg_arg;
-    psa_key_handle_t source_handle = 0;
-    psa_key_policy_t source_policy = PSA_KEY_POLICY_INIT;
-    psa_key_type_t source_type = type_arg;
-    size_t source_bits;
-    psa_key_usage_t target_usage = target_usage_arg;
-    psa_algorithm_t target_alg = target_alg_arg;
-    psa_key_handle_t target_handle = 0;
-    psa_key_policy_t target_policy = PSA_KEY_POLICY_INIT;
-    psa_key_type_t target_type;
-    size_t target_bits;
-    psa_key_usage_t constraint_usage = constraint_usage_arg;
-    psa_algorithm_t constraint_alg = constraint_alg_arg;
-    psa_key_policy_t constraint = PSA_KEY_POLICY_INIT;
-    psa_key_policy_t *p_constraint = NULL;
-    psa_key_usage_t expected_usage = expected_usage_arg;
-    psa_algorithm_t expected_alg = expected_alg_arg;
-    uint8_t *export_buffer = NULL;
-
-    if( constraint_usage_arg != -1 )
-    {
-        p_constraint = &constraint;
-        psa_key_policy_set_usage( p_constraint,
-                                  constraint_usage, constraint_alg );
-    }
-
-    PSA_ASSERT( psa_crypto_init( ) );
-
-    /* Populate the source slot. */
-    PSA_ASSERT( psa_allocate_key( &source_handle ) );
-    psa_key_policy_set_usage( &source_policy, source_usage, source_alg );
-    PSA_ASSERT( psa_set_key_policy( source_handle, &source_policy ) );
-    PSA_ASSERT( psa_import_key( source_handle, source_type,
-                                material->x, material->len ) );
-    PSA_ASSERT( psa_get_key_information( source_handle, NULL, &source_bits ) );
-
-    /* Prepare the target slot. */
-    PSA_ASSERT( psa_allocate_key( &target_handle ) );
-    psa_key_policy_set_usage( &target_policy, target_usage, target_alg );
-    PSA_ASSERT( psa_set_key_policy( target_handle, &target_policy ) );
-    target_policy = psa_key_policy_init();
-
-    /* Copy the key. */
-    PSA_ASSERT( psa_copy_key( source_handle, target_handle, p_constraint ) );
-
-    /* Destroy the source to ensure that this doesn't affect the target. */
-    PSA_ASSERT( psa_destroy_key( source_handle ) );
-
-    /* Test that the target slot has the expected content and policy. */
-    PSA_ASSERT( psa_get_key_information( target_handle,
-                                         &target_type, &target_bits ) );
-    TEST_EQUAL( source_type, target_type );
-    TEST_EQUAL( source_bits, target_bits );
-    PSA_ASSERT( psa_get_key_policy( target_handle, &target_policy ) );
-    TEST_EQUAL( expected_usage, psa_key_policy_get_usage( &target_policy ) );
-    TEST_EQUAL( expected_alg, psa_key_policy_get_algorithm( &target_policy ) );
-    if( expected_usage & PSA_KEY_USAGE_EXPORT )
-    {
-        size_t length;
-        ASSERT_ALLOC( export_buffer, material->len );
-        PSA_ASSERT( psa_export_key( target_handle, export_buffer,
-                                    material->len, &length ) );
-        ASSERT_COMPARE( material->x, material->len,
-                        export_buffer, length );
-    }
-    if( ! exercise_key( target_handle, expected_usage, expected_alg ) )
-        goto exit;
-
-    PSA_ASSERT( psa_close_key( target_handle ) );
-
-exit:
-    mbedtls_psa_crypto_free( );
-    mbedtls_free( export_buffer );
-}
-/* END_CASE */
-
-/* BEGIN_CASE */
-void copy_fail( int source_usage_arg, int source_alg_arg,
-                int type_arg, data_t *material,
-                int target_usage_arg, int target_alg_arg,
-                int constraint_usage_arg, int constraint_alg_arg,
-                int expected_status_arg )
-{
-    /* Test copy failure into an empty slot. There is a test for copy failure
-     * into an occupied slot in
-     * test_suite_psa_crypto_slot_management.function. */
-
-    psa_key_usage_t source_usage = source_usage_arg;
-    psa_algorithm_t source_alg = source_alg_arg;
-    psa_key_handle_t source_handle = 0;
-    psa_key_policy_t source_policy = PSA_KEY_POLICY_INIT;
-    psa_key_type_t source_type = type_arg;
-    size_t source_bits;
-    psa_key_usage_t target_usage = target_usage_arg;
-    psa_algorithm_t target_alg = target_alg_arg;
-    psa_key_handle_t target_handle = 0;
-    psa_key_policy_t target_policy = PSA_KEY_POLICY_INIT;
-    psa_key_type_t target_type;
-    size_t target_bits;
-    psa_key_usage_t constraint_usage = constraint_usage_arg;
-    psa_algorithm_t constraint_alg = constraint_alg_arg;
-    psa_key_policy_t constraint = PSA_KEY_POLICY_INIT;
-    psa_key_policy_t *p_constraint = NULL;
-    psa_status_t expected_status = expected_status_arg;
-
-    if( constraint_usage_arg != -1 )
-    {
-        p_constraint = &constraint;
-        psa_key_policy_set_usage( p_constraint,
-                                  constraint_usage, constraint_alg );
-    }
-
-    PSA_ASSERT( psa_crypto_init( ) );
-
-    /* Populate the source slot. */
-    PSA_ASSERT( psa_allocate_key( &source_handle ) );
-    psa_key_policy_set_usage( &source_policy, source_usage, source_alg );
-    PSA_ASSERT( psa_set_key_policy( source_handle, &source_policy ) );
-    PSA_ASSERT( psa_import_key( source_handle, source_type,
-                                material->x, material->len ) );
-    PSA_ASSERT( psa_get_key_information( source_handle, NULL, &source_bits ) );
-
-    /* Prepare the target slot. */
-    PSA_ASSERT( psa_allocate_key( &target_handle ) );
-    psa_key_policy_set_usage( &target_policy, target_usage, target_alg );
-    PSA_ASSERT( psa_set_key_policy( target_handle, &target_policy ) );
-    target_policy = psa_key_policy_init();
-
-    /* Copy the key. */
-    TEST_EQUAL( psa_copy_key( source_handle, target_handle, p_constraint ),
-                expected_status );
-
-    /* Test that the target slot is unaffected. */
-    TEST_EQUAL( psa_get_key_information( target_handle,
-                                         &target_type, &target_bits ),
-                PSA_ERROR_EMPTY_SLOT );
-    PSA_ASSERT( psa_get_key_policy( target_handle, &target_policy ) );
-    TEST_EQUAL( target_usage, psa_key_policy_get_usage( &target_policy ) );
-    TEST_EQUAL( target_alg, psa_key_policy_get_algorithm( &target_policy ) );
-
-exit:
     mbedtls_psa_crypto_free( );
 }
 /* END_CASE */
@@ -3412,7 +3225,7 @@ void asymmetric_decrypt( int key_type_arg,
     size_t output_length = ~0;
     psa_key_policy_t policy = PSA_KEY_POLICY_INIT;
 
-    output_size = expected_data->len;
+    output_size = key_data->len;
     ASSERT_ALLOC( output, output_size );
 
     PSA_ASSERT( psa_crypto_init( ) );
@@ -3464,19 +3277,19 @@ void asymmetric_decrypt_fail( int key_type_arg,
                               int alg_arg,
                               data_t *input_data,
                               data_t *label,
-                              int output_size_arg,
                               int expected_status_arg  )
 {
     psa_key_handle_t handle = 0;
     psa_key_type_t key_type = key_type_arg;
     psa_algorithm_t alg = alg_arg;
     unsigned char *output = NULL;
-    size_t output_size = output_size_arg;
+    size_t output_size = 0;
     size_t output_length = ~0;
     psa_status_t actual_status;
     psa_status_t expected_status = expected_status_arg;
     psa_key_policy_t policy = PSA_KEY_POLICY_INIT;
 
+    output_size = key_data->len;
     ASSERT_ALLOC( output, output_size );
 
     PSA_ASSERT( psa_crypto_init( ) );
@@ -3705,10 +3518,29 @@ void derive_output( int alg_arg,
                                 key_data->len ) );
 
     /* Extraction phase. */
-    PSA_ASSERT( psa_key_derivation( &generator, handle, alg,
-                                    salt->x, salt->len,
-                                    label->x, label->len,
-                                    requested_capacity ) );
+    if( PSA_ALG_IS_HKDF( alg ) )
+    {
+        PSA_ASSERT( psa_key_derivation_setup( &generator, alg ) );
+        PSA_ASSERT( psa_set_generator_capacity( &generator,
+                                                requested_capacity ) );
+        PSA_ASSERT( psa_key_derivation_input_bytes( &generator,
+                                                    PSA_KDF_STEP_SALT,
+                                                    salt->x, salt->len ) );
+        PSA_ASSERT( psa_key_derivation_input_key( &generator,
+                                                  PSA_KDF_STEP_SECRET,
+                                                  handle ) );
+        PSA_ASSERT( psa_key_derivation_input_bytes( &generator,
+                                                    PSA_KDF_STEP_INFO,
+                                                    label->x, label->len ) );
+    }
+    else
+    {
+        // legacy
+        PSA_ASSERT( psa_key_derivation( &generator, handle, alg,
+                                        salt->x, salt->len,
+                                        label->x, label->len,
+                                        requested_capacity ) );
+    }
     PSA_ASSERT( psa_get_generator_capacity( &generator,
                                             &current_capacity ) );
     TEST_EQUAL( current_capacity, requested_capacity );
@@ -3783,10 +3615,29 @@ void derive_full( int alg_arg,
                                 key_data->len ) );
 
     /* Extraction phase. */
-    PSA_ASSERT( psa_key_derivation( &generator, handle, alg,
-                                    salt->x, salt->len,
-                                    label->x, label->len,
-                                    requested_capacity ) );
+    if( PSA_ALG_IS_HKDF( alg ) )
+    {
+        PSA_ASSERT( psa_key_derivation_setup( &generator, alg ) );
+        PSA_ASSERT( psa_set_generator_capacity( &generator,
+                                                requested_capacity ) );
+        PSA_ASSERT( psa_key_derivation_input_bytes( &generator,
+                                                    PSA_KDF_STEP_SALT,
+                                                    salt->x, salt->len ) );
+        PSA_ASSERT( psa_key_derivation_input_key( &generator,
+                                                  PSA_KDF_STEP_SECRET,
+                                                  handle ) );
+        PSA_ASSERT( psa_key_derivation_input_bytes( &generator,
+                                                    PSA_KDF_STEP_INFO,
+                                                    label->x, label->len ) );
+    }
+    else
+    {
+        // legacy
+        PSA_ASSERT( psa_key_derivation( &generator, handle, alg,
+                                        salt->x, salt->len,
+                                        label->x, label->len,
+                                        requested_capacity ) );
+    }
     PSA_ASSERT( psa_get_generator_capacity( &generator,
                                             &current_capacity ) );
     TEST_EQUAL( current_capacity, expected_capacity );
@@ -3988,10 +3839,10 @@ void key_agreement_setup( int alg_arg,
                                 our_key_data->x,
                                 our_key_data->len ) );
 
-    TEST_EQUAL( psa_key_agreement( &generator,
+    PSA_ASSERT( psa_key_derivation_setup( &generator, alg ) );
+    TEST_EQUAL( psa_key_agreement( &generator, PSA_KDF_STEP_SECRET,
                                    our_key,
-                                   peer_key_data->x, peer_key_data->len,
-                                   alg ),
+                                   peer_key_data->x, peer_key_data->len ),
                 expected_status_arg );
 
 exit:
@@ -4024,10 +3875,10 @@ void key_agreement_capacity( int alg_arg,
                                 our_key_data->x,
                                 our_key_data->len ) );
 
-    PSA_ASSERT( psa_key_agreement( &generator,
+    PSA_ASSERT( psa_key_derivation_setup( &generator, alg ) );
+    PSA_ASSERT( psa_key_agreement( &generator, PSA_KDF_STEP_SECRET,
                                    our_key,
-                                   peer_key_data->x, peer_key_data->len,
-                                   alg ) );
+                                   peer_key_data->x, peer_key_data->len ) );
 
     /* Test the advertized capacity. */
     PSA_ASSERT( psa_get_generator_capacity(
@@ -4078,10 +3929,10 @@ void key_agreement_output( int alg_arg,
                                 our_key_data->x,
                                 our_key_data->len ) );
 
-    PSA_ASSERT( psa_key_agreement( &generator,
+    PSA_ASSERT( psa_key_derivation_setup( &generator, alg ) );
+    PSA_ASSERT( psa_key_agreement( &generator, PSA_KDF_STEP_SECRET,
                                    our_key,
-                                   peer_key_data->x, peer_key_data->len,
-                                   alg ) );
+                                   peer_key_data->x, peer_key_data->len ) );
 
     PSA_ASSERT( psa_generator_read( &generator,
                                     actual_output,

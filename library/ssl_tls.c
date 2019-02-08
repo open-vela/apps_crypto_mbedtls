@@ -798,7 +798,7 @@ int mbedtls_ssl_derive_keys( mbedtls_ssl_context *ssl )
             psa_status_t status;
             psa_algorithm_t alg;
             psa_crypto_generator_t generator = PSA_CRYPTO_GENERATOR_INIT;
-            psa_key_handle_t psk;
+            psa_key_slot_t psk;
 
             MBEDTLS_SSL_DEBUG_MSG( 2, ( "perform PSA-based PSK-to-MS expansion" ) );
 
@@ -1499,8 +1499,7 @@ int mbedtls_ssl_psk_derive_premaster( mbedtls_ssl_context *ssl, mbedtls_key_exch
         *(p++) = (unsigned char)( zlen      );
         p += zlen;
 
-        MBEDTLS_SSL_DEBUG_ECDH( 3, &ssl->handshake->ecdh_ctx,
-                                MBEDTLS_DEBUG_ECDH_Z );
+        MBEDTLS_SSL_DEBUG_MPI( 3, "ECDH: z", &ssl->handshake->ecdh_ctx.z );
     }
     else
 #endif /* MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED */
@@ -3367,10 +3366,8 @@ int mbedtls_ssl_write_handshake_msg( mbedtls_ssl_context *ssl )
         }
     }
 
-    /* Whenever we send anything different from a
-     * HelloRequest we should be in a handshake - double check. */
-    if( ! ( ssl->out_msgtype == MBEDTLS_SSL_MSG_HANDSHAKE &&
-            hs_type          == MBEDTLS_SSL_HS_HELLO_REQUEST ) &&
+    if( ssl->out_msgtype == MBEDTLS_SSL_MSG_HANDSHAKE &&
+        hs_type != MBEDTLS_SSL_HS_HELLO_REQUEST &&
         ssl->handshake == NULL )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
@@ -3464,8 +3461,8 @@ int mbedtls_ssl_write_handshake_msg( mbedtls_ssl_context *ssl )
     /* Either send now, or just save to be sent (and resent) later */
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
     if( ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM &&
-        ! ( ssl->out_msgtype == MBEDTLS_SSL_MSG_HANDSHAKE &&
-            hs_type          == MBEDTLS_SSL_HS_HELLO_REQUEST ) )
+        ( ssl->out_msgtype != MBEDTLS_SSL_MSG_HANDSHAKE ||
+          hs_type != MBEDTLS_SSL_HS_HELLO_REQUEST ) )
     {
         if( ( ret = ssl_flight_append( ssl ) ) != 0 )
         {
@@ -7620,7 +7617,7 @@ int mbedtls_ssl_set_hs_psk( mbedtls_ssl_context *ssl,
 
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
 int mbedtls_ssl_conf_psk_opaque( mbedtls_ssl_config *conf,
-                                 psa_key_handle_t psk_slot,
+                                 psa_key_slot_t psk_slot,
                                  const unsigned char *psk_identity,
                                  size_t psk_identity_len )
 {
@@ -7643,7 +7640,7 @@ int mbedtls_ssl_conf_psk_opaque( mbedtls_ssl_config *conf,
 }
 
 int mbedtls_ssl_set_hs_psk_opaque( mbedtls_ssl_context *ssl,
-                                   psa_key_handle_t psk_slot )
+                                   psa_key_slot_t psk_slot )
 {
     if( psk_slot == 0 || ssl->handshake == NULL )
         return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
