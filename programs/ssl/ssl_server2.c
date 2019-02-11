@@ -223,8 +223,12 @@ int main( void )
 #endif /* MBEDTLS_SSL_ASYNC_PRIVATE */
 
 #if defined(MBEDTLS_KEY_EXCHANGE__SOME__PSK_ENABLED)
-#define USAGE_PSK                                                   \
-    "    psk=%%s              default: \"\" (in hex, without 0x)\n" \
+#define USAGE_PSK                                                       \
+    "    psk=%%s              default: \"\" (in hex, without 0x)\n"     \
+    "    psk_list=%%s         default: \"\"\n"                          \
+    "                          A list of (PSK identity, PSK value) pairs.\n" \
+    "                          The PSK values are in hex, without 0x.\n" \
+    "                          id1,psk1[,id2,psk2[,...]]\n"             \
     "    psk_identity=%%s     default: \"Client_identity\"\n"
 #else
 #define USAGE_PSK ""
@@ -411,6 +415,10 @@ int main( void )
     "                                in order from ssl3 to tls1_2\n"    \
     "                                default: all enabled\n"            \
     "    force_ciphersuite=<name>    default: all enabled\n"            \
+    "    query_config=<name>         return 0 if the specified\n"       \
+    "                                configuration macro is defined and 1\n"  \
+    "                                otherwise. The expansion of the macro\n" \
+    "                                is printed if it is defined\n"     \
     " acceptable ciphersuite names:\n"
 
 
@@ -503,6 +511,8 @@ struct options
     int dgram_packing;          /* allow/forbid datagram packing            */
     int badmac_limit;           /* Limit of records with bad MAC            */
 } opt;
+
+int query_config( const char *config );
 
 static void my_debug( void *ctx, int level,
                       const char *file, int line,
@@ -1751,6 +1761,10 @@ int main( int argc, char *argv[] )
         else if( strcmp( p, "sni" ) == 0 )
         {
             opt.sni = q;
+        }
+        else if( strcmp( p, "query_config" ) == 0 )
+        {
+            return query_config( q );
         }
         else
             goto usage;
