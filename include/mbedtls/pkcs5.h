@@ -26,12 +26,6 @@
 #ifndef MBEDTLS_PKCS5_H
 #define MBEDTLS_PKCS5_H
 
-#if !defined(MBEDTLS_CONFIG_FILE)
-#include "config.h"
-#else
-#include MBEDTLS_CONFIG_FILE
-#endif
-
 #include "asn1.h"
 #include "md.h"
 
@@ -91,16 +85,12 @@ int mbedtls_pkcs5_pbkdf2_hmac( mbedtls_md_context_t *ctx, const unsigned char *p
                        unsigned int iteration_count,
                        uint32_t key_length, unsigned char *output );
 
-#if defined(MBEDTLS_SELF_TEST)
-
 /**
  * \brief          Checkup routine
  *
  * \return         0 if successful, or 1 if the test failed
  */
 int mbedtls_pkcs5_self_test( int verbose );
-
-#endif /* MBEDTLS_SELF_TEST */
 
 #ifdef __cplusplus
 }
