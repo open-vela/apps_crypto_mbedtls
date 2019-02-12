@@ -26,7 +26,7 @@ if cd $( dirname $0 ); then :; else
     exit 1
 fi
 
-# default values, can be overridden by the environment
+# default values, can be overriden by the environment
 : ${P_SRV:=../programs/ssl/ssl_server2}
 : ${P_CLI:=../programs/ssl/ssl_client2}
 : ${P_PXY:=../programs/test/udp_proxy}
@@ -165,34 +165,22 @@ requires_config_disabled() {
 }
 
 get_config_value_or_default() {
-    # This function uses the query_config command line option to query the
-    # required Mbed TLS compile time configuration from the ssl_server2
-    # program. The command will always return a success value if the
-    # configuration is defined and the value will be printed to stdout.
-    #
-    # Note that if the configuration is not defined or is defined to nothing,
-    # the output of this function will be an empty string.
-    ${P_SRV} "query_config=${1}"
+    NAME="$1"
+    DEF_VAL=$( grep ".*#define.*${NAME}" ../include/mbedtls/config.h |
+               sed 's/^.*\s\([0-9]*\)$/\1/' )
+    ../scripts/config.pl get $NAME || echo "$DEF_VAL"
 }
 
 requires_config_value_at_least() {
-    VAL="$( get_config_value_or_default "$1" )"
-    if [ -z "$VAL" ]; then
-        # Should never happen
-        echo "Mbed TLS configuration $1 is not defined"
-        exit 1
-    elif [ "$VAL" -lt "$2" ]; then
+    VAL=$( get_config_value_or_default "$1" )
+    if [ "$VAL" -lt "$2" ]; then
        SKIP_NEXT="YES"
     fi
 }
 
 requires_config_value_at_most() {
     VAL=$( get_config_value_or_default "$1" )
-    if [ -z "$VAL" ]; then
-        # Should never happen
-        echo "Mbed TLS configuration $1 is not defined"
-        exit 1
-    elif [ "$VAL" -gt "$2" ]; then
+    if [ "$VAL" -gt "$2" ]; then
        SKIP_NEXT="YES"
     fi
 }
@@ -683,7 +671,7 @@ run_test() {
 
                 # The filtering in the following two options (-u and -U) do the following
                 #   - ignore valgrind output
-                #   - filter out everything but lines right after the pattern occurrences
+                #   - filter out everything but lines right after the pattern occurances
                 #   - keep one of each non-unique line
                 #   - count how many lines remain
                 # A line with '--' will remain in the result from previous outputs, so the number of lines in the result will be 1
@@ -2752,7 +2740,7 @@ run_test    "Authentication: server max_int chain, client default" \
                     key_file=data_files/dir-maxpath/09.key" \
             "$P_CLI server_name=CA09 ca_file=data_files/dir-maxpath/00.crt" \
             0 \
-            -C "X509 - A fatal error occurred"
+            -C "X509 - A fatal error occured"
 
 requires_full_size_output_buffer
 run_test    "Authentication: server max_int+1 chain, client default" \
@@ -2760,7 +2748,7 @@ run_test    "Authentication: server max_int+1 chain, client default" \
                     key_file=data_files/dir-maxpath/10.key" \
             "$P_CLI server_name=CA10 ca_file=data_files/dir-maxpath/00.crt" \
             1 \
-            -c "X509 - A fatal error occurred"
+            -c "X509 - A fatal error occured"
 
 requires_full_size_output_buffer
 run_test    "Authentication: server max_int+1 chain, client optional" \
@@ -2769,7 +2757,7 @@ run_test    "Authentication: server max_int+1 chain, client optional" \
             "$P_CLI server_name=CA10 ca_file=data_files/dir-maxpath/00.crt \
                     auth_mode=optional" \
             1 \
-            -c "X509 - A fatal error occurred"
+            -c "X509 - A fatal error occured"
 
 requires_full_size_output_buffer
 run_test    "Authentication: server max_int+1 chain, client none" \
@@ -2778,7 +2766,7 @@ run_test    "Authentication: server max_int+1 chain, client none" \
             "$P_CLI server_name=CA10 ca_file=data_files/dir-maxpath/00.crt \
                     auth_mode=none" \
             0 \
-            -C "X509 - A fatal error occurred"
+            -C "X509 - A fatal error occured"
 
 requires_full_size_output_buffer
 run_test    "Authentication: client max_int+1 chain, server default" \
@@ -2786,7 +2774,7 @@ run_test    "Authentication: client max_int+1 chain, server default" \
             "$P_CLI crt_file=data_files/dir-maxpath/c10.pem \
                     key_file=data_files/dir-maxpath/10.key" \
             0 \
-            -S "X509 - A fatal error occurred"
+            -S "X509 - A fatal error occured"
 
 requires_full_size_output_buffer
 run_test    "Authentication: client max_int+1 chain, server optional" \
@@ -2794,7 +2782,7 @@ run_test    "Authentication: client max_int+1 chain, server optional" \
             "$P_CLI crt_file=data_files/dir-maxpath/c10.pem \
                     key_file=data_files/dir-maxpath/10.key" \
             1 \
-            -s "X509 - A fatal error occurred"
+            -s "X509 - A fatal error occured"
 
 requires_full_size_output_buffer
 run_test    "Authentication: client max_int+1 chain, server required" \
@@ -2802,7 +2790,7 @@ run_test    "Authentication: client max_int+1 chain, server required" \
             "$P_CLI crt_file=data_files/dir-maxpath/c10.pem \
                     key_file=data_files/dir-maxpath/10.key" \
             1 \
-            -s "X509 - A fatal error occurred"
+            -s "X509 - A fatal error occured"
 
 requires_full_size_output_buffer
 run_test    "Authentication: client max_int chain, server required" \
@@ -2810,7 +2798,7 @@ run_test    "Authentication: client max_int chain, server required" \
             "$P_CLI crt_file=data_files/dir-maxpath/c09.pem \
                     key_file=data_files/dir-maxpath/09.key" \
             0 \
-            -S "X509 - A fatal error occurred"
+            -S "X509 - A fatal error occured"
 
 # Tests for CA list in CertificateRequest messages
 
@@ -4021,7 +4009,7 @@ run_test    "Per-version suites: TLS 1.2" \
 
 requires_gnutls
 run_test    "ClientHello without extensions, SHA-1 allowed" \
-            "$P_SRV debug_level=3" \
+            "$P_SRV debug_level=3 key_file=data_files/server2.key crt_file=data_files/server2.crt" \
             "$G_CLI --priority=NORMAL:%NO_EXTENSIONS:%DISABLE_SAFE_RENEGOTIATION localhost" \
             0 \
             -s "dumping 'client hello extensions' (0 bytes)"
