@@ -137,9 +137,6 @@ pre_initialize_variables () {
         export MAKEFLAGS="-j"
     fi
 
-    # Include more verbose output for failing tests run by CMake
-    export CTEST_OUTPUT_ON_FAILURE=1
-
     # Gather the list of available components. These are the functions
     # defined in this script whose name starts with "component_".
     # Parse the script with sed, because in sh there is no way to list
@@ -710,9 +707,6 @@ component_test_full_cmake_clang () {
 
     msg "test: main suites (full config)" # ~ 5s
     make test
-
-    msg "test: psa_constant_names (full config)" # ~ 1s
-    record_status tests/scripts/test_psa_constant_names.py
 
     msg "test: ssl-opt.sh default, ECJPAKE, SSL async (full config)" # ~ 1s
     if_build_succeeded tests/ssl-opt.sh -f 'Default\|ECJPAKE\|SSL async private'
