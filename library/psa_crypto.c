@@ -1496,8 +1496,7 @@ psa_status_t psa_hash_update( psa_hash_operation_t *operation,
             break;
 #endif
         default:
-            ret = MBEDTLS_ERR_MD_BAD_INPUT_DATA;
-            break;
+            return( PSA_ERROR_BAD_STATE );
     }
 
     if( ret != 0 )
@@ -1569,8 +1568,7 @@ psa_status_t psa_hash_finish( psa_hash_operation_t *operation,
             break;
 #endif
         default:
-            ret = MBEDTLS_ERR_MD_BAD_INPUT_DATA;
-            break;
+            return( PSA_ERROR_BAD_STATE );
     }
     status = mbedtls_to_psa_error( ret );
 
