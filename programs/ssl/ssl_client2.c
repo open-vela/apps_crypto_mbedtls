@@ -35,9 +35,6 @@
 #define mbedtls_printf     printf
 #define mbedtls_fprintf    fprintf
 #define mbedtls_snprintf   snprintf
-#define mbedtls_exit            exit
-#define MBEDTLS_EXIT_SUCCESS    EXIT_SUCCESS
-#define MBEDTLS_EXIT_FAILURE    EXIT_FAILURE
 #endif
 
 #if !defined(MBEDTLS_ENTROPY_C) || \
@@ -347,18 +344,6 @@ int main( void )
 #define ALPN_LIST_SIZE  10
 #define CURVE_LIST_SIZE 20
 
-#if defined(MBEDTLS_CHECK_PARAMS)
-#include "mbedtls/platform_util.h"
-void mbedtls_param_failed( const char *failure_condition,
-                           const char *file,
-                           int line )
-{
-    mbedtls_printf( "%s:%i: Input param failed - %s\n",
-                    file, line, failure_condition );
-    mbedtls_exit( MBEDTLS_EXIT_FAILURE );
-}
-#endif
-
 /*
  * global options
  */
@@ -586,7 +571,7 @@ int main( int argc, char *argv[] )
     const char *pers = "ssl_client2";
 
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
-    psa_key_handle_t slot = 0;
+    psa_key_slot_t slot = 0;
     psa_algorithm_t alg = 0;
     psa_key_policy_t policy;
     psa_status_t status;
@@ -609,7 +594,7 @@ int main( int argc, char *argv[] )
     mbedtls_x509_crt clicert;
     mbedtls_pk_context pkey;
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
-    psa_key_handle_t key_slot = 0; /* invalid key slot */
+    psa_key_slot_t key_slot = 0; /* invalid key slot */
 #endif
 #endif
     char *p, *q;
@@ -1609,14 +1594,14 @@ int main( int argc, char *argv[] )
     if( opt.psk_opaque != 0 )
     {
         /* The algorithm has already been determined earlier. */
-        status = psa_allocate_key( &slot );
+        status = mbedtls_psa_get_free_key_slot( &slot );
         if( status != PSA_SUCCESS )
         {
             ret = MBEDTLS_ERR_SSL_HW_ACCEL_FAILED;
             goto exit;
         }
 
-        policy = psa_key_policy_init();
+        psa_key_policy_init( &policy );
         psa_key_policy_set_usage( &policy, PSA_KEY_USAGE_DERIVE, alg );
 
         status = psa_set_key_policy( slot, &policy );
