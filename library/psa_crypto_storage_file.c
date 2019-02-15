@@ -36,7 +36,6 @@
 #if defined(MBEDTLS_PLATFORM_C)
 #include "mbedtls/platform.h"
 #else
-#include <stdio.h>
 #define mbedtls_snprintf snprintf
 #endif
 
