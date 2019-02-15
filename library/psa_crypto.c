@@ -2232,6 +2232,11 @@ psa_status_t psa_mac_sign_finish( psa_mac_operation_t *operation,
 {
     psa_status_t status;
 
+    if( operation->alg == 0 )
+    {
+        return( PSA_ERROR_BAD_STATE );
+    }
+
     /* Fill the output buffer with something that isn't a valid mac
      * (barring an attack on the mac and deliberately-crafted input),
      * in case the caller doesn't check the return status properly. */
@@ -2269,6 +2274,11 @@ psa_status_t psa_mac_verify_finish( psa_mac_operation_t *operation,
 {
     uint8_t actual_mac[PSA_MAC_MAX_SIZE];
     psa_status_t status;
+
+    if( operation->alg == 0 )
+    {
+        return( PSA_ERROR_BAD_STATE );
+    }
 
     if( operation->is_sign )
     {
