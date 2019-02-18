@@ -137,6 +137,9 @@ pre_initialize_variables () {
         export MAKEFLAGS="-j"
     fi
 
+    # Include more verbose output for failing tests run by CMake
+    export CTEST_OUTPUT_ON_FAILURE=1
+
     # Gather the list of available components. These are the functions
     # defined in this script whose name starts with "component_".
     # Parse the script with sed, because in sh there is no way to list
@@ -224,7 +227,7 @@ cleanup()
     command make clean
 
     # Remove CMake artefacts
-    find . -name .git -prune \
+    find . -name .git -prune -o \
            -iname CMakeFiles -exec rm -rf {} \+ -o \
            \( -iname cmake_install.cmake -o \
               -iname CTestTestfile.cmake -o \
@@ -387,6 +390,12 @@ pre_check_git () {
             echo "script as: $0 --force"
             exit 1
         fi
+    fi
+}
+
+pre_check_seedfile () {
+    if [ ! -f "./tests/seedfile" ]; then
+        dd if=/dev/urandom of=./tests/seedfile bs=32 count=1
     fi
 }
 
@@ -585,7 +594,6 @@ component_check_doxygen_warnings () {
 }
 
 
-
 ################################################################
 #### Build and test many configurations and targets
 ################################################################
@@ -709,6 +717,9 @@ component_test_full_cmake_clang () {
     msg "test: main suites (full config)" # ~ 5s
     make test
 
+    msg "test: psa_constant_names (full config)" # ~ 1s
+    record_status tests/scripts/test_psa_constant_names.py
+
     msg "test: ssl-opt.sh default, ECJPAKE, SSL async (full config)" # ~ 1s
     if_build_succeeded tests/ssl-opt.sh -f 'Default\|ECJPAKE\|SSL async private'
 
@@ -769,6 +780,35 @@ component_build_default_make_gcc_and_cxx () {
     make TEST_CPP=1
 }
 
+component_test_use_psa_crypto_full_cmake_asan() {
+    # MBEDTLS_USE_PSA_CRYPTO: run the same set of tests as basic-build-test.sh
+    msg "build: cmake, full config + MBEDTLS_USE_PSA_CRYPTO, ASan"
+    scripts/config.pl full
+    scripts/config.pl unset MBEDTLS_MEMORY_BACKTRACE # too slow for tests
+    scripts/config.pl set MBEDTLS_PSA_CRYPTO_C
+    scripts/config.pl set MBEDTLS_USE_PSA_CRYPTO
+    CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
+    make
+
+    msg "test: main suites (MBEDTLS_USE_PSA_CRYPTO)"
+    make test
+
+    msg "test: ssl-opt.sh (MBEDTLS_USE_PSA_CRYPTO)"
+    if_build_succeeded tests/ssl-opt.sh
+
+    msg "test: compat.sh default (MBEDTLS_USE_PSA_CRYPTO)"
+    if_build_succeeded tests/compat.sh
+
+    msg "test: compat.sh ssl3 (MBEDTLS_USE_PSA_CRYPTO)"
+    if_build_succeeded env OPENSSL_CMD="$OPENSSL_LEGACY" tests/compat.sh -m 'ssl3'
+
+    msg "test: compat.sh RC4, DES & NULL (MBEDTLS_USE_PSA_CRYPTO)"
+    if_build_succeeded env OPENSSL_CMD="$OPENSSL_LEGACY" GNUTLS_CLI="$GNUTLS_LEGACY_CLI" GNUTLS_SERV="$GNUTLS_LEGACY_SERV" tests/compat.sh -e '3DES\|DES-CBC3' -f 'NULL\|DES\|RC4\|ARCFOUR'
+
+    msg "test: compat.sh ARIA + ChachaPoly (MBEDTLS_USE_PSA_CRYPTO)"
+    if_build_succeeded env OPENSSL_CMD="$OPENSSL_NEXT" tests/compat.sh -e '^$' -f 'ARIA\|CHACHA'
+}
+
 component_test_check_params_without_platform () {
     msg "build+test: MBEDTLS_CHECK_PARAMS without MBEDTLS_PLATFORM_C"
     scripts/config.pl full # includes CHECK_PARAMS
@@ -810,6 +850,8 @@ component_test_no_platform () {
     scripts/config.pl unset MBEDTLS_ENTROPY_NV_SEED
     scripts/config.pl unset MBEDTLS_MEMORY_BUFFER_ALLOC_C
     scripts/config.pl unset MBEDTLS_FS_IO
+    scripts/config.pl unset MBEDTLS_PSA_CRYPTO_STORAGE_FILE_C
+    scripts/config.pl unset MBEDTLS_PSA_CRYPTO_STORAGE_C
     # Note, _DEFAULT_SOURCE needs to be defined for platforms using glibc version >2.19,
     # to re-enable platform integration features otherwise disabled in C99 builds
     make CC=gcc CFLAGS='-Werror -Wall -Wextra -std=c99 -pedantic -O0 -D_DEFAULT_SOURCE' lib programs
@@ -1026,6 +1068,8 @@ component_build_arm_none_eabi_gcc () {
     scripts/config.pl unset MBEDTLS_NET_C
     scripts/config.pl unset MBEDTLS_TIMING_C
     scripts/config.pl unset MBEDTLS_FS_IO
+    scripts/config.pl unset MBEDTLS_PSA_CRYPTO_STORAGE_FILE_C
+    scripts/config.pl unset MBEDTLS_PSA_CRYPTO_STORAGE_C
     scripts/config.pl unset MBEDTLS_ENTROPY_NV_SEED
     scripts/config.pl set MBEDTLS_NO_PLATFORM_ENTROPY
     # following things are not in the default config
@@ -1043,6 +1087,8 @@ component_build_arm_none_eabi_gcc_no_udbl_division () {
     scripts/config.pl unset MBEDTLS_NET_C
     scripts/config.pl unset MBEDTLS_TIMING_C
     scripts/config.pl unset MBEDTLS_FS_IO
+    scripts/config.pl unset MBEDTLS_PSA_CRYPTO_STORAGE_FILE_C
+    scripts/config.pl unset MBEDTLS_PSA_CRYPTO_STORAGE_C
     scripts/config.pl unset MBEDTLS_ENTROPY_NV_SEED
     scripts/config.pl set MBEDTLS_NO_PLATFORM_ENTROPY
     # following things are not in the default config
@@ -1063,6 +1109,8 @@ component_build_arm_none_eabi_gcc_no_64bit_multiplication () {
     scripts/config.pl unset MBEDTLS_NET_C
     scripts/config.pl unset MBEDTLS_TIMING_C
     scripts/config.pl unset MBEDTLS_FS_IO
+    scripts/config.pl unset MBEDTLS_PSA_CRYPTO_STORAGE_FILE_C
+    scripts/config.pl unset MBEDTLS_PSA_CRYPTO_STORAGE_C
     scripts/config.pl unset MBEDTLS_ENTROPY_NV_SEED
     scripts/config.pl set MBEDTLS_NO_PLATFORM_ENTROPY
     # following things are not in the default config
@@ -1083,6 +1131,8 @@ component_build_armcc () {
     scripts/config.pl unset MBEDTLS_NET_C
     scripts/config.pl unset MBEDTLS_TIMING_C
     scripts/config.pl unset MBEDTLS_FS_IO
+    scripts/config.pl unset MBEDTLS_PSA_CRYPTO_STORAGE_FILE_C
+    scripts/config.pl unset MBEDTLS_PSA_CRYPTO_STORAGE_C
     scripts/config.pl unset MBEDTLS_ENTROPY_NV_SEED
     scripts/config.pl unset MBEDTLS_HAVE_TIME
     scripts/config.pl unset MBEDTLS_HAVE_TIME_DATE
@@ -1280,6 +1330,8 @@ pre_initialize_variables
 pre_parse_command_line "$@"
 
 pre_check_git
+pre_check_seedfile
+
 build_status=0
 if [ $KEEP_GOING -eq 1 ]; then
     pre_setup_keep_going
