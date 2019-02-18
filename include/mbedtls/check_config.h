@@ -50,6 +50,11 @@
     !defined(MBEDTLS_PLATFORM_SNPRINTF_MACRO)
 #define MBEDTLS_PLATFORM_SNPRINTF_ALT
 #endif
+
+#if !defined(MBEDTLS_PLATFORM_VSNPRINTF_ALT) && \
+    !defined(MBEDTLS_PLATFORM_VSNPRINTF_MACRO)
+#define MBEDTLS_PLATFORM_VSNPRINTF_ALT
+#endif
 #endif /* _WIN32 */
 
 #if defined(TARGET_LIKE_MBED) && \
@@ -501,38 +506,6 @@
 #error "MBEDTLS_PLATFORM_NV_SEED_WRITE_MACRO and MBEDTLS_PLATFORM_STD_NV_SEED_WRITE cannot be defined simultaneously"
 #endif
 
-#if defined(MBEDTLS_PSA_CRYPTO_C) &&            \
-    !( defined(MBEDTLS_CTR_DRBG_C) &&           \
-       defined(MBEDTLS_ENTROPY_C) )
-#error "MBEDTLS_PSA_CRYPTO_C defined, but not all prerequisites"
-#endif
-
-#if defined(MBEDTLS_PSA_CRYPTO_SPM) && !defined(MBEDTLS_PSA_CRYPTO_C)
-#error "MBEDTLS_PSA_CRYPTO_SPM defined, but not all prerequisites"
-#endif
-
-#if defined(MBEDTLS_PSA_CRYPTO_STORAGE_FILE_C) && defined(MBEDTLS_PSA_CRYPTO_STORAGE_ITS_C)
-#error "Only one of MBEDTLS_PSA_CRYPTO_STORAGE_FILE_C or MBEDTLS_PSA_CRYPTO_STORAGE_ITS_C can be defined"
-#endif
-
-#if defined(MBEDTLS_PSA_CRYPTO_STORAGE_C) &&            \
-    !( defined(MBEDTLS_PSA_CRYPTO_C) &&                 \
-       ( defined(MBEDTLS_PSA_CRYPTO_STORAGE_FILE_C) ||  \
-         defined(MBEDTLS_PSA_CRYPTO_STORAGE_ITS_C) ) )
-#error "MBEDTLS_PSA_CRYPTO_STORAGE_C defined, but not all prerequisites"
-#endif
-
-#if defined(MBEDTLS_PSA_CRYPTO_STORAGE_FILE_C) &&            \
-    !( defined(MBEDTLS_PSA_CRYPTO_STORAGE_C) &&           \
-       defined(MBEDTLS_FS_IO) )
-#error "MBEDTLS_PSA_CRYPTO_STORAGE_FILE_C defined, but not all prerequisites"
-#endif
-
-#if defined(MBEDTLS_PSA_CRYPTO_STORAGE_ITS_C) &&             \
-    ! defined(MBEDTLS_PSA_CRYPTO_STORAGE_C)
-#error "MBEDTLS_PSA_CRYPTO_STORAGE_ITS_C defined, but not all prerequisites"
-#endif
-
 #if defined(MBEDTLS_RSA_C) && ( !defined(MBEDTLS_BIGNUM_C) ||         \
     !defined(MBEDTLS_OID_C) )
 #error "MBEDTLS_RSA_C defined, but not all prerequisites"
@@ -675,10 +648,6 @@
 #endif
 #undef MBEDTLS_THREADING_IMPL
 
-#if defined(MBEDTLS_USE_PSA_CRYPTO) && !defined(MBEDTLS_PSA_CRYPTO_C)
-#error "MBEDTLS_USE_PSA_CRYPTO defined, but not all prerequisites"
-#endif
-
 #if defined(MBEDTLS_VERSION_FEATURES) && !defined(MBEDTLS_VERSION_C)
 #error "MBEDTLS_VERSION_FEATURES defined, but not all prerequisites"
 #endif
@@ -727,7 +696,7 @@
 /*
  * Avoid warning from -pedantic. This is a convenient place for this
  * workaround since this is included by every single file before the
- * #if defined(MBEDTLS_xxx_C) that results in emtpy translation units.
+ * #if defined(MBEDTLS_xxx_C) that results in empty translation units.
  */
 typedef int mbedtls_iso_c_forbids_empty_translation_units;
 
