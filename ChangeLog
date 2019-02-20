@@ -36,10 +36,6 @@ Changes
      e.g. RSA or ECC signature operations. Reported in #1722, fix suggested
      by Aurelien Jarno and submitted by Jeffrey Martin.
 
-Features
-   * Add a new function mbedtls_asn1_write_named_bitstring() to write ASN.1
-     named bitstring in DER as required by RFC 5280 Appendix B.
-
 = mbed TLS 2.16.0 branch released 2018-12-21
 
 Features
