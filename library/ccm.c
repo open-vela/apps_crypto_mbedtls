@@ -134,17 +134,11 @@ void mbedtls_ccm_free( mbedtls_ccm_context *ctx )
  * This avoids allocating one more 16 bytes buffer while allowing src == dst.
  */
 #define CTR_CRYPT( dst, src, len  )                                            \
-    do                                                                  \
-    {                                                                   \
-        if( ( ret = mbedtls_cipher_update( &ctx->cipher_ctx, ctr,       \
-                                           16, b, &olen ) ) != 0 )      \
-        {                                                               \
-            return( ret );                                              \
-        }                                                               \
-                                                                        \
-        for( i = 0; i < (len); i++ )                                    \
-            (dst)[i] = (src)[i] ^ b[i];                                 \
-    } while( 0 )
+    if( ( ret = mbedtls_cipher_update( &ctx->cipher_ctx, ctr, 16, b, &olen ) ) != 0 )  \
+        return( ret );                                                         \
+                                                                               \
+    for( i = 0; i < len; i++ )                                                 \
+        dst[i] = src[i] ^ b[i];
 
 /*
  * Authenticated encryption or decryption

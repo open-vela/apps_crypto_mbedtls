@@ -615,14 +615,11 @@ static int get_auth_mode( const char *s )
  * Used by sni_parse and psk_parse to handle coma-separated lists
  */
 #define GET_ITEM( dst )         \
-    do                          \
-    {                           \
-        (dst) = p;              \
-        while( *p != ',' )      \
-            if( ++p > end )     \
-                goto error;     \
-        *p++ = '\0';            \
-    } while( 0 )
+    dst = p;                    \
+    while( *p != ',' )          \
+        if( ++p > end )         \
+            goto error;         \
+    *p++ = '\0';
 
 #if defined(SNI_OPTION)
 typedef struct _sni_entry sni_entry;
@@ -779,18 +776,15 @@ int sni_callback( void *p_info, mbedtls_ssl_context *ssl,
 
 #if defined(MBEDTLS_KEY_EXCHANGE__SOME__PSK_ENABLED)
 
-#define HEX2NUM( c )                        \
-    do                                      \
-    {                                       \
-        if( (c) >= '0' && (c) <= '9' )      \
-            (c) -= '0';                     \
-        else if( (c) >= 'a' && (c) <= 'f' ) \
-            (c) -= 'a' - 10;                \
-        else if( (c) >= 'A' && (c) <= 'F' ) \
-            (c) -= 'A' - 10;                \
-        else                                \
-            return( -1 );                   \
-    } while( 0 )
+#define HEX2NUM( c )                    \
+        if( c >= '0' && c <= '9' )      \
+            c -= '0';                   \
+        else if( c >= 'a' && c <= 'f' ) \
+            c -= 'a' - 10;              \
+        else if( c >= 'A' && c <= 'F' ) \
+            c -= 'A' - 10;              \
+        else                            \
+            return( -1 );
 
 /*
  * Convert a hex string to bytes.
