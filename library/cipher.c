@@ -1110,6 +1110,8 @@ int mbedtls_cipher_write_tag( mbedtls_cipher_context_t *ctx,
          * operations, we currently don't make it
          * accessible through the cipher layer. */
         return( MBEDTLS_ERR_CIPHER_FEATURE_UNAVAILABLE );
+
+        return( 0 );
     }
 #endif /* MBEDTLS_USE_PSA_CRYPTO */
 
@@ -1236,7 +1238,7 @@ int mbedtls_cipher_crypt( mbedtls_cipher_context_t *ctx,
             (mbedtls_cipher_context_psa *) ctx->cipher_ctx;
 
         psa_status_t status;
-        psa_cipher_operation_t cipher_op = PSA_CIPHER_OPERATION_INIT;
+        psa_cipher_operation_t cipher_op;
         size_t part_len;
 
         if( ctx->operation == MBEDTLS_DECRYPT )
