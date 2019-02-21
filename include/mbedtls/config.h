@@ -1147,31 +1147,6 @@
 //#define MBEDTLS_ENTROPY_NV_SEED
 
 /**
- * \def MBEDTLS_PSA_HAS_ITS_IO
- *
- * Enable the non-volatile secure storage usage.
- *
- * This is crucial on systems that do not have a HW TRNG support.
- *
- */
-//#define MBEDTLS_PSA_HAS_ITS_IO
-
-/* MBEDTLS_PSA_CRYPTO_KEY_FILE_ID_ENCODES_OWNER
- *
- * In PSA key storage, encode the owner of the key.
- *
- * This is only meaningful when building the library as part of a
- * multi-client service. When you activate this option, you must provide
- * an implementation of the type psa_key_owner_id_t and a translation
- * from psa_key_file_id_t to file name in all the storage backends that
- * you wish to support.
- *
- * Note that this option is meant for internal use only and may be removed
- * without notice.
- */
-//#define MBEDTLS_PSA_CRYPTO_KEY_FILE_ID_ENCODES_OWNER
-
-/**
  * \def MBEDTLS_MEMORY_DEBUG
  *
  * Enable debugging of buffer allocator memory issues. Automatically prints
@@ -2156,7 +2131,7 @@
  * Requires: MBEDTLS_AES_C or MBEDTLS_DES_C
  *
  */
-#define MBEDTLS_CMAC_C
+//#define MBEDTLS_CMAC_C
 
 /**
  * \def MBEDTLS_CTR_DRBG_C
@@ -2705,12 +2680,19 @@
  *
  * Enable the Platform Security Architecture cryptography API.
  *
- * Module:  library/psa_crypto.c
+ * \note This option only has an effect when the build option
+ * USE_CRYPTO_SUBMODULE is also in use.
+ *
+ * \warning This feature is experimental and available on an opt-in basis only.
+ * PSA APIs are subject to change at any time. The implementation comes with
+ * less assurance and support than the rest of Mbed TLS.
+ *
+ * Module:  crypto/library/psa_crypto.c
  *
  * Requires: MBEDTLS_CTR_DRBG_C, MBEDTLS_ENTROPY_C
  *
  */
-#define MBEDTLS_PSA_CRYPTO_C
+//#define MBEDTLS_PSA_CRYPTO_C
 
 /**
  * \def MBEDTLS_PSA_CRYPTO_STORAGE_C
@@ -2724,7 +2706,7 @@
  * (but not both)
  *
  */
-#define MBEDTLS_PSA_CRYPTO_STORAGE_C
+//#define MBEDTLS_PSA_CRYPTO_STORAGE_C
 
 /**
  * \def MBEDTLS_PSA_CRYPTO_STORAGE_FILE_C
@@ -2737,7 +2719,7 @@
  * Requires: MBEDTLS_PSA_CRYPTO_C, MBEDTLS_FS_IO
  *
  */
-#define MBEDTLS_PSA_CRYPTO_STORAGE_FILE_C
+//#define MBEDTLS_PSA_CRYPTO_STORAGE_FILE_C
 
 /**
  * \def MBEDTLS_PSA_CRYPTO_STORAGE_ITS_C
