@@ -50,11 +50,6 @@
     !defined(MBEDTLS_PLATFORM_SNPRINTF_MACRO)
 #define MBEDTLS_PLATFORM_SNPRINTF_ALT
 #endif
-
-#if !defined(MBEDTLS_PLATFORM_VSNPRINTF_ALT) && \
-    !defined(MBEDTLS_PLATFORM_VSNPRINTF_MACRO)
-#define MBEDTLS_PLATFORM_VSNPRINTF_ALT
-#endif
 #endif /* _WIN32 */
 
 #if defined(TARGET_LIKE_MBED) && \
@@ -119,14 +114,8 @@
       defined(MBEDTLS_ECDSA_SIGN_ALT)          || \
       defined(MBEDTLS_ECDSA_VERIFY_ALT)        || \
       defined(MBEDTLS_ECDSA_GENKEY_ALT)        || \
-      defined(MBEDTLS_ECP_INTERNAL_ALT)        || \
       defined(MBEDTLS_ECP_ALT) )
 #error "MBEDTLS_ECP_RESTARTABLE defined, but it cannot coexist with an alternative ECP implementation"
-#endif
-
-#if defined(MBEDTLS_ECP_RESTARTABLE)           && \
-    ! defined(MBEDTLS_ECDH_LEGACY_CONTEXT)
-#error "MBEDTLS_ECP_RESTARTABLE defined, but not MBEDTLS_ECDH_LEGACY_CONTEXT"
 #endif
 
 #if defined(MBEDTLS_ECDSA_DETERMINISTIC) && !defined(MBEDTLS_HMAC_DRBG_C)
@@ -146,10 +135,6 @@
     !defined(MBEDTLS_ECP_DP_SECP224K1_ENABLED) &&                  \
     !defined(MBEDTLS_ECP_DP_SECP256K1_ENABLED) ) )
 #error "MBEDTLS_ECP_C defined, but not all prerequisites"
-#endif
-
-#if defined(MBEDTLS_PK_PARSE_C) && !defined(MBEDTLS_ASN1_PARSE_C)
-#error "MBEDTLS_PK_PARSE_C defined, but not all prerequesites"
 #endif
 
 #if defined(MBEDTLS_ENTROPY_C) && (!defined(MBEDTLS_SHA512_C) &&      \
@@ -737,7 +722,7 @@
 /*
  * Avoid warning from -pedantic. This is a convenient place for this
  * workaround since this is included by every single file before the
- * #if defined(MBEDTLS_xxx_C) that results in empty translation units.
+ * #if defined(MBEDTLS_xxx_C) that results in emtpy translation units.
  */
 typedef int mbedtls_iso_c_forbids_empty_translation_units;
 
