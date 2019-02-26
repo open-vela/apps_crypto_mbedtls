@@ -45,7 +45,6 @@
 #include "mbedtls/cipher.h"
 #include "mbedtls/cipher_internal.h"
 #include "mbedtls/cmac.h"
-#include "mbedtls/compat-1.3.h"
 #include "mbedtls/ctr_drbg.h"
 #include "mbedtls/debug.h"
 #include "mbedtls/des.h"
@@ -81,6 +80,7 @@
 #include "mbedtls/platform_time.h"
 #include "mbedtls/platform_util.h"
 #include "mbedtls/poly1305.h"
+#include "mbedtls/psa_util.h"
 #include "mbedtls/ripemd160.h"
 #include "mbedtls/rsa.h"
 #include "mbedtls/rsa_internal.h"
@@ -96,10 +96,6 @@
 #include "mbedtls/threading.h"
 #include "mbedtls/timing.h"
 #include "mbedtls/version.h"
-#include "mbedtls/x509.h"
-#include "mbedtls/x509_crl.h"
-#include "mbedtls/x509_crt.h"
-#include "mbedtls/x509_csr.h"
 #include "mbedtls/xtea.h"
 
 #if defined(MBEDTLS_PLATFORM_C)
