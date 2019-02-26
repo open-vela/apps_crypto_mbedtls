@@ -482,7 +482,7 @@ void mbedtls_ecp_point_init( mbedtls_ecp_point *pt );
  *
  * \note            After this function is called, domain parameters
  *                  for various ECP groups can be loaded through the
- *                  mbedtls_ecp_group_load() or mbedtls_ecp_tls_read_group()
+ *                  mbedtls_ecp_load() or mbedtls_ecp_tls_read_group()
  *                  functions.
  */
 void mbedtls_ecp_group_init( mbedtls_ecp_group *grp );
@@ -1093,22 +1093,6 @@ int mbedtls_ecp_gen_key( mbedtls_ecp_group_id grp_id, mbedtls_ecp_keypair *key,
                          int (*f_rng)(void *, unsigned char *, size_t),
                          void *p_rng );
 
-/**
- * \brief           This function reads an ECP key.
- *
- * \param grp_id    The ECP group identifier.
- * \param key       The destination key.
- * \param buf       The the buffer containing the binary representation of the
- *                  key. (Big endian integer for Weierstrass curves, byte
- *                  string for Montgomery curves.)
- * \param buflen    The length of the buffer in bytes.
- *
- * \return          \c 0 on success.
- * \return          An \c MBEDTLS_ERR_ECP_XXX or \c MBEDTLS_MPI_XXX error code
- *                  on failure.
- */
-int mbedtls_ecp_read_key( mbedtls_ecp_group_id grp_id, mbedtls_ecp_keypair *key,
-                          const unsigned char *buf, size_t buflen );
 /**
  * \brief           This function checks that the keypair objects
  *                  \p pub and \p prv have the same group and the
