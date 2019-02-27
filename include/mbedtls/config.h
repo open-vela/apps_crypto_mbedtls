@@ -740,38 +740,9 @@
  *
  * \note  This option only works with the default software implementation of
  *        elliptic curve functionality. It is incompatible with
- *        MBEDTLS_ECP_ALT, MBEDTLS_ECDH_XXX_ALT, MBEDTLS_ECDSA_XXX_ALT
- *        and MBEDTLS_ECDH_LEGACY_CONTEXT.
+ *        MBEDTLS_ECP_ALT, MBEDTLS_ECDH_XXX_ALT and MBEDTLS_ECDSA_XXX_ALT.
  */
 //#define MBEDTLS_ECP_RESTARTABLE
-
-/**
- * \def MBEDTLS_ECDH_LEGACY_CONTEXT
- *
- * Use a backward compatible ECDH context.
- *
- * Mbed TLS supports two formats for ECDH contexts (#mbedtls_ecdh_context
- * defined in `ecdh.h`). For most applications, the choice of format makes
- * no difference, since all library functions can work with either format,
- * except that the new format is incompatible with MBEDTLS_ECP_RESTARTABLE.
-
- * The new format used when this option is disabled is smaller
- * (56 bytes on a 32-bit platform). In future versions of the library, it
- * will support alternative implementations of ECDH operations.
- * The new format is incompatible with applications that access
- * context fields directly and with restartable ECP operations.
- *
- * Define this macro if you enable MBEDTLS_ECP_RESTARTABLE or if you
- * want to access ECDH context fields directly. Otherwise you should
- * comment out this macro definition.
- *
- * This option has no effect if #MBEDTLS_ECDH_C is not enabled.
- *
- * \note This configuration option is experimental. Future versions of the
- *       library may modify the way the ECDH context layout is configured
- *       and may modify the layout of the new context type.
- */
-#define MBEDTLS_ECDH_LEGACY_CONTEXT
 
 /**
  * \def MBEDTLS_ECDSA_DETERMINISTIC
@@ -1174,6 +1145,31 @@
  *       given to an external source, to update it.
  */
 //#define MBEDTLS_ENTROPY_NV_SEED
+
+/**
+ * \def MBEDTLS_PSA_HAS_ITS_IO
+ *
+ * Enable the non-volatile secure storage usage.
+ *
+ * This is crucial on systems that do not have a HW TRNG support.
+ *
+ */
+//#define MBEDTLS_PSA_HAS_ITS_IO
+
+/* MBEDTLS_PSA_CRYPTO_KEY_FILE_ID_ENCODES_OWNER
+ *
+ * In PSA key storage, encode the owner of the key.
+ *
+ * This is only meaningful when building the library as part of a
+ * multi-client service. When you activate this option, you must provide
+ * an implementation of the type psa_key_owner_id_t and a translation
+ * from psa_key_file_id_t to file name in all the storage backends that
+ * you wish to support.
+ *
+ * Note that this option is meant for internal use only and may be removed
+ * without notice.
+ */
+//#define MBEDTLS_PSA_CRYPTO_KEY_FILE_ID_ENCODES_OWNER
 
 /**
  * \def MBEDTLS_MEMORY_DEBUG
@@ -2160,7 +2156,7 @@
  * Requires: MBEDTLS_AES_C or MBEDTLS_DES_C
  *
  */
-//#define MBEDTLS_CMAC_C
+#define MBEDTLS_CMAC_C
 
 /**
  * \def MBEDTLS_CTR_DRBG_C
@@ -2709,19 +2705,12 @@
  *
  * Enable the Platform Security Architecture cryptography API.
  *
- * \note This option only has an effect when the build option
- * USE_CRYPTO_SUBMODULE is also in use.
- *
- * \warning This feature is experimental and available on an opt-in basis only.
- * PSA APIs are subject to change at any time. The implementation comes with
- * less assurance and support than the rest of Mbed TLS.
- *
- * Module:  crypto/library/psa_crypto.c
+ * Module:  library/psa_crypto.c
  *
  * Requires: MBEDTLS_CTR_DRBG_C, MBEDTLS_ENTROPY_C
  *
  */
-//#define MBEDTLS_PSA_CRYPTO_C
+#define MBEDTLS_PSA_CRYPTO_C
 
 /**
  * \def MBEDTLS_PSA_CRYPTO_STORAGE_C
@@ -2735,7 +2724,7 @@
  * (but not both)
  *
  */
-//#define MBEDTLS_PSA_CRYPTO_STORAGE_C
+#define MBEDTLS_PSA_CRYPTO_STORAGE_C
 
 /**
  * \def MBEDTLS_PSA_CRYPTO_STORAGE_FILE_C
@@ -2748,7 +2737,7 @@
  * Requires: MBEDTLS_PSA_CRYPTO_C, MBEDTLS_FS_IO
  *
  */
-//#define MBEDTLS_PSA_CRYPTO_STORAGE_FILE_C
+#define MBEDTLS_PSA_CRYPTO_STORAGE_FILE_C
 
 /**
  * \def MBEDTLS_PSA_CRYPTO_STORAGE_ITS_C
