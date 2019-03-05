@@ -688,6 +688,26 @@
 #define MBEDTLS_REMOVE_ARC4_CIPHERSUITES
 
 /**
+ * \def MBEDTLS_REMOVE_3DES_CIPHERSUITES
+ *
+ * Remove 3DES ciphersuites by default in SSL / TLS.
+ * This flag removes the ciphersuites based on 3DES from the default list as
+ * returned by mbedtls_ssl_list_ciphersuites(). However, it is still possible
+ * to enable (some of) them with mbedtls_ssl_conf_ciphersuites() by including
+ * them explicitly.
+ *
+ * A man-in-the-browser attacker can recover authentication tokens sent through
+ * a TLS connection using a 3DES based cipher suite (see "On the Practical
+ * (In-)Security of 64-bit Block Ciphers" by Karthikeyan Bhargavan and Gaëtan
+ * Leurent, see https://sweet32.info/SWEET32_CCS16.pdf). If this attack falls
+ * in your threat model or you are unsure, then you should keep this option
+ * enabled to remove 3DES based cipher suites.
+ *
+ * Comment this macro to keep 3DES in the default ciphersuite list.
+ */
+#define MBEDTLS_REMOVE_3DES_CIPHERSUITES
+
+/**
  * \def MBEDTLS_ECP_DP_SECP192R1_ENABLED
  *
  * MBEDTLS_ECP_XXXX_ENABLED: Enables specific curves within the Elliptic Curve
@@ -1147,31 +1167,6 @@
 //#define MBEDTLS_ENTROPY_NV_SEED
 
 /**
- * \def MBEDTLS_PSA_HAS_ITS_IO
- *
- * Enable the non-volatile secure storage usage.
- *
- * This is crucial on systems that do not have a HW TRNG support.
- *
- */
-//#define MBEDTLS_PSA_HAS_ITS_IO
-
-/* MBEDTLS_PSA_CRYPTO_KEY_FILE_ID_ENCODES_OWNER
- *
- * In PSA key storage, encode the owner of the key.
- *
- * This is only meaningful when building the library as part of a
- * multi-client service. When you activate this option, you must provide
- * an implementation of the type psa_key_owner_id_t and a translation
- * from psa_key_file_id_t to file name in all the storage backends that
- * you wish to support.
- *
- * Note that this option is meant for internal use only and may be removed
- * without notice.
- */
-//#define MBEDTLS_PSA_CRYPTO_KEY_FILE_ID_ENCODES_OWNER
-
-/**
  * \def MBEDTLS_MEMORY_DEBUG
  *
  * Enable debugging of buffer allocator memory issues. Automatically prints
@@ -1378,6 +1373,28 @@
  * Comment this macro to disable support for FALLBACK_SCSV
  */
 #define MBEDTLS_SSL_FALLBACK_SCSV
+
+/**
+ * \def MBEDTLS_SSL_KEEP_PEER_CERTIFICATE
+ *
+ * This option controls the availability of the API mbedtls_ssl_get_peer_cert()
+ * giving access to the peer's certificate after completion of the handshake.
+ *
+ * Unless you need mbedtls_ssl_peer_cert() in your application, it is
+ * recommended to disable this option for reduced RAM usage.
+ *
+ * \note If this option is disabled, mbedtls_ssl_get_peer_cert() is still
+ *       defined, but always returns \c NULL.
+ *
+ * \note This option has no influence on the protection against the
+ *       triple handshake attack. Even if it is disabled, Mbed TLS will
+ *       still ensure that certificates do not change during renegotiation,
+ *       for exaple by keeping a hash of the peer's certificate.
+ *
+ * Comment this macro to disable storing the peer's certificate
+ * after the handshake.
+ */
+#define MBEDTLS_SSL_KEEP_PEER_CERTIFICATE
 
 /**
  * \def MBEDTLS_SSL_HW_RECORD_ACCEL
@@ -2156,7 +2173,7 @@
  * Requires: MBEDTLS_AES_C or MBEDTLS_DES_C
  *
  */
-#define MBEDTLS_CMAC_C
+//#define MBEDTLS_CMAC_C
 
 /**
  * \def MBEDTLS_CTR_DRBG_C
@@ -2705,12 +2722,19 @@
  *
  * Enable the Platform Security Architecture cryptography API.
  *
- * Module:  library/psa_crypto.c
+ * \note This option only has an effect when the build option
+ * USE_CRYPTO_SUBMODULE is also in use.
+ *
+ * \warning This feature is experimental and available on an opt-in basis only.
+ * PSA APIs are subject to change at any time. The implementation comes with
+ * less assurance and support than the rest of Mbed TLS.
+ *
+ * Module:  crypto/library/psa_crypto.c
  *
  * Requires: MBEDTLS_CTR_DRBG_C, MBEDTLS_ENTROPY_C
  *
  */
-#define MBEDTLS_PSA_CRYPTO_C
+//#define MBEDTLS_PSA_CRYPTO_C
 
 /**
  * \def MBEDTLS_PSA_CRYPTO_STORAGE_C
@@ -2724,7 +2748,7 @@
  * (but not both)
  *
  */
-#define MBEDTLS_PSA_CRYPTO_STORAGE_C
+//#define MBEDTLS_PSA_CRYPTO_STORAGE_C
 
 /**
  * \def MBEDTLS_PSA_CRYPTO_STORAGE_FILE_C
@@ -2737,7 +2761,7 @@
  * Requires: MBEDTLS_PSA_CRYPTO_C, MBEDTLS_FS_IO
  *
  */
-#define MBEDTLS_PSA_CRYPTO_STORAGE_FILE_C
+//#define MBEDTLS_PSA_CRYPTO_STORAGE_FILE_C
 
 /**
  * \def MBEDTLS_PSA_CRYPTO_STORAGE_ITS_C
