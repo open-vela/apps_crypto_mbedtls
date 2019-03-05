@@ -30,12 +30,37 @@
 #ifndef PSA_CRYPTO_EXTRA_H
 #define PSA_CRYPTO_EXTRA_H
 
+#include "mbedtls/platform_util.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 /* UID for secure storage seed */
 #define PSA_CRYPTO_ITS_RANDOM_SEED_UID 0xFFFFFF52
+
+/*
+ * Deprecated PSA Crypto error code definitions
+ */
+#if !defined(MBEDTLS_DEPRECATED_REMOVED)
+#define PSA_ERROR_UNKNOWN_ERROR \
+    MBEDTLS_DEPRECATED_NUMERIC_CONSTANT( PSA_ERROR_GENERIC_ERROR )
+#endif
+
+#if !defined(MBEDTLS_DEPRECATED_REMOVED)
+#define PSA_ERROR_OCCUPIED_SLOT \
+    MBEDTLS_DEPRECATED_NUMERIC_CONSTANT( PSA_ERROR_ALREADY_EXISTS )
+#endif
+
+#if !defined(MBEDTLS_DEPRECATED_REMOVED)
+#define PSA_ERROR_EMPTY_SLOT \
+    MBEDTLS_DEPRECATED_NUMERIC_CONSTANT( PSA_ERROR_DOES_NOT_EXIST )
+#endif
+
+#if !defined(MBEDTLS_DEPRECATED_REMOVED)
+#define PSA_ERROR_INSUFFICIENT_CAPACITY \
+    MBEDTLS_DEPRECATED_NUMERIC_CONSTANT( PSA_ERROR_INSUFFICIENT_DATA )
+#endif
 
 /**
  * \brief Library deinitialization.
@@ -111,7 +136,6 @@ void mbedtls_psa_crypto_free( void );
  * \retval #PSA_ERROR_INVALID_ARGUMENT
  *         \p seed_size is out of range.
  * \retval #PSA_ERROR_STORAGE_FAILURE
- * \retval `PSA_ITS_ERROR_XXX`
  *         There was a failure reading or writing from storage.
  * \retval #PSA_ERROR_NOT_PERMITTED
  *         The library has already been initialized. It is no longer
@@ -120,64 +144,6 @@ void mbedtls_psa_crypto_free( void );
 psa_status_t mbedtls_psa_inject_entropy(const unsigned char *seed,
                                         size_t seed_size);
 
-/** Set up a key derivation operation.
- *
- * FIMXE This function is no longer part of the official API. Its prototype
- * is only kept around for the sake of tests that haven't been updated yet.
- *
- * A key derivation algorithm takes three inputs: a secret input \p key and
- * two non-secret inputs \p label and p salt.
- * The result of this function is a byte generator which can
- * be used to produce keys and other cryptographic material.
- *
- * The role of \p label and \p salt is as follows:
- * - For HKDF (#PSA_ALG_HKDF), \p salt is the salt used in the "extract" step
- *   and \p label is the info string used in the "expand" step.
- *
- * \param[in,out] generator       The generator object to set up. It must have
- *                                been initialized as per the documentation for
- *                                #psa_crypto_generator_t and not yet in use.
- * \param handle                  Handle to the secret key.
- * \param alg                     The key derivation algorithm to compute
- *                                (\c PSA_ALG_XXX value such that
- *                                #PSA_ALG_IS_KEY_DERIVATION(\p alg) is true).
- * \param[in] salt                Salt to use.
- * \param salt_length             Size of the \p salt buffer in bytes.
- * \param[in] label               Label to use.
- * \param label_length            Size of the \p label buffer in bytes.
- * \param capacity                The maximum number of bytes that the
- *                                generator will be able to provide.
- *
- * \retval #PSA_SUCCESS
- *         Success.
- * \retval #PSA_ERROR_INVALID_HANDLE
- * \retval #PSA_ERROR_EMPTY_SLOT
- * \retval #PSA_ERROR_NOT_PERMITTED
- * \retval #PSA_ERROR_INVALID_ARGUMENT
- *         \c key is not compatible with \c alg,
- *         or \p capacity is too large for the specified algorithm and key.
- * \retval #PSA_ERROR_NOT_SUPPORTED
- *         \c alg is not supported or is not a key derivation algorithm.
- * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
- * \retval #PSA_ERROR_COMMUNICATION_FAILURE
- * \retval #PSA_ERROR_HARDWARE_FAILURE
- * \retval #PSA_ERROR_TAMPERING_DETECTED
- * \retval #PSA_ERROR_BAD_STATE
- *         The library has not been previously initialized by psa_crypto_init().
- *         It is implementation-dependent whether a failure to initialize
- *         results in this error code.
- */
-psa_status_t psa_key_derivation(psa_crypto_generator_t *generator,
-                                psa_key_handle_t handle,
-                                psa_algorithm_t alg,
-                                const uint8_t *salt,
-                                size_t salt_length,
-                                const uint8_t *label,
-                                size_t label_length,
-                                size_t capacity);
-
-/* FIXME Deprecated. Remove this as soon as all the tests are updated. */
-#define PSA_ALG_SELECT_RAW                      ((psa_algorithm_t)0x31000001)
 
 #ifdef __cplusplus
 }

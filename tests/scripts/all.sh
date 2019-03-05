@@ -120,7 +120,7 @@ pre_initialize_variables () {
     FORCE=0
     KEEP_GOING=0
 
-    # Default commands, can be overriden by the environment
+    # Default commands, can be overridden by the environment
     : ${OPENSSL:="openssl"}
     : ${OPENSSL_LEGACY:="$OPENSSL"}
     : ${OPENSSL_NEXT:="$OPENSSL"}
@@ -136,6 +136,9 @@ pre_initialize_variables () {
     if [ -z "${MAKEFLAGS+set}" ]; then
         export MAKEFLAGS="-j"
     fi
+
+    # Include more verbose output for failing tests run by CMake
+    export CTEST_OUTPUT_ON_FAILURE=1
 
     # Gather the list of available components. These are the functions
     # defined in this script whose name starts with "component_".
@@ -224,7 +227,7 @@ cleanup()
     command make clean
 
     # Remove CMake artefacts
-    find . -name .git -prune \
+    find . -name .git -prune -o \
            -iname CMakeFiles -exec rm -rf {} \+ -o \
            \( -iname cmake_install.cmake -o \
               -iname CTestTestfile.cmake -o \
@@ -295,7 +298,7 @@ check_tools()
 }
 
 check_headers_in_cpp () {
-    ls include/mbedtls >headers.txt
+    ls include/mbedtls | grep "\.h$" >headers.txt
     <programs/test/cpp_dummy_build.cpp sed -n 's/"$//; s!^#include "mbedtls/!!p' |
     sort |
     diff headers.txt -
@@ -387,6 +390,12 @@ pre_check_git () {
             echo "script as: $0 --force"
             exit 1
         fi
+    fi
+}
+
+pre_check_seedfile () {
+    if [ ! -f "./tests/seedfile" ]; then
+        dd if=/dev/urandom of=./tests/seedfile bs=32 count=1
     fi
 }
 
@@ -708,6 +717,9 @@ component_test_full_cmake_clang () {
     msg "test: main suites (full config)" # ~ 5s
     make test
 
+    msg "test: psa_constant_names (full config)" # ~ 1s
+    record_status tests/scripts/test_psa_constant_names.py
+
     msg "test: ssl-opt.sh default, ECJPAKE, SSL async (full config)" # ~ 1s
     if_build_succeeded tests/ssl-opt.sh -f 'Default\|ECJPAKE\|SSL async private'
 
@@ -766,6 +778,60 @@ component_build_default_make_gcc_and_cxx () {
 
     msg "build: Unix make, incremental g++"
     make TEST_CPP=1
+}
+
+component_test_use_psa_crypto_full_cmake_asan() {
+    # MBEDTLS_USE_PSA_CRYPTO: run the same set of tests as basic-build-test.sh
+    msg "build: cmake, full config + MBEDTLS_USE_PSA_CRYPTO, ASan"
+    scripts/config.pl full
+    scripts/config.pl unset MBEDTLS_MEMORY_BACKTRACE # too slow for tests
+    scripts/config.pl unset MBEDTLS_ECP_RESTARTABLE  # restartable ECC not supported through PSA
+    scripts/config.pl set MBEDTLS_PSA_CRYPTO_C
+    scripts/config.pl set MBEDTLS_USE_PSA_CRYPTO
+    CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
+    make
+
+    msg "test: main suites (MBEDTLS_USE_PSA_CRYPTO)"
+    make test
+
+    msg "test: ssl-opt.sh (MBEDTLS_USE_PSA_CRYPTO)"
+    if_build_succeeded tests/ssl-opt.sh
+
+    msg "test: compat.sh default (MBEDTLS_USE_PSA_CRYPTO)"
+    if_build_succeeded tests/compat.sh
+
+    msg "test: compat.sh ssl3 (MBEDTLS_USE_PSA_CRYPTO)"
+    if_build_succeeded env OPENSSL_CMD="$OPENSSL_LEGACY" tests/compat.sh -m 'ssl3'
+
+    msg "test: compat.sh RC4, DES & NULL (MBEDTLS_USE_PSA_CRYPTO)"
+    if_build_succeeded env OPENSSL_CMD="$OPENSSL_LEGACY" GNUTLS_CLI="$GNUTLS_LEGACY_CLI" GNUTLS_SERV="$GNUTLS_LEGACY_SERV" tests/compat.sh -e '3DES\|DES-CBC3' -f 'NULL\|DES\|RC4\|ARCFOUR'
+
+    msg "test: compat.sh ARIA + ChachaPoly (MBEDTLS_USE_PSA_CRYPTO)"
+    if_build_succeeded env OPENSSL_CMD="$OPENSSL_NEXT" tests/compat.sh -e '^$' -f 'ARIA\|CHACHA'
+}
+
+component_test_check_params_without_platform () {
+    msg "build+test: MBEDTLS_CHECK_PARAMS without MBEDTLS_PLATFORM_C"
+    scripts/config.pl full # includes CHECK_PARAMS
+    scripts/config.pl unset MBEDTLS_MEMORY_BACKTRACE # too slow for tests
+    scripts/config.pl unset MBEDTLS_MEMORY_BUFFER_ALLOC_C
+    scripts/config.pl unset MBEDTLS_PLATFORM_EXIT_ALT
+    scripts/config.pl unset MBEDTLS_PLATFORM_TIME_ALT
+    scripts/config.pl unset MBEDTLS_PLATFORM_FPRINTF_ALT
+    scripts/config.pl unset MBEDTLS_PLATFORM_MEMORY
+    scripts/config.pl unset MBEDTLS_PLATFORM_PRINTF_ALT
+    scripts/config.pl unset MBEDTLS_PLATFORM_SNPRINTF_ALT
+    scripts/config.pl unset MBEDTLS_ENTROPY_NV_SEED
+    scripts/config.pl unset MBEDTLS_PLATFORM_C
+    make CC=gcc CFLAGS='-Werror -O1' all test
+}
+
+component_test_check_params_silent () {
+    msg "build+test: MBEDTLS_CHECK_PARAMS with alternative MBEDTLS_PARAM_FAILED()"
+    scripts/config.pl full # includes CHECK_PARAMS
+    scripts/config.pl unset MBEDTLS_MEMORY_BACKTRACE # too slow for tests
+    sed -i 's/.*\(#define MBEDTLS_PARAM_FAILED( cond )\).*/\1/' "$CONFIG_H"
+    make CC=gcc CFLAGS='-Werror -O1' all test
 }
 
 component_test_no_platform () {
@@ -1265,6 +1331,8 @@ pre_initialize_variables
 pre_parse_command_line "$@"
 
 pre_check_git
+pre_check_seedfile
+
 build_status=0
 if [ $KEEP_GOING -eq 1 ]; then
     pre_setup_keep_going
