@@ -5,10 +5,7 @@
 #include "mbedtls/platform.h"
 #else
 #include <stdio.h>
-#include <stdlib.h>
-#define MBEDTLS_EXIT_FAILURE EXIT_FAILURE
 #define mbedtls_printf printf
-#define mbedtls_exit exit
 #endif
 
 #define ASSERT( predicate )                                                   \
@@ -109,7 +106,7 @@ static psa_status_t cipher_encrypt( psa_key_handle_t key_handle,
                                     size_t *output_len )
 {
     psa_status_t status;
-    psa_cipher_operation_t operation = PSA_CIPHER_OPERATION_INIT;
+    psa_cipher_operation_t operation;
     size_t iv_len = 0;
 
     memset( &operation, 0, sizeof( operation ) );
@@ -140,7 +137,7 @@ static psa_status_t cipher_decrypt( psa_key_handle_t key_handle,
                                     size_t *output_len )
 {
     psa_status_t status;
-    psa_cipher_operation_t operation = PSA_CIPHER_OPERATION_INIT;
+    psa_cipher_operation_t operation;
 
     memset( &operation, 0, sizeof( operation ) );
     status = psa_cipher_decrypt_setup( &operation, key_handle, alg );
@@ -326,18 +323,6 @@ static void cipher_examples( void )
     if( status == PSA_SUCCESS )
         mbedtls_printf( "\tsuccess!\r\n" );
 }
-
-#if defined(MBEDTLS_CHECK_PARAMS)
-#include "mbedtls/platform_util.h"
-void mbedtls_param_failed( const char *failure_condition,
-                           const char *file,
-                           int line )
-{
-    mbedtls_printf( "%s:%i: Input param failed - %s\n",
-                    file, line, failure_condition );
-    mbedtls_exit( MBEDTLS_EXIT_FAILURE );
-}
-#endif
 
 int main( void )
 {

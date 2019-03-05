@@ -228,7 +228,7 @@
  * \param key_type      The type of the MAC key.
  * \param key_bits      The size of the MAC key in bits.
  * \param alg           A MAC algorithm (\c PSA_ALG_XXX value such that
- *                      #PSA_ALG_IS_MAC(alg) is true).
+ *                      #PSA_ALG_IS_MAC(\p alg) is true).
  *
  * \return              The MAC size for the specified algorithm with
  *                      the specified key parameters.
@@ -253,7 +253,7 @@
  *
  * \param alg                 An AEAD algorithm
  *                            (\c PSA_ALG_XXX value such that
- *                            #PSA_ALG_IS_AEAD(alg) is true).
+ *                            #PSA_ALG_IS_AEAD(\p alg) is true).
  * \param plaintext_length    Size of the plaintext in bytes.
  *
  * \return                    The AEAD ciphertext size for the specified
@@ -268,6 +268,27 @@
      (plaintext_length) + PSA_AEAD_TAG_LENGTH(alg) :              \
      0)
 
+/** The maximum size of the output of psa_aead_finish(), in bytes.
+ *
+ * If the size of the ciphertext buffer is at least this large, it is
+ * guaranteed that psa_aead_finish() will not fail due to an
+ * insufficient buffer size. Depending on the algorithm, the actual size of
+ * the ciphertext may be smaller.
+ *
+ * \param alg                 An AEAD algorithm
+ *                            (\c PSA_ALG_XXX value such that
+ *                            #PSA_ALG_IS_AEAD(\p alg) is true).
+ *
+ * \return                    The maximum trailing ciphertext size for the
+ *                            specified algorithm.
+ *                            If the AEAD algorithm is not recognized, return 0.
+ *                            An implementation may return either 0 or a
+ *                            correct size for an AEAD algorithm that it
+ *                            recognizes, but does not support.
+ */
+#define PSA_AEAD_FINISH_OUTPUT_SIZE(alg)      \
+    ((size_t)0)
+
 /** The maximum size of the output of psa_aead_decrypt(), in bytes.
  *
  * If the size of the plaintext buffer is at least this large, it is
@@ -277,7 +298,7 @@
  *
  * \param alg                 An AEAD algorithm
  *                            (\c PSA_ALG_XXX value such that
- *                            #PSA_ALG_IS_AEAD(alg) is true).
+ *                            #PSA_ALG_IS_AEAD(\p alg) is true).
  * \param ciphertext_length   Size of the plaintext in bytes.
  *
  * \return                    The AEAD ciphertext size for the specified
@@ -292,9 +313,9 @@
      (plaintext_length) - PSA_AEAD_TAG_LENGTH(alg) :              \
      0)
 
-#define PSA_RSA_MINIMUM_PADDING_SIZE(alg)                         \
-    (PSA_ALG_IS_RSA_OAEP(alg) ?                                   \
-     2 * PSA_HASH_SIZE(PSA_ALG_RSA_OAEP_GET_HASH(alg)) + 1 :      \
+#define PSA_RSA_MINIMUM_PADDING_SIZE(alg)                               \
+    (PSA_ALG_IS_RSA_OAEP(alg) ?                                         \
+     2 * PSA_HASH_FINAL_SIZE(PSA_ALG_RSA_OAEP_GET_HASH(alg)) + 1 :      \
      11 /*PKCS#1v1.5*/)
 
 /**
@@ -417,16 +438,25 @@
 /* Maximum size of the export encoding of an RSA public key.
  * Assumes that the public exponent is less than 2^32.
  *
+ * SubjectPublicKeyInfo  ::=  SEQUENCE  {
+ *      algorithm            AlgorithmIdentifier,
+ *      subjectPublicKey     BIT STRING  } -- contains RSAPublicKey
+ * AlgorithmIdentifier  ::=  SEQUENCE  {
+ *      algorithm               OBJECT IDENTIFIER,
+ *      parameters              NULL  }
  * RSAPublicKey  ::=  SEQUENCE  {
  *    modulus            INTEGER,    -- n
  *    publicExponent     INTEGER  }  -- e
  *
- * - 4 bytes of SEQUENCE overhead;
+ * - 3 * 4 bytes of SEQUENCE overhead;
+ * - 1 + 1 + 9 bytes of algorithm (RSA OID);
+ * - 2 bytes of NULL;
+ * - 4 bytes of BIT STRING overhead;
  * - n : INTEGER;
  * - 7 bytes for the public exponent.
  */
 #define PSA_KEY_EXPORT_RSA_PUBLIC_KEY_MAX_SIZE(key_bits)        \
-    (PSA_KEY_EXPORT_ASN1_INTEGER_MAX_SIZE(key_bits) + 11)
+    (PSA_KEY_EXPORT_ASN1_INTEGER_MAX_SIZE(key_bits) + 36)
 
 /* Maximum size of the export encoding of an RSA key pair.
  * Assumes thatthe public exponent is less than 2^32 and that the size
@@ -493,16 +523,26 @@
 
 /* Maximum size of the export encoding of an ECC public key.
  *
- * The representation of an ECC public key is:
- *      - The byte 0x04;
- *      - `x_P` as a `ceiling(m/8)`-byte string, big-endian;
- *      - `y_P` as a `ceiling(m/8)`-byte string, big-endian;
- *      - where m is the bit size associated with the curve.
+ * SubjectPublicKeyInfo  ::=  SEQUENCE  {
+ *      algorithm            AlgorithmIdentifier,
+ *      subjectPublicKey     BIT STRING  } -- contains ECPoint
+ * AlgorithmIdentifier  ::=  SEQUENCE  {
+ *      algorithm               OBJECT IDENTIFIER,
+ *      parameters              OBJECT IDENTIFIER } -- namedCurve
+ * ECPoint ::= ...
+ *    -- first 8 bits: 0x04;
+ *    -- then x_P as a `ceiling(m/8)`-byte string, big endian;
+ *    -- then y_P as a `ceiling(m/8)`-byte string, big endian;
+ *    -- where `m` is the bit size associated with the curve.
  *
- * - 1 byte + 2 * point size.
+ * - 2 * 4 bytes of SEQUENCE overhead;
+ * - 1 + 1 + 7 bytes of algorithm (id-ecPublicKey OID);
+ * - 1 + 1 + 12 bytes of namedCurve OID;
+ * - 4 bytes of BIT STRING overhead;
+ * - 1 byte + 2 * point size in ECPoint.
  */
 #define PSA_KEY_EXPORT_ECC_PUBLIC_KEY_MAX_SIZE(key_bits)        \
-    (2 * PSA_BITS_TO_BYTES(key_bits) + 1)
+    (2 * PSA_BITS_TO_BYTES(key_bits) + 36)
 
 /* Maximum size of the export encoding of an ECC key pair.
  *
