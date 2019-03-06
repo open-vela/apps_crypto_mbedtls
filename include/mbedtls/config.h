@@ -688,26 +688,6 @@
 #define MBEDTLS_REMOVE_ARC4_CIPHERSUITES
 
 /**
- * \def MBEDTLS_REMOVE_3DES_CIPHERSUITES
- *
- * Remove 3DES ciphersuites by default in SSL / TLS.
- * This flag removes the ciphersuites based on 3DES from the default list as
- * returned by mbedtls_ssl_list_ciphersuites(). However, it is still possible
- * to enable (some of) them with mbedtls_ssl_conf_ciphersuites() by including
- * them explicitly.
- *
- * A man-in-the-browser attacker can recover authentication tokens sent through
- * a TLS connection using a 3DES based cipher suite (see "On the Practical
- * (In-)Security of 64-bit Block Ciphers" by Karthikeyan Bhargavan and Gaëtan
- * Leurent, see https://sweet32.info/SWEET32_CCS16.pdf). If this attack falls
- * in your threat model or you are unsure, then you should keep this option
- * enabled to remove 3DES based cipher suites.
- *
- * Comment this macro to keep 3DES in the default ciphersuite list.
- */
-#define MBEDTLS_REMOVE_3DES_CIPHERSUITES
-
-/**
  * \def MBEDTLS_ECP_DP_SECP192R1_ENABLED
  *
  * MBEDTLS_ECP_XXXX_ENABLED: Enables specific curves within the Elliptic Curve
@@ -1223,30 +1203,6 @@
 #define MBEDTLS_PKCS1_V21
 
 /**
- * \def MBEDTLS_PSA_CRYPTO_SPM
- *
- * When MBEDTLS_PSA_CRYPTO_SPM is defined, the code is built for SPM (Secure
- * Partition Manager) integration which separates the code into two parts: a
- * NSPE (Non-Secure Process Environment) and an SPE (Secure Process
- * Environment).
- *
- * Module:  library/psa_crypto.c
- * Requires: MBEDTLS_PSA_CRYPTO_C
- *
- */
-//#define MBEDTLS_PSA_CRYPTO_SPM
-
-/**
- * \def MBEDTLS_PSA_HAS_ITS_IO
- *
- * Enable the non-volatile secure storage usage.
- *
- * This is crucial on systems that do not have a HW TRNG support.
- *
- */
-//#define MBEDTLS_PSA_HAS_ITS_IO
-
-/**
  * \def MBEDTLS_RSA_NO_CRT
  *
  * Do not use the Chinese Remainder Theorem
@@ -1373,28 +1329,6 @@
  * Comment this macro to disable support for FALLBACK_SCSV
  */
 #define MBEDTLS_SSL_FALLBACK_SCSV
-
-/**
- * \def MBEDTLS_SSL_KEEP_PEER_CERTIFICATE
- *
- * This option controls the availability of the API mbedtls_ssl_get_peer_cert()
- * giving access to the peer's certificate after completion of the handshake.
- *
- * Unless you need mbedtls_ssl_peer_cert() in your application, it is
- * recommended to disable this option for reduced RAM usage.
- *
- * \note If this option is disabled, mbedtls_ssl_get_peer_cert() is still
- *       defined, but always returns \c NULL.
- *
- * \note This option has no influence on the protection against the
- *       triple handshake attack. Even if it is disabled, Mbed TLS will
- *       still ensure that certificates do not change during renegotiation,
- *       for exaple by keeping a hash of the peer's certificate.
- *
- * Comment this macro to disable storing the peer's certificate
- * after the handshake.
- */
-#define MBEDTLS_SSL_KEEP_PEER_CERTIFICATE
 
 /**
  * \def MBEDTLS_SSL_HW_RECORD_ACCEL
@@ -1690,24 +1624,6 @@
  * Uncomment this to enable pthread mutexes.
  */
 //#define MBEDTLS_THREADING_PTHREAD
-
-/**
- * \def MBEDTLS_USE_PSA_CRYPTO
- *
- * Make the X.509 and TLS library use PSA for cryptographic operations, see
- * #MBEDTLS_PSA_CRYPTO_C.
- *
- * Note: this option is still in progress, the full X.509 and TLS modules are
- * not covered yet, but parts that are not ported to PSA yet will still work
- * as usual, so enabling this option should not break backwards compatibility.
- *
- * \warning  Support for PSA is still an experimental feature.
- *           Any public API that depends on this option may change
- *           at any time until this warning is removed.
- *
- * Requires: MBEDTLS_PSA_CRYPTO_C.
- */
-//#define MBEDTLS_USE_PSA_CRYPTO
 
 /**
  * \def MBEDTLS_VERSION_FEATURES
@@ -2716,65 +2632,6 @@
  * Caller:  library/chachapoly.c
  */
 #define MBEDTLS_POLY1305_C
-
-/**
- * \def MBEDTLS_PSA_CRYPTO_C
- *
- * Enable the Platform Security Architecture cryptography API.
- *
- * \note This option only has an effect when the build option
- * USE_CRYPTO_SUBMODULE is also in use.
- *
- * \warning This feature is experimental and available on an opt-in basis only.
- * PSA APIs are subject to change at any time. The implementation comes with
- * less assurance and support than the rest of Mbed TLS.
- *
- * Module:  crypto/library/psa_crypto.c
- *
- * Requires: MBEDTLS_CTR_DRBG_C, MBEDTLS_ENTROPY_C
- *
- */
-//#define MBEDTLS_PSA_CRYPTO_C
-
-/**
- * \def MBEDTLS_PSA_CRYPTO_STORAGE_C
- *
- * Enable the Platform Security Architecture persistent key storage.
- *
- * Module:  library/psa_crypto_storage.c
- *
- * Requires: MBEDTLS_PSA_CRYPTO_C and one of either
- * MBEDTLS_PSA_CRYPTO_STORAGE_FILE_C or MBEDTLS_PSA_CRYPTO_STORAGE_ITS_C
- * (but not both)
- *
- */
-//#define MBEDTLS_PSA_CRYPTO_STORAGE_C
-
-/**
- * \def MBEDTLS_PSA_CRYPTO_STORAGE_FILE_C
- *
- * Enable persistent key storage over files for the
- * Platform Security Architecture cryptography API.
- *
- * Module:  library/psa_crypto_storage_file.c
- *
- * Requires: MBEDTLS_PSA_CRYPTO_C, MBEDTLS_FS_IO
- *
- */
-//#define MBEDTLS_PSA_CRYPTO_STORAGE_FILE_C
-
-/**
- * \def MBEDTLS_PSA_CRYPTO_STORAGE_ITS_C
- *
- * Enable persistent key storage over PSA ITS for the
- * Platform Security Architecture cryptography API.
- *
- * Module:  library/psa_crypto_storage_its.c
- *
- * Requires: MBEDTLS_PSA_CRYPTO_C, MBEDTLS_PSA_HAS_ITS_IO
- *
- */
-//#define MBEDTLS_PSA_CRYPTO_STORAGE_ITS_C
 
 /**
  * \def MBEDTLS_RIPEMD160_C

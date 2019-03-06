@@ -222,12 +222,9 @@ cleanup()
     fi
 
     command make clean
-    cd crypto
-    command make clean
-    cd ..
 
     # Remove CMake artefacts
-    find . -name .git -prune -o \
+    find . -name .git -prune \
            -iname CMakeFiles -exec rm -rf {} \+ -o \
            \( -iname cmake_install.cmake -o \
               -iname CTestTestfile.cmake -o \
@@ -236,11 +233,6 @@ cleanup()
     rm -f include/Makefile include/mbedtls/Makefile programs/*/Makefile
     git update-index --no-skip-worktree Makefile library/Makefile programs/Makefile tests/Makefile
     git checkout -- Makefile library/Makefile programs/Makefile tests/Makefile
-    cd crypto
-    rm -f include/Makefile include/mbedtls/Makefile programs/*/Makefile
-    git update-index --no-skip-worktree Makefile library/Makefile programs/Makefile tests/Makefile
-    git checkout -- Makefile library/Makefile programs/Makefile tests/Makefile
-    cd ..
 
     if [ -f "$CONFIG_BAK" ]; then
         mv "$CONFIG_BAK" "$CONFIG_H"
@@ -303,7 +295,7 @@ check_tools()
 }
 
 check_headers_in_cpp () {
-    ls include/mbedtls | grep "\.h$" >headers.txt
+    ls include/mbedtls >headers.txt
     <programs/test/cpp_dummy_build.cpp sed -n 's/"$//; s!^#include "mbedtls/!!p' |
     sort |
     diff headers.txt -
@@ -395,16 +387,6 @@ pre_check_git () {
             echo "script as: $0 --force"
             exit 1
         fi
-    fi
-    if ! [ -f crypto/Makefile ]; then
-        echo "Please initialize the crypto submodule" >&2
-        exit 1
-    fi
-}
-
-pre_check_seedfile () {
-    if [ ! -f "./tests/seedfile" ]; then
-        dd if=/dev/urandom of=./tests/seedfile bs=32 count=1
     fi
 }
 
@@ -730,8 +712,8 @@ component_test_full_cmake_clang () {
     msg "test: ssl-opt.sh default, ECJPAKE, SSL async (full config)" # ~ 1s
     if_build_succeeded tests/ssl-opt.sh -f 'Default\|ECJPAKE\|SSL async private'
 
-    msg "test: compat.sh RC4, DES, 3DES & NULL (full config)" # ~ 2 min
-    if_build_succeeded env OPENSSL_CMD="$OPENSSL_LEGACY" GNUTLS_CLI="$GNUTLS_LEGACY_CLI" GNUTLS_SERV="$GNUTLS_LEGACY_SERV" tests/compat.sh -e '^$' -f 'NULL\|DES\|RC4\|ARCFOUR'
+    msg "test: compat.sh RC4, DES & NULL (full config)" # ~ 2 min
+    if_build_succeeded env OPENSSL_CMD="$OPENSSL_LEGACY" GNUTLS_CLI="$GNUTLS_LEGACY_CLI" GNUTLS_SERV="$GNUTLS_LEGACY_SERV" tests/compat.sh -e '3DES\|DES-CBC3' -f 'NULL\|DES\|RC4\|ARCFOUR'
 
     msg "test: compat.sh ARIA + ChachaPoly"
     if_build_succeeded env OPENSSL_CMD="$OPENSSL_NEXT" tests/compat.sh -e '^$' -f 'ARIA\|CHACHA'
@@ -785,96 +767,6 @@ component_build_default_make_gcc_and_cxx () {
 
     msg "build: Unix make, incremental g++"
     make TEST_CPP=1
-}
-
-component_test_submodule_cmake () {
-    # USE_CRYPTO_SUBMODULE: check that the build works with CMake
-    msg "build: cmake, full config + USE_CRYPTO_SUBMODULE, gcc+debug"
-    scripts/config.pl full # enables md4 and submodule doesn't enable md4
-    scripts/config.pl unset MBEDTLS_MEMORY_BACKTRACE # too slow for tests
-    CC=gcc cmake -D USE_CRYPTO_SUBMODULE=1 -D CMAKE_BUILD_TYPE=Debug .
-    make
-    msg "test: top-level libmbedcrypto wasn't built (USE_CRYPTO_SUBMODULE, cmake)"
-    if_build_succeeded not test -f library/libmbedcrypto.a
-    msg "test: libmbedcrypto symbols are from crypto files (USE_CRYPTO_SUBMODULE, cmake)"
-    if_build_succeeded objdump -g crypto/library/libmbedcrypto.a | grep -E 'crypto/library$' > /dev/null
-    msg "test: libmbedcrypto uses top-level config (USE_CRYPTO_SUBMODULE, cmake)"
-    if_build_succeeded objdump -g crypto/library/libmbedcrypto.a | grep 'md4.c' > /dev/null
-    msg "test: main suites (USE_CRYPTO_SUBMODULE, cmake)"
-    make test
-    msg "test: ssl-opt.sh (USE_CRYPTO_SUBMODULE, cmake)"
-    if_build_succeeded tests/ssl-opt.sh
-}
-
-component_test_submodule_make () {
-    # USE_CRYPTO_SUBMODULE: check that the build works with make
-    msg "build: make, full config + USE_CRYPTO_SUBMODULE, gcc+debug"
-    scripts/config.pl full # enables md4 and submodule doesn't enable md4
-    scripts/config.pl unset MBEDTLS_MEMORY_BACKTRACE # too slow for tests
-    make CC=gcc CFLAGS='-g' USE_CRYPTO_SUBMODULE=1
-    msg "test: top-level libmbedcrypto wasn't built (USE_CRYPTO_SUBMODULE, make)"
-    if_build_succeeded not test -f library/libmbedcrypto.a
-    msg "test: libmbedcrypto symbols are from crypto files (USE_CRYPTO_SUBMODULE, make)"
-    if_build_succeeded objdump -g crypto/library/libmbedcrypto.a | grep -E 'crypto/library$' > /dev/null
-    msg "test: libmbedcrypto uses top-level config (USE_CRYPTO_SUBMODULE, make)"
-    if_build_succeeded objdump -g crypto/library/libmbedcrypto.a | grep 'md4.c' > /dev/null
-    msg "test: main suites (USE_CRYPTO_SUBMODULE, make)"
-    make CC=gcc USE_CRYPTO_SUBMODULE=1 test
-    msg "test: ssl-opt.sh (USE_CRYPTO_SUBMODULE, make)"
-    if_build_succeeded tests/ssl-opt.sh
-}
-
-component_test_not_submodule_make () {
-    # Don't USE_CRYPTO_SUBMODULE: check that the submodule is not used with make
-    msg "build: make, full config - USE_CRYPTO_SUBMODULE, gcc+debug"
-    scripts/config.pl full
-    make CC=gcc CFLAGS='-g'
-    msg "test: submodule libmbedcrypto wasn't built (USE_CRYPTO_SUBMODULE, make)"
-    if_build_succeeded not test -f crypto/library/libmbedcrypto.a
-    msg "test: libmbedcrypto symbols are from library files (USE_CRYPTO_SUBMODULE, make)"
-    if_build_succeeded objdump -g library/libmbedcrypto.a | grep -E 'library$' | not grep 'crypto' > /dev/null
-}
-
-component_test_not_submodule_cmake () {
-    # Don't USE_CRYPTO_SUBMODULE: check that the submodule is not used with CMake
-    msg "build: cmake, full config - USE_CRYPTO_SUBMODULE, gcc+debug"
-    scripts/config.pl full
-    CC=gcc cmake -D CMAKE_BUILD_TYPE=Debug .
-    make
-    msg "test: submodule libmbedcrypto wasn't built (USE_CRYPTO_SUBMODULE, cmake)"
-    if_build_succeeded not test -f crypto/library/libmbedcrypto.a
-    msg "test: libmbedcrypto symbols are from library files (USE_CRYPTO_SUBMODULE, cmake)"
-    if_build_succeeded objdump -g library/libmbedcrypto.a | grep -E 'library$' | not grep 'crypto' > /dev/null
-}
-
-component_test_use_psa_crypto_full_cmake_asan() {
-    # MBEDTLS_USE_PSA_CRYPTO: run the same set of tests as basic-build-test.sh
-    msg "build: cmake, full config + MBEDTLS_USE_PSA_CRYPTO, ASan"
-    scripts/config.pl full
-    scripts/config.pl unset MBEDTLS_MEMORY_BACKTRACE # too slow for tests
-    scripts/config.pl unset MBEDTLS_ECP_RESTARTABLE  # restartable ECC not supported through PSA
-    scripts/config.pl set MBEDTLS_PSA_CRYPTO_C
-    scripts/config.pl set MBEDTLS_USE_PSA_CRYPTO
-    CC=gcc cmake -D USE_CRYPTO_SUBMODULE=1 -D CMAKE_BUILD_TYPE:String=Asan .
-    make
-
-    msg "test: main suites (MBEDTLS_USE_PSA_CRYPTO)"
-    make test
-
-    msg "test: ssl-opt.sh (MBEDTLS_USE_PSA_CRYPTO)"
-    if_build_succeeded tests/ssl-opt.sh
-
-    msg "test: compat.sh default (MBEDTLS_USE_PSA_CRYPTO)"
-    if_build_succeeded tests/compat.sh
-
-    msg "test: compat.sh ssl3 (MBEDTLS_USE_PSA_CRYPTO)"
-    if_build_succeeded env OPENSSL_CMD="$OPENSSL_LEGACY" tests/compat.sh -m 'ssl3'
-
-    msg "test: compat.sh RC4, DES & NULL (MBEDTLS_USE_PSA_CRYPTO)"
-    if_build_succeeded env OPENSSL_CMD="$OPENSSL_LEGACY" GNUTLS_CLI="$GNUTLS_LEGACY_CLI" GNUTLS_SERV="$GNUTLS_LEGACY_SERV" tests/compat.sh -e '3DES\|DES-CBC3' -f 'NULL\|DES\|RC4\|ARCFOUR'
-
-    msg "test: compat.sh ARIA + ChachaPoly (MBEDTLS_USE_PSA_CRYPTO)"
-    if_build_succeeded env OPENSSL_CMD="$OPENSSL_NEXT" tests/compat.sh -e '^$' -f 'ARIA\|CHACHA'
 }
 
 component_test_check_params_without_platform () {
@@ -966,22 +858,6 @@ component_test_no_max_fragment_length () {
 
     msg "test: ssl-opt.sh, MFL-related tests"
     if_build_succeeded tests/ssl-opt.sh -f "Max fragment length"
-}
-
-component_test_asan_remove_peer_certificate () {
-    msg "build: default config with MBEDTLS_SSL_KEEP_PEER_CERTIFICATE disabled (ASan build)"
-    scripts/config.pl unset MBEDTLS_SSL_KEEP_PEER_CERTIFICATE
-    CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
-    make
-
-    msg "test: !MBEDTLS_SSL_KEEP_PEER_CERTIFICATE"
-    make test
-
-    msg "test: ssl-opt.sh, !MBEDTLS_SSL_KEEP_PEER_CERTIFICATE"
-    if_build_succeeded tests/ssl-opt.sh
-
-    msg "test: compat.sh, !MBEDTLS_SSL_KEEP_PEER_CERTIFICATE"
-    if_build_succeeded tests/compat.sh
 }
 
 component_test_no_max_fragment_length_small_ssl_out_content_len () {
@@ -1098,16 +974,6 @@ support_test_mx32 () {
         amd64|x86_64) true;;
         *) false;;
     esac
-}
-
-component_test_min_mpi_window_size () {
-    msg "build: Default + MBEDTLS_MPI_WINDOW_SIZE=1 (ASan build)" # ~ 10s
-    scripts/config.pl set MBEDTLS_MPI_WINDOW_SIZE 1
-    CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
-    make
-
-    msg "test: MBEDTLS_MPI_WINDOW_SIZE=1 - main suites (inc. selftests) (ASan build)" # ~ 10s
-    make test
 }
 
 component_test_have_int32 () {
@@ -1414,8 +1280,6 @@ pre_initialize_variables
 pre_parse_command_line "$@"
 
 pre_check_git
-pre_check_seedfile
-
 build_status=0
 if [ $KEEP_GOING -eq 1 ]; then
     pre_setup_keep_going
