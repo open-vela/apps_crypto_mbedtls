@@ -193,7 +193,7 @@ psa_algorithm_t psa_key_policy_get_algorithm(const psa_key_policy_t *policy);
  *         the policy has been saved to persistent storage. Implementations
  *         may defer saving the policy until the key material is created.
  * \retval #PSA_ERROR_INVALID_HANDLE
- * \retval #PSA_ERROR_OCCUPIED_SLOT
+ * \retval #PSA_ERROR_ALREADY_EXISTS
  * \retval #PSA_ERROR_NOT_SUPPORTED
  * \retval #PSA_ERROR_INVALID_ARGUMENT
  * \retval #PSA_ERROR_COMMUNICATION_FAILURE
@@ -285,7 +285,7 @@ psa_status_t psa_allocate_key(psa_key_handle_t *handle);
  *         Success. The application can now use the value of `*handle`
  *         to access the newly allocated key slot.
  * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
- * \retval #PSA_ERROR_EMPTY_SLOT
+ * \retval #PSA_ERROR_DOES_NOT_EXIST
  * \retval #PSA_ERROR_INVALID_ARGUMENT
  *         \p lifetime is invalid, for example #PSA_KEY_LIFETIME_VOLATILE.
  * \retval #PSA_ERROR_INVALID_ARGUMENT
@@ -322,7 +322,7 @@ psa_status_t psa_open_key(psa_key_lifetime_t lifetime,
  *         to access the newly allocated key slot.
  * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
  * \retval #PSA_ERROR_INSUFFICIENT_STORAGE
- * \retval #PSA_ERROR_OCCUPIED_SLOT
+ * \retval #PSA_ERROR_ALREADY_EXISTS
  *         There is already a key with the identifier \p id in the storage
  *         area designated by \p lifetime.
  * \retval #PSA_ERROR_INVALID_ARGUMENT
@@ -401,7 +401,7 @@ psa_status_t psa_close_key(psa_key_handle_t handle);
  * \retval #PSA_ERROR_INVALID_ARGUMENT
  *         The key slot is invalid,
  *         or the key data is not correctly formatted.
- * \retval #PSA_ERROR_OCCUPIED_SLOT
+ * \retval #PSA_ERROR_ALREADY_EXISTS
  *         There is already a key in the specified slot.
  * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
  * \retval #PSA_ERROR_INSUFFICIENT_STORAGE
@@ -470,7 +470,7 @@ psa_status_t psa_destroy_key(psa_key_handle_t handle);
  *
  * \retval #PSA_SUCCESS
  * \retval #PSA_ERROR_INVALID_HANDLE
- * \retval #PSA_ERROR_EMPTY_SLOT
+ * \retval #PSA_ERROR_DOES_NOT_EXIST
  *         The handle is to a key slot which does not contain key material yet.
  * \retval #PSA_ERROR_COMMUNICATION_FAILURE
  * \retval #PSA_ERROR_HARDWARE_FAILURE
@@ -554,7 +554,7 @@ psa_status_t psa_get_key_information(psa_key_handle_t handle,
  *
  * \retval #PSA_SUCCESS
  * \retval #PSA_ERROR_INVALID_HANDLE
- * \retval #PSA_ERROR_EMPTY_SLOT
+ * \retval #PSA_ERROR_DOES_NOT_EXIST
  * \retval #PSA_ERROR_NOT_PERMITTED
  * \retval #PSA_ERROR_NOT_SUPPORTED
  * \retval #PSA_ERROR_BUFFER_TOO_SMALL
@@ -641,7 +641,7 @@ psa_status_t psa_export_key(psa_key_handle_t handle,
  *
  * \retval #PSA_SUCCESS
  * \retval #PSA_ERROR_INVALID_HANDLE
- * \retval #PSA_ERROR_EMPTY_SLOT
+ * \retval #PSA_ERROR_DOES_NOT_EXIST
  * \retval #PSA_ERROR_INVALID_ARGUMENT
  *         The key is neither a public key nor a key pair.
  * \retval #PSA_ERROR_NOT_SUPPORTED
@@ -710,9 +710,9 @@ psa_status_t psa_export_public_key(psa_key_handle_t handle,
  *
  * \retval #PSA_SUCCESS
  * \retval #PSA_ERROR_INVALID_HANDLE
- * \retval #PSA_ERROR_OCCUPIED_SLOT
+ * \retval #PSA_ERROR_ALREADY_EXISTS
  *         \p target already contains key material.
- * \retval #PSA_ERROR_EMPTY_SLOT
+ * \retval #PSA_ERROR_DOES_NOT_EXIST
  *         \p source does not contain key material.
  * \retval #PSA_ERROR_INVALID_ARGUMENT
  *         The policy constraints on the source, on the target and
@@ -782,7 +782,7 @@ typedef struct psa_hash_operation_s psa_hash_operation_t;
  */
 static psa_hash_operation_t psa_hash_operation_init(void);
 
-/** Start a multipart hash operation.
+/** Set up a multipart hash operation.
  *
  * The sequence of operations to calculate a hash (message digest)
  * is as follows:
@@ -816,6 +816,9 @@ static psa_hash_operation_t psa_hash_operation_init(void);
  *         Success.
  * \retval #PSA_ERROR_NOT_SUPPORTED
  *         \p alg is not supported or is not a hash algorithm.
+ * \retval #PSA_ERROR_BAD_STATE
+ *         The operation state is not valid (already set up and not
+ *         subsequently completed).
  * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
  * \retval #PSA_ERROR_COMMUNICATION_FAILURE
  * \retval #PSA_ERROR_HARDWARE_FAILURE
@@ -837,7 +840,7 @@ psa_status_t psa_hash_setup(psa_hash_operation_t *operation,
  * \retval #PSA_SUCCESS
  *         Success.
  * \retval #PSA_ERROR_BAD_STATE
- *         The operation state is not valid (not started, or already completed).
+ *         The operation state is not valid (not set up, or already completed).
  * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
  * \retval #PSA_ERROR_COMMUNICATION_FAILURE
  * \retval #PSA_ERROR_HARDWARE_FAILURE
@@ -874,7 +877,7 @@ psa_status_t psa_hash_update(psa_hash_operation_t *operation,
  * \retval #PSA_SUCCESS
  *         Success.
  * \retval #PSA_ERROR_BAD_STATE
- *         The operation state is not valid (not started, or already completed).
+ *         The operation state is not valid (not set up, or already completed).
  * \retval #PSA_ERROR_BUFFER_TOO_SMALL
  *         The size of the \p hash buffer is too small. You can determine a
  *         sufficient buffer size by calling #PSA_HASH_SIZE(\c alg)
@@ -914,7 +917,7 @@ psa_status_t psa_hash_finish(psa_hash_operation_t *operation,
  *         The hash of the message was calculated successfully, but it
  *         differs from the expected hash.
  * \retval #PSA_ERROR_BAD_STATE
- *         The operation state is not valid (not started, or already completed).
+ *         The operation state is not valid (not set up, or already completed).
  * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
  * \retval #PSA_ERROR_COMMUNICATION_FAILURE
  * \retval #PSA_ERROR_HARDWARE_FAILURE
@@ -1032,7 +1035,7 @@ typedef struct psa_mac_operation_s psa_mac_operation_t;
  */
 static psa_mac_operation_t psa_mac_operation_init(void);
 
-/** Start a multipart MAC calculation operation.
+/** Set up a multipart MAC calculation operation.
  *
  * This function sets up the calculation of the MAC
  * (message authentication code) of a byte string.
@@ -1071,7 +1074,7 @@ static psa_mac_operation_t psa_mac_operation_init(void);
  * \retval #PSA_SUCCESS
  *         Success.
  * \retval #PSA_ERROR_INVALID_HANDLE
- * \retval #PSA_ERROR_EMPTY_SLOT
+ * \retval #PSA_ERROR_DOES_NOT_EXIST
  * \retval #PSA_ERROR_NOT_PERMITTED
  * \retval #PSA_ERROR_INVALID_ARGUMENT
  *         \p key is not compatible with \p alg.
@@ -1082,6 +1085,9 @@ static psa_mac_operation_t psa_mac_operation_init(void);
  * \retval #PSA_ERROR_HARDWARE_FAILURE
  * \retval #PSA_ERROR_TAMPERING_DETECTED
  * \retval #PSA_ERROR_BAD_STATE
+ *         The operation state is not valid (already set up and not
+ *         subsequently completed).
+ * \retval #PSA_ERROR_BAD_STATE
  *         The library has not been previously initialized by psa_crypto_init().
  *         It is implementation-dependent whether a failure to initialize
  *         results in this error code.
@@ -1090,7 +1096,7 @@ psa_status_t psa_mac_sign_setup(psa_mac_operation_t *operation,
                                 psa_key_handle_t handle,
                                 psa_algorithm_t alg);
 
-/** Start a multipart MAC verification operation.
+/** Set up a multipart MAC verification operation.
  *
  * This function sets up the verification of the MAC
  * (message authentication code) of a byte string against an expected value.
@@ -1128,7 +1134,7 @@ psa_status_t psa_mac_sign_setup(psa_mac_operation_t *operation,
  * \retval #PSA_SUCCESS
  *         Success.
  * \retval #PSA_ERROR_INVALID_HANDLE
- * \retval #PSA_ERROR_EMPTY_SLOT
+ * \retval #PSA_ERROR_DOES_NOT_EXIST
  * \retval #PSA_ERROR_NOT_PERMITTED
  * \retval #PSA_ERROR_INVALID_ARGUMENT
  *         \c key is not compatible with \c alg.
@@ -1138,6 +1144,9 @@ psa_status_t psa_mac_sign_setup(psa_mac_operation_t *operation,
  * \retval #PSA_ERROR_COMMUNICATION_FAILURE
  * \retval #PSA_ERROR_HARDWARE_FAILURE
  * \retval #PSA_ERROR_TAMPERING_DETECTED
+ * \retval #PSA_ERROR_BAD_STATE
+ *         The operation state is not valid (already set up and not
+ *         subsequently completed).
  * \retval #PSA_ERROR_BAD_STATE
  *         The library has not been previously initialized by psa_crypto_init().
  *         It is implementation-dependent whether a failure to initialize
@@ -1162,7 +1171,7 @@ psa_status_t psa_mac_verify_setup(psa_mac_operation_t *operation,
  * \retval #PSA_SUCCESS
  *         Success.
  * \retval #PSA_ERROR_BAD_STATE
- *         The operation state is not valid (not started, or already completed).
+ *         The operation state is not valid (not set up, or already completed).
  * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
  * \retval #PSA_ERROR_COMMUNICATION_FAILURE
  * \retval #PSA_ERROR_HARDWARE_FAILURE
@@ -1201,7 +1210,7 @@ psa_status_t psa_mac_update(psa_mac_operation_t *operation,
  * \retval #PSA_SUCCESS
  *         Success.
  * \retval #PSA_ERROR_BAD_STATE
- *         The operation state is not valid (not started, or already completed).
+ *         The operation state is not valid (not set up, or already completed).
  * \retval #PSA_ERROR_BUFFER_TOO_SMALL
  *         The size of the \p mac buffer is too small. You can determine a
  *         sufficient buffer size by calling PSA_MAC_FINAL_SIZE().
@@ -1240,7 +1249,7 @@ psa_status_t psa_mac_sign_finish(psa_mac_operation_t *operation,
  *         The MAC of the message was calculated successfully, but it
  *         differs from the expected MAC.
  * \retval #PSA_ERROR_BAD_STATE
- *         The operation state is not valid (not started, or already completed).
+ *         The operation state is not valid (not set up, or already completed).
  * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
  * \retval #PSA_ERROR_COMMUNICATION_FAILURE
  * \retval #PSA_ERROR_HARDWARE_FAILURE
@@ -1373,7 +1382,7 @@ static psa_cipher_operation_t psa_cipher_operation_init(void);
  * \retval #PSA_SUCCESS
  *         Success.
  * \retval #PSA_ERROR_INVALID_HANDLE
- * \retval #PSA_ERROR_EMPTY_SLOT
+ * \retval #PSA_ERROR_DOES_NOT_EXIST
  * \retval #PSA_ERROR_NOT_PERMITTED
  * \retval #PSA_ERROR_INVALID_ARGUMENT
  *         \p key is not compatible with \p alg.
@@ -1383,6 +1392,9 @@ static psa_cipher_operation_t psa_cipher_operation_init(void);
  * \retval #PSA_ERROR_COMMUNICATION_FAILURE
  * \retval #PSA_ERROR_HARDWARE_FAILURE
  * \retval #PSA_ERROR_TAMPERING_DETECTED
+ * \retval #PSA_ERROR_BAD_STATE
+ *         The operation state is not valid (already set up and not
+ *         subsequently completed).
  * \retval #PSA_ERROR_BAD_STATE
  *         The library has not been previously initialized by psa_crypto_init().
  *         It is implementation-dependent whether a failure to initialize
@@ -1432,7 +1444,7 @@ psa_status_t psa_cipher_encrypt_setup(psa_cipher_operation_t *operation,
  * \retval #PSA_SUCCESS
  *         Success.
  * \retval #PSA_ERROR_INVALID_HANDLE
- * \retval #PSA_ERROR_EMPTY_SLOT
+ * \retval #PSA_ERROR_DOES_NOT_EXIST
  * \retval #PSA_ERROR_NOT_PERMITTED
  * \retval #PSA_ERROR_INVALID_ARGUMENT
  *         \p key is not compatible with \p alg.
@@ -1442,6 +1454,9 @@ psa_status_t psa_cipher_encrypt_setup(psa_cipher_operation_t *operation,
  * \retval #PSA_ERROR_COMMUNICATION_FAILURE
  * \retval #PSA_ERROR_HARDWARE_FAILURE
  * \retval #PSA_ERROR_TAMPERING_DETECTED
+ * \retval #PSA_ERROR_BAD_STATE
+ *         The operation state is not valid (already set up and not
+ *         subsequently completed).
  * \retval #PSA_ERROR_BAD_STATE
  *         The library has not been previously initialized by psa_crypto_init().
  *         It is implementation-dependent whether a failure to initialize
@@ -1471,7 +1486,7 @@ psa_status_t psa_cipher_decrypt_setup(psa_cipher_operation_t *operation,
  * \retval #PSA_SUCCESS
  *         Success.
  * \retval #PSA_ERROR_BAD_STATE
- *         The operation state is not valid (not started, or IV already set).
+ *         The operation state is not valid (not set up, or IV already set).
  * \retval #PSA_ERROR_BUFFER_TOO_SMALL
  *         The size of the \p iv buffer is too small.
  * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
@@ -1505,7 +1520,7 @@ psa_status_t psa_cipher_generate_iv(psa_cipher_operation_t *operation,
  * \retval #PSA_SUCCESS
  *         Success.
  * \retval #PSA_ERROR_BAD_STATE
- *         The operation state is not valid (not started, or IV already set).
+ *         The operation state is not valid (not set up, or IV already set).
  * \retval #PSA_ERROR_INVALID_ARGUMENT
  *         The size of \p iv is not acceptable for the chosen algorithm,
  *         or the chosen algorithm does not use an IV.
@@ -1541,7 +1556,7 @@ psa_status_t psa_cipher_set_iv(psa_cipher_operation_t *operation,
  * \retval #PSA_SUCCESS
  *         Success.
  * \retval #PSA_ERROR_BAD_STATE
- *         The operation state is not valid (not started, IV required but
+ *         The operation state is not valid (not set up, IV required but
  *         not set, or already completed).
  * \retval #PSA_ERROR_BUFFER_TOO_SMALL
  *         The size of the \p output buffer is too small.
@@ -1579,7 +1594,7 @@ psa_status_t psa_cipher_update(psa_cipher_operation_t *operation,
  * \retval #PSA_SUCCESS
  *         Success.
  * \retval #PSA_ERROR_BAD_STATE
- *         The operation state is not valid (not started, IV required but
+ *         The operation state is not valid (not set up, IV required but
  *         not set, or already completed).
  * \retval #PSA_ERROR_BUFFER_TOO_SMALL
  *         The size of the \p output buffer is too small.
@@ -1660,7 +1675,7 @@ psa_status_t psa_cipher_abort(psa_cipher_operation_t *operation);
  * \retval #PSA_SUCCESS
  *         Success.
  * \retval #PSA_ERROR_INVALID_HANDLE
- * \retval #PSA_ERROR_EMPTY_SLOT
+ * \retval #PSA_ERROR_DOES_NOT_EXIST
  * \retval #PSA_ERROR_NOT_PERMITTED
  * \retval #PSA_ERROR_INVALID_ARGUMENT
  *         \p key is not compatible with \p alg.
@@ -1716,7 +1731,7 @@ psa_status_t psa_aead_encrypt(psa_key_handle_t handle,
  * \retval #PSA_SUCCESS
  *         Success.
  * \retval #PSA_ERROR_INVALID_HANDLE
- * \retval #PSA_ERROR_EMPTY_SLOT
+ * \retval #PSA_ERROR_DOES_NOT_EXIST
  * \retval #PSA_ERROR_INVALID_SIGNATURE
  *         The ciphertext is not authentic.
  * \retval #PSA_ERROR_NOT_PERMITTED
@@ -2034,7 +2049,7 @@ psa_status_t psa_get_generator_capacity(const psa_crypto_generator_t *generator,
  * \param output_length     Number of bytes to output.
  *
  * \retval #PSA_SUCCESS
- * \retval #PSA_ERROR_INSUFFICIENT_CAPACITY
+ * \retval #PSA_ERROR_INSUFFICIENT_DATA
  *                          There were fewer than \p output_length bytes
  *                          in the generator. Note that in this case, no
  *                          output is written to the output buffer.
@@ -2076,7 +2091,7 @@ psa_status_t psa_generator_read(psa_crypto_generator_t *generator,
  *         Success.
  *         If the key is persistent, the key material and the key's metadata
  *         have been saved to persistent storage.
- * \retval #PSA_ERROR_INSUFFICIENT_CAPACITY
+ * \retval #PSA_ERROR_INSUFFICIENT_DATA
  *                          There were fewer than \p output_length bytes
  *                          in the generator. Note that in this case, no
  *                          output is written to the output buffer.
@@ -2088,7 +2103,7 @@ psa_status_t psa_generator_read(psa_crypto_generator_t *generator,
  *         implementation in general or in this particular slot.
  * \retval #PSA_ERROR_BAD_STATE
  * \retval #PSA_ERROR_INVALID_HANDLE
- * \retval #PSA_ERROR_OCCUPIED_SLOT
+ * \retval #PSA_ERROR_ALREADY_EXISTS
  *         There is already a key in the specified slot.
  * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
  * \retval #PSA_ERROR_INSUFFICIENT_STORAGE
@@ -2172,7 +2187,7 @@ psa_status_t psa_generator_abort(psa_crypto_generator_t *generator);
  * \retval #PSA_SUCCESS
  *         Success.
  * \retval #PSA_ERROR_INVALID_HANDLE
- * \retval #PSA_ERROR_EMPTY_SLOT
+ * \retval #PSA_ERROR_DOES_NOT_EXIST
  * \retval #PSA_ERROR_NOT_PERMITTED
  * \retval #PSA_ERROR_INVALID_ARGUMENT
  *         \c key is not compatible with \c alg,
@@ -2233,7 +2248,7 @@ psa_status_t psa_key_derivation(psa_crypto_generator_t *generator,
  * \retval #PSA_SUCCESS
  *         Success.
  * \retval #PSA_ERROR_INVALID_HANDLE
- * \retval #PSA_ERROR_EMPTY_SLOT
+ * \retval #PSA_ERROR_DOES_NOT_EXIST
  * \retval #PSA_ERROR_NOT_PERMITTED
  * \retval #PSA_ERROR_INVALID_ARGUMENT
  *         \c private_key is not compatible with \c alg,
@@ -2332,7 +2347,7 @@ typedef struct {
  *         If the key is persistent, the key material and the key's metadata
  *         have been saved to persistent storage.
  * \retval #PSA_ERROR_INVALID_HANDLE
- * \retval #PSA_ERROR_OCCUPIED_SLOT
+ * \retval #PSA_ERROR_ALREADY_EXISTS
  *         There is already a key in the specified slot.
  * \retval #PSA_ERROR_NOT_SUPPORTED
  * \retval #PSA_ERROR_INVALID_ARGUMENT

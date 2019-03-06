@@ -35,6 +35,9 @@
 #define mbedtls_printf     printf
 #define mbedtls_fprintf    fprintf
 #define mbedtls_snprintf   snprintf
+#define mbedtls_exit            exit
+#define MBEDTLS_EXIT_SUCCESS    EXIT_SUCCESS
+#define MBEDTLS_EXIT_FAILURE    EXIT_FAILURE
 #endif
 
 #if !defined(MBEDTLS_ENTROPY_C) || \
@@ -339,10 +342,26 @@ int main( void )
     "                        options: ssl3, tls1, tls1_1, tls1_2, dtls1, dtls1_2\n" \
     "\n"                                                    \
     "    force_ciphersuite=<name>    default: all enabled\n"\
+    "    query_config=<name>         return 0 if the specified\n"       \
+    "                                configuration macro is defined and 1\n"  \
+    "                                otherwise. The expansion of the macro\n" \
+    "                                is printed if it is defined\n"     \
     " acceptable ciphersuite names:\n"
 
 #define ALPN_LIST_SIZE  10
 #define CURVE_LIST_SIZE 20
+
+#if defined(MBEDTLS_CHECK_PARAMS)
+#include "mbedtls/platform_util.h"
+void mbedtls_param_failed( const char *failure_condition,
+                           const char *file,
+                           int line )
+{
+    mbedtls_printf( "%s:%i: Input param failed - %s\n",
+                    file, line, failure_condition );
+    mbedtls_exit( MBEDTLS_EXIT_FAILURE );
+}
+#endif
 
 /*
  * global options
@@ -401,6 +420,8 @@ struct options
     int extended_ms;            /* negotiate extended master secret?        */
     int etm;                    /* negotiate encrypt then mac?              */
 } opt;
+
+int query_config( const char *config );
 
 static void my_debug( void *ctx, int level,
                       const char *file, int line,
@@ -1043,6 +1064,10 @@ int main( int argc, char *argv[] )
             opt.dhmlen = atoi( q );
             if( opt.dhmlen < 0 )
                 goto usage;
+        }
+        else if( strcmp( p, "query_config" ) == 0 )
+        {
+            return query_config( q );
         }
         else
             goto usage;

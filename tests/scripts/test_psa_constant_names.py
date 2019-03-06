@@ -131,11 +131,16 @@ where each argument takes each possible value at least once.'''
     excluded_name_re = re.compile('_(?:GET|IS|OF)_|_(?:BASE|FLAG|MASK)\Z')
     # Additional excluded macros.
     # PSA_ALG_ECDH and PSA_ALG_FFDH are excluded for now as the script
-    # currently doesn't support them.
+    # currently doesn't support them. Deprecated errors are also excluded.
     excluded_names = set(['PSA_ALG_AEAD_WITH_DEFAULT_TAG_LENGTH',
                           'PSA_ALG_FULL_LENGTH_MAC',
                           'PSA_ALG_ECDH',
-                          'PSA_ALG_FFDH'])
+                          'PSA_ALG_FFDH',
+                          'PSA_ERROR_UNKNOWN_ERROR',
+                          'PSA_ERROR_OCCUPIED_SLOT',
+                          'PSA_ERROR_EMPTY_SLOT',
+                          'PSA_ERROR_INSUFFICIENT_CAPACITY',
+                          ])
     argument_split_re = re.compile(r' *, *')
     def parse_header_line(self, line):
         '''Parse a C header line, looking for "#define PSA_xxx".'''
@@ -211,6 +216,12 @@ def remove_file_if_exists(filename):
 
 def run_c(options, type, names):
     '''Generate and run a program to print out numerical values for names.'''
+    if type == 'status':
+        cast_to = 'long'
+        printf_format = '%ld'
+    else:
+        cast_to = 'unsigned long'
+        printf_format = '0x%08lx'
     c_name = None
     exe_name = None
     try:
@@ -230,7 +241,8 @@ int main(void)
 {
 ''')
         for name in names:
-            c_file.write('    printf("0x%08x\\n", {});\n'.format(name))
+            c_file.write('    printf("{}\\n", ({}) {});\n'
+                         .format(printf_format, cast_to, name))
         c_file.write('''    return 0;
 }
 ''')

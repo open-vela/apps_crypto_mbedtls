@@ -30,12 +30,37 @@
 #ifndef PSA_CRYPTO_EXTRA_H
 #define PSA_CRYPTO_EXTRA_H
 
+#include "mbedtls/platform_util.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 /* UID for secure storage seed */
 #define PSA_CRYPTO_ITS_RANDOM_SEED_UID 0xFFFFFF52
+
+/*
+ * Deprecated PSA Crypto error code definitions
+ */
+#if !defined(MBEDTLS_DEPRECATED_REMOVED)
+#define PSA_ERROR_UNKNOWN_ERROR \
+    MBEDTLS_DEPRECATED_NUMERIC_CONSTANT( PSA_ERROR_GENERIC_ERROR )
+#endif
+
+#if !defined(MBEDTLS_DEPRECATED_REMOVED)
+#define PSA_ERROR_OCCUPIED_SLOT \
+    MBEDTLS_DEPRECATED_NUMERIC_CONSTANT( PSA_ERROR_ALREADY_EXISTS )
+#endif
+
+#if !defined(MBEDTLS_DEPRECATED_REMOVED)
+#define PSA_ERROR_EMPTY_SLOT \
+    MBEDTLS_DEPRECATED_NUMERIC_CONSTANT( PSA_ERROR_DOES_NOT_EXIST )
+#endif
+
+#if !defined(MBEDTLS_DEPRECATED_REMOVED)
+#define PSA_ERROR_INSUFFICIENT_CAPACITY \
+    MBEDTLS_DEPRECATED_NUMERIC_CONSTANT( PSA_ERROR_INSUFFICIENT_DATA )
+#endif
 
 /**
  * \brief Library deinitialization.
@@ -111,7 +136,6 @@ void mbedtls_psa_crypto_free( void );
  * \retval #PSA_ERROR_INVALID_ARGUMENT
  *         \p seed_size is out of range.
  * \retval #PSA_ERROR_STORAGE_FAILURE
- * \retval `PSA_ITS_ERROR_XXX`
  *         There was a failure reading or writing from storage.
  * \retval #PSA_ERROR_NOT_PERMITTED
  *         The library has already been initialized. It is no longer
