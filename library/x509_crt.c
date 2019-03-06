@@ -49,11 +49,6 @@
 #include "mbedtls/pem.h"
 #endif
 
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
-#include "psa/crypto.h"
-#include "mbedtls/psa_util.h"
-#endif
-
 #if defined(MBEDTLS_PLATFORM_C)
 #include "mbedtls/platform.h"
 #else
@@ -834,10 +829,8 @@ static int x509_get_crt_ext( unsigned char **p,
 /*
  * Parse and fill a single X.509 certificate in DER format
  */
-static int x509_crt_parse_der_core( mbedtls_x509_crt *crt,
-                                    const unsigned char *buf,
-                                    size_t buflen,
-                                    int make_copy )
+static int x509_crt_parse_der_core( mbedtls_x509_crt *crt, const unsigned char *buf,
+                                    size_t buflen )
 {
     int ret;
     size_t len;
@@ -854,7 +847,7 @@ static int x509_crt_parse_der_core( mbedtls_x509_crt *crt,
     if( crt == NULL || buf == NULL )
         return( MBEDTLS_ERR_X509_BAD_INPUT_DATA );
 
-    /* Use the original buffer until we figure out actual length. */
+    // Use the original buffer until we figure out actual length
     p = (unsigned char*) buf;
     len = buflen;
     end = p + len;
@@ -872,26 +865,25 @@ static int x509_crt_parse_der_core( mbedtls_x509_crt *crt,
         return( MBEDTLS_ERR_X509_INVALID_FORMAT );
     }
 
-    end = crt_end = p + len;
+    if( len > (size_t) ( end - p ) )
+    {
+        mbedtls_x509_crt_free( crt );
+        return( MBEDTLS_ERR_X509_INVALID_FORMAT +
+                MBEDTLS_ERR_ASN1_LENGTH_MISMATCH );
+    }
+    crt_end = p + len;
+
+    // Create and populate a new buffer for the raw field
     crt->raw.len = crt_end - buf;
-    if( make_copy != 0 )
-    {
-        /* Create and populate a new buffer for the raw field. */
-        crt->raw.p = p = mbedtls_calloc( 1, crt->raw.len );
-        if( crt->raw.p == NULL )
-            return( MBEDTLS_ERR_X509_ALLOC_FAILED );
+    crt->raw.p = p = mbedtls_calloc( 1, crt->raw.len );
+    if( p == NULL )
+        return( MBEDTLS_ERR_X509_ALLOC_FAILED );
 
-        memcpy( crt->raw.p, buf, crt->raw.len );
-        crt->own_buffer = 1;
+    memcpy( p, buf, crt->raw.len );
 
-        p += crt->raw.len - len;
-        end = crt_end = p + len;
-    }
-    else
-    {
-        crt->raw.p = (unsigned char*) buf;
-        crt->own_buffer = 0;
-    }
+    // Direct pointers to the new buffer
+    p += crt->raw.len - len;
+    end = crt_end = p + len;
 
     /*
      * TBSCertificate  ::=  SEQUENCE  {
@@ -996,13 +988,11 @@ static int x509_crt_parse_der_core( mbedtls_x509_crt *crt,
     /*
      * SubjectPublicKeyInfo
      */
-    crt->pk_raw.p = p;
     if( ( ret = mbedtls_pk_parse_subpubkey( &p, end, &crt->pk ) ) != 0 )
     {
         mbedtls_x509_crt_free( crt );
         return( ret );
     }
-    crt->pk_raw.len = p - crt->pk_raw.p;
 
     /*
      *  issuerUniqueID  [1]  IMPLICIT UniqueIdentifier OPTIONAL,
@@ -1096,10 +1086,8 @@ static int x509_crt_parse_der_core( mbedtls_x509_crt *crt,
  * Parse one X.509 certificate in DER format from a buffer and add them to a
  * chained list
  */
-static int mbedtls_x509_crt_parse_der_internal( mbedtls_x509_crt *chain,
-                                                const unsigned char *buf,
-                                                size_t buflen,
-                                                int make_copy )
+int mbedtls_x509_crt_parse_der( mbedtls_x509_crt *chain, const unsigned char *buf,
+                        size_t buflen )
 {
     int ret;
     mbedtls_x509_crt *crt = chain, *prev = NULL;
@@ -1131,7 +1119,7 @@ static int mbedtls_x509_crt_parse_der_internal( mbedtls_x509_crt *chain,
         crt = crt->next;
     }
 
-    if( ( ret = x509_crt_parse_der_core( crt, buf, buflen, make_copy ) ) != 0 )
+    if( ( ret = x509_crt_parse_der_core( crt, buf, buflen ) ) != 0 )
     {
         if( prev )
             prev->next = NULL;
@@ -1145,27 +1133,11 @@ static int mbedtls_x509_crt_parse_der_internal( mbedtls_x509_crt *chain,
     return( 0 );
 }
 
-int mbedtls_x509_crt_parse_der_nocopy( mbedtls_x509_crt *chain,
-                                       const unsigned char *buf,
-                                       size_t buflen )
-{
-    return( mbedtls_x509_crt_parse_der_internal( chain, buf, buflen, 0 ) );
-}
-
-int mbedtls_x509_crt_parse_der( mbedtls_x509_crt *chain,
-                                const unsigned char *buf,
-                                size_t buflen )
-{
-    return( mbedtls_x509_crt_parse_der_internal( chain, buf, buflen, 1 ) );
-}
-
 /*
  * Parse one or more PEM certificates from a buffer and add them to the chained
  * list
  */
-int mbedtls_x509_crt_parse( mbedtls_x509_crt *chain,
-                            const unsigned char *buf,
-                            size_t buflen )
+int mbedtls_x509_crt_parse( mbedtls_x509_crt *chain, const unsigned char *buf, size_t buflen )
 {
 #if defined(MBEDTLS_PEM_PARSE_C)
     int success = 0, first_error = 0, total_failed = 0;
@@ -1920,35 +1892,16 @@ static int x509_crt_check_signature( const mbedtls_x509_crt *child,
                                      mbedtls_x509_crt *parent,
                                      mbedtls_x509_crt_restart_ctx *rs_ctx )
 {
-    unsigned char hash[MBEDTLS_MD_MAX_SIZE];
-    size_t hash_len;
-#if !defined(MBEDTLS_USE_PSA_CRYPTO)
     const mbedtls_md_info_t *md_info;
+    unsigned char hash[MBEDTLS_MD_MAX_SIZE];
+
     md_info = mbedtls_md_info_from_type( child->sig_md );
-    hash_len = mbedtls_md_get_size( md_info );
-
-    /* Note: hash errors can happen only after an internal error */
     if( mbedtls_md( md_info, child->tbs.p, child->tbs.len, hash ) != 0 )
-        return( -1 );
-#else
-    psa_hash_operation_t hash_operation = PSA_HASH_OPERATION_INIT;
-    psa_algorithm_t hash_alg = mbedtls_psa_translate_md( child->sig_md );
-
-    if( psa_hash_setup( &hash_operation, hash_alg ) != PSA_SUCCESS )
-        return( -1 );
-
-    if( psa_hash_update( &hash_operation, child->tbs.p, child->tbs.len )
-        != PSA_SUCCESS )
     {
+        /* Note: this can't happen except after an internal error */
         return( -1 );
     }
 
-    if( psa_hash_finish( &hash_operation, hash, sizeof( hash ), &hash_len )
-        != PSA_SUCCESS )
-    {
-        return( -1 );
-    }
-#endif /* MBEDTLS_USE_PSA_CRYPTO */
     /* Skip expensive computation on obvious mismatch */
     if( ! mbedtls_pk_can_do( &parent->pk, child->sig_pk ) )
         return( -1 );
@@ -1957,7 +1910,7 @@ static int x509_crt_check_signature( const mbedtls_x509_crt *child,
     if( rs_ctx != NULL && child->sig_pk == MBEDTLS_PK_ECDSA )
     {
         return( mbedtls_pk_verify_restartable( &parent->pk,
-                    child->sig_md, hash, hash_len,
+                    child->sig_md, hash, mbedtls_md_get_size( md_info ),
                     child->sig.p, child->sig.len, &rs_ctx->pk ) );
     }
 #else
@@ -1965,7 +1918,7 @@ static int x509_crt_check_signature( const mbedtls_x509_crt *child,
 #endif
 
     return( mbedtls_pk_verify_ext( child->sig_pk, child->sig_opts, &parent->pk,
-                child->sig_md, hash, hash_len,
+                child->sig_md, hash, mbedtls_md_get_size( md_info ),
                 child->sig.p, child->sig.len ) );
 }
 
@@ -2722,7 +2675,7 @@ void mbedtls_x509_crt_free( mbedtls_x509_crt *crt )
             mbedtls_free( seq_prv );
         }
 
-        if( cert_cur->raw.p != NULL && cert_cur->own_buffer )
+        if( cert_cur->raw.p != NULL )
         {
             mbedtls_platform_zeroize( cert_cur->raw.p, cert_cur->raw.len );
             mbedtls_free( cert_cur->raw.p );

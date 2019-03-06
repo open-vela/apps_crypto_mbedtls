@@ -114,15 +114,14 @@
 #endif
 
 #if defined(MBEDTLS_ECP_RESTARTABLE)           && \
-    ( defined(MBEDTLS_USE_PSA_CRYPTO)          || \
-      defined(MBEDTLS_ECDH_COMPUTE_SHARED_ALT) || \
+    ( defined(MBEDTLS_ECDH_COMPUTE_SHARED_ALT) || \
       defined(MBEDTLS_ECDH_GEN_PUBLIC_ALT)     || \
       defined(MBEDTLS_ECDSA_SIGN_ALT)          || \
       defined(MBEDTLS_ECDSA_VERIFY_ALT)        || \
       defined(MBEDTLS_ECDSA_GENKEY_ALT)        || \
       defined(MBEDTLS_ECP_INTERNAL_ALT)        || \
       defined(MBEDTLS_ECP_ALT) )
-#error "MBEDTLS_ECP_RESTARTABLE defined, but it cannot coexist with an alternative or PSA-based ECP implementation"
+#error "MBEDTLS_ECP_RESTARTABLE defined, but it cannot coexist with an alternative ECP implementation"
 #endif
 
 #if defined(MBEDTLS_ECDSA_DETERMINISTIC) && !defined(MBEDTLS_HMAC_DRBG_C)
@@ -278,14 +277,6 @@
     ( !defined(MBEDTLS_ECJPAKE_C) || !defined(MBEDTLS_SHA256_C) ||      \
       !defined(MBEDTLS_ECP_DP_SECP256R1_ENABLED) )
 #error "MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED defined, but not all prerequisites"
-#endif
-
-#if defined(MBEDTLS_KEY_EXCHANGE__WITH_CERT__ENABLED) &&        \
-    !defined(MBEDTLS_SSL_KEEP_PEER_CERTIFICATE) &&              \
-    ( !defined(MBEDTLS_SHA256_C) &&                             \
-      !defined(MBEDTLS_SHA512_C) &&                             \
-      !defined(MBEDTLS_SHA1_C) )
-#error "!MBEDTLS_SSL_KEEP_PEER_CERTIFICATE requires MBEDTLS_SHA512_C, MBEDTLS_SHA256_C or MBEDTLS_SHA1_C"
 #endif
 
 #if defined(MBEDTLS_MEMORY_BUFFER_ALLOC_C) &&                          \
@@ -515,38 +506,6 @@
 #error "MBEDTLS_PLATFORM_NV_SEED_WRITE_MACRO and MBEDTLS_PLATFORM_STD_NV_SEED_WRITE cannot be defined simultaneously"
 #endif
 
-#if defined(MBEDTLS_PSA_CRYPTO_C) &&            \
-    !( defined(MBEDTLS_CTR_DRBG_C) &&           \
-       defined(MBEDTLS_ENTROPY_C) )
-#error "MBEDTLS_PSA_CRYPTO_C defined, but not all prerequisites"
-#endif
-
-#if defined(MBEDTLS_PSA_CRYPTO_SPM) && !defined(MBEDTLS_PSA_CRYPTO_C)
-#error "MBEDTLS_PSA_CRYPTO_SPM defined, but not all prerequisites"
-#endif
-
-#if defined(MBEDTLS_PSA_CRYPTO_STORAGE_FILE_C) && defined(MBEDTLS_PSA_CRYPTO_STORAGE_ITS_C)
-#error "Only one of MBEDTLS_PSA_CRYPTO_STORAGE_FILE_C or MBEDTLS_PSA_CRYPTO_STORAGE_ITS_C can be defined"
-#endif
-
-#if defined(MBEDTLS_PSA_CRYPTO_STORAGE_C) &&            \
-    !( defined(MBEDTLS_PSA_CRYPTO_C) &&                 \
-       ( defined(MBEDTLS_PSA_CRYPTO_STORAGE_FILE_C) ||  \
-         defined(MBEDTLS_PSA_CRYPTO_STORAGE_ITS_C) ) )
-#error "MBEDTLS_PSA_CRYPTO_STORAGE_C defined, but not all prerequisites"
-#endif
-
-#if defined(MBEDTLS_PSA_CRYPTO_STORAGE_FILE_C) &&            \
-    !( defined(MBEDTLS_PSA_CRYPTO_STORAGE_C) &&           \
-       defined(MBEDTLS_FS_IO) )
-#error "MBEDTLS_PSA_CRYPTO_STORAGE_FILE_C defined, but not all prerequisites"
-#endif
-
-#if defined(MBEDTLS_PSA_CRYPTO_STORAGE_ITS_C) &&             \
-    ! defined(MBEDTLS_PSA_CRYPTO_STORAGE_C)
-#error "MBEDTLS_PSA_CRYPTO_STORAGE_ITS_C defined, but not all prerequisites"
-#endif
-
 #if defined(MBEDTLS_RSA_C) && ( !defined(MBEDTLS_BIGNUM_C) ||         \
     !defined(MBEDTLS_OID_C) )
 #error "MBEDTLS_RSA_C defined, but not all prerequisites"
@@ -688,10 +647,6 @@
 #error "MBEDTLS_THREADING_C defined, single threading implementation required"
 #endif
 #undef MBEDTLS_THREADING_IMPL
-
-#if defined(MBEDTLS_USE_PSA_CRYPTO) && !defined(MBEDTLS_PSA_CRYPTO_C)
-#error "MBEDTLS_USE_PSA_CRYPTO defined, but not all prerequisites"
-#endif
 
 #if defined(MBEDTLS_VERSION_FEATURES) && !defined(MBEDTLS_VERSION_C)
 #error "MBEDTLS_VERSION_FEATURES defined, but not all prerequisites"
