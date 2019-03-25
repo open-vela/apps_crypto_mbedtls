@@ -1237,17 +1237,14 @@
 //#define MBEDTLS_PSA_CRYPTO_SPM
 
 /**
- * \def MBEDTLS_PSA_INJECT_ENTROPY
+ * \def MBEDTLS_PSA_HAS_ITS_IO
  *
- * Enable support for entropy injection at first boot. This feature is
- * required on systems that do not have a built-in entropy source (TRNG).
- * This feature is currently not supported on systems that have a built-in
- * entropy source.
+ * Enable the non-volatile secure storage usage.
  *
- * Requires: MBEDTLS_PSA_CRYPTO_STORAGE_C, MBEDTLS_ENTROPY_NV_SEED
+ * This is crucial on systems that do not have a HW TRNG support.
  *
  */
-//#define MBEDTLS_PSA_INJECT_ENTROPY
+//#define MBEDTLS_PSA_HAS_ITS_IO
 
 /**
  * \def MBEDTLS_RSA_NO_CRT
@@ -2744,26 +2741,40 @@
  *
  * Enable the Platform Security Architecture persistent key storage.
  *
- * Module:  crypto/library/psa_crypto_storage.c
+ * Module:  library/psa_crypto_storage.c
  *
- * Requires: MBEDTLS_PSA_CRYPTO_C,
- *           either MBEDTLS_PSA_ITS_FILE_C or a native implementation of
- *           the PSA ITS interface
+ * Requires: MBEDTLS_PSA_CRYPTO_C and one of either
+ * MBEDTLS_PSA_CRYPTO_STORAGE_FILE_C or MBEDTLS_PSA_CRYPTO_STORAGE_ITS_C
+ * (but not both)
+ *
  */
 //#define MBEDTLS_PSA_CRYPTO_STORAGE_C
 
 /**
- * \def MBEDTLS_PSA_ITS_FILE_C
+ * \def MBEDTLS_PSA_CRYPTO_STORAGE_FILE_C
  *
- * Enable the emulation of the Platform Security Architecture
- * Internal Trusted Storage (PSA ITS) over files.
+ * Enable persistent key storage over files for the
+ * Platform Security Architecture cryptography API.
  *
- * Module:  crypto/library/psa_its_file.c
+ * Module:  library/psa_crypto_storage_file.c
  *
- * Requires: MBEDTLS_FS_IO
+ * Requires: MBEDTLS_PSA_CRYPTO_C, MBEDTLS_FS_IO
  *
  */
-//#define MBEDTLS_PSA_ITS_FILE_C
+//#define MBEDTLS_PSA_CRYPTO_STORAGE_FILE_C
+
+/**
+ * \def MBEDTLS_PSA_CRYPTO_STORAGE_ITS_C
+ *
+ * Enable persistent key storage over PSA ITS for the
+ * Platform Security Architecture cryptography API.
+ *
+ * Module:  library/psa_crypto_storage_its.c
+ *
+ * Requires: MBEDTLS_PSA_CRYPTO_C, MBEDTLS_PSA_HAS_ITS_IO
+ *
+ */
+//#define MBEDTLS_PSA_CRYPTO_STORAGE_ITS_C
 
 /**
  * \def MBEDTLS_RIPEMD160_C
