@@ -406,9 +406,6 @@ pre_check_seedfile () {
     if [ ! -f "./tests/seedfile" ]; then
         dd if=/dev/urandom of=./tests/seedfile bs=32 count=1
     fi
-    if [ ! -f "./crypto/tests/seedfile" ]; then
-        dd if=/dev/urandom of=./crypto/tests/seedfile bs=32 count=1
-    fi
 }
 
 pre_setup_keep_going () {
@@ -676,23 +673,6 @@ component_test_rsa_no_crt () {
 
     msg "test: RSA_NO_CRT - RSA-related part of compat.sh (ASan build)" # ~ 3 min
     if_build_succeeded tests/compat.sh -t RSA
-}
-
-component_test_new_ecdh_context () {
-    msg "build: new ECDH context (ASan build)" # ~ 6 min
-    scripts/config.pl unset MBEDTLS_ECDH_LEGACY_CONTEXT
-    CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
-    make
-
-    msg "test: new ECDH context - main suites (inc. selftests) (ASan build)" # ~ 50s
-    make test
-
-    msg "test: new ECDH context - ECDH-related part of ssl-opt.sh (ASan build)" # ~ 5s
-    if_build_succeeded tests/ssl-opt.sh -f ECDH
-
-    msg "test: new ECDH context - compat.sh with some ECDH ciphersuites (ASan build)" # ~ 3 min
-    # Exclude some symmetric ciphers that are redundant here to gain time.
-    if_build_succeeded tests/compat.sh -f ECDH -V NO -e 'ARCFOUR\|ARIA\|CAMELLIA\|CHACHA\|DES\|RC4'
 }
 
 component_test_small_ssl_out_content_len () {
@@ -1120,16 +1100,6 @@ support_test_mx32 () {
     esac
 }
 
-component_test_min_mpi_window_size () {
-    msg "build: Default + MBEDTLS_MPI_WINDOW_SIZE=1 (ASan build)" # ~ 10s
-    scripts/config.pl set MBEDTLS_MPI_WINDOW_SIZE 1
-    CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
-    make
-
-    msg "test: MBEDTLS_MPI_WINDOW_SIZE=1 - main suites (inc. selftests) (ASan build)" # ~ 10s
-    make test
-}
-
 component_test_have_int32 () {
     msg "build: gcc, force 32-bit bignum limbs"
     scripts/config.pl unset MBEDTLS_HAVE_ASM
@@ -1391,9 +1361,6 @@ component_test_zeroize () {
     unset gdb_disable_aslr
 }
 
-support_check_python_files () {
-    type pylint3 >/dev/null 2>/dev/null
-}
 component_check_python_files () {
     msg "Lint: Python scripts"
     record_status tests/scripts/check-python-files.sh
