@@ -5,15 +5,13 @@ mbed TLS ChangeLog (Sorted per branch, date)
 Features
    * Add the Any Policy certificate policy oid, as defined in
      rfc 5280 section 4.2.1.4.
-   * Add the Wi-SUN Field Area Network (FAN) device extended key usage.
 
 Bugfix
-   * Fix bugs in the AEAD test suite which would be exposed by ciphers which
-     either used both encrypt and decrypt key schedules, or which perform padding.
-     GCM and CCM were not affected. Fixed by Jack Lloyd.
    * Fix private key DER output in the key_app_writer example. File contents
      were shifted by one byte, creating an invalid ASN.1 tag. Fixed by
      Christian Walther in #2239.
+   * Fix potential memory leak in X.509 self test. Found and fixed by
+     Junhwan Park, #2106.
 
 Changes
    * Server's RSA certificate in certs.c was SHA-1 signed. In the default
@@ -42,8 +40,6 @@ Features
    * Add MBEDTLS_REMOVE_3DES_CIPHERSUITES to allow removing 3DES ciphersuites
      from the default list (enabled by default). See
      https://sweet32.info/SWEET32_CCS16.pdf.
-   * It is now possible to use NIST key wrap mode via the mbedtls_cipher API.
-     Contributed by Jack Lloyd and Fortanix Inc.
 
 API Changes
    * Add a new X.509 API call `mbedtls_x509_parse_der_nocopy()`.
@@ -89,8 +85,6 @@ Bugfix
      extensions in CSRs and CRTs that caused these bitstrings to not be encoded
      correctly as trailing zeroes were not accounted for as unused bits in the
      leading content octet. Fixes #1610.
-   * Add a check for MBEDTLS_X509_CRL_PARSE_C in ssl_server2, guarding the crl
-     sni entry parameter. Reported by inestlerode in #560.
 
 Changes
    * Reduce RAM consumption during session renegotiation by not storing
