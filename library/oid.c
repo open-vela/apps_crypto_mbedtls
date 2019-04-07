@@ -284,17 +284,27 @@ FN_OID_GET_ATTR1(mbedtls_oid_get_x509_ext_type, oid_x509_ext_t, x509_ext, int, e
 
 static const mbedtls_oid_descriptor_t oid_ext_key_usage[] =
 {
-    { ADD_LEN( MBEDTLS_OID_SERVER_AUTH ),      "id-kp-serverAuth",      "TLS Web Server Authentication" },
-    { ADD_LEN( MBEDTLS_OID_CLIENT_AUTH ),      "id-kp-clientAuth",      "TLS Web Client Authentication" },
-    { ADD_LEN( MBEDTLS_OID_CODE_SIGNING ),     "id-kp-codeSigning",     "Code Signing" },
-    { ADD_LEN( MBEDTLS_OID_EMAIL_PROTECTION ), "id-kp-emailProtection", "E-mail Protection" },
-    { ADD_LEN( MBEDTLS_OID_TIME_STAMPING ),    "id-kp-timeStamping",    "Time Stamping" },
-    { ADD_LEN( MBEDTLS_OID_OCSP_SIGNING ),     "id-kp-OCSPSigning",     "OCSP Signing" },
+    { ADD_LEN( MBEDTLS_OID_SERVER_AUTH ),      "id-kp-serverAuth",       "TLS Web Server Authentication" },
+    { ADD_LEN( MBEDTLS_OID_CLIENT_AUTH ),      "id-kp-clientAuth",       "TLS Web Client Authentication" },
+    { ADD_LEN( MBEDTLS_OID_CODE_SIGNING ),     "id-kp-codeSigning",      "Code Signing" },
+    { ADD_LEN( MBEDTLS_OID_EMAIL_PROTECTION ), "id-kp-emailProtection",  "E-mail Protection" },
+    { ADD_LEN( MBEDTLS_OID_TIME_STAMPING ),    "id-kp-timeStamping",     "Time Stamping" },
+    { ADD_LEN( MBEDTLS_OID_OCSP_SIGNING ),     "id-kp-OCSPSigning",      "OCSP Signing" },
+    { ADD_LEN( MBEDTLS_OID_WISUN_FAN ),        "id-kp-wisun-fan-device", "Wi-SUN Alliance Field Area Network (FAN)" },
     { NULL, 0, NULL, NULL },
 };
 
 FN_OID_TYPED_FROM_ASN1(mbedtls_oid_descriptor_t, ext_key_usage, oid_ext_key_usage)
 FN_OID_GET_ATTR1(mbedtls_oid_get_extended_key_usage, mbedtls_oid_descriptor_t, ext_key_usage, const char *, description)
+
+static const mbedtls_oid_descriptor_t oid_certificate_policies[] =
+{
+    { ADD_LEN( MBEDTLS_OID_ANY_POLICY ),      "anyPolicy",       "Any Policy" },
+    { NULL, 0, NULL, NULL },
+};
+
+FN_OID_TYPED_FROM_ASN1(mbedtls_oid_descriptor_t, certificate_policies, oid_certificate_policies)
+FN_OID_GET_ATTR1(mbedtls_oid_get_certificate_policies, mbedtls_oid_descriptor_t, certificate_policies, const char *, description)
 
 #if defined(MBEDTLS_MD_C)
 /*

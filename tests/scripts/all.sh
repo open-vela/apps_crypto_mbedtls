@@ -406,6 +406,9 @@ pre_check_seedfile () {
     if [ ! -f "./tests/seedfile" ]; then
         dd if=/dev/urandom of=./tests/seedfile bs=32 count=1
     fi
+    if [ ! -f "./crypto/tests/seedfile" ]; then
+        dd if=/dev/urandom of=./crypto/tests/seedfile bs=32 count=1
+    fi
 }
 
 pre_setup_keep_going () {
@@ -1289,6 +1292,9 @@ component_test_zeroize () {
     unset gdb_disable_aslr
 }
 
+support_check_python_files () {
+    type pylint3 >/dev/null 2>/dev/null
+}
 component_check_python_files () {
     msg "Lint: Python scripts"
     record_status tests/scripts/check-python-files.sh
