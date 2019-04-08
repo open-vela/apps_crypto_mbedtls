@@ -19,9 +19,6 @@ lib:
 
 tests: lib
 	$(MAKE) -C tests
-ifdef USE_CRYPTO_SUBMODULE
-	$(MAKE) CRYPTO_INCLUDES:="-I../../include -I../include" -C crypto/tests
-endif
 
 ifndef WINDOWS
 install: no_test
@@ -106,9 +103,6 @@ endif
 
 check: lib tests
 	$(MAKE) -C tests check
-ifdef USE_CRYPTO_SUBMODULE
-	$(MAKE) CRYPTO_INCLUDES:="-I../../include -I../include" -C crypto/tests check
-endif
 
 test: check
 
