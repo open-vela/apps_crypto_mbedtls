@@ -24,17 +24,13 @@ ifndef WINDOWS
 install: no_test
 	mkdir -p $(DESTDIR)/include/mbedtls
 	cp -rp include/mbedtls $(DESTDIR)/include
+	mkdir -p $(DESTDIR)/include/psa
+	cp -rp include/psa $(DESTDIR)/include
 
 	mkdir -p $(DESTDIR)/lib
 	cp -RP library/libmbedtls.*    $(DESTDIR)/lib
 	cp -RP library/libmbedx509.*   $(DESTDIR)/lib
-ifdef USE_CRYPTO_SUBMODULE
-	mkdir -p $(DESTDIR)/include/psa
-	cp -rp crypto/include/psa $(DESTDIR)/include
-	cp -RP crypto/library/libmbedcrypto.* $(DESTDIR)/lib
-else
 	cp -RP library/libmbedcrypto.* $(DESTDIR)/lib
-endif
 
 	mkdir -p $(DESTDIR)/bin
 	for p in programs/*/* ; do              \
@@ -50,9 +46,6 @@ uninstall:
 	rm -f $(DESTDIR)/lib/libmbedtls.*
 	rm -f $(DESTDIR)/lib/libmbedx509.*
 	rm -f $(DESTDIR)/lib/libmbedcrypto.*
-ifdef USE_CRYPTO_SUBMODULE
-	$(MAKE) -C crypto uninstall
-endif
 
 	for p in programs/*/* ; do              \
 	    if [ -x $$p ] && [ ! -d $$p ] ;     \
@@ -94,9 +87,6 @@ clean:
 	$(MAKE) -C library clean
 	$(MAKE) -C programs clean
 	$(MAKE) -C tests clean
-ifdef USE_CRYPTO_SUBMODULE
-	$(MAKE) -C crypto clean
-endif
 ifndef WINDOWS
 	find . \( -name \*.gcno -o -name \*.gcda -o -name \*.info \) -exec rm {} +
 endif
@@ -112,8 +102,6 @@ ifndef WINDOWS
 covtest:
 	$(MAKE) check
 	programs/test/selftest
-	tests/compat.sh
-	tests/ssl-opt.sh
 
 lcov:
 	rm -rf Coverage
