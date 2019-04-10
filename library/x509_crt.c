@@ -820,17 +820,7 @@ static int x509_get_crt_ext( unsigned char **p,
             break;
 
         default:
-            /*
-             * If this is a non-critical extension, which the oid layer
-             * supports, but there isn't an x509 parser for it,
-             * skip the extension.
-             */
-#if !defined(MBEDTLS_X509_ALLOW_UNSUPPORTED_CRITICAL_EXTENSION)
-            if( is_critical )
-                return( MBEDTLS_ERR_X509_FEATURE_UNAVAILABLE );
-            else
-#endif
-                *p = end_ext_octet;
+            return( MBEDTLS_ERR_X509_FEATURE_UNAVAILABLE );
         }
     }
 
