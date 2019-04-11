@@ -549,17 +549,6 @@ component_check_doxygen_warnings () {
 #### Build and test many configurations and targets
 ################################################################
 
-component_test_default_out_of_box () {
-    msg "build: make, default config (out-of-box)" # ~1min
-    make
-
-    msg "test: main suites make, default config (out-of-box)" # ~10s
-    make test
-
-    msg "selftest: make, default config (out-of-box)" # ~10s
-    programs/test/selftest
-}
-
 component_test_default_cmake_gcc_asan () {
     msg "build: cmake, gcc, ASan" # ~ 1 min 50s
     CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
@@ -808,9 +797,6 @@ component_test_m32_o1 () {
     # Build again with -O1, to compile in the i386 specific inline assembly
     msg "build: i386, make, gcc -O1 (ASan build)" # ~ 30s
     scripts/config.pl full
-    scripts/config.pl unset MBEDTLS_MEMORY_BACKTRACE
-    scripts/config.pl unset MBEDTLS_MEMORY_BUFFER_ALLOC_C
-    scripts/config.pl unset MBEDTLS_MEMORY_DEBUG
     make CC=gcc CFLAGS='-O1 -Werror -Wall -Wextra -m32 -fsanitize=address'
 
     msg "test: i386, make, gcc -O1 (ASan build)"
@@ -1009,12 +995,6 @@ component_build_mingw () {
     make CC=i686-w64-mingw32-gcc AR=i686-w64-mingw32-ar LD=i686-w64-minggw32-ld CFLAGS='-Werror -Wall -Wextra' WINDOWS_BUILD=1 SHARED=1 tests
     make WINDOWS_BUILD=1 clean
 }
-support_build_mingw() {
-    case $(i686-w64-mingw32-gcc -dumpversion) in
-        [0-5]*) false;;
-        *) true;;
-    esac
-}
 
 component_test_memsan () {
     msg "build: MSan (clang)" # ~ 1 min 20s
@@ -1081,9 +1061,6 @@ component_test_zeroize () {
     unset gdb_disable_aslr
 }
 
-support_check_python_files () {
-    type pylint3 >/dev/null 2>/dev/null
-}
 component_check_python_files () {
     msg "Lint: Python scripts"
     record_status tests/scripts/check-python-files.sh
