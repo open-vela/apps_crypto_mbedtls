@@ -746,11 +746,11 @@
  * Enable "non-blocking" ECC operations that can return early and be resumed.
  *
  * This allows various functions to pause by returning
- * #MBEDTLS_ERR_ECP_IN_PROGRESS (or, for functions in Mbed TLS's SSL module,
- * MBEDTLS_ERR_SSL_CRYPTO_IN_PROGRESS) and then be called later again in order
- * to further progress and eventually complete their operation. This is
- * controlled through mbedtls_ecp_set_max_ops() which limits the maximum number
- * of ECC operations a function may perform before pausing; see
+ * #MBEDTLS_ERR_ECP_IN_PROGRESS (or, for functions in the SSL module,
+ * #MBEDTLS_ERR_SSL_CRYPTO_IN_PROGRESS) and then be called later again in
+ * order to further progress and eventually complete their operation. This is
+ * controlled through mbedtls_ecp_set_max_ops() which limits the maximum
+ * number of ECC operations a function may perform before pausing; see
  * mbedtls_ecp_set_max_ops() for more information.
  *
  * This is useful in non-threaded environments if you want to avoid blocking
@@ -760,38 +760,9 @@
  *
  * \note  This option only works with the default software implementation of
  *        elliptic curve functionality. It is incompatible with
- *        MBEDTLS_ECP_ALT, MBEDTLS_ECDH_XXX_ALT, MBEDTLS_ECDSA_XXX_ALT
- *        and MBEDTLS_ECDH_LEGACY_CONTEXT.
+ *        MBEDTLS_ECP_ALT, MBEDTLS_ECDH_XXX_ALT and MBEDTLS_ECDSA_XXX_ALT.
  */
 //#define MBEDTLS_ECP_RESTARTABLE
-
-/**
- * \def MBEDTLS_ECDH_LEGACY_CONTEXT
- *
- * Use a backward compatible ECDH context.
- *
- * Mbed TLS supports two formats for ECDH contexts (#mbedtls_ecdh_context
- * defined in `ecdh.h`). For most applications, the choice of format makes
- * no difference, since all library functions can work with either format,
- * except that the new format is incompatible with MBEDTLS_ECP_RESTARTABLE.
-
- * The new format used when this option is disabled is smaller
- * (56 bytes on a 32-bit platform). In future versions of the library, it
- * will support alternative implementations of ECDH operations.
- * The new format is incompatible with applications that access
- * context fields directly and with restartable ECP operations.
- *
- * Define this macro if you enable MBEDTLS_ECP_RESTARTABLE or if you
- * want to access ECDH context fields directly. Otherwise you should
- * comment out this macro definition.
- *
- * This option has no effect if #MBEDTLS_ECDH_C is not enabled.
- *
- * \note This configuration option is experimental. Future versions of the
- *       library may modify the way the ECDH context layout is configured
- *       and may modify the layout of the new context type.
- */
-#define MBEDTLS_ECDH_LEGACY_CONTEXT
 
 /**
  * \def MBEDTLS_ECDSA_DETERMINISTIC
@@ -1195,21 +1166,6 @@
  */
 //#define MBEDTLS_ENTROPY_NV_SEED
 
-/* MBEDTLS_PSA_CRYPTO_KEY_FILE_ID_ENCODES_OWNER
- *
- * In PSA key storage, encode the owner of the key.
- *
- * This is only meaningful when building the library as part of a
- * multi-client service. When you activate this option, you must provide
- * an implementation of the type psa_key_owner_id_t and a translation
- * from psa_key_file_id_t to file name in all the storage backends that
- * you wish to support.
- *
- * Note that this option is meant for internal use only and may be removed
- * without notice.
- */
-//#define MBEDTLS_PSA_CRYPTO_KEY_FILE_ID_ENCODES_OWNER
-
 /**
  * \def MBEDTLS_MEMORY_DEBUG
  *
@@ -1281,17 +1237,14 @@
 //#define MBEDTLS_PSA_CRYPTO_SPM
 
 /**
- * \def MBEDTLS_PSA_INJECT_ENTROPY
+ * \def MBEDTLS_PSA_HAS_ITS_IO
  *
- * Enable support for entropy injection at first boot. This feature is
- * required on systems that do not have a built-in entropy source (TRNG).
- * This feature is currently not supported on systems that have a built-in
- * entropy source.
+ * Enable the non-volatile secure storage usage.
  *
- * Requires: MBEDTLS_PSA_CRYPTO_STORAGE_C, MBEDTLS_ENTROPY_NV_SEED
+ * This is crucial on systems that do not have a HW TRNG support.
  *
  */
-//#define MBEDTLS_PSA_INJECT_ENTROPY
+//#define MBEDTLS_PSA_HAS_ITS_IO
 
 /**
  * \def MBEDTLS_RSA_NO_CRT
@@ -2220,7 +2173,7 @@
  * Requires: MBEDTLS_AES_C or MBEDTLS_DES_C
  *
  */
-#define MBEDTLS_CMAC_C
+//#define MBEDTLS_CMAC_C
 
 /**
  * \def MBEDTLS_CTR_DRBG_C
@@ -2769,12 +2722,19 @@
  *
  * Enable the Platform Security Architecture cryptography API.
  *
- * Module:  library/psa_crypto.c
+ * \note This option only has an effect when the build option
+ * USE_CRYPTO_SUBMODULE is also in use.
+ *
+ * \warning This feature is experimental and available on an opt-in basis only.
+ * PSA APIs are subject to change at any time. The implementation comes with
+ * less assurance and support than the rest of Mbed TLS.
+ *
+ * Module:  crypto/library/psa_crypto.c
  *
  * Requires: MBEDTLS_CTR_DRBG_C, MBEDTLS_ENTROPY_C
  *
  */
-#define MBEDTLS_PSA_CRYPTO_C
+//#define MBEDTLS_PSA_CRYPTO_C
 
 /**
  * \def MBEDTLS_PSA_CRYPTO_STORAGE_C
@@ -2783,23 +2743,38 @@
  *
  * Module:  library/psa_crypto_storage.c
  *
- * Requires: MBEDTLS_PSA_CRYPTO_C,
- *           either MBEDTLS_PSA_ITS_FILE_C or a native implementation of
- *           the PSA ITS interface
+ * Requires: MBEDTLS_PSA_CRYPTO_C and one of either
+ * MBEDTLS_PSA_CRYPTO_STORAGE_FILE_C or MBEDTLS_PSA_CRYPTO_STORAGE_ITS_C
+ * (but not both)
+ *
  */
-#define MBEDTLS_PSA_CRYPTO_STORAGE_C
+//#define MBEDTLS_PSA_CRYPTO_STORAGE_C
 
 /**
- * \def MBEDTLS_PSA_ITS_FILE_C
+ * \def MBEDTLS_PSA_CRYPTO_STORAGE_FILE_C
  *
- * Enable the emulation of the Platform Security Architecture
- * Internal Trusted Storage (PSA ITS) over files.
+ * Enable persistent key storage over files for the
+ * Platform Security Architecture cryptography API.
  *
- * Module:  library/psa_its_file.c
+ * Module:  library/psa_crypto_storage_file.c
  *
- * Requires: MBEDTLS_FS_IO
+ * Requires: MBEDTLS_PSA_CRYPTO_C, MBEDTLS_FS_IO
+ *
  */
-#define MBEDTLS_PSA_ITS_FILE_C
+//#define MBEDTLS_PSA_CRYPTO_STORAGE_FILE_C
+
+/**
+ * \def MBEDTLS_PSA_CRYPTO_STORAGE_ITS_C
+ *
+ * Enable persistent key storage over PSA ITS for the
+ * Platform Security Architecture cryptography API.
+ *
+ * Module:  library/psa_crypto_storage_its.c
+ *
+ * Requires: MBEDTLS_PSA_CRYPTO_C, MBEDTLS_PSA_HAS_ITS_IO
+ *
+ */
+//#define MBEDTLS_PSA_CRYPTO_STORAGE_ITS_C
 
 /**
  * \def MBEDTLS_RIPEMD160_C
