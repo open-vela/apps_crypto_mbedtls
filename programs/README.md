@@ -44,6 +44,8 @@ This subdirectory mostly contains sample programs that illustrate specific featu
 
 ### Diffie-Hellman key exchange examples
 
+* [`pkey/dh_client.c`](pkey/dh_client.c), [`pkey/dh_server.c`](pkey/dh_server.c): secure channel demonstrators (client, server). This pair of programs illustrates how to set up a secure channel using RSA for authentication and Diffie-Hellman to generate a shared AES session key.
+
 * [`pkey/ecdh_curve25519.c`](pkey/ecdh_curve25519.c): demonstration of a elliptic curve Diffie-Hellman (ECDH) key agreement.
 
 ### Bignum (`mpi`) usage examples
@@ -96,6 +98,8 @@ In addition to providing options for testing client-side features, the `ssl_clie
 * [`test/benchmark.c`](test/benchmark.c): benchmark for cryptographic algorithms.
 
 * [`test/selftest.c`](test/selftest.c): runs the self-test function in each library module.
+
+* [`test/ssl_cert_test.c`](test/ssl_cert_test.c): demonstrates how to verify X.509 certificates, and (for RSA keys only) how to check that each certificate matches the corresponding private key. This program requires some test data which is not provided.
 
 * [`test/udp_proxy.c`](test/udp_proxy.c): a UDP proxy that can inject certain failures (delay, duplicate, drop). Useful for testing DTLS.
 

@@ -35,8 +35,6 @@
 #define mbedtls_printf     printf
 #define mbedtls_fprintf    fprintf
 #define mbedtls_snprintf   snprintf
-#define mbedtls_calloc     calloc
-#define mbedtls_free       free
 #define mbedtls_exit            exit
 #define MBEDTLS_EXIT_SUCCESS    EXIT_SUCCESS
 #define MBEDTLS_EXIT_FAILURE    EXIT_FAILURE
@@ -82,7 +80,6 @@ int main( void )
 #define DFL_REQUEST_PAGE        "/"
 #define DFL_REQUEST_SIZE        -1
 #define DFL_DEBUG_LEVEL         0
-#define DFL_CONTEXT_CRT_CB      0
 #define DFL_NBIO                0
 #define DFL_EVENT               0
 #define DFL_READ_TIMEOUT        0
@@ -125,22 +122,10 @@ int main( void )
 #define DFL_FALLBACK            -1
 #define DFL_EXTENDED_MS         -1
 #define DFL_ETM                 -1
-#define DFL_CA_CALLBACK         0
-
 
 #define GET_REQUEST "GET %s HTTP/1.0\r\nExtra-header: "
 #define GET_REQUEST_END "\r\n\r\n"
 
-#if defined(MBEDTLS_X509_CRT_PARSE_C)
-#define USAGE_CONTEXT_CRT_CB \
-    "    context_crt_cb=%%d   This determines whether the CRT verification callback is bound\n" \
-    "                        to the SSL configuration of the SSL context.\n" \
-    "                        Possible values:\n"\
-    "                        - 0 (default): Use CRT callback bound to configuration\n" \
-    "                        - 1: Use CRT callback bound to SSL context\n"
-#else
-#define USAGE_CONTEXT_CRT_CB ""
-#endif /* MBEDTLS_X509_CRT_PARSE_C */
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
 #if defined(MBEDTLS_FS_IO)
 #define USAGE_IO \
@@ -188,14 +173,6 @@ int main( void )
 #else
 #define USAGE_PSK ""
 #endif /* MBEDTLS_KEY_EXCHANGE__SOME__PSK_ENABLED */
-
-#if defined(MBEDTLS_X509_TRUSTED_CERTIFICATE_CALLBACK)
-#define USAGE_CA_CALLBACK                       \
-    "   ca_callback=%%d       default: 0 (disabled)\n"      \
-    "                         Enable this to use the trusted certificate callback function\n"
-#else
-#define USAGE_CA_CALLBACK ""
-#endif /* MBEDTLS_X509_TRUSTED_CERTIFICATE_CALLBACK */
 
 #if defined(MBEDTLS_SSL_SESSION_TICKETS)
 #define USAGE_TICKETS                                       \
@@ -335,7 +312,6 @@ int main( void )
     "                        options: none, optional, required\n" \
     USAGE_IO                                                \
     USAGE_KEY_OPAQUE                                        \
-    USAGE_CA_CALLBACK                                       \
     "\n"                                                    \
     USAGE_PSK                                               \
     USAGE_ECJPAKE                                           \
@@ -350,7 +326,6 @@ int main( void )
     USAGE_TICKETS                                           \
     USAGE_MAX_FRAG_LEN                                      \
     USAGE_TRUNC_HMAC                                        \
-    USAGE_CONTEXT_CRT_CB                                    \
     USAGE_ALPN                                              \
     USAGE_FALLBACK                                          \
     USAGE_EMS                                               \
@@ -411,9 +386,6 @@ struct options
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
     int psk_opaque;
 #endif
-#if defined(MBEDTLS_X509_TRUSTED_CERTIFICATE_CALLBACK)
-    int ca_callback;            /* Use callback for trusted certificate list */
-#endif
     const char *psk;            /* the pre-shared key                       */
     const char *psk_identity;   /* the pre-shared key identity              */
     const char *ecjpake_pw;     /* the EC J-PAKE password                   */
@@ -447,7 +419,6 @@ struct options
     int dgram_packing;          /* allow/forbid datagram packing            */
     int extended_ms;            /* negotiate extended master secret?        */
     int etm;                    /* negotiate encrypt then mac?              */
-    int context_crt_cb;         /* use context-specific CRT verify callback */
 } opt;
 
 int query_config( const char *config );
@@ -467,62 +438,6 @@ static void my_debug( void *ctx, int level,
                      basename, line, level, str );
     fflush(  (FILE *) ctx  );
 }
-
-#if defined(MBEDTLS_X509_TRUSTED_CERTIFICATE_CALLBACK)
-int ca_callback( void *data, mbedtls_x509_crt const *child,
-                 mbedtls_x509_crt **candidates )
-{
-    int ret = 0;
-    mbedtls_x509_crt *ca = (mbedtls_x509_crt *) data;
-    mbedtls_x509_crt *first;
-
-    /* This is a test-only implementation of the CA callback
-     * which always returns the entire list of trusted certificates.
-     * Production implementations managing a large number of CAs
-     * should use an efficient presentation and lookup for the
-     * set of trusted certificates (such as a hashtable) and only
-     * return those trusted certificates which satisfy basic
-     * parental checks, such as the matching of child `Issuer`
-     * and parent `Subject` field or matching key identifiers. */
-    ((void) child);
-
-    first = mbedtls_calloc( 1, sizeof( mbedtls_x509_crt ) );
-    if( first == NULL )
-    {
-        ret = -1;
-        goto exit;
-    }
-    mbedtls_x509_crt_init( first );
-
-    if( mbedtls_x509_crt_parse_der( first, ca->raw.p, ca->raw.len ) != 0 )
-    {
-        ret = -1;
-        goto exit;
-    }
-
-    while( ca->next != NULL )
-    {
-        ca = ca->next;
-        if( mbedtls_x509_crt_parse_der( first, ca->raw.p, ca->raw.len ) != 0 )
-        {
-            ret = -1;
-            goto exit;
-        }
-    }
-
-exit:
-
-    if( ret != 0 )
-    {
-        mbedtls_x509_crt_free( first );
-        mbedtls_free( first );
-        first = NULL;
-    }
-
-    *candidates = first;
-    return( ret );
-}
-#endif /* MBEDTLS_X509_TRUSTED_CERTIFICATE_CALLBACK */
 
 /*
  * Test recv/send functions that make sure each try returns
@@ -563,8 +478,6 @@ static int my_send( void *ctx, const unsigned char *buf, size_t len )
 }
 
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
-static unsigned char peer_crt_info[1024];
-
 /*
  * Enabled if debug_level > 1 in code below
  */
@@ -574,14 +487,8 @@ static int my_verify( void *data, mbedtls_x509_crt *crt,
     char buf[1024];
     ((void) data);
 
-    mbedtls_x509_crt_info( buf, sizeof( buf ) - 1, "", crt );
-    if( depth == 0 )
-        memcpy( peer_crt_info, buf, sizeof( buf ) );
-
-    if( opt.debug_level == 0 )
-        return( 0 );
-
     mbedtls_printf( "\nVerify requested for (Depth %d):\n", depth );
+    mbedtls_x509_crt_info( buf, sizeof( buf ) - 1, "", crt );
     mbedtls_printf( "%s", buf );
 
     if ( ( *flags ) == 0 )
@@ -770,7 +677,6 @@ int main( int argc, char *argv[] )
     opt.debug_level         = DFL_DEBUG_LEVEL;
     opt.nbio                = DFL_NBIO;
     opt.event               = DFL_EVENT;
-    opt.context_crt_cb      = DFL_CONTEXT_CRT_CB;
     opt.read_timeout        = DFL_READ_TIMEOUT;
     opt.max_resend          = DFL_MAX_RESEND;
     opt.request_page        = DFL_REQUEST_PAGE;
@@ -783,9 +689,6 @@ int main( int argc, char *argv[] )
     opt.psk                 = DFL_PSK;
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
     opt.psk_opaque          = DFL_PSK_OPAQUE;
-#endif
-#if defined(MBEDTLS_X509_TRUSTED_CERTIFICATE_CALLBACK)
-    opt.ca_callback         = DFL_CA_CALLBACK;
 #endif
     opt.psk_identity        = DFL_PSK_IDENTITY;
     opt.ecjpake_pw          = DFL_ECJPAKE_PW;
@@ -848,12 +751,6 @@ int main( int argc, char *argv[] )
             if( opt.debug_level < 0 || opt.debug_level > 65535 )
                 goto usage;
         }
-        else if( strcmp( p, "context_crt_cb" ) == 0 )
-        {
-            opt.context_crt_cb = atoi( q );
-            if( opt.context_crt_cb != 0 && opt.context_crt_cb != 1 )
-                goto usage;
-        }
         else if( strcmp( p, "nbio" ) == 0 )
         {
             opt.nbio = atoi( q );
@@ -900,10 +797,6 @@ int main( int argc, char *argv[] )
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
         else if( strcmp( p, "psk_opaque" ) == 0 )
             opt.psk_opaque = atoi( q );
-#endif
-#if defined(MBEDTLS_X509_TRUSTED_CERTIFICATE_CALLBACK)
-        else if( strcmp( p, "ca_callback" ) == 0)
-            opt.ca_callback = atoi( q );
 #endif
         else if( strcmp( p, "psk_identity" ) == 0 )
             opt.psk_identity = q;
@@ -1610,10 +1503,8 @@ int main( int argc, char *argv[] )
         mbedtls_ssl_conf_sig_hashes( &conf, ssl_sig_hashes_for_test );
     }
 
-    if( opt.context_crt_cb == 0 )
+    if( opt.debug_level > 0 )
         mbedtls_ssl_conf_verify( &conf, my_verify, NULL );
-
-    memset( peer_crt_info, 0, sizeof( peer_crt_info ) );
 #endif /* MBEDTLS_X509_CRT_PARSE_C */
 
     if( opt.auth_mode != DFL_AUTH_MODE )
@@ -1701,12 +1592,7 @@ int main( int argc, char *argv[] )
     if( strcmp( opt.ca_path, "none" ) != 0 &&
         strcmp( opt.ca_file, "none" ) != 0 )
     {
-#if defined(MBEDTLS_X509_TRUSTED_CERTIFICATE_CALLBACK)
-        if( opt.ca_callback != 0 )
-            mbedtls_ssl_conf_ca_cb( &conf, ca_callback, &cacert );
-        else
-#endif
-            mbedtls_ssl_conf_ca_chain( &conf, &cacert, NULL );
+        mbedtls_ssl_conf_ca_chain( &conf, &cacert, NULL );
     }
     if( strcmp( opt.crt_file, "none" ) != 0 &&
         strcmp( opt.key_file, "none" ) != 0 )
@@ -1820,11 +1706,6 @@ int main( int argc, char *argv[] )
         }
     }
 #endif
-
-#if defined(MBEDTLS_X509_CRT_PARSE_C)
-    if( opt.context_crt_cb == 1 )
-        mbedtls_ssl_set_verify( &ssl, my_verify, NULL );
-#endif /* MBEDTLS_X509_CRT_PARSE_C */
 
     if( opt.nbio == 2 )
         mbedtls_ssl_set_bio( &ssl, &server_fd, my_send, my_recv, NULL );
@@ -1952,8 +1833,13 @@ int main( int argc, char *argv[] )
     else
         mbedtls_printf( " ok\n" );
 
-    mbedtls_printf( "  . Peer certificate information    ...\n" );
-    mbedtls_printf( "%s\n", peer_crt_info );
+    if( mbedtls_ssl_get_peer_cert( &ssl ) != NULL )
+    {
+        mbedtls_printf( "  . Peer certificate information    ...\n" );
+        mbedtls_x509_crt_info( (char *) buf, sizeof( buf ) - 1, "      ",
+                       mbedtls_ssl_get_peer_cert( &ssl ) );
+        mbedtls_printf( "%s\n", buf );
+    }
 #endif /* MBEDTLS_X509_CRT_PARSE_C */
 
 #if defined(MBEDTLS_SSL_RENEGOTIATION)
@@ -2258,10 +2144,6 @@ send_request:
         mbedtls_printf( "  . Restarting connection from same port..." );
         fflush( stdout );
 
-#if defined(MBEDTLS_X509_CRT_PARSE_C)
-        memset( peer_crt_info, 0, sizeof( peer_crt_info ) );
-#endif /* MBEDTLS_X509_CRT_PARSE_C */
-
         if( ( ret = mbedtls_ssl_session_reset( &ssl ) ) != 0 )
         {
             mbedtls_printf( " failed\n  ! mbedtls_ssl_session_reset returned -0x%x\n\n",
@@ -2332,10 +2214,6 @@ reconnect:
 #endif
 
         mbedtls_printf( "  . Reconnecting with saved session..." );
-
-#if defined(MBEDTLS_X509_CRT_PARSE_C)
-        memset( peer_crt_info, 0, sizeof( peer_crt_info ) );
-#endif /* MBEDTLS_X509_CRT_PARSE_C */
 
         if( ( ret = mbedtls_ssl_session_reset( &ssl ) ) != 0 )
         {

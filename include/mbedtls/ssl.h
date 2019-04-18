@@ -787,25 +787,6 @@ typedef int mbedtls_ssl_async_resume_t( mbedtls_ssl_context *ssl,
 typedef void mbedtls_ssl_async_cancel_t( mbedtls_ssl_context *ssl );
 #endif /* MBEDTLS_SSL_ASYNC_PRIVATE */
 
-#if defined(MBEDTLS_KEY_EXCHANGE__WITH_CERT__ENABLED) &&        \
-    !defined(MBEDTLS_SSL_KEEP_PEER_CERTIFICATE)
-#define MBEDTLS_SSL_PEER_CERT_DIGEST_MAX_LEN  48
-#if defined(MBEDTLS_SHA256_C)
-#define MBEDTLS_SSL_PEER_CERT_DIGEST_DFL_TYPE MBEDTLS_MD_SHA256
-#define MBEDTLS_SSL_PEER_CERT_DIGEST_DFL_LEN  32
-#elif defined(MBEDTLS_SHA512_C)
-#define MBEDTLS_SSL_PEER_CERT_DIGEST_DFL_TYPE MBEDTLS_MD_SHA384
-#define MBEDTLS_SSL_PEER_CERT_DIGEST_DFL_LEN  48
-#elif defined(MBEDTLS_SHA1_C)
-#define MBEDTLS_SSL_PEER_CERT_DIGEST_DFL_TYPE MBEDTLS_MD_SHA1
-#define MBEDTLS_SSL_PEER_CERT_DIGEST_DFL_LEN  20
-#else
-/* This is already checked in check_config.h, but be sure. */
-#error "Bad configuration - need SHA-1, SHA-256 or SHA-512 enabled to compute digest of peer CRT."
-#endif
-#endif /* MBEDTLS_KEY_EXCHANGE__WITH_CERT__ENABLED &&
-          !MBEDTLS_SSL_KEEP_PEER_CERTIFICATE */
-
 /*
  * This structure is used for storing current session data.
  */
@@ -821,15 +802,7 @@ struct mbedtls_ssl_session
     unsigned char master[48];   /*!< the master secret  */
 
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
-#if defined(MBEDTLS_SSL_KEEP_PEER_CERTIFICATE)
-    mbedtls_x509_crt *peer_cert;       /*!< peer X.509 cert chain */
-#else /* MBEDTLS_SSL_KEEP_PEER_CERTIFICATE */
-    /*! The digest of the peer's end-CRT. This must be kept to detect CRT
-     *  changes during renegotiation, mitigating the triple handshake attack. */
-    unsigned char *peer_cert_digest;
-    size_t peer_cert_digest_len;
-    mbedtls_md_type_t peer_cert_digest_type;
-#endif /* !MBEDTLS_SSL_KEEP_PEER_CERTIFICATE */
+    mbedtls_x509_crt *peer_cert;        /*!< peer X.509 cert chain */
 #endif /* MBEDTLS_X509_CRT_PARSE_C */
     uint32_t verify_result;          /*!<  verification result     */
 
@@ -928,10 +901,6 @@ struct mbedtls_ssl_config
     mbedtls_ssl_key_cert *key_cert; /*!< own certificate/key pair(s)        */
     mbedtls_x509_crt *ca_chain;     /*!< trusted CAs                        */
     mbedtls_x509_crl *ca_crl;       /*!< trusted CAs CRLs                   */
-#if defined(MBEDTLS_X509_TRUSTED_CERTIFICATE_CALLBACK)
-    mbedtls_x509_crt_ca_cb_t f_ca_cb;
-    void *p_ca_cb;
-#endif /* MBEDTLS_X509_TRUSTED_CERTIFICATE_CALLBACK */
 #endif /* MBEDTLS_X509_CRT_PARSE_C */
 
 #if defined(MBEDTLS_SSL_ASYNC_PRIVATE)
@@ -1093,12 +1062,6 @@ struct mbedtls_ssl_context
 #if defined(MBEDTLS_SSL_DTLS_BADMAC_LIMIT)
     unsigned badmac_seen;       /*!< records with a bad MAC received    */
 #endif /* MBEDTLS_SSL_DTLS_BADMAC_LIMIT */
-
-#if defined(MBEDTLS_X509_CRT_PARSE_C)
-    /** Callback to customize X.509 certificate chain verification          */
-    int (*f_vrfy)(void *, mbedtls_x509_crt *, int, uint32_t *);
-    void *p_vrfy;                   /*!< context for X.509 verify callback */
-#endif
 
     mbedtls_ssl_send_t *f_send; /*!< Callback for network send */
     mbedtls_ssl_recv_t *f_recv; /*!< Callback for network receive */
@@ -1376,17 +1339,13 @@ void mbedtls_ssl_conf_authmode( mbedtls_ssl_config *conf, int authmode );
 /**
  * \brief          Set the verification callback (Optional).
  *
- *                 If set, the provided verify callback is called for each
- *                 certificate in the peer's CRT chain, including the trusted
- *                 root. For more information, please see the documentation of
- *                 \c mbedtls_x509_crt_verify().
+ *                 If set, the verify callback is called for each
+ *                 certificate in the chain. For implementation
+ *                 information, please see \c mbedtls_x509_crt_verify()
  *
- * \note           For per context callbacks and contexts, please use
- *                 mbedtls_ssl_set_verify() instead.
- *
- * \param conf     The SSL configuration to use.
- * \param f_vrfy   The verification callback to use during CRT verification.
- * \param p_vrfy   The opaque context to be passed to the callback.
+ * \param conf     SSL configuration
+ * \param f_vrfy   verification function
+ * \param p_vrfy   verification parameter
  */
 void mbedtls_ssl_conf_verify( mbedtls_ssl_config *conf,
                      int (*f_vrfy)(void *, mbedtls_x509_crt *, int, uint32_t *),
@@ -1503,30 +1462,6 @@ void mbedtls_ssl_set_bio( mbedtls_ssl_context *ssl,
  */
 void mbedtls_ssl_set_mtu( mbedtls_ssl_context *ssl, uint16_t mtu );
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
-
-#if defined(MBEDTLS_X509_CRT_PARSE_C)
-/**
- * \brief          Set a connection-specific verification callback (optional).
- *
- *                 If set, the provided verify callback is called for each
- *                 certificate in the peer's CRT chain, including the trusted
- *                 root. For more information, please see the documentation of
- *                 \c mbedtls_x509_crt_verify().
- *
- * \note           This call is analogous to mbedtls_ssl_conf_verify() but
- *                 binds the verification callback and context to an SSL context
- *                 as opposed to an SSL configuration.
- *                 If mbedtls_ssl_conf_verify() and mbedtls_ssl_set_verify()
- *                 are both used, mbedtls_ssl_set_verify() takes precedence.
- *
- * \param ssl      The SSL context to use.
- * \param f_vrfy   The verification callback to use during CRT verification.
- * \param p_vrfy   The opaque context to be passed to the callback.
- */
-void mbedtls_ssl_set_verify( mbedtls_ssl_context *ssl,
-                     int (*f_vrfy)(void *, mbedtls_x509_crt *, int, uint32_t *),
-                     void *p_vrfy );
-#endif /* MBEDTLS_X509_CRT_PARSE_C */
 
 /**
  * \brief          Set the timeout period for mbedtls_ssl_read()
@@ -2108,63 +2043,6 @@ void mbedtls_ssl_conf_cert_profile( mbedtls_ssl_config *conf,
 void mbedtls_ssl_conf_ca_chain( mbedtls_ssl_config *conf,
                                mbedtls_x509_crt *ca_chain,
                                mbedtls_x509_crl *ca_crl );
-
-#if defined(MBEDTLS_X509_TRUSTED_CERTIFICATE_CALLBACK)
-/**
- * \brief          Set the trusted certificate callback.
- *
- *                 This API allows to register the set of trusted certificates
- *                 through a callback, instead of a linked list as configured
- *                 by mbedtls_ssl_conf_ca_chain().
- *
- *                 This is useful for example in contexts where a large number
- *                 of CAs are used, and the inefficiency of maintaining them
- *                 in a linked list cannot be tolerated. It is also useful when
- *                 the set of trusted CAs needs to be modified frequently.
- *
- *                 See the documentation of `mbedtls_x509_crt_ca_cb_t` for
- *                 more information.
- *
- * \param conf     The SSL configuration to register the callback with.
- * \param f_ca_cb  The trusted certificate callback to use when verifying
- *                 certificate chains.
- * \param p_ca_cb  The context to be passed to \p f_ca_cb (for example,
- *                 a reference to a trusted CA database).
- *
- * \note           This API is incompatible with mbedtls_ssl_conf_ca_chain():
- *                 Any call to this function overwrites the values set through
- *                 earlier calls to mbedtls_ssl_conf_ca_chain() or
- *                 mbedtls_ssl_conf_ca_cb().
- *
- * \note           This API is incompatible with CA indication in
- *                 CertificateRequest messages: A server-side SSL context which
- *                 is bound to an SSL configuration that uses a CA callback
- *                 configured via mbedtls_ssl_conf_ca_cb(), and which requires
- *                 client authentication, will send an empty CA list in the
- *                 corresponding CertificateRequest message.
- *
- * \note           This API is incompatible with mbedtls_ssl_set_hs_ca_chain():
- *                 If an SSL context is bound to an SSL configuration which uses
- *                 CA callbacks configured via mbedtls_ssl_conf_ca_cb(), then
- *                 calls to mbedtls_ssl_set_hs_ca_chain() have no effect.
- *
- * \note           The use of this API disables the use of restartable ECC
- *                 during X.509 CRT signature verification (but doesn't affect
- *                 other uses).
- *
- * \warning        This API is incompatible with the use of CRLs. Any call to
- *                 mbedtls_ssl_conf_ca_cb() unsets CRLs configured through
- *                 earlier calls to mbedtls_ssl_conf_ca_chain().
- *
- * \warning        In multi-threaded environments, the callback \p f_ca_cb
- *                 must be thread-safe, and it is the user's responsibility
- *                 to guarantee this (for example through a mutex
- *                 contained in the callback context pointed to by \p p_ca_cb).
- */
-void mbedtls_ssl_conf_ca_cb( mbedtls_ssl_config *conf,
-                             mbedtls_x509_crt_ca_cb_t f_ca_cb,
-                             void *p_ca_cb );
-#endif /* MBEDTLS_X509_TRUSTED_CERTIFICATE_CALLBACK */
 
 /**
  * \brief          Set own certificate chain and private key
@@ -3094,34 +2972,18 @@ int mbedtls_ssl_get_max_out_record_payload( const mbedtls_ssl_context *ssl );
 
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
 /**
- * \brief          Return the peer certificate from the current connection.
+ * \brief          Return the peer certificate from the current connection
  *
- * \param  ssl     The SSL context to use. This must be initialized and setup.
+ *                 Note: Can be NULL in case no certificate was sent during
+ *                 the handshake. Different calls for the same connection can
+ *                 return the same or different pointers for the same
+ *                 certificate and even a different certificate altogether.
+ *                 The peer cert CAN change in a single connection if
+ *                 renegotiation is performed.
  *
- * \return         The current peer certificate, if available.
- *                 The returned certificate is owned by the SSL context and
- *                 is valid only until the next call to the SSL API.
- * \return         \c NULL if no peer certificate is available. This might
- *                 be because the chosen ciphersuite doesn't use CRTs
- *                 (PSK-based ciphersuites, for example), or because
- *                 #MBEDTLS_SSL_KEEP_PEER_CERTIFICATE has been disabled,
- *                 allowing the stack to free the peer's CRT to save memory.
+ * \param ssl      SSL context
  *
- * \note           For one-time inspection of the peer's certificate during
- *                 the handshake, consider registering an X.509 CRT verification
- *                 callback through mbedtls_ssl_conf_verify() instead of calling
- *                 this function. Using mbedtls_ssl_conf_verify() also comes at
- *                 the benefit of allowing you to influence the verification
- *                 process, for example by masking expected and tolerated
- *                 verification failures.
- *
- * \warning        You must not use the pointer returned by this function
- *                 after any further call to the SSL API, including
- *                 mbedtls_ssl_read() and mbedtls_ssl_write(); this is
- *                 because the pointer might change during renegotiation,
- *                 which happens transparently to the user.
- *                 If you want to use the certificate across API calls,
- *                 you must make a copy.
+ * \return         the current peer certificate
  */
 const mbedtls_x509_crt *mbedtls_ssl_get_peer_cert( const mbedtls_ssl_context *ssl );
 #endif /* MBEDTLS_X509_CRT_PARSE_C */
