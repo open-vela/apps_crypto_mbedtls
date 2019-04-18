@@ -36,12 +36,6 @@
 #ifndef MBEDTLS_ECP_H
 #define MBEDTLS_ECP_H
 
-#if !defined(MBEDTLS_CONFIG_FILE)
-#include "config.h"
-#else
-#include MBEDTLS_CONFIG_FILE
-#endif
-
 #include "bignum.h"
 
 /*
@@ -98,16 +92,6 @@ typedef enum
  * \note Montgomery curves are currently excluded.
  */
 #define MBEDTLS_ECP_DP_MAX     12
-
-/*
- * Curve types
- */
-typedef enum
-{
-    MBEDTLS_ECP_TYPE_NONE = 0,
-    MBEDTLS_ECP_TYPE_SHORT_WEIERSTRASS,    /* y^2 = x^3 + a x + b      */
-    MBEDTLS_ECP_TYPE_MONTGOMERY,           /* y^2 = x^3 + a x^2 + x    */
-} mbedtls_ecp_curve_type;
 
 /**
  * Curve information, for use by other modules.
@@ -205,68 +189,6 @@ typedef struct mbedtls_ecp_group
 }
 mbedtls_ecp_group;
 
-/**
- * \name SECTION: Module settings
- *
- * The configuration options you can set for this module are in this section.
- * Either change them in config.h, or define them using the compiler command line.
- * \{
- */
-
-#if !defined(MBEDTLS_ECP_MAX_BITS)
-/**
- * The maximum size of the groups, that is, of \c N and \c P.
- */
-#define MBEDTLS_ECP_MAX_BITS     521   /**< The maximum size of groups, in bits. */
-#endif
-
-#define MBEDTLS_ECP_MAX_BYTES    ( ( MBEDTLS_ECP_MAX_BITS + 7 ) / 8 )
-#define MBEDTLS_ECP_MAX_PT_LEN   ( 2 * MBEDTLS_ECP_MAX_BYTES + 1 )
-
-#if !defined(MBEDTLS_ECP_WINDOW_SIZE)
-/*
- * Maximum "window" size used for point multiplication.
- * Default: 6.
- * Minimum value: 2. Maximum value: 7.
- *
- * Result is an array of at most ( 1 << ( MBEDTLS_ECP_WINDOW_SIZE - 1 ) )
- * points used for point multiplication. This value is directly tied to EC
- * peak memory usage, so decreasing it by one should roughly cut memory usage
- * by two (if large curves are in use).
- *
- * Reduction in size may reduce speed, but larger curves are impacted first.
- * Sample performances (in ECDHE handshakes/s, with FIXED_POINT_OPTIM = 1):
- *      w-size:     6       5       4       3       2
- *      521       145     141     135     120      97
- *      384       214     209     198     177     146
- *      256       320     320     303     262     226
- *      224       475     475     453     398     342
- *      192       640     640     633     587     476
- */
-#define MBEDTLS_ECP_WINDOW_SIZE    6   /**< The maximum window size used. */
-#endif /* MBEDTLS_ECP_WINDOW_SIZE */
-
-#if !defined(MBEDTLS_ECP_FIXED_POINT_OPTIM)
-/*
- * Trade memory for speed on fixed-point multiplication.
- *
- * This speeds up repeated multiplication of the generator (that is, the
- * multiplication in ECDSA signatures, and half of the multiplications in
- * ECDSA verification and ECDHE) by a factor roughly 3 to 4.
- *
- * The cost is increasing EC peak memory usage by a factor roughly 2.
- *
- * Change this value to 0 to reduce peak memory usage.
- */
-#define MBEDTLS_ECP_FIXED_POINT_OPTIM  1   /**< Enable fixed-point speed-up. */
-#endif /* MBEDTLS_ECP_FIXED_POINT_OPTIM */
-
-/* \} name SECTION: Module settings */
-
-#else  /* MBEDTLS_ECP_ALT */
-#include "ecp_alt.h"
-#endif /* MBEDTLS_ECP_ALT */
-
 #if defined(MBEDTLS_ECP_RESTARTABLE)
 
 /**
@@ -332,6 +254,68 @@ typedef void mbedtls_ecp_restart_ctx;
 #endif /* MBEDTLS_ECP_RESTARTABLE */
 
 /**
+ * \name SECTION: Module settings
+ *
+ * The configuration options you can set for this module are in this section.
+ * Either change them in config.h, or define them using the compiler command line.
+ * \{
+ */
+
+#if !defined(MBEDTLS_ECP_MAX_BITS)
+/**
+ * The maximum size of the groups, that is, of \c N and \c P.
+ */
+#define MBEDTLS_ECP_MAX_BITS     521   /**< The maximum size of groups, in bits. */
+#endif
+
+#define MBEDTLS_ECP_MAX_BYTES    ( ( MBEDTLS_ECP_MAX_BITS + 7 ) / 8 )
+#define MBEDTLS_ECP_MAX_PT_LEN   ( 2 * MBEDTLS_ECP_MAX_BYTES + 1 )
+
+#if !defined(MBEDTLS_ECP_WINDOW_SIZE)
+/*
+ * Maximum "window" size used for point multiplication.
+ * Default: 6.
+ * Minimum value: 2. Maximum value: 7.
+ *
+ * Result is an array of at most ( 1 << ( MBEDTLS_ECP_WINDOW_SIZE - 1 ) )
+ * points used for point multiplication. This value is directly tied to EC
+ * peak memory usage, so decreasing it by one should roughly cut memory usage
+ * by two (if large curves are in use).
+ *
+ * Reduction in size may reduce speed, but larger curves are impacted first.
+ * Sample performances (in ECDHE handshakes/s, with FIXED_POINT_OPTIM = 1):
+ *      w-size:     6       5       4       3       2
+ *      521       145     141     135     120      97
+ *      384       214     209     198     177     146
+ *      256       320     320     303     262     226
+ *      224       475     475     453     398     342
+ *      192       640     640     633     587     476
+ */
+#define MBEDTLS_ECP_WINDOW_SIZE    6   /**< The maximum window size used. */
+#endif /* MBEDTLS_ECP_WINDOW_SIZE */
+
+#if !defined(MBEDTLS_ECP_FIXED_POINT_OPTIM)
+/*
+ * Trade memory for speed on fixed-point multiplication.
+ *
+ * This speeds up repeated multiplication of the generator (that is, the
+ * multiplication in ECDSA signatures, and half of the multiplications in
+ * ECDSA verification and ECDHE) by a factor roughly 3 to 4.
+ *
+ * The cost is increasing EC peak memory usage by a factor roughly 2.
+ *
+ * Change this value to 0 to reduce peak memory usage.
+ */
+#define MBEDTLS_ECP_FIXED_POINT_OPTIM  1   /**< Enable fixed-point speed-up. */
+#endif /* MBEDTLS_ECP_FIXED_POINT_OPTIM */
+
+/* \} name SECTION: Module settings */
+
+#else  /* MBEDTLS_ECP_ALT */
+#include "ecp_alt.h"
+#endif /* MBEDTLS_ECP_ALT */
+
+/**
  * \brief    The ECP key-pair structure.
  *
  * A generic key-pair that may be used for ECDSA and fixed ECDH, for example.
@@ -375,19 +359,19 @@ mbedtls_ecp_keypair;
  *                  same; they must not be used until the function finally
  *                  returns 0.
  *
- *                  This only applies to functions whose documentation mentions
- *                  they may return #MBEDTLS_ERR_ECP_IN_PROGRESS (or
- *                  `MBEDTLS_ERR_SSL_CRYPTO_IN_PROGRESS` for functions in the
- *                  Mbed TLS SSL module). For functions that accept a "restart
- *                  context" argument, passing NULL disables restart and makes
- *                  the function equivalent to the function with the same name
+ *                  This only applies to functions whose documentation
+ *                  mentions they may return #MBEDTLS_ERR_ECP_IN_PROGRESS (or
+ *                  #MBEDTLS_ERR_SSL_CRYPTO_IN_PROGRESS for functions in the
+ *                  SSL module). For functions that accept a "restart context"
+ *                  argument, passing NULL disables restart and makes the
+ *                  function equivalent to the function with the same name
  *                  with \c _restartable removed. For functions in the ECDH
- *                  module, restart is disabled unless the function accepts an
- *                  "ECDH context" argument and mbedtls_ecdh_enable_restart()
- *                  was previously called on that context. For function in the
- *                  Mbed TLS SSL module, restart is only enabled for specific
- *                  sides and key exchanges (currently only for clients and
- *                  ECDHE-ECDSA).
+ *                  module, restart is disabled unless the function accepts
+ *                  an "ECDH context" argument and
+ *                  mbedtls_ecdh_enable_restart() was previously called on
+ *                  that context. For function in the SSL module, restart is
+ *                  only enabled for specific sides and key exchanges
+ *                  (currently only for clients and ECDHE-ECDSA).
  *
  * \param max_ops   Maximum number of basic operations done in a row.
  *                  Default: 0 (unlimited).
@@ -426,11 +410,6 @@ void mbedtls_ecp_set_max_ops( unsigned max_ops );
  */
 int mbedtls_ecp_restart_is_enabled( void );
 #endif /* MBEDTLS_ECP_RESTARTABLE */
-
-/*
- * Get the type of a curve
- */
-mbedtls_ecp_curve_type mbedtls_ecp_get_type( const mbedtls_ecp_group *grp );
 
 /**
  * \brief           This function retrieves the information defined in
@@ -497,7 +476,7 @@ void mbedtls_ecp_point_init( mbedtls_ecp_point *pt );
  *
  * \note            After this function is called, domain parameters
  *                  for various ECP groups can be loaded through the
- *                  mbedtls_ecp_group_load() or mbedtls_ecp_tls_read_group()
+ *                  mbedtls_ecp_load() or mbedtls_ecp_tls_read_group()
  *                  functions.
  */
 void mbedtls_ecp_group_init( mbedtls_ecp_group *grp );
@@ -641,9 +620,6 @@ int mbedtls_ecp_point_read_string( mbedtls_ecp_point *P, int radix,
  * \param P         The point to export. This must be initialized.
  * \param format    The point format. This must be either
  *                  #MBEDTLS_ECP_PF_COMPRESSED or #MBEDTLS_ECP_PF_UNCOMPRESSED.
- *                  (For groups without these formats, this parameter is
- *                  ignored. But it still has to be either of the above
- *                  values.)
  * \param olen      The address at which to store the length of
  *                  the output in Bytes. This must not be \c NULL.
  * \param buf       The output buffer. This must be a writable buffer
@@ -653,14 +629,11 @@ int mbedtls_ecp_point_read_string( mbedtls_ecp_point *P, int radix,
  * \return          \c 0 on success.
  * \return          #MBEDTLS_ERR_ECP_BUFFER_TOO_SMALL if the output buffer
  *                  is too small to hold the point.
- * \return          #MBEDTLS_ERR_ECP_FEATURE_UNAVAILABLE if the point format
- *                  or the export for the given group is not implemented.
  * \return          Another negative error code on other kinds of failure.
  */
-int mbedtls_ecp_point_write_binary( const mbedtls_ecp_group *grp,
-                                    const mbedtls_ecp_point *P,
-                                    int format, size_t *olen,
-                                    unsigned char *buf, size_t buflen );
+int mbedtls_ecp_point_write_binary( const mbedtls_ecp_group *grp, const mbedtls_ecp_point *P,
+                            int format, size_t *olen,
+                            unsigned char *buf, size_t buflen );
 
 /**
  * \brief           This function imports a point from unsigned binary data.
@@ -681,8 +654,8 @@ int mbedtls_ecp_point_write_binary( const mbedtls_ecp_group *grp,
  * \return          \c 0 on success.
  * \return          #MBEDTLS_ERR_ECP_BAD_INPUT_DATA if the input is invalid.
  * \return          #MBEDTLS_ERR_MPI_ALLOC_FAILED on memory-allocation failure.
- * \return          #MBEDTLS_ERR_ECP_FEATURE_UNAVAILABLE if the import for the
- *                  given group is not implemented.
+ * \return          #MBEDTLS_ERR_ECP_FEATURE_UNAVAILABLE if the point format
+ *                  is not implemented.
  */
 int mbedtls_ecp_point_read_binary( const mbedtls_ecp_group *grp,
                                    mbedtls_ecp_point *P,
@@ -1114,26 +1087,6 @@ int mbedtls_ecp_gen_key( mbedtls_ecp_group_id grp_id, mbedtls_ecp_keypair *key,
                          int (*f_rng)(void *, unsigned char *, size_t),
                          void *p_rng );
 
-/**
- * \brief           This function reads an elliptic curve private key.
- *
- * \param grp_id    The ECP group identifier.
- * \param key       The destination key.
- * \param buf       The the buffer containing the binary representation of the
- *                  key. (Big endian integer for Weierstrass curves, byte
- *                  string for Montgomery curves.)
- * \param buflen    The length of the buffer in bytes.
- *
- * \return          \c 0 on success.
- * \return          #MBEDTLS_ERR_ECP_INVALID_KEY error if the key is
- *                  invalid.
- * \return          #MBEDTLS_ERR_MPI_ALLOC_FAILED if memory allocation failed.
- * \return          #MBEDTLS_ERR_ECP_FEATURE_UNAVAILABLE if the operation for
- *                  the group is not implemented.
- * \return          Another negative error code on different kinds of failure.
- */
-int mbedtls_ecp_read_key( mbedtls_ecp_group_id grp_id, mbedtls_ecp_keypair *key,
-                          const unsigned char *buf, size_t buflen );
 /**
  * \brief           This function checks that the keypair objects
  *                  \p pub and \p prv have the same group and the

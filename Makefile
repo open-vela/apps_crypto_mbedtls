@@ -24,8 +24,6 @@ ifndef WINDOWS
 install: no_test
 	mkdir -p $(DESTDIR)/include/mbedtls
 	cp -rp include/mbedtls $(DESTDIR)/include
-	mkdir -p $(DESTDIR)/include/psa
-	cp -rp include/psa $(DESTDIR)/include
 
 	mkdir -p $(DESTDIR)/lib
 	cp -RP library/libmbedtls.*    $(DESTDIR)/lib
@@ -102,6 +100,8 @@ ifndef WINDOWS
 covtest:
 	$(MAKE) check
 	programs/test/selftest
+	tests/compat.sh
+	tests/ssl-opt.sh
 
 lcov:
 	rm -rf Coverage
