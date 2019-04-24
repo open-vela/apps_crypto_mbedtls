@@ -97,6 +97,14 @@ typedef enum
  *          This macro is not suitable for negative parameter validation tests,
  *          as it assumes the test step will not create an error.
  *
+ *          Failing the test means:
+ *          - Mark this test case as failed.
+ *          - Print a message identifying the failure.
+ *          - Jump to the \c exit label.
+ *
+ *          This macro expands to an instruction, not an expression.
+ *          It may jump to the \c exit label.
+ *
  * \param   TEST    The test expression to be tested.
  */
 #define TEST_ASSERT( TEST )                                 \
@@ -278,7 +286,7 @@ jmp_buf jmp_tmp;
 /*----------------------------------------------------------------------------*/
 /* Helper Functions */
 
-void test_fail( const char *test, int line_no, const char* filename )
+static void test_fail( const char *test, int line_no, const char* filename )
 {
     test_info.failed = 1;
     test_info.test = test;
@@ -342,6 +350,7 @@ static int redirect_output( FILE** out_stream, const char* path )
 
     if( *out_stream == NULL )
     {
+        close( stdout_fd );
         return -1;
     }
 
@@ -368,7 +377,7 @@ static void close_output( FILE* out_stream )
 }
 #endif /* __unix__ || __APPLE__ __MACH__ */
 
-int unhexify( unsigned char *obuf, const char *ibuf )
+static int unhexify( unsigned char *obuf, const char *ibuf )
 {
     unsigned char c, c2;
     int len = strlen( ibuf ) / 2;
@@ -402,7 +411,7 @@ int unhexify( unsigned char *obuf, const char *ibuf )
     return len;
 }
 
-void hexify( unsigned char *obuf, const unsigned char *ibuf, int len )
+static void hexify( unsigned char *obuf, const unsigned char *ibuf, int len )
 {
     unsigned char l, h;
 
@@ -456,7 +465,7 @@ static unsigned char *zero_alloc( size_t len )
  *
  * For convenience, dies if allocation fails.
  */
-unsigned char *unhexify_alloc( const char *ibuf, size_t *olen )
+static unsigned char *unhexify_alloc( const char *ibuf, size_t *olen )
 {
     unsigned char *obuf;
 
@@ -507,7 +516,7 @@ static int rnd_std_rand( void *rng_state, unsigned char *output, size_t len )
  *
  * rng_state shall be NULL.
  */
-int rnd_zero_rand( void *rng_state, unsigned char *output, size_t len )
+static int rnd_zero_rand( void *rng_state, unsigned char *output, size_t len )
 {
     if( rng_state != NULL )
         rng_state  = NULL;
@@ -534,7 +543,7 @@ typedef struct
  *
  * After the buffer is empty it will return rand();
  */
-int rnd_buffer_rand( void *rng_state, unsigned char *output, size_t len )
+static int rnd_buffer_rand( void *rng_state, unsigned char *output, size_t len )
 {
     rnd_buf_info *info = (rnd_buf_info *) rng_state;
     size_t use_len;
@@ -580,7 +589,7 @@ typedef struct
  *
  * rng_state shall be a pointer to a rnd_pseudo_info structure.
  */
-int rnd_pseudo_rand( void *rng_state, unsigned char *output, size_t len )
+static int rnd_pseudo_rand( void *rng_state, unsigned char *output, size_t len )
 {
     rnd_pseudo_info *info = (rnd_pseudo_info *) rng_state;
     uint32_t i, *k, sum, delta=0x9E3779B9;

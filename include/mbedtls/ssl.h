@@ -65,6 +65,10 @@
 #include "platform_time.h"
 #endif
 
+#if defined(MBEDTLS_USE_PSA_CRYPTO)
+#include "psa/crypto.h"
+#endif /* MBEDTLS_USE_PSA_CRYPTO */
+
 /*
  * SSL Error codes
  */
@@ -783,6 +787,25 @@ typedef int mbedtls_ssl_async_resume_t( mbedtls_ssl_context *ssl,
 typedef void mbedtls_ssl_async_cancel_t( mbedtls_ssl_context *ssl );
 #endif /* MBEDTLS_SSL_ASYNC_PRIVATE */
 
+#if defined(MBEDTLS_KEY_EXCHANGE__WITH_CERT__ENABLED) &&        \
+    !defined(MBEDTLS_SSL_KEEP_PEER_CERTIFICATE)
+#define MBEDTLS_SSL_PEER_CERT_DIGEST_MAX_LEN  48
+#if defined(MBEDTLS_SHA256_C)
+#define MBEDTLS_SSL_PEER_CERT_DIGEST_DFL_TYPE MBEDTLS_MD_SHA256
+#define MBEDTLS_SSL_PEER_CERT_DIGEST_DFL_LEN  32
+#elif defined(MBEDTLS_SHA512_C)
+#define MBEDTLS_SSL_PEER_CERT_DIGEST_DFL_TYPE MBEDTLS_MD_SHA384
+#define MBEDTLS_SSL_PEER_CERT_DIGEST_DFL_LEN  48
+#elif defined(MBEDTLS_SHA1_C)
+#define MBEDTLS_SSL_PEER_CERT_DIGEST_DFL_TYPE MBEDTLS_MD_SHA1
+#define MBEDTLS_SSL_PEER_CERT_DIGEST_DFL_LEN  20
+#else
+/* This is already checked in check_config.h, but be sure. */
+#error "Bad configuration - need SHA-1, SHA-256 or SHA-512 enabled to compute digest of peer CRT."
+#endif
+#endif /* MBEDTLS_KEY_EXCHANGE__WITH_CERT__ENABLED &&
+          !MBEDTLS_SSL_KEEP_PEER_CERTIFICATE */
+
 /*
  * This structure is used for storing current session data.
  */
@@ -798,7 +821,15 @@ struct mbedtls_ssl_session
     unsigned char master[48];   /*!< the master secret  */
 
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
-    mbedtls_x509_crt *peer_cert;        /*!< peer X.509 cert chain */
+#if defined(MBEDTLS_SSL_KEEP_PEER_CERTIFICATE)
+    mbedtls_x509_crt *peer_cert;       /*!< peer X.509 cert chain */
+#else /* MBEDTLS_SSL_KEEP_PEER_CERTIFICATE */
+    /*! The digest of the peer's end-CRT. This must be kept to detect CRT
+     *  changes during renegotiation, mitigating the triple handshake attack. */
+    unsigned char *peer_cert_digest;
+    size_t peer_cert_digest_len;
+    mbedtls_md_type_t peer_cert_digest_type;
+#endif /* !MBEDTLS_SSL_KEEP_PEER_CERTIFICATE */
 #endif /* MBEDTLS_X509_CRT_PARSE_C */
     uint32_t verify_result;          /*!<  verification result     */
 
@@ -897,6 +928,10 @@ struct mbedtls_ssl_config
     mbedtls_ssl_key_cert *key_cert; /*!< own certificate/key pair(s)        */
     mbedtls_x509_crt *ca_chain;     /*!< trusted CAs                        */
     mbedtls_x509_crl *ca_crl;       /*!< trusted CAs CRLs                   */
+#if defined(MBEDTLS_X509_TRUSTED_CERTIFICATE_CALLBACK)
+    mbedtls_x509_crt_ca_cb_t f_ca_cb;
+    void *p_ca_cb;
+#endif /* MBEDTLS_X509_TRUSTED_CERTIFICATE_CALLBACK */
 #endif /* MBEDTLS_X509_CRT_PARSE_C */
 
 #if defined(MBEDTLS_SSL_ASYNC_PRIVATE)
@@ -923,19 +958,37 @@ struct mbedtls_ssl_config
 #endif
 
 #if defined(MBEDTLS_KEY_EXCHANGE__SOME__PSK_ENABLED)
-    unsigned char *psk;             /*!< pre-shared key. This field should
-                                         only be set via
-                                         mbedtls_ssl_conf_psk() */
-    size_t         psk_len;         /*!< length of the pre-shared key. This
-                                         field should only be set via
-                                         mbedtls_ssl_conf_psk() */
-    unsigned char *psk_identity;    /*!< identity for PSK negotiation. This
-                                         field should only be set via
-                                         mbedtls_ssl_conf_psk() */
-    size_t         psk_identity_len;/*!< length of identity. This field should
-                                         only be set via
-                                         mbedtls_ssl_conf_psk() */
-#endif
+
+#if defined(MBEDTLS_USE_PSA_CRYPTO)
+    psa_key_handle_t psk_opaque; /*!< PSA key slot holding opaque PSK.
+                                  *   This field should only be set via
+                                  *   mbedtls_ssl_conf_psk_opaque().
+                                  *   If either no PSK or a raw PSK have
+                                  *   been configured, this has value \c 0. */
+#endif /* MBEDTLS_USE_PSA_CRYPTO */
+
+    unsigned char *psk;      /*!< The raw pre-shared key. This field should
+                              *   only be set via mbedtls_ssl_conf_psk().
+                              *   If either no PSK or an opaque PSK
+                              *   have been configured, this has value NULL. */
+    size_t         psk_len;  /*!< The length of the raw pre-shared key.
+                              *   This field should only be set via
+                              *   mbedtls_ssl_conf_psk().
+                              *   Its value is non-zero if and only if
+                              *   \c psk is not \c NULL. */
+
+    unsigned char *psk_identity;    /*!< The PSK identity for PSK negotiation.
+                                     *   This field should only be set via
+                                     *   mbedtls_ssl_conf_psk().
+                                     *   This is set if and only if either
+                                     *   \c psk or \c psk_opaque are set. */
+    size_t         psk_identity_len;/*!< The length of PSK identity.
+                                     *   This field should only be set via
+                                     *   mbedtls_ssl_conf_psk().
+                                     *   Its value is non-zero if and only if
+                                     *   \c psk is not \c NULL or \c psk_opaque
+                                     *   is not \c 0. */
+#endif /* MBEDTLS_KEY_EXCHANGE__SOME__PSK_ENABLED */
 
 #if defined(MBEDTLS_SSL_ALPN)
     const char **alpn_list;         /*!< ordered list of protocols          */
@@ -1040,6 +1093,12 @@ struct mbedtls_ssl_context
 #if defined(MBEDTLS_SSL_DTLS_BADMAC_LIMIT)
     unsigned badmac_seen;       /*!< records with a bad MAC received    */
 #endif /* MBEDTLS_SSL_DTLS_BADMAC_LIMIT */
+
+#if defined(MBEDTLS_X509_CRT_PARSE_C)
+    /** Callback to customize X.509 certificate chain verification          */
+    int (*f_vrfy)(void *, mbedtls_x509_crt *, int, uint32_t *);
+    void *p_vrfy;                   /*!< context for X.509 verify callback */
+#endif
 
     mbedtls_ssl_send_t *f_send; /*!< Callback for network send */
     mbedtls_ssl_recv_t *f_recv; /*!< Callback for network receive */
@@ -1317,13 +1376,17 @@ void mbedtls_ssl_conf_authmode( mbedtls_ssl_config *conf, int authmode );
 /**
  * \brief          Set the verification callback (Optional).
  *
- *                 If set, the verify callback is called for each
- *                 certificate in the chain. For implementation
- *                 information, please see \c mbedtls_x509_crt_verify()
+ *                 If set, the provided verify callback is called for each
+ *                 certificate in the peer's CRT chain, including the trusted
+ *                 root. For more information, please see the documentation of
+ *                 \c mbedtls_x509_crt_verify().
  *
- * \param conf     SSL configuration
- * \param f_vrfy   verification function
- * \param p_vrfy   verification parameter
+ * \note           For per context callbacks and contexts, please use
+ *                 mbedtls_ssl_set_verify() instead.
+ *
+ * \param conf     The SSL configuration to use.
+ * \param f_vrfy   The verification callback to use during CRT verification.
+ * \param p_vrfy   The opaque context to be passed to the callback.
  */
 void mbedtls_ssl_conf_verify( mbedtls_ssl_config *conf,
                      int (*f_vrfy)(void *, mbedtls_x509_crt *, int, uint32_t *),
@@ -1440,6 +1503,30 @@ void mbedtls_ssl_set_bio( mbedtls_ssl_context *ssl,
  */
 void mbedtls_ssl_set_mtu( mbedtls_ssl_context *ssl, uint16_t mtu );
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
+
+#if defined(MBEDTLS_X509_CRT_PARSE_C)
+/**
+ * \brief          Set a connection-specific verification callback (optional).
+ *
+ *                 If set, the provided verify callback is called for each
+ *                 certificate in the peer's CRT chain, including the trusted
+ *                 root. For more information, please see the documentation of
+ *                 \c mbedtls_x509_crt_verify().
+ *
+ * \note           This call is analogous to mbedtls_ssl_conf_verify() but
+ *                 binds the verification callback and context to an SSL context
+ *                 as opposed to an SSL configuration.
+ *                 If mbedtls_ssl_conf_verify() and mbedtls_ssl_set_verify()
+ *                 are both used, mbedtls_ssl_set_verify() takes precedence.
+ *
+ * \param ssl      The SSL context to use.
+ * \param f_vrfy   The verification callback to use during CRT verification.
+ * \param p_vrfy   The opaque context to be passed to the callback.
+ */
+void mbedtls_ssl_set_verify( mbedtls_ssl_context *ssl,
+                     int (*f_vrfy)(void *, mbedtls_x509_crt *, int, uint32_t *),
+                     void *p_vrfy );
+#endif /* MBEDTLS_X509_CRT_PARSE_C */
 
 /**
  * \brief          Set the timeout period for mbedtls_ssl_read()
@@ -2022,6 +2109,63 @@ void mbedtls_ssl_conf_ca_chain( mbedtls_ssl_config *conf,
                                mbedtls_x509_crt *ca_chain,
                                mbedtls_x509_crl *ca_crl );
 
+#if defined(MBEDTLS_X509_TRUSTED_CERTIFICATE_CALLBACK)
+/**
+ * \brief          Set the trusted certificate callback.
+ *
+ *                 This API allows to register the set of trusted certificates
+ *                 through a callback, instead of a linked list as configured
+ *                 by mbedtls_ssl_conf_ca_chain().
+ *
+ *                 This is useful for example in contexts where a large number
+ *                 of CAs are used, and the inefficiency of maintaining them
+ *                 in a linked list cannot be tolerated. It is also useful when
+ *                 the set of trusted CAs needs to be modified frequently.
+ *
+ *                 See the documentation of `mbedtls_x509_crt_ca_cb_t` for
+ *                 more information.
+ *
+ * \param conf     The SSL configuration to register the callback with.
+ * \param f_ca_cb  The trusted certificate callback to use when verifying
+ *                 certificate chains.
+ * \param p_ca_cb  The context to be passed to \p f_ca_cb (for example,
+ *                 a reference to a trusted CA database).
+ *
+ * \note           This API is incompatible with mbedtls_ssl_conf_ca_chain():
+ *                 Any call to this function overwrites the values set through
+ *                 earlier calls to mbedtls_ssl_conf_ca_chain() or
+ *                 mbedtls_ssl_conf_ca_cb().
+ *
+ * \note           This API is incompatible with CA indication in
+ *                 CertificateRequest messages: A server-side SSL context which
+ *                 is bound to an SSL configuration that uses a CA callback
+ *                 configured via mbedtls_ssl_conf_ca_cb(), and which requires
+ *                 client authentication, will send an empty CA list in the
+ *                 corresponding CertificateRequest message.
+ *
+ * \note           This API is incompatible with mbedtls_ssl_set_hs_ca_chain():
+ *                 If an SSL context is bound to an SSL configuration which uses
+ *                 CA callbacks configured via mbedtls_ssl_conf_ca_cb(), then
+ *                 calls to mbedtls_ssl_set_hs_ca_chain() have no effect.
+ *
+ * \note           The use of this API disables the use of restartable ECC
+ *                 during X.509 CRT signature verification (but doesn't affect
+ *                 other uses).
+ *
+ * \warning        This API is incompatible with the use of CRLs. Any call to
+ *                 mbedtls_ssl_conf_ca_cb() unsets CRLs configured through
+ *                 earlier calls to mbedtls_ssl_conf_ca_chain().
+ *
+ * \warning        In multi-threaded environments, the callback \p f_ca_cb
+ *                 must be thread-safe, and it is the user's responsibility
+ *                 to guarantee this (for example through a mutex
+ *                 contained in the callback context pointed to by \p p_ca_cb).
+ */
+void mbedtls_ssl_conf_ca_cb( mbedtls_ssl_config *conf,
+                             mbedtls_x509_crt_ca_cb_t f_ca_cb,
+                             void *p_ca_cb );
+#endif /* MBEDTLS_X509_TRUSTED_CERTIFICATE_CALLBACK */
+
 /**
  * \brief          Set own certificate chain and private key
  *
@@ -2033,7 +2177,7 @@ void mbedtls_ssl_conf_ca_chain( mbedtls_ssl_config *conf,
  *                 provision more than one cert/key pair (eg one ECDSA, one
  *                 RSA with SHA-256, one RSA with SHA-1). An adequate
  *                 certificate will be selected according to the client's
- *                 advertised capabilities. In case mutliple certificates are
+ *                 advertised capabilities. In case multiple certificates are
  *                 adequate, preference is given to the one set by the first
  *                 call to this function, then second, etc.
  *
@@ -2065,68 +2209,146 @@ int mbedtls_ssl_conf_own_cert( mbedtls_ssl_config *conf,
 
 #if defined(MBEDTLS_KEY_EXCHANGE__SOME__PSK_ENABLED)
 /**
- * \brief          Set the Pre Shared Key (PSK) and the expected identity name
+ * \brief          Configure a pre-shared key (PSK) and identity
+ *                 to be used in PSK-based ciphersuites.
  *
  * \note           This is mainly useful for clients. Servers will usually
  *                 want to use \c mbedtls_ssl_conf_psk_cb() instead.
  *
- * \note           Currently clients can only register one pre-shared key.
- *                 In other words, the servers' identity hint is ignored.
+ * \warning        Currently, clients can only register a single pre-shared key.
+ *                 Calling this function or mbedtls_ssl_conf_psk_opaque() more
+ *                 than once will overwrite values configured in previous calls.
  *                 Support for setting multiple PSKs on clients and selecting
- *                 one based on the identity hint is not a planned feature but
- *                 feedback is welcomed.
+ *                 one based on the identity hint is not a planned feature,
+ *                 but feedback is welcomed.
  *
- * \param conf     SSL configuration
- * \param psk      pointer to the pre-shared key
- * \param psk_len  pre-shared key length
- * \param psk_identity      pointer to the pre-shared key identity
- * \param psk_identity_len  identity key length
+ * \param conf     The SSL configuration to register the PSK with.
+ * \param psk      The pointer to the pre-shared key to use.
+ * \param psk_len  The length of the pre-shared key in bytes.
+ * \param psk_identity      The pointer to the pre-shared key identity.
+ * \param psk_identity_len  The length of the pre-shared key identity
+ *                          in bytes.
  *
- * \return         0 if successful or MBEDTLS_ERR_SSL_ALLOC_FAILED
+ * \note           The PSK and its identity are copied internally and
+ *                 hence need not be preserved by the caller for the lifetime
+ *                 of the SSL configuration.
+ *
+ * \return         \c 0 if successful.
+ * \return         An \c MBEDTLS_ERR_SSL_XXX error code on failure.
  */
 int mbedtls_ssl_conf_psk( mbedtls_ssl_config *conf,
                 const unsigned char *psk, size_t psk_len,
                 const unsigned char *psk_identity, size_t psk_identity_len );
 
+#if defined(MBEDTLS_USE_PSA_CRYPTO)
+/**
+ * \brief          Configure an opaque pre-shared key (PSK) and identity
+ *                 to be used in PSK-based ciphersuites.
+ *
+ * \note           This is mainly useful for clients. Servers will usually
+ *                 want to use \c mbedtls_ssl_conf_psk_cb() instead.
+ *
+ * \warning        Currently, clients can only register a single pre-shared key.
+ *                 Calling this function or mbedtls_ssl_conf_psk() more than
+ *                 once will overwrite values configured in previous calls.
+ *                 Support for setting multiple PSKs on clients and selecting
+ *                 one based on the identity hint is not a planned feature,
+ *                 but feedback is welcomed.
+ *
+ * \param conf     The SSL configuration to register the PSK with.
+ * \param psk      The identifier of the key slot holding the PSK.
+ *                 Until \p conf is destroyed or this function is successfully
+ *                 called again, the key slot \p psk must be populated with a
+ *                 key of type PSA_ALG_CATEGORY_KEY_DERIVATION whose policy
+ *                 allows its use for the key derivation algorithm applied
+ *                 in the handshake.
+ * \param psk_identity      The pointer to the pre-shared key identity.
+ * \param psk_identity_len  The length of the pre-shared key identity
+ *                          in bytes.
+ *
+ * \note           The PSK identity hint is copied internally and hence need
+ *                 not be preserved by the caller for the lifetime of the
+ *                 SSL configuration.
+ *
+ * \return         \c 0 if successful.
+ * \return         An \c MBEDTLS_ERR_SSL_XXX error code on failure.
+ */
+int mbedtls_ssl_conf_psk_opaque( mbedtls_ssl_config *conf,
+                                 psa_key_handle_t psk,
+                                 const unsigned char *psk_identity,
+                                 size_t psk_identity_len );
+#endif /* MBEDTLS_USE_PSA_CRYPTO */
 
 /**
- * \brief          Set the Pre Shared Key (PSK) for the current handshake
+ * \brief          Set the pre-shared Key (PSK) for the current handshake.
  *
  * \note           This should only be called inside the PSK callback,
- *                 ie the function passed to \c mbedtls_ssl_conf_psk_cb().
+ *                 i.e. the function passed to \c mbedtls_ssl_conf_psk_cb().
  *
- * \param ssl      SSL context
- * \param psk      pointer to the pre-shared key
- * \param psk_len  pre-shared key length
+ * \param ssl      The SSL context to configure a PSK for.
+ * \param psk      The pointer to the pre-shared key.
+ * \param psk_len  The length of the pre-shared key in bytes.
  *
- * \return         0 if successful or MBEDTLS_ERR_SSL_ALLOC_FAILED
+ * \return         \c 0 if successful.
+ * \return         An \c MBEDTLS_ERR_SSL_XXX error code on failure.
  */
 int mbedtls_ssl_set_hs_psk( mbedtls_ssl_context *ssl,
                             const unsigned char *psk, size_t psk_len );
+
+#if defined(MBEDTLS_USE_PSA_CRYPTO)
+/**
+ * \brief          Set an opaque pre-shared Key (PSK) for the current handshake.
+ *
+ * \note           This should only be called inside the PSK callback,
+ *                 i.e. the function passed to \c mbedtls_ssl_conf_psk_cb().
+ *
+ * \param ssl      The SSL context to configure a PSK for.
+ * \param psk      The identifier of the key slot holding the PSK.
+ *                 For the duration of the current handshake, the key slot
+ *                 must be populated with a key of type
+ *                 PSA_ALG_CATEGORY_KEY_DERIVATION whose policy allows its
+ *                 use for the key derivation algorithm
+ *                 applied in the handshake.
+  *
+ * \return         \c 0 if successful.
+ * \return         An \c MBEDTLS_ERR_SSL_XXX error code on failure.
+ */
+int mbedtls_ssl_set_hs_psk_opaque( mbedtls_ssl_context *ssl,
+                                   psa_key_handle_t psk );
+#endif /* MBEDTLS_USE_PSA_CRYPTO */
 
 /**
  * \brief          Set the PSK callback (server-side only).
  *
  *                 If set, the PSK callback is called for each
- *                 handshake where a PSK ciphersuite was negotiated.
+ *                 handshake where a PSK-based ciphersuite was negotiated.
  *                 The caller provides the identity received and wants to
  *                 receive the actual PSK data and length.
  *
- *                 The callback has the following parameters: (void *parameter,
- *                 mbedtls_ssl_context *ssl, const unsigned char *psk_identity,
- *                 size_t identity_len)
+ *                 The callback has the following parameters:
+ *                 - \c void*: The opaque pointer \p p_psk.
+ *                 - \c mbedtls_ssl_context*: The SSL context to which
+ *                                            the operation applies.
+ *                 - \c const unsigned char*: The PSK identity
+ *                                            selected by the client.
+ *                 - \c size_t: The length of the PSK identity
+ *                              selected by the client.
+ *
  *                 If a valid PSK identity is found, the callback should use
- *                 \c mbedtls_ssl_set_hs_psk() on the ssl context to set the
- *                 correct PSK and return 0.
+ *                 \c mbedtls_ssl_set_hs_psk() or
+ *                 \c mbedtls_ssl_set_hs_psk_opaque()
+ *                 on the SSL context to set the correct PSK and return \c 0.
  *                 Any other return value will result in a denied PSK identity.
  *
  * \note           If you set a PSK callback using this function, then you
  *                 don't need to set a PSK key and identity using
  *                 \c mbedtls_ssl_conf_psk().
  *
- * \param conf     SSL configuration
- * \param f_psk    PSK identity function
- * \param p_psk    PSK identity parameter
+ * \param conf     The SSL configuration to register the callback with.
+ * \param f_psk    The callback for selecting and setting the PSK based
+ *                 in the PSK identity chosen by the client.
+ * \param p_psk    A pointer to an opaque structure to be passed to
+ *                 the callback, for example a PSK store.
  */
 void mbedtls_ssl_conf_psk_cb( mbedtls_ssl_config *conf,
                      int (*f_psk)(void *, mbedtls_ssl_context *, const unsigned char *,
@@ -2872,18 +3094,34 @@ int mbedtls_ssl_get_max_out_record_payload( const mbedtls_ssl_context *ssl );
 
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
 /**
- * \brief          Return the peer certificate from the current connection
+ * \brief          Return the peer certificate from the current connection.
  *
- *                 Note: Can be NULL in case no certificate was sent during
- *                 the handshake. Different calls for the same connection can
- *                 return the same or different pointers for the same
- *                 certificate and even a different certificate altogether.
- *                 The peer cert CAN change in a single connection if
- *                 renegotiation is performed.
+ * \param  ssl     The SSL context to use. This must be initialized and setup.
  *
- * \param ssl      SSL context
+ * \return         The current peer certificate, if available.
+ *                 The returned certificate is owned by the SSL context and
+ *                 is valid only until the next call to the SSL API.
+ * \return         \c NULL if no peer certificate is available. This might
+ *                 be because the chosen ciphersuite doesn't use CRTs
+ *                 (PSK-based ciphersuites, for example), or because
+ *                 #MBEDTLS_SSL_KEEP_PEER_CERTIFICATE has been disabled,
+ *                 allowing the stack to free the peer's CRT to save memory.
  *
- * \return         the current peer certificate
+ * \note           For one-time inspection of the peer's certificate during
+ *                 the handshake, consider registering an X.509 CRT verification
+ *                 callback through mbedtls_ssl_conf_verify() instead of calling
+ *                 this function. Using mbedtls_ssl_conf_verify() also comes at
+ *                 the benefit of allowing you to influence the verification
+ *                 process, for example by masking expected and tolerated
+ *                 verification failures.
+ *
+ * \warning        You must not use the pointer returned by this function
+ *                 after any further call to the SSL API, including
+ *                 mbedtls_ssl_read() and mbedtls_ssl_write(); this is
+ *                 because the pointer might change during renegotiation,
+ *                 which happens transparently to the user.
+ *                 If you want to use the certificate across API calls,
+ *                 you must make a copy.
  */
 const mbedtls_x509_crt *mbedtls_ssl_get_peer_cert( const mbedtls_ssl_context *ssl );
 #endif /* MBEDTLS_X509_CRT_PARSE_C */
@@ -3200,7 +3438,7 @@ void mbedtls_ssl_free( mbedtls_ssl_context *ssl );
  *                 mbedtls_ssl_config_defaults() or mbedtls_ssl_config_free().
  *
  * \note           You need to call mbedtls_ssl_config_defaults() unless you
- *                 manually set all of the relevent fields yourself.
+ *                 manually set all of the relevant fields yourself.
  *
  * \param conf     SSL configuration context
  */
