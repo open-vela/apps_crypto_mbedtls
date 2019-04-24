@@ -35,7 +35,7 @@ In order to run the tests, enter:
 
     make check
 
-The tests need Perl to be built and run. If you don't have Perl installed, you can skip building the tests with:
+The tests need Python to be built and Perl to be run. If you don't have one of them installed, you can skip building the tests with:
 
     make no_test
 
@@ -47,7 +47,7 @@ In order to build for a Windows platform, you should use `WINDOWS_BUILD=1` if th
 
 Setting the variable `SHARED` in your environment will build shared libraries in addition to the static libraries. Setting `DEBUG` gives you a debug build. You can override `CFLAGS` and `LDFLAGS` by setting them in your environment or on the make command line; compiler warning options may be overridden separately using `WARNING_CFLAGS`. Some directory-specific options (for example, `-I` directives) are still preserved.
 
-Please note that setting `CFLAGS` overrides its default value of `-O2` and setting `WARNING_CFLAGS` overrides its default value (starting with `-Wall -W`), so if you just want to add some warning options to the default ones, you can do so by setting `CFLAGS=-O2 -Werror` for example. Setting `WARNING_CFLAGS` is useful when you want to get rid of its default content (for example because your compiler doesn't accept `-Wall` as an option). Directory-specific options cannot be overriden from the command line.
+Please note that setting `CFLAGS` overrides its default value of `-O2` and setting `WARNING_CFLAGS` overrides its default value (starting with `-Wall -W`), so if you just want to add some warning options to the default ones, you can do so by setting `CFLAGS=-O2 -Werror` for example. Setting `WARNING_CFLAGS` is useful when you want to get rid of its default content (for example because your compiler doesn't accept `-Wall` as an option). Directory-specific options cannot be overridden from the command line.
 
 Depending on your platform, you might run into some issues. Please check the Makefiles in `library/`, `programs/` and `tests/` for options to manually add or remove for specific platforms. You can also check [the Mbed TLS Knowledge Base](https://tls.mbed.org/kb) for articles on your platform or issue.
 
@@ -65,7 +65,7 @@ In order to run the tests, enter:
 
     make test
 
-The test suites need Perl to be built. If you don't have Perl installed, you'll want to disable the test suites with:
+The test suites need Python to be built and Perl to be executed. If you don't have one of these installed, you'll want to disable the test suites with:
 
     cmake -DENABLE_TESTING=Off /path/to/mbedtls_source
 
@@ -133,7 +133,7 @@ on the build mode as seen above), it's merely prepended to it.
 
 The build files for Microsoft Visual Studio are generated for Visual Studio 2010.
 
-The solution file `mbedTLS.sln` contains all the basic projects needed to build the library and all the programs. The files in tests are not generated and compiled, as these need a perl environment as well. However, the selftest program in `programs/test/` is still available.
+The solution file `mbedTLS.sln` contains all the basic projects needed to build the library and all the programs. The files in tests are not generated and compiled, as these need Python and perl environments as well. However, the selftest program in `programs/test/` is still available.
 
 Example programs
 ----------------
@@ -143,7 +143,7 @@ We've included example programs for a lot of different features and uses in [`pr
 Tests
 -----
 
-Mbed TLS includes an elaborate test suite in `tests/` that initially requires Perl to generate the tests files (e.g. `test\_suite\_mpi.c`). These files are generated from a `function file` (e.g. `suites/test\_suite\_mpi.function`) and a `data file` (e.g. `suites/test\_suite\_mpi.data`). The `function file` contains the test functions. The `data file` contains the test cases, specified as parameters that will be passed to the test function.
+Mbed TLS includes an elaborate test suite in `tests/` that initially requires Python to generate the tests files (e.g. `test\_suite\_mpi.c`). These files are generated from a `function file` (e.g. `suites/test\_suite\_mpi.function`) and a `data file` (e.g. `suites/test\_suite\_mpi.data`). The `function file` contains the test functions. The `data file` contains the test cases, specified as parameters that will be passed to the test function.
 
 For machines with a Unix shell and OpenSSL (and optionally GnuTLS) installed, additional test scripts are available:
 
@@ -157,6 +157,43 @@ Configurations
 --------------
 
 We provide some non-standard configurations focused on specific use cases in the `configs/` directory. You can read more about those in `configs/README.txt`
+
+Using Mbed Crypto as a submodule
+--------------------------------
+
+As an experimental feature, you can use Mbed Crypto as the source of the cryptography implementation, with Mbed TLS providing the X.509 and TLS parts of the library. Mbed Crypto is currently provided for evaluation only and should not be used in production. At this point, you should only use this option if you want to try out the experimental PSA Crypto API.
+
+To enable the use of Mbed Crypto as a submodule:
+
+1. Check out the `crypto` submodule and update it.
+
+        git submodule init crypto
+        git submodule update crypto
+
+2. (Optional) TO enable the PSA Crypto API, set the build configuration option `MBEDTLS_PSA_CRYPTO_C`. You can either edit `include/mbedtls/config.h` directly or use the configuration script:
+
+        scripts/config.pl set MBEDTLS_PSA_CRYPTO_C
+
+3. Activate the build option `USE_CRYPTO_SUBMODULE`. With GNU make, set `USE_CRYPTO_SUBMODULE=1` on each make invocation:
+
+        make USE_CRYPTO_SUBMODULE=1
+        make USE_CRYPTO_SUBMODULE=1 test
+        tests/ssl-opt.sh -f Default
+
+   Note that you need to pass `USE_CRYPTO_SUBMODULE=1` even to `make clean`. For example, if you change `config.h`, run this before rebuilding:
+
+        make USE_CRYPTO_SUBMODULE=1 clean
+
+   With CMake, create a build directory (recommended) and pass `-DUSE_CRYPTO_SUBMODULE=1` to `cmake`:
+
+        mkdir build
+        cd build
+        cmake -DUSE_CRYPTO_SUBMODULE=1 ..
+        make
+        make test
+        tests/ssl-opt.sh -f Default
+
+Note that this does not enable the PSA-specific tests and utility programs. To use these programs, use Mbed Crypto as a standalone project.
 
 Porting Mbed TLS
 ----------------
