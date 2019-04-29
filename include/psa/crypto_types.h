@@ -110,13 +110,4 @@ typedef uint32_t psa_key_usage_t;
 
 /**@}*/
 
-/** \defgroup derivation Key derivation
- * @{
- */
-
-/** \brief Encoding of the step of a key derivation. */
-typedef uint16_t psa_key_derivation_step_t;
-
-/**@}*/
-
 #endif /* PSA_CRYPTO_TYPES_H */
