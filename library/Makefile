@@ -2,7 +2,7 @@
 # Also see "include/mbedtls/config.h"
 
 CFLAGS	?= -O2
-WARNING_CFLAGS ?=  -Wall -Wextra
+WARNING_CFLAGS ?=  -Wall -W -Wdeclaration-after-statement
 LDFLAGS ?=
 
 LOCAL_CFLAGS = $(WARNING_CFLAGS) -I../include -D_FILE_OFFSET_BITS=64
@@ -35,8 +35,8 @@ LOCAL_CFLAGS += -fPIC -fpic
 endif
 endif
 
-SOEXT_TLS=so.12
-SOEXT_X509=so.0
+SOEXT_TLS=so.13
+SOEXT_X509=so.1
 SOEXT_CRYPTO=so.3
 
 # Set AR_DASH= (empty string) to use an ar implementation that does not accept

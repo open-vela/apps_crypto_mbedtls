@@ -32,7 +32,6 @@
 
 #include "x509.h"
 #include "x509_crl.h"
-#include "bignum.h"
 
 /**
  * \addtogroup x509_module
