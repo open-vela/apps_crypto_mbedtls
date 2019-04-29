@@ -21,10 +21,6 @@
 
 set -u
 
-# Limit the size of each log to 10 GiB, in case of failures with this script
-# where it may output seemingly unlimited length error logs.
-ulimit -f 20971520
-
 if cd $( dirname $0 ); then :; else
     echo "cd $( dirname $0 ) failed" >&2
     exit 1
@@ -554,12 +550,6 @@ run_test() {
     CLI_CMD="$2"
     CLI_EXPECT="$3"
     shift 3
-
-    # Check if test uses files
-    TEST_USES_FILES=$(echo "$SRV_CMD $CLI_CMD" | grep "\.\(key\|crt\|pem\)" )
-    if [ ! -z "$TEST_USES_FILES" ]; then
-       requires_config_enabled MBEDTLS_FS_IO
-    fi
 
     # Check if server forces ciphersuite
     FORCE_CIPHERSUITE=$(echo "$SRV_CMD" | sed -n 's/^.*force_ciphersuite=\([a-zA-Z0-9\-]*\).*$/\1/p')

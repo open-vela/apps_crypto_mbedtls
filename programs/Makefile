@@ -3,8 +3,8 @@
 # To compile with PKCS11: add "-lpkcs11-helper" to LDFLAGS
 
 CFLAGS	?= -O2
-WARNING_CFLAGS ?= -Wall -Wextra
-WARNING_CXXFLAGS ?= -Wall -Wextra
+WARNING_CFLAGS ?= -Wall -W -Wdeclaration-after-statement
+WARNING_CXXFLAGS ?= -Wall -W
 LDFLAGS ?=
 
 LOCAL_CFLAGS = $(WARNING_CFLAGS) -I../include -D_FILE_OFFSET_BITS=64
@@ -19,9 +19,9 @@ LOCAL_CFLAGS += -I../crypto/include
 LOCAL_CXXFLAGS += -I../crypto/include
 
 ifndef SHARED
-DEP=../crypto/library/libmbedcrypto.a ../library/libmbedx509.a ../library/libmbedtls.a
+DEP=../library/libmbedcrypto.a ../library/libmbedx509.a ../library/libmbedtls.a
 else
-DEP=../crypto/library/libmbedcrypto.$(DLEXT) ../library/libmbedx509.$(DLEXT) ../library/libmbedtls.$(DLEXT)
+DEP=../library/libmbedcrypto.$(DLEXT) ../library/libmbedx509.$(DLEXT) ../library/libmbedtls.$(DLEXT)
 endif
 
 ifdef DEBUG
@@ -90,18 +90,9 @@ endif
 
 .SILENT:
 
-.PHONY: all clean list fuzz
+.PHONY: all clean list
 
 all: $(APPS)
-ifndef WINDOWS
-# APPS doesn't include the fuzzing programs, which aren't "normal"
-# sample or test programs, and don't build with MSVC which is
-# warning about fopen
-all: fuzz
-endif
-
-fuzz:
-	$(MAKE) -C fuzz
 
 $(DEP):
 	$(MAKE) -C ../library
@@ -309,12 +300,9 @@ x509/req_app$(EXEXT): x509/req_app.c $(DEP)
 clean:
 ifndef WINDOWS
 	rm -f $(APPS)
-	-rm -f ssl/ssl_pthread_server$(EXEXT)
-	-rm -f test/cpp_dummy_build$(EXEXT)
 else
 	del /S /Q /F *.o *.exe
 endif
-	$(MAKE) -C fuzz clean
 
 list:
 	echo $(APPS)
