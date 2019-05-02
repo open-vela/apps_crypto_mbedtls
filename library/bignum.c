@@ -582,20 +582,15 @@ int mbedtls_mpi_write_string( const mbedtls_mpi *X, int radix,
     if( radix < 2 || radix > 16 )
         return( MBEDTLS_ERR_MPI_BAD_INPUT_DATA );
 
-    n = mbedtls_mpi_bitlen( X ); /* Number of bits necessary to present `n`. */
-    if( radix >=  4 ) n >>= 1;   /* Number of 4-adic digits necessary to present
-                                  * `n`. If radix > 4, this might be a strict
-                                  * overapproximation of the number of
-                                  * radix-adic digits needed to present `n`. */
-    if( radix >= 16 ) n >>= 1;   /* Number of hexadecimal digits necessary to
-                                  * present `n`. */
-
-    n += 1; /* Terminating null byte */
-    n += 1; /* Compensate for the divisions above, which round down `n`
-             * in case it's not even. */
-    n += 1; /* Potential '-'-sign. */
-    n += ( n & 1 ); /* Make n even to have enough space for hexadecimal writing,
-                     * which always uses an even number of hex-digits. */
+    n = mbedtls_mpi_bitlen( X );
+    if( radix >=  4 ) n >>= 1;
+    if( radix >= 16 ) n >>= 1;
+    /*
+     * Round up the buffer length to an even value to ensure that there is
+     * enough room for hexadecimal values that can be represented in an odd
+     * number of digits.
+     */
+    n += 3 + ( ( n + 1 ) & 1 );
 
     if( buflen < n )
     {
@@ -607,10 +602,7 @@ int mbedtls_mpi_write_string( const mbedtls_mpi *X, int radix,
     mbedtls_mpi_init( &T );
 
     if( X->s == -1 )
-    {
         *p++ = '-';
-        buflen--;
-    }
 
     if( radix == 16 )
     {
@@ -742,15 +734,10 @@ cleanup:
 static mbedtls_mpi_uint mpi_uint_bigendian_to_host_c( mbedtls_mpi_uint x )
 {
     uint8_t i;
-    unsigned char *x_ptr;
     mbedtls_mpi_uint tmp = 0;
-
-    for( i = 0, x_ptr = (unsigned char*) &x; i < ciL; i++, x_ptr++ )
-    {
-        tmp <<= CHAR_BIT;
-        tmp |= (mbedtls_mpi_uint) *x_ptr;
-    }
-
+    /* This works regardless of the endianness. */
+    for( i = 0; i < ciL; i++, x >>= 8 )
+        tmp |= ( x & 0xFF ) << ( ( ciL - 1 - i ) << 3 );
     return( tmp );
 }
 
