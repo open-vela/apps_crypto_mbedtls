@@ -228,7 +228,7 @@
  * \param key_type      The type of the MAC key.
  * \param key_bits      The size of the MAC key in bits.
  * \param alg           A MAC algorithm (\c PSA_ALG_XXX value such that
- *                      #PSA_ALG_IS_MAC(alg) is true).
+ *                      #PSA_ALG_IS_MAC(\p alg) is true).
  *
  * \return              The MAC size for the specified algorithm with
  *                      the specified key parameters.
@@ -253,7 +253,7 @@
  *
  * \param alg                 An AEAD algorithm
  *                            (\c PSA_ALG_XXX value such that
- *                            #PSA_ALG_IS_AEAD(alg) is true).
+ *                            #PSA_ALG_IS_AEAD(\p alg) is true).
  * \param plaintext_length    Size of the plaintext in bytes.
  *
  * \return                    The AEAD ciphertext size for the specified
@@ -268,6 +268,27 @@
      (plaintext_length) + PSA_AEAD_TAG_LENGTH(alg) :              \
      0)
 
+/** The maximum size of the output of psa_aead_finish(), in bytes.
+ *
+ * If the size of the ciphertext buffer is at least this large, it is
+ * guaranteed that psa_aead_finish() will not fail due to an
+ * insufficient buffer size. Depending on the algorithm, the actual size of
+ * the ciphertext may be smaller.
+ *
+ * \param alg                 An AEAD algorithm
+ *                            (\c PSA_ALG_XXX value such that
+ *                            #PSA_ALG_IS_AEAD(\p alg) is true).
+ *
+ * \return                    The maximum trailing ciphertext size for the
+ *                            specified algorithm.
+ *                            If the AEAD algorithm is not recognized, return 0.
+ *                            An implementation may return either 0 or a
+ *                            correct size for an AEAD algorithm that it
+ *                            recognizes, but does not support.
+ */
+#define PSA_AEAD_FINISH_OUTPUT_SIZE(alg)      \
+    ((size_t)0)
+
 /** The maximum size of the output of psa_aead_decrypt(), in bytes.
  *
  * If the size of the plaintext buffer is at least this large, it is
@@ -277,7 +298,7 @@
  *
  * \param alg                 An AEAD algorithm
  *                            (\c PSA_ALG_XXX value such that
- *                            #PSA_ALG_IS_AEAD(alg) is true).
+ *                            #PSA_ALG_IS_AEAD(\p alg) is true).
  * \param ciphertext_length   Size of the plaintext in bytes.
  *
  * \return                    The AEAD ciphertext size for the specified
@@ -576,5 +597,37 @@
      PSA_KEY_TYPE_IS_ECC_KEYPAIR(key_type) ? PSA_KEY_EXPORT_ECC_KEYPAIR_MAX_SIZE(key_bits) : \
      PSA_KEY_TYPE_IS_ECC_PUBLIC_KEY(key_type) ? PSA_KEY_EXPORT_ECC_PUBLIC_KEY_MAX_SIZE(key_bits) : \
      0)
+
+/** Safe output buffer size for psa_get_key_domain_parameters().
+ *
+ * This macro returns a compile-time constant if its arguments are
+ * compile-time constants.
+ *
+ * \warning This function may call its arguments multiple times or
+ *          zero times, so you should not pass arguments that contain
+ *          side effects.
+ *
+ * \param key_type  A supported key type.
+ * \param key_bits  The size of the key in bits.
+ *
+ * \return If the parameters are valid and supported, return
+ *         a buffer size in bytes that guarantees that
+ *         psa_get_key_domain_parameters() will not fail with
+ *         #PSA_ERROR_BUFFER_TOO_SMALL.
+ *         If the parameters are a valid combination that is not supported
+ *         by the implementation, this macro either shall return either a
+ *         sensible size or 0.
+ *         If the parameters are not valid, the
+ *         return value is unspecified.
+ */
+#define PSA_KEY_DOMAIN_PARAMETERS_SIZE(key_type, key_bits)              \
+    (PSA_KEY_TYPE_IS_RSA(key_type) ? sizeof(int) :                      \
+     PSA_KEY_TYPE_IS_DH(key_type) ? PSA_DH_KEY_DOMAIN_PARAMETERS_SIZE(key_bits) : \
+     PSA_KEY_TYPE_IS_DSA(key_type) ? PSA_DSA_KEY_DOMAIN_PARAMETERS_SIZE(key_bits) : \
+     0)
+#define PSA_DH_KEY_DOMAIN_PARAMETERS_SIZE(key_bits)     \
+    (4 + (PSA_BITS_TO_BYTES(key_bits) + 5) * 3 /*without optional parts*/)
+#define PSA_DSA_KEY_DOMAIN_PARAMETERS_SIZE(key_bits)    \
+    (4 + (PSA_BITS_TO_BYTES(key_bits) + 5) * 2 /*p, g*/ + 34 /*q*/)
 
 #endif /* PSA_CRYPTO_SIZES_H */
