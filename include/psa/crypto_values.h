@@ -402,6 +402,15 @@
  * legacy protocols. */
 #define PSA_KEY_TYPE_ARC4                       ((psa_key_type_t)0x40000004)
 
+/** Key for the ChaCha20 stream cipher or the Chacha20-Poly1305 AEAD algorithm.
+ *
+ * ChaCha20 and the ChaCha20_Poly1305 construction are defined in RFC 7539.
+ *
+ * Implementations must support 12-byte nonces, may support 8-byte nonces,
+ * and should reject other sizes.
+ */
+#define PSA_KEY_TYPE_CHACHA20                   ((psa_key_type_t)0x40000005)
+
 /** RSA public key. */
 #define PSA_KEY_TYPE_RSA_PUBLIC_KEY             ((psa_key_type_t)0x60010000)
 /** RSA key pair (private and public key). */
@@ -836,6 +845,18 @@
  */
 #define PSA_ALG_ARC4                            ((psa_algorithm_t)0x04800001)
 
+/** The ChaCha20 stream cipher.
+ *
+ * ChaCha20 is defined in RFC 7539.
+ *
+ * The nonce size for psa_cipher_set_iv() or psa_cipher_generate_iv()
+ * must be 12.
+ *
+ * The initial block counter is always 0.
+ *
+ */
+#define PSA_ALG_CHACHA20                        ((psa_algorithm_t)0x04800005)
+
 /** The CTR stream cipher mode.
  *
  * CTR is a stream cipher which is built from a block cipher.
@@ -874,13 +895,39 @@
  */
 #define PSA_ALG_CBC_PKCS7                       ((psa_algorithm_t)0x04600101)
 
+#define PSA_ALG_AEAD_FROM_BLOCK_FLAG            ((psa_algorithm_t)0x00400000)
+
+/** Whether the specified algorithm is an AEAD mode on a block cipher.
+ *
+ * \param alg An algorithm identifier (value of type #psa_algorithm_t).
+ *
+ * \return 1 if \p alg is an AEAD algorithm which is an AEAD mode based on
+ *         a block cipher, 0 otherwise.
+ *         This macro may return either 0 or 1 if \p alg is not a supported
+ *         algorithm identifier.
+ */
+#define PSA_ALG_IS_AEAD_ON_BLOCK_CIPHER(alg)    \
+    (((alg) & (PSA_ALG_CATEGORY_MASK | PSA_ALG_AEAD_FROM_BLOCK_FLAG)) == \
+     (PSA_ALG_CATEGORY_AEAD | PSA_ALG_AEAD_FROM_BLOCK_FLAG))
+
 /** The CCM authenticated encryption algorithm.
  */
-#define PSA_ALG_CCM                             ((psa_algorithm_t)0x06001001)
+#define PSA_ALG_CCM                             ((psa_algorithm_t)0x06401001)
 
 /** The GCM authenticated encryption algorithm.
  */
-#define PSA_ALG_GCM                             ((psa_algorithm_t)0x06001002)
+#define PSA_ALG_GCM                             ((psa_algorithm_t)0x06401002)
+
+/** The Chacha20-Poly1305 AEAD algorithm.
+ *
+ * The ChaCha20_Poly1305 construction is defined in RFC 7539.
+ *
+ * Implementations must support 12-byte nonces, may support 8-byte nonces,
+ * and should reject other sizes.
+ *
+ * Implementations must support 16-byte tags and should reject other sizes.
+ */
+#define PSA_ALG_CHACHA20_POLY1305               ((psa_algorithm_t)0x06001005)
 
 /* In the encoding of a AEAD algorithm, the bits corresponding to
  * PSA_ALG_AEAD_TAG_LENGTH_MASK encode the length of the AEAD tag.
@@ -924,6 +971,7 @@
     (                                                                   \
         PSA__ALG_AEAD_WITH_DEFAULT_TAG_LENGTH__CASE(aead_alg, PSA_ALG_CCM) \
         PSA__ALG_AEAD_WITH_DEFAULT_TAG_LENGTH__CASE(aead_alg, PSA_ALG_GCM) \
+        PSA__ALG_AEAD_WITH_DEFAULT_TAG_LENGTH__CASE(aead_alg, PSA_ALG_CHACHA20_POLY1305) \
         0)
 #define PSA__ALG_AEAD_WITH_DEFAULT_TAG_LENGTH__CASE(aead_alg, ref)      \
     PSA_ALG_AEAD_WITH_TAG_LENGTH(aead_alg, 0) ==                        \
@@ -1458,20 +1506,6 @@
  * where it is encrypted by another key.
  */
 #define PSA_KEY_USAGE_EXPORT                    ((psa_key_usage_t)0x00000001)
-
-/** Whether the key may be copied.
- *
- * This flag allows the use of psa_crypto_copy() to make a copy of the key
- * with the same policy or a more restrictive policy.
- *
- * For some lifetimes, copying a key also requires the usage flag
- * #PSA_KEY_USAGE_EXPORT, because otherwise the source key
- * is locked inside a secure processing environment and cannot be
- * extracted. For keys with the lifetime #PSA_KEY_LIFETIME_VOLATILE or
- * #PSA_KEY_LIFETIME_PERSISTENT, the usage flag #PSA_KEY_USAGE_COPY
- * is sufficient to permit the copy.
- */
-#define PSA_KEY_USAGE_COPY                      ((psa_key_usage_t)0x00000002)
 
 /** Whether the key may be used to encrypt a message.
  *

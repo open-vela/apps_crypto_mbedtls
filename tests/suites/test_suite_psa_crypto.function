@@ -1204,22 +1204,18 @@ void attributes_set_get( int id_arg, int lifetime_arg,
 /* END_CASE */
 
 /* BEGIN_CASE */
-void import( data_t *data, int type_arg,
-             int attr_bits_arg,
-             int expected_status_arg )
+void import( data_t *data, int type_arg, int expected_status_arg )
 {
     psa_key_attributes_t attributes = PSA_KEY_ATTRIBUTES_INIT;
     psa_key_attributes_t got_attributes = PSA_KEY_ATTRIBUTES_INIT;
     psa_key_handle_t handle = 0;
     psa_key_type_t type = type_arg;
-    size_t attr_bits = attr_bits_arg;
     psa_status_t expected_status = expected_status_arg;
     psa_status_t status;
 
     PSA_ASSERT( psa_crypto_init( ) );
 
     psa_set_key_type( &attributes, type );
-    psa_set_key_bits( &attributes, attr_bits );
     status = psa_import_key( &attributes, &handle, data->x, data->len );
     TEST_EQUAL( status, expected_status );
     if( status != PSA_SUCCESS )
@@ -1227,8 +1223,6 @@ void import( data_t *data, int type_arg,
 
     PSA_ASSERT( psa_get_key_attributes( handle, &got_attributes ) );
     TEST_EQUAL( psa_get_key_type( &got_attributes ), type );
-    if( attr_bits != 0 )
-        TEST_EQUAL( attr_bits, got_attributes.bits );
 
     PSA_ASSERT( psa_destroy_key( handle ) );
     test_operations_on_invalid_handle( handle );
@@ -1924,11 +1918,12 @@ exit:
 /* END_CASE */
 
 /* BEGIN_CASE */
-void copy_success( int source_usage_arg, int source_alg_arg,
-                   int type_arg, data_t *material,
-                   int copy_attributes,
-                   int target_usage_arg, int target_alg_arg,
-                   int expected_usage_arg, int expected_alg_arg )
+void copy_key( int source_usage_arg, int source_alg_arg,
+               int type_arg, data_t *material,
+               int copy_attributes,
+               int target_usage_arg, int target_alg_arg,
+               int expected_status_arg,
+               int expected_usage_arg, int expected_alg_arg )
 {
     psa_key_attributes_t source_attributes = PSA_KEY_ATTRIBUTES_INIT;
     psa_key_attributes_t target_attributes = PSA_KEY_ATTRIBUTES_INIT;
@@ -1946,6 +1941,7 @@ void copy_success( int source_usage_arg, int source_alg_arg,
     psa_set_key_type( &source_attributes, type_arg );
     PSA_ASSERT( psa_import_key( &source_attributes, &source_handle,
                                 material->x, material->len ) );
+    /* Retrieve the key size. */
     PSA_ASSERT( psa_get_key_attributes( source_handle, &source_attributes ) );
 
     /* Prepare the target attributes. */
@@ -1957,8 +1953,14 @@ void copy_success( int source_usage_arg, int source_alg_arg,
         psa_set_key_algorithm( &target_attributes, target_alg_arg );
 
     /* Copy the key. */
-    PSA_ASSERT( psa_copy_key( source_handle,
-                              &target_attributes, &target_handle ) );
+    TEST_EQUAL( psa_copy_key( source_handle,
+                              &target_attributes, &target_handle ),
+                expected_status_arg );
+    if( expected_status_arg != PSA_SUCCESS )
+    {
+        TEST_EQUAL( target_handle, 0 );
+        goto exit;
+    }
 
     /* Destroy the source to ensure that this doesn't affect the target. */
     PSA_ASSERT( psa_destroy_key( source_handle ) );
@@ -1990,44 +1992,6 @@ exit:
     psa_reset_key_attributes( &target_attributes );
     mbedtls_psa_crypto_free( );
     mbedtls_free( export_buffer );
-}
-/* END_CASE */
-
-/* BEGIN_CASE */
-void copy_fail( int source_usage_arg, int source_alg_arg,
-                int type_arg, data_t *material,
-                int target_type_arg, int target_bits_arg,
-                int target_usage_arg, int target_alg_arg,
-                int expected_status_arg )
-{
-    psa_key_attributes_t source_attributes = PSA_KEY_ATTRIBUTES_INIT;
-    psa_key_attributes_t target_attributes = PSA_KEY_ATTRIBUTES_INIT;
-    psa_key_handle_t source_handle = 0;
-    psa_key_handle_t target_handle = 0;
-
-    PSA_ASSERT( psa_crypto_init( ) );
-
-    /* Prepare the source key. */
-    psa_set_key_usage_flags( &source_attributes, source_usage_arg );
-    psa_set_key_algorithm( &source_attributes, source_alg_arg );
-    psa_set_key_type( &source_attributes, type_arg );
-    PSA_ASSERT( psa_import_key( &source_attributes, &source_handle,
-                                material->x, material->len ) );
-
-    /* Prepare the target attributes. */
-    psa_set_key_type( &target_attributes, target_type_arg );
-    psa_set_key_bits( &target_attributes, target_bits_arg );
-    psa_set_key_usage_flags( &target_attributes, target_usage_arg );
-    psa_set_key_algorithm( &target_attributes, target_alg_arg );
-
-    /* Try to copy the key. */
-    TEST_EQUAL( psa_copy_key( source_handle,
-                              &target_attributes, &target_handle ),
-                expected_status_arg );
-exit:
-    psa_reset_key_attributes( &source_attributes );
-    psa_reset_key_attributes( &target_attributes );
-    mbedtls_psa_crypto_free( );
 }
 /* END_CASE */
 
@@ -2843,7 +2807,7 @@ exit:
 
 /* BEGIN_CASE */
 void cipher_encrypt( int alg_arg, int key_type_arg,
-                     data_t *key,
+                     data_t *key, data_t *iv,
                      data_t *input, data_t *expected_output,
                      int expected_status_arg )
 {
@@ -2852,17 +2816,12 @@ void cipher_encrypt( int alg_arg, int key_type_arg,
     psa_key_type_t key_type = key_type_arg;
     psa_algorithm_t alg = alg_arg;
     psa_status_t expected_status = expected_status_arg;
-    unsigned char iv[16] = {0};
-    size_t iv_size;
     unsigned char *output = NULL;
     size_t output_buffer_size = 0;
     size_t function_output_length = 0;
     size_t total_output_length = 0;
     psa_cipher_operation_t operation = PSA_CIPHER_OPERATION_INIT;
     psa_key_attributes_t attributes = PSA_KEY_ATTRIBUTES_INIT;
-
-    iv_size = PSA_BLOCK_CIPHER_BLOCK_SIZE( key_type );
-    memset( iv, 0x2a, iv_size );
 
     PSA_ASSERT( psa_crypto_init( ) );
 
@@ -2876,8 +2835,7 @@ void cipher_encrypt( int alg_arg, int key_type_arg,
     PSA_ASSERT( psa_cipher_encrypt_setup( &operation,
                                           handle, alg ) );
 
-    PSA_ASSERT( psa_cipher_set_iv( &operation,
-                                   iv, iv_size ) );
+    PSA_ASSERT( psa_cipher_set_iv( &operation, iv->x, iv->len ) );
     output_buffer_size = ( (size_t) input->len +
                            PSA_BLOCK_CIPHER_BLOCK_SIZE( key_type ) );
     ASSERT_ALLOC( output, output_buffer_size );
@@ -2910,7 +2868,7 @@ exit:
 
 /* BEGIN_CASE */
 void cipher_encrypt_multipart( int alg_arg, int key_type_arg,
-                               data_t *key,
+                               data_t *key, data_t *iv,
                                data_t *input,
                                int first_part_size_arg,
                                int output1_length_arg, int output2_length_arg,
@@ -2922,17 +2880,12 @@ void cipher_encrypt_multipart( int alg_arg, int key_type_arg,
     size_t first_part_size = first_part_size_arg;
     size_t output1_length = output1_length_arg;
     size_t output2_length = output2_length_arg;
-    unsigned char iv[16] = {0};
-    size_t iv_size;
     unsigned char *output = NULL;
     size_t output_buffer_size = 0;
     size_t function_output_length = 0;
     size_t total_output_length = 0;
     psa_cipher_operation_t operation = PSA_CIPHER_OPERATION_INIT;
     psa_key_attributes_t attributes = PSA_KEY_ATTRIBUTES_INIT;
-
-    iv_size = PSA_BLOCK_CIPHER_BLOCK_SIZE( key_type );
-    memset( iv, 0x2a, iv_size );
 
     PSA_ASSERT( psa_crypto_init( ) );
 
@@ -2946,8 +2899,7 @@ void cipher_encrypt_multipart( int alg_arg, int key_type_arg,
     PSA_ASSERT( psa_cipher_encrypt_setup( &operation,
                                           handle, alg ) );
 
-    PSA_ASSERT( psa_cipher_set_iv( &operation,
-                                   iv, sizeof( iv ) ) );
+    PSA_ASSERT( psa_cipher_set_iv( &operation, iv->x, iv->len ) );
     output_buffer_size = ( (size_t) input->len +
                            PSA_BLOCK_CIPHER_BLOCK_SIZE( key_type ) );
     ASSERT_ALLOC( output, output_buffer_size );
@@ -2985,7 +2937,7 @@ exit:
 
 /* BEGIN_CASE */
 void cipher_decrypt_multipart( int alg_arg, int key_type_arg,
-                               data_t *key,
+                               data_t *key, data_t *iv,
                                data_t *input,
                                int first_part_size_arg,
                                int output1_length_arg, int output2_length_arg,
@@ -2998,17 +2950,12 @@ void cipher_decrypt_multipart( int alg_arg, int key_type_arg,
     size_t first_part_size = first_part_size_arg;
     size_t output1_length = output1_length_arg;
     size_t output2_length = output2_length_arg;
-    unsigned char iv[16] = {0};
-    size_t iv_size;
     unsigned char *output = NULL;
     size_t output_buffer_size = 0;
     size_t function_output_length = 0;
     size_t total_output_length = 0;
     psa_cipher_operation_t operation = PSA_CIPHER_OPERATION_INIT;
     psa_key_attributes_t attributes = PSA_KEY_ATTRIBUTES_INIT;
-
-    iv_size = PSA_BLOCK_CIPHER_BLOCK_SIZE( key_type );
-    memset( iv, 0x2a, iv_size );
 
     PSA_ASSERT( psa_crypto_init( ) );
 
@@ -3022,8 +2969,7 @@ void cipher_decrypt_multipart( int alg_arg, int key_type_arg,
     PSA_ASSERT( psa_cipher_decrypt_setup( &operation,
                                           handle, alg ) );
 
-    PSA_ASSERT( psa_cipher_set_iv( &operation,
-                                   iv, sizeof( iv ) ) );
+    PSA_ASSERT( psa_cipher_set_iv( &operation, iv->x, iv->len ) );
 
     output_buffer_size = ( (size_t) input->len +
                            PSA_BLOCK_CIPHER_BLOCK_SIZE( key_type ) );
@@ -3063,7 +3009,7 @@ exit:
 
 /* BEGIN_CASE */
 void cipher_decrypt( int alg_arg, int key_type_arg,
-                     data_t *key,
+                     data_t *key, data_t *iv,
                      data_t *input, data_t *expected_output,
                      int expected_status_arg )
 {
@@ -3072,17 +3018,12 @@ void cipher_decrypt( int alg_arg, int key_type_arg,
     psa_key_type_t key_type = key_type_arg;
     psa_algorithm_t alg = alg_arg;
     psa_status_t expected_status = expected_status_arg;
-    unsigned char iv[16] = {0};
-    size_t iv_size;
     unsigned char *output = NULL;
     size_t output_buffer_size = 0;
     size_t function_output_length = 0;
     size_t total_output_length = 0;
     psa_cipher_operation_t operation = PSA_CIPHER_OPERATION_INIT;
     psa_key_attributes_t attributes = PSA_KEY_ATTRIBUTES_INIT;
-
-    iv_size = PSA_BLOCK_CIPHER_BLOCK_SIZE( key_type );
-    memset( iv, 0x2a, iv_size );
 
     PSA_ASSERT( psa_crypto_init( ) );
 
@@ -3096,8 +3037,7 @@ void cipher_decrypt( int alg_arg, int key_type_arg,
     PSA_ASSERT( psa_cipher_decrypt_setup( &operation,
                                           handle, alg ) );
 
-    PSA_ASSERT( psa_cipher_set_iv( &operation,
-                                   iv, iv_size ) );
+    PSA_ASSERT( psa_cipher_set_iv( &operation, iv->x, iv->len ) );
 
     output_buffer_size = ( (size_t) input->len +
                            PSA_BLOCK_CIPHER_BLOCK_SIZE( key_type ) );
