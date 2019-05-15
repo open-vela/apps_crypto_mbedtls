@@ -276,10 +276,6 @@ struct mbedtls_ssl_sig_hash_set_t
 #endif /* MBEDTLS_SSL_PROTO_TLS1_2 &&
           MBEDTLS_KEY_EXCHANGE__WITH_CERT__ENABLED */
 
-typedef int  mbedtls_ssl_tls_prf_cb( const unsigned char *secret, size_t slen,
-                                     const char *label,
-                                     const unsigned char *random, size_t rlen,
-                                     unsigned char *dstbuf, size_t dlen );
 /*
  * This structure contains the parameters only needed during handshake.
  */
@@ -429,7 +425,9 @@ struct mbedtls_ssl_handshake_params
     void (*update_checksum)(mbedtls_ssl_context *, const unsigned char *, size_t);
     void (*calc_verify)(mbedtls_ssl_context *, unsigned char *);
     void (*calc_finished)(mbedtls_ssl_context *, unsigned char *, int);
-    mbedtls_ssl_tls_prf_cb *tls_prf;
+    int  (*tls_prf)(const unsigned char *, size_t, const char *,
+                    const unsigned char *, size_t,
+                    unsigned char *, size_t);
 
     mbedtls_ssl_ciphersuite_t const *ciphersuite_info;
 
