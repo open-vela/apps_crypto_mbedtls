@@ -536,10 +536,9 @@ void psa_reset_key_attributes(psa_key_attributes_t *attributes);
  *
  * Open a handle to a key which was previously created with psa_create_key().
  *
- * Implementations may provide additional keys that can be opened with
- * psa_open_key(). Such keys have a key identifier in the vendor range,
- * as documented in the description of #psa_key_id_t.
- *
+ * \param lifetime      The lifetime of the key. This designates a storage
+ *                      area where the key material is stored. This must not
+ *                      be #PSA_KEY_LIFETIME_VOLATILE.
  * \param id            The persistent identifier of the key.
  * \param[out] handle   On success, a handle to a key slot which contains
  *                      the data and metadata loaded from the specified
@@ -551,16 +550,19 @@ void psa_reset_key_attributes(psa_key_attributes_t *attributes);
  * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
  * \retval #PSA_ERROR_DOES_NOT_EXIST
  * \retval #PSA_ERROR_INVALID_ARGUMENT
- *         \p id is invalid.
+ *         \p lifetime is invalid, for example #PSA_KEY_LIFETIME_VOLATILE.
+ * \retval #PSA_ERROR_INVALID_ARGUMENT
+ *         \p id is invalid for the specified lifetime.
+ * \retval #PSA_ERROR_NOT_SUPPORTED
+ *         \p lifetime is not supported.
  * \retval #PSA_ERROR_NOT_PERMITTED
  *         The specified key exists, but the application does not have the
  *         permission to access it. Note that this specification does not
  *         define any way to create such a key, but it may be possible
  *         through implementation-specific means.
- * \retval #PSA_ERROR_COMMUNICATION_FAILURE
- * \retval #PSA_ERROR_STORAGE_FAILURE
  */
-psa_status_t psa_open_key(psa_key_id_t id,
+psa_status_t psa_open_key(psa_key_lifetime_t lifetime,
+                          psa_key_id_t id,
                           psa_key_handle_t *handle);
 
 /** Close a key handle.
@@ -605,9 +607,10 @@ psa_status_t psa_close_key(psa_key_handle_t handle);
  * according to a different format.
  *
  * \param[in] attributes    The attributes for the new key.
- *                          The key size field in \p attributes is
- *                          ignored; the actual key size is determined
- *                          from the \p data buffer.
+ *                          The key size is always determined from the
+ *                          \p data buffer.
+ *                          If the key size in \p attributes is nonzero,
+ *                          it must be equal to the size from \p data.
  * \param[out] handle       On success, a handle to the newly created key.
  *                          \c 0 on failure.
  * \param[in] data    Buffer containing the key data. The content of this
@@ -634,8 +637,12 @@ psa_status_t psa_close_key(psa_key_handle_t handle);
  *         The key type or key size is not supported, either by the
  *         implementation in general or in this particular persistent location.
  * \retval #PSA_ERROR_INVALID_ARGUMENT
- *         The key attributes, as a whole, are invalid,
- *         or the key data is not correctly formatted.
+ *         The key attributes, as a whole, are invalid.
+ * \retval #PSA_ERROR_INVALID_ARGUMENT
+ *         The key data is not correctly formatted.
+ * \retval #PSA_ERROR_INVALID_ARGUMENT
+ *         The size in \p attributes is nonzero and does not match the size
+ *         of the key data.
  * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
  * \retval #PSA_ERROR_INSUFFICIENT_STORAGE
  * \retval #PSA_ERROR_COMMUNICATION_FAILURE
@@ -881,9 +888,12 @@ psa_status_t psa_export_public_key(psa_key_handle_t handle,
  *                          occupied slot.
  * \param[in] attributes    The attributes for the new key.
  *                          They are used as follows:
- *                          - The key type, key size and domain parameters
- *                            are ignored. This information is copied
- *                            from the source key.
+ *                          - The key type and size may be 0. If either is
+ *                            nonzero, it must match the corresponding
+ *                            attribute of the source key.
+ *                          - If \p attributes contains domain parameters,
+ *                            they must match the domain parameters of
+ *                            the source key.
  *                          - The key location (the lifetime and, for
  *                            persistent keys, the key identifier) is
  *                            used directly.
@@ -906,6 +916,9 @@ psa_status_t psa_export_public_key(psa_key_handle_t handle,
  * \retval #PSA_ERROR_INVALID_ARGUMENT
  *         The policy constraints on the source and specified in
  *         \p attributes are incompatible.
+ * \retval #PSA_ERROR_INVALID_ARGUMENT
+ *         \p attributes specifies a key type, domain parameters or key size
+ *         which does not match the attributes of the source key.
  * \retval #PSA_ERROR_NOT_PERMITTED
  *         The source key is not exportable and its lifetime does not
  *         allow copying it to the target's lifetime.
