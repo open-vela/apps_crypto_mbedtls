@@ -16,22 +16,12 @@ if grep --version|head -n1|grep GNU >/dev/null; then :; else
     exit 1
 fi
 
-trace=
-if [ $# -ne 0 ] && [ "$1" = "-v" ]; then
-  shift
-  trace='-x'
-  exec 2>check-names.err
-  trap 'echo "FAILED UNEXPECTEDLY, status=$?";
-        cat check-names.err' EXIT
-  set -x
-fi
-
 printf "Analysing source code...\n"
 
-sh $trace tests/scripts/list-macros.sh
+tests/scripts/list-macros.sh
 tests/scripts/list-enum-consts.pl
-sh $trace tests/scripts/list-identifiers.sh
-sh $trace tests/scripts/list-symbols.sh
+tests/scripts/list-identifiers.sh
+tests/scripts/list-symbols.sh
 
 FAIL=0
 
@@ -50,7 +40,7 @@ diff macros identifiers | sed -n -e 's/< //p' > actual-macros
 for THING in actual-macros enum-consts; do
     printf "Names of $THING: "
     test -r $THING
-    BAD=$( grep -v '^MBEDTLS_[0-9A-Z_]*[0-9A-Z]$' $THING || true )
+    BAD=$( grep -E -v '^(MBEDTLS|PSA)_[0-9A-Z_]*[0-9A-Z]$' $THING || true )
     if [ "x$BAD" = "x" ]; then
         echo "PASS"
     else
@@ -63,7 +53,7 @@ done
 for THING in identifiers; do
     printf "Names of $THING: "
     test -r $THING
-    BAD=$( grep -v '^mbedtls_[0-9a-z_]*[0-9a-z]$' $THING || true )
+    BAD=$( grep -E -v '^(mbedtls|psa)_[0-9a-z_]*[0-9a-z]$' $THING || true )
     if [ "x$BAD" = "x" ]; then
         echo "PASS"
     else
@@ -75,7 +65,7 @@ done
 
 printf "Likely typos: "
 sort -u actual-macros enum-consts > _caps
-HEADERS=$( ls include/mbedtls/*.h | egrep -v 'compat-1\.3\.h' )
+HEADERS=$( ls include/mbedtls/*.h include/psa/*.h | egrep -v 'compat-1\.3\.h' )
 NL='
 '
 sed -n 's/MBED..._[A-Z0-9_]*/\'"$NL"'&\'"$NL"/gp \
@@ -90,12 +80,6 @@ else
     echo "FAIL"
     echo "$TYPOS"
     FAIL=1
-fi
-
-if [ -n "$trace" ]; then
-  set +x
-  trap - EXIT
-  rm check-names.err
 fi
 
 printf "\nOverall: "
