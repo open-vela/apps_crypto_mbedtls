@@ -132,7 +132,8 @@ psa_status_t psa_crypto_init(void);
  * psa_reset_key_attributes() on an attribute structure is optional if
  * the structure has only been modified by the following functions
  * since it was initialized or last reset with psa_reset_key_attributes():
- * - psa_make_key_persistent()
+ * - psa_set_key_id()
+ * - psa_set_key_lifetime()
  * - psa_set_key_type()
  * - psa_set_key_bits()
  * - psa_set_key_usage_flags()
@@ -173,7 +174,9 @@ psa_status_t psa_crypto_init(void);
  *
  * A typical sequence to create a key is as follows:
  * -# Create and initialize an attribute structure.
- * -# If the key is persistent, call psa_make_key_persistent().
+ * -# If the key is persistent, call psa_set_key_id().
+ *    Also call psa_set_key_lifetime() to place the key in a non-default
+ *    location.
  * -# Set the key policy with psa_set_key_usage_flags() and
  *    psa_set_key_algorithm().
  * -# Set the key type with psa_set_key_type(). If the key type requires
@@ -203,16 +206,18 @@ psa_status_t psa_crypto_init(void);
  */
 typedef struct psa_key_attributes_s psa_key_attributes_t;
 
-/** Declare a key as persistent.
+/** Declare a key as persistent and set its key identifier.
  *
- * This function does not access storage, it merely fills the attribute
- * structure with given values. The persistent key will be written to
- * storage when the attribute structure is passed to a key creation
- * function such as psa_import_key(), psa_generate_random_key(),
+ * If the attribute structure currently declares the key as volatile (which
+ * is the default content of an attribute structure), this function sets
+ * the lifetime attribute to #PSA_KEY_LIFETIME_PERSISTENT.
+ *
+ * This function does not access storage, it merely stores the given
+ * value in the structure.
+ * The persistent key will be written to storage when the attribute
+ * structure is passed to a key creation function such as
+ * psa_import_key(), psa_generate_random_key(),
  * psa_generate_derived_key() or psa_copy_key().
- *
- * This function overwrites any identifier and lifetime values
- * previously set in \p attributes.
  *
  * This function may be declared as `static` (i.e. without external
  * linkage). This function may be provided as a function-like macro,
@@ -220,13 +225,37 @@ typedef struct psa_key_attributes_s psa_key_attributes_t;
  *
  * \param[out] attributes       The attribute structure to write to.
  * \param id                    The persistent identifier for the key.
+ */
+static void psa_set_key_id(psa_key_attributes_t *attributes,
+                           psa_key_id_t id);
+
+/** Set the location of a persistent key.
+ *
+ * To make a key persistent, you must give it a persistent key identifier
+ * with psa_set_key_id(). By default, a key that has a persistent identifier
+ * is stored in the default storage area identifier by
+ * #PSA_KEY_LIFETIME_PERSISTENT. Call this function to choose a storage
+ * area, or to explicitly declare the key as volatile.
+ *
+ * This function does not access storage, it merely stores the given
+ * value in the structure.
+ * The persistent key will be written to storage when the attribute
+ * structure is passed to a key creation function such as
+ * psa_import_key(), psa_generate_random_key(),
+ * psa_generate_derived_key() or psa_copy_key().
+ *
+ * This function may be declared as `static` (i.e. without external
+ * linkage). This function may be provided as a function-like macro,
+ * but in this case it must evaluate each of its arguments exactly once.
+ *
+ * \param[out] attributes       The attribute structure to write to.
  * \param lifetime              The lifetime for the key.
  *                              If this is #PSA_KEY_LIFETIME_VOLATILE, the
- *                              key will be volatile, and \p id is ignored.
+ *                              key will be volatile, and the key identifier
+ *                              attribute is reset to 0.
  */
-static void psa_make_key_persistent(psa_key_attributes_t *attributes,
-                                    psa_key_id_t id,
-                                    psa_key_lifetime_t lifetime);
+static void psa_set_key_lifetime(psa_key_attributes_t *attributes,
+                                 psa_key_lifetime_t lifetime);
 
 /** Retrieve the key identifier from key attributes.
  *
@@ -512,10 +541,9 @@ void psa_reset_key_attributes(psa_key_attributes_t *attributes);
  *
  * Open a handle to a key which was previously created with psa_create_key().
  *
- * Implementations may provide additional keys that can be opened with
- * psa_open_key(). Such keys have a key identifier in the vendor range,
- * as documented in the description of #psa_key_id_t.
- *
+ * \param lifetime      The lifetime of the key. This designates a storage
+ *                      area where the key material is stored. This must not
+ *                      be #PSA_KEY_LIFETIME_VOLATILE.
  * \param id            The persistent identifier of the key.
  * \param[out] handle   On success, a handle to a key slot which contains
  *                      the data and metadata loaded from the specified
@@ -527,16 +555,19 @@ void psa_reset_key_attributes(psa_key_attributes_t *attributes);
  * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
  * \retval #PSA_ERROR_DOES_NOT_EXIST
  * \retval #PSA_ERROR_INVALID_ARGUMENT
- *         \p id is invalid.
+ *         \p lifetime is invalid, for example #PSA_KEY_LIFETIME_VOLATILE.
+ * \retval #PSA_ERROR_INVALID_ARGUMENT
+ *         \p id is invalid for the specified lifetime.
+ * \retval #PSA_ERROR_NOT_SUPPORTED
+ *         \p lifetime is not supported.
  * \retval #PSA_ERROR_NOT_PERMITTED
  *         The specified key exists, but the application does not have the
  *         permission to access it. Note that this specification does not
  *         define any way to create such a key, but it may be possible
  *         through implementation-specific means.
- * \retval #PSA_ERROR_COMMUNICATION_FAILURE
- * \retval #PSA_ERROR_STORAGE_FAILURE
  */
-psa_status_t psa_open_key(psa_key_id_t id,
+psa_status_t psa_open_key(psa_key_lifetime_t lifetime,
+                          psa_key_id_t id,
                           psa_key_handle_t *handle);
 
 /** Close a key handle.
@@ -581,9 +612,10 @@ psa_status_t psa_close_key(psa_key_handle_t handle);
  * according to a different format.
  *
  * \param[in] attributes    The attributes for the new key.
- *                          The key size field in \p attributes is
- *                          ignored; the actual key size is determined
- *                          from the \p data buffer.
+ *                          The key size is always determined from the
+ *                          \p data buffer.
+ *                          If the key size in \p attributes is nonzero,
+ *                          it must be equal to the size from \p data.
  * \param[out] handle       On success, a handle to the newly created key.
  *                          \c 0 on failure.
  * \param[in] data    Buffer containing the key data. The content of this
@@ -610,8 +642,12 @@ psa_status_t psa_close_key(psa_key_handle_t handle);
  *         The key type or key size is not supported, either by the
  *         implementation in general or in this particular persistent location.
  * \retval #PSA_ERROR_INVALID_ARGUMENT
- *         The key attributes, as a whole, are invalid,
- *         or the key data is not correctly formatted.
+ *         The key attributes, as a whole, are invalid.
+ * \retval #PSA_ERROR_INVALID_ARGUMENT
+ *         The key data is not correctly formatted.
+ * \retval #PSA_ERROR_INVALID_ARGUMENT
+ *         The size in \p attributes is nonzero and does not match the size
+ *         of the key data.
  * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
  * \retval #PSA_ERROR_INSUFFICIENT_STORAGE
  * \retval #PSA_ERROR_COMMUNICATION_FAILURE
@@ -857,9 +893,12 @@ psa_status_t psa_export_public_key(psa_key_handle_t handle,
  *                          occupied slot.
  * \param[in] attributes    The attributes for the new key.
  *                          They are used as follows:
- *                          - The key type, key size and domain parameters
- *                            are ignored. This information is copied
- *                            from the source key.
+ *                          - The key type and size may be 0. If either is
+ *                            nonzero, it must match the corresponding
+ *                            attribute of the source key.
+ *                          - If \p attributes contains domain parameters,
+ *                            they must match the domain parameters of
+ *                            the source key.
  *                          - The key location (the lifetime and, for
  *                            persistent keys, the key identifier) is
  *                            used directly.
@@ -882,6 +921,9 @@ psa_status_t psa_export_public_key(psa_key_handle_t handle,
  * \retval #PSA_ERROR_INVALID_ARGUMENT
  *         The policy constraints on the source and specified in
  *         \p attributes are incompatible.
+ * \retval #PSA_ERROR_INVALID_ARGUMENT
+ *         \p attributes specifies a key type, domain parameters or key size
+ *         which does not match the attributes of the source key.
  * \retval #PSA_ERROR_NOT_PERMITTED
  *         The source key is not exportable and its lifetime does not
  *         allow copying it to the target's lifetime.
