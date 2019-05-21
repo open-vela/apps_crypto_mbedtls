@@ -1,6 +1,14 @@
 set(libs
-    mbedcrypto
+    mbedtls
 )
+
+if(USE_PKCS11_HELPER_LIBRARY)
+    set(libs ${libs} pkcs11-helper)
+endif(USE_PKCS11_HELPER_LIBRARY)
+
+if(ENABLE_ZLIB_SUPPORT)
+    set(libs ${libs} ${ZLIB_LIBRARIES})
+endif(ENABLE_ZLIB_SUPPORT)
 
 find_package(Perl)
 if(NOT PERL_FOUND)
@@ -29,7 +37,7 @@ function(add_test_suite suite_name)
     add_custom_command(
         OUTPUT test_suite_${data_name}.c
         COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/scripts/generate_test_code.py -f ${CMAKE_CURRENT_SOURCE_DIR}/suites/test_suite_${suite_name}.function -d ${CMAKE_CURRENT_SOURCE_DIR}/suites/test_suite_${data_name}.data -t ${CMAKE_CURRENT_SOURCE_DIR}/suites/main_test.function -p ${CMAKE_CURRENT_SOURCE_DIR}/suites/host_test.function -s ${CMAKE_CURRENT_SOURCE_DIR}/suites --helpers-file ${CMAKE_CURRENT_SOURCE_DIR}/suites/helpers.function -o .
-        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/scripts/generate_test_code.py mbedcrypto ${CMAKE_CURRENT_SOURCE_DIR}/suites/helpers.function ${CMAKE_CURRENT_SOURCE_DIR}/suites/main_test.function ${CMAKE_CURRENT_SOURCE_DIR}/suites/host_test.function ${CMAKE_CURRENT_SOURCE_DIR}/suites/test_suite_${suite_name}.function ${CMAKE_CURRENT_SOURCE_DIR}/suites/test_suite_${data_name}.data
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/scripts/generate_test_code.py mbedtls ${CMAKE_CURRENT_SOURCE_DIR}/suites/helpers.function ${CMAKE_CURRENT_SOURCE_DIR}/suites/main_test.function ${CMAKE_CURRENT_SOURCE_DIR}/suites/host_test.function ${CMAKE_CURRENT_SOURCE_DIR}/suites/test_suite_${suite_name}.function ${CMAKE_CURRENT_SOURCE_DIR}/suites/test_suite_${data_name}.data
     )
 
     set(exe_name test_suite_${data_name})
@@ -89,7 +97,6 @@ add_test_suite(cipher cipher.chachapoly)
 add_test_suite(cipher cipher.des)
 add_test_suite(cipher cipher.gcm)
 add_test_suite(cipher cipher.misc)
-add_test_suite(cipher cipher.nist_kw)
 add_test_suite(cipher cipher.null)
 add_test_suite(cipher cipher.padding)
 add_test_suite(cmac)
