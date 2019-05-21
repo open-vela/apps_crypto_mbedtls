@@ -24,12 +24,15 @@ understanding the script it is important to understand the
 framework. This doc string contains a summary of the framework
 and explains the function of this script.
 
-Mbed Crypto test suites:
-========================
+Mbed TLS test suites:
+=====================
 Scope:
 ------
-The test suites focus on unit testing the crypto primitives. Tests can be added
-to test any Mbed Crypto module.
+The test suites focus on unit testing the crypto primitives and also
+include x509 parser tests. Tests can be added to test any Mbed TLS
+module. However, the framework is not capable of testing SSL
+protocol, since that requires full stack execution and that is best
+tested as part of the system test.
 
 Test case definition:
 ---------------------
@@ -235,7 +238,7 @@ class FileWrapper(io.FileIO, object):
         if hasattr(parent, '__next__'):
             line = parent.__next__()  # Python 3
         else:
-            line = parent.next()  # Python 2 # pylint: disable=no-member
+            line = parent.next()  # Python 2
         if line is not None:
             self._line_no += 1
             # Convert byte array to string with correct encoding and
