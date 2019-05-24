@@ -1,5 +1,6 @@
 
 # To compile on SunOS: add "-lsocket -lnsl" to LDFLAGS
+# To compile with PKCS11: add "-lpkcs11-helper" to LDFLAGS
 
 CFLAGS	?= -O2
 WARNING_CFLAGS ?= -Wall -W -Wdeclaration-after-statement -Wno-unused-function -Wno-unused-value
@@ -8,6 +9,8 @@ LDFLAGS ?=
 CRYPTO_INCLUDES ?= -I../include
 LOCAL_CFLAGS = $(WARNING_CFLAGS) $(CRYPTO_INCLUDES) -I../library -D_FILE_OFFSET_BITS=64
 LOCAL_LDFLAGS = -L../library			\
+		-lmbedtls$(SHARED_SUFFIX)	\
+		-lmbedx509$(SHARED_SUFFIX)	\
 		-lmbedcrypto$(SHARED_SUFFIX)
 
 # Enable definition of various functions used throughout the testsuite
@@ -16,9 +19,9 @@ LOCAL_LDFLAGS = -L../library			\
 LOCAL_CFLAGS += -D_POSIX_C_SOURCE=200809L
 
 ifndef SHARED
-DEP=../library/libmbedcrypto.a
+DEP=../library/libmbedcrypto.a ../library/libmbedx509.a ../library/libmbedtls.a
 else
-DEP=../library/libmbedcrypto.$(DLEXT)
+DEP=../library/libmbedcrypto.$(DLEXT) ../library/libmbedx509.$(DLEXT) ../library/libmbedtls.$(DLEXT)
 endif
 
 ifdef DEBUG
@@ -44,6 +47,11 @@ EXEXT=
 SHARED_SUFFIX=
 # python2 for POSIX since FreeBSD has only python2 as default.
 PYTHON ?= python2
+endif
+
+# Zlib shared library extensions:
+ifdef ZLIB
+LOCAL_LDFLAGS += -lz
 endif
 
 # A test application is built for each suites/test_suite_*.data file.
