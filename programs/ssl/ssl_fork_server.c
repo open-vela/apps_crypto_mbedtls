@@ -254,7 +254,6 @@ int main( void )
         if( pid != 0 )
         {
             mbedtls_printf( " ok\n" );
-            mbedtls_net_close( &client_fd );
 
             if( ( ret = mbedtls_ctr_drbg_reseed( &ctr_drbg,
                                          (const unsigned char *) "parent",
@@ -267,7 +266,7 @@ int main( void )
             continue;
         }
 
-        mbedtls_net_close( &listen_fd );
+        mbedtls_net_init( &listen_fd );
 
         pid = getpid();
 
