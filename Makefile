@@ -28,6 +28,8 @@ install: no_test
 	cp -rp include/psa $(DESTDIR)/include
 
 	mkdir -p $(DESTDIR)/lib
+	cp -RP library/libmbedtls.*    $(DESTDIR)/lib
+	cp -RP library/libmbedx509.*   $(DESTDIR)/lib
 	cp -RP library/libmbedcrypto.* $(DESTDIR)/lib
 
 	mkdir -p $(DESTDIR)/bin
@@ -41,6 +43,8 @@ install: no_test
 
 uninstall:
 	rm -rf $(DESTDIR)/include/mbedtls
+	rm -f $(DESTDIR)/lib/libmbedtls.*
+	rm -f $(DESTDIR)/lib/libmbedx509.*
 	rm -f $(DESTDIR)/lib/libmbedcrypto.*
 
 	for p in programs/*/* ; do              \
@@ -116,12 +120,3 @@ apidoc:
 apidoc_clean:
 	rm -rf apidoc
 endif
-
-## Editor navigation files
-C_SOURCE_FILES = $(wildcard include/*/*.h library/*.[hc] programs/*/*.[hc] tests/suites/*.function)
-tags: $(C_SOURCE_FILES)
-	ctags -o $@ $(C_SOURCE_FILES)
-TAGS: $(C_SOURCE_FILES)
-	etags -o $@ $(C_SOURCE_FILES)
-GPATH GRTAGS GSYMS GTAGS: $(C_SOURCE_FILES)
-	ls $(C_SOURCE_FILES) | gtags -f - --gtagsconf .globalrc
