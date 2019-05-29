@@ -168,7 +168,7 @@ int mbedtls_pk_setup_opaque( mbedtls_pk_context *ctx, const psa_key_handle_t key
         return( MBEDTLS_ERR_PK_BAD_INPUT_DATA );
 
     /* Current implementation of can_do() relies on this. */
-    if( ! PSA_KEY_TYPE_IS_ECC_KEY_PAIR( type ) )
+    if( ! PSA_KEY_TYPE_IS_ECC_KEYPAIR( type ) )
         return( MBEDTLS_ERR_PK_FEATURE_UNAVAILABLE) ;
 
     if( ( ctx->pk_ctx = info->ctx_alloc_func() ) == NULL )
@@ -614,7 +614,7 @@ int mbedtls_pk_wrap_as_opaque( mbedtls_pk_context *pk,
         return( ret );
 
     curve_id = mbedtls_ecp_curve_info_from_grp_id( ec->grp.id )->tls_id;
-    key_type = PSA_KEY_TYPE_ECC_KEY_PAIR(
+    key_type = PSA_KEY_TYPE_ECC_KEYPAIR(
                                  mbedtls_psa_parse_tls_ecc_group ( curve_id ) );
 
     /* allocate a key slot */
@@ -629,7 +629,7 @@ int mbedtls_pk_wrap_as_opaque( mbedtls_pk_context *pk,
         return( MBEDTLS_ERR_PK_HW_ACCEL_FAILED );
 
     /* import private key in slot */
-    if( PSA_SUCCESS != psa_import_key_to_handle( key, key_type, d, d_len ) )
+    if( PSA_SUCCESS != psa_import_key( key, key_type, d, d_len ) )
         return( MBEDTLS_ERR_PK_HW_ACCEL_FAILED );
 
     /* remember slot number to be destroyed later by caller */
