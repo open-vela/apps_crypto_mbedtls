@@ -342,7 +342,7 @@ int mbedtls_cipher_setkey( mbedtls_cipher_context_t *ctx,
             return( MBEDTLS_ERR_CIPHER_HW_ACCEL_FAILED );
 
         /* Populate new key slot. */
-        status = psa_import_key( cipher_psa->slot,
+        status = psa_import_key_to_handle( cipher_psa->slot,
                                  key_type, key, key_bytelen );
         if( status != PSA_SUCCESS )
             return( MBEDTLS_ERR_CIPHER_HW_ACCEL_FAILED );
@@ -1114,8 +1114,6 @@ int mbedtls_cipher_write_tag( mbedtls_cipher_context_t *ctx,
          * operations, we currently don't make it
          * accessible through the cipher layer. */
         return( MBEDTLS_ERR_CIPHER_FEATURE_UNAVAILABLE );
-
-        return( 0 );
     }
 #endif /* MBEDTLS_USE_PSA_CRYPTO */
 
