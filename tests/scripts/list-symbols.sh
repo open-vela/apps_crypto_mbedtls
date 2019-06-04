@@ -14,13 +14,12 @@ fi
 
 cp include/mbedtls/config.h include/mbedtls/config.h.bak
 scripts/config.pl full
-make clean
 make_ret=
-CFLAGS=-fno-asynchronous-unwind-tables make lib \
+CFLAGS=-fno-asynchronous-unwind-tables make clean lib \
       >list-symbols.make.log 2>&1 ||
   {
     make_ret=$?
-    echo "Build failure: CFLAGS=-fno-asynchronous-unwind-tables make lib"
+    echo "Build failure: CFLAGS=-fno-asynchronous-unwind-tables make clean lib"
     cat list-symbols.make.log >&2
   }
 rm list-symbols.make.log
