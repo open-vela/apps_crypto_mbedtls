@@ -402,7 +402,7 @@ static int x509_get_version( unsigned char **p,
             return( 0 );
         }
 
-        return( MBEDTLS_ERR_X509_INVALID_FORMAT + ret );
+        return( ret );
     }
 
     end = *p + len;
@@ -469,7 +469,7 @@ static int x509_get_uid( unsigned char **p,
         if( ret == MBEDTLS_ERR_ASN1_UNEXPECTED_TAG )
             return( 0 );
 
-        return( MBEDTLS_ERR_X509_INVALID_FORMAT + ret );
+        return( ret );
     }
 
     uid->p = *p;
@@ -891,13 +891,14 @@ static int x509_get_crt_ext( unsigned char **p,
     size_t len;
     unsigned char *end_ext_data, *end_ext_octet;
 
-    if( *p == end )
-        return( 0 );
-
     if( ( ret = mbedtls_x509_get_ext( p, end, &crt->v3_ext, 3 ) ) != 0 )
-        return( ret );
+    {
+        if( ret == MBEDTLS_ERR_ASN1_UNEXPECTED_TAG )
+            return( 0 );
 
-    end = crt->v3_ext.p + crt->v3_ext.len;
+        return( ret );
+    }
+
     while( *p < end )
     {
         /*
