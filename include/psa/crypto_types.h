@@ -45,9 +45,9 @@
  * \brief Function return status.
  *
  * This is either #PSA_SUCCESS (which is zero), indicating success,
- * or a small negative value indicating that an error occurred. Errors are
- * encoded as one of the \c PSA_ERROR_xxx values defined here. */
-/* If #PSA_SUCCESS is already defined, it means that #psa_status_t
+ * or a nonzero value indicating that an error occurred. Errors are
+ * encoded as one of the \c PSA_ERROR_xxx values defined here.
+ * If #PSA_SUCCESS is already defined, it means that #psa_status_t
  * is also defined in an external header, so prevent its multiple
  * definition.
  */
@@ -68,9 +68,6 @@ typedef uint32_t psa_key_type_t;
 /** The type of PSA elliptic curve identifiers. */
 typedef uint16_t psa_ecc_curve_t;
 
-/** The type of PSA Diffie-Hellman group identifiers. */
-typedef uint16_t psa_dh_group_t;
-
 /** \brief Encoding of a cryptographic algorithm.
  *
  * For algorithms that can be applied to multiple key types, this type
@@ -88,30 +85,10 @@ typedef uint32_t psa_algorithm_t;
  */
 
 /** Encoding of key lifetimes.
- *
- * The lifetime of a key indicates where it is stored and what system actions
- * may create and destroy it.
- *
- * Keys with the lifetime #PSA_KEY_LIFETIME_VOLATILE are automatically
- * destroyed when the application terminates or on a power reset.
- *
- * Keys with a lifetime other than #PSA_KEY_LIFETIME_VOLATILE are said
- * to be _persistent_.
- * Persistent keys are preserved if the application or the system restarts.
- * Persistent keys have a key identifier of type #psa_key_id_t.
- * The application can call psa_open_key() to open a persistent key that
- * it created previously.
  */
 typedef uint32_t psa_key_lifetime_t;
 
 /** Encoding of identifiers of persistent keys.
- *
- * - Applications may freely choose key identifiers in the range
- *   #PSA_KEY_ID_USER_MIN to #PSA_KEY_ID_USER_MAX.
- * - Implementations may define additional key identifiers in the range
- *   #PSA_KEY_ID_VENDOR_MIN to #PSA_KEY_ID_VENDOR_MAX.
- * - 0 is reserved as an invalid key identifier.
- * - Key identifiers outside these ranges are reserved for future use.
  */
 /* Implementation-specific quirk: The Mbed Crypto library can be built as
  * part of a multi-client service that exposes the PSA Crypto API in each
@@ -130,15 +107,6 @@ typedef uint32_t psa_key_id_t;
 
 /** \brief Encoding of permitted usage on a key. */
 typedef uint32_t psa_key_usage_t;
-
-/**@}*/
-
-/** \defgroup derivation Key derivation
- * @{
- */
-
-/** \brief Encoding of the step of a key derivation. */
-typedef uint16_t psa_key_derivation_step_t;
 
 /**@}*/
 
