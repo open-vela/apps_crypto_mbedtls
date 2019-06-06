@@ -134,7 +134,7 @@
 #error "MBEDTLS_ECDSA_DETERMINISTIC defined, but not all prerequisites"
 #endif
 
-#if defined(MBEDTLS_ECP_C) && ( !defined(MBEDTLS_BIGNUM_C) || (    \
+#if defined(MBEDTLS_ECP_C) && ( !defined(MBEDTLS_BIGNUM_C) || (   \
     !defined(MBEDTLS_ECP_DP_SECP192R1_ENABLED) &&                  \
     !defined(MBEDTLS_ECP_DP_SECP224R1_ENABLED) &&                  \
     !defined(MBEDTLS_ECP_DP_SECP256R1_ENABLED) &&                  \
@@ -145,9 +145,7 @@
     !defined(MBEDTLS_ECP_DP_BP512R1_ENABLED)   &&                  \
     !defined(MBEDTLS_ECP_DP_SECP192K1_ENABLED) &&                  \
     !defined(MBEDTLS_ECP_DP_SECP224K1_ENABLED) &&                  \
-    !defined(MBEDTLS_ECP_DP_SECP256K1_ENABLED) &&                  \
-    !defined(MBEDTLS_ECP_DP_CURVE25519_ENABLED) &&                 \
-    !defined(MBEDTLS_ECP_DP_CURVE448_ENABLED) ) )
+    !defined(MBEDTLS_ECP_DP_SECP256K1_ENABLED) ) )
 #error "MBEDTLS_ECP_C defined, but not all prerequisites"
 #endif
 
@@ -641,6 +639,23 @@
 #if defined(MBEDTLS_SSL_DTLS_ANTI_REPLAY) &&                              \
     ( !defined(MBEDTLS_SSL_TLS_C) || !defined(MBEDTLS_SSL_PROTO_DTLS) )
 #error "MBEDTLS_SSL_DTLS_ANTI_REPLAY  defined, but not all prerequisites"
+#endif
+
+#if defined(MBEDTLS_SSL_DTLS_CONNECTION_ID) &&                              \
+    ( !defined(MBEDTLS_SSL_TLS_C) || !defined(MBEDTLS_SSL_PROTO_DTLS) )
+#error "MBEDTLS_SSL_DTLS_CONNECTION_ID  defined, but not all prerequisites"
+#endif
+
+#if defined(MBEDTLS_SSL_DTLS_CONNECTION_ID)            &&                 \
+    defined(MBEDTLS_SSL_CID_IN_LEN_MAX) &&                 \
+    MBEDTLS_SSL_CID_IN_LEN_MAX > 255
+#error "MBEDTLS_SSL_CID_IN_LEN_MAX too large (max 255)"
+#endif
+
+#if defined(MBEDTLS_SSL_DTLS_CONNECTION_ID)            &&                  \
+    defined(MBEDTLS_SSL_CID_OUT_LEN_MAX) &&                 \
+    MBEDTLS_SSL_CID_OUT_LEN_MAX > 255
+#error "MBEDTLS_SSL_CID_OUT_LEN_MAX too large (max 255)"
 #endif
 
 #if defined(MBEDTLS_SSL_DTLS_BADMAC_LIMIT) &&                              \
