@@ -611,24 +611,6 @@ component_check_doxygen_warnings () {
 #### Build and test many configurations and targets
 ################################################################
 
-component_test_large_ecdsa_key_signature () {
-
-    SMALL_MPI_MAX_SIZE=136 # Small enough to interfere with the EC signatures
-
-    msg "build: cmake + MBEDTLS_MPI_MAX_SIZE=${SMALL_MPI_MAX_SIZE}, gcc, ASan" # ~ 1 min 50s
-    scripts/config.pl set MBEDTLS_MPI_MAX_SIZE $SMALL_MPI_MAX_SIZE
-    crypto/scripts/config.pl set MBEDTLS_MPI_MAX_SIZE $SMALL_MPI_MAX_SIZE
-    CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
-    make
-
-    INEVITABLY_PRESENT_FILE=Makefile
-    SIGNATURE_FILE="${INEVITABLY_PRESENT_FILE}.sig" # Warning, this is rm -f'ed below
-
-    msg "test: pk_sign secp521r1_prv.der for MBEDTLS_MPI_MAX_SIZE=${SMALL_MPI_MAX_SIZE} (ASan build)" # ~ 5s
-    if_build_succeeded programs/pkey/pk_sign tests/data_files/secp521r1_prv.der $INEVITABLY_PRESENT_FILE
-    rm -f $SIGNATURE_FILE
-}
-
 component_test_default_out_of_box () {
     msg "build: make, default config (out-of-box)" # ~1min
     make
@@ -971,6 +953,20 @@ component_test_no_max_fragment_length_small_ssl_out_content_len () {
     if_build_succeeded tests/ssl-opt.sh -f "Max fragment length\|Large buffer"
 }
 
+component_test_when_no_ciphersuites_have_mac () {
+    msg "build: when no ciphersuites have MAC"
+    scripts/config.pl unset MBEDTLS_CIPHER_NULL_CIPHER
+    scripts/config.pl unset MBEDTLS_ARC4_C
+    scripts/config.pl unset MBEDTLS_CIPHER_MODE_CBC
+    make
+
+    msg "test: !MBEDTLS_SSL_SOME_MODES_USE_MAC"
+    make test
+
+    msg "test ssl-opt.sh: !MBEDTLS_SSL_SOME_MODES_USE_MAC"
+    if_build_succeeded tests/ssl-opt.sh -f 'Default\|EtM' -e 'without EtM'
+}
+
 component_test_null_entropy () {
     msg "build: default config with  MBEDTLS_TEST_NULL_ENTROPY (ASan build)"
     scripts/config.pl set MBEDTLS_TEST_NULL_ENTROPY
@@ -1007,7 +1003,7 @@ component_test_m32_o0 () {
     # Build once with -O0, to compile out the i386 specific inline assembly
     msg "build: i386, make, gcc -O0 (ASan build)" # ~ 30s
     scripts/config.pl full
-    make CC=gcc CFLAGS='-O0 -Werror -Wall -Wextra -m32 -fsanitize=address' LDFLAGS='-m32'
+    make CC=gcc CFLAGS='-O0 -Werror -Wall -Wextra -m32 -fsanitize=address'
 
     msg "test: i386, make, gcc -O0 (ASan build)"
     make test
@@ -1026,7 +1022,7 @@ component_test_m32_o1 () {
     scripts/config.pl unset MBEDTLS_MEMORY_BACKTRACE
     scripts/config.pl unset MBEDTLS_MEMORY_BUFFER_ALLOC_C
     scripts/config.pl unset MBEDTLS_MEMORY_DEBUG
-    make CC=gcc CFLAGS='-O1 -Werror -Wall -Wextra -m32 -fsanitize=address' LDFLAGS='-m32'
+    make CC=gcc CFLAGS='-O1 -Werror -Wall -Wextra -m32 -fsanitize=address'
 
     msg "test: i386, make, gcc -O1 (ASan build)"
     make test
@@ -1041,7 +1037,7 @@ support_test_m32_o1 () {
 component_test_mx32 () {
     msg "build: 64-bit ILP32, make, gcc" # ~ 30s
     scripts/config.pl full
-    make CC=gcc CFLAGS='-Werror -Wall -Wextra -mx32' LDFLAGS='-mx32'
+    make CC=gcc CFLAGS='-Werror -Wall -Wextra -mx32'
 
     msg "test: 64-bit ILP32, make, gcc"
     make test
