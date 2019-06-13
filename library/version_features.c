@@ -31,7 +31,7 @@
 
 #include <string.h>
 
-static const char * const features[] = {
+static const char *features[] = {
 #if defined(MBEDTLS_VERSION_FEATURES)
 #if defined(MBEDTLS_HAVE_ASM)
     "MBEDTLS_HAVE_ASM",
@@ -447,9 +447,6 @@ static const char * const features[] = {
 #if defined(MBEDTLS_SSL_ALL_ALERT_MESSAGES)
     "MBEDTLS_SSL_ALL_ALERT_MESSAGES",
 #endif /* MBEDTLS_SSL_ALL_ALERT_MESSAGES */
-#if defined(MBEDTLS_SSL_DTLS_CONNECTION_ID)
-    "MBEDTLS_SSL_DTLS_CONNECTION_ID",
-#endif /* MBEDTLS_SSL_DTLS_CONNECTION_ID */
 #if defined(MBEDTLS_SSL_ASYNC_PRIVATE)
     "MBEDTLS_SSL_ASYNC_PRIVATE",
 #endif /* MBEDTLS_SSL_ASYNC_PRIVATE */
@@ -792,7 +789,7 @@ static const char * const features[] = {
 
 int mbedtls_version_check_feature( const char *feature )
 {
-    const char * const *idx = features;
+    const char **idx = features;
 
     if( *idx == NULL )
         return( -2 );

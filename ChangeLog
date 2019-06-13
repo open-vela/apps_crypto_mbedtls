@@ -1,6 +1,6 @@
 mbed TLS ChangeLog (Sorted per branch, date)
 
-= mbed TLS 2.18.0 branch released 2019-06-11
+= mbed TLS x.x.x branch released xxxx-xx-xx
 
 Features
    * Add the Any Policy certificate policy oid, as defined in
@@ -22,15 +22,6 @@ Features
      supported.
    * List all SAN types in the subject_alt_names field of the certificate.
      Resolves #459.
-   * Add support for draft-05 of the Connection ID extension, as specified
-     in https://tools.ietf.org/html/draft-ietf-tls-dtls-connection-id-05.
-     The Connection ID extension allows to keep DTLS connections beyond the
-     lifetime of the underlying transport by adding a connection identifier
-     to the DTLS record header. This identifier can be used to associated an
-     incoming record with the correct connection data even after the peer has
-     changed its IP or port. The feature is enabled at compile-time by setting
-     MBEDTLS_SSL_DTLS_CONNECTION_ID (disabled by default), and at run-time
-     through the new APIs mbedtls_ssl_conf_cid() and mbedtls_ssl_set_cid().
 
 Bugfix
    * Fix private key DER output in the key_app_writer example. File contents
@@ -55,9 +46,6 @@ Bugfix
      for the parameter.
    * Add a check for MBEDTLS_X509_CRL_PARSE_C in ssl_server2, guarding the crl
      sni entry parameter. Reported by inestlerode in #560.
-   * Set the next sequence of the subject_alt_name to NULL when deleting
-     sequence on failure. Found and fix suggested by Philippe Antoine.
-     Credit to OSS-Fuzz.
 
 API Changes
    * Extend the MBEDTLS_SSL_EXPORT_KEYS to export the handshake randbytes,
@@ -78,8 +66,6 @@ Changes
      Found by Coverity, reported and fixed by Peter Kolbus (Garmin). Fixes #2309.
    * Add test for minimal value of MBEDTLS_MPI_WINDOW_SIZE to all.sh.
      Contributed by Peter Kolbus (Garmin).
-   * Change wording in the `mbedtls_ssl_conf_max_frag_len()`'s documentation to
-     improve clarity. Fixes #2258.
 
 = mbed TLS 2.17.0 branch released 2019-03-19
 
