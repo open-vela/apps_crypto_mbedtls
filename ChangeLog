@@ -46,6 +46,14 @@ Bugfix
      for the parameter.
    * Add a check for MBEDTLS_X509_CRL_PARSE_C in ssl_server2, guarding the crl
      sni entry parameter. Reported by inestlerode in #560.
+   * Set the next sequence of the subject_alt_name to NULL when deleting
+     sequence on failure. Found and fix suggested by Philippe Antoine.
+     Credit to OSS-Fuzz.
+   * Fix missing bounds checks in X.509 parsing functions that could
+     lead to successful parsing of ill-formed X.509 CRTs. Fixes #2437.
+   * Fix multiple X.509 functions previously returning ASN.1 low-level error
+     codes to always wrap these codes into X.509 high level error codes before
+     returning. Fixes #2431.
 
 API Changes
    * Extend the MBEDTLS_SSL_EXPORT_KEYS to export the handshake randbytes,
@@ -66,6 +74,9 @@ Changes
      Found by Coverity, reported and fixed by Peter Kolbus (Garmin). Fixes #2309.
    * Add test for minimal value of MBEDTLS_MPI_WINDOW_SIZE to all.sh.
      Contributed by Peter Kolbus (Garmin).
+   * Change wording in the `mbedtls_ssl_conf_max_frag_len()`'s documentation to
+     improve clarity. Fixes #2258.
+   * Replace multiple uses of MD2 by SHA-256 in X.509 test suite. Fixes #821.
 
 = mbed TLS 2.17.0 branch released 2019-03-19
 
