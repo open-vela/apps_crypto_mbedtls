@@ -19,9 +19,9 @@ LOCAL_CFLAGS += -I../crypto/include
 LOCAL_CXXFLAGS += -I../crypto/include
 
 ifndef SHARED
-DEP=../crypto/library/libmbedcrypto.a ../library/libmbedx509.a ../library/libmbedtls.a
+DEP=../library/libmbedcrypto.a ../library/libmbedx509.a ../library/libmbedtls.a
 else
-DEP=../crypto/library/libmbedcrypto.$(DLEXT) ../library/libmbedx509.$(DLEXT) ../library/libmbedtls.$(DLEXT)
+DEP=../library/libmbedcrypto.$(DLEXT) ../library/libmbedx509.$(DLEXT) ../library/libmbedtls.$(DLEXT)
 endif
 
 ifdef DEBUG
