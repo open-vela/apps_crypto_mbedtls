@@ -1,6 +1,6 @@
 mbed TLS ChangeLog (Sorted per branch, date)
 
-= mbed TLS x.x.x branch released xxxx-xx-xx
+= mbed TLS 2.18.0 branch released 2019-06-11
 
 Features
    * Add the Any Policy certificate policy oid, as defined in
@@ -58,13 +58,11 @@ Bugfix
    * Set the next sequence of the subject_alt_name to NULL when deleting
      sequence on failure. Found and fix suggested by Philippe Antoine.
      Credit to OSS-Fuzz.
-   * Fix misuse of signed arithmetic in the HAVEGE module. #2598
 
 API Changes
    * Extend the MBEDTLS_SSL_EXPORT_KEYS to export the handshake randbytes,
      and the used tls-prf.
    * Add public API for tls-prf function, according to requested enum.
-   * The HAVEGE state type now uses uint32_t elements instead of int.
 
 Changes
    * Server's RSA certificate in certs.c was SHA-1 signed. In the default
