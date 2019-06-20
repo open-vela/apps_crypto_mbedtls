@@ -55,4 +55,45 @@ psa_status_t psa_initialize_key_slots( void );
  * This does not affect persistent storage. */
 void psa_wipe_all_key_slots( void );
 
+/** Find a free key slot and mark it as in use.
+ *
+ * \param[out] handle   On success, a slot number that can be used as a
+ *                      handle to the slot. The selected slot was not
+ *                      in use before. This function marks it as in use
+ *                      and otherwise leaves it in a freshly-initialized
+ *                      state.
+ * \param[out] p_slot   On success, a pointer to the slot.
+ *
+ * \retval #PSA_SUCCESS
+ * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
+ * \retval #PSA_ERROR_BAD_STATE
+ */
+psa_status_t psa_internal_allocate_key_slot( psa_key_handle_t *handle,
+                                             psa_key_slot_t **p_slot );
+
+/** Test whether the given parameters are acceptable for a persistent key.
+ *
+ * This function does not access the storage in any way. It only tests
+ * whether the parameters are meaningful and permitted by general policy.
+ * It does not test whether the a file by the given id exists or could be
+ * created.
+ *
+ * \param lifetime      The lifetime to test.
+ * \param id            The key id to test.
+ * \param creating      0 if attempting to open an existing key.
+ *                      Nonzero if attempting to create a key.
+ *
+ * \retval PSA_SUCCESS
+ *         The given parameters are valid.
+ * \retval PSA_ERROR_INVALID_ARGUMENT
+ *         \p lifetime is volatile or is invalid.
+ * \retval PSA_ERROR_INVALID_ARGUMENT
+ *         \p id is invalid.
+ */
+psa_status_t psa_validate_persistent_key_parameters(
+    psa_key_lifetime_t lifetime,
+    psa_key_file_id_t id,
+    int creating );
+
+
 #endif /* PSA_CRYPTO_SLOT_MANAGEMENT_H */
