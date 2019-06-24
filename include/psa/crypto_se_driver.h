@@ -8,11 +8,11 @@
  * space in which the PSA Crypto implementation runs, typically secure
  * elements (SEs).
  *
- * This file is part of the PSA Crypto Driver Model, containing functions for
- * driver developers to implement to enable hardware to be called in a
- * standardized way by a PSA Cryptographic API implementation. The functions
- * comprising the driver model, which driver authors implement, are not
- * intended to be called by application developers.
+ * This file is part of the PSA Crypto Driver HAL (hardware abstraction layer),
+ * containing functions for driver developers to implement to enable hardware
+ * to be called in a standardized way by a PSA Cryptography API
+ * implementation. The functions comprising the driver HAL, which driver
+ * authors implement, are not intended to be called by application developers.
  */
 
 /*
@@ -756,7 +756,7 @@ typedef psa_status_t (*psa_drv_se_destroy_key_t)(psa_key_slot_number_t key);
  * \retval #PSA_ERROR_NOT_SUPPORTED
  * \retval #PSA_ERROR_COMMUNICATION_FAILURE
  * \retval #PSA_ERROR_HARDWARE_FAILURE
- * \retval #PSA_ERROR_TAMPERING_DETECTED
+ * \retval #PSA_ERROR_CORRUPTION_DETECTED
  */
 typedef psa_status_t (*psa_drv_se_export_key_t)(psa_key_slot_number_t key,
                                                 uint8_t *p_data,
@@ -958,6 +958,83 @@ typedef struct {
      * exports the key */
     psa_drv_se_key_derivation_export_t     p_export;
 } psa_drv_se_key_derivation_t;
+
+/**@}*/
+
+/** \defgroup se_registration Secure element driver registration
+ */
+/**@{*/
+
+/** A structure containing pointers to all the entry points of a
+ * secure element driver.
+ *
+ * Future versions of this specification may add extra substructures at
+ * the end of this structure.
+ */
+typedef struct {
+    /** The version of the driver model that this driver implements.
+     * This is a protection against linking driver binaries built against
+     * a different version of this specification.
+     * Use #PSA_DRV_SE_HAL_VERSION.
+     */
+    uint32_t hal_version;
+    psa_drv_se_key_management_t key_management;
+    psa_drv_se_mac_t mac;
+    psa_drv_se_cipher_t cipher;
+    psa_drv_se_aead_t aead;
+    psa_drv_se_asymmetric_t asymmetric;
+    psa_drv_se_key_derivation_t derivation;
+} psa_drv_se_t;
+
+/** The current version of the opaque driver model.
+ */
+/* 0.0.0 patchlevel 5 */
+#define PSA_DRV_SE_HAL_VERSION 0x00000005
+
+/** Register an external cryptoprocessor driver.
+ *
+ * This function is only intended to be used by driver code, not by
+ * application code. In implementations with separation between the
+ * PSA cryptography module and applications, this function should
+ * only be available to callers that run in the same memory space as
+ * the cryptography module, and should not be exposed to applications
+ * running in a different memory space.
+ *
+ * This function may be called before psa_crypto_init(). It is
+ * implementation-defined whether this function may be called
+ * after psa_crypto_init().
+ *
+ * \param lifetime      The lifetime value through which this driver will
+ *                      be exposed to applications.
+ *                      The values #PSA_KEY_LIFETIME_VOLATILE and
+ *                      #PSA_KEY_LIFETIME_PERSISTENT are reserved and
+ *                      may not be used for opaque drivers. Implementations
+ *                      may reserve other values.
+ * \param[in] methods   The method table of the driver. This structure must
+ *                      remain valid for as long as the cryptography
+ *                      module keeps running. It is typically a global
+ *                      constant.
+ *
+ * \return PSA_SUCCESS
+ *         The driver was successfully registered. Applications can now
+ *         use \p lifetime to access keys through the methods passed to
+ *         this function.
+ * \return PSA_ERROR_BAD_STATE
+ *         This function was called after the initialization of the
+ *         cryptography module, and this implementation does not support
+ *         driver registration at this stage.
+ * \return PSA_ERROR_ALREADY_EXISTS
+ *         There is already a registered driver for this value of \p lifetime.
+ * \return PSA_ERROR_INVALID_ARGUMENT
+ *         \p lifetime is a reserved value
+ * \return PSA_ERROR_NOT_SUPPORTED
+ *         `methods->interface_version` is not supported by this implementation.
+ * \return PSA_ERROR_INSUFFICIENT_MEMORY
+ * \return PSA_ERROR_NOT_PERMITTED
+ */
+psa_status_t psa_register_se_driver(
+    psa_key_lifetime_t lifetime,
+    const psa_drv_se_t *methods);
 
 /**@}*/
 
