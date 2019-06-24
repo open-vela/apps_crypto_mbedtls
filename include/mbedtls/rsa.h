@@ -907,8 +907,7 @@ int mbedtls_rsa_rsaes_oaep_decrypt( mbedtls_rsa_context *ctx,
  *                 the size of the hash corresponding to \p md_alg.
  * \param sig      The buffer to hold the signature. This must be a writable
  *                 buffer of length \c ctx->len Bytes. For example, \c 256 Bytes
- *                 for an 2048-bit RSA modulus. A buffer length of
- *                 #MBEDTLS_MPI_MAX_SIZE is always safe.
+ *                 for an 2048-bit RSA modulus.
  *
  * \return         \c 0 if the signing operation was successful.
  * \return         An \c MBEDTLS_ERR_RSA_XXX error code on failure.
@@ -955,8 +954,7 @@ int mbedtls_rsa_pkcs1_sign( mbedtls_rsa_context *ctx,
  *                 the size of the hash corresponding to \p md_alg.
  * \param sig      The buffer to hold the signature. This must be a writable
  *                 buffer of length \c ctx->len Bytes. For example, \c 256 Bytes
- *                 for an 2048-bit RSA modulus. A buffer length of
- *                 #MBEDTLS_MPI_MAX_SIZE is always safe.
+ *                 for an 2048-bit RSA modulus.
  *
  * \return         \c 0 if the signing operation was successful.
  * \return         An \c MBEDTLS_ERR_RSA_XXX error code on failure.
@@ -1017,8 +1015,7 @@ int mbedtls_rsa_rsassa_pkcs1_v15_sign( mbedtls_rsa_context *ctx,
  *                 the size of the hash corresponding to \p md_alg.
  * \param sig      The buffer to hold the signature. This must be a writable
  *                 buffer of length \c ctx->len Bytes. For example, \c 256 Bytes
- *                 for an 2048-bit RSA modulus. A buffer length of
- *                 #MBEDTLS_MPI_MAX_SIZE is always safe.
+ *                 for an 2048-bit RSA modulus.
  *
  * \return         \c 0 if the signing operation was successful.
  * \return         An \c MBEDTLS_ERR_RSA_XXX error code on failure.
