@@ -5,8 +5,6 @@ else()
     project("mbed TLS" C)
 endif()
 
-set(MBEDTLS_DIR ${CMAKE_CURRENT_SOURCE_DIR})
-
 option(USE_PKCS11_HELPER_LIBRARY "Build mbed TLS with the pkcs11-helper library." OFF)
 option(ENABLE_ZLIB_SUPPORT "Build mbed TLS with zlib library." OFF)
 
@@ -234,13 +232,13 @@ if(ENABLE_TESTING)
             COMMAND mv DartConfiguration.tcl.bak DartConfiguration.tcl
         )
     endif(UNIX)
+endif()
 
-    # Make scripts needed for testing available in an out-of-source build.
-    if (NOT ${CMAKE_CURRENT_BINARY_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
-        link_to_source(scripts)
-        # Copy (don't link) DartConfiguration.tcl, needed for memcheck, to
-        # keep things simple with the sed commands in the memcheck target.
-        configure_file(${CMAKE_CURRENT_SOURCE_DIR}/DartConfiguration.tcl
-                    ${CMAKE_CURRENT_BINARY_DIR}/DartConfiguration.tcl COPYONLY)
-    endif()
+# Make scripts needed for testing available in an out-of-source build.
+if (NOT ${CMAKE_CURRENT_BINARY_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
+    link_to_source(scripts)
+    # Copy (don't link) DartConfiguration.tcl, needed for memcheck, to
+    # keep things simple with the sed commands in the memcheck target.
+    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/DartConfiguration.tcl
+                   ${CMAKE_CURRENT_BINARY_DIR}/DartConfiguration.tcl COPYONLY)
 endif()
