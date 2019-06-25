@@ -3,7 +3,7 @@
 # To compile with PKCS11: add "-lpkcs11-helper" to LDFLAGS
 
 CFLAGS	?= -O2
-WARNING_CFLAGS ?= -Wall -W -Wunused
+WARNING_CFLAGS ?= -Wall -W -Wdeclaration-after-statement -Wunused
 LDFLAGS ?=
 
 LOCAL_CFLAGS = $(WARNING_CFLAGS) -I../include -D_FILE_OFFSET_BITS=64
@@ -112,9 +112,12 @@ BINARIES := $(addsuffix $(EXEXT),$(APPS))
 
 .SILENT:
 
-.PHONY: all check test clean
+.PHONY: all check test clean fuzz
 
-all: $(BINARIES)
+all: $(BINARIES) fuzz
+
+fuzz:
+	$(MAKE) -C fuzz
 
 $(DEP):
 	$(MAKE) -C ../library
@@ -161,6 +164,7 @@ ifneq ($(wildcard TESTS/.*),)
 	rmdir /Q /S TESTS
 endif
 endif
+	$(MAKE) -C fuzz clean
 
 # Test suites caught by SKIP_TEST_SUITES are built but not executed.
 check: $(BINARIES)
