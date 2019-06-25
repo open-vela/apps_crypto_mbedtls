@@ -19,9 +19,9 @@ LOCAL_CFLAGS += -I../crypto/include
 LOCAL_CXXFLAGS += -I../crypto/include
 
 ifndef SHARED
-DEP=../crypto/library/libmbedcrypto.a ../library/libmbedx509.a ../library/libmbedtls.a
+DEP=../library/libmbedcrypto.a ../library/libmbedx509.a ../library/libmbedtls.a
 else
-DEP=../crypto/library/libmbedcrypto.$(DLEXT) ../library/libmbedx509.$(DLEXT) ../library/libmbedtls.$(DLEXT)
+DEP=../library/libmbedcrypto.$(DLEXT) ../library/libmbedx509.$(DLEXT) ../library/libmbedtls.$(DLEXT)
 endif
 
 ifdef DEBUG
@@ -300,8 +300,6 @@ x509/req_app$(EXEXT): x509/req_app.c $(DEP)
 clean:
 ifndef WINDOWS
 	rm -f $(APPS)
-	-rm -f ssl/ssl_pthread_server$(EXEXT)
-	-rm -f test/cpp_dummy_build$(EXEXT)
 else
 	del /S /Q /F *.o *.exe
 endif
