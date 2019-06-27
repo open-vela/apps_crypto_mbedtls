@@ -5,9 +5,15 @@ else()
     project("mbed TLS" C)
 endif()
 
+option(USE_PKCS11_HELPER_LIBRARY "Build mbed TLS with the pkcs11-helper library." OFF)
+option(ENABLE_ZLIB_SUPPORT "Build mbed TLS with zlib library." OFF)
+
 option(ENABLE_PROGRAMS "Build mbed TLS programs." ON)
 
 option(UNSAFE_BUILD "Allow unsafe builds. These builds ARE NOT SECURE." OFF)
+
+# export the submodule flag so that crypto knows it's being built as a submodule
+set( USE_CRYPTO_SUBMODULE ON )
 
 string(REGEX MATCH "Clang" CMAKE_COMPILER_IS_CLANG "${CMAKE_C_COMPILER_ID}")
 string(REGEX MATCH "GNU" CMAKE_COMPILER_IS_GNU "${CMAKE_C_COMPILER_ID}")
@@ -170,11 +176,18 @@ else()
     set(LIB_INSTALL_DIR lib)
 endif()
 
-include_directories(include/)
-include_directories(library/)
+if(ENABLE_ZLIB_SUPPORT)
+    find_package(ZLIB)
+
+    if(ZLIB_FOUND)
+        include_directories(${ZLIB_INCLUDE_DIR})
+    endif(ZLIB_FOUND)
+endif(ENABLE_ZLIB_SUPPORT)
 
 add_subdirectory(library)
 add_subdirectory(include)
+add_subdirectory(crypto/library)
+add_subdirectory(crypto/include)
 
 if(ENABLE_PROGRAMS)
     add_subdirectory(programs)
@@ -188,6 +201,7 @@ if(ENABLE_TESTING)
     enable_testing()
 
     add_subdirectory(tests)
+    add_subdirectory(crypto/tests)
 
     # additional convenience targets for Unix only
     if(UNIX)
@@ -195,6 +209,8 @@ if(ENABLE_TESTING)
         ADD_CUSTOM_TARGET(covtest
             COMMAND make test
             COMMAND programs/test/selftest
+            COMMAND tests/compat.sh
+            COMMAND tests/ssl-opt.sh
         )
 
         ADD_CUSTOM_TARGET(lcov
@@ -216,13 +232,13 @@ if(ENABLE_TESTING)
             COMMAND mv DartConfiguration.tcl.bak DartConfiguration.tcl
         )
     endif(UNIX)
-endif()
 
-# Make scripts needed for testing available in an out-of-source build.
-if (NOT ${CMAKE_CURRENT_BINARY_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
-    link_to_source(scripts)
-    # Copy (don't link) DartConfiguration.tcl, needed for memcheck, to
-    # keep things simple with the sed commands in the memcheck target.
-    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/DartConfiguration.tcl
-                   ${CMAKE_CURRENT_BINARY_DIR}/DartConfiguration.tcl COPYONLY)
+    # Make scripts needed for testing available in an out-of-source build.
+    if (NOT ${CMAKE_CURRENT_BINARY_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
+        link_to_source(scripts)
+        # Copy (don't link) DartConfiguration.tcl, needed for memcheck, to
+        # keep things simple with the sed commands in the memcheck target.
+        configure_file(${CMAKE_CURRENT_SOURCE_DIR}/DartConfiguration.tcl
+                    ${CMAKE_CURRENT_BINARY_DIR}/DartConfiguration.tcl COPYONLY)
+    endif()
 endif()
