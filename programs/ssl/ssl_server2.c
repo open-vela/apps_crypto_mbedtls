@@ -173,6 +173,7 @@ int main( void )
 #define DFL_ETM                 -1
 #define DFL_CA_CALLBACK         0
 #define DFL_EAP_TLS             0
+#define DFL_REPRODUCIBLE        0
 
 #define LONG_RESPONSE "<p>01-blah-blah-blah-blah-blah-blah-blah-blah-blah\r\n" \
     "02-blah-blah-blah-blah-blah-blah-blah-blah-blah-blah-blah-blah-blah\r\n"  \
@@ -202,8 +203,10 @@ int main( void )
 #define USAGE_IO \
     "    ca_file=%%s          The single file containing the top-level CA(s) you fully trust\n" \
     "                        default: \"\" (pre-loaded)\n" \
+    "                        use \"none\" to skip loading any top-level CAs.\n" \
     "    ca_path=%%s          The path containing the top-level CA(s) you fully trust\n" \
     "                        default: \"\" (pre-loaded) (overrides ca_file)\n" \
+    "                        use \"none\" to skip loading any top-level CAs.\n" \
     "    crt_file=%%s         Your own cert and chain (in bottom to top order, top may be omitted)\n" \
     "                        default: see note after key_file2\n" \
     "    key_file=%%s         default: see note after key_file2\n" \
@@ -401,6 +404,9 @@ int main( void )
 #define USAGE_ETM ""
 #endif
 
+#define USAGE_REPRODUCIBLE \
+    "    reproducible=0/1     default: 0 (disabled)\n"
+
 #if defined(MBEDTLS_SSL_RENEGOTIATION)
 #define USAGE_RENEGO \
     "    renegotiation=%%d    default: 0 (disabled)\n"      \
@@ -469,6 +475,7 @@ int main( void )
     "\n"                                                    \
     USAGE_TICKETS                                           \
     USAGE_EAP_TLS                                           \
+    USAGE_REPRODUCIBLE                                      \
     USAGE_CACHE                                             \
     USAGE_MAX_FRAG_LEN                                      \
     USAGE_TRUNC_HMAC                                        \
@@ -494,7 +501,6 @@ int main( void )
     "                                is printed if it is defined\n"     \
     " acceptable ciphersuite names:\n"
 
-
 #define ALPN_LIST_SIZE  10
 #define CURVE_LIST_SIZE 20
 
@@ -510,17 +516,6 @@ int main( void )
     (out_be)[(i) + 7] = (unsigned char)( ( (in_le) >> 0  ) & 0xFF );    \
 }
 
-#if defined(MBEDTLS_CHECK_PARAMS)
-#include "mbedtls/platform_util.h"
-void mbedtls_param_failed( const char *failure_condition,
-                           const char *file,
-                           int line )
-{
-    mbedtls_printf( "%s:%i: Input param failed - %s\n",
-                    file, line, failure_condition );
-    mbedtls_exit( MBEDTLS_EXIT_FAILURE );
-}
-#endif
 
 /*
  * global options
@@ -597,6 +592,7 @@ struct options
     const char *cid_val;        /* the CID to use for incoming messages     */
     const char *cid_val_renego; /* the CID to use for incoming messages
                                  * after renegotiation                      */
+    int reproducible;           /* make communication reproducible          */
 } opt;
 
 int query_config( const char *config );
@@ -650,6 +646,26 @@ static void my_debug( void *ctx, int level,
 
     mbedtls_fprintf( (FILE *) ctx, "%s:%04d: |%d| %s", basename, line, level, str );
     fflush(  (FILE *) ctx  );
+}
+
+mbedtls_time_t dummy_constant_time( mbedtls_time_t* time )
+{
+    (void) time;
+    return 0x5af2a056;
+}
+
+int dummy_entropy( void *data, unsigned char *output, size_t len )
+{
+    size_t i;
+    int ret;
+    (void) data;
+
+    ret = mbedtls_entropy_func( data, output, len );
+    for (i = 0; i < len; i++ ) {
+        //replace result with pseudo random
+        output[i] = (unsigned char) rand();
+    }
+    return( ret );
 }
 
 #if defined(MBEDTLS_X509_TRUSTED_CERTIFICATE_CALLBACK)
@@ -1728,6 +1744,7 @@ int main( int argc, char *argv[] )
     opt.extended_ms         = DFL_EXTENDED_MS;
     opt.etm                 = DFL_ETM;
     opt.eap_tls             = DFL_EAP_TLS;
+    opt.reproducible        = DFL_REPRODUCIBLE;
 
     for( i = 1; i < argc; i++ )
     {
@@ -2146,6 +2163,10 @@ int main( int argc, char *argv[] )
             if( opt.eap_tls < 0 || opt.eap_tls > 1 )
                 goto usage;
         }
+        else if( strcmp( p, "reproducible" ) == 0 )
+        {
+            opt.reproducible = 1;
+        }
         else
             goto usage;
     }
@@ -2446,13 +2467,28 @@ int main( int argc, char *argv[] )
     fflush( stdout );
 
     mbedtls_entropy_init( &entropy );
-    if( ( ret = mbedtls_ctr_drbg_seed( &ctr_drbg, mbedtls_entropy_func,
-                                       &entropy, (const unsigned char *) pers,
-                                       strlen( pers ) ) ) != 0 )
+    if (opt.reproducible)
     {
-        mbedtls_printf( " failed\n  ! mbedtls_ctr_drbg_seed returned -0x%x\n",
-                        -ret );
-        goto exit;
+        srand( 1 );
+        if( ( ret = mbedtls_ctr_drbg_seed( &ctr_drbg, dummy_entropy,
+                                           &entropy, (const unsigned char *) pers,
+                                           strlen( pers ) ) ) != 0 )
+        {
+            mbedtls_printf( " failed\n  ! mbedtls_ctr_drbg_seed returned -0x%x\n",
+                            -ret );
+            goto exit;
+        }
+    }
+    else
+    {
+        if( ( ret = mbedtls_ctr_drbg_seed( &ctr_drbg, mbedtls_entropy_func,
+                                           &entropy, (const unsigned char *) pers,
+                                           strlen( pers ) ) ) != 0 )
+        {
+            mbedtls_printf( " failed\n  ! mbedtls_ctr_drbg_seed returned -0x%x\n",
+                            -ret );
+            goto exit;
+        }
     }
 
     mbedtls_printf( " ok\n" );
@@ -2464,20 +2500,22 @@ int main( int argc, char *argv[] )
     mbedtls_printf( "  . Loading the CA root certificate ..." );
     fflush( stdout );
 
+    if( strcmp( opt.ca_path, "none" ) == 0 ||
+        strcmp( opt.ca_file, "none" ) == 0 )
+    {
+        ret = 0;
+    }
+    else
 #if defined(MBEDTLS_FS_IO)
     if( strlen( opt.ca_path ) )
-        if( strcmp( opt.ca_path, "none" ) == 0 )
-            ret = 0;
-        else
-            ret = mbedtls_x509_crt_parse_path( &cacert, opt.ca_path );
+        ret = mbedtls_x509_crt_parse_path( &cacert, opt.ca_path );
     else if( strlen( opt.ca_file ) )
-        if( strcmp( opt.ca_file, "none" ) == 0 )
-            ret = 0;
-        else
-            ret = mbedtls_x509_crt_parse_file( &cacert, opt.ca_file );
+        ret = mbedtls_x509_crt_parse_file( &cacert, opt.ca_file );
     else
 #endif
 #if defined(MBEDTLS_CERTS_C)
+    {
+#if defined(MBEDTLS_PEM_PARSE_C)
         for( i = 0; mbedtls_test_cas[i] != NULL; i++ )
         {
             ret = mbedtls_x509_crt_parse( &cacert,
@@ -2486,12 +2524,23 @@ int main( int argc, char *argv[] )
             if( ret != 0 )
                 break;
         }
+        if( ret == 0 )
+#endif /* MBEDTLS_PEM_PARSE_C */
+        for( i = 0; mbedtls_test_cas_der[i] != NULL; i++ )
+        {
+            ret = mbedtls_x509_crt_parse_der( &cacert,
+                         (const unsigned char *) mbedtls_test_cas_der[i],
+                         mbedtls_test_cas_der_len[i] );
+            if( ret != 0 )
+                break;
+        }
+    }
 #else
     {
         ret = 1;
-        mbedtls_printf("MBEDTLS_CERTS_C not defined.");
+        mbedtls_printf( "MBEDTLS_CERTS_C not defined." );
     }
-#endif
+#endif /* MBEDTLS_CERTS_C */
     if( ret < 0 )
     {
         mbedtls_printf( " failed\n  !  mbedtls_x509_crt_parse returned -0x%x\n\n", -ret );
@@ -2771,6 +2820,16 @@ int main( int argc, char *argv[] )
         }
 #endif
 
+    if (opt.reproducible)
+    {
+#if defined(MBEDTLS_HAVE_TIME)
+#if defined(MBEDTLS_PLATFORM_TIME_ALT)
+        mbedtls_platform_set_time( dummy_constant_time );
+#else
+        fprintf( stderr, "Warning: reproducible option used without constant time\n" );
+#endif
+#endif
+    }
     mbedtls_ssl_conf_rng( &conf, mbedtls_ctr_drbg_random, &ctr_drbg );
     mbedtls_ssl_conf_dbg( &conf, my_debug, stdout );
 
