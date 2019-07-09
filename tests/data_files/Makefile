@@ -832,14 +832,6 @@ ec_prv.pk8param.pem: ec_prv.pk8param.der
 	$(OPENSSL) pkey -in $< -inform DER -out $@
 all_final += ec_prv.pk8param.pem
 
-###
-### A generic SECP521R1 private key
-###
-
-secp521r1_prv.der:
-	$(OPENSSL) ecparam -genkey -name secp521r1 -noout -out secp521r1_prv.der
-all_final += secp521r1_prv.der
-
 ################################################################
 ### Generate CSRs for X.509 write test suite
 ################################################################
@@ -988,14 +980,7 @@ server1.v1.crt.openssl: server1.key server1.req.sha256 $(test_ca_crt) $(test_ca_
 server1.v1.der.openssl: server1.v1.crt.openssl
 	$(OPENSSL) x509 -inform PEM -in $< -outform DER -out $@
 
-# To revoke certificate in the openssl database:
-#
-# $(OPENSSL) ca -gencrl -batch -cert $(test_ca_crt) -keyfile $(test_ca_key_file_rsa) -key $(test_ca_pwd_rsa) -config $(test_ca_server1_config_file) -md sha256 -crldays 365 -revoke server1.crt
-
-crl.pem: $(test_ca_crt) $(test_ca_key_file_rsa) $(test_ca_config_file)
-	$(OPENSSL) ca -gencrl -batch -cert $(test_ca_crt) -keyfile $(test_ca_key_file_rsa) -key $(test_ca_pwd_rsa) -config $(test_ca_server1_config_file) -md sha1 -crldays 3653 -out $@
-
-server1_all: crl.pem server1.crt server1.noauthid.crt server1.crt.openssl server1.v1.crt server1.v1.crt.openssl server1.key_usage.crt server1.key_usage_noauthid.crt server1.key_usage.crt.openssl server1.cert_type.crt server1.cert_type_noauthid.crt server1.cert_type.crt.openssl server1.der server1.der.openssl server1.v1.der server1.v1.der.openssl server1.key_usage.der server1.key_usage.der.openssl server1.cert_type.der server1.cert_type.der.openssl
+server1_all: server1.crt server1.noauthid.crt server1.crt.openssl server1.v1.crt server1.v1.crt.openssl server1.key_usage.crt server1.key_usage_noauthid.crt server1.key_usage.crt.openssl server1.cert_type.crt server1.cert_type_noauthid.crt server1.cert_type.crt.openssl server1.der server1.der.openssl server1.v1.der server1.v1.der.openssl server1.key_usage.der server1.key_usage.der.openssl server1.cert_type.der server1.cert_type.der.openssl
 
 # server2*
 
