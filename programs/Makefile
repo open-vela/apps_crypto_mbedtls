@@ -3,8 +3,8 @@
 # To compile with PKCS11: add "-lpkcs11-helper" to LDFLAGS
 
 CFLAGS	?= -O2
-WARNING_CFLAGS ?= -Wall -Wextra
-WARNING_CXXFLAGS ?= -Wall -Wextra
+WARNING_CFLAGS ?= -Wall -W -Wdeclaration-after-statement
+WARNING_CXXFLAGS ?= -Wall -W
 LDFLAGS ?=
 
 LOCAL_CFLAGS = $(WARNING_CFLAGS) -I../include -D_FILE_OFFSET_BITS=64
@@ -90,9 +90,12 @@ endif
 
 .SILENT:
 
-.PHONY: all clean list
+.PHONY: all clean list fuzz
 
-all: $(APPS)
+all: $(APPS) fuzz
+
+fuzz:
+	$(MAKE) -C fuzz
 
 $(DEP):
 	$(MAKE) -C ../library
@@ -305,6 +308,7 @@ ifndef WINDOWS
 else
 	del /S /Q /F *.o *.exe
 endif
+	$(MAKE) -C fuzz clean
 
 list:
 	echo $(APPS)
