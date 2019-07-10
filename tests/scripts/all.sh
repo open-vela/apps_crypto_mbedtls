@@ -24,7 +24,8 @@
 # configurations, and can and will arbitrarily change the current CMake
 # configuration. The following files must be committed into git:
 #    * include/mbedtls/config.h
-#    * Makefile, library/Makefile, programs/Makefile, tests/Makefile
+#    * Makefile, library/Makefile, programs/Makefile, tests/Makefile,
+#      programs/fuzz/Makefile
 # After running this script, the CMake cache will be lost and CMake
 # will no longer be initialised.
 #
@@ -75,9 +76,9 @@
 # * Run `make clean`.
 # * Restore `include/mbedtks/config.h` from a backup made before running
 #   the component.
-# * Check out `Makefile`, `library/Makefile`, `programs/Makefile` and
-#   `tests/Makefile` from git. This cleans up after an in-tree use of
-#   CMake.
+# * Check out `Makefile`, `library/Makefile`, `programs/Makefile`,
+#   `tests/Makefile` and `programs/fuzz/Makefile` from git.
+#   This cleans up after an in-tree use of CMake.
 #
 # Any command that is expected to fail must be protected so that the
 # script keeps running in --keep-going mode despite `set -e`. In keep-going
@@ -234,18 +235,13 @@ cleanup()
               -iname CMakeCache.txt \) -exec rm {} \+
     # Recover files overwritten by in-tree CMake builds
     rm -f include/Makefile include/mbedtls/Makefile programs/*/Makefile
-    git update-index --no-skip-worktree Makefile library/Makefile programs/Makefile tests/Makefile
-    git checkout -- Makefile library/Makefile programs/Makefile tests/Makefile
+    git update-index --no-skip-worktree Makefile library/Makefile programs/Makefile tests/Makefile programs/fuzz/Makefile
+    git checkout -- Makefile library/Makefile programs/Makefile tests/Makefile programs/fuzz/Makefile
     cd crypto
     rm -f include/Makefile include/mbedtls/Makefile programs/*/Makefile
     git update-index --no-skip-worktree Makefile library/Makefile programs/Makefile tests/Makefile
     git checkout -- Makefile library/Makefile programs/Makefile tests/Makefile
     cd ..
-
-    # Remove any artifacts from the component_test_cmake_as_subdirectory test.
-    rm -rf programs/test/cmake_subproject/build
-    rm -f programs/test/cmake_subproject/Makefile
-    rm -f programs/test/cmake_subproject/cmake_subproject
 
     if [ -f "$CONFIG_BAK" ]; then
         mv "$CONFIG_BAK" "$CONFIG_H"
@@ -616,23 +612,6 @@ component_check_doxygen_warnings () {
 #### Build and test many configurations and targets
 ################################################################
 
-component_test_large_ecdsa_key_signature () {
-
-    SMALL_MPI_MAX_SIZE=136 # Small enough to interfere with the EC signatures
-
-    msg "build: cmake + MBEDTLS_MPI_MAX_SIZE=${SMALL_MPI_MAX_SIZE}, gcc, ASan" # ~ 1 min 50s
-    scripts/config.pl set MBEDTLS_MPI_MAX_SIZE $SMALL_MPI_MAX_SIZE
-    CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
-    make
-
-    INEVITABLY_PRESENT_FILE=Makefile
-    SIGNATURE_FILE="${INEVITABLY_PRESENT_FILE}.sig" # Warning, this is rm -f'ed below
-
-    msg "test: pk_sign secp521r1_prv.der for MBEDTLS_MPI_MAX_SIZE=${SMALL_MPI_MAX_SIZE} (ASan build)" # ~ 5s
-    if_build_succeeded programs/pkey/pk_sign tests/data_files/secp521r1_prv.der $INEVITABLY_PRESENT_FILE
-    rm -f $SIGNATURE_FILE
-}
-
 component_test_default_out_of_box () {
     msg "build: make, default config (out-of-box)" # ~1min
     make
@@ -841,7 +820,7 @@ component_test_no_use_psa_crypto_full_cmake_asan() {
     msg "build: cmake, full config + MBEDTLS_USE_PSA_CRYPTO, ASan"
     scripts/config.pl full
     scripts/config.pl unset MBEDTLS_MEMORY_BACKTRACE # too slow for tests
-    scripts/config.pl set MBEDTLS_ECP_RESTARTABLE  # not using PSA, so enable restartable ECC
+    scripts/config.pl unset MBEDTLS_ECP_RESTARTABLE  # restartable ECC not supported through PSA
     scripts/config.pl set MBEDTLS_PSA_CRYPTO_C
     scripts/config.pl unset MBEDTLS_USE_PSA_CRYPTO
     scripts/config.pl unset MBEDTLS_PSA_ITS_FILE_C
@@ -1052,7 +1031,7 @@ component_test_m32_o0 () {
     # Build once with -O0, to compile out the i386 specific inline assembly
     msg "build: i386, make, gcc -O0 (ASan build)" # ~ 30s
     scripts/config.pl full
-    make CC=gcc CFLAGS='-O0 -Werror -Wall -Wextra -m32 -fsanitize=address' LDFLAGS='-m32'
+    make CC=gcc CFLAGS='-O0 -Werror -Wall -Wextra -m32 -fsanitize=address' LDFLAGS='-m32 -fsanitize=address'
 
     msg "test: i386, make, gcc -O0 (ASan build)"
     make test
@@ -1071,7 +1050,7 @@ component_test_m32_o1 () {
     scripts/config.pl unset MBEDTLS_MEMORY_BACKTRACE
     scripts/config.pl unset MBEDTLS_MEMORY_BUFFER_ALLOC_C
     scripts/config.pl unset MBEDTLS_MEMORY_DEBUG
-    make CC=gcc CFLAGS='-O1 -Werror -Wall -Wextra -m32 -fsanitize=address' LDFLAGS='-m32'
+    make CC=gcc CFLAGS='-O1 -Werror -Wall -Wextra -m32 -fsanitize=address' LDFLAGS='-m32 -fsanitize=address'
 
     msg "test: i386, make, gcc -O1 (ASan build)"
     make test
@@ -1238,19 +1217,6 @@ component_test_cmake_out_of_source () {
     fi
     cd "$MBEDTLS_ROOT_DIR"
     rm -rf "$OUT_OF_SOURCE_DIR"
-    unset MBEDTLS_ROOT_DIR
-}
-
-component_test_cmake_as_subdirectory () {
-    msg "build: cmake 'as-subdirectory' build"
-    MBEDTLS_ROOT_DIR="$PWD"
-
-    cd programs/test/cmake_subproject
-    cmake .
-    make
-    if_build_succeeded ./cmake_subproject
-
-    cd "$MBEDTLS_ROOT_DIR"
     unset MBEDTLS_ROOT_DIR
 }
 
