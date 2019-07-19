@@ -51,6 +51,7 @@
 #if defined(_WIN32) && !defined(EFIX64) && !defined(EFI32)
 
 #include <windows.h>
+#include <winbase.h>
 #include <process.h>
 
 struct _hr_time
