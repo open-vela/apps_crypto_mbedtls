@@ -29,6 +29,7 @@
 #endif
 
 #include "psa/crypto.h"
+#include "psa/crypto_se_driver.h"
 
 #include "mbedtls/ecp.h"
 #include "mbedtls/rsa.h"
@@ -45,17 +46,25 @@ typedef struct
     unsigned allocated : 1;
     union
     {
+        /* Raw-data key (key_type_is_raw_bytes() in psa_crypto.c) */
         struct raw_data
         {
             uint8_t *data;
             size_t bytes;
         } raw;
 #if defined(MBEDTLS_RSA_C)
+        /* RSA public key or key pair */
         mbedtls_rsa_context *rsa;
 #endif /* MBEDTLS_RSA_C */
 #if defined(MBEDTLS_ECP_C)
+        /* EC public key or key pair */
         mbedtls_ecp_keypair *ecp;
 #endif /* MBEDTLS_ECP_C */
+        /* Any key type in a secure element */
+        struct se
+        {
+            psa_key_slot_number_t slot_number;
+        } se;
     } data;
 } psa_key_slot_t;
 
@@ -68,7 +77,7 @@ typedef struct
  * \retval PSA_SUCCESS
  *         Success. This includes the case of a key slot that was
  *         already fully wiped.
- * \retval PSA_ERROR_TAMPERING_DETECTED
+ * \retval PSA_ERROR_CORRUPTION_DETECTED
  */
 psa_status_t psa_wipe_key_slot( psa_key_slot_t *slot );
 

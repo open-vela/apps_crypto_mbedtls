@@ -218,11 +218,6 @@ cleanup()
     git update-index --no-skip-worktree Makefile library/Makefile programs/Makefile tests/Makefile
     git checkout -- Makefile library/Makefile programs/Makefile tests/Makefile
 
-    # Remove any artifacts from the component_test_cmake_as_subdirectory test.
-    rm -rf programs/test/cmake_subproject/build
-    rm -f programs/test/cmake_subproject/Makefile
-    rm -f programs/test/cmake_subproject/cmake_subproject
-
     if [ -f "$CONFIG_BAK" ]; then
         mv "$CONFIG_BAK" "$CONFIG_H"
     fi
@@ -607,21 +602,11 @@ component_test_full_cmake_clang () {
     CC=clang cmake -D CMAKE_BUILD_TYPE:String=Check -D ENABLE_TESTING=On .
     make
 
-    msg "test: main suites (full config, clang)" # ~ 5s
+    msg "test: main suites (full config)" # ~ 5s
     make test
 
-    msg "test: psa_constant_names (full config, clang)" # ~ 1s
+    msg "test: psa_constant_names (full config)" # ~ 1s
     record_status tests/scripts/test_psa_constant_names.py
-}
-
-component_test_full_make_gcc_o0 () {
-    msg "build: make, full config, gcc -O0" # ~ 50s
-    scripts/config.pl full
-    scripts/config.pl unset MBEDTLS_MEMORY_BACKTRACE # too slow for tests
-    make CC=gcc CFLAGS='-O0'
-
-    msg "test: main suites (full config, gcc -O0)" # ~ 5s
-    make test
 }
 
 component_build_deprecated () {
@@ -724,6 +709,7 @@ component_test_no_platform () {
     scripts/config.pl unset MBEDTLS_ENTROPY_NV_SEED
     scripts/config.pl unset MBEDTLS_MEMORY_BUFFER_ALLOC_C
     scripts/config.pl unset MBEDTLS_FS_IO
+    scripts/config.pl unset MBEDTLS_PSA_CRYPTO_SE_C
     scripts/config.pl unset MBEDTLS_PSA_CRYPTO_STORAGE_C
     scripts/config.pl unset MBEDTLS_PSA_ITS_FILE_C
     scripts/config.pl unset MBEDTLS_PSA_CRYPTO_STORAGE_ITS_C
@@ -909,6 +895,7 @@ component_build_arm_none_eabi_gcc () {
     scripts/config.pl unset MBEDTLS_TIMING_C
     scripts/config.pl unset MBEDTLS_FS_IO
     scripts/config.pl unset MBEDTLS_PSA_ITS_FILE_C
+    scripts/config.pl unset MBEDTLS_PSA_CRYPTO_SE_C
     scripts/config.pl unset MBEDTLS_PSA_CRYPTO_STORAGE_ITS_C
     scripts/config.pl unset MBEDTLS_PSA_CRYPTO_STORAGE_C
     scripts/config.pl unset MBEDTLS_ENTROPY_NV_SEED
@@ -928,6 +915,7 @@ component_build_arm_none_eabi_gcc_no_udbl_division () {
     scripts/config.pl unset MBEDTLS_TIMING_C
     scripts/config.pl unset MBEDTLS_FS_IO
     scripts/config.pl unset MBEDTLS_PSA_ITS_FILE_C
+    scripts/config.pl unset MBEDTLS_PSA_CRYPTO_SE_C
     scripts/config.pl unset MBEDTLS_PSA_CRYPTO_STORAGE_ITS_C
     scripts/config.pl unset MBEDTLS_PSA_CRYPTO_STORAGE_C
     scripts/config.pl unset MBEDTLS_ENTROPY_NV_SEED
@@ -950,6 +938,7 @@ component_build_arm_none_eabi_gcc_no_64bit_multiplication () {
     scripts/config.pl unset MBEDTLS_TIMING_C
     scripts/config.pl unset MBEDTLS_FS_IO
     scripts/config.pl unset MBEDTLS_PSA_ITS_FILE_C
+    scripts/config.pl unset MBEDTLS_PSA_CRYPTO_SE_C
     scripts/config.pl unset MBEDTLS_PSA_CRYPTO_STORAGE_ITS_C
     scripts/config.pl unset MBEDTLS_PSA_CRYPTO_STORAGE_C
     scripts/config.pl unset MBEDTLS_ENTROPY_NV_SEED
@@ -972,6 +961,7 @@ component_build_armcc () {
     scripts/config.pl unset MBEDTLS_TIMING_C
     scripts/config.pl unset MBEDTLS_FS_IO
     scripts/config.pl unset MBEDTLS_PSA_ITS_FILE_C
+    scripts/config.pl unset MBEDTLS_PSA_CRYPTO_SE_C
     scripts/config.pl unset MBEDTLS_PSA_CRYPTO_STORAGE_ITS_C
     scripts/config.pl unset MBEDTLS_PSA_CRYPTO_STORAGE_C
     scripts/config.pl unset MBEDTLS_ENTROPY_NV_SEED
@@ -1058,19 +1048,6 @@ component_test_cmake_out_of_source () {
 
     cd "$MBEDTLS_ROOT_DIR"
     rm -rf "$OUT_OF_SOURCE_DIR"
-    unset MBEDTLS_ROOT_DIR
-}
-
-component_test_cmake_as_subdirectory () {
-    msg "build: cmake 'as-subdirectory' build"
-    MBEDTLS_ROOT_DIR="$PWD"
-
-    cd programs/test/cmake_subproject
-    cmake .
-    make
-    if_build_succeeded ./cmake_subproject
-
-    cd "$MBEDTLS_ROOT_DIR"
     unset MBEDTLS_ROOT_DIR
 }
 
