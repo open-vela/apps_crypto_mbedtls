@@ -1710,19 +1710,6 @@
 #define MBEDTLS_PSA_CRYPTO_C
 
 /**
- * \def MBEDTLS_PSA_CRYPTO_SE_C
- *
- * Enable secure element support in the Platform Security Architecture
- * cryptography API.
- *
- * Module:  library/psa_crypto_se.c
- *
- * Requires: MBEDTLS_PSA_CRYPTO_C, MBEDTLS_PSA_CRYPTO_STORAGE_C
- *
- */
-#define MBEDTLS_PSA_CRYPTO_SE_C
-
-/**
  * \def MBEDTLS_PSA_CRYPTO_STORAGE_C
  *
  * Enable the Platform Security Architecture persistent key storage.
@@ -2013,6 +2000,6 @@
 #include MBEDTLS_USER_CONFIG_FILE
 #endif
 
-#include "check_config.h"
+#include "mbedtls/check_config.h"
 
 #endif /* MBEDTLS_CONFIG_H */
