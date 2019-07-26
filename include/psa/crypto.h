@@ -1746,7 +1746,7 @@ psa_status_t psa_cipher_decrypt_setup(psa_cipher_operation_t *operation,
  * \retval #PSA_ERROR_CORRUPTION_DETECTED
  */
 psa_status_t psa_cipher_generate_iv(psa_cipher_operation_t *operation,
-                                    unsigned char *iv,
+                                    uint8_t *iv,
                                     size_t iv_size,
                                     size_t *iv_length);
 
@@ -1781,7 +1781,7 @@ psa_status_t psa_cipher_generate_iv(psa_cipher_operation_t *operation,
  * \retval #PSA_ERROR_CORRUPTION_DETECTED
  */
 psa_status_t psa_cipher_set_iv(psa_cipher_operation_t *operation,
-                               const unsigned char *iv,
+                               const uint8_t *iv,
                                size_t iv_length);
 
 /** Encrypt or decrypt a message fragment in an active cipher operation.
@@ -1819,7 +1819,7 @@ psa_status_t psa_cipher_set_iv(psa_cipher_operation_t *operation,
 psa_status_t psa_cipher_update(psa_cipher_operation_t *operation,
                                const uint8_t *input,
                                size_t input_length,
-                               unsigned char *output,
+                               uint8_t *output,
                                size_t output_size,
                                size_t *output_length);
 
@@ -2212,7 +2212,7 @@ psa_status_t psa_aead_decrypt_setup(psa_aead_operation_t *operation,
  * \retval #PSA_ERROR_CORRUPTION_DETECTED
  */
 psa_status_t psa_aead_generate_nonce(psa_aead_operation_t *operation,
-                                     unsigned char *nonce,
+                                     uint8_t *nonce,
                                      size_t nonce_size,
                                      size_t *nonce_length);
 
@@ -2246,7 +2246,7 @@ psa_status_t psa_aead_generate_nonce(psa_aead_operation_t *operation,
  * \retval #PSA_ERROR_CORRUPTION_DETECTED
  */
 psa_status_t psa_aead_set_nonce(psa_aead_operation_t *operation,
-                                const unsigned char *nonce,
+                                const uint8_t *nonce,
                                 size_t nonce_length);
 
 /** Declare the lengths of the message and additional data for AEAD.
@@ -2400,7 +2400,7 @@ psa_status_t psa_aead_update_ad(psa_aead_operation_t *operation,
 psa_status_t psa_aead_update(psa_aead_operation_t *operation,
                              const uint8_t *input,
                              size_t input_length,
-                             unsigned char *output,
+                             uint8_t *output,
                              size_t output_size,
                              size_t *output_length);
 
