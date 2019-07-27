@@ -5,17 +5,12 @@ else()
     project("mbed TLS" C)
 endif()
 
+# Set the project root directory.
 set(MBEDTLS_DIR ${CMAKE_CURRENT_SOURCE_DIR})
-
-option(USE_PKCS11_HELPER_LIBRARY "Build mbed TLS with the pkcs11-helper library." OFF)
-option(ENABLE_ZLIB_SUPPORT "Build mbed TLS with zlib library." OFF)
 
 option(ENABLE_PROGRAMS "Build mbed TLS programs." ON)
 
 option(UNSAFE_BUILD "Allow unsafe builds. These builds ARE NOT SECURE." OFF)
-
-# export the submodule flag so that crypto knows it's being built as a submodule
-set( USE_CRYPTO_SUBMODULE ON )
 
 string(REGEX MATCH "Clang" CMAKE_COMPILER_IS_CLANG "${CMAKE_C_COMPILER_ID}")
 string(REGEX MATCH "GNU" CMAKE_COMPILER_IS_GNU "${CMAKE_C_COMPILER_ID}")
@@ -51,9 +46,9 @@ set(CTR_DRBG_128_BIT_KEY_WARNING "${WARNING_BORDER}"
                          "${CTR_DRBG_128_BIT_KEY_WARN_L3}"
                          "${WARNING_BORDER}")
 
-# Python 3 is only needed here to check for configuration warnings.
-find_package(PythonInterp 3)
-if(PYTHONINTERP_FOUND)
+find_package(PythonInterp)
+find_package(Perl)
+if(PYTHON_FOUND)
 
     # If 128-bit keys are configured for CTR_DRBG, display an appropriate warning
     execute_process(COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/scripts/config.py -f ${CMAKE_CURRENT_SOURCE_DIR}/include/mbedtls/config.h get MBEDTLS_CTR_DRBG_USE_128_BIT_KEY
@@ -142,8 +137,8 @@ if(CMAKE_COMPILER_IS_GNU)
     set(CMAKE_C_FLAGS_RELEASE     "-O2")
     set(CMAKE_C_FLAGS_DEBUG       "-O0 -g3")
     set(CMAKE_C_FLAGS_COVERAGE    "-O0 -g3 --coverage")
-    set(CMAKE_C_FLAGS_ASAN        "-Werror -fsanitize=address -fno-common -O3")
-    set(CMAKE_C_FLAGS_ASANDBG     "-Werror -fsanitize=address -fno-common -O1 -g3 -fno-omit-frame-pointer -fno-optimize-sibling-calls ")
+    set(CMAKE_C_FLAGS_ASAN        "-Werror -fsanitize=address -fno-common -fsanitize=undefined -fno-sanitize-recover=all -O3")
+    set(CMAKE_C_FLAGS_ASANDBG     "-Werror -fsanitize=address -fno-common -fsanitize=undefined -fno-sanitize-recover=all -O1 -g3 -fno-omit-frame-pointer -fno-optimize-sibling-calls")
     set(CMAKE_C_FLAGS_CHECK       "-Werror -Os")
     set(CMAKE_C_FLAGS_CHECKFULL   "${CMAKE_C_FLAGS_CHECK} -Wcast-qual")
 endif(CMAKE_COMPILER_IS_GNU)
@@ -154,7 +149,7 @@ if(CMAKE_COMPILER_IS_CLANG)
     set(CMAKE_C_FLAGS_DEBUG       "-O0 -g3")
     set(CMAKE_C_FLAGS_COVERAGE    "-O0 -g3 --coverage")
     set(CMAKE_C_FLAGS_ASAN        "-Werror -fsanitize=address -fno-common -fsanitize=undefined -fno-sanitize-recover=all -O3")
-    set(CMAKE_C_FLAGS_ASANDBG     "-Werror -fsanitize=address -fno-common -fsanitize=undefined -fno-sanitize-recover=all -O1 -g3 -fno-omit-frame-pointer -fno-optimize-sibling-calls ")
+    set(CMAKE_C_FLAGS_ASANDBG     "-Werror -fsanitize=address -fno-common -fsanitize=undefined -fno-sanitize-recover=all -O1 -g3 -fno-omit-frame-pointer -fno-optimize-sibling-calls")
     set(CMAKE_C_FLAGS_MEMSAN      "-Werror -fsanitize=memory -O3")
     set(CMAKE_C_FLAGS_MEMSANDBG   "-Werror -fsanitize=memory -O1 -g3 -fno-omit-frame-pointer -fno-optimize-sibling-calls -fsanitize-memory-track-origins=2")
     set(CMAKE_C_FLAGS_CHECK       "-Werror -Os")
@@ -181,23 +176,17 @@ else()
     set(LIB_INSTALL_DIR lib)
 endif()
 
-if(ENABLE_ZLIB_SUPPORT)
-    find_package(ZLIB)
+include_directories(include/)
+include_directories(library/)
 
-    if(ZLIB_FOUND)
-        include_directories(${ZLIB_INCLUDE_DIR})
-    endif(ZLIB_FOUND)
-endif(ENABLE_ZLIB_SUPPORT)
+add_subdirectory(include)
 
-add_subdirectory(crypto/3rdparty)
+add_subdirectory(3rdparty)
 include_directories(${thirdparty_inc})
 list(APPEND libs ${thirdparty_lib})
 add_definitions(${thirdparty_def})
 
 add_subdirectory(library)
-add_subdirectory(include)
-add_subdirectory(crypto/library)
-add_subdirectory(crypto/include)
 
 if(ENABLE_PROGRAMS)
     add_subdirectory(programs)
@@ -211,7 +200,6 @@ if(ENABLE_TESTING)
     enable_testing()
 
     add_subdirectory(tests)
-    add_subdirectory(crypto/tests)
 
     # additional convenience targets for Unix only
     if(UNIX)
@@ -219,8 +207,6 @@ if(ENABLE_TESTING)
         ADD_CUSTOM_TARGET(covtest
             COMMAND make test
             COMMAND programs/test/selftest
-            COMMAND tests/compat.sh
-            COMMAND tests/ssl-opt.sh
         )
 
         ADD_CUSTOM_TARGET(lcov
