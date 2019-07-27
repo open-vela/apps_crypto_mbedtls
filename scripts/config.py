@@ -24,7 +24,6 @@ Basic usage, to read the Mbed TLS or Mbed Crypto configuration:
 ##
 ## This file is part of Mbed TLS (https://tls.mbed.org)
 
-import os
 import re
 
 class Setting:
@@ -36,14 +35,12 @@ class Setting:
       with no value.
     * active: True if name is defined, False if a #define for name is
       present in config.h but commented out.
-    * section: the name of the section that contains this symbol.
     """
     # pylint: disable=too-few-public-methods
-    def __init__(self, active, name, value='', section=None):
+    def __init__(self, active, name, value=''):
         self.active = active
         self.name = name
         self.value = value
-        self.section = section
 
 class Config:
     """Representation of the Mbed TLS configuration.
@@ -53,10 +50,12 @@ class Config:
     if there is a #define for it whether commented out or not.
 
     This class supports the following protocols:
-    * `name in config` is `True` if the symbol `name` is active, `False`
-      otherwise (whether `name` is inactive or not known).
-    * `config[name]` is the value of the macro `name`. If `name` is inactive,
-      raise `KeyError` (even if `name` is known).
+    * `name in config` is True if the symbol `name` is set in the
+      configuration, False otherwise (whether `name` is known but commented
+      out or not known at all).
+    * `config[name]` is the value of the macro `name`. If `name` is not
+      set, raise `KeyError` (even if a definition for `name` is present
+      but commented out).
     * `config[name] = value` sets the value associated to `name`. `name`
       must be known, but does not need to be set. This does not cause
       name to become set.
@@ -129,106 +128,26 @@ class Config:
     def unset(self, name):
         """Make name unset (inactive).
 
-        name remains known if it was known before.
+        name remains known.
         """
-        if name not in self.settings:
-            return
+        self.set(name)
         self.settings[name].active = False
 
     def adapt(self, adapter):
         """Run adapter on each known symbol and (de)activate it accordingly.
 
         `adapter` must be a function that returns a boolean. It is called as
-        `adapter(name, active, section)` for each setting, where `active` is
-        `True` if `name` is set and `False` if `name` is known but unset,
-        and `section` is the name of the section containing `name`. If
+        `adapter(name, active)` for each setting, where `active` is `True`
+        if `name` is set and `False` if `name` is known but unset. If
         `adapter` returns `True`, then set `name` (i.e. make it active),
         otherwise unset `name` (i.e. make it known but inactive).
         """
         for setting in self.settings.values():
-            setting.active = adapter(setting.name, setting.active,
-                                     setting.section)
+            setting.active = adapter(setting.name, setting.active)
 
-def is_full_section(section):
-    """Is this section affected by "config.py full" and friends?"""
-    return section.endswith('support') or section.endswith('modules')
-
-def realfull_adapter(_name, active, section):
-    """Activate all symbols found in the system and feature sections."""
-    if not is_full_section(section):
-        return active
+def realfull_adapter(_name, _set):
+    """Uncomment everything."""
     return True
-
-def include_in_full(name):
-    """Rules for symbols in the "full" configuration."""
-    if re.search(r'PLATFORM_[A-Z0-9]+_ALT', name):
-        return True
-    if name in [
-            'MBEDTLS_DEPRECATED_REMOVED',
-            'MBEDTLS_ECDH_VARIANT_EVEREST_ENABLED',
-            'MBEDTLS_ECP_RESTARTABLE',
-            'MBEDTLS_HAVE_SSE2',
-            'MBEDTLS_MEMORY_BACKTRACE',
-            'MBEDTLS_MEMORY_BUFFER_ALLOC_C',
-            'MBEDTLS_MEMORY_DEBUG',
-            'MBEDTLS_NO_64BIT_MULTIPLICATION',
-            'MBEDTLS_NO_DEFAULT_ENTROPY_SOURCES',
-            'MBEDTLS_NO_PLATFORM_ENTROPY',
-            'MBEDTLS_NO_UDBL_DIVISION',
-            'MBEDTLS_PKCS11_C',
-            'MBEDTLS_PLATFORM_NO_STD_FUNCTIONS',
-            'MBEDTLS_PSA_CRYPTO_SPM',
-            'MBEDTLS_PSA_INJECT_ENTROPY',
-            'MBEDTLS_REMOVE_3DES_CIPHERSUITES',
-            'MBEDTLS_REMOVE_ARC4_CIPHERSUITES',
-            'MBEDTLS_RSA_NO_CRT',
-            'MBEDTLS_SSL_HW_RECORD_ACCEL',
-            'MBEDTLS_TEST_NULL_ENTROPY',
-            'MBEDTLS_X509_ALLOW_EXTENSIONS_NON_V3',
-            'MBEDTLS_X509_ALLOW_UNSUPPORTED_CRITICAL_EXTENSION',
-            'MBEDTLS_ZLIB_SUPPORT',
-    ]:
-        return False
-    if name.endswith('_ALT'):
-        return False
-    return True
-
-def full_adapter(name, active, section):
-    """Config adapter for "full"."""
-    if not is_full_section(section):
-        return active
-    return include_in_full(name)
-
-def keep_in_baremetal(name):
-    """Rules for symbols in the "baremetal" configuration."""
-    if name in [
-            'MBEDTLS_DEPRECATED_WARNING',
-            'MBEDTLS_ENTROPY_NV_SEED',
-            'MBEDTLS_FS_IO',
-            'MBEDTLS_HAVEGE_C',
-            'MBEDTLS_HAVE_TIME',
-            'MBEDTLS_HAVE_TIME_DATE',
-            'MBEDTLS_MEMORY_BACKTRACE',
-            'MBEDTLS_MEMORY_BUFFER_ALLOC_C',
-            'MBEDTLS_NET_C',
-            'MBEDTLS_PLATFORM_FPRINTF_ALT',
-            'MBEDTLS_PLATFORM_TIME_ALT',
-            'MBEDTLS_PSA_CRYPTO_STORAGE_C',
-            'MBEDTLS_PSA_ITS_FILE_C',
-            'MBEDTLS_THREADING_C',
-            'MBEDTLS_THREADING_PTHREAD',
-            'MBEDTLS_TIMING_C',
-    ]:
-        return False
-    return True
-
-def baremetal_adapter(name, active, section):
-    """Config adapter for "baremetal"."""
-    if not is_full_section(section):
-        return active
-    if name == 'MBEDTLS_NO_PLATFORM_ENTROPY':
-        return True
-    return include_in_full(name) and keep_in_baremetal(name)
 
 class ConfigFile(Config):
     """Representation of the Mbed TLS configuration read for a file.
@@ -237,26 +156,16 @@ class ConfigFile(Config):
     and modify the configuration.
     """
 
-    _path_in_tree = 'include/mbedtls/config.h'
-    default_path = [_path_in_tree,
-                    os.path.join(os.path.dirname(__file__),
-                                 os.pardir,
-                                 _path_in_tree),
-                    os.path.join(os.path.dirname(os.path.abspath(os.path.dirname(__file__))),
-                                 _path_in_tree)]
+    default_path = 'include/mbedtls/config.h'
 
     def __init__(self, filename=None):
         """Read the Mbed TLS configuration file."""
         if filename is None:
-            for filename in self.default_path:
-                if os.path.lexists(filename):
-                    break
+            filename = self.default_path
         super().__init__()
         self.filename = filename
-        self.current_section = 'header'
-        with open(filename, 'r', encoding='utf-8') as file:
+        with open(filename) as file:
             self.templates = [self._parse_line(line) for line in file]
-        self.current_section = None
 
     def set(self, name, value=None):
         if name not in self.settings:
@@ -270,20 +179,11 @@ class ConfigFile(Config):
                            r'(?P<arguments>(?:\((?:\w|\s|,)*\))?)' +
                            r'(?P<separator>\s*)' +
                            r'(?P<value>.*)')
-    _section_line_regexp = (r'\s*/?\*+\s*[\\@]name\s+SECTION:\s*' +
-                            r'(?P<section>.*)[ */]*')
-    _config_line_regexp = re.compile(r'|'.join([_define_line_regexp,
-                                                _section_line_regexp]))
     def _parse_line(self, line):
         """Parse a line in config.h and return the corresponding template."""
         line = line.rstrip('\r\n')
-        m = re.match(self._config_line_regexp, line)
-        if m is None:
-            return line
-        elif m.group('section'):
-            self.current_section = m.group('section')
-            return line
-        else:
+        m = re.match(self._define_line_regexp, line)
+        if m:
             active = not m.group('commented_out')
             name = m.group('name')
             value = m.group('value')
@@ -291,33 +191,21 @@ class ConfigFile(Config):
                         m.group('indentation'),
                         m.group('define') + name +
                         m.group('arguments') + m.group('separator'))
-            self.settings[name] = Setting(active, name, value,
-                                          self.current_section)
+            self.settings[name] = Setting(active, name, value)
             return template
+        else:
+            return line
 
     def _format_template(self, name, indent, middle):
         """Build a line for config.h for the given setting.
 
-        The line has the form "<indent>#define <name> <value>"
-        where <middle> is "#define <name> ".
+        The line has the form "<indent>#define <name><middle> <value>".
         """
         setting = self.settings[name]
-        value = setting.value
-        if value is None:
-            value = ''
-        # Normally the whitespace to separte the symbol name from the
-        # value is part of middle, and there's no whitespace for a symbol
-        # with no value. But if a symbol has been changed from having a
-        # value to not having one, the whitespace is wrong, so fix it.
-        if value:
-            if middle[-1] not in '\t ':
-                middle += ' '
-        else:
-            middle = middle.rstrip()
         return ''.join([indent,
                         '' if setting.active else '//',
                         middle,
-                        value]).rstrip()
+                        setting.value]).rstrip()
 
     def write_to_stream(self, output):
         """Write the whole configuration to output."""
@@ -335,7 +223,7 @@ class ConfigFile(Config):
         """
         if filename is None:
             filename = self.filename
-        with open(filename, 'w', encoding='utf-8') as output:
+        with open(filename, 'w') as output:
             self.write_to_stream(output)
 
 if __name__ == '__main__':
@@ -349,11 +237,8 @@ if __name__ == '__main__':
                             Default: {}.
                             """.format(ConfigFile.default_path))
         parser.add_argument('--force', '-o',
-                            action='store_true',
                             help="""For the set command, if SYMBOL is not
                             present, add a definition for it.""")
-        parser.add_argument('--write', '-w', metavar='FILE',
-                            help="""File to write to instead of the input file.""")
         subparsers = parser.add_subparsers(dest='command',
                                            title='Commands')
         parser_get = subparsers.add_parser('get',
@@ -372,8 +257,7 @@ if __name__ == '__main__':
                                            found, unless --force is passed.
                                            """)
         parser_set.add_argument('symbol', metavar='SYMBOL')
-        parser_set.add_argument('value', metavar='VALUE', nargs='?',
-                                default='')
+        parser_set.add_argument('value', metavar='VALUE', nargs='?')
         parser_unset = subparsers.add_parser('unset',
                                              help="""Comment out the #define
                                              for SYMBOL. Do nothing if none
@@ -383,41 +267,29 @@ if __name__ == '__main__':
         def add_adapter(name, function, description):
             subparser = subparsers.add_parser(name, help=description)
             subparser.set_defaults(adapter=function)
-        add_adapter('baremetal', baremetal_adapter,
-                    """Like full, but exclude features that require platform
-                    features such as file input-output.""")
-        add_adapter('full', full_adapter,
-                    """Uncomment most features.
-                    Exclude alternative implementations and platform support
-                    options, as well as some options that are awkward to test.
-                    """)
         add_adapter('realfull', realfull_adapter,
-                    """Uncomment all boolean #defines.
-                    Suitable for generating documentation, but not for building.""")
+                    """Uncomment all #defines. No exceptions.""")
 
         args = parser.parse_args()
         config = ConfigFile(args.file)
-        if args.command is None:
-            parser.print_help()
-            return 1
-        elif args.command == 'get':
+        if args.command == 'get':
             if args.symbol in config:
                 value = config[args.symbol]
                 if value:
                     sys.stdout.write(value + '\n')
             return args.symbol not in config
         elif args.command == 'set':
-            if not args.force and args.symbol not in config.settings:
+            if not args.force and args.symbol not in config:
                 sys.stderr.write("A #define for the symbol {} "
-                                 "was not found in {}\n"
-                                 .format(args.symbol, config.filename))
+                                 "was not found in {}"
+                                 .format(args.symbol, args.file))
                 return 1
             config.set(args.symbol, value=args.value)
         elif args.command == 'unset':
             config.unset(args.symbol)
         else:
             config.adapt(args.adapter)
-        config.write(args.write)
+        config.write()
 
     # Import modules only used by main only if main is defined and called.
     # pylint: disable=wrong-import-position
