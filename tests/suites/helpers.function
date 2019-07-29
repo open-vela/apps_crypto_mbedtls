@@ -126,6 +126,14 @@ typedef enum
 #define TEST_EQUAL( expr1, expr2 )              \
     TEST_ASSERT( ( expr1 ) == ( expr2 ) )
 
+/** Evaluate an expression and fail the test case if it returns an error.
+ *
+ * \param expr      The expression to evaluate. This is typically a call
+ *                  to a \c psa_xxx function that returns a value of type
+ *                  #psa_status_t.
+ */
+#define PSA_ASSERT( expr ) TEST_EQUAL( ( expr ), PSA_SUCCESS )
+
 /** Allocate memory dynamically and fail the test case if this fails.
  *
  * You must set \p pointer to \c NULL before calling this macro and
@@ -278,7 +286,7 @@ typedef enum
 #define TEST_VALID_PARAM( TEST )                                    \
     TEST_ASSERT( ( TEST, 1 ) );
 
-#define assert(a) if( !( a ) )                                      \
+#define TEST_HELPER_ASSERT(a) if( !( a ) )                                      \
 {                                                                   \
     mbedtls_fprintf( stderr, "Assertion Failed at %s:%d - %s\n",   \
                              __FILE__, __LINE__, #a );              \
@@ -496,7 +504,7 @@ static int unhexify( unsigned char *obuf, const char *ibuf )
 {
     unsigned char c, c2;
     int len = strlen( ibuf ) / 2;
-    assert( strlen( ibuf ) % 2 == 0 ); /* must be even number of bytes */
+    TEST_HELPER_ASSERT( strlen( ibuf ) % 2 == 0 ); /* must be even number of bytes */
 
     while( *ibuf != 0 )
     {
@@ -508,7 +516,7 @@ static int unhexify( unsigned char *obuf, const char *ibuf )
         else if( c >= 'A' && c <= 'F' )
             c -= 'A' - 10;
         else
-            assert( 0 );
+            TEST_HELPER_ASSERT( 0 );
 
         c2 = *ibuf++;
         if( c2 >= '0' && c2 <= '9' )
@@ -518,7 +526,7 @@ static int unhexify( unsigned char *obuf, const char *ibuf )
         else if( c2 >= 'A' && c2 <= 'F' )
             c2 -= 'A' - 10;
         else
-            assert( 0 );
+            TEST_HELPER_ASSERT( 0 );
 
         *obuf++ = ( c << 4 ) | c2;
     }
@@ -563,7 +571,7 @@ static unsigned char *zero_alloc( size_t len )
     size_t actual_len = ( len != 0 ) ? len : 1;
 
     p = mbedtls_calloc( 1, actual_len );
-    assert( p != NULL );
+    TEST_HELPER_ASSERT( p != NULL );
 
     memset( p, 0x00, actual_len );
 
@@ -590,7 +598,7 @@ static unsigned char *unhexify_alloc( const char *ibuf, size_t *olen )
         return( zero_alloc( *olen ) );
 
     obuf = mbedtls_calloc( 1, *olen );
-    assert( obuf != NULL );
+    TEST_HELPER_ASSERT( obuf != NULL );
 
     (void) unhexify( obuf, ibuf );
 
