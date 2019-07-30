@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
-
-# This file is part of Mbed TLS (https://tls.mbed.org)
-# Copyright (c) 2018, Arm Limited, All Rights Reserved
-
 """
+This file is part of Mbed TLS (https://tls.mbed.org)
+
+Copyright (c) 2018, Arm Limited, All Rights Reserved
+
+Purpose
+
 This script checks the current state of the source code for minor issues,
 including incorrect file permissions, presence of tabs, non-Unix line endings,
-trailing whitespace, and presence of UTF-8 BOM.
+trailing whitespace, presence of UTF-8 BOM, and TODO comments.
 Note: requires python 3, must be run from Mbed TLS root.
 """
 
@@ -168,6 +170,19 @@ class MergeArtifactIssueTracker(LineIssueTracker):
             return True
         return False
 
+class TodoIssueTracker(LineIssueTracker):
+    """Track lines containing ``TODO``."""
+
+    heading = "TODO present:"
+    files_exemptions = frozenset([
+        os.path.basename(__file__),
+        "benchmark.c",
+        "pull_request_template.md",
+    ])
+
+    def issue_with_line(self, line, _filepath):
+        return b"todo" in line.lower()
+
 
 class IntegrityChecker(object):
     """Sanity-check files under the current directory."""
@@ -196,6 +211,7 @@ class IntegrityChecker(object):
             TrailingWhitespaceIssueTracker(),
             TabIssueTracker(),
             MergeArtifactIssueTracker(),
+            TodoIssueTracker(),
         ]
 
     @staticmethod
@@ -241,7 +257,15 @@ class IntegrityChecker(object):
 
 
 def run_main():
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(
+        description=(
+            "This script checks the current state of the source code for "
+            "minor issues, including incorrect file permissions, "
+            "presence of tabs, non-Unix line endings, trailing whitespace, "
+            "presence of UTF-8 BOM, and TODO comments. "
+            "Note: requires python 3, must be run from Mbed TLS root."
+        )
+    )
     parser.add_argument(
         "-l", "--log_file", type=str, help="path to optional output log",
     )
