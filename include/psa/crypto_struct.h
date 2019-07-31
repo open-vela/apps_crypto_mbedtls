@@ -38,7 +38,7 @@
 /* Include the Mbed TLS configuration file, the way Mbed TLS does it
  * in each of its header files. */
 #if !defined(MBEDTLS_CONFIG_FILE)
-#include "../mbedtls/config.h"
+#include "mbedtls/config.h"
 #else
 #include MBEDTLS_CONFIG_FILE
 #endif
@@ -309,39 +309,18 @@ static inline struct psa_key_policy_s psa_key_policy_init( void )
     return( v );
 }
 
-/* The type used internally for key sizes.
- * Public interfaces use size_t, but internally we use a smaller type. */
-typedef uint16_t psa_key_bits_t;
-/* The maximum value of the type used to represent bit-sizes.
- * This is used to mark an invalid key size. */
-#define PSA_KEY_BITS_TOO_LARGE ( (psa_key_bits_t) ( -1 ) )
-/* The maximum size of a key in bits.
- * Currently defined as the maximum that can be represented, rounded down
- * to a whole number of bytes.
- * This is an uncast value so that it can be used in preprocessor
- * conditionals. */
-#define PSA_MAX_KEY_BITS 0xfff8
-
-typedef struct
-{
-    psa_key_type_t type;
-    psa_key_lifetime_t lifetime;
-    psa_key_id_t id;
-    psa_key_policy_t policy;
-    psa_key_bits_t bits;
-    uint16_t flags;
-} psa_core_key_attributes_t;
-
-#define PSA_CORE_KEY_ATTRIBUTES_INIT {0, 0, 0, {0, 0, 0}, 0, 0}
-
 struct psa_key_attributes_s
 {
-    psa_core_key_attributes_t core;
+    psa_key_id_t id;
+    psa_key_lifetime_t lifetime;
+    psa_key_policy_t policy;
+    psa_key_type_t type;
+    size_t bits;
     void *domain_parameters;
     size_t domain_parameters_size;
 };
 
-#define PSA_KEY_ATTRIBUTES_INIT {PSA_CORE_KEY_ATTRIBUTES_INIT, NULL, 0}
+#define PSA_KEY_ATTRIBUTES_INIT {0, 0, {0, 0, 0}, 0, 0, NULL, 0}
 static inline struct psa_key_attributes_s psa_key_attributes_init( void )
 {
     const struct psa_key_attributes_s v = PSA_KEY_ATTRIBUTES_INIT;
@@ -351,53 +330,53 @@ static inline struct psa_key_attributes_s psa_key_attributes_init( void )
 static inline void psa_set_key_id(psa_key_attributes_t *attributes,
                                   psa_key_id_t id)
 {
-    attributes->core.id = id;
-    if( attributes->core.lifetime == PSA_KEY_LIFETIME_VOLATILE )
-        attributes->core.lifetime = PSA_KEY_LIFETIME_PERSISTENT;
+    attributes->id = id;
+    if( attributes->lifetime == PSA_KEY_LIFETIME_VOLATILE )
+        attributes->lifetime = PSA_KEY_LIFETIME_PERSISTENT;
 }
 
 static inline psa_key_id_t psa_get_key_id(
     const psa_key_attributes_t *attributes)
 {
-    return( attributes->core.id );
+    return( attributes->id );
 }
 
 static inline void psa_set_key_lifetime(psa_key_attributes_t *attributes,
                                         psa_key_lifetime_t lifetime)
 {
-    attributes->core.lifetime = lifetime;
+    attributes->lifetime = lifetime;
     if( lifetime == PSA_KEY_LIFETIME_VOLATILE )
-        attributes->core.id = 0;
+        attributes->id = 0;
 }
 
 static inline psa_key_lifetime_t psa_get_key_lifetime(
     const psa_key_attributes_t *attributes)
 {
-    return( attributes->core.lifetime );
+    return( attributes->lifetime );
 }
 
 static inline void psa_set_key_usage_flags(psa_key_attributes_t *attributes,
                                            psa_key_usage_t usage_flags)
 {
-    attributes->core.policy.usage = usage_flags;
+    attributes->policy.usage = usage_flags;
 }
 
 static inline psa_key_usage_t psa_get_key_usage_flags(
     const psa_key_attributes_t *attributes)
 {
-    return( attributes->core.policy.usage );
+    return( attributes->policy.usage );
 }
 
 static inline void psa_set_key_algorithm(psa_key_attributes_t *attributes,
                                          psa_algorithm_t alg)
 {
-    attributes->core.policy.alg = alg;
+    attributes->policy.alg = alg;
 }
 
 static inline psa_algorithm_t psa_get_key_algorithm(
     const psa_key_attributes_t *attributes)
 {
-    return( attributes->core.policy.alg );
+    return( attributes->policy.alg );
 }
 
 /* This function is declared in crypto_extra.h, which comes after this
@@ -413,7 +392,7 @@ static inline void psa_set_key_type(psa_key_attributes_t *attributes,
     if( attributes->domain_parameters == NULL )
     {
         /* Common case: quick path */
-        attributes->core.type = type;
+        attributes->type = type;
     }
     else
     {
@@ -428,22 +407,19 @@ static inline void psa_set_key_type(psa_key_attributes_t *attributes,
 static inline psa_key_type_t psa_get_key_type(
     const psa_key_attributes_t *attributes)
 {
-    return( attributes->core.type );
+    return( attributes->type );
 }
 
 static inline void psa_set_key_bits(psa_key_attributes_t *attributes,
                                     size_t bits)
 {
-    if( bits > PSA_MAX_KEY_BITS )
-        attributes->core.bits = PSA_KEY_BITS_TOO_LARGE;
-    else
-        attributes->core.bits = (psa_key_bits_t) bits;
+    attributes->bits = bits;
 }
 
 static inline size_t psa_get_key_bits(
     const psa_key_attributes_t *attributes)
 {
-    return( attributes->core.bits );
+    return( attributes->bits );
 }
 
 #endif /* PSA_CRYPTO_STRUCT_H */

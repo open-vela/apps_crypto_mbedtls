@@ -35,14 +35,9 @@ extern "C" {
 #include <stdint.h>
 #include <string.h>
 
-/* Limit the maximum key size in storage. This should have no effect
- * since the key size is limited in memory. */
-#define PSA_CRYPTO_MAX_STORAGE_SIZE ( PSA_BITS_TO_BYTES( PSA_MAX_KEY_BITS ) )
-/* Sanity check: a file size must fit in 32 bits. Allow a generous
- * 64kB of metadata. */
-#if PSA_CRYPTO_MAX_STORAGE_SIZE > 0xffff0000
-#error PSA_CRYPTO_MAX_STORAGE_SIZE > 0xffff0000
-#endif
+/* Limit the maximum key size to 30kB (just in case someone tries to
+ * inadvertently store an obscene amount of data) */
+#define PSA_CRYPTO_MAX_STORAGE_SIZE ( 30 * 1024 )
 
 /** The maximum permitted persistent slot number.
  *
@@ -88,7 +83,7 @@ int psa_is_key_present_in_storage( const psa_key_file_id_t key );
  * already occupied non-persistent key, as well as validating the key data.
  *
  *
- * \param[in] attr          The attributes of the key to save.
+ * \param[in] attributes    The attributes of the key to save.
  *                          The key identifier field in the attributes
  *                          determines the key's location.
  * \param[in] data          Buffer containing the key data.
@@ -100,7 +95,7 @@ int psa_is_key_present_in_storage( const psa_key_file_id_t key );
  * \retval PSA_ERROR_STORAGE_FAILURE
  * \retval PSA_ERROR_ALREADY_EXISTS
  */
-psa_status_t psa_save_persistent_key( const psa_core_key_attributes_t *attr,
+psa_status_t psa_save_persistent_key( const psa_key_attributes_t *attributes,
                                       const uint8_t *data,
                                       const size_t data_length );
 
@@ -116,7 +111,8 @@ psa_status_t psa_save_persistent_key( const psa_core_key_attributes_t *attr,
  * this function to zeroize and free this buffer, regardless of whether this
  * function succeeds or fails.
  *
- * \param[in,out] attr      On input, the key identifier field identifies
+ * \param[in,out] attributes
+ *                          On input, the key identifier field identifies
  *                          the key to load. Other fields are ignored.
  *                          On success, the attribute structure contains
  *                          the key metadata that was loaded from storage.
@@ -128,7 +124,7 @@ psa_status_t psa_save_persistent_key( const psa_core_key_attributes_t *attr,
  * \retval PSA_ERROR_STORAGE_FAILURE
  * \retval PSA_ERROR_DOES_NOT_EXIST
  */
-psa_status_t psa_load_persistent_key( psa_core_key_attributes_t *attr,
+psa_status_t psa_load_persistent_key( psa_key_attributes_t *attributes,
                                       uint8_t **data,
                                       size_t *data_length );
 
@@ -162,13 +158,13 @@ void psa_free_persistent_key_data( uint8_t *key_data, size_t key_data_length );
  *
  * \param[in] data          Buffer containing the key data.
  * \param data_length       Length of the key data buffer.
- * \param[in] attr          The core attributes of the key.
+ * \param[in] attributes    The attributes of the key.
  * \param[out] storage_data Output buffer for the formatted data.
  *
  */
 void psa_format_key_data_for_storage( const uint8_t *data,
                                       const size_t data_length,
-                                      const psa_core_key_attributes_t *attr,
+                                      const psa_key_attributes_t *attributes,
                                       uint8_t *storage_data );
 
 /**
@@ -180,7 +176,7 @@ void psa_format_key_data_for_storage( const uint8_t *data,
  *                             containing the key data. This must be freed
  *                             using psa_free_persistent_key_data()
  * \param[out] key_data_length Length of the key data buffer
- * \param[out] attr            On success, the attribute structure is filled
+ * \param[out] attributes      On success, the attribute structure is filled
  *                             with the loaded key metadata.
  *
  * \retval PSA_SUCCESS
@@ -192,7 +188,7 @@ psa_status_t psa_parse_key_data_from_storage( const uint8_t *storage_data,
                                               size_t storage_data_length,
                                               uint8_t **key_data,
                                               size_t *key_data_length,
-                                              psa_core_key_attributes_t *attr );
+                                              psa_key_attributes_t *attributes );
 
 #if defined(MBEDTLS_PSA_CRYPTO_SE_C)
 /** This symbol is defined if transaction support is required. */
