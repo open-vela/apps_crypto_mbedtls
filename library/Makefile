@@ -2,7 +2,7 @@
 # Also see "include/mbedtls/config.h"
 
 CFLAGS	?= -O2
-WARNING_CFLAGS ?=  -Wall -W -Wdeclaration-after-statement
+WARNING_CFLAGS ?=  -Wall -Wextra
 LDFLAGS ?=
 
 CRYPTO_INCLUDES ?= -I../include
@@ -80,7 +80,7 @@ OBJS_CRYPTO=	aes.o		aesni.o		arc4.o		\
 		pk.o		pk_wrap.o	pkcs12.o	\
 		pkcs5.o		pkparse.o	pkwrite.o	\
 		platform.o	platform_util.o	poly1305.o	\
-		psa_crypto.o	psa_crypto_se.o			\
+		psa_crypto.o					\
 		psa_crypto_slot_management.o			\
 		psa_crypto_storage.o				\
 		psa_its_file.o					\
