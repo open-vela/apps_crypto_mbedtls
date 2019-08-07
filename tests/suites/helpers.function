@@ -126,6 +126,14 @@ typedef enum
 #define TEST_EQUAL( expr1, expr2 )              \
     TEST_ASSERT( ( expr1 ) == ( expr2 ) )
 
+/** Evaluate an expression and fail the test case if it returns an error.
+ *
+ * \param expr      The expression to evaluate. This is typically a call
+ *                  to a \c psa_xxx function that returns a value of type
+ *                  #psa_status_t.
+ */
+#define PSA_ASSERT( expr ) TEST_EQUAL( ( expr ), PSA_SUCCESS )
+
 /** Allocate memory dynamically and fail the test case if this fails.
  *
  * You must set \p pointer to \c NULL before calling this macro and
@@ -178,6 +186,21 @@ typedef enum
             TEST_ASSERT( memcmp( ( p1 ), ( p2 ), ( size1 ) ) == 0 );    \
     }                                                                   \
     while( 0 )
+
+/**
+ * \brief   This macro tests the expression passed to it and skips the
+ *          running test if it doesn't evaluate to 'true'.
+ *
+ * \param   TEST    The test expression to be tested.
+ */
+#define TEST_ASSUME( TEST )                         \
+    do {                                            \
+        if( ! (TEST) )                              \
+        {                                           \
+            test_skip( #TEST, __LINE__, __FILE__ ); \
+            goto exit;                              \
+        }                                           \
+    } while( 0 )
 
 #if defined(MBEDTLS_CHECK_PARAMS) && !defined(MBEDTLS_PARAM_FAILED_ALT)
 /**
@@ -278,7 +301,7 @@ typedef enum
 #define TEST_VALID_PARAM( TEST )                                    \
     TEST_ASSERT( ( TEST, 1 ) );
 
-#define assert(a) if( !( a ) )                                      \
+#define TEST_HELPER_ASSERT(a) if( !( a ) )                                      \
 {                                                                   \
     mbedtls_fprintf( stderr, "Assertion Failed at %s:%d - %s\n",   \
                              __FILE__, __LINE__, #a );              \
@@ -364,10 +387,17 @@ typedef enum
 /*----------------------------------------------------------------------------*/
 /* Global variables */
 
+typedef enum
+{
+    TEST_RESULT_SUCCESS = 0,
+    TEST_RESULT_FAILED,
+    TEST_RESULT_SKIPPED
+} test_result_t;
+
 static struct
 {
     paramfail_test_state_t paramfail_test_state;
-    int failed;
+    test_result_t result;
     const char *test;
     const char *filename;
     int line_no;
@@ -401,9 +431,17 @@ jmp_buf jmp_tmp;
 /*----------------------------------------------------------------------------*/
 /* Helper Functions */
 
-static void test_fail( const char *test, int line_no, const char* filename )
+void test_fail( const char *test, int line_no, const char* filename )
 {
-    test_info.failed = 1;
+    test_info.result = TEST_RESULT_FAILED;
+    test_info.test = test;
+    test_info.line_no = line_no;
+    test_info.filename = filename;
+}
+
+void test_skip( const char *test, int line_no, const char* filename )
+{
+    test_info.result = TEST_RESULT_SKIPPED;
     test_info.test = test;
     test_info.line_no = line_no;
     test_info.filename = filename;
@@ -442,7 +480,7 @@ void mbedtls_param_failed( const char *failure_condition,
         /* Record the location of the failure, but not as a failure yet, in case
          * it was part of the test */
         test_fail( failure_condition, line, file );
-        test_info.failed = 0;
+        test_info.result = TEST_RESULT_SUCCESS;
 
         longjmp( param_fail_jmp, 1 );
     }
@@ -492,11 +530,11 @@ static void close_output( FILE* out_stream )
 }
 #endif /* __unix__ || __APPLE__ __MACH__ */
 
-static int unhexify( unsigned char *obuf, const char *ibuf )
+int unhexify( unsigned char *obuf, const char *ibuf )
 {
     unsigned char c, c2;
     int len = strlen( ibuf ) / 2;
-    assert( strlen( ibuf ) % 2 == 0 ); /* must be even number of bytes */
+    TEST_HELPER_ASSERT( strlen( ibuf ) % 2 == 0 ); /* must be even number of bytes */
 
     while( *ibuf != 0 )
     {
@@ -508,7 +546,7 @@ static int unhexify( unsigned char *obuf, const char *ibuf )
         else if( c >= 'A' && c <= 'F' )
             c -= 'A' - 10;
         else
-            assert( 0 );
+            TEST_HELPER_ASSERT( 0 );
 
         c2 = *ibuf++;
         if( c2 >= '0' && c2 <= '9' )
@@ -518,7 +556,7 @@ static int unhexify( unsigned char *obuf, const char *ibuf )
         else if( c2 >= 'A' && c2 <= 'F' )
             c2 -= 'A' - 10;
         else
-            assert( 0 );
+            TEST_HELPER_ASSERT( 0 );
 
         *obuf++ = ( c << 4 ) | c2;
     }
@@ -526,7 +564,7 @@ static int unhexify( unsigned char *obuf, const char *ibuf )
     return len;
 }
 
-static void hexify( unsigned char *obuf, const unsigned char *ibuf, int len )
+void hexify( unsigned char *obuf, const unsigned char *ibuf, int len )
 {
     unsigned char l, h;
 
@@ -563,7 +601,7 @@ static unsigned char *zero_alloc( size_t len )
     size_t actual_len = ( len != 0 ) ? len : 1;
 
     p = mbedtls_calloc( 1, actual_len );
-    assert( p != NULL );
+    TEST_HELPER_ASSERT( p != NULL );
 
     memset( p, 0x00, actual_len );
 
@@ -580,7 +618,7 @@ static unsigned char *zero_alloc( size_t len )
  *
  * For convenience, dies if allocation fails.
  */
-static unsigned char *unhexify_alloc( const char *ibuf, size_t *olen )
+unsigned char *unhexify_alloc( const char *ibuf, size_t *olen )
 {
     unsigned char *obuf;
 
@@ -590,7 +628,7 @@ static unsigned char *unhexify_alloc( const char *ibuf, size_t *olen )
         return( zero_alloc( *olen ) );
 
     obuf = mbedtls_calloc( 1, *olen );
-    assert( obuf != NULL );
+    TEST_HELPER_ASSERT( obuf != NULL );
 
     (void) unhexify( obuf, ibuf );
 
@@ -631,7 +669,7 @@ static int rnd_std_rand( void *rng_state, unsigned char *output, size_t len )
  *
  * rng_state shall be NULL.
  */
-static int rnd_zero_rand( void *rng_state, unsigned char *output, size_t len )
+int rnd_zero_rand( void *rng_state, unsigned char *output, size_t len )
 {
     if( rng_state != NULL )
         rng_state  = NULL;
@@ -658,7 +696,7 @@ typedef struct
  *
  * After the buffer is empty it will return rand();
  */
-static int rnd_buffer_rand( void *rng_state, unsigned char *output, size_t len )
+int rnd_buffer_rand( void *rng_state, unsigned char *output, size_t len )
 {
     rnd_buf_info *info = (rnd_buf_info *) rng_state;
     size_t use_len;
@@ -704,7 +742,7 @@ typedef struct
  *
  * rng_state shall be a pointer to a rnd_pseudo_info structure.
  */
-static int rnd_pseudo_rand( void *rng_state, unsigned char *output, size_t len )
+int rnd_pseudo_rand( void *rng_state, unsigned char *output, size_t len )
 {
     rnd_pseudo_info *info = (rnd_pseudo_info *) rng_state;
     uint32_t i, *k, sum, delta=0x9E3779B9;
