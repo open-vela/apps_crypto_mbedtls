@@ -47,6 +47,7 @@
 #include "mbedtls/blowfish.h"
 #include "mbedtls/camellia.h"
 #include "mbedtls/ccm.h"
+#include "mbedtls/certs.h"
 #include "mbedtls/chacha20.h"
 #include "mbedtls/chachapoly.h"
 #include "mbedtls/cipher.h"
@@ -267,14 +268,6 @@ int query_config( const char *config )
         return( 0 );
     }
 #endif /* MBEDTLS_CHECK_PARAMS */
-
-#if defined(MBEDTLS_CHECK_PARAMS_ASSERT)
-    if( strcmp( "MBEDTLS_CHECK_PARAMS_ASSERT", config ) == 0 )
-    {
-        MACRO_EXPANSION_TO_STR( MBEDTLS_CHECK_PARAMS_ASSERT );
-        return( 0 );
-    }
-#endif /* MBEDTLS_CHECK_PARAMS_ASSERT */
 
 #if defined(MBEDTLS_TIMING_ALT)
     if( strcmp( "MBEDTLS_TIMING_ALT", config ) == 0 )
@@ -1515,6 +1508,14 @@ int query_config( const char *config )
         return( 0 );
     }
 #endif /* MBEDTLS_PSA_CRYPTO_C */
+
+#if defined(MBEDTLS_PSA_CRYPTO_SE_C)
+    if( strcmp( "MBEDTLS_PSA_CRYPTO_SE_C", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( MBEDTLS_PSA_CRYPTO_SE_C );
+        return( 0 );
+    }
+#endif /* MBEDTLS_PSA_CRYPTO_SE_C */
 
 #if defined(MBEDTLS_PSA_CRYPTO_STORAGE_C)
     if( strcmp( "MBEDTLS_PSA_CRYPTO_STORAGE_C", config ) == 0 )
