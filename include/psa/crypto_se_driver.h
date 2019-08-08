@@ -134,17 +134,10 @@ typedef psa_status_t (*psa_drv_se_init_t)(psa_drv_se_context_t *drv_context,
                                           void *persistent_data,
                                           psa_key_lifetime_t lifetime);
 
-#if defined(__DOXYGEN_ONLY__) || !defined(MBEDTLS_PSA_CRYPTO_SE_C)
-/* Mbed Crypto with secure element support enabled defines this type in
- * crypto_types.h because it is also visible to applications through an
- * implementation-specific extension.
- * For the PSA Cryptography specification, this type is only visible
- * via crypto_se_driver.h. */
 /** An internal designation of a key slot between the core part of the
  * PSA Crypto implementation and the driver. The meaning of this value
  * is driver-dependent. */
 typedef uint64_t psa_key_slot_number_t;
-#endif /* __DOXYGEN_ONLY__ || !MBEDTLS_PSA_CRYPTO_SE_C */
 
 /**@}*/
 
@@ -833,30 +826,6 @@ typedef psa_status_t (*psa_drv_se_allocate_key_t)(
     const psa_key_attributes_t *attributes,
     psa_key_slot_number_t *key_slot);
 
-/** \brief A function that determines whether a slot number is valid
- * for a key.
- *
- * \param[in,out] drv_context       The driver context structure.
- * \param[in] attributes    Attributes of the key.
- * \param[in] key_slot      Slot where the key is to be stored.
- *
- * \retval #PSA_SUCCESS
- *         The given slot number is valid for a key with the given
- *         attributes.
- * \retval #PSA_ERROR_INVALID_ARGUMENT
- *         The given slot number is not valid for a key with the
- *         given attributes. This includes the case where the slot
- *         number is not valid at all.
- * \retval #PSA_ERROR_ALREADY_EXISTS
- *         There is already a key with the specified slot number.
- *         Drivers may choose to return this error from the key
- *         creation function instead.
- */
-typedef psa_status_t (*psa_drv_se_validate_slot_number_t)(
-    psa_drv_se_context_t *drv_context,
-    const psa_key_attributes_t *attributes,
-    psa_key_slot_number_t key_slot);
-
 /** \brief A function that imports a key into a secure element in binary format
  *
  * This function can support any output from psa_export_key(). Refer to the
@@ -1001,32 +970,8 @@ typedef psa_status_t (*psa_drv_se_generate_key_t)(psa_drv_se_context_t *drv_cont
  * If one of the functions is not implemented, it should be set to NULL.
  */
 typedef struct {
-    /** Function that allocates a slot for a key.
-     *
-     * The core calls this function to determine a slot number, then
-     * calls the actual creation function (such as
-     * psa_drv_se_key_management_t::p_import or
-     * psa_drv_se_key_management_t::p_generate).
-     *
-     * If this function succeeds, the next call that the core makes to the
-     * driver is either the creation function or
-     * psa_drv_se_key_management_t::p_destroy. Note that
-     * if the platform is reset after this function returns, the core
-     * may either subsequently call
-     * psa_drv_se_key_management_t::p_destroy or may behave as if the
-     * last call to this function had not taken place.
-     */
+    /** Function that allocates a slot. */
     psa_drv_se_allocate_key_t   p_allocate;
-    /** Function that checks the validity of a slot for a key.
-     *
-     * The core calls this function instead of
-     * psa_drv_se_key_management_t::p_allocate to create
-     * a key in a specific slot. It then calls the actual creation function
-     * (such as psa_drv_se_key_management_t::p_import or
-     * psa_drv_se_key_management_t::p_generate) or
-     * psa_drv_se_key_management_t::p_destroy.
-     */
-    psa_drv_se_validate_slot_number_t p_validate_slot_number;
     /** Function that performs a key import operation */
     psa_drv_se_import_key_t     p_import;
     /** Function that performs a generation */
