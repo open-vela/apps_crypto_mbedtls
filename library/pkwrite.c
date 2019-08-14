@@ -38,9 +38,7 @@
 #include "mbedtls/rsa.h"
 #endif
 #if defined(MBEDTLS_ECP_C)
-#include "mbedtls/bignum.h"
 #include "mbedtls/ecp.h"
-#include "mbedtls/platform_util.h"
 #endif
 #if defined(MBEDTLS_ECDSA_C)
 #include "mbedtls/ecdsa.h"
@@ -156,26 +154,6 @@ static int pk_write_ec_param( unsigned char **p, unsigned char *start,
 
     return( (int) len );
 }
-
-/*
- * privateKey  OCTET STRING -- always of length ceil(log2(n)/8)
- */
-static int pk_write_ec_private( unsigned char **p, unsigned char *start,
-                                mbedtls_ecp_keypair *ec )
-{
-    int ret;
-    size_t byte_length = ( ec->grp.pbits + 7 ) / 8;
-    unsigned char tmp[MBEDTLS_ECP_MAX_BYTES];
-
-    ret = mbedtls_mpi_write_binary( &ec->d, tmp, byte_length );
-    if( ret != 0 )
-        goto exit;
-    ret = mbedtls_asn1_write_octet_string( p, start, tmp, byte_length );
-
-exit:
-    mbedtls_platform_zeroize( tmp, byte_length );
-    return( ret );
-}
 #endif /* MBEDTLS_ECP_C */
 
 int mbedtls_pk_write_pubkey( unsigned char **p, unsigned char *start,
@@ -268,17 +246,16 @@ int mbedtls_pk_write_pubkey_der( mbedtls_pk_context *key, unsigned char *buf, si
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
     if( pk_type == MBEDTLS_PK_OPAQUE )
     {
-        psa_status_t status;
+        psa_key_attributes_t attributes = PSA_KEY_ATTRIBUTES_INIT;
         psa_key_type_t key_type;
         psa_key_handle_t handle;
         psa_ecc_curve_t curve;
 
         handle = *((psa_key_handle_t*) key->pk_ctx );
-
-        status = psa_get_key_information( handle, &key_type,
-                                          NULL /* bitsize not needed */ );
-        if( status != PSA_SUCCESS )
+        if( PSA_SUCCESS != psa_get_key_attributes( handle, &attributes ) )
             return( MBEDTLS_ERR_PK_HW_ACCEL_FAILED );
+        key_type = psa_get_key_type( &attributes );
+        psa_reset_key_attributes( &attributes );
 
         curve = PSA_KEY_TYPE_GET_CURVE( key_type );
         if( curve == 0 )
@@ -447,8 +424,9 @@ int mbedtls_pk_write_key_der( mbedtls_pk_context *key, unsigned char *buf, size_
                             MBEDTLS_ASN1_CONTEXT_SPECIFIC | MBEDTLS_ASN1_CONSTRUCTED | 0 ) );
         len += par_len;
 
-        /* privateKey */
-        MBEDTLS_ASN1_CHK_ADD( len, pk_write_ec_private( &c, buf, ec ) );
+        /* privateKey: write as MPI then fix tag */
+        MBEDTLS_ASN1_CHK_ADD( len, mbedtls_asn1_write_mpi( &c, buf, &ec->d ) );
+        *c = MBEDTLS_ASN1_OCTET_STRING;
 
         /* version */
         MBEDTLS_ASN1_CHK_ADD( len, mbedtls_asn1_write_int( &c, buf, 1 ) );
