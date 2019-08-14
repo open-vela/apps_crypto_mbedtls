@@ -39,12 +39,12 @@
 #define MBEDTLS_BN_MUL_H
 
 #if !defined(MBEDTLS_CONFIG_FILE)
-#include "mbedtls/config.h"
+#include "config.h"
 #else
 #include MBEDTLS_CONFIG_FILE
 #endif
 
-#include "mbedtls/bignum.h"
+#include "bignum.h"
 
 #if defined(MBEDTLS_HAVE_ASM)
 
@@ -642,8 +642,7 @@
            "r6", "r7", "r8", "r9", "cc"         \
          );
 
-#elif (__ARM_ARCH >= 6) && \
-    defined (__ARM_FEATURE_DSP) && (__ARM_FEATURE_DSP == 1)
+#elif defined (__ARM_FEATURE_DSP) && (__ARM_FEATURE_DSP == 1)
 
 #define MULADDC_INIT                            \
     asm(

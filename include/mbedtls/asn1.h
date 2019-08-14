@@ -25,7 +25,7 @@
 #define MBEDTLS_ASN1_H
 
 #if !defined(MBEDTLS_CONFIG_FILE)
-#include "mbedtls/config.h"
+#include "config.h"
 #else
 #include MBEDTLS_CONFIG_FILE
 #endif
@@ -33,7 +33,7 @@
 #include <stddef.h>
 
 #if defined(MBEDTLS_BIGNUM_C)
-#include "mbedtls/bignum.h"
+#include "bignum.h"
 #endif
 
 /**
@@ -66,7 +66,7 @@
  * - 0x02 -- tag indicating INTEGER
  * - 0x01 -- length in octets
  * - 0x05 -- value
- * Such sequences are typically read into Mbed TLS's \c mbedtls_x509_buf.
+ * Such sequences are typically read into \c ::mbedtls_x509_buf.
  * \{
  */
 #define MBEDTLS_ASN1_BOOLEAN                 0x01
