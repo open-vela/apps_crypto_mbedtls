@@ -43,7 +43,7 @@
 int main( void )
 {
     mbedtls_printf("MBEDTLS_TIMING_C not defined.\n");
-    mbedtls_exit( 0 );
+    return( 0 );
 }
 #else
 
@@ -999,7 +999,7 @@ int main( int argc, char *argv[] )
     fflush( stdout ); getchar();
 #endif
 
-    mbedtls_exit( 0 );
+    return( 0 );
 }
 
 #endif /* MBEDTLS_TIMING_C */
