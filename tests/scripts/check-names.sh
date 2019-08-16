@@ -56,7 +56,7 @@ diff macros identifiers | sed -n -e 's/< //p' > actual-macros
 for THING in actual-macros enum-consts; do
     printf "Names of $THING: "
     test -r $THING
-    BAD=$( grep -v '^MBEDTLS_[0-9A-Z_]*[0-9A-Z]$' $THING || true )
+    BAD=$( grep -E -v '^(MBEDTLS|PSA)_[0-9A-Z_]*[0-9A-Z]$' $THING || true )
     if [ "x$BAD" = "x" ]; then
         echo "PASS"
     else
@@ -69,7 +69,7 @@ done
 for THING in identifiers; do
     printf "Names of $THING: "
     test -r $THING
-    BAD=$( grep -v '^mbedtls_[0-9a-z_]*[0-9a-z]$' $THING || true )
+    BAD=$( grep -E -v '^(mbedtls|psa)_[0-9a-z_]*[0-9a-z]$' $THING || true )
     if [ "x$BAD" = "x" ]; then
         echo "PASS"
     else
@@ -81,7 +81,7 @@ done
 
 printf "Likely typos: "
 sort -u actual-macros enum-consts > _caps
-HEADERS=$( ls include/mbedtls/*.h crypto/include/mbedtls/*.h | egrep -v 'compat-1\.3\.h' )
+HEADERS=$( ls include/mbedtls/*.h include/psa/*.h | egrep -v 'compat-1\.3\.h' )
 NL='
 '
 sed -n 's/MBED..._[A-Z0-9_]*/\'"$NL"'&\'"$NL"/gp \
