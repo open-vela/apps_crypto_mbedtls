@@ -45,7 +45,6 @@
 #endif
 
 #include "mbedtls/net_sockets.h"
-#include "mbedtls/error.h"
 
 #include <string.h>
 
@@ -54,7 +53,8 @@
 
 #define IS_EINTR( ret ) ( ( ret ) == WSAEINTR )
 
-#if !defined(_WIN32_WINNT)
+#if !defined(_WIN32_WINNT) || (_WIN32_WINNT < 0x0501)
+#undef _WIN32_WINNT
 /* Enables getaddrinfo() & Co */
 #define _WIN32_WINNT 0x0501
 #endif
@@ -63,9 +63,6 @@
 
 #include <winsock2.h>
 #include <windows.h>
-#if (_WIN32_WINNT < 0x0501)
-#include <wspiapi.h>
-#endif
 
 #if defined(_MSC_VER)
 #if defined(_WIN32_WCE)
@@ -150,7 +147,7 @@ void mbedtls_net_init( mbedtls_net_context *ctx )
 int mbedtls_net_connect( mbedtls_net_context *ctx, const char *host,
                          const char *port, int proto )
 {
-    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+    int ret;
     struct addrinfo hints, *addr_list, *cur;
 
     if( ( ret = net_prepare() ) != 0 )
@@ -316,7 +313,7 @@ int mbedtls_net_accept( mbedtls_net_context *bind_ctx,
                         mbedtls_net_context *client_ctx,
                         void *client_ip, size_t buf_size, size_t *ip_len )
 {
-    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+    int ret;
     int type;
 
     struct sockaddr_storage client_addr;
@@ -458,7 +455,7 @@ int mbedtls_net_set_nonblock( mbedtls_net_context *ctx )
 
 int mbedtls_net_poll( mbedtls_net_context *ctx, uint32_t rw, uint32_t timeout )
 {
-    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+    int ret;
     struct timeval tv;
 
     fd_set read_fds;
@@ -543,7 +540,7 @@ void mbedtls_net_usleep( unsigned long usec )
  */
 int mbedtls_net_recv( void *ctx, unsigned char *buf, size_t len )
 {
-    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+    int ret;
     int fd = ((mbedtls_net_context *) ctx)->fd;
 
     if( fd < 0 )
@@ -580,7 +577,7 @@ int mbedtls_net_recv( void *ctx, unsigned char *buf, size_t len )
 int mbedtls_net_recv_timeout( void *ctx, unsigned char *buf,
                               size_t len, uint32_t timeout )
 {
-    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+    int ret;
     struct timeval tv;
     fd_set read_fds;
     int fd = ((mbedtls_net_context *) ctx)->fd;
@@ -623,7 +620,7 @@ int mbedtls_net_recv_timeout( void *ctx, unsigned char *buf,
  */
 int mbedtls_net_send( void *ctx, const unsigned char *buf, size_t len )
 {
-    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+    int ret;
     int fd = ((mbedtls_net_context *) ctx)->fd;
 
     if( fd < 0 )
@@ -652,19 +649,6 @@ int mbedtls_net_send( void *ctx, const unsigned char *buf, size_t len )
     }
 
     return( ret );
-}
-
-/*
- * Close the connection
- */
-void mbedtls_net_close( mbedtls_net_context *ctx )
-{
-    if( ctx->fd == -1 )
-        return;
-
-    close( ctx->fd );
-
-    ctx->fd = -1;
 }
 
 /*

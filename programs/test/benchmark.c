@@ -25,20 +25,25 @@
 #include MBEDTLS_CONFIG_FILE
 #endif
 
+#if defined(MBEDTLS_PLATFORM_C)
 #include "mbedtls/platform.h"
-#if !defined(MBEDTLS_PLATFORM_C)
+#else
 #include <stdio.h>
 #include <stdlib.h>
 #define mbedtls_exit       exit
 #define mbedtls_printf     printf
+#define mbedtls_snprintf   snprintf
 #define mbedtls_free       free
+#define mbedtls_exit            exit
+#define MBEDTLS_EXIT_SUCCESS    EXIT_SUCCESS
+#define MBEDTLS_EXIT_FAILURE    EXIT_FAILURE
 #endif
 
 #if !defined(MBEDTLS_TIMING_C)
 int main( void )
 {
     mbedtls_printf("MBEDTLS_TIMING_C not defined.\n");
-    return( 0 );
+    mbedtls_exit( 0 );
 }
 #else
 
@@ -92,7 +97,7 @@ int main( void )
 /*
  * Size to use for the alloc buffer if MEMORY_BUFFER_ALLOC_C is defined.
  */
-#define HEAP_SIZE       (1u << 16)  /* 64k */
+#define HEAP_SIZE       (1u << 16)  // 64k
 
 #define BUFSIZE         1024
 #define HEADER_FORMAT   "  %-24s :  "
@@ -112,7 +117,7 @@ int main( void )
         mbedtls_printf( "FAILED: %s\n", tmp );
 #else
 #define PRINT_ERROR                                                     \
-        mbedtls_printf( "FAILED: -0x%04x\n", (unsigned int) -ret );
+        mbedtls_printf( "FAILED: -0x%04x\n", -ret );
 #endif
 
 #define TIME_AND_TSC( TITLE, CODE )                                     \
@@ -150,16 +155,6 @@ do {                                                                    \
 
 #if defined(MBEDTLS_MEMORY_BUFFER_ALLOC_C) && defined(MBEDTLS_MEMORY_DEBUG)
 
-/* How much space to reserve for the title when printing heap usage results.
- * Updated manually as the output of the following command:
- *
- *  sed -n 's/.*[T]IME_PUBLIC.*"\(.*\)",/\1/p' programs/test/benchmark.c |
- *      awk '{print length+2}' | sort -rn | head -n1
- *
- * This computes the maximum length of a title +2 (because we appends "/s").
- * (If the value is too small, the only consequence is poor alignement.) */
-#define TITLE_SPACE 16
-
 #define MEMORY_MEASURE_INIT                                             \
     size_t max_used, max_blocks, max_bytes;                             \
     size_t prv_used, prv_blocks;                                        \
@@ -168,8 +163,7 @@ do {                                                                    \
 
 #define MEMORY_MEASURE_PRINT( title_len )                               \
     mbedtls_memory_buffer_alloc_max_get( &max_used, &max_blocks );      \
-    ii = TITLE_SPACE > (title_len) ? TITLE_SPACE - (title_len) : 1;     \
-    while( ii-- ) mbedtls_printf( " " );                                \
+    for( ii = 12 - (title_len); ii != 0; ii-- ) mbedtls_printf( " " );  \
     max_used -= prv_used;                                               \
     max_blocks -= prv_blocks;                                           \
     max_bytes = max_used + MEM_BLOCK_OVERHEAD * max_blocks;             \
@@ -196,12 +190,7 @@ do {                                                                    \
         CODE;                                                           \
     }                                                                   \
                                                                         \
-    if( ret == MBEDTLS_ERR_PLATFORM_FEATURE_UNSUPPORTED )               \
-    {                                                                   \
-        mbedtls_printf( "Feature Not Supported. Skipping.\n" );         \
-        ret = 0;                                                        \
-    }                                                                   \
-    else if( ret != 0 )                                                 \
+    if( ret != 0 )                                                      \
     {                                                                   \
         PRINT_ERROR;                                                    \
     }                                                                   \
@@ -235,18 +224,6 @@ static int myrand( void *rng_state, unsigned char *output, size_t len )
 
     return( 0 );
 }
-
-#define CHECK_AND_CONTINUE( R )                                         \
-    {                                                                   \
-        int CHECK_AND_CONTINUE_ret = ( R );                             \
-        if( CHECK_AND_CONTINUE_ret == MBEDTLS_ERR_PLATFORM_FEATURE_UNSUPPORTED ) { \
-            mbedtls_printf( "Feature not supported. Skipping.\n" );     \
-            continue;                                                   \
-        }                                                               \
-        else if( CHECK_AND_CONTINUE_ret != 0 ) {                        \
-            mbedtls_exit( 1 );                                          \
-        }                                                               \
-    }
 
 /*
  * Clear some memory that was used to prepare the context
@@ -697,13 +674,12 @@ int main( int argc, char *argv[] )
         mbedtls_ctr_drbg_context ctr_drbg;
 
         mbedtls_ctr_drbg_init( &ctr_drbg );
+
         if( mbedtls_ctr_drbg_seed( &ctr_drbg, myrand, NULL, NULL, 0 ) != 0 )
             mbedtls_exit(1);
         TIME_AND_TSC( "CTR_DRBG (NOPR)",
                 mbedtls_ctr_drbg_random( &ctr_drbg, buf, BUFSIZE ) );
-        mbedtls_ctr_drbg_free( &ctr_drbg );
 
-        mbedtls_ctr_drbg_init( &ctr_drbg );
         if( mbedtls_ctr_drbg_seed( &ctr_drbg, myrand, NULL, NULL, 0 ) != 0 )
             mbedtls_exit(1);
         mbedtls_ctr_drbg_set_prediction_resistance( &ctr_drbg, MBEDTLS_CTR_DRBG_PR_ON );
@@ -851,9 +827,6 @@ int main( int argc, char *argv[] )
              curve_info->grp_id != MBEDTLS_ECP_DP_NONE;
              curve_info++ )
         {
-            if( ! mbedtls_ecdsa_can_do( curve_info->grp_id ) )
-                continue;
-
             mbedtls_ecdsa_init( &ecdsa );
 
             if( mbedtls_ecdsa_genkey( &ecdsa, curve_info->grp_id, myrand, NULL ) != 0 )
@@ -873,9 +846,6 @@ int main( int argc, char *argv[] )
              curve_info->grp_id != MBEDTLS_ECP_DP_NONE;
              curve_info++ )
         {
-            if( ! mbedtls_ecdsa_can_do( curve_info->grp_id ) )
-                continue;
-
             mbedtls_ecdsa_init( &ecdsa );
 
             if( mbedtls_ecdsa_genkey( &ecdsa, curve_info->grp_id, myrand, NULL ) != 0 ||
@@ -918,24 +888,24 @@ int main( int argc, char *argv[] )
              curve_info->grp_id != MBEDTLS_ECP_DP_NONE;
              curve_info++ )
         {
-            if( ! mbedtls_ecdh_can_do( curve_info->grp_id ) )
-                continue;
-
             mbedtls_ecdh_init( &ecdh );
 
-            CHECK_AND_CONTINUE( mbedtls_ecp_group_load( &ecdh.grp, curve_info->grp_id ) );
-            CHECK_AND_CONTINUE( mbedtls_ecdh_make_public( &ecdh, &olen, buf, sizeof( buf),
-                                                    myrand, NULL ) );
-            CHECK_AND_CONTINUE( mbedtls_ecp_copy( &ecdh.Qp, &ecdh.Q ) );
+            if( mbedtls_ecp_group_load( &ecdh.grp, curve_info->grp_id ) != 0 ||
+                mbedtls_ecdh_make_public( &ecdh, &olen, buf, sizeof( buf),
+                                  myrand, NULL ) != 0 ||
+                mbedtls_ecp_copy( &ecdh.Qp, &ecdh.Q ) != 0 )
+            {
+                mbedtls_exit( 1 );
+            }
             ecp_clear_precomputed( &ecdh.grp );
 
             mbedtls_snprintf( title, sizeof( title ), "ECDHE-%s",
                                               curve_info->name );
             TIME_PUBLIC( title, "handshake",
-                    CHECK_AND_CONTINUE( mbedtls_ecdh_make_public( &ecdh, &olen, buf, sizeof( buf),
+                    ret |= mbedtls_ecdh_make_public( &ecdh, &olen, buf, sizeof( buf),
+                                             myrand, NULL );
+                    ret |= mbedtls_ecdh_calc_secret( &ecdh, &olen, buf, sizeof( buf ),
                                              myrand, NULL ) );
-                    CHECK_AND_CONTINUE( mbedtls_ecdh_calc_secret( &ecdh, &olen, buf, sizeof( buf ),
-                                             myrand, NULL ) ) );
             mbedtls_ecdh_free( &ecdh );
         }
 
@@ -947,16 +917,19 @@ int main( int argc, char *argv[] )
             mbedtls_ecdh_init( &ecdh );
             mbedtls_mpi_init( &z );
 
-            CHECK_AND_CONTINUE( mbedtls_ecp_group_load( &ecdh.grp, curve_info->grp_id ) );
-            CHECK_AND_CONTINUE( mbedtls_ecdh_gen_public( &ecdh.grp, &ecdh.d, &ecdh.Qp, myrand, NULL ) );
+            if( mbedtls_ecp_group_load( &ecdh.grp, curve_info->grp_id ) != 0 ||
+                mbedtls_ecdh_gen_public( &ecdh.grp, &ecdh.d, &ecdh.Qp, myrand, NULL ) != 0 )
+            {
+                mbedtls_exit( 1 );
+            }
 
             mbedtls_snprintf( title, sizeof(title), "ECDHE-%s",
                               curve_info->name );
             TIME_PUBLIC(  title, "handshake",
-                    CHECK_AND_CONTINUE( mbedtls_ecdh_gen_public( &ecdh.grp, &ecdh.d, &ecdh.Q,
-                                            myrand, NULL ) );
-                    CHECK_AND_CONTINUE( mbedtls_ecdh_compute_shared( &ecdh.grp, &z, &ecdh.Qp, &ecdh.d,
-                                                myrand, NULL ) ) );
+                    ret |= mbedtls_ecdh_gen_public( &ecdh.grp, &ecdh.d, &ecdh.Q,
+                                            myrand, NULL );
+                    ret |= mbedtls_ecdh_compute_shared( &ecdh.grp, &z, &ecdh.Qp, &ecdh.d,
+                                                myrand, NULL ) );
 
             mbedtls_ecdh_free( &ecdh );
             mbedtls_mpi_free( &z );
@@ -966,24 +939,24 @@ int main( int argc, char *argv[] )
              curve_info->grp_id != MBEDTLS_ECP_DP_NONE;
              curve_info++ )
         {
-            if( ! mbedtls_ecdh_can_do( curve_info->grp_id ) )
-                continue;
-
             mbedtls_ecdh_init( &ecdh );
 
-            CHECK_AND_CONTINUE( mbedtls_ecp_group_load( &ecdh.grp, curve_info->grp_id ) );
-            CHECK_AND_CONTINUE( mbedtls_ecdh_make_public( &ecdh, &olen, buf, sizeof( buf),
-                                  myrand, NULL ) );
-            CHECK_AND_CONTINUE( mbedtls_ecp_copy( &ecdh.Qp, &ecdh.Q ) );
-            CHECK_AND_CONTINUE( mbedtls_ecdh_make_public( &ecdh, &olen, buf, sizeof( buf),
-                                  myrand, NULL ) );
+            if( mbedtls_ecp_group_load( &ecdh.grp, curve_info->grp_id ) != 0 ||
+                mbedtls_ecdh_make_public( &ecdh, &olen, buf, sizeof( buf),
+                                  myrand, NULL ) != 0 ||
+                mbedtls_ecp_copy( &ecdh.Qp, &ecdh.Q ) != 0 ||
+                mbedtls_ecdh_make_public( &ecdh, &olen, buf, sizeof( buf),
+                                  myrand, NULL ) != 0 )
+            {
+                mbedtls_exit( 1 );
+            }
             ecp_clear_precomputed( &ecdh.grp );
 
             mbedtls_snprintf( title, sizeof( title ), "ECDH-%s",
                                               curve_info->name );
             TIME_PUBLIC( title, "handshake",
-                    CHECK_AND_CONTINUE( mbedtls_ecdh_calc_secret( &ecdh, &olen, buf, sizeof( buf ),
-                                             myrand, NULL ) ) );
+                    ret |= mbedtls_ecdh_calc_secret( &ecdh, &olen, buf, sizeof( buf ),
+                                             myrand, NULL ) );
             mbedtls_ecdh_free( &ecdh );
         }
 
@@ -995,61 +968,22 @@ int main( int argc, char *argv[] )
             mbedtls_ecdh_init( &ecdh );
             mbedtls_mpi_init( &z );
 
-            CHECK_AND_CONTINUE( mbedtls_ecp_group_load( &ecdh.grp, curve_info->grp_id ) );
-            CHECK_AND_CONTINUE( mbedtls_ecdh_gen_public( &ecdh.grp, &ecdh.d, &ecdh.Qp,
-                                 myrand, NULL ) );
-            CHECK_AND_CONTINUE( mbedtls_ecdh_gen_public( &ecdh.grp, &ecdh.d, &ecdh.Q, myrand, NULL ) );
+            if( mbedtls_ecp_group_load( &ecdh.grp, curve_info->grp_id ) != 0 ||
+                mbedtls_ecdh_gen_public( &ecdh.grp, &ecdh.d, &ecdh.Qp,
+                                 myrand, NULL ) != 0 ||
+                mbedtls_ecdh_gen_public( &ecdh.grp, &ecdh.d, &ecdh.Q, myrand, NULL ) != 0 )
+            {
+                mbedtls_exit( 1 );
+            }
 
             mbedtls_snprintf( title, sizeof(title), "ECDH-%s",
                               curve_info->name );
             TIME_PUBLIC(  title, "handshake",
-                    CHECK_AND_CONTINUE( mbedtls_ecdh_compute_shared( &ecdh.grp, &z, &ecdh.Qp, &ecdh.d,
-                                                myrand, NULL ) ) );
+                    ret |= mbedtls_ecdh_compute_shared( &ecdh.grp, &z, &ecdh.Qp, &ecdh.d,
+                                                myrand, NULL ) );
 
             mbedtls_ecdh_free( &ecdh );
             mbedtls_mpi_free( &z );
-        }
-    }
-#endif
-
-#if defined(MBEDTLS_ECDH_C)
-    if( todo.ecdh )
-    {
-        mbedtls_ecdh_context ecdh_srv, ecdh_cli;
-        unsigned char buf_srv[BUFSIZE], buf_cli[BUFSIZE];
-        const mbedtls_ecp_curve_info * curve_list = mbedtls_ecp_curve_list();
-        const mbedtls_ecp_curve_info *curve_info;
-        size_t olen;
-
-        for( curve_info = curve_list;
-            curve_info->grp_id != MBEDTLS_ECP_DP_NONE;
-            curve_info++ )
-        {
-            if( ! mbedtls_ecdh_can_do( curve_info->grp_id ) )
-                continue;
-
-            mbedtls_ecdh_init( &ecdh_srv );
-            mbedtls_ecdh_init( &ecdh_cli );
-
-            mbedtls_snprintf( title, sizeof( title ), "ECDHE-%s", curve_info->name );
-            TIME_PUBLIC( title, "full handshake",
-                const unsigned char * p_srv = buf_srv;
-
-                CHECK_AND_CONTINUE( mbedtls_ecdh_setup( &ecdh_srv, curve_info->grp_id ) );
-                CHECK_AND_CONTINUE( mbedtls_ecdh_make_params( &ecdh_srv, &olen, buf_srv, sizeof( buf_srv ), myrand, NULL ) );
-
-                CHECK_AND_CONTINUE( mbedtls_ecdh_read_params( &ecdh_cli, &p_srv, p_srv + olen ) );
-                CHECK_AND_CONTINUE( mbedtls_ecdh_make_public( &ecdh_cli, &olen, buf_cli, sizeof( buf_cli ), myrand, NULL ) );
-
-                CHECK_AND_CONTINUE( mbedtls_ecdh_read_public( &ecdh_srv, buf_cli, olen ) );
-                CHECK_AND_CONTINUE( mbedtls_ecdh_calc_secret( &ecdh_srv, &olen, buf_srv, sizeof( buf_srv ), myrand, NULL ) );
-
-                CHECK_AND_CONTINUE( mbedtls_ecdh_calc_secret( &ecdh_cli, &olen, buf_cli, sizeof( buf_cli ), myrand, NULL ) );
-                mbedtls_ecdh_free( &ecdh_cli );
-
-                mbedtls_ecdh_free( &ecdh_srv );
-            );
-
         }
     }
 #endif
@@ -1065,7 +999,7 @@ int main( int argc, char *argv[] )
     fflush( stdout ); getchar();
 #endif
 
-    return( 0 );
+    mbedtls_exit( 0 );
 }
 
 #endif /* MBEDTLS_TIMING_C */

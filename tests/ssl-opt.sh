@@ -25,9 +25,9 @@ set -u
 # where it may output seemingly unlimited length error logs.
 ulimit -f 20971520
 
-ORIGINAL_PWD=$PWD
-if ! cd "$(dirname "$0")"; then
-    exit 125
+if cd $( dirname $0 ); then :; else
+    echo "cd $( dirname $0 ) failed" >&2
+    exit 1
 fi
 
 # default values, can be overridden by the environment
@@ -38,17 +38,6 @@ fi
 : ${GNUTLS_CLI:=gnutls-cli}
 : ${GNUTLS_SERV:=gnutls-serv}
 : ${PERL:=perl}
-
-guess_config_name() {
-    if git diff --quiet ../include/mbedtls/config.h 2>/dev/null; then
-        echo "default"
-    else
-        echo "unknown"
-    fi
-}
-: ${MBEDTLS_TEST_OUTCOME_FILE=}
-: ${MBEDTLS_TEST_CONFIGURATION:="$(guess_config_name)"}
-: ${MBEDTLS_TEST_PLATFORM:="$(uname -s | tr -c \\n0-9A-Za-z _)-$(uname -m | tr -c \\n0-9A-Za-z _)"}
 
 O_SRV="$OPENSSL_CMD s_server -www -cert data_files/server5.crt -key data_files/server5.key"
 O_CLI="echo 'GET / HTTP/1.0' | $OPENSSL_CMD s_client"
@@ -108,11 +97,9 @@ print_usage() {
     printf "  -n|--number\tExecute only numbered test (comma-separated, e.g. '245,256')\n"
     printf "  -s|--show-numbers\tShow test numbers in front of test names\n"
     printf "  -p|--preserve-logs\tPreserve logs of successful tests as well\n"
-    printf "     --outcome-file\tFile where test outcomes are written\n"
-    printf "                \t(default: \$MBEDTLS_TEST_OUTCOME_FILE, none if empty)\n"
-    printf "     --port     \tTCP/UDP port (default: randomish 1xxxx)\n"
+    printf "     --port\tTCP/UDP port (default: randomish 1xxxx)\n"
     printf "     --proxy-port\tTCP/UDP proxy port (default: randomish 2xxxx)\n"
-    printf "     --seed     \tInteger seed value to use for this test run\n"
+    printf "     --seed\tInteger seed value to use for this test run\n"
 }
 
 get_options() {
@@ -158,14 +145,6 @@ get_options() {
         shift
     done
 }
-
-# Make the outcome file path relative to the original directory, not
-# to .../tests
-case "$MBEDTLS_TEST_OUTCOME_FILE" in
-    [!/]*)
-        MBEDTLS_TEST_OUTCOME_FILE="$ORIGINAL_PWD/$MBEDTLS_TEST_OUTCOME_FILE"
-        ;;
-esac
 
 # Skip next test; use this macro to skip tests which are legitimate
 # in theory and expected to be re-introduced at some point, but
@@ -223,7 +202,7 @@ requires_config_value_at_most() {
 }
 
 requires_ciphersuite_enabled() {
-    if [ -z "$($P_CLI --help 2>/dev/null | grep $1)" ]; then
+    if [ -z "$($P_CLI --help | grep $1)" ]; then
         SKIP_NEXT="YES"
     fi
 }
@@ -321,9 +300,9 @@ requires_not_i686() {
 }
 
 # Calculate the input & output maximum content lengths set in the config
-MAX_CONTENT_LEN=$( ../scripts/config.py get MBEDTLS_SSL_MAX_CONTENT_LEN || echo "16384")
-MAX_IN_LEN=$( ../scripts/config.py get MBEDTLS_SSL_IN_CONTENT_LEN || echo "$MAX_CONTENT_LEN")
-MAX_OUT_LEN=$( ../scripts/config.py get MBEDTLS_SSL_OUT_CONTENT_LEN || echo "$MAX_CONTENT_LEN")
+MAX_CONTENT_LEN=$( ../scripts/config.pl get MBEDTLS_SSL_MAX_CONTENT_LEN || echo "16384")
+MAX_IN_LEN=$( ../scripts/config.pl get MBEDTLS_SSL_IN_CONTENT_LEN || echo "$MAX_CONTENT_LEN")
+MAX_OUT_LEN=$( ../scripts/config.pl get MBEDTLS_SSL_OUT_CONTENT_LEN || echo "$MAX_CONTENT_LEN")
 
 if [ "$MAX_IN_LEN" -lt "$MAX_CONTENT_LEN" ]; then
     MAX_CONTENT_LEN="$MAX_IN_LEN"
@@ -380,22 +359,9 @@ print_name() {
 
 }
 
-# record_outcome <outcome> [<failure-reason>]
-# The test name must be in $NAME.
-record_outcome() {
-    echo "$1"
-    if [ -n "$MBEDTLS_TEST_OUTCOME_FILE" ]; then
-        printf '%s;%s;%s;%s;%s;%s\n' \
-               "$MBEDTLS_TEST_PLATFORM" "$MBEDTLS_TEST_CONFIGURATION" \
-               "ssl-opt" "$NAME" \
-               "$1" "${2-}" \
-               >>"$MBEDTLS_TEST_OUTCOME_FILE"
-    fi
-}
-
 # fail <message>
 fail() {
-    record_outcome "FAIL" "$1"
+    echo "FAIL"
     echo "  ! $1"
 
     mv $SRV_OUT o-srv-${TESTS}.log
@@ -460,9 +426,9 @@ has_mem_err() {
     fi
 }
 
-# Wait for process $2 named $3 to be listening on port $1. Print error to $4.
+# Wait for process $2 to be listening on port $1
 if type lsof >/dev/null 2>/dev/null; then
-    wait_app_start() {
+    wait_server_start() {
         START_TIME=$(date +%s)
         if [ "$DTLS" -eq 1 ]; then
             proto=UDP
@@ -472,8 +438,8 @@ if type lsof >/dev/null 2>/dev/null; then
         # Make a tight loop, server normally takes less than 1s to start.
         while ! lsof -a -n -b -i "$proto:$1" -p "$2" >/dev/null 2>/dev/null; do
               if [ $(( $(date +%s) - $START_TIME )) -gt $DOG_DELAY ]; then
-                  echo "$3 START TIMEOUT"
-                  echo "$3 START TIMEOUT" >> $4
+                  echo "SERVERSTART TIMEOUT"
+                  echo "SERVERSTART TIMEOUT" >> $SRV_OUT
                   break
               fi
               # Linux and *BSD support decimal arguments to sleep. On other
@@ -482,21 +448,11 @@ if type lsof >/dev/null 2>/dev/null; then
         done
     }
 else
-    echo "Warning: lsof not available, wait_app_start = sleep"
-    wait_app_start() {
+    echo "Warning: lsof not available, wait_server_start = sleep"
+    wait_server_start() {
         sleep "$START_DELAY"
     }
 fi
-
-# Wait for server process $2 to be listening on port $1.
-wait_server_start() {
-    wait_app_start $1 $2 "SERVER" $SRV_OUT
-}
-
-# Wait for proxy process $2 to be listening on port $1.
-wait_proxy_start() {
-    wait_app_start $1 $2 "PROXY" $PXY_OUT
-}
 
 # Given the client or server debug output, parse the unix timestamp that is
 # included in the first 4 bytes of the random bytes and check that it's within
@@ -519,45 +475,6 @@ check_server_hello_time() {
         return 1
     elif [ $SERVER_HELLO_TIME -gt $(( $CUR_TIME + $THRESHOLD_IN_SECS )) ]; then
         # The time in ServerHello is at least 5 minutes later than now
-        return 1
-    else
-        return 0
-    fi
-}
-
-# Get handshake memory usage from server or client output and put it into the variable specified by the first argument
-handshake_memory_get() {
-    OUTPUT_VARIABLE="$1"
-    OUTPUT_FILE="$2"
-
-    # Get memory usage from a pattern like "Heap memory usage after handshake: 23112 bytes. Peak memory usage was 33112"
-    MEM_USAGE=$(sed -n 's/.*Heap memory usage after handshake: //p' < "$OUTPUT_FILE" | grep -o "[0-9]*" | head -1)
-
-    # Check if memory usage was read
-    if [ -z "$MEM_USAGE" ]; then
-        echo "Error: Can not read the value of handshake memory usage"
-        return 1
-    else
-        eval "$OUTPUT_VARIABLE=$MEM_USAGE"
-        return 0
-    fi
-}
-
-# Get handshake memory usage from server or client output and check if this value
-# is not higher than the maximum given by the first argument
-handshake_memory_check() {
-    MAX_MEMORY="$1"
-    OUTPUT_FILE="$2"
-
-    # Get memory usage
-    if ! handshake_memory_get "MEMORY_USAGE" "$OUTPUT_FILE"; then
-        return 1
-    fi
-
-    # Check if memory usage is below max value
-    if [ "$MEMORY_USAGE" -gt "$MAX_MEMORY" ]; then
-        echo "\nFailed: Handshake memory usage was $MEMORY_USAGE bytes," \
-             "but should be below $MAX_MEMORY bytes"
         return 1
     else
         return 0
@@ -612,7 +529,6 @@ run_test() {
     if echo "$NAME" | grep "$FILTER" | grep -v "$EXCLUDE" >/dev/null; then :
     else
         SKIP_NEXT="NO"
-        # There was no request to run the test, so don't record its outcome.
         return
     fi
 
@@ -660,7 +576,7 @@ run_test() {
     # should we skip?
     if [ "X$SKIP_NEXT" = "XYES" ]; then
         SKIP_NEXT="NO"
-        record_outcome "SKIP"
+        echo "SKIP"
         SKIPS=$(( $SKIPS + 1 ))
         return
     fi
@@ -694,7 +610,7 @@ run_test() {
             echo "$PXY_CMD" > $PXY_OUT
             $PXY_CMD >> $PXY_OUT 2>&1 &
             PXY_PID=$!
-            wait_proxy_start "$PXY_PORT" "$PXY_PID"
+            # assume proxy starts faster than server
         fi
 
         check_osrv_dtls
@@ -846,7 +762,7 @@ run_test() {
     fi
 
     # if we're here, everything is ok
-    record_outcome "PASS"
+    echo "PASS"
     if [ "$PRESERVE_LOGS" -gt 0 ]; then
         mv $SRV_OUT o-srv-${TESTS}.log
         mv $CLI_OUT o-cli-${TESTS}.log
@@ -904,62 +820,8 @@ run_test_psa_force_curve() {
                 -C "error"
 }
 
-# Test that the server's memory usage after a handshake is reduced when a client specifies
-# a maximum fragment length.
-#  first argument ($1) is MFL for SSL client
-#  second argument ($2) is memory usage for SSL client with default MFL (16k)
-run_test_memory_after_hanshake_with_mfl()
-{
-    # The test passes if the difference is around 2*(16k-MFL)
-    local MEMORY_USAGE_LIMIT="$(( $2 - ( 2 * ( 16384 - $1 )) ))"
-
-    # Leave some margin for robustness
-    MEMORY_USAGE_LIMIT="$(( ( MEMORY_USAGE_LIMIT * 110 ) / 100 ))"
-
-    run_test    "Handshake memory usage (MFL $1)" \
-                "$P_SRV debug_level=3 auth_mode=required force_version=tls1_2" \
-                "$P_CLI debug_level=3 force_version=tls1_2 \
-                    crt_file=data_files/server5.crt key_file=data_files/server5.key \
-                    force_ciphersuite=TLS-ECDHE-ECDSA-WITH-AES-128-CCM max_frag_len=$1" \
-                0 \
-                -F "handshake_memory_check $MEMORY_USAGE_LIMIT"
-}
-
-
-# Test that the server's memory usage after a handshake is reduced when a client specifies
-# different values of Maximum Fragment Length: default (16k), 4k, 2k, 1k and 512 bytes
-run_tests_memory_after_hanshake()
-{
-    # all tests in this sequence requires the same configuration (see requires_config_enabled())
-    SKIP_THIS_TESTS="$SKIP_NEXT"
-
-    # first test with default MFU is to get reference memory usage
-    MEMORY_USAGE_MFL_16K=0
-    run_test    "Handshake memory usage initial (MFL 16384 - default)" \
-                "$P_SRV debug_level=3 auth_mode=required force_version=tls1_2" \
-                "$P_CLI debug_level=3 force_version=tls1_2 \
-                    crt_file=data_files/server5.crt key_file=data_files/server5.key \
-                    force_ciphersuite=TLS-ECDHE-ECDSA-WITH-AES-128-CCM" \
-                0 \
-                -F "handshake_memory_get MEMORY_USAGE_MFL_16K"
-
-    SKIP_NEXT="$SKIP_THIS_TESTS"
-    run_test_memory_after_hanshake_with_mfl 4096 "$MEMORY_USAGE_MFL_16K"
-
-    SKIP_NEXT="$SKIP_THIS_TESTS"
-    run_test_memory_after_hanshake_with_mfl 2048 "$MEMORY_USAGE_MFL_16K"
-
-    SKIP_NEXT="$SKIP_THIS_TESTS"
-    run_test_memory_after_hanshake_with_mfl 1024 "$MEMORY_USAGE_MFL_16K"
-
-    SKIP_NEXT="$SKIP_THIS_TESTS"
-    run_test_memory_after_hanshake_with_mfl 512 "$MEMORY_USAGE_MFL_16K"
-}
-
 cleanup() {
     rm -f $CLI_OUT $SRV_OUT $PXY_OUT $SESSION
-    rm -f context_srv.txt
-    rm -f context_cli.txt
     test -n "${SRV_PID:-}" && kill $SRV_PID >/dev/null 2>&1
     test -n "${PXY_PID:-}" && kill $PXY_PID >/dev/null 2>&1
     test -n "${CLI_PID:-}" && kill $CLI_PID >/dev/null 2>&1
@@ -1088,18 +950,6 @@ run_test    "Default, DTLS" \
             0 \
             -s "Protocol is DTLSv1.2" \
             -s "Ciphersuite is TLS-ECDHE-RSA-WITH-CHACHA20-POLY1305-SHA256"
-
-requires_config_enabled MBEDTLS_ZLIB_SUPPORT
-run_test    "Default (compression enabled)" \
-            "$P_SRV debug_level=3" \
-            "$P_CLI debug_level=3" \
-            0 \
-            -s "Allocating compression buffer" \
-            -c "Allocating compression buffer" \
-            -s "Record expansion is unknown (compression)" \
-            -c "Record expansion is unknown (compression)" \
-            -S "error" \
-            -C "error"
 
 requires_config_enabled MBEDTLS_X509_TRUSTED_CERTIFICATE_CALLBACK
 run_test    "CA callback on client" \
@@ -1267,7 +1117,7 @@ run_test    "SHA-1 forbidden by default in server certificate" \
             -c "The certificate is signed with an unacceptable hash"
 
 requires_config_enabled MBEDTLS_TLS_DEFAULT_ALLOW_SHA1_IN_CERTIFICATES
-run_test    "SHA-1 allowed by default in server certificate" \
+run_test    "SHA-1 forbidden by default in server certificate" \
             "$P_SRV key_file=data_files/server2.key crt_file=data_files/server2.crt" \
             "$P_CLI debug_level=2 allow_sha1=0" \
             0
@@ -1290,7 +1140,7 @@ run_test    "SHA-1 forbidden by default in client certificate" \
             -s "The certificate is signed with an unacceptable hash"
 
 requires_config_enabled MBEDTLS_TLS_DEFAULT_ALLOW_SHA1_IN_CERTIFICATES
-run_test    "SHA-1 allowed by default in client certificate" \
+run_test    "SHA-1 forbidden by default in client certificate" \
             "$P_SRV auth_mode=required allow_sha1=0" \
             "$P_CLI key_file=data_files/cli-rsa.key crt_file=data_files/cli-rsa-sha1.crt" \
             0
@@ -1429,216 +1279,6 @@ run_test    "Truncated HMAC, DTLS: client enabled, server enabled" \
             0 \
             -S "dumping 'expected mac' (20 bytes)" \
             -s "dumping 'expected mac' (10 bytes)"
-
-# Tests for Context serialization
-
-requires_config_enabled MBEDTLS_SSL_CONTEXT_SERIALIZATION
-run_test    "Context serialization, client serializes, CCM" \
-            "$P_SRV dtls=1 serialize=0 exchanges=2" \
-            "$P_CLI dtls=1 serialize=1 exchanges=2 force_ciphersuite=TLS-ECDHE-ECDSA-WITH-AES-128-CCM-8" \
-            0 \
-            -c "Deserializing connection..." \
-            -S "Deserializing connection..."
-
-requires_config_enabled MBEDTLS_SSL_CONTEXT_SERIALIZATION
-run_test    "Context serialization, client serializes, ChaChaPoly" \
-            "$P_SRV dtls=1 serialize=0 exchanges=2" \
-            "$P_CLI dtls=1 serialize=1 exchanges=2 force_ciphersuite=TLS-ECDHE-ECDSA-WITH-CHACHA20-POLY1305-SHA256" \
-            0 \
-            -c "Deserializing connection..." \
-            -S "Deserializing connection..."
-
-requires_config_enabled MBEDTLS_SSL_CONTEXT_SERIALIZATION
-run_test    "Context serialization, client serializes, GCM" \
-            "$P_SRV dtls=1 serialize=0 exchanges=2" \
-            "$P_CLI dtls=1 serialize=1 exchanges=2 force_ciphersuite=TLS-ECDHE-ECDSA-WITH-AES-128-GCM-SHA256" \
-            0 \
-            -c "Deserializing connection..." \
-            -S "Deserializing connection..."
-
-requires_config_enabled MBEDTLS_SSL_CONTEXT_SERIALIZATION
-requires_config_enabled MBEDTLS_SSL_DTLS_CONNECTION_ID
-run_test    "Context serialization, client serializes, with CID" \
-            "$P_SRV dtls=1 serialize=0 exchanges=2 cid=1 cid_val=dead" \
-            "$P_CLI dtls=1 serialize=1 exchanges=2 cid=1 cid_val=beef" \
-            0 \
-            -c "Deserializing connection..." \
-            -S "Deserializing connection..."
-
-requires_config_enabled MBEDTLS_SSL_CONTEXT_SERIALIZATION
-run_test    "Context serialization, server serializes, CCM" \
-            "$P_SRV dtls=1 serialize=1 exchanges=2" \
-            "$P_CLI dtls=1 serialize=0 exchanges=2 force_ciphersuite=TLS-ECDHE-ECDSA-WITH-AES-128-CCM-8" \
-            0 \
-            -C "Deserializing connection..." \
-            -s "Deserializing connection..."
-
-requires_config_enabled MBEDTLS_SSL_CONTEXT_SERIALIZATION
-run_test    "Context serialization, server serializes, ChaChaPoly" \
-            "$P_SRV dtls=1 serialize=1 exchanges=2" \
-            "$P_CLI dtls=1 serialize=0 exchanges=2 force_ciphersuite=TLS-ECDHE-ECDSA-WITH-CHACHA20-POLY1305-SHA256" \
-            0 \
-            -C "Deserializing connection..." \
-            -s "Deserializing connection..."
-
-requires_config_enabled MBEDTLS_SSL_CONTEXT_SERIALIZATION
-run_test    "Context serialization, server serializes, GCM" \
-            "$P_SRV dtls=1 serialize=1 exchanges=2" \
-            "$P_CLI dtls=1 serialize=0 exchanges=2 force_ciphersuite=TLS-ECDHE-ECDSA-WITH-AES-128-GCM-SHA256" \
-            0 \
-            -C "Deserializing connection..." \
-            -s "Deserializing connection..."
-
-requires_config_enabled MBEDTLS_SSL_CONTEXT_SERIALIZATION
-requires_config_enabled MBEDTLS_SSL_DTLS_CONNECTION_ID
-run_test    "Context serialization, server serializes, with CID" \
-            "$P_SRV dtls=1 serialize=1 exchanges=2 cid=1 cid_val=dead" \
-            "$P_CLI dtls=1 serialize=0 exchanges=2 cid=1 cid_val=beef" \
-            0 \
-            -C "Deserializing connection..." \
-            -s "Deserializing connection..."
-
-requires_config_enabled MBEDTLS_SSL_CONTEXT_SERIALIZATION
-run_test    "Context serialization, both serialize, CCM" \
-            "$P_SRV dtls=1 serialize=1 exchanges=2" \
-            "$P_CLI dtls=1 serialize=1 exchanges=2 force_ciphersuite=TLS-ECDHE-ECDSA-WITH-AES-128-CCM-8" \
-            0 \
-            -c "Deserializing connection..." \
-            -s "Deserializing connection..."
-
-requires_config_enabled MBEDTLS_SSL_CONTEXT_SERIALIZATION
-run_test    "Context serialization, both serialize, ChaChaPoly" \
-            "$P_SRV dtls=1 serialize=1 exchanges=2" \
-            "$P_CLI dtls=1 serialize=1 exchanges=2 force_ciphersuite=TLS-ECDHE-ECDSA-WITH-CHACHA20-POLY1305-SHA256" \
-            0 \
-            -c "Deserializing connection..." \
-            -s "Deserializing connection..."
-
-requires_config_enabled MBEDTLS_SSL_CONTEXT_SERIALIZATION
-run_test    "Context serialization, both serialize, GCM" \
-            "$P_SRV dtls=1 serialize=1 exchanges=2" \
-            "$P_CLI dtls=1 serialize=1 exchanges=2 force_ciphersuite=TLS-ECDHE-ECDSA-WITH-AES-128-GCM-SHA256" \
-            0 \
-            -c "Deserializing connection..." \
-            -s "Deserializing connection..."
-
-requires_config_enabled MBEDTLS_SSL_CONTEXT_SERIALIZATION
-requires_config_enabled MBEDTLS_SSL_DTLS_CONNECTION_ID
-run_test    "Context serialization, both serialize, with CID" \
-            "$P_SRV dtls=1 serialize=1 exchanges=2 cid=1 cid_val=dead" \
-            "$P_CLI dtls=1 serialize=1 exchanges=2 cid=1 cid_val=beef" \
-            0 \
-            -c "Deserializing connection..." \
-            -s "Deserializing connection..."
-
-requires_config_enabled MBEDTLS_SSL_CONTEXT_SERIALIZATION
-run_test    "Context serialization, re-init, client serializes, CCM" \
-            "$P_SRV dtls=1 serialize=0 exchanges=2" \
-            "$P_CLI dtls=1 serialize=2 exchanges=2 force_ciphersuite=TLS-ECDHE-ECDSA-WITH-AES-128-CCM-8" \
-            0 \
-            -c "Deserializing connection..." \
-            -S "Deserializing connection..."
-
-requires_config_enabled MBEDTLS_SSL_CONTEXT_SERIALIZATION
-run_test    "Context serialization, re-init, client serializes, ChaChaPoly" \
-            "$P_SRV dtls=1 serialize=0 exchanges=2" \
-            "$P_CLI dtls=1 serialize=2 exchanges=2 force_ciphersuite=TLS-ECDHE-ECDSA-WITH-CHACHA20-POLY1305-SHA256" \
-            0 \
-            -c "Deserializing connection..." \
-            -S "Deserializing connection..."
-
-requires_config_enabled MBEDTLS_SSL_CONTEXT_SERIALIZATION
-run_test    "Context serialization, re-init, client serializes, GCM" \
-            "$P_SRV dtls=1 serialize=0 exchanges=2" \
-            "$P_CLI dtls=1 serialize=2 exchanges=2 force_ciphersuite=TLS-ECDHE-ECDSA-WITH-AES-128-GCM-SHA256" \
-            0 \
-            -c "Deserializing connection..." \
-            -S "Deserializing connection..."
-
-requires_config_enabled MBEDTLS_SSL_CONTEXT_SERIALIZATION
-requires_config_enabled MBEDTLS_SSL_DTLS_CONNECTION_ID
-run_test    "Context serialization, re-init, client serializes, with CID" \
-            "$P_SRV dtls=1 serialize=0 exchanges=2 cid=1 cid_val=dead" \
-            "$P_CLI dtls=1 serialize=2 exchanges=2 cid=1 cid_val=beef" \
-            0 \
-            -c "Deserializing connection..." \
-            -S "Deserializing connection..."
-
-requires_config_enabled MBEDTLS_SSL_CONTEXT_SERIALIZATION
-run_test    "Context serialization, re-init, server serializes, CCM" \
-            "$P_SRV dtls=1 serialize=2 exchanges=2" \
-            "$P_CLI dtls=1 serialize=0 exchanges=2 force_ciphersuite=TLS-ECDHE-ECDSA-WITH-AES-128-CCM-8" \
-            0 \
-            -C "Deserializing connection..." \
-            -s "Deserializing connection..."
-
-requires_config_enabled MBEDTLS_SSL_CONTEXT_SERIALIZATION
-run_test    "Context serialization, re-init, server serializes, ChaChaPoly" \
-            "$P_SRV dtls=1 serialize=2 exchanges=2" \
-            "$P_CLI dtls=1 serialize=0 exchanges=2 force_ciphersuite=TLS-ECDHE-ECDSA-WITH-CHACHA20-POLY1305-SHA256" \
-            0 \
-            -C "Deserializing connection..." \
-            -s "Deserializing connection..."
-
-requires_config_enabled MBEDTLS_SSL_CONTEXT_SERIALIZATION
-run_test    "Context serialization, re-init, server serializes, GCM" \
-            "$P_SRV dtls=1 serialize=2 exchanges=2" \
-            "$P_CLI dtls=1 serialize=0 exchanges=2 force_ciphersuite=TLS-ECDHE-ECDSA-WITH-CHACHA20-POLY1305-SHA256" \
-            0 \
-            -C "Deserializing connection..." \
-            -s "Deserializing connection..."
-
-requires_config_enabled MBEDTLS_SSL_CONTEXT_SERIALIZATION
-requires_config_enabled MBEDTLS_SSL_DTLS_CONNECTION_ID
-run_test    "Context serialization, re-init, server serializes, with CID" \
-            "$P_SRV dtls=1 serialize=2 exchanges=2 cid=1 cid_val=dead" \
-            "$P_CLI dtls=1 serialize=0 exchanges=2 cid=1 cid_val=beef" \
-            0 \
-            -C "Deserializing connection..." \
-            -s "Deserializing connection..."
-
-requires_config_enabled MBEDTLS_SSL_CONTEXT_SERIALIZATION
-run_test    "Context serialization, re-init, both serialize, CCM" \
-            "$P_SRV dtls=1 serialize=2 exchanges=2" \
-            "$P_CLI dtls=1 serialize=2 exchanges=2 force_ciphersuite=TLS-ECDHE-ECDSA-WITH-AES-128-CCM-8" \
-            0 \
-            -c "Deserializing connection..." \
-            -s "Deserializing connection..."
-
-requires_config_enabled MBEDTLS_SSL_CONTEXT_SERIALIZATION
-run_test    "Context serialization, re-init, both serialize, ChaChaPoly" \
-            "$P_SRV dtls=1 serialize=2 exchanges=2" \
-            "$P_CLI dtls=1 serialize=2 exchanges=2 force_ciphersuite=TLS-ECDHE-ECDSA-WITH-CHACHA20-POLY1305-SHA256" \
-            0 \
-            -c "Deserializing connection..." \
-            -s "Deserializing connection..."
-
-requires_config_enabled MBEDTLS_SSL_CONTEXT_SERIALIZATION
-run_test    "Context serialization, re-init, both serialize, GCM" \
-            "$P_SRV dtls=1 serialize=2 exchanges=2" \
-            "$P_CLI dtls=1 serialize=2 exchanges=2 force_ciphersuite=TLS-ECDHE-ECDSA-WITH-CHACHA20-POLY1305-SHA256" \
-            0 \
-            -c "Deserializing connection..." \
-            -s "Deserializing connection..."
-
-requires_config_enabled MBEDTLS_SSL_CONTEXT_SERIALIZATION
-requires_config_enabled MBEDTLS_SSL_DTLS_CONNECTION_ID
-run_test    "Context serialization, re-init, both serialize, with CID" \
-            "$P_SRV dtls=1 serialize=2 exchanges=2 cid=1 cid_val=dead" \
-            "$P_CLI dtls=1 serialize=2 exchanges=2 cid=1 cid_val=beef" \
-            0 \
-            -c "Deserializing connection..." \
-            -s "Deserializing connection..."
-
-requires_config_enabled MBEDTLS_SSL_CONTEXT_SERIALIZATION
-run_test    "Saving the serialized context to a file" \
-            "$P_SRV dtls=1 serialize=1 context_file=context_srv.txt" \
-            "$P_CLI dtls=1 serialize=1 context_file=context_cli.txt" \
-            0 \
-            -s "Save serialized context to a file... ok" \
-            -c "Save serialized context to a file... ok"
-rm -f context_srv.txt
-rm -f context_cli.txt
 
 # Tests for DTLS Connection ID extension
 
@@ -2299,8 +1939,8 @@ run_test    "Extended Master Secret: default" \
             -s "found extended master secret extension" \
             -s "server hello, adding extended master secret extension" \
             -c "found extended_master_secret extension" \
-            -c "session hash for extended master secret" \
-            -s "session hash for extended master secret"
+            -c "using extended master secret" \
+            -s "using extended master secret"
 
 run_test    "Extended Master Secret: client enabled, server disabled" \
             "$P_SRV debug_level=3 extended_ms=0" \
@@ -2310,8 +1950,8 @@ run_test    "Extended Master Secret: client enabled, server disabled" \
             -s "found extended master secret extension" \
             -S "server hello, adding extended master secret extension" \
             -C "found extended_master_secret extension" \
-            -C "session hash for extended master secret" \
-            -S "session hash for extended master secret"
+            -C "using extended master secret" \
+            -S "using extended master secret"
 
 run_test    "Extended Master Secret: client disabled, server enabled" \
             "$P_SRV debug_level=3 extended_ms=1" \
@@ -2321,8 +1961,8 @@ run_test    "Extended Master Secret: client disabled, server enabled" \
             -S "found extended master secret extension" \
             -S "server hello, adding extended master secret extension" \
             -C "found extended_master_secret extension" \
-            -C "session hash for extended master secret" \
-            -S "session hash for extended master secret"
+            -C "using extended master secret" \
+            -S "using extended master secret"
 
 requires_config_enabled MBEDTLS_SSL_PROTO_SSL3
 run_test    "Extended Master Secret: client SSLv3, server enabled" \
@@ -2333,8 +1973,8 @@ run_test    "Extended Master Secret: client SSLv3, server enabled" \
             -S "found extended master secret extension" \
             -S "server hello, adding extended master secret extension" \
             -C "found extended_master_secret extension" \
-            -C "session hash for extended master secret" \
-            -S "session hash for extended master secret"
+            -C "using extended master secret" \
+            -S "using extended master secret"
 
 requires_config_enabled MBEDTLS_SSL_PROTO_SSL3
 run_test    "Extended Master Secret: client enabled, server SSLv3" \
@@ -2345,8 +1985,8 @@ run_test    "Extended Master Secret: client enabled, server SSLv3" \
             -S "found extended master secret extension" \
             -S "server hello, adding extended master secret extension" \
             -C "found extended_master_secret extension" \
-            -C "session hash for extended master secret" \
-            -S "session hash for extended master secret"
+            -C "using extended master secret" \
+            -S "using extended master secret"
 
 # Tests for FALLBACK_SCSV
 
@@ -2436,7 +2076,7 @@ run_test    "Encrypt then MAC: empty application data record" \
             -s "dumping 'input payload after decrypt' (0 bytes)" \
             -c "0 bytes written in 1 fragments"
 
-run_test    "Encrypt then MAC: disabled, empty application data record" \
+run_test    "Default, no Encrypt then MAC: empty application data record" \
             "$P_SRV auth_mode=none debug_level=4 etm=0" \
             "$P_CLI auth_mode=none etm=0 request_size=0" \
             0 \
@@ -2451,7 +2091,7 @@ run_test    "Encrypt then MAC, DTLS: empty application data record" \
             -s "dumping 'input payload after decrypt' (0 bytes)" \
             -c "0 bytes written in 1 fragments"
 
-run_test    "Encrypt then MAC, DTLS: disabled, empty application data record" \
+run_test    "Default, no Encrypt then MAC, DTLS: empty application data record" \
             "$P_SRV auth_mode=none debug_level=4 etm=0 dtls=1" \
             "$P_CLI auth_mode=none etm=0 request_size=0 dtls=1" \
             0 \
@@ -2599,20 +2239,6 @@ run_test    "Session resume using tickets: timeout" \
             -S "a session has been resumed" \
             -C "a session has been resumed"
 
-run_test    "Session resume using tickets: session copy" \
-            "$P_SRV debug_level=3 tickets=1 cache_max=0" \
-            "$P_CLI debug_level=3 tickets=1 reconnect=1 reco_mode=0" \
-            0 \
-            -c "client hello, adding session ticket extension" \
-            -s "found session ticket extension" \
-            -s "server hello, adding session ticket extension" \
-            -c "found session_ticket extension" \
-            -c "parse new session ticket" \
-            -S "session successfully restored from cache" \
-            -s "session successfully restored from ticket" \
-            -s "a session has been resumed" \
-            -c "a session has been resumed"
-
 run_test    "Session resume using tickets: openssl server" \
             "$O_SRV" \
             "$P_CLI debug_level=3 tickets=1 reconnect=1" \
@@ -2638,7 +2264,7 @@ run_test    "Session resume using tickets: openssl client" \
 
 run_test    "Session resume using tickets, DTLS: basic" \
             "$P_SRV debug_level=3 dtls=1 tickets=1" \
-            "$P_CLI debug_level=3 dtls=1 tickets=1 reconnect=1 skip_close_notify=1" \
+            "$P_CLI debug_level=3 dtls=1 tickets=1 reconnect=1" \
             0 \
             -c "client hello, adding session ticket extension" \
             -s "found session ticket extension" \
@@ -2652,7 +2278,7 @@ run_test    "Session resume using tickets, DTLS: basic" \
 
 run_test    "Session resume using tickets, DTLS: cache disabled" \
             "$P_SRV debug_level=3 dtls=1 tickets=1 cache_max=0" \
-            "$P_CLI debug_level=3 dtls=1 tickets=1 reconnect=1 skip_close_notify=1" \
+            "$P_CLI debug_level=3 dtls=1 tickets=1 reconnect=1" \
             0 \
             -c "client hello, adding session ticket extension" \
             -s "found session ticket extension" \
@@ -2666,7 +2292,7 @@ run_test    "Session resume using tickets, DTLS: cache disabled" \
 
 run_test    "Session resume using tickets, DTLS: timeout" \
             "$P_SRV debug_level=3 dtls=1 tickets=1 cache_max=0 ticket_timeout=1" \
-            "$P_CLI debug_level=3 dtls=1 tickets=1 reconnect=1 skip_close_notify=1 reco_delay=2" \
+            "$P_CLI debug_level=3 dtls=1 tickets=1 reconnect=1 reco_delay=2" \
             0 \
             -c "client hello, adding session ticket extension" \
             -s "found session ticket extension" \
@@ -2677,20 +2303,6 @@ run_test    "Session resume using tickets, DTLS: timeout" \
             -S "session successfully restored from ticket" \
             -S "a session has been resumed" \
             -C "a session has been resumed"
-
-run_test    "Session resume using tickets, DTLS: session copy" \
-            "$P_SRV debug_level=3 dtls=1 tickets=1 cache_max=0" \
-            "$P_CLI debug_level=3 dtls=1 tickets=1 reconnect=1 skip_close_notify=1 reco_mode=0" \
-            0 \
-            -c "client hello, adding session ticket extension" \
-            -s "found session ticket extension" \
-            -s "server hello, adding session ticket extension" \
-            -c "found session_ticket extension" \
-            -c "parse new session ticket" \
-            -S "session successfully restored from cache" \
-            -s "session successfully restored from ticket" \
-            -s "a session has been resumed" \
-            -c "a session has been resumed"
 
 run_test    "Session resume using tickets, DTLS: openssl server" \
             "$O_SRV -dtls1" \
@@ -2788,15 +2400,6 @@ run_test    "Session resume using cache: no timeout" \
             -s "a session has been resumed" \
             -c "a session has been resumed"
 
-run_test    "Session resume using cache: session copy" \
-            "$P_SRV debug_level=3 tickets=0" \
-            "$P_CLI debug_level=3 tickets=0 reconnect=1 reco_mode=0" \
-            0 \
-            -s "session successfully restored from cache" \
-            -S "session successfully restored from ticket" \
-            -s "a session has been resumed" \
-            -c "a session has been resumed"
-
 run_test    "Session resume using cache: openssl client" \
             "$P_SRV debug_level=3 tickets=0" \
             "( $O_CLI -sess_out $SESSION; \
@@ -2821,7 +2424,7 @@ run_test    "Session resume using cache: openssl server" \
 
 run_test    "Session resume using cache, DTLS: tickets enabled on client" \
             "$P_SRV dtls=1 debug_level=3 tickets=0" \
-            "$P_CLI dtls=1 debug_level=3 tickets=1 reconnect=1 skip_close_notify=1" \
+            "$P_CLI dtls=1 debug_level=3 tickets=1 reconnect=1" \
             0 \
             -c "client hello, adding session ticket extension" \
             -s "found session ticket extension" \
@@ -2835,7 +2438,7 @@ run_test    "Session resume using cache, DTLS: tickets enabled on client" \
 
 run_test    "Session resume using cache, DTLS: tickets enabled on server" \
             "$P_SRV dtls=1 debug_level=3 tickets=1" \
-            "$P_CLI dtls=1 debug_level=3 tickets=0 reconnect=1 skip_close_notify=1" \
+            "$P_CLI dtls=1 debug_level=3 tickets=0 reconnect=1" \
             0 \
             -C "client hello, adding session ticket extension" \
             -S "found session ticket extension" \
@@ -2849,7 +2452,7 @@ run_test    "Session resume using cache, DTLS: tickets enabled on server" \
 
 run_test    "Session resume using cache, DTLS: cache_max=0" \
             "$P_SRV dtls=1 debug_level=3 tickets=0 cache_max=0" \
-            "$P_CLI dtls=1 debug_level=3 tickets=0 reconnect=1 skip_close_notify=1" \
+            "$P_CLI dtls=1 debug_level=3 tickets=0 reconnect=1" \
             0 \
             -S "session successfully restored from cache" \
             -S "session successfully restored from ticket" \
@@ -2858,7 +2461,7 @@ run_test    "Session resume using cache, DTLS: cache_max=0" \
 
 run_test    "Session resume using cache, DTLS: cache_max=1" \
             "$P_SRV dtls=1 debug_level=3 tickets=0 cache_max=1" \
-            "$P_CLI dtls=1 debug_level=3 tickets=0 reconnect=1 skip_close_notify=1" \
+            "$P_CLI dtls=1 debug_level=3 tickets=0 reconnect=1" \
             0 \
             -s "session successfully restored from cache" \
             -S "session successfully restored from ticket" \
@@ -2867,7 +2470,7 @@ run_test    "Session resume using cache, DTLS: cache_max=1" \
 
 run_test    "Session resume using cache, DTLS: timeout > delay" \
             "$P_SRV dtls=1 debug_level=3 tickets=0" \
-            "$P_CLI dtls=1 debug_level=3 tickets=0 reconnect=1 skip_close_notify=1 reco_delay=0" \
+            "$P_CLI dtls=1 debug_level=3 tickets=0 reconnect=1 reco_delay=0" \
             0 \
             -s "session successfully restored from cache" \
             -S "session successfully restored from ticket" \
@@ -2876,7 +2479,7 @@ run_test    "Session resume using cache, DTLS: timeout > delay" \
 
 run_test    "Session resume using cache, DTLS: timeout < delay" \
             "$P_SRV dtls=1 debug_level=3 tickets=0 cache_timeout=1" \
-            "$P_CLI dtls=1 debug_level=3 tickets=0 reconnect=1 skip_close_notify=1 reco_delay=2" \
+            "$P_CLI dtls=1 debug_level=3 tickets=0 reconnect=1 reco_delay=2" \
             0 \
             -S "session successfully restored from cache" \
             -S "session successfully restored from ticket" \
@@ -2885,16 +2488,7 @@ run_test    "Session resume using cache, DTLS: timeout < delay" \
 
 run_test    "Session resume using cache, DTLS: no timeout" \
             "$P_SRV dtls=1 debug_level=3 tickets=0 cache_timeout=0" \
-            "$P_CLI dtls=1 debug_level=3 tickets=0 reconnect=1 skip_close_notify=1 reco_delay=2" \
-            0 \
-            -s "session successfully restored from cache" \
-            -S "session successfully restored from ticket" \
-            -s "a session has been resumed" \
-            -c "a session has been resumed"
-
-run_test    "Session resume using cache, DTLS: session copy" \
-            "$P_SRV dtls=1 debug_level=3 tickets=0" \
-            "$P_CLI dtls=1 debug_level=3 tickets=0 reconnect=1 skip_close_notify=1 reco_mode=0" \
+            "$P_CLI dtls=1 debug_level=3 tickets=0 reconnect=1 reco_delay=2" \
             0 \
             -s "session successfully restored from cache" \
             -S "session successfully restored from ticket" \
@@ -2937,10 +2531,8 @@ run_test    "Max fragment length: enabled, default" \
             "$P_SRV debug_level=3" \
             "$P_CLI debug_level=3" \
             0 \
-            -c "Maximum input fragment length is $MAX_CONTENT_LEN" \
-            -c "Maximum output fragment length is $MAX_CONTENT_LEN" \
-            -s "Maximum input fragment length is $MAX_CONTENT_LEN" \
-            -s "Maximum output fragment length is $MAX_CONTENT_LEN" \
+            -c "Maximum fragment length is $MAX_CONTENT_LEN" \
+            -s "Maximum fragment length is $MAX_CONTENT_LEN" \
             -C "client hello, adding max_fragment_length extension" \
             -S "found max fragment length extension" \
             -S "server hello, max_fragment_length extension" \
@@ -2951,10 +2543,8 @@ run_test    "Max fragment length: enabled, default, larger message" \
             "$P_SRV debug_level=3" \
             "$P_CLI debug_level=3 request_size=$(( $MAX_CONTENT_LEN + 1))" \
             0 \
-            -c "Maximum input fragment length is $MAX_CONTENT_LEN" \
-            -c "Maximum output fragment length is $MAX_CONTENT_LEN" \
-            -s "Maximum input fragment length is $MAX_CONTENT_LEN" \
-            -s "Maximum output fragment length is $MAX_CONTENT_LEN" \
+            -c "Maximum fragment length is $MAX_CONTENT_LEN" \
+            -s "Maximum fragment length is $MAX_CONTENT_LEN" \
             -C "client hello, adding max_fragment_length extension" \
             -S "found max fragment length extension" \
             -S "server hello, max_fragment_length extension" \
@@ -2968,10 +2558,8 @@ run_test    "Max fragment length, DTLS: enabled, default, larger message" \
             "$P_SRV debug_level=3 dtls=1" \
             "$P_CLI debug_level=3 dtls=1 request_size=$(( $MAX_CONTENT_LEN + 1))" \
             1 \
-            -c "Maximum input fragment length is $MAX_CONTENT_LEN" \
-            -c "Maximum output fragment length is $MAX_CONTENT_LEN" \
-            -s "Maximum input fragment length is $MAX_CONTENT_LEN" \
-            -s "Maximum output fragment length is $MAX_CONTENT_LEN" \
+            -c "Maximum fragment length is $MAX_CONTENT_LEN" \
+            -s "Maximum fragment length is $MAX_CONTENT_LEN" \
             -C "client hello, adding max_fragment_length extension" \
             -S "found max fragment length extension" \
             -S "server hello, max_fragment_length extension" \
@@ -2987,10 +2575,8 @@ run_test    "Max fragment length: disabled, larger message" \
             "$P_SRV debug_level=3" \
             "$P_CLI debug_level=3 request_size=$(( $MAX_CONTENT_LEN + 1))" \
             0 \
-            -C "Maximum input fragment length is 16384" \
-            -C "Maximum output fragment length is 16384" \
-            -S "Maximum input fragment length is 16384" \
-            -S "Maximum output fragment length is 16384" \
+            -C "Maximum fragment length is 16384" \
+            -S "Maximum fragment length is 16384" \
             -c "$(( $MAX_CONTENT_LEN + 1)) bytes written in 2 fragments" \
             -s "$MAX_CONTENT_LEN bytes read" \
             -s "1 bytes read"
@@ -3000,10 +2586,8 @@ run_test    "Max fragment length DTLS: disabled, larger message" \
             "$P_SRV debug_level=3 dtls=1" \
             "$P_CLI debug_level=3 dtls=1 request_size=$(( $MAX_CONTENT_LEN + 1))" \
             1 \
-            -C "Maximum input fragment length is 16384" \
-            -C "Maximum output fragment length is 16384" \
-            -S "Maximum input fragment length is 16384" \
-            -S "Maximum output fragment length is 16384" \
+            -C "Maximum fragment length is 16384" \
+            -S "Maximum fragment length is 16384" \
             -c "fragment larger than.*maximum "
 
 requires_config_enabled MBEDTLS_SSL_MAX_FRAGMENT_LENGTH
@@ -3011,178 +2595,8 @@ run_test    "Max fragment length: used by client" \
             "$P_SRV debug_level=3" \
             "$P_CLI debug_level=3 max_frag_len=4096" \
             0 \
-            -c "Maximum input fragment length is 4096" \
-            -c "Maximum output fragment length is 4096" \
-            -s "Maximum input fragment length is 4096" \
-            -s "Maximum output fragment length is 4096" \
-            -c "client hello, adding max_fragment_length extension" \
-            -s "found max fragment length extension" \
-            -s "server hello, max_fragment_length extension" \
-            -c "found max_fragment_length extension"
-
-requires_config_enabled MBEDTLS_SSL_MAX_FRAGMENT_LENGTH
-run_test    "Max fragment length: client 512, server 1024" \
-            "$P_SRV debug_level=3 max_frag_len=1024" \
-            "$P_CLI debug_level=3 max_frag_len=512" \
-            0 \
-            -c "Maximum input fragment length is 512" \
-            -c "Maximum output fragment length is 512" \
-            -s "Maximum input fragment length is 512" \
-            -s "Maximum output fragment length is 512" \
-            -c "client hello, adding max_fragment_length extension" \
-            -s "found max fragment length extension" \
-            -s "server hello, max_fragment_length extension" \
-            -c "found max_fragment_length extension"
-
-requires_config_enabled MBEDTLS_SSL_MAX_FRAGMENT_LENGTH
-run_test    "Max fragment length: client 512, server 2048" \
-            "$P_SRV debug_level=3 max_frag_len=2048" \
-            "$P_CLI debug_level=3 max_frag_len=512" \
-            0 \
-            -c "Maximum input fragment length is 512" \
-            -c "Maximum output fragment length is 512" \
-            -s "Maximum input fragment length is 512" \
-            -s "Maximum output fragment length is 512" \
-            -c "client hello, adding max_fragment_length extension" \
-            -s "found max fragment length extension" \
-            -s "server hello, max_fragment_length extension" \
-            -c "found max_fragment_length extension"
-
-requires_config_enabled MBEDTLS_SSL_MAX_FRAGMENT_LENGTH
-run_test    "Max fragment length: client 512, server 4096" \
-            "$P_SRV debug_level=3 max_frag_len=4096" \
-            "$P_CLI debug_level=3 max_frag_len=512" \
-            0 \
-            -c "Maximum input fragment length is 512" \
-            -c "Maximum output fragment length is 512" \
-            -s "Maximum input fragment length is 512" \
-            -s "Maximum output fragment length is 512" \
-            -c "client hello, adding max_fragment_length extension" \
-            -s "found max fragment length extension" \
-            -s "server hello, max_fragment_length extension" \
-            -c "found max_fragment_length extension"
-
-requires_config_enabled MBEDTLS_SSL_MAX_FRAGMENT_LENGTH
-run_test    "Max fragment length: client 1024, server 512" \
-            "$P_SRV debug_level=3 max_frag_len=512" \
-            "$P_CLI debug_level=3 max_frag_len=1024" \
-            0 \
-            -c "Maximum input fragment length is 1024" \
-            -c "Maximum output fragment length is 1024" \
-            -s "Maximum input fragment length is 1024" \
-            -s "Maximum output fragment length is 512" \
-            -c "client hello, adding max_fragment_length extension" \
-            -s "found max fragment length extension" \
-            -s "server hello, max_fragment_length extension" \
-            -c "found max_fragment_length extension"
-
-requires_config_enabled MBEDTLS_SSL_MAX_FRAGMENT_LENGTH
-run_test    "Max fragment length: client 1024, server 2048" \
-            "$P_SRV debug_level=3 max_frag_len=2048" \
-            "$P_CLI debug_level=3 max_frag_len=1024" \
-            0 \
-            -c "Maximum input fragment length is 1024" \
-            -c "Maximum output fragment length is 1024" \
-            -s "Maximum input fragment length is 1024" \
-            -s "Maximum output fragment length is 1024" \
-            -c "client hello, adding max_fragment_length extension" \
-            -s "found max fragment length extension" \
-            -s "server hello, max_fragment_length extension" \
-            -c "found max_fragment_length extension"
-
-requires_config_enabled MBEDTLS_SSL_MAX_FRAGMENT_LENGTH
-run_test    "Max fragment length: client 1024, server 4096" \
-            "$P_SRV debug_level=3 max_frag_len=4096" \
-            "$P_CLI debug_level=3 max_frag_len=1024" \
-            0 \
-            -c "Maximum input fragment length is 1024" \
-            -c "Maximum output fragment length is 1024" \
-            -s "Maximum input fragment length is 1024" \
-            -s "Maximum output fragment length is 1024" \
-            -c "client hello, adding max_fragment_length extension" \
-            -s "found max fragment length extension" \
-            -s "server hello, max_fragment_length extension" \
-            -c "found max_fragment_length extension"
-
-requires_config_enabled MBEDTLS_SSL_MAX_FRAGMENT_LENGTH
-run_test    "Max fragment length: client 2048, server 512" \
-            "$P_SRV debug_level=3 max_frag_len=512" \
-            "$P_CLI debug_level=3 max_frag_len=2048" \
-            0 \
-            -c "Maximum input fragment length is 2048" \
-            -c "Maximum output fragment length is 2048" \
-            -s "Maximum input fragment length is 2048" \
-            -s "Maximum output fragment length is 512" \
-            -c "client hello, adding max_fragment_length extension" \
-            -s "found max fragment length extension" \
-            -s "server hello, max_fragment_length extension" \
-            -c "found max_fragment_length extension"
-
-requires_config_enabled MBEDTLS_SSL_MAX_FRAGMENT_LENGTH
-run_test    "Max fragment length: client 2048, server 1024" \
-            "$P_SRV debug_level=3 max_frag_len=1024" \
-            "$P_CLI debug_level=3 max_frag_len=2048" \
-            0 \
-            -c "Maximum input fragment length is 2048" \
-            -c "Maximum output fragment length is 2048" \
-            -s "Maximum input fragment length is 2048" \
-            -s "Maximum output fragment length is 1024" \
-            -c "client hello, adding max_fragment_length extension" \
-            -s "found max fragment length extension" \
-            -s "server hello, max_fragment_length extension" \
-            -c "found max_fragment_length extension"
-
-requires_config_enabled MBEDTLS_SSL_MAX_FRAGMENT_LENGTH
-run_test    "Max fragment length: client 2048, server 4096" \
-            "$P_SRV debug_level=3 max_frag_len=4096" \
-            "$P_CLI debug_level=3 max_frag_len=2048" \
-            0 \
-            -c "Maximum input fragment length is 2048" \
-            -c "Maximum output fragment length is 2048" \
-            -s "Maximum input fragment length is 2048" \
-            -s "Maximum output fragment length is 2048" \
-            -c "client hello, adding max_fragment_length extension" \
-            -s "found max fragment length extension" \
-            -s "server hello, max_fragment_length extension" \
-            -c "found max_fragment_length extension"
-
-requires_config_enabled MBEDTLS_SSL_MAX_FRAGMENT_LENGTH
-run_test    "Max fragment length: client 4096, server 512" \
-            "$P_SRV debug_level=3 max_frag_len=512" \
-            "$P_CLI debug_level=3 max_frag_len=4096" \
-            0 \
-            -c "Maximum input fragment length is 4096" \
-            -c "Maximum output fragment length is 4096" \
-            -s "Maximum input fragment length is 4096" \
-            -s "Maximum output fragment length is 512" \
-            -c "client hello, adding max_fragment_length extension" \
-            -s "found max fragment length extension" \
-            -s "server hello, max_fragment_length extension" \
-            -c "found max_fragment_length extension"
-
-requires_config_enabled MBEDTLS_SSL_MAX_FRAGMENT_LENGTH
-run_test    "Max fragment length: client 4096, server 1024" \
-            "$P_SRV debug_level=3 max_frag_len=1024" \
-            "$P_CLI debug_level=3 max_frag_len=4096" \
-            0 \
-            -c "Maximum input fragment length is 4096" \
-            -c "Maximum output fragment length is 4096" \
-            -s "Maximum input fragment length is 4096" \
-            -s "Maximum output fragment length is 1024" \
-            -c "client hello, adding max_fragment_length extension" \
-            -s "found max fragment length extension" \
-            -s "server hello, max_fragment_length extension" \
-            -c "found max_fragment_length extension"
-
-requires_config_enabled MBEDTLS_SSL_MAX_FRAGMENT_LENGTH
-run_test    "Max fragment length: client 4096, server 2048" \
-            "$P_SRV debug_level=3 max_frag_len=2048" \
-            "$P_CLI debug_level=3 max_frag_len=4096" \
-            0 \
-            -c "Maximum input fragment length is 4096" \
-            -c "Maximum output fragment length is 4096" \
-            -s "Maximum input fragment length is 4096" \
-            -s "Maximum output fragment length is 2048" \
+            -c "Maximum fragment length is 4096" \
+            -s "Maximum fragment length is 4096" \
             -c "client hello, adding max_fragment_length extension" \
             -s "found max fragment length extension" \
             -s "server hello, max_fragment_length extension" \
@@ -3193,10 +2607,8 @@ run_test    "Max fragment length: used by server" \
             "$P_SRV debug_level=3 max_frag_len=4096" \
             "$P_CLI debug_level=3" \
             0 \
-            -c "Maximum input fragment length is $MAX_CONTENT_LEN" \
-            -c "Maximum output fragment length is $MAX_CONTENT_LEN" \
-            -s "Maximum input fragment length is $MAX_CONTENT_LEN" \
-            -s "Maximum output fragment length is 4096" \
+            -c "Maximum fragment length is $MAX_CONTENT_LEN" \
+            -s "Maximum fragment length is 4096" \
             -C "client hello, adding max_fragment_length extension" \
             -S "found max fragment length extension" \
             -S "server hello, max_fragment_length extension" \
@@ -3208,8 +2620,7 @@ run_test    "Max fragment length: gnutls server" \
             "$G_SRV" \
             "$P_CLI debug_level=3 max_frag_len=4096" \
             0 \
-            -c "Maximum input fragment length is 4096" \
-            -c "Maximum output fragment length is 4096" \
+            -c "Maximum fragment length is 4096" \
             -c "client hello, adding max_fragment_length extension" \
             -c "found max_fragment_length extension"
 
@@ -3218,10 +2629,8 @@ run_test    "Max fragment length: client, message just fits" \
             "$P_SRV debug_level=3" \
             "$P_CLI debug_level=3 max_frag_len=2048 request_size=2048" \
             0 \
-            -c "Maximum input fragment length is 2048" \
-            -c "Maximum output fragment length is 2048" \
-            -s "Maximum input fragment length is 2048" \
-            -s "Maximum output fragment length is 2048" \
+            -c "Maximum fragment length is 2048" \
+            -s "Maximum fragment length is 2048" \
             -c "client hello, adding max_fragment_length extension" \
             -s "found max fragment length extension" \
             -s "server hello, max_fragment_length extension" \
@@ -3234,10 +2643,8 @@ run_test    "Max fragment length: client, larger message" \
             "$P_SRV debug_level=3" \
             "$P_CLI debug_level=3 max_frag_len=2048 request_size=2345" \
             0 \
-            -c "Maximum input fragment length is 2048" \
-            -c "Maximum output fragment length is 2048" \
-            -s "Maximum input fragment length is 2048" \
-            -s "Maximum output fragment length is 2048" \
+            -c "Maximum fragment length is 2048" \
+            -s "Maximum fragment length is 2048" \
             -c "client hello, adding max_fragment_length extension" \
             -s "found max fragment length extension" \
             -s "server hello, max_fragment_length extension" \
@@ -3251,10 +2658,8 @@ run_test    "Max fragment length: DTLS client, larger message" \
             "$P_SRV debug_level=3 dtls=1" \
             "$P_CLI debug_level=3 dtls=1 max_frag_len=2048 request_size=2345" \
             1 \
-            -c "Maximum input fragment length is 2048" \
-            -c "Maximum output fragment length is 2048" \
-            -s "Maximum input fragment length is 2048" \
-            -s "Maximum output fragment length is 2048" \
+            -c "Maximum fragment length is 2048" \
+            -s "Maximum fragment length is 2048" \
             -c "client hello, adding max_fragment_length extension" \
             -s "found max fragment length extension" \
             -s "server hello, max_fragment_length extension" \
@@ -3346,29 +2751,6 @@ run_test    "Renegotiation: double" \
             "$P_SRV debug_level=3 exchanges=2 renegotiation=1 auth_mode=optional renegotiate=1" \
             "$P_CLI debug_level=3 exchanges=2 renegotiation=1 renegotiate=1" \
             0 \
-            -c "client hello, adding renegotiation extension" \
-            -s "received TLS_EMPTY_RENEGOTIATION_INFO" \
-            -s "found renegotiation extension" \
-            -s "server hello, secure renegotiation extension" \
-            -c "found renegotiation extension" \
-            -c "=> renegotiate" \
-            -s "=> renegotiate" \
-            -s "write hello request"
-
-requires_config_enabled MBEDTLS_SSL_RENEGOTIATION
-requires_config_enabled MBEDTLS_SSL_MAX_FRAGMENT_LENGTH
-run_test    "Renegotiation with max fragment length: client 2048, server 512" \
-            "$P_SRV debug_level=3 exchanges=2 renegotiation=1 auth_mode=optional renegotiate=1 max_frag_len=512" \
-            "$P_CLI debug_level=3 exchanges=2 renegotiation=1 renegotiate=1 max_frag_len=2048 force_ciphersuite=TLS-ECDHE-ECDSA-WITH-AES-128-CCM-8" \
-            0 \
-            -c "Maximum input fragment length is 2048" \
-            -c "Maximum output fragment length is 2048" \
-            -s "Maximum input fragment length is 2048" \
-            -s "Maximum output fragment length is 512" \
-            -c "client hello, adding max_fragment_length extension" \
-            -s "found max fragment length extension" \
-            -s "server hello, max_fragment_length extension" \
-            -c "found max_fragment_length extension" \
             -c "client hello, adding renegotiation extension" \
             -s "received TLS_EMPTY_RENEGOTIATION_INFO" \
             -s "found renegotiation extension" \
@@ -4080,7 +3462,7 @@ run_test    "Authentication: client no cert, ssl3" \
 # default value (8)
 
 MAX_IM_CA='8'
-MAX_IM_CA_CONFIG=$( ../scripts/config.py get MBEDTLS_X509_MAX_INTERMEDIATE_CA)
+MAX_IM_CA_CONFIG=$( ../scripts/config.pl get MBEDTLS_X509_MAX_INTERMEDIATE_CA)
 
 if [ -n "$MAX_IM_CA_CONFIG" ] && [ "$MAX_IM_CA_CONFIG" -ne "$MAX_IM_CA" ]; then
     printf "The ${CONFIG_H} file contains a value for the configuration of\n"
@@ -4858,19 +4240,19 @@ run_test    "Event-driven I/O, DTLS: ticket + client auth" \
 
 run_test    "Event-driven I/O, DTLS: ticket + client auth + resume" \
             "$P_SRV dtls=1 event=1 tickets=1 auth_mode=required" \
-            "$P_CLI dtls=1 event=1 tickets=1 reconnect=1 skip_close_notify=1" \
+            "$P_CLI dtls=1 event=1 tickets=1 reconnect=1" \
             0 \
             -c "Read from server: .* bytes read"
 
 run_test    "Event-driven I/O, DTLS: ticket + resume" \
             "$P_SRV dtls=1 event=1 tickets=1 auth_mode=none" \
-            "$P_CLI dtls=1 event=1 tickets=1 reconnect=1 skip_close_notify=1" \
+            "$P_CLI dtls=1 event=1 tickets=1 reconnect=1" \
             0 \
             -c "Read from server: .* bytes read"
 
 run_test    "Event-driven I/O, DTLS: session-id resume" \
             "$P_SRV dtls=1 event=1 tickets=0 auth_mode=none" \
-            "$P_CLI dtls=1 event=1 tickets=0 reconnect=1 skip_close_notify=1" \
+            "$P_CLI dtls=1 event=1 tickets=0 reconnect=1" \
             0 \
             -c "Read from server: .* bytes read"
 
@@ -4882,7 +4264,7 @@ run_test    "Event-driven I/O, DTLS: session-id resume" \
 run_test    "Event-driven I/O, DTLS: session-id resume, UDP packing" \
             -p "$P_PXY pack=50" \
             "$P_SRV dtls=1 event=1 tickets=0 auth_mode=required" \
-            "$P_CLI dtls=1 event=1 tickets=0 reconnect=1 skip_close_notify=1" \
+            "$P_CLI dtls=1 event=1 tickets=0 reconnect=1" \
             0 \
             -c "Read from server: .* bytes read"
 
@@ -5400,8 +4782,8 @@ run_test    "PSK callback: opaque psk on client, no callback" \
             0 \
             -c "skip PMS generation for opaque PSK"\
             -S "skip PMS generation for opaque PSK"\
-            -C "session hash for extended master secret"\
-            -S "session hash for extended master secret"\
+            -C "using extended master secret"\
+            -S "using extended master secret"\
             -S "SSL - None of the common ciphersuites is usable" \
             -S "SSL - Unknown identity received" \
             -S "SSL - Verification of the message MAC failed"
@@ -5414,8 +4796,8 @@ run_test    "PSK callback: opaque psk on client, no callback, SHA-384" \
             0 \
             -c "skip PMS generation for opaque PSK"\
             -S "skip PMS generation for opaque PSK"\
-            -C "session hash for extended master secret"\
-            -S "session hash for extended master secret"\
+            -C "using extended master secret"\
+            -S "using extended master secret"\
             -S "SSL - None of the common ciphersuites is usable" \
             -S "SSL - Unknown identity received" \
             -S "SSL - Verification of the message MAC failed"
@@ -5428,8 +4810,8 @@ run_test    "PSK callback: opaque psk on client, no callback, EMS" \
             0 \
             -c "skip PMS generation for opaque PSK"\
             -S "skip PMS generation for opaque PSK"\
-            -c "session hash for extended master secret"\
-            -s "session hash for extended master secret"\
+            -c "using extended master secret"\
+            -s "using extended master secret"\
             -S "SSL - None of the common ciphersuites is usable" \
             -S "SSL - Unknown identity received" \
             -S "SSL - Verification of the message MAC failed"
@@ -5442,8 +4824,8 @@ run_test    "PSK callback: opaque psk on client, no callback, SHA-384, EMS" \
             0 \
             -c "skip PMS generation for opaque PSK"\
             -S "skip PMS generation for opaque PSK"\
-            -c "session hash for extended master secret"\
-            -s "session hash for extended master secret"\
+            -c "using extended master secret"\
+            -s "using extended master secret"\
             -S "SSL - None of the common ciphersuites is usable" \
             -S "SSL - Unknown identity received" \
             -S "SSL - Verification of the message MAC failed"
@@ -5456,8 +4838,8 @@ run_test    "PSK callback: raw psk on client, static opaque on server, no callba
             0 \
             -C "skip PMS generation for opaque PSK"\
             -s "skip PMS generation for opaque PSK"\
-            -C "session hash for extended master secret"\
-            -S "session hash for extended master secret"\
+            -C "using extended master secret"\
+            -S "using extended master secret"\
             -S "SSL - None of the common ciphersuites is usable" \
             -S "SSL - Unknown identity received" \
             -S "SSL - Verification of the message MAC failed"
@@ -5470,8 +4852,8 @@ run_test    "PSK callback: raw psk on client, static opaque on server, no callba
             0 \
             -C "skip PMS generation for opaque PSK"\
             -s "skip PMS generation for opaque PSK"\
-            -C "session hash for extended master secret"\
-            -S "session hash for extended master secret"\
+            -C "using extended master secret"\
+            -S "using extended master secret"\
             -S "SSL - None of the common ciphersuites is usable" \
             -S "SSL - Unknown identity received" \
             -S "SSL - Verification of the message MAC failed"
@@ -5483,8 +4865,8 @@ run_test    "PSK callback: raw psk on client, static opaque on server, no callba
             "$P_CLI debug_level=3 min_version=tls1_2 force_ciphersuite=TLS-PSK-WITH-AES-128-CBC-SHA \
             psk_identity=foo psk=abc123 extended_ms=1" \
             0 \
-            -c "session hash for extended master secret"\
-            -s "session hash for extended master secret"\
+            -c "using extended master secret"\
+            -s "using extended master secret"\
             -C "skip PMS generation for opaque PSK"\
             -s "skip PMS generation for opaque PSK"\
             -S "SSL - None of the common ciphersuites is usable" \
@@ -5498,8 +4880,8 @@ run_test    "PSK callback: raw psk on client, static opaque on server, no callba
             "$P_CLI debug_level=3 min_version=tls1_2 force_ciphersuite=TLS-PSK-WITH-AES-256-CBC-SHA384 \
             psk_identity=foo psk=abc123 extended_ms=1" \
             0 \
-            -c "session hash for extended master secret"\
-            -s "session hash for extended master secret"\
+            -c "using extended master secret"\
+            -s "using extended master secret"\
             -C "skip PMS generation for opaque PSK"\
             -s "skip PMS generation for opaque PSK"\
             -S "SSL - None of the common ciphersuites is usable" \
@@ -5514,8 +4896,8 @@ run_test    "PSK callback: raw psk on client, no static PSK on server, opaque PS
             0 \
             -C "skip PMS generation for opaque PSK"\
             -s "skip PMS generation for opaque PSK"\
-            -C "session hash for extended master secret"\
-            -S "session hash for extended master secret"\
+            -C "using extended master secret"\
+            -S "using extended master secret"\
             -S "SSL - None of the common ciphersuites is usable" \
             -S "SSL - Unknown identity received" \
             -S "SSL - Verification of the message MAC failed"
@@ -5528,8 +4910,8 @@ run_test    "PSK callback: raw psk on client, no static PSK on server, opaque PS
             0 \
             -C "skip PMS generation for opaque PSK"\
             -s "skip PMS generation for opaque PSK"\
-            -C "session hash for extended master secret"\
-            -S "session hash for extended master secret"\
+            -C "using extended master secret"\
+            -S "using extended master secret"\
             -S "SSL - None of the common ciphersuites is usable" \
             -S "SSL - Unknown identity received" \
             -S "SSL - Verification of the message MAC failed"
@@ -5541,8 +4923,8 @@ run_test    "PSK callback: raw psk on client, no static PSK on server, opaque PS
             "$P_CLI debug_level=3 min_version=tls1_2 force_ciphersuite=TLS-PSK-WITH-AES-128-CBC-SHA \
             psk_identity=abc psk=dead extended_ms=1" \
             0 \
-            -c "session hash for extended master secret"\
-            -s "session hash for extended master secret"\
+            -c "using extended master secret"\
+            -s "using extended master secret"\
             -C "skip PMS generation for opaque PSK"\
             -s "skip PMS generation for opaque PSK"\
             -S "SSL - None of the common ciphersuites is usable" \
@@ -5556,8 +4938,8 @@ run_test    "PSK callback: raw psk on client, no static PSK on server, opaque PS
             "$P_CLI debug_level=3 min_version=tls1_2 force_ciphersuite=TLS-PSK-WITH-AES-256-CBC-SHA384 \
             psk_identity=abc psk=dead extended_ms=1" \
             0 \
-            -c "session hash for extended master secret"\
-            -s "session hash for extended master secret"\
+            -c "using extended master secret"\
+            -s "using extended master secret"\
             -C "skip PMS generation for opaque PSK"\
             -s "skip PMS generation for opaque PSK"\
             -S "SSL - None of the common ciphersuites is usable" \
@@ -5572,8 +4954,8 @@ run_test    "PSK callback: raw psk on client, mismatching static raw PSK on serv
             0 \
             -C "skip PMS generation for opaque PSK"\
             -s "skip PMS generation for opaque PSK"\
-            -C "session hash for extended master secret"\
-            -S "session hash for extended master secret"\
+            -C "using extended master secret"\
+            -S "using extended master secret"\
             -S "SSL - None of the common ciphersuites is usable" \
             -S "SSL - Unknown identity received" \
             -S "SSL - Verification of the message MAC failed"
@@ -5586,8 +4968,8 @@ run_test    "PSK callback: raw psk on client, mismatching static opaque PSK on s
             0 \
             -C "skip PMS generation for opaque PSK"\
             -s "skip PMS generation for opaque PSK"\
-            -C "session hash for extended master secret"\
-            -S "session hash for extended master secret"\
+            -C "using extended master secret"\
+            -S "using extended master secret"\
             -S "SSL - None of the common ciphersuites is usable" \
             -S "SSL - Unknown identity received" \
             -S "SSL - Verification of the message MAC failed"
@@ -5599,8 +4981,8 @@ run_test    "PSK callback: raw psk on client, mismatching static opaque PSK on s
             psk_identity=def psk=beef" \
             0 \
             -C "skip PMS generation for opaque PSK"\
-            -C "session hash for extended master secret"\
-            -S "session hash for extended master secret"\
+            -C "using extended master secret"\
+            -S "using extended master secret"\
             -S "SSL - None of the common ciphersuites is usable" \
             -S "SSL - Unknown identity received" \
             -S "SSL - Verification of the message MAC failed"
@@ -5612,8 +4994,8 @@ run_test    "PSK callback: raw psk on client, id-matching but wrong raw PSK on s
             psk_identity=def psk=beef" \
             0 \
             -C "skip PMS generation for opaque PSK"\
-            -C "session hash for extended master secret"\
-            -S "session hash for extended master secret"\
+            -C "using extended master secret"\
+            -S "using extended master secret"\
             -S "SSL - None of the common ciphersuites is usable" \
             -S "SSL - Unknown identity received" \
             -S "SSL - Verification of the message MAC failed"
@@ -5815,8 +5197,15 @@ run_test    "Per-version suites: TLS 1.2" \
 # Test for ClientHello without extensions
 
 requires_gnutls
-run_test    "ClientHello without extensions" \
-            "$P_SRV debug_level=3" \
+run_test    "ClientHello without extensions, SHA-1 allowed" \
+            "$P_SRV debug_level=3 key_file=data_files/server2.key crt_file=data_files/server2.crt" \
+            "$G_CLI --priority=NORMAL:%NO_EXTENSIONS:%DISABLE_SAFE_RENEGOTIATION localhost" \
+            0 \
+            -s "dumping 'client hello extensions' (0 bytes)"
+
+requires_gnutls
+run_test    "ClientHello without extensions, SHA-1 forbidden in certificates on server" \
+            "$P_SRV debug_level=3 key_file=data_files/server2.key crt_file=data_files/server2.crt allow_sha1=0" \
             "$G_CLI --priority=NORMAL:%NO_EXTENSIONS:%DISABLE_SAFE_RENEGOTIATION localhost" \
             0 \
             -s "dumping 'client hello extensions' (0 bytes)"
@@ -7347,7 +6736,7 @@ run_test    "SSL async private: sign, error in resume then fall back to transpar
 
 requires_config_enabled MBEDTLS_SSL_ASYNC_PRIVATE
 requires_config_enabled MBEDTLS_SSL_RENEGOTIATION
-run_test    "SSL async private: renegotiation: client-initiated, sign" \
+run_test    "SSL async private: renegotiation: client-initiated; sign" \
             "$P_SRV \
              async_operations=s async_private_delay1=1 async_private_delay2=1 \
              exchanges=2 renegotiation=1" \
@@ -7358,7 +6747,7 @@ run_test    "SSL async private: renegotiation: client-initiated, sign" \
 
 requires_config_enabled MBEDTLS_SSL_ASYNC_PRIVATE
 requires_config_enabled MBEDTLS_SSL_RENEGOTIATION
-run_test    "SSL async private: renegotiation: server-initiated, sign" \
+run_test    "SSL async private: renegotiation: server-initiated; sign" \
             "$P_SRV \
              async_operations=s async_private_delay1=1 async_private_delay2=1 \
              exchanges=2 renegotiation=1 renegotiate=1" \
@@ -7369,7 +6758,7 @@ run_test    "SSL async private: renegotiation: server-initiated, sign" \
 
 requires_config_enabled MBEDTLS_SSL_ASYNC_PRIVATE
 requires_config_enabled MBEDTLS_SSL_RENEGOTIATION
-run_test    "SSL async private: renegotiation: client-initiated, decrypt" \
+run_test    "SSL async private: renegotiation: client-initiated; decrypt" \
             "$P_SRV \
              async_operations=d async_private_delay1=1 async_private_delay2=1 \
              exchanges=2 renegotiation=1" \
@@ -7381,7 +6770,7 @@ run_test    "SSL async private: renegotiation: client-initiated, decrypt" \
 
 requires_config_enabled MBEDTLS_SSL_ASYNC_PRIVATE
 requires_config_enabled MBEDTLS_SSL_RENEGOTIATION
-run_test    "SSL async private: renegotiation: server-initiated, decrypt" \
+run_test    "SSL async private: renegotiation: server-initiated; decrypt" \
             "$P_SRV \
              async_operations=d async_private_delay1=1 async_private_delay2=1 \
              exchanges=2 renegotiation=1 renegotiate=1" \
@@ -7503,8 +6892,8 @@ run_test    "DTLS cookie: enabled, nbio" \
 
 not_with_valgrind # spurious resend
 run_test    "DTLS client reconnect from same port: reference" \
-            "$P_SRV dtls=1 exchanges=2 read_timeout=20000 hs_timeout=10000-20000" \
-            "$P_CLI dtls=1 exchanges=2 debug_level=2 hs_timeout=10000-20000" \
+            "$P_SRV dtls=1 exchanges=2 read_timeout=1000" \
+            "$P_CLI dtls=1 exchanges=2 debug_level=2 hs_timeout=500-1000" \
             0 \
             -C "resend" \
             -S "The operation timed out" \
@@ -7512,8 +6901,8 @@ run_test    "DTLS client reconnect from same port: reference" \
 
 not_with_valgrind # spurious resend
 run_test    "DTLS client reconnect from same port: reconnect" \
-            "$P_SRV dtls=1 exchanges=2 read_timeout=20000 hs_timeout=10000-20000" \
-            "$P_CLI dtls=1 exchanges=2 debug_level=2 hs_timeout=10000-20000 reconnect_hard=1" \
+            "$P_SRV dtls=1 exchanges=2 read_timeout=1000" \
+            "$P_CLI dtls=1 exchanges=2 debug_level=2 hs_timeout=500-1000 reconnect_hard=1" \
             0 \
             -C "resend" \
             -S "The operation timed out" \
@@ -7540,14 +6929,6 @@ run_test    "DTLS client reconnect from same port: no cookies" \
             "$P_CLI dtls=1 exchanges=2 debug_level=2 hs_timeout=500-8000 reconnect_hard=1" \
             0 \
             -s "The operation timed out" \
-            -S "Client initiated reconnection from same port"
-
-run_test    "DTLS client reconnect from same port: attacker-injected" \
-            -p "$P_PXY inject_clihlo=1" \
-            "$P_SRV dtls=1 exchanges=2 debug_level=1" \
-            "$P_CLI dtls=1 exchanges=2" \
-            0 \
-            -s "possible client reconnect from the same port" \
             -S "Client initiated reconnection from same port"
 
 # Tests for various cases of client authentication with DTLS
@@ -7957,7 +7338,7 @@ requires_config_enabled MBEDTLS_ECDSA_C
 requires_config_enabled MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA
 requires_config_enabled MBEDTLS_AES_C
 requires_config_enabled MBEDTLS_GCM_C
-run_test    "DTLS fragmenting: proxy MTU: auto-reduction (not valgrind)" \
+run_test    "DTLS fragmenting: proxy MTU: auto-reduction" \
             -p "$P_PXY mtu=508" \
             "$P_SRV dtls=1 debug_level=2 auth_mode=required \
              crt_file=data_files/server7_int-ca.crt \
@@ -7981,7 +7362,7 @@ requires_config_enabled MBEDTLS_ECDSA_C
 requires_config_enabled MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA
 requires_config_enabled MBEDTLS_AES_C
 requires_config_enabled MBEDTLS_GCM_C
-run_test    "DTLS fragmenting: proxy MTU: auto-reduction (with valgrind)" \
+run_test    "DTLS fragmenting: proxy MTU: auto-reduction" \
             -p "$P_PXY mtu=508" \
             "$P_SRV dtls=1 debug_level=2 auth_mode=required \
              crt_file=data_files/server7_int-ca.crt \
@@ -8130,7 +7511,7 @@ run_test    "DTLS fragmenting: proxy MTU, resumed handshake" \
              key_file=data_files/server8.key \
              hs_timeout=10000-60000 \
              force_ciphersuite=TLS-ECDHE-ECDSA-WITH-AES-128-GCM-SHA256 \
-             mtu=1450 reconnect=1 skip_close_notify=1 reco_delay=1" \
+             mtu=1450 reconnect=1 reco_delay=1" \
             0 \
             -S "autoreduction" \
             -s "found fragmented DTLS handshake message" \
@@ -8619,8 +8000,8 @@ run_test    "DTLS fragmenting: 3d, openssl client, DTLS 1.0" \
 not_with_valgrind # spurious resend due to timeout
 run_test    "DTLS proxy: reference" \
             -p "$P_PXY" \
-            "$P_SRV dtls=1 debug_level=2 hs_timeout=10000-20000" \
-            "$P_CLI dtls=1 debug_level=2 hs_timeout=10000-20000" \
+            "$P_SRV dtls=1 debug_level=2" \
+            "$P_CLI dtls=1 debug_level=2" \
             0 \
             -C "replayed record" \
             -S "replayed record" \
@@ -8637,8 +8018,8 @@ run_test    "DTLS proxy: reference" \
 not_with_valgrind # spurious resend due to timeout
 run_test    "DTLS proxy: duplicate every packet" \
             -p "$P_PXY duplicate=1" \
-            "$P_SRV dtls=1 dgram_packing=0 debug_level=2 hs_timeout=10000-20000" \
-            "$P_CLI dtls=1 dgram_packing=0 debug_level=2 hs_timeout=10000-20000" \
+            "$P_SRV dtls=1 dgram_packing=0 debug_level=2" \
+            "$P_CLI dtls=1 dgram_packing=0 debug_level=2" \
             0 \
             -c "replayed record" \
             -s "replayed record" \
@@ -8891,11 +8272,11 @@ run_test    "DTLS reordering: Buffer encrypted Finished message" \
 #   without fragmentation or be reassembled within the bounds of
 #   MBEDTLS_SSL_DTLS_MAX_BUFFERING. Achieve this by testing with a PSK-based
 #   handshake, omitting CRTs.
-requires_config_value_at_least "MBEDTLS_SSL_DTLS_MAX_BUFFERING" 190
-requires_config_value_at_most "MBEDTLS_SSL_DTLS_MAX_BUFFERING" 230
+requires_config_value_at_least "MBEDTLS_SSL_DTLS_MAX_BUFFERING" 240
+requires_config_value_at_most "MBEDTLS_SSL_DTLS_MAX_BUFFERING" 280
 run_test    "DTLS reordering: Buffer encrypted Finished message, drop for fragmented NewSessionTicket" \
             -p "$P_PXY delay_srv=NewSessionTicket delay_srv=NewSessionTicket delay_ccs=1" \
-            "$P_SRV mtu=140 response_size=90 dgram_packing=0 psk=abc123 psk_identity=foo cookies=0 dtls=1 debug_level=2" \
+            "$P_SRV mtu=190 dgram_packing=0 psk=abc123 psk_identity=foo cookies=0 dtls=1 debug_level=2" \
             "$P_CLI dgram_packing=0 dtls=1 debug_level=2 force_ciphersuite=TLS-PSK-WITH-AES-128-CCM-8 psk=abc123 psk_identity=foo" \
             0 \
             -s "Buffer record from epoch 1" \
@@ -8979,7 +8360,7 @@ run_test    "DTLS proxy: 3d, min handshake, resumption" \
             "$P_SRV dtls=1 dgram_packing=0 hs_timeout=500-10000 tickets=0 auth_mode=none \
              psk=abc123 debug_level=3" \
             "$P_CLI dtls=1 dgram_packing=0 hs_timeout=500-10000 tickets=0 psk=abc123 \
-             debug_level=3 reconnect=1 skip_close_notify=1 read_timeout=1000 max_resend=10 \
+             debug_level=3 reconnect=1 read_timeout=1000 max_resend=10 \
              force_ciphersuite=TLS-PSK-WITH-AES-128-CCM-8" \
             0 \
             -s "a session has been resumed" \
@@ -8993,7 +8374,7 @@ run_test    "DTLS proxy: 3d, min handshake, resumption, nbio" \
             "$P_SRV dtls=1 dgram_packing=0 hs_timeout=500-10000 tickets=0 auth_mode=none \
              psk=abc123 debug_level=3 nbio=2" \
             "$P_CLI dtls=1 dgram_packing=0 hs_timeout=500-10000 tickets=0 psk=abc123 \
-             debug_level=3 reconnect=1 skip_close_notify=1 read_timeout=1000 max_resend=10 \
+             debug_level=3 reconnect=1 read_timeout=1000 max_resend=10 \
              force_ciphersuite=TLS-PSK-WITH-AES-128-CCM-8 nbio=2" \
             0 \
             -s "a session has been resumed" \
@@ -9142,12 +8523,6 @@ run_test    "export keys functionality" \
             -c "exported maclen is " \
             -c "exported keylen is " \
             -c "exported ivlen is "
-
-# Test heap memory usage after handshake
-requires_config_enabled MBEDTLS_MEMORY_DEBUG
-requires_config_enabled MBEDTLS_MEMORY_BUFFER_ALLOC_C
-requires_config_enabled MBEDTLS_SSL_MAX_FRAGMENT_LENGTH
-run_tests_memory_after_hanshake
 
 # Final report
 

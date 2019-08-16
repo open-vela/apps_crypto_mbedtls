@@ -13,7 +13,7 @@ if grep -i cmake Makefile >/dev/null; then
 fi
 
 cp include/mbedtls/config.h include/mbedtls/config.h.bak
-scripts/config.py full
+scripts/config.pl full
 make clean
 make_ret=
 CFLAGS=-fno-asynchronous-unwind-tables make lib \
@@ -30,9 +30,9 @@ if [ -n "$make_ret" ]; then
 fi
 
 if uname | grep -F Darwin >/dev/null; then
-    nm -gUj library/libmbed*.a 2>/dev/null | sed -n -e 's/^_//p' | grep -v -e ^FStar -e ^Hacl
+    nm -gUj library/libmbed*.a 2>/dev/null | sed -n -e 's/^_//p'
 elif uname | grep -F Linux >/dev/null; then
-    nm -og library/libmbed*.a | grep -v '^[^ ]*: *U \|^$\|^[^ ]*:$' | sed 's/^[^ ]* . //' | grep -v -e ^FStar -e ^Hacl
+    nm -og library/libmbed*.a | grep -v '^[^ ]*: *U \|^$\|^[^ ]*:$' | sed 's/^[^ ]* . //'
 fi | sort > exported-symbols
 make clean
 
