@@ -76,7 +76,7 @@ int main( void )
     mbedtls_printf("MBEDTLS_AES_C and/or MBEDTLS_SHA256_C "
                     "and/or MBEDTLS_FS_IO and/or MBEDTLS_MD_C "
                     "not defined.\n");
-    mbedtls_exit( 0 );
+    return( 0 );
 }
 #else
 
@@ -465,6 +465,6 @@ exit:
     mbedtls_aes_free( &aes_ctx );
     mbedtls_md_free( &sha_ctx );
 
-    mbedtls_exit( exit_code );
+    return( exit_code );
 }
 #endif /* MBEDTLS_AES_C && MBEDTLS_SHA256_C && MBEDTLS_FS_IO */

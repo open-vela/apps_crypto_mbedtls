@@ -61,7 +61,7 @@
 int main( void )
 {
     mbedtls_printf("MBEDTLS_BASE64_C and/or MBEDTLS_FS_IO not defined.\n");
-    mbedtls_exit( 0 );
+    return( 0 );
 }
 #else
 
@@ -290,6 +290,6 @@ exit:
     fflush( stdout ); getchar();
 #endif
 
-    mbedtls_exit( exit_code );
+    return( exit_code );
 }
 #endif /* MBEDTLS_BASE64_C && MBEDTLS_FS_IO */

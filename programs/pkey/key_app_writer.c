@@ -94,7 +94,7 @@
 int main( void )
 {
     mbedtls_printf( "MBEDTLS_PK_PARSE_C and/or MBEDTLS_PK_WRITE_C and/or MBEDTLS_FS_IO not defined.\n" );
-    mbedtls_exit( 0 );
+    return( 0 );
 }
 #else
 
@@ -436,6 +436,6 @@ exit:
     fflush( stdout ); getchar();
 #endif
 
-    mbedtls_exit( exit_code );
+    return( exit_code );
 }
 #endif /* MBEDTLS_PK_PARSE_C && MBEDTLS_PK_WRITE_C && MBEDTLS_FS_IO */
