@@ -5,12 +5,14 @@ LOCAL_LDFLAGS = -L../../library			\
 		-lmbedx509$(SHARED_SUFFIX)	\
 		-lmbedcrypto$(SHARED_SUFFIX)
 
-LOCAL_CFLAGS += $(patsubst -I../%,-I../../%,$(THIRDPARTY_INCLUDES))
+LOCAL_LDFLAGS += -L../../crypto/library
+LOCAL_CFLAGS += -I../../crypto/include
+CRYPTO := ../../crypto/library/
 
 ifndef SHARED
-DEP=../../library/libmbedcrypto.a ../../library/libmbedx509.a ../../library/libmbedtls.a
+DEP=$(CRYPTO)libmbedcrypto.a ../../library/libmbedx509.a ../../library/libmbedtls.a
 else
-DEP=../../library/libmbedcrypto.$(DLEXT) ../../library/libmbedx509.$(DLEXT) ../../library/libmbedtls.$(DLEXT)
+DEP=$(CRYPTO)libmbedcrypto.$(DLEXT) ../../library/libmbedx509.$(DLEXT) ../../library/libmbedtls.$(DLEXT)
 endif
 
 
@@ -66,6 +68,5 @@ clean:
 ifndef WINDOWS
 	rm -rf $(BINARIES) *.o
 else
-	if exist *.o del /Q /F *.o
-	if exist *.exe del /Q /F *.exe
+	del /Q /F *.o *.exe
 endif

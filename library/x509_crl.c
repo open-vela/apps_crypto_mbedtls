@@ -38,7 +38,6 @@
 #if defined(MBEDTLS_X509_CRL_PARSE_C)
 
 #include "mbedtls/x509_crl.h"
-#include "mbedtls/error.h"
 #include "mbedtls/oid.h"
 #include "mbedtls/platform_util.h"
 
@@ -75,7 +74,7 @@ static int x509_crl_get_version( unsigned char **p,
                              const unsigned char *end,
                              int *ver )
 {
-    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+    int ret;
 
     if( ( ret = mbedtls_asn1_get_int( p, end, ver ) ) != 0 )
     {
@@ -102,7 +101,7 @@ static int x509_get_crl_ext( unsigned char **p,
                              const unsigned char *end,
                              mbedtls_x509_buf *ext )
 {
-    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+    int ret;
 
     if( *p == end )
         return( 0 );
@@ -182,7 +181,7 @@ static int x509_get_crl_entry_ext( unsigned char **p,
                              const unsigned char *end,
                              mbedtls_x509_buf *ext )
 {
-    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+    int ret;
     size_t len = 0;
 
     /* OPTIONAL */
@@ -236,7 +235,7 @@ static int x509_get_entries( unsigned char **p,
                              const unsigned char *end,
                              mbedtls_x509_crl_entry *entry )
 {
-    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+    int ret;
     size_t entry_len;
     mbedtls_x509_crl_entry *cur_entry = entry;
 
@@ -301,7 +300,7 @@ static int x509_get_entries( unsigned char **p,
 int mbedtls_x509_crl_parse_der( mbedtls_x509_crl *chain,
                         const unsigned char *buf, size_t buflen )
 {
-    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+    int ret;
     size_t len;
     unsigned char *p = NULL, *end = NULL;
     mbedtls_x509_buf sig_params1, sig_params2, sig_oid2;
@@ -540,8 +539,8 @@ int mbedtls_x509_crl_parse_der( mbedtls_x509_crl *chain,
 int mbedtls_x509_crl_parse( mbedtls_x509_crl *chain, const unsigned char *buf, size_t buflen )
 {
 #if defined(MBEDTLS_PEM_PARSE_C)
-    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
-    size_t use_len = 0;
+    int ret;
+    size_t use_len;
     mbedtls_pem_context pem;
     int is_pem = 0;
 
@@ -604,7 +603,7 @@ int mbedtls_x509_crl_parse( mbedtls_x509_crl *chain, const unsigned char *buf, s
  */
 int mbedtls_x509_crl_parse_file( mbedtls_x509_crl *chain, const char *path )
 {
-    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+    int ret;
     size_t n;
     unsigned char *buf;
 
@@ -631,7 +630,7 @@ int mbedtls_x509_crl_parse_file( mbedtls_x509_crl *chain, const char *path )
 int mbedtls_x509_crl_info( char *buf, size_t size, const char *prefix,
                    const mbedtls_x509_crl *crl )
 {
-    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+    int ret;
     size_t n;
     char *p;
     const mbedtls_x509_crl_entry *entry;

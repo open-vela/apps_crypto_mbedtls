@@ -39,7 +39,6 @@
 #endif
 
 #include "mbedtls/debug.h"
-#include "mbedtls/error.h"
 
 #include <stdarg.h>
 #include <stdio.h>
@@ -86,7 +85,7 @@ void mbedtls_debug_print_msg( const mbedtls_ssl_context *ssl, int level,
 {
     va_list argp;
     char str[DEBUG_BUF_SIZE];
-    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+    int ret;
 
     if( NULL == ssl              ||
         NULL == ssl->conf        ||
@@ -132,7 +131,7 @@ void mbedtls_debug_print_ret( const mbedtls_ssl_context *ssl, int level,
         return;
 
     mbedtls_snprintf( str, sizeof( str ), "%s() returned %d (-0x%04x)\n",
-              text, ret, (unsigned int) -ret );
+              text, ret, -ret );
 
     debug_send_line( ssl, level, file, line, str );
 }
