@@ -101,10 +101,6 @@ OBJS_CRYPTO += version.o
 OBJS_CRYPTO += version_features.o
 endif
 
-include ../3rdparty/Makefile.inc
-LOCAL_CFLAGS+=$(THIRDPARTY_INCLUDES)
-OBJS_CRYPTO+=$(THIRDPARTY_CRYPTO_OBJECTS)
-
 .SILENT:
 
 .PHONY: all static shared clean
@@ -152,9 +148,8 @@ libmbedcrypto.dll: $(OBJS_CRYPTO)
 
 clean:
 ifndef WINDOWS
-	rm -f *.o libmbed* $(OBJS_CRYPTO)
+	rm -f *.o libmbed*
 else
 	if exist *.o del /Q /F *.o
 	if exist libmbed* del /Q /F libmbed*
-	if exist $(OBJS_CRYPTO) del /Q /F $(OBJS_CRYPTO)
 endif
