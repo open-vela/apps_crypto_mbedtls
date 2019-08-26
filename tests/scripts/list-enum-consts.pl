@@ -8,7 +8,7 @@ use open qw(:std utf8);
 
 -d 'include/mbedtls' or die "$0: must be run from root\n";
 
-@ARGV = grep { ! /compat-1\.3\.h/ } <include/mbedtls/*.h crypto/include/mbedtls/*.h>;
+@ARGV = grep { ! /compat-1\.3\.h/ } <include/mbedtls/*.h>;
 
 my @consts;
 my $state = 'out';
@@ -22,7 +22,7 @@ while (<>)
         $state = 'in';
     } elsif( $state eq 'in' and /}/ ) {
         $state = 'out';
-    } elsif( $state eq 'in' and not /^#/) {
+    } elsif( $state eq 'in' ) {
         s/=.*//; s!/\*.*!!; s/,.*//; s/\s+//g; chomp;
         push @consts, $_ if $_;
     }
