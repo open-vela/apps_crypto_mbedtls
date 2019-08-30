@@ -2611,13 +2611,15 @@ check_signature:
             continue;
         }
 
-        *r_parent = parent;
-        *r_signature_is_good = signature_is_good;
-
         break;
     }
 
-    if( parent == NULL )
+    if( parent != NULL )
+    {
+        *r_parent = parent;
+        *r_signature_is_good = signature_is_good;
+    }
+    else
     {
         *r_parent = fallback_parent;
         *r_signature_is_good = fallback_signature_is_good;
