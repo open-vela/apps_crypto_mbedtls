@@ -1,13 +1,6 @@
 mbed TLS ChangeLog (Sorted per branch, date)
 
-= mbed TLS 2.19.0 branch released xxxx-xx-xx
-
-Security
-   * When writing a private EC key, use a constant size for the private
-     value, as specified in RFC 5915. Previously, the value was written
-     as an ASN.1 INTEGER, which caused the size of the key to leak
-     about 1 bit of information on average and could cause the value to be
-     1 byte too large for the output buffer.
+= mbed TLS x.x.x branch released xxxx-xx-xx
 
 Features
    * Add new API functions mbedtls_ssl_session_save() and
@@ -125,6 +118,13 @@ Features
      changed its IP or port. The feature is enabled at compile-time by setting
      MBEDTLS_SSL_DTLS_CONNECTION_ID (disabled by default), and at run-time
      through the new APIs mbedtls_ssl_conf_cid() and mbedtls_ssl_set_cid().
+   * New implementation of X25519 (ECDH using Curve25519) from Project Everest
+     (https://project-everest.github.io/). It can be enabled at compile time
+     with MBEDTLS_ECDH_VARIANT_EVEREST_ENABLED. This implementation is formally
+     verified and significantly faster, but is only supported on x86 platforms
+     (32-bit and 64-bit) using GCC, Clang or Visual Studio. Contributed by
+     Christoph Wintersteiger from Microsoft Research.
+
 
 API Changes
    * Extend the MBEDTLS_SSL_EXPORT_KEYS to export the handshake randbytes,
@@ -293,6 +293,11 @@ API Changes
      that it is now optional with the MBEDTLS_CHECK_PARAMS flag which by default
      is off. That means that checks which were previously present by default
      will no longer be.
+   * The functions mbedtls_ecp_curve_list() and mbedtls_ecp_grp_id_list() now
+     list all curves for which at least one of ECDH or ECDSA is supported, not
+     just curves for which both are supported. Call mbedtls_ecdsa_can_do() or
+     mbedtls_ecdh_can_do() on each result to check whether each algorithm is
+     supported.
 
 New deprecations
    * Deprecate mbedtls_ctr_drbg_update and mbedtls_hmac_drbg_update
