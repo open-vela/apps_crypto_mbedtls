@@ -2,6 +2,13 @@ mbed TLS ChangeLog (Sorted per branch, date)
 
 = mbed TLS 2.19.0 branch released xxxx-xx-xx
 
+Security
+   * When writing a private EC key, use a constant size for the private
+     value, as specified in RFC 5915. Previously, the value was written
+     as an ASN.1 INTEGER, which caused the size of the key to leak
+     about 1 bit of information on average and could cause the value to be
+     1 byte too large for the output buffer.
+
 Features
    * Add new API functions mbedtls_ssl_session_save() and
      mbedtls_ssl_session_load() to allow serializing a session, for example to
