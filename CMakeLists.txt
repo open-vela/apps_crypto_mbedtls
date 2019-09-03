@@ -5,12 +5,17 @@ else()
     project("mbed TLS" C)
 endif()
 
-# Set the project root directory.
 set(MBEDTLS_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+
+option(USE_PKCS11_HELPER_LIBRARY "Build mbed TLS with the pkcs11-helper library." OFF)
+option(ENABLE_ZLIB_SUPPORT "Build mbed TLS with zlib library." OFF)
 
 option(ENABLE_PROGRAMS "Build mbed TLS programs." ON)
 
 option(UNSAFE_BUILD "Allow unsafe builds. These builds ARE NOT SECURE." OFF)
+
+# export the submodule flag so that crypto knows it's being built as a submodule
+set( USE_CRYPTO_SUBMODULE ON )
 
 string(REGEX MATCH "Clang" CMAKE_COMPILER_IS_CLANG "${CMAKE_C_COMPILER_ID}")
 string(REGEX MATCH "GNU" CMAKE_COMPILER_IS_GNU "${CMAKE_C_COMPILER_ID}")
@@ -176,17 +181,23 @@ else()
     set(LIB_INSTALL_DIR lib)
 endif()
 
-include_directories(include/)
-include_directories(library/)
+if(ENABLE_ZLIB_SUPPORT)
+    find_package(ZLIB)
 
-add_subdirectory(include)
+    if(ZLIB_FOUND)
+        include_directories(${ZLIB_INCLUDE_DIR})
+    endif(ZLIB_FOUND)
+endif(ENABLE_ZLIB_SUPPORT)
 
-add_subdirectory(3rdparty)
+add_subdirectory(crypto/3rdparty)
 include_directories(${thirdparty_inc})
 list(APPEND libs ${thirdparty_lib})
 add_definitions(${thirdparty_def})
 
 add_subdirectory(library)
+add_subdirectory(include)
+add_subdirectory(crypto/library)
+add_subdirectory(crypto/include)
 
 if(ENABLE_PROGRAMS)
     add_subdirectory(programs)
@@ -200,6 +211,7 @@ if(ENABLE_TESTING)
     enable_testing()
 
     add_subdirectory(tests)
+    add_subdirectory(crypto/tests)
 
     # additional convenience targets for Unix only
     if(UNIX)
@@ -207,6 +219,8 @@ if(ENABLE_TESTING)
         ADD_CUSTOM_TARGET(covtest
             COMMAND make test
             COMMAND programs/test/selftest
+            COMMAND tests/compat.sh
+            COMMAND tests/ssl-opt.sh
         )
 
         ADD_CUSTOM_TARGET(lcov
