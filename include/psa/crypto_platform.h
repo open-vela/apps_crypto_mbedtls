@@ -1,7 +1,7 @@
 /**
  * \file psa/crypto_platform.h
  *
- * \brief PSA cryptography module: Mbed TLS platform definitions
+ * \brief PSA cryptography module: Mbed TLS platfom definitions
  *
  * \note This file may not be included directly. Applications must
  * include psa/crypto.h.

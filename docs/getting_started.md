@@ -18,7 +18,7 @@ The Mbed Crypto library is distributed under the Apache License, version 2.0.
 #### Platform Security Architecture (PSA)
 
 Arm's Platform Security Architecture (PSA) is a holistic set of threat models,
-security analyses, hardware and firmware architecture specifications, and an open source firmware reference implementation. PSA provides a recipe, based on industry best practice, that enables you to design security into both hardware and firmware consistently. Part of the API provided by PSA is the cryptography interface, which provides access to a set of primitives.
+security analyses, hardware and firmware architecture specifications, and an open source firmware reference implementation. PSA provides a recipe, based on industry best practice, that allows security to be consistently designed in, at both a hardware and firmware level. Part of the API provided by PSA is the cryptography interface, which provides access to a set of primitives.
 
 ### Using Mbed Crypto
 
@@ -37,11 +37,11 @@ security analyses, hardware and firmware architecture specifications, and an ope
 
 ### Getting the Mbed Crypto library
 
-Mbed Crypto releases are available in the [public GitHub repository](https://github.com/ARMmbed/mbed-crypto).
+Mbed Crypto releases are available in the [public Github repository]( https://github.com/ARMmbed/mbed-crypto).
 
 ### Building the Mbed Crypto library
 
-**Prerequisites to building the library with the provided makefiles:**
+You need the following tools to build the library with the provided makefiles:
 * GNU Make.
 * A C toolchain (compiler, linker, archiver).
 * Python 2 or Python 3 (either works) to generate the test code.
@@ -49,7 +49,7 @@ Mbed Crypto releases are available in the [public GitHub repository](https://git
 
 If you have a C compiler such as GCC or Clang, just run `make` in the top-level directory to build the library, a set of unit tests and some sample programs.
 
-To select a different compiler, set the `CC` variable to the name or path of the compiler and linker (default: `cc`) and set `AR` to a compatible archiver (default: `ar`); for example:
+To select a different compiler, set the `CC` variable to name or path of the compiler and linker (default: `cc`) and set `AR` to a compatible archiver (default: `ar`), such as:
 ```
 make CC=arm-linux-gnueabi-gcc AR=arm-linux-gnueabi-ar
 ```
@@ -64,13 +64,13 @@ To use the Mbed Crypto APIs, call `psa_crypto_init()` before calling any other A
 ### Importing a key
 
 To use a key for cryptography operations in Mbed Crypto, you need to first
-import it. Importing the key creates a handle that refers to the key for use
+import it. Upon importing, you'll be given a handle to refer to the key for use
 with other function calls.
 
-**Prerequisites to importing keys:**
-* Initialize the library with a successful call to `psa_crypto_init()`.
+Prerequisites for importing keys:
+* Initialize the library with a successful call to `psa_crypto_init`.
 
-This example shows how to import a key:
+Importing a key:
 ```C
     psa_status_t status;
     psa_key_attributes_t attributes = PSA_KEY_ATTRIBUTES_INIT;
@@ -112,24 +112,23 @@ This example shows how to import a key:
 
 ### Signing a message using RSA
 
-Mbed Crypto supports encrypting, decrypting, signing and verifying messages using public key signature algorithms, such as RSA or ECDSA.
+Mbed Crypto provides support for encrypting, decrypting, signing and verifying messages using public key signature algorithms (such as RSA or ECDSA).
 
-**Prerequisites to performing asymmetric signature operations:**
-* Initialize the library with a successful call to `psa_crypto_init()`.
+Prerequisites for performing asymmetric signature operations:
+* Initialize the library with a successful call to `psa_crypto_init`.
 * Have a valid key with appropriate attributes set:
     * Usage flag `PSA_KEY_USAGE_SIGN` to allow signing.
     * Usage flag `PSA_KEY_USAGE_VERIFY` to allow signature verification.
-    * Algorithm set to the desired signature algorithm.
+    * Algorithm set to desired signature algorithm.
 
-This example shows how to sign a hash that has already been calculated:
+To sign a given `hash` using RSA:
+1. Call `psa_asymmetric_sign()` and get the output buffer that contains the
+   signature:
 ```C
     psa_status_t status;
     psa_key_attributes_t attributes = PSA_KEY_ATTRIBUTES_INIT;
     uint8_t key[] = RSA_KEY;
-    uint8_t hash[32] = {0x50, 0xd8, 0x58, 0xe0, 0x98, 0x5e, 0xcc, 0x7f,
-                    0x60, 0x41, 0x8a, 0xaf, 0x0c, 0xc5, 0xab, 0x58,
-                    0x7f, 0x42, 0xc2, 0x57, 0x0a, 0x88, 0x40, 0x95,
-                    0xa9, 0xe8, 0xcc, 0xac, 0xd0, 0xf6, 0x54, 0x5c};
+    uint8_t hash[] = "INPUT_FOR_SIGN";
     uint8_t signature[PSA_ASYMMETRIC_SIGNATURE_MAX_SIZE] = {0};
     size_t signature_length;
     psa_key_handle_t handle;
@@ -180,21 +179,21 @@ This example shows how to sign a hash that has already been calculated:
 
 ### Using symmetric ciphers
 
-Mbed Crypto supports encrypting and decrypting messages using various symmetric cipher algorithms (both block and stream ciphers).
+Mbed Crypto provides support for encrypting and decrypting messages using various symmetric cipher algorithms (both block and stream ciphers).
 
-**Prerequisites to working with the symmetric cipher API:**
-* Initialize the library with a successful call to `psa_crypto_init()`.
-* Have a handle to a symmetric key. This key's usage flags must include `PSA_KEY_USAGE_ENCRYPT` to allow encryption or `PSA_KEY_USAGE_DECRYPT` to allow decryption.
+Prerequisites to working with the symmetric cipher API:
+* Initialize the library with a successful call to `psa_crypto_init`.
+* Configure the key policy accordingly (`PSA_KEY_USAGE_ENCRYPT` to allow encryption or `PSA_KEY_USAGE_DECRYPT` to allow decryption).
+* Have a valid key in the key slot.
 
-**To encrypt a message with a symmetric cipher:**
+Encrypting a message with a symmetric cipher:
 1. Allocate an operation (`psa_cipher_operation_t`) structure to pass to the cipher functions.
-1. Initialize the operation structure to zero or to `PSA_CIPHER_OPERATION_INIT`.
-1. Call `psa_cipher_encrypt_setup()` to specify the algorithm and the key to be used.
-1. Call either `psa_cipher_generate_iv()` or `psa_cipher_set_iv()` to generate or set the initialization vector (IV). We recommend calling `psa_cipher_generate_iv()`, unless you require a specific IV value.
-1. Call `psa_cipher_update()` one or more times, passing the whole message or a fragment of the message on each call.
-1. Call `psa_cipher_finish()` to end the operation and output the encrypted message.
+1. Call `psa_cipher_encrypt_setup` to initialize the operation structure and  specify the algorithm and the key to be used.
+1. Call either `psa_cipher_generate_iv` or `psa_cipher_set_iv` to generate or set the initialization vector (IV). We recommended `psa_cipher_generate_iv`, unless you require a specific IV value.
+1. Call `psa_cipher_update` one or more times, passing either the whole or only a fragment of the message each time.
+1. Call `psa_cipher_finish` to end the operation and output the encrypted message.
 
-This example shows how to encrypt data using an AES (Advanced Encryption Standard) key in CBC (Cipher Block Chaining)) mode with no padding (assuming all prerequisites have been fulfilled):
+Encrypting data using an AES key in cipher block chain (CBC) mode with no padding (assuming all prerequisites have been fulfilled):
 ```c
     enum {
         block_size = PSA_BLOCK_CIPHER_BLOCK_SIZE(PSA_KEY_TYPE_AES),
@@ -268,14 +267,14 @@ This example shows how to encrypt data using an AES (Advanced Encryption Standar
     mbedtls_psa_crypto_free();
 ```
 
-**To decrypt a message with a symmetric cipher:**
+Decrypting a message with a symmetric cipher:
 1. Allocate an operation (`psa_cipher_operation_t`) structure to pass to the cipher functions.
-1. Call `psa_cipher_decrypt_setup()` to initialize the operation structure and to specify the algorithm and the key to be used.
-1. Call `psa_cipher_set_iv()` with the IV for the decryption.
-1. Call `psa_cipher_update()` one or more times, passing the whole message or a fragment of the message on each call.
-1. Call `psa_cipher_finish()` to end the operation and output the decrypted message.
+1. Call `psa_cipher_decrypt_setup` to initialize the operation structure and to specify the algorithm and the key to be used.
+1. Call `psa_cipher_set_iv` with the IV for the decryption.
+1. Call `psa_cipher_update` one or more times passing either the whole or only a fragment of the message each time.
+1. Call `psa_cipher_finish` to end the operation and output the decrypted message.
 
-This example shows how to decrypt encrypted data using an AES key in CBC mode with no padding
+Decrypting encrypted data using an AES key in CBC mode with no padding
 (assuming all prerequisites have been fulfilled):
 ```c
     enum {
@@ -351,36 +350,33 @@ This example shows how to decrypt encrypted data using an AES key in CBC mode wi
 
 #### Handling cipher operation contexts
 
-After you've initialized the operation structure with a successful call to `psa_cipher_encrypt_setup()` or `psa_cipher_decrypt_setup()`, you can terminate the operation at any time by calling `psa_cipher_abort()`.
+Once you've initialized the operation structure with a successful call to `psa_cipher_encrypt_setup` or `psa_cipher_decrypt_setup`, you can terminate the operation at any time by calling `psa_cipher_abort`.
 
-The call to `psa_cipher_abort()` frees any resources associated with the operation, except for the operation structure itself.
+The call to `psa_cipher_abort` frees any resources associated with the operation (except for the operation structure itself). An implicit call to `psa_cipher_abort` occurs when any of these conditions occur:
+* A call to `psa_cipher_generate_iv`, `psa_cipher_set_iv` or `psa_cipher_update` has failed (returning any status other than `PSA_SUCCESS`).
+* Either a successful or failed call to `psa_cipher_finish`.
 
-Mbed Crypto implicitly calls `psa_cipher_abort()` when:
-* A call to `psa_cipher_generate_iv()`, `psa_cipher_set_iv()` or `psa_cipher_update()` fails (returning any status other than `PSA_SUCCESS`).
-* A call to `psa_cipher_finish()` succeeds or fails.
+Once `psa_cipher_abort` has been called (either implicitly by the implementation or explicitly by the user), the operation structure is invalidated and may not be reused for the same operation. However, the operation structure may be reused for a different operation by calling either `psa_cipher_encrypt_setup` or `psa_cipher_decrypt_setup` again.
 
-After an implicit or explicit call to `psa_cipher_abort()`, the operation structure is invalidated; in other words, you cannot reuse the operation structure for the same operation. You can, however, reuse the operation structure for a different operation by calling either `psa_cipher_encrypt_setup()` or `psa_cipher_decrypt_setup()` again.
+For an operation that has been initialized successfully (by a successful call to `psa_cipher_encrypt_setup` or `psa_cipher_decrypt_setup`) it is imperative that at some time `psa_cipher_abort` is called.
 
-You must call `psa_cipher_abort()` at some point for any operation that is initialized successfully (by a successful call to `psa_cipher_encrypt_setup()` or `psa_cipher_decrypt_setup()`).
-
-Making multiple sequential calls to `psa_cipher_abort()` on an operation that is terminated (either implicitly or explicitly) is safe and has no effect.
+Multiple sequential calls to `psa_cipher_abort` on an operation that has already been terminated (either implicitly or explicitly) are safe and have no effect.
 
 ### Hashing a message
 
 Mbed Crypto lets you compute and verify hashes using various hashing
 algorithms.
 
-**Prerequisites to working with the hash APIs:**
-* Initialize the library with a successful call to `psa_crypto_init()`.
+Prerequisites to working with the hash APIs:
+* Initialize the library with a successful call to `psa_crypto_init`.
 
-**To calculate a hash:**
+To calculate a hash:
 1. Allocate an operation structure (`psa_hash_operation_t`) to pass to the hash functions.
-1. Initialize the operation structure to zero or to `PSA_HASH_OPERATION_INIT`.
-1. Call `psa_hash_setup()` to specify the hash algorithm.
-1. Call `psa_hash_update()` one or more times, passing the whole message or a fragment of the message on each call.
-1. Call `psa_hash_finish()` to calculate the hash, or `psa_hash_verify()` to compare the computed hash with an expected hash value.
+1. Call `psa_hash_setup` to initialize the operation structure and specify the hash algorithm.
+1. Call `psa_hash_update` one or more times, passing either the whole or only a fragment of the message each time.
+1. Call `psa_hash_finish` to calculate the hash, or `psa_hash_verify` to compare the computed hash with an expected hash value.
 
-This example shows how to calculate the `SHA-256` hash of a message:
+Calculate the `SHA-256` hash of a message:
 ```c
     psa_status_t status;
     psa_algorithm_t alg = PSA_ALG_SHA_256;
@@ -425,7 +421,7 @@ This example shows how to calculate the `SHA-256` hash of a message:
     mbedtls_psa_crypto_free();
 ```
 
-This example shows how to verify the `SHA-256` hash of a message:
+Verify the `SHA-256` hash of a message:
 ```c
     psa_status_t status;
     psa_algorithm_t alg = PSA_ALG_SHA_256;
@@ -477,29 +473,29 @@ The API provides the macro `PSA_HASH_SIZE`, which returns the expected hash leng
 
 #### Handling hash operation contexts
 
-After a successful call to `psa_hash_setup()` initializes the operation structure, you can terminate the operation at any time by calling `psa_hash_abort()`. The call to `psa_hash_abort()` frees any resources associated with the operation, except for the operation structure itself.
+Once the operation structure has been successfully initialized by a successful call to `psa_hash_setup`, it's possible to terminate the operation at any time by calling `psa_hash_abort`. The call to `psa_hash_abort` frees any resources associated with the operation (except for the operation structure itself).
 
-Mbed Crypto implicitly calls `psa_hash_abort()` when:
-1. A call to `psa_hash_update()` fails (returning any status other than `PSA_SUCCESS`).
-1. A call to `psa_hash_finish()` succeeds or fails.
-1. A call to `psa_hash_verify()` succeeds or fails.
+An implicit call to `psa_hash_abort` occurs when any of these conditions occur:
+1. A call to `psa_hash_update` has failed (returning any status other than `PSA_SUCCESS`).
+1. Either a successful or failed call to `psa_hash_finish`.
+1. Either a successful or failed call to `psa_hash_verify`.
 
-After an implicit or explicit call to `psa_hash_abort()`, the operation structure is invalidated; in other words, you cannot reuse the operation structure for the same operation. You can, however, reuse the operation structure for a different operation by calling `psa_hash_setup()` again.
+Once `psa_hash_abort` has been called (either implicitly by the implementation or explicitly by the user), the operation structure is invalidated and may not be reused for the same operation. However, the operation structure may be reused for a different operation by calling `psa_hash_setup` again.
 
-You must call `psa_hash_abort()` at some point for any operation that is initialized successfully (by a successful call to `psa_hash_setup()`) .
+For an operation that has been initialized successfully (by a successful call to `psa_hash_setup`) it is imperative that at some time `psa_hash_abort` is called.
 
-Making multiple sequential calls to `psa_hash_abort()` on an operation that has already been terminated (either implicitly or explicitly) is safe and has no effect.
+Multiple sequential calls to `psa_hash_abort` on an operation that has already been terminated (either implicitly or explicitly) is safe and has no effect.
 
 ### Generating a random value
 
-Mbed Crypto can generate random data.
+Mbed Crypto can generate random data. To generate a random key, use
+`psa_generate_key()` instead of `psa_generate_random()`
 
-**Prerequisites to generating random data:**
+Prerequisites to random generation:
 * Initialize the library with a successful call to `psa_crypto_init()`.
 
-<span class="notes">**Note:** To generate a random key, use `psa_generate_key()` instead of `psa_generate_random()`.</span>
-
-This example shows how to generate ten bytes of random data by calling `psa_generate_random()`:
+Generate a random, ten-byte piece of data:
+1. Generate random bytes by calling `psa_generate_random()`:
 ```C
     psa_status_t status;
     uint8_t random[10] = { 0 };
@@ -531,39 +527,36 @@ This example shows how to generate ten bytes of random data by calling `psa_gene
 Mbed Crypto provides a key derivation API that lets you derive new keys from
 existing ones. The key derivation API has functions to take inputs, including
 other keys and data, and functions to generate outputs, such as new keys or
-other data.
+other data. A key derivation context must first be initialized and set up,
+provided with a key and optionally other data, and then derived data can be
+read from it either to a buffer or directly sent to a key slot. Refer to the
+documentation for the particular algorithm (such as HKDF or the TLS1.2 PRF) for
+information on which inputs to pass when and when you can obtain which outputs.
 
-You must first initialize and set up a key derivation context,
-provided with a key and, optionally, other data. Then, use the key derivation context to either read derived data to a buffer or send derived data directly to a key slot.
-
-See the documentation for the particular algorithm (such as HKDF or the TLS1.2 PRF) for
-information about which inputs to pass when, and when you can obtain which outputs.
-
-**Prerequisites to working with the key derivation APIs:**
-* Initialize the library with a successful call to `psa_crypto_init()`.
+Prerequisites to working with the key derivation APIs:
+* Initialize the library with a successful call to `psa_crypto_init`.
 * Use a key with the appropriate attributes set:
     * Usage flags set for key derivation (`PSA_KEY_USAGE_DERIVE`)
     * Key type set to `PSA_KEY_TYPE_DERIVE`.
     * Algorithm set to a key derivation algorithm
-      (for example `PSA_ALG_HKDF(PSA_ALG_SHA_256)`).
+      (`PSA_ALG_HKDF(PSA_ALG_SHA_256)`).
 
-**To derive a new AES-CTR 128-bit encryption key into a given key slot using HKDF
-with a given key, salt and `info`:**
-
-1. Set up the key derivation context using the `psa_key_derivation_setup()`
+Deriving a new AES-CTR 128-bit encryption key into a given key slot using HKDF
+with a given key, salt and info:
+1. Set up the key derivation context using the `psa_key_derivation_setup`
 function, specifying the derivation algorithm `PSA_ALG_HKDF(PSA_ALG_SHA_256)`.
-1. Provide an optional salt with `psa_key_derivation_input_bytes()`.
-1. Provide `info` with `psa_key_derivation_input_bytes()`.
-1. Provide `secret` with `psa_key_derivation_input_key()`, referencing a key that
+1. Provide an optional salt with `psa_key_derivation_input_bytes`.
+1. Provide info with `psa_key_derivation_input_bytes`.
+1. Provide secret with `psa_key_derivation_input_key`, referencing a key that
    can be used for key derivation.
 1. Set the key attributes desired for the new derived key. We'll set
-   the `PSA_KEY_USAGE_ENCRYPT` usage flag and the `PSA_ALG_CTR` algorithm for this
+   `PSA_KEY_USAGE_ENCRYPT` parameter and the algorithm `PSA_ALG_CTR` for this
    example.
 1. Derive the key by calling `psa_key_derivation_output_key()`.
 1. Clean up the key derivation context.
 
-At this point, the derived key slot holds a new 128-bit AES-CTR encryption key
-derived from the key, salt and `info` provided:
+At this point the derived key slot holds a new 128-bit AES-CTR encryption key
+derived from the key, salt and info provided:
 ```C
     psa_status_t status;
     psa_key_attributes_t attributes = PSA_KEY_ATTRIBUTES_INIT;
@@ -666,13 +659,14 @@ derived from the key, salt and `info` provided:
 
 ### Authenticating and encrypting or decrypting a message
 
-Mbed Crypto provides a simple way to authenticate and encrypt with associated data (AEAD), supporting the `PSA_ALG_CCM` algorithm.
+Mbed Crypto provides a simple way for authenticate and encrypt with associated data (AEAD) supporting `PSA_ALG_CCM` algorithm.
 
-**Prerequisites to working with the AEAD cipher APIs:**
-* Initialize the library with a successful call to `psa_crypto_init()`.
-* The key attributes for the key used for derivation must have the `PSA_KEY_USAGE_ENCRYPT` or `PSA_KEY_USAGE_DECRYPT` usage flags.
+Prerequisites to working with the AEAD ciphers APIs:
+* Initialize the library with a successful call to `psa_crypto_init`.
+* The key attributes for the key used for derivation must have usage flags
+  `PSA_KEY_USAGE_ENCRYPT` or `PSA_KEY_USAGE_DECRYPT`.
 
-This example shows how to authenticate and encrypt a message:
+To authenticate and encrypt a message:
 ```C
     psa_status_t status;
     static const uint8_t key[] = {
@@ -743,7 +737,7 @@ This example shows how to authenticate and encrypt a message:
     mbedtls_psa_crypto_free();
 ```
 
-This example shows how to authenticate and decrypt a message:
+To authenticate and decrypt a message:
 
 ```C
     psa_status_t status;
@@ -822,15 +816,18 @@ This example shows how to authenticate and decrypt a message:
 
 Mbed Crypto provides a simple way to generate a key or key pair.
 
-**Prerequisites to using key generation and export APIs:**
-* Initialize the library with a successful call to `psa_crypto_init()`.
+Prerequisites to using key generation and export APIs:
+* Initialize the library with a successful call to `psa_crypto_init`.
 
-**To generate an ECDSA key:**
+Generate an ECDSA key:
 1. Set the desired key attributes for key generation by calling
    `psa_set_key_algorithm()` with the chosen ECDSA algorithm (such as
-   `PSA_ALG_DETERMINISTIC_ECDSA(PSA_ALG_SHA_256)`). You only want to export the public key, not the key pair (or private key); therefore, do not set `PSA_KEY_USAGE_EXPORT`.
+   `PSA_ALG_DETERMINISTIC_ECDSA(PSA_ALG_SHA_256)`). We don't set
+   `PSA_KEY_USAGE_EXPORT` as we only want to export the public key, not the key
+   pair (or private key).
 1. Generate a key by calling `psa_generate_key()`.
-1. Export the generated public key by calling `psa_export_public_key()`:
+1. Export the generated public key by calling `psa_export_public_key()`
+:
 ```C
     enum {
         key_bits = 256,
@@ -880,6 +877,8 @@ Mbed Crypto provides a simple way to generate a key or key pair.
     mbedtls_psa_crypto_free();
 ```
 
-### More about the Mbed Crypto API
+### More about the Mbed Crypto library
 
-For more information about the PSA Crypto API, please see the [PSA Cryptography API Specification](https://armmbed.github.io/mbed-crypto/html/index.html).
+More information on [Mbed Crypto](https://github.com/ARMmbed/mbed-crypto/).
+
+More information on [PSA Crypto](https://github.com/ARMmbed/mbed-crypto/blob/development/docs/PSA_Crypto_API_Overview.pdf).
