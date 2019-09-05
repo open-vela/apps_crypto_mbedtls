@@ -2426,8 +2426,7 @@ static int mpi_miller_rabin( const mbedtls_mpi *X, size_t rounds,
             }
 
             if (count++ > 30) {
-                ret = MBEDTLS_ERR_MPI_NOT_ACCEPTABLE;
-                goto cleanup;
+                return MBEDTLS_ERR_MPI_NOT_ACCEPTABLE;
             }
 
         } while ( mbedtls_mpi_cmp_mpi( &A, &W ) >= 0 ||
