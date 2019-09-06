@@ -906,7 +906,6 @@ component_test_check_params_functionality () {
     scripts/config.pl full # includes CHECK_PARAMS
     # Make MBEDTLS_PARAM_FAILED call mbedtls_param_failed().
     scripts/config.pl unset MBEDTLS_CHECK_PARAMS_ASSERT
-    scripts/config.pl unset MBEDTLS_MEMORY_BUFFER_ALLOC_C
     # Only build and run tests. Do not build sample programs, because
     # they don't have a mbedtls_param_failed() function.
     make CC=gcc CFLAGS='-Werror -O1' lib test
@@ -1128,7 +1127,6 @@ component_test_m32_o0 () {
     # Build once with -O0, to compile out the i386 specific inline assembly
     msg "build: i386, make, gcc -O0 (ASan build)" # ~ 30s
     scripts/config.pl full
-    scripts/config.pl unset MBEDTLS_MEMORY_BUFFER_ALLOC_C # slow and makes ASan mostly ineffective
     make CC=gcc CFLAGS='-O0 -Werror -Wall -Wextra -m32 -fsanitize=address' LDFLAGS='-m32 -fsanitize=address'
 
     msg "test: i386, make, gcc -O0 (ASan build)"
