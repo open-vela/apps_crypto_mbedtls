@@ -441,6 +441,16 @@
  *            dependencies on them, and considering stronger message digests
  *            and ciphers instead.
  *
+ * \warning   If both MBEDTLS_ECDSA_SIGN_ALT and MBEDTLS_ECDSA_DETERMINISTIC are
+ *            enabled, then the deterministic ECDH signature functions pass the
+ *            the static HMAC-DRBG as RNG to mbedtls_ecdsa_sign(). Therefore
+ *            alternative implementations should use the RNG only for generating
+ *            the ephemeral key and nothing else. If this is not possible, then
+ *            MBEDTLS_ECDSA_DETERMINISTIC should be disabled and an alternative
+ *            implementation should be provided for mbedtls_ecdsa_sign_det_ext()
+ *            (and for mbedtls_ecdsa_sign_det() too if backward compatibility is
+ *            desirable).
+ *
  */
 //#define MBEDTLS_MD2_PROCESS_ALT
 //#define MBEDTLS_MD4_PROCESS_ALT
@@ -1005,6 +1015,16 @@
  * Uncomment to enable the smaller implementation of SHA256.
  */
 //#define MBEDTLS_SHA256_SMALLER
+
+/**
+ * \def MBEDTLS_SHA512_SMALLER
+ *
+ * Enable an implementation of SHA-512 that has lower ROM footprint but also
+ * lower performance.
+ *
+ * Uncomment to enable the smaller implementation of SHA512.
+ */
+//#define MBEDTLS_SHA512_SMALLER
 
 /**
  * \def MBEDTLS_THREADING_ALT
@@ -1747,6 +1767,22 @@
 #define MBEDTLS_PSA_CRYPTO_C
 
 /**
+ * \def MBEDTLS_PSA_CRYPTO_SE_C
+ *
+ * Enable secure element support in the Platform Security Architecture
+ * cryptography API.
+ *
+ * \warning This feature is not yet suitable for production. It is provided
+ *          for API evaluation and testing purposes only.
+ *
+ * Module:  library/psa_crypto_se.c
+ *
+ * Requires: MBEDTLS_PSA_CRYPTO_C, MBEDTLS_PSA_CRYPTO_STORAGE_C
+ *
+ */
+//#define MBEDTLS_PSA_CRYPTO_SE_C
+
+/**
  * \def MBEDTLS_PSA_CRYPTO_STORAGE_C
  *
  * Enable the Platform Security Architecture persistent key storage.
@@ -2061,6 +2097,15 @@
  * supplied at compile time.
  */
 //#define MBEDTLS_PLATFORM_GMTIME_R_ALT
+
+/**
+ * Enable the verified implementations of ECDH primitives from Project Everest
+ * (currently only Curve25519). This feature changes the layout of ECDH
+ * contexts and therefore is a compatibility break for applications that access
+ * fields of a mbedtls_ecdh_context structure directly. See also
+ * MBEDTLS_ECDH_LEGACY_CONTEXT in include/mbedtls/ecdh.h.
+ */
+//#define MBEDTLS_ECDH_VARIANT_EVEREST_ENABLED
 
 /* \} name SECTION: Customisation configuration options */
 

@@ -618,6 +618,27 @@ component_test_new_ecdh_context () {
     make test
 }
 
+component_test_everest () {
+    msg "build: Everest ECDH context (ASan build)" # ~ 6 min
+    scripts/config.pl unset MBEDTLS_ECDH_LEGACY_CONTEXT
+    scripts/config.pl set MBEDTLS_ECDH_VARIANT_EVEREST_ENABLED
+    CC=clang cmake -D CMAKE_BUILD_TYPE:String=Asan .
+    make
+
+    msg "test: Everest ECDH context - main suites (inc. selftests) (ASan build)" # ~ 50s
+    make test
+}
+
+component_test_psa_collect_statuses () {
+  msg "build+test: psa_collect_statuses" # ~30s
+  scripts/config.pl full
+  scripts/config.pl unset MBEDTLS_MEMORY_BUFFER_ALLOC_C # slow and irrelevant
+  record_status tests/scripts/psa_collect_statuses.py
+  # Check that psa_crypto_init() succeeded at least once
+  record_status grep -q '^0:psa_crypto_init:' tests/statuses.log
+  rm -f tests/statuses.log
+}
+
 component_test_full_cmake_clang () {
     msg "build: cmake, full config, clang" # ~ 50s
     scripts/config.pl full
@@ -690,7 +711,7 @@ component_test_no_use_psa_crypto_full_cmake_asan() {
     # full minus MBEDTLS_USE_PSA_CRYPTO: run the same set of tests as basic-build-test.sh
     msg "build: cmake, full config + MBEDTLS_USE_PSA_CRYPTO, ASan"
     scripts/config.pl full
-    scripts/config.pl unset MBEDTLS_MEMORY_BACKTRACE # too slow for tests
+    scripts/config.pl unset MBEDTLS_MEMORY_BUFFER_ALLOC_C
     scripts/config.pl set MBEDTLS_ECP_RESTARTABLE  # not using PSA, so enable restartable ECC
     scripts/config.pl set MBEDTLS_PSA_CRYPTO_C
     scripts/config.pl unset MBEDTLS_USE_PSA_CRYPTO
@@ -756,6 +777,7 @@ component_test_no_platform () {
     scripts/config.pl unset MBEDTLS_ENTROPY_NV_SEED
     scripts/config.pl unset MBEDTLS_MEMORY_BUFFER_ALLOC_C
     scripts/config.pl unset MBEDTLS_FS_IO
+    scripts/config.pl unset MBEDTLS_PSA_CRYPTO_SE_C
     scripts/config.pl unset MBEDTLS_PSA_CRYPTO_STORAGE_C
     scripts/config.pl unset MBEDTLS_PSA_ITS_FILE_C
     # Note, _DEFAULT_SOURCE needs to be defined for platforms using glibc version >2.19,
@@ -828,9 +850,47 @@ component_test_aes_fewer_tables_and_rom_tables () {
     make test
 }
 
+component_test_se_default () {
+    msg "build: default config + MBEDTLS_PSA_CRYPTO_SE_C"
+    scripts/config.pl set MBEDTLS_PSA_CRYPTO_SE_C
+    make CC=clang CFLAGS='-Werror -Wall -Wextra -Wno-unused-function -Os -fsanitize=address' LDFLAGS='-fsanitize=address'
+
+    msg "test: default config + MBEDTLS_PSA_CRYPTO_SE_C"
+    make test
+}
+
+component_test_se_full () {
+    msg "build: full config + MBEDTLS_PSA_CRYPTO_SE_C"
+    scripts/config.pl set MBEDTLS_PSA_CRYPTO_SE_C
+    make CC=gcc CFLAGS='-Werror -Wall -Wextra -O2 -fsanitize=address' LDFLAGS='-fsanitize=address'
+
+    msg "test: full config + MBEDTLS_PSA_CRYPTO_SE_C"
+    make test
+}
+
 component_test_make_shared () {
     msg "build/test: make shared" # ~ 40s
     make SHARED=1 all check -j1
+    ldd programs/util/strerror | grep libmbedcrypto
+}
+
+component_test_cmake_shared () {
+    msg "build/test: cmake shared" # ~ 2min
+    cmake -DUSE_SHARED_MBEDTLS_LIBRARY=On .
+    make
+    ldd programs/util/strerror | grep libmbedcrypto
+    make test
+}
+
+component_build_mbedtls_config_file () {
+    msg "build: make with MBEDTLS_CONFIG_FILE" # ~40s
+    # Use the full config so as to catch a maximum of places where
+    # the check of MBEDTLS_CONFIG_FILE might be missing.
+    scripts/config.pl full
+    sed 's!"check_config.h"!"mbedtls/check_config.h"!' <"$CONFIG_H" >full_config.h
+    echo '#error "MBEDTLS_CONFIG_FILE is not working"' >"$CONFIG_H"
+    make CFLAGS="-I '$PWD' -DMBEDTLS_CONFIG_FILE='\"full_config.h\"'"
+    rm -f full_config.h
 }
 
 component_test_m32_o0 () {
@@ -862,6 +922,19 @@ component_test_m32_o1 () {
     make test
 }
 support_test_m32_o1 () {
+    support_test_m32_o0 "$@"
+}
+
+component_test_m32_everest () {
+    msg "build: i386, Everest ECDH context (ASan build)" # ~ 6 min
+    scripts/config.pl unset MBEDTLS_ECDH_LEGACY_CONTEXT
+    scripts/config.pl set MBEDTLS_ECDH_VARIANT_EVEREST_ENABLED
+    make CC=gcc CFLAGS='-O2 -Werror -Wall -Wextra -m32 -fsanitize=address'
+
+    msg "test: i386, Everest ECDH context - main suites (inc. selftests) (ASan build)" # ~ 50s
+    make test
+}
+support_test_m32_everest () {
     support_test_m32_o0 "$@"
 }
 
@@ -938,6 +1011,17 @@ component_build_arm_none_eabi_gcc () {
     msg "build: arm-none-eabi-gcc, make" # ~ 10s
     scripts/config.pl baremetal
     make CC=arm-none-eabi-gcc AR=arm-none-eabi-ar LD=arm-none-eabi-ld CFLAGS='-Werror -Wall -Wextra' lib
+}
+
+component_build_arm_none_eabi_gcc_arm5vte () {
+    msg "build: arm-none-eabi-gcc -march=arm5vte, make" # ~ 10s
+    scripts/config.pl baremetal
+    # Build for a target platform that's close to what Debian uses
+    # for its "armel" distribution (https://wiki.debian.org/ArmEabiPort).
+    # See https://github.com/ARMmbed/mbedtls/pull/2169 and comments.
+    # It would be better to build with arm-linux-gnueabi-gcc but
+    # we don't have that on our CI at this time.
+    make CC=arm-none-eabi-gcc AR=arm-none-eabi-ar CFLAGS='-Werror -Wall -Wextra -march=armv5te -O1' LDFLAGS='-march=armv5te' SHELL='sh -x' lib
 }
 
 component_build_arm_none_eabi_gcc_no_udbl_division () {
