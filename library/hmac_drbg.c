@@ -149,32 +149,20 @@ int mbedtls_hmac_drbg_seed_buf( mbedtls_hmac_drbg_context *ctx,
 }
 
 /*
- * Internal function used both for seeding and reseeding the DRBG.
- * Comments starting with arabic numbers refer to section 10.1.2.4
- * of SP800-90A, while roman numbers refer to section 9.2.
+ * HMAC_DRBG reseeding: 10.1.2.4 (arabic) + 9.2 (Roman)
  */
-static int hmac_drbg_reseed_core( mbedtls_hmac_drbg_context *ctx,
-                                  const unsigned char *additional, size_t len,
-                                  int use_nonce )
+int mbedtls_hmac_drbg_reseed( mbedtls_hmac_drbg_context *ctx,
+                      const unsigned char *additional, size_t len )
 {
     unsigned char seed[MBEDTLS_HMAC_DRBG_MAX_SEED_INPUT];
-    size_t seedlen = 0;
+    size_t seedlen;
     int ret;
 
+    /* III. Check input length */
+    if( len > MBEDTLS_HMAC_DRBG_MAX_INPUT ||
+        ctx->entropy_len + len > MBEDTLS_HMAC_DRBG_MAX_SEED_INPUT )
     {
-        size_t total_entropy_len;
-
-        if( use_nonce == 0 )
-            total_entropy_len = ctx->entropy_len;
-        else
-            total_entropy_len = ctx->entropy_len * 3 / 2;
-
-        /* III. Check input length */
-        if( len > MBEDTLS_HMAC_DRBG_MAX_INPUT ||
-            total_entropy_len + len > MBEDTLS_HMAC_DRBG_MAX_SEED_INPUT )
-        {
-            return( MBEDTLS_ERR_HMAC_DRBG_INPUT_TOO_BIG );
-        }
+        return( MBEDTLS_ERR_HMAC_DRBG_INPUT_TOO_BIG );
     }
 
     memset( seed, 0, MBEDTLS_HMAC_DRBG_MAX_SEED_INPUT );
@@ -182,32 +170,9 @@ static int hmac_drbg_reseed_core( mbedtls_hmac_drbg_context *ctx,
     /* IV. Gather entropy_len bytes of entropy for the seed */
     if( ( ret = ctx->f_entropy( ctx->p_entropy,
                                 seed, ctx->entropy_len ) ) != 0 )
-    {
         return( MBEDTLS_ERR_HMAC_DRBG_ENTROPY_SOURCE_FAILED );
-    }
-    seedlen += ctx->entropy_len;
 
-    /* For initial seeding, allow adding of nonce generated
-     * from the entropy source. See Sect 8.6.7 in SP800-90A. */
-    if( use_nonce )
-    {
-        /* Note: We don't merge the two calls to f_entropy() in order
-         *       to avoid requesting too much entropy from f_entropy()
-         *       at once. Specifically, if the underlying digest is not
-         *       SHA-1, 3 / 2 * entropy_len is at least 36 Bytes, which
-         *       is larger than the maximum of 32 Bytes that our own
-         *       entropy source implementation can emit in a single
-         *       call in configurations disabling SHA-512. */
-        if( ( ret = ctx->f_entropy( ctx->p_entropy,
-                                    seed + seedlen,
-                                    ctx->entropy_len / 2 ) ) != 0 )
-        {
-            return( MBEDTLS_ERR_HMAC_DRBG_ENTROPY_SOURCE_FAILED );
-        }
-
-        seedlen += ctx->entropy_len / 2;
-    }
-
+    seedlen = ctx->entropy_len;
 
     /* 1. Concatenate entropy and additional data if any */
     if( additional != NULL && len != 0 )
@@ -230,19 +195,7 @@ exit:
 }
 
 /*
- * HMAC_DRBG reseeding: 10.1.2.4 + 9.2
- */
-int mbedtls_hmac_drbg_reseed( mbedtls_hmac_drbg_context *ctx,
-                      const unsigned char *additional, size_t len )
-{
-    return( hmac_drbg_reseed_core( ctx, additional, len, 0 ) );
-}
-
-/*
  * HMAC_DRBG initialisation (10.1.2.3 + 9.1)
- *
- * The nonce is not passed as a separate parameter but extracted
- * from the entropy source as suggested in 8.6.7.
  */
 int mbedtls_hmac_drbg_seed( mbedtls_hmac_drbg_context *ctx,
                     const mbedtls_md_info_t * md_info,
@@ -252,7 +205,7 @@ int mbedtls_hmac_drbg_seed( mbedtls_hmac_drbg_context *ctx,
                     size_t len )
 {
     int ret;
-    size_t md_size;
+    size_t entropy_len, md_size;
 
     if( ( ret = mbedtls_md_setup( &ctx->md_ctx, md_info, 1 ) ) != 0 )
         return( ret );
@@ -280,15 +233,20 @@ int mbedtls_hmac_drbg_seed( mbedtls_hmac_drbg_context *ctx,
      *
      * (This also matches the sizes used in the NIST test vectors.)
      */
-    ctx->entropy_len = md_size <= 20 ? 16 : /* 160-bits hash -> 128 bits */
-                       md_size <= 28 ? 24 : /* 224-bits hash -> 192 bits */
-                       32;  /* better (256+) -> 256 bits */
+    entropy_len = md_size <= 20 ? 16 : /* 160-bits hash -> 128 bits */
+                  md_size <= 28 ? 24 : /* 224-bits hash -> 192 bits */
+                                  32;  /* better (256+) -> 256 bits */
 
-    if( ( ret = hmac_drbg_reseed_core( ctx, custom, len,
-                                       1 /* add nonce */ ) ) != 0 )
-    {
+    /*
+     * For initialisation, use more entropy to emulate a nonce
+     * (Again, matches test vectors.)
+     */
+    ctx->entropy_len = entropy_len * 3 / 2;
+
+    if( ( ret = mbedtls_hmac_drbg_reseed( ctx, custom, len ) ) != 0 )
         return( ret );
-    }
+
+    ctx->entropy_len = entropy_len;
 
     return( 0 );
 }
