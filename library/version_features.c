@@ -408,9 +408,6 @@ static const char * const features[] = {
 #if defined(MBEDTLS_SHA256_SMALLER)
     "MBEDTLS_SHA256_SMALLER",
 #endif /* MBEDTLS_SHA256_SMALLER */
-#if defined(MBEDTLS_SHA512_SMALLER)
-    "MBEDTLS_SHA512_SMALLER",
-#endif /* MBEDTLS_SHA512_SMALLER */
 #if defined(MBEDTLS_THREADING_ALT)
     "MBEDTLS_THREADING_ALT",
 #endif /* MBEDTLS_THREADING_ALT */
@@ -561,9 +558,6 @@ static const char * const features[] = {
 #if defined(MBEDTLS_PSA_CRYPTO_C)
     "MBEDTLS_PSA_CRYPTO_C",
 #endif /* MBEDTLS_PSA_CRYPTO_C */
-#if defined(MBEDTLS_PSA_CRYPTO_SE_C)
-    "MBEDTLS_PSA_CRYPTO_SE_C",
-#endif /* MBEDTLS_PSA_CRYPTO_SE_C */
 #if defined(MBEDTLS_PSA_CRYPTO_STORAGE_C)
     "MBEDTLS_PSA_CRYPTO_STORAGE_C",
 #endif /* MBEDTLS_PSA_CRYPTO_STORAGE_C */
