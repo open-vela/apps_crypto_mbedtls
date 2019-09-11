@@ -374,8 +374,7 @@ int execute_tests( int args, const char ** argv )
     while ( 1 )
     {
         ret = 0;
-        test_info.result = TEST_RESULT_SUCCESS;
-        test_info.step = (unsigned long)( -1 );
+        test_info.failed = 0;
         data_len = 0;
 
         data = receive_data( &data_len );
@@ -433,7 +432,7 @@ int execute_tests( int args, const char ** argv )
         if ( ret )
             send_failure( ret );
         else
-            send_status( test_info.result );
+            send_status( test_info.failed );
     }
     return( 0 );
 }
