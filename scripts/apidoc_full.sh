@@ -19,7 +19,7 @@ fi
 CONFIG_BAK=${CONFIG_H}.bak
 cp -p $CONFIG_H $CONFIG_BAK
 
-scripts/config.py realfull
+scripts/config.pl realfull
 make apidoc
 
 mv $CONFIG_BAK $CONFIG_H
