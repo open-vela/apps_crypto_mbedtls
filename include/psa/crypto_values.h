@@ -284,7 +284,7 @@
  */
 #define PSA_KEY_TYPE_NONE                       ((psa_key_type_t)0x00000000)
 
-/** Vendor-defined key type flag.
+/** Vendor-defined flag
  *
  * Key types defined by this standard will never have the
  * #PSA_KEY_TYPE_VENDOR_FLAG bit set. Vendors who define additional key types
@@ -301,10 +301,7 @@
 
 #define PSA_KEY_TYPE_CATEGORY_FLAG_PAIR         ((psa_key_type_t)0x10000000)
 
-/** Whether a key type is vendor-defined.
- *
- * See also #PSA_KEY_TYPE_VENDOR_FLAG.
- */
+/** Whether a key type is vendor-defined. */
 #define PSA_KEY_TYPE_IS_VENDOR_DEFINED(type) \
     (((type) & PSA_KEY_TYPE_VENDOR_FLAG) != 0)
 
@@ -564,15 +561,7 @@
         (type) == PSA_KEY_TYPE_ARC4 ? 1 :            \
         0)
 
-/** Vendor-defined algorithm flag.
- *
- * Algorithms defined by this standard will never have the #PSA_ALG_VENDOR_FLAG
- * bit set. Vendors who define additional algorithms must use an encoding with
- * the #PSA_ALG_VENDOR_FLAG bit set and should respect the bitwise structure
- * used by standard encodings whenever practical.
- */
 #define PSA_ALG_VENDOR_FLAG                     ((psa_algorithm_t)0x80000000)
-
 #define PSA_ALG_CATEGORY_MASK                   ((psa_algorithm_t)0x7f000000)
 #define PSA_ALG_CATEGORY_HASH                   ((psa_algorithm_t)0x01000000)
 #define PSA_ALG_CATEGORY_MAC                    ((psa_algorithm_t)0x02000000)
@@ -583,10 +572,6 @@
 #define PSA_ALG_CATEGORY_KEY_DERIVATION         ((psa_algorithm_t)0x20000000)
 #define PSA_ALG_CATEGORY_KEY_AGREEMENT          ((psa_algorithm_t)0x30000000)
 
-/** Whether an algorithm is vendor-defined.
- *
- * See also #PSA_ALG_VENDOR_FLAG.
- */
 #define PSA_ALG_IS_VENDOR_DEFINED(alg)                                  \
     (((alg) & PSA_ALG_VENDOR_FLAG) != 0)
 
@@ -1618,43 +1603,31 @@
 
 /** A secret input for key derivation.
  *
- * This should be a key of type #PSA_KEY_TYPE_DERIVE
- * (passed to psa_key_derivation_input_key())
- * or the shared secret resulting from a key agreement
- * (obtained via psa_key_derivation_key_agreement()).
- *
- * The secret can also be a direct input (passed to
- * key_derivation_input_bytes()). In this case, the derivation operation
- * may not be used to derive keys: the operation will only allow
- * psa_key_derivation_output_bytes(), not psa_key_derivation_output_key().
+ * This must be a key of type #PSA_KEY_TYPE_DERIVE.
  */
 #define PSA_KEY_DERIVATION_INPUT_SECRET     ((psa_key_derivation_step_t)0x0101)
 
 /** A label for key derivation.
  *
- * This should be a direct input.
- * It can also be a key of type #PSA_KEY_TYPE_RAW_DATA.
+ * This must be a direct input.
  */
 #define PSA_KEY_DERIVATION_INPUT_LABEL      ((psa_key_derivation_step_t)0x0201)
 
 /** A salt for key derivation.
  *
- * This should be a direct input.
- * It can also be a key of type #PSA_KEY_TYPE_RAW_DATA.
+ * This must be a direct input.
  */
 #define PSA_KEY_DERIVATION_INPUT_SALT       ((psa_key_derivation_step_t)0x0202)
 
 /** An information string for key derivation.
  *
- * This should be a direct input.
- * It can also be a key of type #PSA_KEY_TYPE_RAW_DATA.
+ * This must be a direct input.
  */
 #define PSA_KEY_DERIVATION_INPUT_INFO       ((psa_key_derivation_step_t)0x0203)
 
 /** A seed for key derivation.
  *
- * This should be a direct input.
- * It can also be a key of type #PSA_KEY_TYPE_RAW_DATA.
+ * This must be a direct input.
  */
 #define PSA_KEY_DERIVATION_INPUT_SEED       ((psa_key_derivation_step_t)0x0204)
 
