@@ -65,24 +65,10 @@ typedef int32_t psa_status_t;
  */
 typedef uint32_t psa_key_type_t;
 
-/** The type of PSA elliptic curve identifiers.
- *
- * The encoding of curve identifiers is aligned with the
- * TLS Supported Groups Registry (formerly known as the
- * TLS EC Named Curve Registry)
- * https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-8
- * The values are defined by RFC 8422 and RFC 7027.
- */
+/** The type of PSA elliptic curve identifiers. */
 typedef uint16_t psa_ecc_curve_t;
 
-/** The type of PSA Diffie-Hellman group identifiers.
- *
- * The encoding of group identifiers is aligned with the
- * TLS Supported Groups Registry (formerly known as the
- * TLS EC Named Curve Registry)
- * https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-8
- * The values are defined by RFC 7919.
- */
+/** The type of PSA Diffie-Hellman group identifiers. */
 typedef uint16_t psa_dh_group_t;
 
 /** \brief Encoding of a cryptographic algorithm.
@@ -220,11 +206,12 @@ typedef uint32_t psa_key_usage_t;
  * values:
  *
  * - lifetime: #PSA_KEY_LIFETIME_VOLATILE.
- * - key identifier: unspecified.
- * - type: \c 0.
- * - key size: \c 0.
- * - usage flags: \c 0.
- * - algorithm: \c 0.
+ * - key identifier: 0 (which is not a valid key identifier).
+ * - type: \c 0 (meaning that the type is unspecified).
+ * - key size: \c 0 (meaning that the size is unspecified).
+ * - usage flags: \c 0 (which allows no usage except exporting a public key).
+ * - algorithm: \c 0 (which allows no cryptographic usage, but allows
+ *   exporting).
  *
  * A typical sequence to create a key is as follows:
  * -# Create and initialize an attribute structure.

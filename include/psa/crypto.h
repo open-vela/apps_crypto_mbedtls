@@ -226,7 +226,14 @@ static psa_key_usage_t psa_get_key_usage_flags(
 /** Declare the permitted algorithm policy for a key.
  *
  * The permitted algorithm policy of a key encodes which algorithm or
- * algorithms are permitted to be used with this key.
+ * algorithms are permitted to be used with this key. The following
+ * algorithm policies are supported:
+ * - 0 does not allow any cryptographic operation with the key. The key
+ *   may be used for non-cryptographic actions such as exporting (if
+ *   permitted by the usage flags).
+ * - An algorithm value permits this particular algorithm.
+ * - An algorithm wildcard built from #PSA_ALG_ANY_HASH allows the specified
+ *   signature scheme with any hash algorithm.
  *
  * This function overwrites any algorithm policy
  * previously set in \p attributes.
@@ -266,6 +273,8 @@ static psa_algorithm_t psa_get_key_algorithm(
  *
  * \param[out] attributes       The attribute structure to write to.
  * \param type                  The key type to write.
+ *                              If this is 0, the key type in \p attributes
+ *                              becomes unspecified.
  */
 static void psa_set_key_type(psa_key_attributes_t *attributes,
                              psa_key_type_t type);
@@ -281,6 +290,9 @@ static void psa_set_key_type(psa_key_attributes_t *attributes,
  *
  * \param[out] attributes       The attribute structure to write to.
  * \param bits                  The key size in bits.
+ *                              If this is 0, the key size in \p attributes
+ *                              becomes unspecified. Keys of size 0 are
+ *                              not supported.
  */
 static void psa_set_key_bits(psa_key_attributes_t *attributes,
                              size_t bits);
@@ -591,6 +603,13 @@ psa_status_t psa_destroy_key(psa_key_handle_t handle);
  * and to the documentation of psa_export_key() for the format for
  * other key types.
  *
+ * The key data determines the key size. The attributes may optionally
+ * specify a key size; in this case it must match the size determined
+ * from the key data. A key size of 0 in \p attributes indicates that
+ * the key size is solely determined by the key data.
+ *
+ * Implementations must reject an attempt to import a key of size 0.
+ *
  * This specification supports a single format for each key type.
  * Implementations may support other formats as long as the standard
  * format is supported. Implementations that support other formats
@@ -598,7 +617,6 @@ psa_status_t psa_destroy_key(psa_key_handle_t handle);
  * minimize the risk that an invalid input is accidentally interpreted
  * according to a different format.
  *
-
  * \param[in] attributes    The attributes for the new key.
  *                          The key size is always determined from the
  *                          \p data buffer.
@@ -641,8 +659,6 @@ psa_status_t psa_destroy_key(psa_key_handle_t handle);
  * \retval #PSA_ERROR_STORAGE_FAILURE
  * \retval #PSA_ERROR_HARDWARE_FAILURE
  * \retval #PSA_ERROR_CORRUPTION_DETECTED
- * \retval #PSA_ERROR_BAD_STATE
- *         \p operation is either not initialized or is in use
  * \retval #PSA_ERROR_BAD_STATE
  *         The library has not been previously initialized by psa_crypto_init().
  *         It is implementation-dependent whether a failure to initialize
@@ -948,7 +964,7 @@ static psa_hash_operation_t psa_hash_operation_init(void);
  * -# Allocate an operation object which will be passed to all the functions
  *    listed here.
  * -# Initialize the operation object with one of the methods described in the
- *    documentation for #psa_hash_operation_t, e.g. PSA_HASH_OPERATION_INIT.
+ *    documentation for #psa_hash_operation_t, e.g. #PSA_HASH_OPERATION_INIT.
  * -# Call psa_hash_setup() to specify the algorithm.
  * -# Call psa_hash_update() zero, one or more times, passing a fragment
  *    of the message each time. The hash that is calculated is the hash
@@ -956,14 +972,16 @@ static psa_hash_operation_t psa_hash_operation_init(void);
  * -# To calculate the hash, call psa_hash_finish().
  *    To compare the hash with an expected value, call psa_hash_verify().
  *
- * The application may call psa_hash_abort() at any time after the operation
+ * If an error occurs at any step after a call to psa_hash_setup(), the
+ * operation will need to be reset by a call to psa_hash_abort(). The
+ * application may call psa_hash_abort() at any time after the operation
  * has been initialized.
  *
  * After a successful call to psa_hash_setup(), the application must
  * eventually terminate the operation. The following events terminate an
  * operation:
- * - A failed call to psa_hash_update().
- * - A call to psa_hash_finish(), psa_hash_verify() or psa_hash_abort().
+ * - A successful call to psa_hash_finish() or psa_hash_verify().
+ * - A call to psa_hash_abort().
  *
  * \param[in,out] operation The operation object to set up. It must have
  *                          been initialized as per the documentation for
@@ -978,14 +996,11 @@ static psa_hash_operation_t psa_hash_operation_init(void);
  * \retval #PSA_ERROR_INVALID_ARGUMENT
  *         \p alg is not a hash algorithm.
  * \retval #PSA_ERROR_BAD_STATE
- *         The operation state is not valid (already set up and not
- *         subsequently completed).
+ *         The operation state is not valid (it must be inactive).
  * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
  * \retval #PSA_ERROR_COMMUNICATION_FAILURE
  * \retval #PSA_ERROR_HARDWARE_FAILURE
  * \retval #PSA_ERROR_CORRUPTION_DETECTED
- * \retval #PSA_ERROR_BAD_STATE
- *         \p operation is either not initialized or is in use
  * \retval #PSA_ERROR_BAD_STATE
  *         The library has not been previously initialized by psa_crypto_init().
  *         It is implementation-dependent whether a failure to initialize
@@ -998,7 +1013,8 @@ psa_status_t psa_hash_setup(psa_hash_operation_t *operation,
  *
  * The application must call psa_hash_setup() before calling this function.
  *
- * If this function returns an error status, the operation becomes inactive.
+ * If this function returns an error status, the operation enters an error
+ * state and must be aborted by calling psa_hash_abort().
  *
  * \param[in,out] operation Active hash operation.
  * \param[in] input         Buffer containing the message fragment to hash.
@@ -1007,13 +1023,11 @@ psa_status_t psa_hash_setup(psa_hash_operation_t *operation,
  * \retval #PSA_SUCCESS
  *         Success.
  * \retval #PSA_ERROR_BAD_STATE
- *         The operation state is not valid (not set up, or already completed).
+ *         The operation state is not valid (it muct be active).
  * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
  * \retval #PSA_ERROR_COMMUNICATION_FAILURE
  * \retval #PSA_ERROR_HARDWARE_FAILURE
  * \retval #PSA_ERROR_CORRUPTION_DETECTED
- * \retval #PSA_ERROR_BAD_STATE
- *         The operation state is not valid.
  * \retval #PSA_ERROR_BAD_STATE
  *         The library has not been previously initialized by psa_crypto_init().
  *         It is implementation-dependent whether a failure to initialize
@@ -1029,7 +1043,9 @@ psa_status_t psa_hash_update(psa_hash_operation_t *operation,
  * This function calculates the hash of the message formed by concatenating
  * the inputs passed to preceding calls to psa_hash_update().
  *
- * When this function returns, the operation becomes inactive.
+ * When this function returns successfuly, the operation becomes inactive.
+ * If this function returns an error status, the operation enters an error
+ * state and must be aborted by calling psa_hash_abort().
  *
  * \warning Applications should not call this function if they expect
  *          a specific value for the hash. Call psa_hash_verify() instead.
@@ -1050,7 +1066,7 @@ psa_status_t psa_hash_update(psa_hash_operation_t *operation,
  * \retval #PSA_SUCCESS
  *         Success.
  * \retval #PSA_ERROR_BAD_STATE
- *         The operation state is not valid (not set up, or already completed).
+ *         The operation state is not valid (it must be active).
  * \retval #PSA_ERROR_BUFFER_TOO_SMALL
  *         The size of the \p hash buffer is too small. You can determine a
  *         sufficient buffer size by calling #PSA_HASH_SIZE(\c alg)
@@ -1059,8 +1075,6 @@ psa_status_t psa_hash_update(psa_hash_operation_t *operation,
  * \retval #PSA_ERROR_COMMUNICATION_FAILURE
  * \retval #PSA_ERROR_HARDWARE_FAILURE
  * \retval #PSA_ERROR_CORRUPTION_DETECTED
- * \retval #PSA_ERROR_BAD_STATE
- *         The operation state is not valid.
  * \retval #PSA_ERROR_BAD_STATE
  *         The library has not been previously initialized by psa_crypto_init().
  *         It is implementation-dependent whether a failure to initialize
@@ -1080,7 +1094,9 @@ psa_status_t psa_hash_finish(psa_hash_operation_t *operation,
  * compares the calculated hash with the expected hash passed as a
  * parameter to this function.
  *
- * When this function returns, the operation becomes inactive.
+ * When this function returns successfuly, the operation becomes inactive.
+ * If this function returns an error status, the operation enters an error
+ * state and must be aborted by calling psa_hash_abort().
  *
  * \note Implementations shall make the best effort to ensure that the
  * comparison between the actual hash and the expected hash is performed
@@ -1096,13 +1112,11 @@ psa_status_t psa_hash_finish(psa_hash_operation_t *operation,
  *         The hash of the message was calculated successfully, but it
  *         differs from the expected hash.
  * \retval #PSA_ERROR_BAD_STATE
- *         The operation state is not valid (not set up, or already completed).
+ *         The operation state is not valid (it must be active).
  * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
  * \retval #PSA_ERROR_COMMUNICATION_FAILURE
  * \retval #PSA_ERROR_HARDWARE_FAILURE
  * \retval #PSA_ERROR_CORRUPTION_DETECTED
- * \retval #PSA_ERROR_BAD_STATE
- *         The operation state is not valid.
  * \retval #PSA_ERROR_BAD_STATE
  *         The library has not been previously initialized by psa_crypto_init().
  *         It is implementation-dependent whether a failure to initialize
@@ -1120,11 +1134,7 @@ psa_status_t psa_hash_verify(psa_hash_operation_t *operation,
  * psa_hash_setup() again.
  *
  * You may call this function any time after the operation object has
- * been initialized by any of the following methods:
- * - A call to psa_hash_setup(), whether it succeeds or not.
- * - Initializing the \c struct to all-bits-zero.
- * - Initializing the \c struct to logical zeros, e.g.
- *   `psa_hash_operation_t operation = {0}`.
+ * been initialized by one of the methods described in #psa_hash_operation_t.
  *
  * In particular, calling psa_hash_abort() after the operation has been
  * terminated by a call to psa_hash_abort(), psa_hash_finish() or
@@ -1133,13 +1143,9 @@ psa_status_t psa_hash_verify(psa_hash_operation_t *operation,
  * \param[in,out] operation     Initialized hash operation.
  *
  * \retval #PSA_SUCCESS
- * \retval #PSA_ERROR_BAD_STATE
- *         \p operation is not an active hash operation.
  * \retval #PSA_ERROR_COMMUNICATION_FAILURE
  * \retval #PSA_ERROR_HARDWARE_FAILURE
  * \retval #PSA_ERROR_CORRUPTION_DETECTED
- * \retval #PSA_ERROR_BAD_STATE
- *         The operation state is not valid.
  * \retval #PSA_ERROR_BAD_STATE
  *         The library has not been previously initialized by psa_crypto_init().
  *         It is implementation-dependent whether a failure to initialize
@@ -1164,17 +1170,13 @@ psa_status_t psa_hash_abort(psa_hash_operation_t *operation);
  *
  * \retval #PSA_SUCCESS
  * \retval #PSA_ERROR_BAD_STATE
- *         \p source_operation is not an active hash operation.
+ *         The \p source_operation state is not valid (it must be active).
  * \retval #PSA_ERROR_BAD_STATE
- *         \p target_operation is active.
+ *         The \p target_operation state is not valid (it must be inactive).
  * \retval #PSA_ERROR_COMMUNICATION_FAILURE
  * \retval #PSA_ERROR_HARDWARE_FAILURE
  * \retval #PSA_ERROR_CORRUPTION_DETECTED
  * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
- * \retval #PSA_ERROR_BAD_STATE
- *         The operation state is either not initialized or has already been setup.
- * \retval #PSA_ERROR_BAD_STATE
- *         The operation state is either not initialized or has already been setup.
  * \retval #PSA_ERROR_BAD_STATE
  *         The library has not been previously initialized by psa_crypto_init().
  *         It is implementation-dependent whether a failure to initialize
@@ -1334,7 +1336,7 @@ static psa_mac_operation_t psa_mac_operation_init(void);
  * -# Allocate an operation object which will be passed to all the functions
  *    listed here.
  * -# Initialize the operation object with one of the methods described in the
- *    documentation for #psa_mac_operation_t, e.g. PSA_MAC_OPERATION_INIT.
+ *    documentation for #psa_mac_operation_t, e.g. #PSA_MAC_OPERATION_INIT.
  * -# Call psa_mac_sign_setup() to specify the algorithm and key.
  * -# Call psa_mac_update() zero, one or more times, passing a fragment
  *    of the message each time. The MAC that is calculated is the MAC
@@ -1342,13 +1344,15 @@ static psa_mac_operation_t psa_mac_operation_init(void);
  * -# At the end of the message, call psa_mac_sign_finish() to finish
  *    calculating the MAC value and retrieve it.
  *
- * The application may call psa_mac_abort() at any time after the operation
+ * If an error occurs at any step after a call to psa_mac_sign_setup(), the
+ * operation will need to be reset by a call to psa_mac_abort(). The
+ * application may call psa_mac_abort() at any time after the operation
  * has been initialized.
  *
  * After a successful call to psa_mac_sign_setup(), the application must
  * eventually terminate the operation through one of the following methods:
- * - A failed call to psa_mac_update().
- * - A call to psa_mac_sign_finish() or psa_mac_abort().
+ * - A successful call to psa_mac_sign_finish().
+ * - A call to psa_mac_abort().
  *
  * \param[in,out] operation The operation object to set up. It must have
  *                          been initialized as per the documentation for
@@ -1374,8 +1378,7 @@ static psa_mac_operation_t psa_mac_operation_init(void);
  * \retval #PSA_ERROR_STORAGE_FAILURE
  *         The key could not be retrieved from storage.
  * \retval #PSA_ERROR_BAD_STATE
- *         The operation state is not valid (already set up and not
- *         subsequently completed).
+ *         The operation state is not valid (it must be inactive).
  * \retval #PSA_ERROR_BAD_STATE
  *         The library has not been previously initialized by psa_crypto_init().
  *         It is implementation-dependent whether a failure to initialize
@@ -1394,7 +1397,7 @@ psa_status_t psa_mac_sign_setup(psa_mac_operation_t *operation,
  * -# Allocate an operation object which will be passed to all the functions
  *    listed here.
  * -# Initialize the operation object with one of the methods described in the
- *    documentation for #psa_mac_operation_t, e.g. PSA_MAC_OPERATION_INIT.
+ *    documentation for #psa_mac_operation_t, e.g. #PSA_MAC_OPERATION_INIT.
  * -# Call psa_mac_verify_setup() to specify the algorithm and key.
  * -# Call psa_mac_update() zero, one or more times, passing a fragment
  *    of the message each time. The MAC that is calculated is the MAC
@@ -1403,13 +1406,15 @@ psa_status_t psa_mac_sign_setup(psa_mac_operation_t *operation,
  *    calculating the actual MAC of the message and verify it against
  *    the expected value.
  *
- * The application may call psa_mac_abort() at any time after the operation
+ * If an error occurs at any step after a call to psa_mac_verify_setup(), the
+ * operation will need to be reset by a call to psa_mac_abort(). The
+ * application may call psa_mac_abort() at any time after the operation
  * has been initialized.
  *
  * After a successful call to psa_mac_verify_setup(), the application must
  * eventually terminate the operation through one of the following methods:
- * - A failed call to psa_mac_update().
- * - A call to psa_mac_verify_finish() or psa_mac_abort().
+ * - A successful call to psa_mac_verify_finish().
+ * - A call to psa_mac_abort().
  *
  * \param[in,out] operation The operation object to set up. It must have
  *                          been initialized as per the documentation for
@@ -1435,8 +1440,7 @@ psa_status_t psa_mac_sign_setup(psa_mac_operation_t *operation,
  * \retval #PSA_ERROR_STORAGE_FAILURE
  *         The key could not be retrieved from storage
  * \retval #PSA_ERROR_BAD_STATE
- *         The operation state is not valid (already set up and not
- *         subsequently completed).
+ *         The operation state is not valid (it must be inactive).
  * \retval #PSA_ERROR_BAD_STATE
  *         The library has not been previously initialized by psa_crypto_init().
  *         It is implementation-dependent whether a failure to initialize
@@ -1451,7 +1455,8 @@ psa_status_t psa_mac_verify_setup(psa_mac_operation_t *operation,
  * The application must call psa_mac_sign_setup() or psa_mac_verify_setup()
  * before calling this function.
  *
- * If this function returns an error status, the operation becomes inactive.
+ * If this function returns an error status, the operation enters an error
+ * state and must be aborted by calling psa_mac_abort().
  *
  * \param[in,out] operation Active MAC operation.
  * \param[in] input         Buffer containing the message fragment to add to
@@ -1461,7 +1466,7 @@ psa_status_t psa_mac_verify_setup(psa_mac_operation_t *operation,
  * \retval #PSA_SUCCESS
  *         Success.
  * \retval #PSA_ERROR_BAD_STATE
- *         The operation state is not valid (not set up, or already completed).
+ *         The operation state is not valid (it must be active).
  * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
  * \retval #PSA_ERROR_COMMUNICATION_FAILURE
  * \retval #PSA_ERROR_HARDWARE_FAILURE
@@ -1482,7 +1487,9 @@ psa_status_t psa_mac_update(psa_mac_operation_t *operation,
  * This function calculates the MAC of the message formed by concatenating
  * the inputs passed to preceding calls to psa_mac_update().
  *
- * When this function returns, the operation becomes inactive.
+ * When this function returns successfuly, the operation becomes inactive.
+ * If this function returns an error status, the operation enters an error
+ * state and must be aborted by calling psa_mac_abort().
  *
  * \warning Applications should not call this function if they expect
  *          a specific value for the MAC. Call psa_mac_verify_finish() instead.
@@ -1505,7 +1512,8 @@ psa_status_t psa_mac_update(psa_mac_operation_t *operation,
  * \retval #PSA_SUCCESS
  *         Success.
  * \retval #PSA_ERROR_BAD_STATE
- *         The operation state is not valid (not set up, or already completed).
+ *         The operation state is not valid (it must be an active mac sign
+ *         operation).
  * \retval #PSA_ERROR_BUFFER_TOO_SMALL
  *         The size of the \p mac buffer is too small. You can determine a
  *         sufficient buffer size by calling PSA_MAC_FINAL_SIZE().
@@ -1533,7 +1541,9 @@ psa_status_t psa_mac_sign_finish(psa_mac_operation_t *operation,
  * compares the calculated MAC with the expected MAC passed as a
  * parameter to this function.
  *
- * When this function returns, the operation becomes inactive.
+ * When this function returns successfuly, the operation becomes inactive.
+ * If this function returns an error status, the operation enters an error
+ * state and must be aborted by calling psa_mac_abort().
  *
  * \note Implementations shall make the best effort to ensure that the
  * comparison between the actual MAC and the expected MAC is performed
@@ -1549,7 +1559,8 @@ psa_status_t psa_mac_sign_finish(psa_mac_operation_t *operation,
  *         The MAC of the message was calculated successfully, but it
  *         differs from the expected MAC.
  * \retval #PSA_ERROR_BAD_STATE
- *         The operation state is not valid (not set up, or already completed).
+ *         The operation state is not valid (it must be an active mac verify
+ *         operation).
  * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
  * \retval #PSA_ERROR_COMMUNICATION_FAILURE
  * \retval #PSA_ERROR_HARDWARE_FAILURE
@@ -1572,12 +1583,7 @@ psa_status_t psa_mac_verify_finish(psa_mac_operation_t *operation,
  * psa_mac_sign_setup() or psa_mac_verify_setup() again.
  *
  * You may call this function any time after the operation object has
- * been initialized by any of the following methods:
- * - A call to psa_mac_sign_setup() or psa_mac_verify_setup(), whether
- *   it succeeds or not.
- * - Initializing the \c struct to all-bits-zero.
- * - Initializing the \c struct to logical zeros, e.g.
- *   `psa_mac_operation_t operation = {0}`.
+ * been initialized by one of the methods described in #psa_mac_operation_t.
  *
  * In particular, calling psa_mac_abort() after the operation has been
  * terminated by a call to psa_mac_abort(), psa_mac_sign_finish() or
@@ -1586,8 +1592,6 @@ psa_status_t psa_mac_verify_finish(psa_mac_operation_t *operation,
  * \param[in,out] operation Initialized MAC operation.
  *
  * \retval #PSA_SUCCESS
- * \retval #PSA_ERROR_BAD_STATE
- *         \p operation is not an active MAC operation.
  * \retval #PSA_ERROR_COMMUNICATION_FAILURE
  * \retval #PSA_ERROR_HARDWARE_FAILURE
  * \retval #PSA_ERROR_CORRUPTION_DETECTED
@@ -1607,7 +1611,8 @@ psa_status_t psa_mac_abort(psa_mac_operation_t *operation);
 /** Encrypt a message using a symmetric cipher.
  *
  * This function encrypts a message with a random IV (initialization
- * vector).
+ * vector). Use the multipart operation interface with a
+ * #psa_cipher_operation_t object to provide other forms of IV.
  *
  * \param handle                Handle to the key to use for the operation.
  *                              It must remain valid until the operation
@@ -1751,7 +1756,7 @@ static psa_cipher_operation_t psa_cipher_operation_init(void);
  *    listed here.
  * -# Initialize the operation object with one of the methods described in the
  *    documentation for #psa_cipher_operation_t, e.g.
- *    PSA_CIPHER_OPERATION_INIT.
+ *    #PSA_CIPHER_OPERATION_INIT.
  * -# Call psa_cipher_encrypt_setup() to specify the algorithm and key.
  * -# Call either psa_cipher_generate_iv() or psa_cipher_set_iv() to
  *    generate or set the IV (initialization vector). You should use
@@ -1761,14 +1766,16 @@ static psa_cipher_operation_t psa_cipher_operation_init(void);
  *    of the message each time.
  * -# Call psa_cipher_finish().
  *
- * The application may call psa_cipher_abort() at any time after the operation
+ * If an error occurs at any step after a call to psa_cipher_encrypt_setup(),
+ * the operation will need to be reset by a call to psa_cipher_abort(). The
+ * application may call psa_cipher_abort() at any time after the operation
  * has been initialized.
  *
  * After a successful call to psa_cipher_encrypt_setup(), the application must
  * eventually terminate the operation. The following events terminate an
  * operation:
- * - A failed call to any of the \c psa_cipher_xxx functions.
- * - A call to psa_cipher_finish() or psa_cipher_abort().
+ * - A successful call to psa_cipher_finish().
+ * - A call to psa_cipher_abort().
  *
  * \param[in,out] operation     The operation object to set up. It must have
  *                              been initialized as per the documentation for
@@ -1794,8 +1801,7 @@ static psa_cipher_operation_t psa_cipher_operation_init(void);
  * \retval #PSA_ERROR_CORRUPTION_DETECTED
  * \retval #PSA_ERROR_STORAGE_FAILURE
  * \retval #PSA_ERROR_BAD_STATE
- *         The operation state is not valid (already set up and not
- *         subsequently completed).
+ *         The operation state is not valid (it must be inactive).
  * \retval #PSA_ERROR_BAD_STATE
  *         The library has not been previously initialized by psa_crypto_init().
  *         It is implementation-dependent whether a failure to initialize
@@ -1813,7 +1819,7 @@ psa_status_t psa_cipher_encrypt_setup(psa_cipher_operation_t *operation,
  *    listed here.
  * -# Initialize the operation object with one of the methods described in the
  *    documentation for #psa_cipher_operation_t, e.g.
- *    PSA_CIPHER_OPERATION_INIT.
+ *    #PSA_CIPHER_OPERATION_INIT.
  * -# Call psa_cipher_decrypt_setup() to specify the algorithm and key.
  * -# Call psa_cipher_set_iv() with the IV (initialization vector) for the
  *    decryption. If the IV is prepended to the ciphertext, you can call
@@ -1823,14 +1829,16 @@ psa_status_t psa_cipher_encrypt_setup(psa_cipher_operation_t *operation,
  *    of the message each time.
  * -# Call psa_cipher_finish().
  *
- * The application may call psa_cipher_abort() at any time after the operation
+ * If an error occurs at any step after a call to psa_cipher_decrypt_setup(),
+ * the operation will need to be reset by a call to psa_cipher_abort(). The
+ * application may call psa_cipher_abort() at any time after the operation
  * has been initialized.
  *
  * After a successful call to psa_cipher_decrypt_setup(), the application must
  * eventually terminate the operation. The following events terminate an
  * operation:
- * - A failed call to any of the \c psa_cipher_xxx functions.
- * - A call to psa_cipher_finish() or psa_cipher_abort().
+ * - A successful call to psa_cipher_finish().
+ * - A call to psa_cipher_abort().
  *
  * \param[in,out] operation     The operation object to set up. It must have
  *                              been initialized as per the documentation for
@@ -1856,8 +1864,7 @@ psa_status_t psa_cipher_encrypt_setup(psa_cipher_operation_t *operation,
  * \retval #PSA_ERROR_CORRUPTION_DETECTED
  * \retval #PSA_ERROR_STORAGE_FAILURE
  * \retval #PSA_ERROR_BAD_STATE
- *         The operation state is not valid (already set up and not
- *         subsequently completed).
+ *         The operation state is not valid (it must be inactive).
  * \retval #PSA_ERROR_BAD_STATE
  *         The library has not been previously initialized by psa_crypto_init().
  *         It is implementation-dependent whether a failure to initialize
@@ -1876,7 +1883,8 @@ psa_status_t psa_cipher_decrypt_setup(psa_cipher_operation_t *operation,
  * The application must call psa_cipher_encrypt_setup() before
  * calling this function.
  *
- * If this function returns an error status, the operation becomes inactive.
+ * If this function returns an error status, the operation enters an error
+ * state and must be aborted by calling psa_cipher_abort().
  *
  * \param[in,out] operation     Active cipher operation.
  * \param[out] iv               Buffer where the generated IV is to be written.
@@ -1887,7 +1895,7 @@ psa_status_t psa_cipher_decrypt_setup(psa_cipher_operation_t *operation,
  * \retval #PSA_SUCCESS
  *         Success.
  * \retval #PSA_ERROR_BAD_STATE
- *         The operation state is not valid (not set up, or IV already set).
+ *         The operation state is not valid (it must be active, with no IV set).
  * \retval #PSA_ERROR_BUFFER_TOO_SMALL
  *         The size of the \p iv buffer is too small.
  * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
@@ -1913,7 +1921,8 @@ psa_status_t psa_cipher_generate_iv(psa_cipher_operation_t *operation,
  * The application must call psa_cipher_encrypt_setup() before
  * calling this function.
  *
- * If this function returns an error status, the operation becomes inactive.
+ * If this function returns an error status, the operation enters an error
+ * state and must be aborted by calling psa_cipher_abort().
  *
  * \note When encrypting, applications should use psa_cipher_generate_iv()
  * instead of this function, unless implementing a protocol that requires
@@ -1926,7 +1935,8 @@ psa_status_t psa_cipher_generate_iv(psa_cipher_operation_t *operation,
  * \retval #PSA_SUCCESS
  *         Success.
  * \retval #PSA_ERROR_BAD_STATE
- *         The operation state is not valid (not set up, or IV already set).
+ *         The operation state is not valid (it must be an active cipher
+ *         encrypt operation, with no IV set).
  * \retval #PSA_ERROR_INVALID_ARGUMENT
  *         The size of \p iv is not acceptable for the chosen algorithm,
  *         or the chosen algorithm does not use an IV.
@@ -1953,7 +1963,8 @@ psa_status_t psa_cipher_set_iv(psa_cipher_operation_t *operation,
  * 2. If the algorithm requires an IV, call psa_cipher_generate_iv()
  *    (recommended when encrypting) or psa_cipher_set_iv().
  *
- * If this function returns an error status, the operation becomes inactive.
+ * If this function returns an error status, the operation enters an error
+ * state and must be aborted by calling psa_cipher_abort().
  *
  * \param[in,out] operation     Active cipher operation.
  * \param[in] input             Buffer containing the message fragment to
@@ -1967,8 +1978,8 @@ psa_status_t psa_cipher_set_iv(psa_cipher_operation_t *operation,
  * \retval #PSA_SUCCESS
  *         Success.
  * \retval #PSA_ERROR_BAD_STATE
- *         The operation state is not valid (not set up, IV required but
- *         not set, or already completed).
+ *         The operation state is not valid (it must be active, with an IV set
+ *         if required for the algorithm).
  * \retval #PSA_ERROR_BUFFER_TOO_SMALL
  *         The size of the \p output buffer is too small.
  * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
@@ -1999,7 +2010,9 @@ psa_status_t psa_cipher_update(psa_cipher_operation_t *operation,
  * formed by concatenating the inputs passed to preceding calls to
  * psa_cipher_update().
  *
- * When this function returns, the operation becomes inactive.
+ * When this function returns successfuly, the operation becomes inactive.
+ * If this function returns an error status, the operation enters an error
+ * state and must be aborted by calling psa_cipher_abort().
  *
  * \param[in,out] operation     Active cipher operation.
  * \param[out] output           Buffer where the output is to be written.
@@ -2018,8 +2031,8 @@ psa_status_t psa_cipher_update(psa_cipher_operation_t *operation,
  *         This is a decryption operation for an algorithm that includes
  *         padding, and the ciphertext does not contain valid padding.
  * \retval #PSA_ERROR_BAD_STATE
- *         The operation state is not valid (not set up, IV required but
- *         not set, or already completed).
+ *         The operation state is not valid (it must be active, with an IV set
+ *         if required for the algorithm).
  * \retval #PSA_ERROR_BUFFER_TOO_SMALL
  *         The size of the \p output buffer is too small.
  * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
@@ -2045,12 +2058,7 @@ psa_status_t psa_cipher_finish(psa_cipher_operation_t *operation,
  * psa_cipher_encrypt_setup() or psa_cipher_decrypt_setup() again.
  *
  * You may call this function any time after the operation object has
- * been initialized by any of the following methods:
- * - A call to psa_cipher_encrypt_setup() or psa_cipher_decrypt_setup(),
- *   whether it succeeds or not.
- * - Initializing the \c struct to all-bits-zero.
- * - Initializing the \c struct to logical zeros, e.g.
- *   `psa_cipher_operation_t operation = {0}`.
+ * been initialized as described in #psa_cipher_operation_t.
  *
  * In particular, calling psa_cipher_abort() after the operation has been
  * terminated by a call to psa_cipher_abort() or psa_cipher_finish()
@@ -2059,8 +2067,6 @@ psa_status_t psa_cipher_finish(psa_cipher_operation_t *operation,
  * \param[in,out] operation     Initialized cipher operation.
  *
  * \retval #PSA_SUCCESS
- * \retval #PSA_ERROR_BAD_STATE
- *         \p operation is not an active cipher operation.
  * \retval #PSA_ERROR_COMMUNICATION_FAILURE
  * \retval #PSA_ERROR_HARDWARE_FAILURE
  * \retval #PSA_ERROR_CORRUPTION_DETECTED
@@ -2251,7 +2257,7 @@ static psa_aead_operation_t psa_aead_operation_init(void);
  *    listed here.
  * -# Initialize the operation object with one of the methods described in the
  *    documentation for #psa_aead_operation_t, e.g.
- *    PSA_AEAD_OPERATION_INIT.
+ *    #PSA_AEAD_OPERATION_INIT.
  * -# Call psa_aead_encrypt_setup() to specify the algorithm and key.
  * -# If needed, call psa_aead_set_lengths() to specify the length of the
  *    inputs to the subsequent calls to psa_aead_update_ad() and
@@ -2267,14 +2273,16 @@ static psa_aead_operation_t psa_aead_operation_init(void);
  *    of the message to encrypt each time.
  * -# Call psa_aead_finish().
  *
- * The application may call psa_aead_abort() at any time after the operation
+ * If an error occurs at any step after a call to psa_aead_encrypt_setup(),
+ * the operation will need to be reset by a call to psa_aead_abort(). The
+ * application may call psa_aead_abort() at any time after the operation
  * has been initialized.
  *
  * After a successful call to psa_aead_encrypt_setup(), the application must
  * eventually terminate the operation. The following events terminate an
  * operation:
- * - A failed call to any of the \c psa_aead_xxx functions.
- * - A call to psa_aead_finish(), psa_aead_verify() or psa_aead_abort().
+ * - A successful call to psa_aead_finish().
+ * - A call to psa_aead_abort().
  *
  * \param[in,out] operation     The operation object to set up. It must have
  *                              been initialized as per the documentation for
@@ -2288,7 +2296,9 @@ static psa_aead_operation_t psa_aead_operation_init(void);
  *
  * \retval #PSA_SUCCESS
  *         Success.
- * \retval #PSA_ERROR_INVALID_HANDLE
+ * \retval #PSA_ERROR_BAD_STATE
+ *         The operation state is not valid (it must be inactive).
+  * \retval #PSA_ERROR_INVALID_HANDLE
  * \retval #PSA_ERROR_NOT_PERMITTED
  * \retval #PSA_ERROR_INVALID_ARGUMENT
  *         \p handle is not compatible with \p alg.
@@ -2316,7 +2326,7 @@ psa_status_t psa_aead_encrypt_setup(psa_aead_operation_t *operation,
  *    listed here.
  * -# Initialize the operation object with one of the methods described in the
  *    documentation for #psa_aead_operation_t, e.g.
- *    PSA_AEAD_OPERATION_INIT.
+ *    #PSA_AEAD_OPERATION_INIT.
  * -# Call psa_aead_decrypt_setup() to specify the algorithm and key.
  * -# If needed, call psa_aead_set_lengths() to specify the length of the
  *    inputs to the subsequent calls to psa_aead_update_ad() and
@@ -2329,14 +2339,16 @@ psa_status_t psa_aead_encrypt_setup(psa_aead_operation_t *operation,
  *    of the ciphertext to decrypt each time.
  * -# Call psa_aead_verify().
  *
- * The application may call psa_aead_abort() at any time after the operation
+ * If an error occurs at any step after a call to psa_aead_decrypt_setup(),
+ * the operation will need to be reset by a call to psa_aead_abort(). The
+ * application may call psa_aead_abort() at any time after the operation
  * has been initialized.
  *
  * After a successful call to psa_aead_decrypt_setup(), the application must
  * eventually terminate the operation. The following events terminate an
  * operation:
- * - A failed call to any of the \c psa_aead_xxx functions.
- * - A call to psa_aead_finish(), psa_aead_verify() or psa_aead_abort().
+ * - A successful call to psa_aead_verify().
+ * - A call to psa_aead_abort().
  *
  * \param[in,out] operation     The operation object to set up. It must have
  *                              been initialized as per the documentation for
@@ -2350,7 +2362,9 @@ psa_status_t psa_aead_encrypt_setup(psa_aead_operation_t *operation,
  *
  * \retval #PSA_SUCCESS
  *         Success.
- * \retval #PSA_ERROR_INVALID_HANDLE
+ * \retval #PSA_ERROR_BAD_STATE
+ *         The operation state is not valid (it must be inactive).
+  * \retval #PSA_ERROR_INVALID_HANDLE
  * \retval #PSA_ERROR_NOT_PERMITTED
  * \retval #PSA_ERROR_INVALID_ARGUMENT
  *         \p handle is not compatible with \p alg.
@@ -2379,7 +2393,8 @@ psa_status_t psa_aead_decrypt_setup(psa_aead_operation_t *operation,
  * The application must call psa_aead_encrypt_setup() before
  * calling this function.
  *
- * If this function returns an error status, the operation becomes inactive.
+ * If this function returns an error status, the operation enters an error
+ * state and must be aborted by calling psa_aead_abort().
  *
  * \param[in,out] operation     Active AEAD operation.
  * \param[out] nonce            Buffer where the generated nonce is to be
@@ -2391,7 +2406,8 @@ psa_status_t psa_aead_decrypt_setup(psa_aead_operation_t *operation,
  * \retval #PSA_SUCCESS
  *         Success.
  * \retval #PSA_ERROR_BAD_STATE
- *         The operation state is not valid (not set up, or nonce already set).
+ *         The operation state is not valid (it must be an active aead encrypt
+           operation, with no nonce set).
  * \retval #PSA_ERROR_BUFFER_TOO_SMALL
  *         The size of the \p nonce buffer is too small.
  * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
@@ -2414,10 +2430,11 @@ psa_status_t psa_aead_generate_nonce(psa_aead_operation_t *operation,
  * This function sets the nonce for the authenticated
  * encryption or decryption operation.
  *
- * The application must call psa_aead_encrypt_setup() before
- * calling this function.
+ * The application must call psa_aead_encrypt_setup() or
+ * psa_aead_decrypt_setup() before calling this function.
  *
- * If this function returns an error status, the operation becomes inactive.
+ * If this function returns an error status, the operation enters an error
+ * state and must be aborted by calling psa_aead_abort().
  *
  * \note When encrypting, applications should use psa_aead_generate_nonce()
  * instead of this function, unless implementing a protocol that requires
@@ -2430,7 +2447,8 @@ psa_status_t psa_aead_generate_nonce(psa_aead_operation_t *operation,
  * \retval #PSA_SUCCESS
  *         Success.
  * \retval #PSA_ERROR_BAD_STATE
- *         The operation state is not valid (not set up, or nonce already set).
+ *         The operation state is not valid (it must be active, with no nonce
+ *         set).
  * \retval #PSA_ERROR_INVALID_ARGUMENT
  *         The size of \p nonce is not acceptable for the chosen algorithm.
  * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
@@ -2463,6 +2481,9 @@ psa_status_t psa_aead_set_nonce(psa_aead_operation_t *operation,
  *   this function is not required.
  * - For vendor-defined algorithm, refer to the vendor documentation.
  *
+ * If this function returns an error status, the operation enters an error
+ * state and must be aborted by calling psa_aead_abort().
+ *
  * \param[in,out] operation     Active AEAD operation.
  * \param ad_length             Size of the non-encrypted additional
  *                              authenticated data in bytes.
@@ -2471,8 +2492,9 @@ psa_status_t psa_aead_set_nonce(psa_aead_operation_t *operation,
  * \retval #PSA_SUCCESS
  *         Success.
  * \retval #PSA_ERROR_BAD_STATE
- *         The operation state is not valid (not set up, already completed,
- *         or psa_aead_update_ad() or psa_aead_update() already called).
+ *         The operation state is not valid (it must be active, and
+ *         psa_aead_update_ad() and psa_aead_update() must not have been
+ *         called yet).
  * \retval #PSA_ERROR_INVALID_ARGUMENT
  *         At least one of the lengths is not acceptable for the chosen
  *         algorithm.
@@ -2501,7 +2523,8 @@ psa_status_t psa_aead_set_lengths(psa_aead_operation_t *operation,
  * 1. Call either psa_aead_encrypt_setup() or psa_aead_decrypt_setup().
  * 2. Set the nonce with psa_aead_generate_nonce() or psa_aead_set_nonce().
  *
- * If this function returns an error status, the operation becomes inactive.
+ * If this function returns an error status, the operation enters an error
+ * state and must be aborted by calling psa_aead_abort().
  *
  * \warning When decrypting, until psa_aead_verify() has returned #PSA_SUCCESS,
  *          there is no guarantee that the input is valid. Therefore, until
@@ -2517,8 +2540,9 @@ psa_status_t psa_aead_set_lengths(psa_aead_operation_t *operation,
  * \retval #PSA_SUCCESS
  *         Success.
  * \retval #PSA_ERROR_BAD_STATE
- *         The operation state is not valid (not set up, nonce not set,
- *         psa_aead_update() already called, or operation already completed).
+ *         The operation state is not valid (it must be active, have a nonce
+ *         set, have lengths set if required by the algorithm, and
+ *         psa_aead_update() must not have been called yet).
  * \retval #PSA_ERROR_INVALID_ARGUMENT
  *         The total input length overflows the additional data length that
  *         was previously specified with psa_aead_set_lengths().
@@ -2545,7 +2569,8 @@ psa_status_t psa_aead_update_ad(psa_aead_operation_t *operation,
  * 2. Set the nonce with psa_aead_generate_nonce() or psa_aead_set_nonce().
  * 3. Call psa_aead_update_ad() to pass all the additional data.
  *
- * If this function returns an error status, the operation becomes inactive.
+ * If this function returns an error status, the operation enters an error
+ * state and must be aborted by calling psa_aead_abort().
  *
  * \warning When decrypting, until psa_aead_verify() has returned #PSA_SUCCESS,
  *          there is no guarantee that the input is valid. Therefore, until
@@ -2585,8 +2610,8 @@ psa_status_t psa_aead_update_ad(psa_aead_operation_t *operation,
  * \retval #PSA_SUCCESS
  *         Success.
  * \retval #PSA_ERROR_BAD_STATE
- *         The operation state is not valid (not set up, nonce not set
- *         or already completed).
+ *         The operation state is not valid (it must be active, have a nonce
+ *         set, and have lengths set if required by the algorithm).
  * \retval #PSA_ERROR_BUFFER_TOO_SMALL
  *         The size of the \p output buffer is too small.
  *         You can determine a sufficient buffer size by calling
@@ -2632,7 +2657,9 @@ psa_status_t psa_aead_update(psa_aead_operation_t *operation,
  *   #PSA_AEAD_TAG_LENGTH(\c alg) where \c alg is the AEAD algorithm
  *   that the operation performs.
  *
- * When this function returns, the operation becomes inactive.
+ * When this function returns successfuly, the operation becomes inactive.
+ * If this function returns an error status, the operation enters an error
+ * state and must be aborted by calling psa_aead_abort().
  *
  * \param[in,out] operation     Active AEAD operation.
  * \param[out] ciphertext       Buffer where the last part of the ciphertext
@@ -2656,8 +2683,8 @@ psa_status_t psa_aead_update(psa_aead_operation_t *operation,
  * \retval #PSA_SUCCESS
  *         Success.
  * \retval #PSA_ERROR_BAD_STATE
- *         The operation state is not valid (not set up, nonce not set,
- *         decryption, or already completed).
+ *         The operation state is not valid (it must be an active encryption
+ *         operation with a nonce set).
  * \retval #PSA_ERROR_BUFFER_TOO_SMALL
  *         The size of the \p ciphertext or \p tag buffer is too small.
  *         You can determine a sufficient buffer size for \p ciphertext by
@@ -2695,12 +2722,26 @@ psa_status_t psa_aead_finish(psa_aead_operation_t *operation,
  *
  * The operation must have been set up with psa_aead_decrypt_setup().
  *
- * This function finishes the authentication of the additional data
- * formed by concatenating the inputs passed to preceding calls to
- * psa_aead_update_ad() with the ciphertext formed by concatenating the
- * inputs passed to preceding calls to psa_aead_update().
+ * This function finishes the authenticated decryption of the message
+ * components:
  *
- * When this function returns, the operation becomes inactive.
+ * -  The additional data consisting of the concatenation of the inputs
+ *    passed to preceding calls to psa_aead_update_ad().
+ * -  The ciphertext consisting of the concatenation of the inputs passed to
+ *    preceding calls to psa_aead_update().
+ * -  The tag passed to this function call.
+ *
+ * If the authentication tag is correct, this function outputs any remaining
+ * plaintext and reports success. If the authentication tag is not correct,
+ * this function returns #PSA_ERROR_INVALID_SIGNATURE.
+ *
+ * When this function returns successfuly, the operation becomes inactive.
+ * If this function returns an error status, the operation enters an error
+ * state and must be aborted by calling psa_aead_abort().
+ *
+ * \note Implementations shall make the best effort to ensure that the
+ * comparison between the actual tag and the expected tag is performed
+ * in constant time.
  *
  * \param[in,out] operation     Active AEAD operation.
  * \param[out] plaintext        Buffer where the last part of the plaintext
@@ -2720,9 +2761,12 @@ psa_status_t psa_aead_finish(psa_aead_operation_t *operation,
  *
  * \retval #PSA_SUCCESS
  *         Success.
+ * \retval #PSA_ERROR_INVALID_SIGNATURE
+ *         The calculations were successful, but the authentication tag is
+ *         not correct.
  * \retval #PSA_ERROR_BAD_STATE
- *         The operation state is not valid (not set up, nonce not set,
- *         encryption, or already completed).
+ *         The operation state is not valid (it must be an active decryption
+ *         operation with a nonce set).
  * \retval #PSA_ERROR_BUFFER_TOO_SMALL
  *         The size of the \p plaintext buffer is too small.
  *         You can determine a sufficient buffer size for \p plaintext by
@@ -2761,22 +2805,15 @@ psa_status_t psa_aead_verify(psa_aead_operation_t *operation,
  * psa_aead_encrypt_setup() or psa_aead_decrypt_setup() again.
  *
  * You may call this function any time after the operation object has
- * been initialized by any of the following methods:
- * - A call to psa_aead_encrypt_setup() or psa_aead_decrypt_setup(),
- *   whether it succeeds or not.
- * - Initializing the \c struct to all-bits-zero.
- * - Initializing the \c struct to logical zeros, e.g.
- *   `psa_aead_operation_t operation = {0}`.
+ * been initialized as described in #psa_aead_operation_t.
  *
  * In particular, calling psa_aead_abort() after the operation has been
- * terminated by a call to psa_aead_abort() or psa_aead_finish()
- * is safe and has no effect.
+ * terminated by a call to psa_aead_abort(), psa_aead_finish() or
+ * psa_aead_verify() is safe and has no effect.
  *
  * \param[in,out] operation     Initialized AEAD operation.
  *
  * \retval #PSA_SUCCESS
- * \retval #PSA_ERROR_BAD_STATE
- *         \p operation is not an active AEAD operation.
  * \retval #PSA_ERROR_COMMUNICATION_FAILURE
  * \retval #PSA_ERROR_HARDWARE_FAILURE
  * \retval #PSA_ERROR_CORRUPTION_DETECTED
@@ -3069,23 +3106,31 @@ static psa_key_derivation_operation_t psa_key_derivation_operation_init(void);
  * cryptographic material.
  *
  * To derive a key:
- * - Start with an initialized object of type #psa_key_derivation_operation_t.
- * - Call psa_key_derivation_setup() to select the algorithm.
- * - Provide the inputs for the key derivation by calling
- *   psa_key_derivation_input_bytes() or psa_key_derivation_input_key()
- *   as appropriate. Which inputs are needed, in what order, and whether
- *   they may be keys and if so of what type depends on the algorithm.
- * - Optionally set the operation's maximum capacity with
- *   psa_key_derivation_set_capacity(). You may do this before, in the middle
- *   of or after providing inputs. For some algorithms, this step is mandatory
- *   because the output depends on the maximum capacity.
- * - To derive a key, call psa_key_derivation_output_key().
- *   To derive a byte string for a different purpose, call
- * - psa_key_derivation_output_bytes().
- *   Successive calls to these functions use successive output bytes
- *   calculated by the key derivation algorithm.
- * - Clean up the key derivation operation object with
- *   psa_key_derivation_abort().
+ * -# Start with an initialized object of type #psa_key_derivation_operation_t.
+ * -# Call psa_key_derivation_setup() to select the algorithm.
+ * -# Provide the inputs for the key derivation by calling
+ *    psa_key_derivation_input_bytes() or psa_key_derivation_input_key()
+ *    as appropriate. Which inputs are needed, in what order, and whether
+ *    they may be keys and if so of what type depends on the algorithm.
+ * -# Optionally set the operation's maximum capacity with
+ *    psa_key_derivation_set_capacity(). You may do this before, in the middle
+ *    of or after providing inputs. For some algorithms, this step is mandatory
+ *    because the output depends on the maximum capacity.
+ * -# To derive a key, call psa_key_derivation_output_key().
+ *    To derive a byte string for a different purpose, call
+ *    psa_key_derivation_output_bytes().
+ *    Successive calls to these functions use successive output bytes
+ *    calculated by the key derivation algorithm.
+ * -# Clean up the key derivation operation object with
+ *    psa_key_derivation_abort().
+ *
+ * If this function returns an error, the key derivation operation object is
+ * not changed.
+ *
+ * If an error occurs at any step after a call to psa_key_derivation_setup(),
+ * the operation will need to be reset by a call to psa_key_derivation_abort().
+ *
+ * Implementations must reject an attempt to derive a key of size 0.
  *
  * \param[in,out] operation       The key derivation operation object
  *                                to set up. It must
@@ -3106,7 +3151,7 @@ static psa_key_derivation_operation_t psa_key_derivation_operation_init(void);
  * \retval #PSA_ERROR_CORRUPTION_DETECTED
  * \retval #PSA_ERROR_STORAGE_FAILURE
  * \retval #PSA_ERROR_BAD_STATE
- *         The operation state is either not initialized or has already been setup.
+ *         The operation state is not valid (it must be inactive).
  * \retval #PSA_ERROR_BAD_STATE
  *         The library has not been previously initialized by psa_crypto_init().
  *         It is implementation-dependent whether a failure to initialize
@@ -3128,7 +3173,7 @@ psa_status_t psa_key_derivation_setup(
  * \retval #PSA_SUCCESS
  * \retval #PSA_ERROR_COMMUNICATION_FAILURE
  * \retval #PSA_ERROR_BAD_STATE
- *         The operation state is not valid.
+ *         The operation state is not valid (it must be active).
  * \retval #PSA_ERROR_HARDWARE_FAILURE
  * \retval #PSA_ERROR_CORRUPTION_DETECTED
  * \retval #PSA_ERROR_BAD_STATE
@@ -3156,7 +3201,7 @@ psa_status_t psa_key_derivation_get_capacity(
  *         In this case, the operation object remains valid and its capacity
  *         remains unchanged.
  * \retval #PSA_ERROR_BAD_STATE
- *         The operation state is not valid.
+ *         The operation state is not valid (it must be active).
  * \retval #PSA_ERROR_COMMUNICATION_FAILURE
  * \retval #PSA_ERROR_HARDWARE_FAILURE
  * \retval #PSA_ERROR_CORRUPTION_DETECTED
@@ -3188,6 +3233,9 @@ psa_status_t psa_key_derivation_set_capacity(
  * using psa_key_derivation_input_key() instead of this function. Refer to
  * the documentation of individual step types for information.
  *
+ * If this function returns an error status, the operation enters an error
+ * state and must be aborted by calling psa_key_derivation_abort().
+ *
  * \param[in,out] operation       The key derivation operation object to use.
  *                                It must have been set up with
  *                                psa_key_derivation_setup() and must not
@@ -3208,7 +3256,7 @@ psa_status_t psa_key_derivation_set_capacity(
  * \retval #PSA_ERROR_CORRUPTION_DETECTED
  * \retval #PSA_ERROR_STORAGE_FAILURE
  * \retval #PSA_ERROR_BAD_STATE
- *         The value of \p step is not valid given the state of \p operation.
+ *         The operation state is not valid for this input \p step.
  * \retval #PSA_ERROR_BAD_STATE
  *         The library has not been previously initialized by psa_crypto_init().
  *         It is implementation-dependent whether a failure to initialize
@@ -3230,6 +3278,9 @@ psa_status_t psa_key_derivation_input_bytes(
  * of the appropriate type using this function, while others must be
  * passed as direct inputs using psa_key_derivation_input_bytes(). Refer to
  * the documentation of individual step types for information.
+ *
+ * If this function returns an error status, the operation enters an error
+ * state and must be aborted by calling psa_key_derivation_abort().
  *
  * \param[in,out] operation       The key derivation operation object to use.
  *                                It must have been set up with
@@ -3254,7 +3305,7 @@ psa_status_t psa_key_derivation_input_bytes(
  * \retval #PSA_ERROR_CORRUPTION_DETECTED
  * \retval #PSA_ERROR_STORAGE_FAILURE
  * \retval #PSA_ERROR_BAD_STATE
- *         The value of \p step is not valid given the state of \p operation.
+ *         The operation state is not valid for this input \p step.
  * \retval #PSA_ERROR_BAD_STATE
  *         The library has not been previously initialized by psa_crypto_init().
  *         It is implementation-dependent whether a failure to initialize
@@ -3273,6 +3324,9 @@ psa_status_t psa_key_derivation_input_key(
  * The result of this function is passed as input to a key derivation.
  * The output of this key derivation can be extracted by reading from the
  * resulting operation to produce keys and other cryptographic material.
+ *
+ * If this function returns an error status, the operation enters an error
+ * state and must be aborted by calling psa_key_derivation_abort().
  *
  * \param[in,out] operation       The key derivation operation object to use.
  *                                It must have been set up with
@@ -3304,6 +3358,8 @@ psa_status_t psa_key_derivation_input_key(
  *
  * \retval #PSA_SUCCESS
  *         Success.
+ * \retval #PSA_ERROR_BAD_STATE
+ *         The operation state is not valid for this key agreement \p step.
  * \retval #PSA_ERROR_INVALID_HANDLE
  * \retval #PSA_ERROR_NOT_PERMITTED
  * \retval #PSA_ERROR_INVALID_ARGUMENT
@@ -3338,6 +3394,10 @@ psa_status_t psa_key_derivation_key_agreement(
  * stream.
  * The operation's capacity decreases by the number of bytes read.
  *
+ * If this function returns an error status other than
+ * #PSA_ERROR_INSUFFICIENT_DATA, the operation enters an error
+ * state and must be aborted by calling psa_key_derivation_abort().
+ *
  * \param[in,out] operation The key derivation operation object to read from.
  * \param[out] output       Buffer where the output will be written.
  * \param output_length     Number of bytes to output.
@@ -3351,6 +3411,8 @@ psa_status_t psa_key_derivation_key_agreement(
  *                          subsequent calls to this function will not
  *                          succeed, even with a smaller output buffer.
  * \retval #PSA_ERROR_BAD_STATE
+ *         The operation state is not valid (it must be active and completed
+ *         all required input steps).
  * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
  * \retval #PSA_ERROR_COMMUNICATION_FAILURE
  * \retval #PSA_ERROR_HARDWARE_FAILURE
@@ -3370,10 +3432,17 @@ psa_status_t psa_key_derivation_output_bytes(
  *
  * This function calculates output bytes from a key derivation algorithm
  * and uses those bytes to generate a key deterministically.
+ * The key's location, usage policy, type and size are taken from
+ * \p attributes.
+ *
  * If you view the key derivation's output as a stream of bytes, this
  * function destructively reads as many bytes as required from the
  * stream.
  * The operation's capacity decreases by the number of bytes read.
+ *
+ * If this function returns an error status other than
+ * #PSA_ERROR_INSUFFICIENT_DATA, the operation enters an error
+ * state and must be aborted by calling psa_key_derivation_abort().
  *
  * How much output is produced and consumed from the operation, and how
  * the key is derived, depends on the key type:
@@ -3472,6 +3541,8 @@ psa_status_t psa_key_derivation_output_bytes(
  * \retval #PSA_ERROR_INVALID_ARGUMENT
  *         The provided key attributes are not valid for the operation.
  * \retval #PSA_ERROR_BAD_STATE
+ *         The operation state is not valid (it must be active and completed
+ *         all required input steps).
  * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
  * \retval #PSA_ERROR_INSUFFICIENT_STORAGE
  * \retval #PSA_ERROR_COMMUNICATION_FAILURE
@@ -3490,22 +3561,19 @@ psa_status_t psa_key_derivation_output_key(
 
 /** Abort a key derivation operation.
  *
- * Once a key derivation operation has been aborted, its capacity is zero.
- * Aborting an operation frees all associated resources except for the
- * \c operation structure itself.
+ * Aborting an operation frees all associated resources except for the \c
+ * operation structure itself. Once aborted, the operation object can be reused
+ * for another operation by calling psa_key_derivation_setup() again.
  *
- * This function may be called at any time as long as the operation
- * object has been initialized to #PSA_KEY_DERIVATION_OPERATION_INIT, to
- * psa_key_derivation_operation_init() or a zero value. In particular,
- * it is valid to call psa_key_derivation_abort() twice, or to call
- * psa_key_derivation_abort() on an operation that has not been set up.
+ * This function may be called at any time after the operation
+ * object has been initialized as described in #psa_key_derivation_operation_t.
  *
- * Once aborted, the key derivation operation object may be called.
+ * In particular, it is valid to call psa_key_derivation_abort() twice, or to
+ * call psa_key_derivation_abort() on an operation that has not been set up.
  *
  * \param[in,out] operation    The operation to abort.
  *
  * \retval #PSA_SUCCESS
- * \retval #PSA_ERROR_BAD_STATE
  * \retval #PSA_ERROR_COMMUNICATION_FAILURE
  * \retval #PSA_ERROR_HARDWARE_FAILURE
  * \retval #PSA_ERROR_CORRUPTION_DETECTED
@@ -3612,7 +3680,9 @@ psa_status_t psa_generate_random(uint8_t *output,
  * \brief Generate a key or key pair.
  *
  * The key is generated randomly.
- * Its location, policy, type and size are taken from \p attributes.
+ * Its location, usage policy, type and size are taken from \p attributes.
+ *
+ * Implementations must reject an attempt to generate a key of size 0.
  *
  * The following type-specific considerations apply:
  * - For RSA keys (#PSA_KEY_TYPE_RSA_KEY_PAIR),
