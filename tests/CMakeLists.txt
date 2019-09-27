@@ -10,9 +10,9 @@ if(ENABLE_ZLIB_SUPPORT)
     set(libs ${libs} ${ZLIB_LIBRARIES})
 endif(ENABLE_ZLIB_SUPPORT)
 
-find_package(PythonInterp)
-if(NOT PYTHONINTERP_FOUND)
-    message(FATAL_ERROR "Cannot build test suites without Python 2 or 3")
+find_package(Perl)
+if(NOT PERL_FOUND)
+    message(FATAL_ERROR "Cannot build test suites without Perl")
 endif()
 
 # Enable definition of various functions used throughout the testsuite
