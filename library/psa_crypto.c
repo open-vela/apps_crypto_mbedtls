@@ -451,13 +451,6 @@ static psa_status_t prepare_raw_data_slot( psa_key_type_t type,
     switch( type )
     {
         case PSA_KEY_TYPE_RAW_DATA:
-            if( bits == 0 )
-            {
-                raw->bytes = 0;
-                raw->data = NULL;
-                return( PSA_SUCCESS );
-            }
-            break;
 #if defined(MBEDTLS_MD_C)
         case PSA_KEY_TYPE_HMAC:
 #endif
@@ -1281,6 +1274,12 @@ static psa_status_t psa_internal_export_key( const psa_key_slot_t *slot,
     if( export_public_key && ! PSA_KEY_TYPE_IS_ASYMMETRIC( slot->attr.type ) )
         return( PSA_ERROR_INVALID_ARGUMENT );
 
+    /* Reject a zero-length output buffer now, since this can never be a
+     * valid key representation. This way we know that data must be a valid
+     * pointer and we can do things like memset(data, ..., data_size). */
+    if( data_size == 0 )
+        return( PSA_ERROR_BUFFER_TOO_SMALL );
+
 #if defined(MBEDTLS_PSA_CRYPTO_SE_C)
     if( psa_get_se_driver( slot->attr.lifetime, &drv, &drv_context ) )
     {
@@ -1302,12 +1301,9 @@ static psa_status_t psa_internal_export_key( const psa_key_slot_t *slot,
     {
         if( slot->data.raw.bytes > data_size )
             return( PSA_ERROR_BUFFER_TOO_SMALL );
-        if( data_size != 0 )
-        {
-            memcpy( data, slot->data.raw.data, slot->data.raw.bytes );
-            memset( data + slot->data.raw.bytes, 0,
-                    data_size - slot->data.raw.bytes );
-        }
+        memcpy( data, slot->data.raw.data, slot->data.raw.bytes );
+        memset( data + slot->data.raw.bytes, 0,
+                data_size - slot->data.raw.bytes );
         *data_length = slot->data.raw.bytes;
         return( PSA_SUCCESS );
     }
@@ -1366,10 +1362,7 @@ static psa_status_t psa_internal_export_key( const psa_key_slot_t *slot,
             }
             if( ret < 0 )
             {
-                /* If data_size is 0 then data may be NULL and then the
-                 * call to memset would have undefined behavior. */
-                if( data_size != 0 )
-                    memset( data, 0, data_size );
+                memset( data, 0, data_size );
                 return( mbedtls_to_psa_error( ret ) );
             }
             /* The mbedtls_pk_xxx functions write to the end of the buffer.
@@ -1676,7 +1669,7 @@ static psa_status_t psa_finish_key_creation(
                                          slot->attr.bits );
             uint8_t *buffer = mbedtls_calloc( 1, buffer_size );
             size_t length = 0;
-            if( buffer == NULL && buffer_size != 0 )
+            if( buffer == NULL )
                 return( PSA_ERROR_INSUFFICIENT_MEMORY );
             status = psa_internal_export_key( slot,
                                               buffer, buffer_size, &length,
@@ -1685,8 +1678,7 @@ static psa_status_t psa_finish_key_creation(
                 status = psa_save_persistent_key( &slot->attr,
                                                   buffer, length );
 
-            if( buffer_size != 0 )
-                mbedtls_platform_zeroize( buffer, buffer_size );
+            mbedtls_platform_zeroize( buffer, buffer_size );
             mbedtls_free( buffer );
         }
     }
@@ -1826,6 +1818,12 @@ psa_status_t psa_import_key( const psa_key_attributes_t *attributes,
     psa_key_slot_t *slot = NULL;
     psa_se_drv_table_entry_t *driver = NULL;
 
+    /* Reject zero-length symmetric keys (including raw data key objects).
+     * This also rejects any key which might be encoded as an empty string,
+     * which is never valid. */
+    if( data_length == 0 )
+        return( PSA_ERROR_INVALID_ARGUMENT );
+
     status = psa_start_key_creation( PSA_KEY_CREATION_IMPORT, attributes,
                                      handle, &slot, &driver );
     if( status != PSA_SUCCESS )
@@ -1957,7 +1955,7 @@ static psa_status_t psa_copy_key_material( const psa_key_slot_t *source,
     buffer_size = PSA_KEY_EXPORT_MAX_SIZE( source->attr.type,
                                            psa_get_key_slot_bits( source ) );
     buffer = mbedtls_calloc( 1, buffer_size );
-    if( buffer == NULL && buffer_size != 0 )
+    if( buffer == NULL )
         return( PSA_ERROR_INSUFFICIENT_MEMORY );
     status = psa_internal_export_key( source, buffer, buffer_size, &length, 0 );
     if( status != PSA_SUCCESS )
@@ -1966,8 +1964,7 @@ static psa_status_t psa_copy_key_material( const psa_key_slot_t *source,
     status = psa_import_key_into_slot( target, buffer, length );
 
 exit:
-    if( buffer_size != 0 )
-        mbedtls_platform_zeroize( buffer, buffer_size );
+    mbedtls_platform_zeroize( buffer, buffer_size );
     mbedtls_free( buffer );
     return( status );
 }
@@ -2735,7 +2732,7 @@ static psa_status_t psa_hmac_setup_internal( psa_hmac_internal_data *hmac,
     status = psa_hash_update( &hmac->hash_ctx, ipad, block_size );
 
 cleanup:
-    mbedtls_platform_zeroize( ipad, key_length );
+    mbedtls_platform_zeroize( ipad, sizeof(ipad) );
 
     return( status );
 }
@@ -3194,8 +3191,8 @@ static psa_status_t psa_rsa_verify( mbedtls_rsa_context *rsa,
     if( status != PSA_SUCCESS )
         return( status );
 
-    if( signature_length < mbedtls_rsa_get_len( rsa ) )
-        return( PSA_ERROR_BUFFER_TOO_SMALL );
+    if( signature_length != mbedtls_rsa_get_len( rsa ) )
+        return( PSA_ERROR_INVALID_SIGNATURE );
 
 #if defined(MBEDTLS_PKCS1_V15)
     if( PSA_ALG_IS_RSA_PKCS1V15_SIGN( alg ) )
@@ -3350,6 +3347,12 @@ psa_status_t psa_asymmetric_sign( psa_key_handle_t handle,
 #endif /* MBEDTLS_PSA_CRYPTO_SE_C */
 
     *signature_length = signature_size;
+    /* Immediately reject a zero-length signature buffer. This guarantees
+     * that signature must be a valid pointer. (On the other hand, the hash
+     * buffer can in principle be empty since it doesn't actually have
+     * to be a hash.) */
+    if( signature_size == 0 )
+        return( PSA_ERROR_BUFFER_TOO_SMALL );
 
     status = psa_get_key_from_slot( handle, &slot, PSA_KEY_USAGE_SIGN, alg );
     if( status != PSA_SUCCESS )
@@ -3425,7 +3428,7 @@ exit:
     if( status == PSA_SUCCESS )
         memset( signature + *signature_length, '!',
                 signature_size - *signature_length );
-    else if( signature_size != 0 )
+    else
         memset( signature, '!', signature_size );
     /* If signature_size is 0 then we have nothing to do. We must not call
      * memset because signature may be NULL in this case. */
@@ -4778,6 +4781,15 @@ psa_status_t psa_key_derivation_output_key( const psa_key_attributes_t *attribut
     psa_status_t status;
     psa_key_slot_t *slot = NULL;
     psa_se_drv_table_entry_t *driver = NULL;
+
+    /* Reject any attempt to create a zero-length key so that we don't
+     * risk tripping up later, e.g. on a malloc(0) that returns NULL. */
+    if( psa_get_key_bits( attributes ) == 0 )
+        return( PSA_ERROR_INVALID_ARGUMENT );
+
+    if( ! operation->can_output_key )
+        return( PSA_ERROR_NOT_PERMITTED );
+
     status = psa_start_key_creation( PSA_KEY_CREATION_DERIVE,
                                      attributes, handle, &slot, &driver );
 #if defined(MBEDTLS_PSA_CRYPTO_SE_C)
@@ -5067,14 +5079,53 @@ static psa_status_t psa_tls12_prf_psk_to_ms_input(
 }
 #endif /* MBEDTLS_MD_C */
 
+/** Check whether the given key type is acceptable for the given
+ * input step of a key derivation.
+ *
+ * Secret inputs must have the type #PSA_KEY_TYPE_DERIVE.
+ * Non-secret inputs must have the type #PSA_KEY_TYPE_RAW_DATA.
+ * Both secret and non-secret inputs can alternatively have the type
+ * #PSA_KEY_TYPE_NONE, which is never the type of a key object, meaning
+ * that the input was passed as a buffer rather than via a key object.
+ */
+static int psa_key_derivation_check_input_type(
+    psa_key_derivation_step_t step,
+    psa_key_type_t key_type )
+{
+    switch( step )
+    {
+        case PSA_KEY_DERIVATION_INPUT_SECRET:
+            if( key_type == PSA_KEY_TYPE_DERIVE )
+                return( PSA_SUCCESS );
+            if( key_type == PSA_KEY_TYPE_NONE )
+                return( PSA_SUCCESS );
+            break;
+        case PSA_KEY_DERIVATION_INPUT_LABEL:
+        case PSA_KEY_DERIVATION_INPUT_SALT:
+        case PSA_KEY_DERIVATION_INPUT_INFO:
+        case PSA_KEY_DERIVATION_INPUT_SEED:
+            if( key_type == PSA_KEY_TYPE_RAW_DATA )
+                return( PSA_SUCCESS );
+            if( key_type == PSA_KEY_TYPE_NONE )
+                return( PSA_SUCCESS );
+            break;
+    }
+    return( PSA_ERROR_INVALID_ARGUMENT );
+}
+
 static psa_status_t psa_key_derivation_input_internal(
     psa_key_derivation_operation_t *operation,
     psa_key_derivation_step_t step,
+    psa_key_type_t key_type,
     const uint8_t *data,
     size_t data_length )
 {
     psa_status_t status;
     psa_algorithm_t kdf_alg = psa_key_derivation_get_kdf_alg( operation );
+
+    status = psa_key_derivation_check_input_type( step, key_type );
+    if( status != PSA_SUCCESS )
+        goto exit;
 
 #if defined(MBEDTLS_MD_C)
     if( PSA_ALG_IS_HKDF( kdf_alg ) )
@@ -5102,6 +5153,7 @@ static psa_status_t psa_key_derivation_input_internal(
         return( PSA_ERROR_BAD_STATE );
     }
 
+exit:
     if( status != PSA_SUCCESS )
         psa_key_derivation_abort( operation );
     return( status );
@@ -5113,10 +5165,8 @@ psa_status_t psa_key_derivation_input_bytes(
     const uint8_t *data,
     size_t data_length )
 {
-    if( step == PSA_KEY_DERIVATION_INPUT_SECRET )
-        return( PSA_ERROR_INVALID_ARGUMENT );
-
     return( psa_key_derivation_input_internal( operation, step,
+                                               PSA_KEY_TYPE_NONE,
                                                data, data_length ) );
 }
 
@@ -5127,23 +5177,23 @@ psa_status_t psa_key_derivation_input_key(
 {
     psa_key_slot_t *slot;
     psa_status_t status;
+
     status = psa_get_transparent_key( handle, &slot,
                                       PSA_KEY_USAGE_DERIVE,
                                       operation->alg );
     if( status != PSA_SUCCESS )
+    {
+        psa_key_derivation_abort( operation );
         return( status );
-    if( slot->attr.type != PSA_KEY_TYPE_DERIVE )
-        return( PSA_ERROR_INVALID_ARGUMENT );
-    /* Don't allow a key to be used as an input that is usually public.
-     * This is debatable. It's ok from a cryptographic perspective to
-     * use secret material as an input that is usually public. However
-     * the material should be dedicated to a particular input step,
-     * otherwise this may allow the key to be used in an unintended way
-     * and leak values derived from the key. So be conservative. */
-    if( step != PSA_KEY_DERIVATION_INPUT_SECRET )
-        return( PSA_ERROR_INVALID_ARGUMENT );
+    }
+
+    /* Passing a key object as a SECRET input unlocks the permission
+     * to output to a key object. */
+    if( step == PSA_KEY_DERIVATION_INPUT_SECRET )
+        operation->can_output_key = 1;
+
     return( psa_key_derivation_input_internal( operation,
-                                               step,
+                                               step, slot->attr.type,
                                                slot->data.raw.data,
                                                slot->data.raw.bytes ) );
 }
@@ -5256,8 +5306,10 @@ static psa_status_t psa_key_agreement_internal( psa_key_derivation_operation_t *
         goto exit;
 
     /* Step 2: set up the key derivation to generate key material from
-     * the shared secret. */
+     * the shared secret. A shared secret is permitted wherever a key
+     * of type DERIVE is permitted. */
     status = psa_key_derivation_input_internal( operation, step,
+                                                PSA_KEY_TYPE_DERIVE,
                                                 shared_secret,
                                                 shared_secret_length );
 
@@ -5511,6 +5563,11 @@ psa_status_t psa_generate_key( const psa_key_attributes_t *attributes,
     psa_status_t status;
     psa_key_slot_t *slot = NULL;
     psa_se_drv_table_entry_t *driver = NULL;
+
+    /* Reject any attempt to create a zero-length key so that we don't
+     * risk tripping up later, e.g. on a malloc(0) that returns NULL. */
+    if( psa_get_key_bits( attributes ) == 0 )
+        return( PSA_ERROR_INVALID_ARGUMENT );
 
     status = psa_start_key_creation( PSA_KEY_CREATION_GENERATE,
                                      attributes, handle, &slot, &driver );
