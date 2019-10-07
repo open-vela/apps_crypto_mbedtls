@@ -57,22 +57,6 @@ extern "C" {
  * algorithms, key types, policies, etc. */
 #include "crypto_types.h"
 
-/** \defgroup API version
- * @{
- */
-
-/**
- * The major version of this implementation of the PSA Crypto API
- */
-#define PSA_CRYPTO_API_VERSION_MAJOR 1
-
-/**
- * The minor version of this implementation of the PSA Crypto API
- */
-#define PSA_CRYPTO_API_VERSION_MINOR 0
-
-/**@}*/
-
 /* The file "crypto_values.h" declares macros to build and analyze values
  * of integral types defined in "crypto_types.h". */
 #include "crypto_values.h"
@@ -3245,12 +3229,9 @@ psa_status_t psa_key_derivation_set_capacity(
  * Refer to the documentation of each key derivation or key agreement
  * algorithm for information.
  *
- * This function passes direct inputs, which is usually correct for
- * non-secret inputs. To pass a secret input, which should be in a key
- * object, call psa_key_derivation_input_key() instead of this function.
- * Refer to the documentation of individual step types
- * (`PSA_KEY_DERIVATION_INPUT_xxx` values of type ::psa_key_derivation_step_t)
- * for more information.
+ * This function passes direct inputs. Some inputs must be passed as keys
+ * using psa_key_derivation_input_key() instead of this function. Refer to
+ * the documentation of individual step types for information.
  *
  * If this function returns an error status, the operation enters an error
  * state and must be aborted by calling psa_key_derivation_abort().
@@ -3293,13 +3274,10 @@ psa_status_t psa_key_derivation_input_bytes(
  * Refer to the documentation of each key derivation or key agreement
  * algorithm for information.
  *
- * This function obtains input from a key object, which is usually correct for
- * secret inputs or for non-secret personalization strings kept in the key
- * store. To pass a non-secret parameter which is not in the key store,
- * call psa_key_derivation_input_bytes() instead of this function.
- * Refer to the documentation of individual step types
- * (`PSA_KEY_DERIVATION_INPUT_xxx` values of type ::psa_key_derivation_step_t)
- * for more information.
+ * This function passes key inputs. Some inputs must be passed as keys
+ * of the appropriate type using this function, while others must be
+ * passed as direct inputs using psa_key_derivation_input_bytes(). Refer to
+ * the documentation of individual step types for information.
  *
  * If this function returns an error status, the operation enters an error
  * state and must be aborted by calling psa_key_derivation_abort().
@@ -3320,8 +3298,7 @@ psa_status_t psa_key_derivation_input_bytes(
  * \retval #PSA_ERROR_INVALID_ARGUMENT
  *         \c step is not compatible with the operation's algorithm.
  * \retval #PSA_ERROR_INVALID_ARGUMENT
- *         \c step does not allow key inputs of the given type
- *         or does not allow key inputs at all.
+ *         \c step does not allow key inputs.
  * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
  * \retval #PSA_ERROR_COMMUNICATION_FAILURE
  * \retval #PSA_ERROR_HARDWARE_FAILURE
@@ -3391,8 +3368,6 @@ psa_status_t psa_key_derivation_input_key(
  *         \c private_key.
  * \retval #PSA_ERROR_NOT_SUPPORTED
  *         \c alg is not supported or is not a key derivation algorithm.
- * \retval #PSA_ERROR_INVALID_ARGUMENT
- *         \c step does not allow an input resulting from a key agreement.
  * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
  * \retval #PSA_ERROR_COMMUNICATION_FAILURE
  * \retval #PSA_ERROR_HARDWARE_FAILURE
@@ -3543,11 +3518,6 @@ psa_status_t psa_key_derivation_output_bytes(
  * In all cases, the data that is read is discarded from the operation.
  * The operation's capacity is decreased by the number of bytes read.
  *
- * For algorithms that take an input step #PSA_KEY_DERIVATION_INPUT_SECRET,
- * the input to that step must be provided with psa_key_derivation_input_key().
- * Future versions of this specification may include additional restrictions
- * on the derived key based on the attributes and strength of the secret key.
- *
  * \param[in] attributes    The attributes for the new key.
  * \param[in,out] operation The key derivation operation object to read from.
  * \param[out] handle       On success, a handle to the newly created key.
@@ -3570,9 +3540,6 @@ psa_status_t psa_key_derivation_output_bytes(
  *         implementation in general or in this particular location.
  * \retval #PSA_ERROR_INVALID_ARGUMENT
  *         The provided key attributes are not valid for the operation.
- * \retval #PSA_ERROR_NOT_PERMITTED
- *         The #PSA_KEY_DERIVATION_INPUT_SECRET input was not provided through
- *         a key.
  * \retval #PSA_ERROR_BAD_STATE
  *         The operation state is not valid (it must be active and completed
  *         all required input steps).
