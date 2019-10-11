@@ -424,10 +424,18 @@
 #define PSA_KEY_TYPE_ECC_PUBLIC_KEY_BASE        ((psa_key_type_t)0x60030000)
 #define PSA_KEY_TYPE_ECC_KEY_PAIR_BASE           ((psa_key_type_t)0x70030000)
 #define PSA_KEY_TYPE_ECC_CURVE_MASK             ((psa_key_type_t)0x0000ffff)
-/** Elliptic curve key pair. */
+/** Elliptic curve key pair.
+ *
+ * \param curve     A value of type ::psa_ecc_curve_t that identifies the
+ *                  ECC curve to be used.
+ */
 #define PSA_KEY_TYPE_ECC_KEY_PAIR(curve)         \
     (PSA_KEY_TYPE_ECC_KEY_PAIR_BASE | (curve))
-/** Elliptic curve public key. */
+/** Elliptic curve public key.
+ *
+ * \param curve     A value of type ::psa_ecc_curve_t that identifies the
+ *                  ECC curve to be used.
+ */
 #define PSA_KEY_TYPE_ECC_PUBLIC_KEY(curve)              \
     (PSA_KEY_TYPE_ECC_PUBLIC_KEY_BASE | (curve))
 
@@ -498,13 +506,34 @@
  */
 #define PSA_ECC_CURVE_CURVE448          ((psa_ecc_curve_t) 0x001e)
 
+/** Minimum value for a vendor-defined ECC curve identifier
+ *
+ * The range for vendor-defined curve identifiers is a subset of the IANA
+ * registry private use range, `0xfe00` - `0xfeff`.
+ */
+#define PSA_ECC_CURVE_VENDOR_MIN        ((psa_ecc_curve_t) 0xfe00)
+/** Maximum value for a vendor-defined ECC curve identifier
+ *
+ * The range for vendor-defined curve identifiers is a subset of the IANA
+ * registry private use range, `0xfe00` - `0xfeff`.
+ */
+#define PSA_ECC_CURVE_VENDOR_MAX        ((psa_ecc_curve_t) 0xfe7f)
+
 #define PSA_KEY_TYPE_DH_PUBLIC_KEY_BASE         ((psa_key_type_t)0x60040000)
 #define PSA_KEY_TYPE_DH_KEY_PAIR_BASE            ((psa_key_type_t)0x70040000)
 #define PSA_KEY_TYPE_DH_GROUP_MASK              ((psa_key_type_t)0x0000ffff)
-/** Diffie-Hellman key pair. */
+/** Diffie-Hellman key pair.
+ *
+ * \param group     A value of type ::psa_dh_group_t that identifies the
+ *                  Diffie-Hellman group to be used.
+ */
 #define PSA_KEY_TYPE_DH_KEY_PAIR(group)          \
     (PSA_KEY_TYPE_DH_KEY_PAIR_BASE | (group))
-/** Diffie-Hellman public key. */
+/** Diffie-Hellman public key.
+ *
+ * \param group     A value of type ::psa_dh_group_t that identifies the
+ *                  Diffie-Hellman group to be used.
+ */
 #define PSA_KEY_TYPE_DH_PUBLIC_KEY(group)               \
     (PSA_KEY_TYPE_DH_PUBLIC_KEY_BASE | (group))
 
@@ -537,6 +566,19 @@
 #define PSA_DH_GROUP_FFDHE4096          ((psa_dh_group_t) 0x0102)
 #define PSA_DH_GROUP_FFDHE6144          ((psa_dh_group_t) 0x0103)
 #define PSA_DH_GROUP_FFDHE8192          ((psa_dh_group_t) 0x0104)
+
+/** Minimum value for a vendor-defined Diffie Hellman group identifier
+ *
+ * The range for vendor-defined group identifiers is a subset of the IANA
+ * registry private use range, `0x01fc` - `0x01ff`.
+ */
+#define PSA_DH_GROUP_VENDOR_MIN         ((psa_dh_group_t) 0x01fc)
+/** Maximum value for a vendor-defined Diffie Hellman group identifier
+ *
+ * The range for vendor-defined group identifiers is a subset of the IANA
+ * registry private use range, `0x01fc` - `0x01ff`.
+ */
+#define PSA_DH_GROUP_VENDOR_MAX         ((psa_dh_group_t) 0x01fd)
 
 /** The block size of a block cipher.
  *
@@ -680,11 +722,15 @@
     (((alg) & PSA_ALG_CATEGORY_MASK) == PSA_ALG_CATEGORY_KEY_DERIVATION)
 
 #define PSA_ALG_HASH_MASK                       ((psa_algorithm_t)0x000000ff)
-
+/** MD2 */
 #define PSA_ALG_MD2                             ((psa_algorithm_t)0x01000001)
+/** MD4 */
 #define PSA_ALG_MD4                             ((psa_algorithm_t)0x01000002)
+/** MD5 */
 #define PSA_ALG_MD5                             ((psa_algorithm_t)0x01000003)
+/** PSA_ALG_RIPEMD160 */
 #define PSA_ALG_RIPEMD160                       ((psa_algorithm_t)0x01000004)
+/** SHA1 */
 #define PSA_ALG_SHA_1                           ((psa_algorithm_t)0x01000005)
 /** SHA2-224 */
 #define PSA_ALG_SHA_224                         ((psa_algorithm_t)0x01000008)
