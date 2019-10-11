@@ -186,6 +186,9 @@ static inline void psa_clear_key_slot_number(
  * \retval #PSA_ERROR_ALREADY_EXISTS
  *         There is already a key with the identifier specified in
  *         \p attributes.
+ * \retval #PSA_ERROR_NOT_SUPPORTED
+ *         The secure element driver for the specified lifetime does not
+ *         support registering a key.
  * \retval #PSA_ERROR_INVALID_ARGUMENT
  *         \p attributes specifies a lifetime which is not located
  *         in a secure element.
@@ -428,8 +431,9 @@ psa_status_t mbedtls_psa_inject_entropy(const uint8_t *seed,
  * #PSA_KEY_TYPE_DH_KEY_PAIR(#PSA_DH_GROUP_CUSTOM), the group data comes
  * from domain parameters set by psa_set_key_domain_parameters().
  */
-/* This value is reserved for private use in the TLS named group registry. */
-#define PSA_DH_GROUP_CUSTOM             ((psa_dh_group_t) 0x01fc)
+/* This value is a deprecated value meaning an explicit curve in the IANA
+ * registry. */
+#define PSA_DH_GROUP_CUSTOM             ((psa_dh_group_t) 0xff01)
 
 
 /**
