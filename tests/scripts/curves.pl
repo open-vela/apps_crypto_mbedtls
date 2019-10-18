@@ -46,14 +46,13 @@ for my $curve (@curves) {
     system( "make clean" ) and die;
 
     # depends on a specific curve. Also, ignore error if it wasn't enabled
-    system( "scripts/config.py unset MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED" );
+    system( "scripts/config.pl unset MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED" );
 
     print "\n******************************************\n";
     print "* Testing without curve: $curve\n";
     print "******************************************\n";
-    $ENV{MBEDTLS_TEST_CONFIGURATION} = "-$curve";
 
-    system( "scripts/config.py unset $curve" )
+    system( "scripts/config.pl unset $curve" )
         and abort "Failed to disable $curve\n";
 
     system( "CFLAGS='-Werror -Wall -Wextra' make lib" )
