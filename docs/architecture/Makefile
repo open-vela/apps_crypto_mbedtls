@@ -3,7 +3,7 @@ PANDOC = pandoc
 default: all
 
 all_markdown = \
-	       testing/test-framework.md \
+	       mbed-crypto-storage-specification.md \
 	       # This line is intentionally left blank
 
 html: $(all_markdown:.md=.html)
