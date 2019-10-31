@@ -128,9 +128,6 @@ pre_initialize_variables () {
     # Include more verbose output for failing tests run by CMake
     export CTEST_OUTPUT_ON_FAILURE=1
 
-    # CFLAGS and LDFLAGS for Asan builds that don't use CMake
-    ASAN_CFLAGS='-Werror -Wall -Wextra -fsanitize=address,undefined -fno-sanitize-recover=all'
-
     # Gather the list of available components. These are the functions
     # defined in this script whose name starts with "component_".
     # Parse the script with sed, because in sh there is no way to list
@@ -829,7 +826,7 @@ component_test_malloc_0_null () {
     msg "build: malloc(0) returns NULL (ASan+UBSan build)"
     scripts/config.pl full
     scripts/config.pl unset MBEDTLS_MEMORY_BUFFER_ALLOC_C
-    make CC=gcc CFLAGS="'-DMBEDTLS_CONFIG_FILE=\"$PWD/tests/configs/config-wrapper-malloc-0-null.h\"' $ASAN_CFLAGS -O" LDFLAGS="$ASAN_CFLAGS"
+    make CC=gcc CFLAGS="'-DMBEDTLS_CONFIG_FILE=\"$PWD/tests/configs/config-wrapper-malloc-0-null.h\"' -O -Werror -Wall -Wextra -fsanitize=address,undefined" LDFLAGS='-fsanitize=address,undefined'
 
     msg "test: malloc(0) returns NULL (ASan+UBSan build)"
     make test
@@ -871,7 +868,7 @@ component_test_aes_fewer_tables_and_rom_tables () {
 component_test_se_default () {
     msg "build: default config + MBEDTLS_PSA_CRYPTO_SE_C"
     scripts/config.pl set MBEDTLS_PSA_CRYPTO_SE_C
-    make CC=clang CFLAGS="$ASAN_CFLAGS -Os" LDFLAGS="$ASAN_CFLAGS"
+    make CC=clang CFLAGS='-Werror -Wall -Wextra -Wno-unused-function -Os -fsanitize=address' LDFLAGS='-fsanitize=address'
 
     msg "test: default config + MBEDTLS_PSA_CRYPTO_SE_C"
     make test
@@ -879,8 +876,10 @@ component_test_se_default () {
 
 component_test_se_full () {
     msg "build: full config + MBEDTLS_PSA_CRYPTO_SE_C"
+    scripts/config.pl full
+    scripts/config.pl unset MBEDTLS_MEMORY_BUFFER_ALLOC_C
     scripts/config.pl set MBEDTLS_PSA_CRYPTO_SE_C
-    make CC=gcc CFLAGS="$ASAN_CFLAGS -O2" LDFLAGS="$ASAN_CFLAGS"
+    make CC=gcc CFLAGS='-Werror -Wall -Wextra -O2 -fsanitize=address' LDFLAGS='-fsanitize=address'
 
     msg "test: full config + MBEDTLS_PSA_CRYPTO_SE_C"
     make test
@@ -915,7 +914,7 @@ component_test_m32_o0 () {
     # Build once with -O0, to compile out the i386 specific inline assembly
     msg "build: i386, make, gcc -O0 (ASan build)" # ~ 30s
     scripts/config.pl full
-    make CC=gcc CFLAGS="$ASAN_CFLAGS -m32 -O0" LDFLAGS="-m32 $ASAN_CFLAGS"
+    make CC=gcc CFLAGS='-O0 -Werror -Wall -Wextra -m32 -fsanitize=address' LDFLAGS='-m32 -fsanitize=address'
 
     msg "test: i386, make, gcc -O0 (ASan build)"
     make test
@@ -934,7 +933,7 @@ component_test_m32_o1 () {
     scripts/config.pl unset MBEDTLS_MEMORY_BACKTRACE
     scripts/config.pl unset MBEDTLS_MEMORY_BUFFER_ALLOC_C
     scripts/config.pl unset MBEDTLS_MEMORY_DEBUG
-    make CC=gcc CFLAGS="$ASAN_CFLAGS -m32 -O1" LDFLAGS="-m32 $ASAN_CFLAGS"
+    make CC=gcc CFLAGS='-O1 -Werror -Wall -Wextra -m32 -fsanitize=address' LDFLAGS='-m32 -fsanitize=address'
 
     msg "test: i386, make, gcc -O1 (ASan build)"
     make test
@@ -947,7 +946,7 @@ component_test_m32_everest () {
     msg "build: i386, Everest ECDH context (ASan build)" # ~ 6 min
     scripts/config.pl unset MBEDTLS_ECDH_LEGACY_CONTEXT
     scripts/config.pl set MBEDTLS_ECDH_VARIANT_EVEREST_ENABLED
-    make CC=gcc CFLAGS="$ASAN_CFLAGS -m32 -O2" LDFLAGS="-m32 $ASAN_CFLAGS"
+    make CC=gcc CFLAGS='-O2 -Werror -Wall -Wextra -m32 -fsanitize=address'
 
     msg "test: i386, Everest ECDH context - main suites (inc. selftests) (ASan build)" # ~ 50s
     make test
