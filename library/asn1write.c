@@ -231,7 +231,7 @@ int mbedtls_asn1_write_bool( unsigned char **p, unsigned char *start, int boolea
     return( (int) len );
 }
 
-static int asn1_write_tagged_int( unsigned char **p, unsigned char *start, int val, int tag )
+int mbedtls_asn1_write_int( unsigned char **p, unsigned char *start, int val )
 {
     int ret;
     size_t len = 0;
@@ -255,19 +255,9 @@ static int asn1_write_tagged_int( unsigned char **p, unsigned char *start, int v
     }
 
     MBEDTLS_ASN1_CHK_ADD( len, mbedtls_asn1_write_len( p, start, len ) );
-    MBEDTLS_ASN1_CHK_ADD( len, mbedtls_asn1_write_tag( p, start, tag ) );
+    MBEDTLS_ASN1_CHK_ADD( len, mbedtls_asn1_write_tag( p, start, MBEDTLS_ASN1_INTEGER ) );
 
     return( (int) len );
-}
-
-int mbedtls_asn1_write_int( unsigned char **p, unsigned char *start, int val )
-{
-    return( asn1_write_tagged_int( p, start, val, MBEDTLS_ASN1_INTEGER ) );
-}
-
-int mbedtls_asn1_write_enum( unsigned char **p, unsigned char *start, int val )
-{
-    return( asn1_write_tagged_int( p, start, val, MBEDTLS_ASN1_ENUMERATED ) );
 }
 
 int mbedtls_asn1_write_tagged_string( unsigned char **p, unsigned char *start, int tag,
