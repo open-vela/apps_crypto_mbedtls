@@ -24,6 +24,7 @@ Basic usage, to read the Mbed TLS or Mbed Crypto configuration:
 ##
 ## This file is part of Mbed TLS (https://tls.mbed.org)
 
+import os
 import re
 
 class Setting:
@@ -52,12 +53,10 @@ class Config:
     if there is a #define for it whether commented out or not.
 
     This class supports the following protocols:
-    * `name in config` is True if the symbol `name` is set in the
-      configuration, False otherwise (whether `name` is known but commented
-      out or not known at all).
-    * `config[name]` is the value of the macro `name`. If `name` is not
-      set, raise `KeyError` (even if a definition for `name` is present
-      but commented out).
+    * `name in config` is `True` if the symbol `name` is active, `False`
+      otherwise (whether `name` is inactive or not known).
+    * `config[name]` is the value of the macro `name`. If `name` is inactive,
+      raise `KeyError` (even if `name` is known).
     * `config[name] = value` sets the value associated to `name`. `name`
       must be known, but does not need to be set. This does not cause
       name to become set.
@@ -130,9 +129,10 @@ class Config:
     def unset(self, name):
         """Make name unset (inactive).
 
-        name remains known.
+        name remains known if it was known before.
         """
-        self.set(name)
+        if name not in self.settings:
+            return
         self.settings[name].active = False
 
     def adapt(self, adapter):
@@ -154,7 +154,7 @@ def is_full_section(section):
     return section.endswith('support') or section.endswith('modules')
 
 def realfull_adapter(_name, active, section):
-    """Uncomment everything in the system and feature sections."""
+    """Activate all symbols found in the system and feature sections."""
     if not is_full_section(section):
         return active
     return True
@@ -164,22 +164,29 @@ def include_in_full(name):
     if re.search(r'PLATFORM_[A-Z0-9]+_ALT', name):
         return True
     if name in [
-            'MBEDTLS_CTR_DRBG_USE_128_BIT_KEY',
             'MBEDTLS_DEPRECATED_REMOVED',
             'MBEDTLS_ECDH_VARIANT_EVEREST_ENABLED',
             'MBEDTLS_ECP_RESTARTABLE',
             'MBEDTLS_HAVE_SSE2',
+            'MBEDTLS_MEMORY_BACKTRACE',
+            'MBEDTLS_MEMORY_BUFFER_ALLOC_C',
+            'MBEDTLS_MEMORY_DEBUG',
             'MBEDTLS_NO_64BIT_MULTIPLICATION',
             'MBEDTLS_NO_DEFAULT_ENTROPY_SOURCES',
             'MBEDTLS_NO_PLATFORM_ENTROPY',
             'MBEDTLS_NO_UDBL_DIVISION',
+            'MBEDTLS_PKCS11_C',
             'MBEDTLS_PLATFORM_NO_STD_FUNCTIONS',
-            'MBEDTLS_PSA_CRYPTO_KEY_FILE_ID_ENCODES_OWNER',
-            'MBEDTLS_PSA_CRYPTO_SE_C',
             'MBEDTLS_PSA_CRYPTO_SPM',
             'MBEDTLS_PSA_INJECT_ENTROPY',
+            'MBEDTLS_REMOVE_3DES_CIPHERSUITES',
+            'MBEDTLS_REMOVE_ARC4_CIPHERSUITES',
             'MBEDTLS_RSA_NO_CRT',
+            'MBEDTLS_SSL_HW_RECORD_ACCEL',
             'MBEDTLS_TEST_NULL_ENTROPY',
+            'MBEDTLS_X509_ALLOW_EXTENSIONS_NON_V3',
+            'MBEDTLS_X509_ALLOW_UNSUPPORTED_CRITICAL_EXTENSION',
+            'MBEDTLS_ZLIB_SUPPORT',
     ]:
         return False
     if name.endswith('_ALT'):
@@ -203,9 +210,9 @@ def keep_in_baremetal(name):
             'MBEDTLS_HAVE_TIME_DATE',
             'MBEDTLS_MEMORY_BACKTRACE',
             'MBEDTLS_MEMORY_BUFFER_ALLOC_C',
+            'MBEDTLS_NET_C',
             'MBEDTLS_PLATFORM_FPRINTF_ALT',
             'MBEDTLS_PLATFORM_TIME_ALT',
-            'MBEDTLS_PSA_CRYPTO_SE_C',
             'MBEDTLS_PSA_CRYPTO_STORAGE_C',
             'MBEDTLS_PSA_ITS_FILE_C',
             'MBEDTLS_THREADING_C',
@@ -230,16 +237,24 @@ class ConfigFile(Config):
     and modify the configuration.
     """
 
-    default_path = 'include/mbedtls/config.h'
+    _path_in_tree = 'include/mbedtls/config.h'
+    default_path = [_path_in_tree,
+                    os.path.join(os.path.dirname(__file__),
+                                 os.pardir,
+                                 _path_in_tree),
+                    os.path.join(os.path.dirname(os.path.abspath(os.path.dirname(__file__))),
+                                 _path_in_tree)]
 
     def __init__(self, filename=None):
         """Read the Mbed TLS configuration file."""
         if filename is None:
-            filename = self.default_path
+            for filename in self.default_path:
+                if os.path.lexists(filename):
+                    break
         super().__init__()
         self.filename = filename
         self.current_section = 'header'
-        with open(filename) as file:
+        with open(filename, 'r', encoding='utf-8') as file:
             self.templates = [self._parse_line(line) for line in file]
         self.current_section = None
 
@@ -283,13 +298,26 @@ class ConfigFile(Config):
     def _format_template(self, name, indent, middle):
         """Build a line for config.h for the given setting.
 
-        The line has the form "<indent>#define <name><middle> <value>".
+        The line has the form "<indent>#define <name> <value>"
+        where <middle> is "#define <name> ".
         """
         setting = self.settings[name]
+        value = setting.value
+        if value is None:
+            value = ''
+        # Normally the whitespace to separte the symbol name from the
+        # value is part of middle, and there's no whitespace for a symbol
+        # with no value. But if a symbol has been changed from having a
+        # value to not having one, the whitespace is wrong, so fix it.
+        if value:
+            if middle[-1] not in '\t ':
+                middle += ' '
+        else:
+            middle = middle.rstrip()
         return ''.join([indent,
                         '' if setting.active else '//',
                         middle,
-                        setting.value]).rstrip()
+                        value]).rstrip()
 
     def write_to_stream(self, output):
         """Write the whole configuration to output."""
@@ -307,7 +335,7 @@ class ConfigFile(Config):
         """
         if filename is None:
             filename = self.filename
-        with open(filename, 'w') as output:
+        with open(filename, 'w', encoding='utf-8') as output:
             self.write_to_stream(output)
 
 if __name__ == '__main__':
@@ -321,9 +349,10 @@ if __name__ == '__main__':
                             Default: {}.
                             """.format(ConfigFile.default_path))
         parser.add_argument('--force', '-o',
+                            action='store_true',
                             help="""For the set command, if SYMBOL is not
                             present, add a definition for it.""")
-        parser.add_argument('--write', '-w',
+        parser.add_argument('--write', '-w', metavar='FILE',
                             help="""File to write to instead of the input file.""")
         subparsers = parser.add_subparsers(dest='command',
                                            title='Commands')
@@ -343,7 +372,8 @@ if __name__ == '__main__':
                                            found, unless --force is passed.
                                            """)
         parser_set.add_argument('symbol', metavar='SYMBOL')
-        parser_set.add_argument('value', metavar='VALUE', nargs='?')
+        parser_set.add_argument('value', metavar='VALUE', nargs='?',
+                                default='')
         parser_unset = subparsers.add_parser('unset',
                                              help="""Comment out the #define
                                              for SYMBOL. Do nothing if none
@@ -367,17 +397,20 @@ if __name__ == '__main__':
 
         args = parser.parse_args()
         config = ConfigFile(args.file)
-        if args.command == 'get':
+        if args.command is None:
+            parser.print_help()
+            return 1
+        elif args.command == 'get':
             if args.symbol in config:
                 value = config[args.symbol]
                 if value:
                     sys.stdout.write(value + '\n')
             return args.symbol not in config
         elif args.command == 'set':
-            if not args.force and args.symbol not in config:
+            if not args.force and args.symbol not in config.settings:
                 sys.stderr.write("A #define for the symbol {} "
-                                 "was not found in {}"
-                                 .format(args.symbol, args.file))
+                                 "was not found in {}\n"
+                                 .format(args.symbol, config.filename))
                 return 1
             config.set(args.symbol, value=args.value)
         elif args.command == 'unset':
