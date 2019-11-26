@@ -21,10 +21,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
             mbedtls_mpi_init( &DQ ); mbedtls_mpi_init( &QP );
 
             rsa = mbedtls_pk_rsa( pk );
-            if ( mbedtls_rsa_export( rsa, &N, NULL, NULL, NULL, &E ) != 0 ) {
-                abort();
-            }
-            if ( mbedtls_rsa_export( rsa, &N, &P, &Q, &D, &E ) != MBEDTLS_ERR_RSA_BAD_INPUT_DATA ) {
+            if ( mbedtls_rsa_export( rsa, &N, &P, &Q, &D, &E ) != 0 ) {
                 abort();
             }
             if ( mbedtls_rsa_export_crt( rsa, &DP, &DQ, &QP ) != MBEDTLS_ERR_RSA_BAD_INPUT_DATA ) {
@@ -39,30 +36,20 @@ int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
         else
 #endif
 #if defined(MBEDTLS_ECP_C)
-        if( mbedtls_pk_get_type( &pk ) == MBEDTLS_PK_ECKEY ||
-            mbedtls_pk_get_type( &pk ) == MBEDTLS_PK_ECKEY_DH )
+        if( mbedtls_pk_get_type( &pk ) == MBEDTLS_PK_ECKEY )
         {
-            mbedtls_ecp_keypair *ecp = mbedtls_pk_ec( pk );
-            mbedtls_ecp_group_id grp_id = ecp->grp.id;
-            const mbedtls_ecp_curve_info *curve_info =
-                mbedtls_ecp_curve_info_from_grp_id( grp_id );
+            mbedtls_ecp_keypair *ecp;
 
-            /* If the curve is not supported, the key should not have been
-             * accepted. */
-            if( curve_info == NULL )
-                abort( );
-
-            /* It's a public key, so the private value should not have
-             * been changed from its initialization to 0. */
-            if( mbedtls_mpi_cmp_int( &ecp->d, 0 ) != 0 )
-                abort( );
+            ecp = mbedtls_pk_ec( pk );
+            //dummy use of value
+            if (ecp) {
+                ret = 0;
+            }
         }
         else
 #endif
         {
-            /* The key is valid but is not of a supported type.
-             * This should not happen. */
-            abort( );
+            ret = 0;
         }
     }
     mbedtls_pk_free( &pk );
