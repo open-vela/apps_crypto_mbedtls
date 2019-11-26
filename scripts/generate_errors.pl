@@ -3,15 +3,17 @@
 # Generate error.c
 #
 # Usage: ./generate_errors.pl or scripts/generate_errors.pl without arguments,
-# or generate_errors.pl include_dir data_dir error_file
+# or generate_errors.pl include_dir data_dir error_file include_crypto
+# include_crypto can be either 0 (don't include) or 1 (include). On by default.
 
 use strict;
 
-my ($include_dir, $data_dir, $error_file);
+my ($include_dir, $data_dir, $error_file, $include_crypto);
+my $crypto_dir = "crypto";
 
 if( @ARGV ) {
-    die "Invalid number of arguments" if scalar @ARGV != 3;
-    ($include_dir, $data_dir, $error_file) = @ARGV;
+    die "Invalid number of arguments" if scalar @ARGV != 4;
+    ($include_dir, $data_dir, $error_file, $include_crypto) = @ARGV;
 
     -d $include_dir or die "No such directory: $include_dir\n";
     -d $data_dir or die "No such directory: $data_dir\n";
@@ -19,6 +21,7 @@ if( @ARGV ) {
     $include_dir = 'include/mbedtls';
     $data_dir = 'scripts/data_files';
     $error_file = 'library/error.c';
+    $include_crypto = 1;
 
     unless( -d $include_dir && -d $data_dir ) {
         chdir '..' or die;
@@ -27,16 +30,20 @@ if( @ARGV ) {
     }
 }
 
+if( $include_crypto ) {
+    -d $crypto_dir or die "Crypto submodule not present\n";
+}
+
 my $error_format_file = $data_dir.'/error.fmt';
 
 my @low_level_modules = qw( AES ARC4 ARIA ASN1 BASE64 BIGNUM BLOWFISH
                             CAMELLIA CCM CHACHA20 CHACHAPOLY CMAC CTR_DRBG DES
-                            ENTROPY ERROR GCM HKDF HMAC_DRBG MD2 MD4 MD5
-                            OID PADLOCK PBKDF2 PLATFORM POLY1305 RIPEMD160
+                            ENTROPY GCM HKDF HMAC_DRBG MD2 MD4 MD5
+                            NET OID PADLOCK PBKDF2 PLATFORM POLY1305 RIPEMD160
                             SHA1 SHA256 SHA512 THREADING XTEA );
 my @high_level_modules = qw( CIPHER DHM ECP MD
                              PEM PK PKCS12 PKCS5
-                             RSA );
+                             RSA SSL X509 );
 
 my $line_separator = $/;
 undef $/;
@@ -47,9 +54,19 @@ close(FORMAT_FILE);
 
 $/ = $line_separator;
 
-my @files = <$include_dir/*.h>;
+my @headers = ();
+if ($include_crypto) {
+    @headers = <$crypto_dir/$include_dir/*.h>;
+    foreach my $header (<$include_dir/*.h>) {
+        my $basename = $header; $basename =~ s!.*/!!;
+        push @headers, $header unless -e "$crypto_dir/$include_dir/$basename";
+    }
+} else {
+     @headers = <$include_dir/*.h>;
+}
+
 my @matches;
-foreach my $file (@files) {
+foreach my $file (@headers) {
     open(FILE, "$file");
     my @grep_res = grep(/^\s*#define\s+MBEDTLS_ERR_\w+\s+\-0x[0-9A-Fa-f]+/, <FILE>);
     push(@matches, @grep_res);
@@ -73,8 +90,9 @@ foreach my $line (@matches)
     my ($error_name, $error_code) = $line =~ /(MBEDTLS_ERR_\w+)\s+\-(0x\w+)/;
     my ($description) = $line =~ /\/\*\*< (.*?)\.? \*\//;
 
-    die "Duplicated error code: $error_code ($error_name)\n"
-        if( $error_codes_seen{$error_code}++ );
+    if( $error_codes_seen{$error_code}++ ) {
+        die "Duplicated error code: $error_code ($error_name)\n";
+    }
 
     $description =~ s/\\/\\\\/g;
     if ($description eq "") {
@@ -90,12 +108,17 @@ foreach my $line (@matches)
     $module_name = "HMAC_DRBG" if ($module_name eq "HMAC");
 
     my $define_name = $module_name;
+    $define_name = "X509_USE,X509_CREATE" if ($define_name eq "X509");
     $define_name = "ASN1_PARSE" if ($define_name eq "ASN1");
+    $define_name = "SSL_TLS" if ($define_name eq "SSL");
     $define_name = "PEM_PARSE,PEM_WRITE" if ($define_name eq "PEM");
 
     my $include_name = $module_name;
     $include_name =~ tr/A-Z/a-z/;
     $include_name = "" if ($include_name eq "asn1");
+
+    # Fix faulty ones
+    $include_name = "net_sockets" if ($module_name eq "NET");
 
     my $found_ll = grep $_ eq $module_name, @low_level_modules;
     my $found_hl = grep $_ eq $module_name, @high_level_modules;
@@ -155,8 +178,19 @@ foreach my $line (@matches)
         ${$old_define} = $define_name;
     }
 
-    ${$code_check} .= "${white_space}if( use_ret == -($error_name) )\n".
-                      "${white_space}    mbedtls_snprintf( buf, buflen, \"$module_name - $description\" );\n"
+    if ($error_name eq "MBEDTLS_ERR_SSL_FATAL_ALERT_MESSAGE")
+    {
+        ${$code_check} .= "${white_space}if( use_ret == -($error_name) )\n".
+                          "${white_space}\{\n".
+                          "${white_space}    mbedtls_snprintf( buf, buflen, \"$module_name - $description\" );\n".
+                          "${white_space}    return;\n".
+                          "${white_space}}\n"
+    }
+    else
+    {
+        ${$code_check} .= "${white_space}if( use_ret == -($error_name) )\n".
+                          "${white_space}    mbedtls_snprintf( buf, buflen, \"$module_name - $description\" );\n"
+    }
 };
 
 if ($ll_old_define ne "")
