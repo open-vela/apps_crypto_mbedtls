@@ -424,10 +424,18 @@
 #define PSA_KEY_TYPE_ECC_PUBLIC_KEY_BASE        ((psa_key_type_t)0x60030000)
 #define PSA_KEY_TYPE_ECC_KEY_PAIR_BASE           ((psa_key_type_t)0x70030000)
 #define PSA_KEY_TYPE_ECC_CURVE_MASK             ((psa_key_type_t)0x0000ffff)
-/** Elliptic curve key pair. */
+/** Elliptic curve key pair.
+ *
+ * \param curve     A value of type ::psa_ecc_curve_t that identifies the
+ *                  ECC curve to be used.
+ */
 #define PSA_KEY_TYPE_ECC_KEY_PAIR(curve)         \
     (PSA_KEY_TYPE_ECC_KEY_PAIR_BASE | (curve))
-/** Elliptic curve public key. */
+/** Elliptic curve public key.
+ *
+ * \param curve     A value of type ::psa_ecc_curve_t that identifies the
+ *                  ECC curve to be used.
+ */
 #define PSA_KEY_TYPE_ECC_PUBLIC_KEY(curve)              \
     (PSA_KEY_TYPE_ECC_PUBLIC_KEY_BASE | (curve))
 
@@ -498,13 +506,34 @@
  */
 #define PSA_ECC_CURVE_CURVE448          ((psa_ecc_curve_t) 0x001e)
 
+/** Minimum value for a vendor-defined ECC curve identifier
+ *
+ * The range for vendor-defined curve identifiers is a subset of the IANA
+ * registry private use range, `0xfe00` - `0xfeff`.
+ */
+#define PSA_ECC_CURVE_VENDOR_MIN        ((psa_ecc_curve_t) 0xfe00)
+/** Maximum value for a vendor-defined ECC curve identifier
+ *
+ * The range for vendor-defined curve identifiers is a subset of the IANA
+ * registry private use range, `0xfe00` - `0xfeff`.
+ */
+#define PSA_ECC_CURVE_VENDOR_MAX        ((psa_ecc_curve_t) 0xfe7f)
+
 #define PSA_KEY_TYPE_DH_PUBLIC_KEY_BASE         ((psa_key_type_t)0x60040000)
 #define PSA_KEY_TYPE_DH_KEY_PAIR_BASE            ((psa_key_type_t)0x70040000)
 #define PSA_KEY_TYPE_DH_GROUP_MASK              ((psa_key_type_t)0x0000ffff)
-/** Diffie-Hellman key pair. */
+/** Diffie-Hellman key pair.
+ *
+ * \param group     A value of type ::psa_dh_group_t that identifies the
+ *                  Diffie-Hellman group to be used.
+ */
 #define PSA_KEY_TYPE_DH_KEY_PAIR(group)          \
     (PSA_KEY_TYPE_DH_KEY_PAIR_BASE | (group))
-/** Diffie-Hellman public key. */
+/** Diffie-Hellman public key.
+ *
+ * \param group     A value of type ::psa_dh_group_t that identifies the
+ *                  Diffie-Hellman group to be used.
+ */
 #define PSA_KEY_TYPE_DH_PUBLIC_KEY(group)               \
     (PSA_KEY_TYPE_DH_PUBLIC_KEY_BASE | (group))
 
@@ -538,6 +567,19 @@
 #define PSA_DH_GROUP_FFDHE6144          ((psa_dh_group_t) 0x0103)
 #define PSA_DH_GROUP_FFDHE8192          ((psa_dh_group_t) 0x0104)
 
+/** Minimum value for a vendor-defined Diffie Hellman group identifier
+ *
+ * The range for vendor-defined group identifiers is a subset of the IANA
+ * registry private use range, `0x01fc` - `0x01ff`.
+ */
+#define PSA_DH_GROUP_VENDOR_MIN         ((psa_dh_group_t) 0x01fc)
+/** Maximum value for a vendor-defined Diffie Hellman group identifier
+ *
+ * The range for vendor-defined group identifiers is a subset of the IANA
+ * registry private use range, `0x01fc` - `0x01ff`.
+ */
+#define PSA_DH_GROUP_VENDOR_MAX         ((psa_dh_group_t) 0x01fd)
+
 /** The block size of a block cipher.
  *
  * \param type  A cipher key type (value of type #psa_key_type_t).
@@ -562,6 +604,7 @@
         (type) == PSA_KEY_TYPE_DES ? 8 :             \
         (type) == PSA_KEY_TYPE_CAMELLIA ? 16 :       \
         (type) == PSA_KEY_TYPE_ARC4 ? 1 :            \
+        (type) == PSA_KEY_TYPE_CHACHA20 ? 1 :            \
         0)
 
 /** Vendor-defined algorithm flag.
@@ -680,11 +723,15 @@
     (((alg) & PSA_ALG_CATEGORY_MASK) == PSA_ALG_CATEGORY_KEY_DERIVATION)
 
 #define PSA_ALG_HASH_MASK                       ((psa_algorithm_t)0x000000ff)
-
+/** MD2 */
 #define PSA_ALG_MD2                             ((psa_algorithm_t)0x01000001)
+/** MD4 */
 #define PSA_ALG_MD4                             ((psa_algorithm_t)0x01000002)
+/** MD5 */
 #define PSA_ALG_MD5                             ((psa_algorithm_t)0x01000003)
+/** PSA_ALG_RIPEMD160 */
 #define PSA_ALG_RIPEMD160                       ((psa_algorithm_t)0x01000004)
+/** SHA1 */
 #define PSA_ALG_SHA_1                           ((psa_algorithm_t)0x01000005)
 /** SHA2-224 */
 #define PSA_ALG_SHA_224                         ((psa_algorithm_t)0x01000008)
@@ -720,17 +767,17 @@
  * Then you may create and use a key as follows:
  * - Set the key usage field using #PSA_ALG_ANY_HASH, for example:
  *   ```
- *   psa_set_key_usage_flags(&attributes, PSA_KEY_USAGE_SIGN); // or VERIFY
+ *   psa_set_key_usage_flags(&attributes, PSA_KEY_USAGE_SIGN_HASH); // or VERIFY
  *   psa_set_key_algorithm(&attributes, PSA_xxx_SIGNATURE(PSA_ALG_ANY_HASH));
  *   ```
  * - Import or generate key material.
- * - Call psa_asymmetric_sign() or psa_asymmetric_verify(), passing
+ * - Call psa_sign_hash() or psa_verify_hash(), passing
  *   an algorithm built from `PSA_xxx_SIGNATURE` and a specific hash. Each
  *   call to sign or verify a message may use a different hash.
  *   ```
- *   psa_asymmetric_sign(handle, PSA_xxx_SIGNATURE(PSA_ALG_SHA_256), ...);
- *   psa_asymmetric_sign(handle, PSA_xxx_SIGNATURE(PSA_ALG_SHA_512), ...);
- *   psa_asymmetric_sign(handle, PSA_xxx_SIGNATURE(PSA_ALG_SHA3_256), ...);
+ *   psa_sign_hash(handle, PSA_xxx_SIGNATURE(PSA_ALG_SHA_256), ...);
+ *   psa_sign_hash(handle, PSA_xxx_SIGNATURE(PSA_ALG_SHA_512), ...);
+ *   psa_sign_hash(handle, PSA_xxx_SIGNATURE(PSA_ALG_SHA3_256), ...);
  *   ```
  *
  * This value may not be used to build other algorithms that are
@@ -1151,11 +1198,12 @@
  */
 #define PSA_ALG_DETERMINISTIC_ECDSA(hash_alg)                           \
     (PSA_ALG_DETERMINISTIC_ECDSA_BASE | ((hash_alg) & PSA_ALG_HASH_MASK))
+#define PSA_ALG_ECDSA_DETERMINISTIC_FLAG        ((psa_algorithm_t)0x00010000)
 #define PSA_ALG_IS_ECDSA(alg)                                           \
-    (((alg) & ~PSA_ALG_HASH_MASK & ~PSA_ALG_DSA_DETERMINISTIC_FLAG) ==  \
+    (((alg) & ~PSA_ALG_HASH_MASK & ~PSA_ALG_ECDSA_DETERMINISTIC_FLAG) ==  \
      PSA_ALG_ECDSA_BASE)
 #define PSA_ALG_ECDSA_IS_DETERMINISTIC(alg)             \
-    (((alg) & PSA_ALG_DSA_DETERMINISTIC_FLAG) != 0)
+    (((alg) & PSA_ALG_ECDSA_DETERMINISTIC_FLAG) != 0)
 #define PSA_ALG_IS_DETERMINISTIC_ECDSA(alg)                             \
     (PSA_ALG_IS_ECDSA(alg) && PSA_ALG_ECDSA_IS_DETERMINISTIC(alg))
 #define PSA_ALG_IS_RANDOMIZED_ECDSA(alg)                                \
@@ -1594,7 +1642,7 @@
  *
  * For a key pair, this concerns the private key.
  */
-#define PSA_KEY_USAGE_SIGN                      ((psa_key_usage_t)0x00000400)
+#define PSA_KEY_USAGE_SIGN_HASH                 ((psa_key_usage_t)0x00000400)
 
 /** Whether the key may be used to verify a message signature.
  *
@@ -1604,7 +1652,7 @@
  *
  * For a key pair, this concerns the public key.
  */
-#define PSA_KEY_USAGE_VERIFY                    ((psa_key_usage_t)0x00000800)
+#define PSA_KEY_USAGE_VERIFY_HASH               ((psa_key_usage_t)0x00000800)
 
 /** Whether the key may be used to derive other keys.
  */
