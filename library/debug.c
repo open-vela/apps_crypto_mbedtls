@@ -44,8 +44,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "mbedtls/error.h"
-
 #if ( defined(__ARMCC_VERSION) || defined(_MSC_VER) ) && \
     !defined(inline) && !defined(__cplusplus)
 #define inline __inline
@@ -87,7 +85,7 @@ void mbedtls_debug_print_msg( const mbedtls_ssl_context *ssl, int level,
 {
     va_list argp;
     char str[DEBUG_BUF_SIZE];
-    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+    int ret;
 
     if( NULL == ssl              ||
         NULL == ssl->conf        ||
