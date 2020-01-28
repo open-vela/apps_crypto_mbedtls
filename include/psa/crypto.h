@@ -459,9 +459,12 @@ psa_status_t psa_open_key(psa_key_id_t id,
  * maintain the key handle until after the multipart operation has finished.
  *
  * \param handle        The key handle to close.
+ *                      If this is \c 0, do nothing and return \c PSA_SUCCESS.
  *
  * \retval #PSA_SUCCESS
+ *         \p handle was a valid handle or \c 0. It is now closed.
  * \retval #PSA_ERROR_INVALID_HANDLE
+ *         \p handle is not a valid handle nor \c 0.
  * \retval #PSA_ERROR_COMMUNICATION_FAILURE
  * \retval #PSA_ERROR_CORRUPTION_DETECTED
  * \retval #PSA_ERROR_BAD_STATE
@@ -579,13 +582,17 @@ psa_status_t psa_copy_key(psa_key_handle_t source_handle,
  * key will cause the multipart operation to fail.
  *
  * \param handle        Handle to the key to erase.
+ *                      If this is \c 0, do nothing and return \c PSA_SUCCESS.
  *
  * \retval #PSA_SUCCESS
- *         The key material has been erased.
+ *         \p handle was a valid handle and the key material that it
+ *         referred to has been erased.
+ *         Alternatively, \p handle is \c 0.
  * \retval #PSA_ERROR_NOT_PERMITTED
  *         The key cannot be erased because it is
  *         read-only, either due to a policy or due to physical restrictions.
  * \retval #PSA_ERROR_INVALID_HANDLE
+ *         \p handle is not a valid handle nor \c 0.
  * \retval #PSA_ERROR_COMMUNICATION_FAILURE
  *         There was an failure in communication with the cryptoprocessor.
  *         The key material may still be present in the cryptoprocessor.
@@ -2872,7 +2879,7 @@ psa_status_t psa_aead_abort(psa_aead_operation_t *operation);
  * \retval #PSA_ERROR_BUFFER_TOO_SMALL
  *         The size of the \p signature buffer is too small. You can
  *         determine a sufficient buffer size by calling
- *         #PSA_ASYMMETRIC_SIGN_OUTPUT_SIZE(\c key_type, \c key_bits, \p alg)
+ *         #PSA_SIGN_OUTPUT_SIZE(\c key_type, \c key_bits, \p alg)
  *         where \c key_type and \c key_bits are the type and bit-size
  *         respectively of \p handle.
  * \retval #PSA_ERROR_NOT_SUPPORTED
@@ -2888,13 +2895,13 @@ psa_status_t psa_aead_abort(psa_aead_operation_t *operation);
  *         It is implementation-dependent whether a failure to initialize
  *         results in this error code.
  */
-psa_status_t psa_asymmetric_sign(psa_key_handle_t handle,
-                                 psa_algorithm_t alg,
-                                 const uint8_t *hash,
-                                 size_t hash_length,
-                                 uint8_t *signature,
-                                 size_t signature_size,
-                                 size_t *signature_length);
+psa_status_t psa_sign_hash(psa_key_handle_t handle,
+                           psa_algorithm_t alg,
+                           const uint8_t *hash,
+                           size_t hash_length,
+                           uint8_t *signature,
+                           size_t signature_size,
+                           size_t *signature_length);
 
 /**
  * \brief Verify the signature a hash or short message using a public key.
@@ -2934,12 +2941,12 @@ psa_status_t psa_asymmetric_sign(psa_key_handle_t handle,
  *         It is implementation-dependent whether a failure to initialize
  *         results in this error code.
  */
-psa_status_t psa_asymmetric_verify(psa_key_handle_t handle,
-                                   psa_algorithm_t alg,
-                                   const uint8_t *hash,
-                                   size_t hash_length,
-                                   const uint8_t *signature,
-                                   size_t signature_length);
+psa_status_t psa_verify_hash(psa_key_handle_t handle,
+                             psa_algorithm_t alg,
+                             const uint8_t *hash,
+                             size_t hash_length,
+                             const uint8_t *signature,
+                             size_t signature_length);
 
 /**
  * \brief Encrypt a short message with a public key.
