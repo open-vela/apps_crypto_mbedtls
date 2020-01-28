@@ -769,48 +769,14 @@ static int pk_parse_key_pkcs1_der( mbedtls_rsa_context *rsa,
         goto cleanup;
     p += len;
 
-#if !defined(MBEDTLS_RSA_NO_CRT)
-    /*
-    * The RSA CRT parameters DP, DQ and QP are nominally redundant, in
-    * that they can be easily recomputed from D, P and Q. However by
-    * parsing them from the PKCS1 structure it is possible to avoid
-    * recalculating them which both reduces the overhead of loading
-    * RSA private keys into memory and also avoids side channels which
-    * can arise when computing those values, since all of D, P, and Q
-    * are secret. See https://eprint.iacr.org/2020/055 for a
-    * description of one such attack.
-    */
-
-    /* Import DP */
-    if( ( ret = mbedtls_asn1_get_tag( &p, end, &len,
-                                      MBEDTLS_ASN1_INTEGER ) ) != 0 ||
-        ( ret = mbedtls_mpi_read_binary( &rsa->DP, p, len ) ) != 0 )
+    /* Complete the RSA private key */
+    if( ( ret = mbedtls_rsa_complete( rsa ) ) != 0 )
         goto cleanup;
-    p += len;
 
-    /* Import DQ */
-    if( ( ret = mbedtls_asn1_get_tag( &p, end, &len,
-                                      MBEDTLS_ASN1_INTEGER ) ) != 0 ||
-        ( ret = mbedtls_mpi_read_binary( &rsa->DQ, p, len ) ) != 0 )
-        goto cleanup;
-    p += len;
-
-    /* Import QP */
-    if( ( ret = mbedtls_asn1_get_tag( &p, end, &len,
-                                      MBEDTLS_ASN1_INTEGER ) ) != 0 ||
-        ( ret = mbedtls_mpi_read_binary( &rsa->QP, p, len ) ) != 0 )
-        goto cleanup;
-    p += len;
-#else
-    /* Verify existance of the CRT params */
+    /* Check optional parameters */
     if( ( ret = mbedtls_asn1_get_mpi( &p, end, &T ) ) != 0 ||
         ( ret = mbedtls_asn1_get_mpi( &p, end, &T ) ) != 0 ||
         ( ret = mbedtls_asn1_get_mpi( &p, end, &T ) ) != 0 )
-       goto cleanup;
-#endif
-
-    /* Complete the RSA private key */
-    if( ( ret = mbedtls_rsa_complete( rsa ) ) != 0 )
         goto cleanup;
 
     if( p != end )
