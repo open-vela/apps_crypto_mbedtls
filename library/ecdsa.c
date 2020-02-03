@@ -298,7 +298,7 @@ static int ecdsa_sign_restartable( mbedtls_ecp_group *grp,
     *p_sign_tries = 0;
     do
     {
-        if( *p_sign_tries++ > 10 )
+        if( (*p_sign_tries)++ > 10 )
         {
             ret = MBEDTLS_ERR_ECP_RANDOM_FAILED;
             goto cleanup;
@@ -311,7 +311,7 @@ static int ecdsa_sign_restartable( mbedtls_ecp_group *grp,
         *p_key_tries = 0;
         do
         {
-            if( *p_key_tries++ > 10 )
+            if( (*p_key_tries)++ > 10 )
             {
                 ret = MBEDTLS_ERR_ECP_RANDOM_FAILED;
                 goto cleanup;
@@ -364,6 +364,7 @@ modn:
         MBEDTLS_MPI_CHK( mbedtls_mpi_add_mpi( &e, &e, s ) );
         MBEDTLS_MPI_CHK( mbedtls_mpi_mul_mpi( &e, &e, &t ) );
         MBEDTLS_MPI_CHK( mbedtls_mpi_mul_mpi( pk, pk, &t ) );
+        MBEDTLS_MPI_CHK( mbedtls_mpi_mod_mpi( pk, pk, &grp->N ) );
         MBEDTLS_MPI_CHK( mbedtls_mpi_inv_mod( s, pk, &grp->N ) );
         MBEDTLS_MPI_CHK( mbedtls_mpi_mul_mpi( s, s, &e ) );
         MBEDTLS_MPI_CHK( mbedtls_mpi_mod_mpi( s, s, &grp->N ) );

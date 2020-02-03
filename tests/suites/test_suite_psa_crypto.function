@@ -1258,7 +1258,44 @@ void static_checks( )
     TEST_EQUAL( PSA_KEY_USAGE_SIGN, PSA_KEY_USAGE_SIGN_HASH );
     TEST_EQUAL( PSA_KEY_USAGE_VERIFY, PSA_KEY_USAGE_VERIFY_HASH );
     TEST_EQUAL( PSA_ASYMMETRIC_SIGNATURE_MAX_SIZE, PSA_SIGNATURE_MAX_SIZE );
-#endif /* MBEDTLS_TEST_DEPRECATED */
+
+    TEST_EQUAL( PSA_ECC_CURVE_SECP160K1, PSA_ECC_CURVE_SECP_K1 );
+    TEST_EQUAL( PSA_ECC_CURVE_SECP192K1, PSA_ECC_CURVE_SECP_K1 );
+    TEST_EQUAL( PSA_ECC_CURVE_SECP224K1, PSA_ECC_CURVE_SECP_K1 );
+    TEST_EQUAL( PSA_ECC_CURVE_SECP256K1, PSA_ECC_CURVE_SECP_K1 );
+    TEST_EQUAL( PSA_ECC_CURVE_SECP160R1, PSA_ECC_CURVE_SECP_R1 );
+    TEST_EQUAL( PSA_ECC_CURVE_SECP192R1, PSA_ECC_CURVE_SECP_R1 );
+    TEST_EQUAL( PSA_ECC_CURVE_SECP224R1, PSA_ECC_CURVE_SECP_R1 );
+    TEST_EQUAL( PSA_ECC_CURVE_SECP256R1, PSA_ECC_CURVE_SECP_R1 );
+    TEST_EQUAL( PSA_ECC_CURVE_SECP384R1, PSA_ECC_CURVE_SECP_R1 );
+    TEST_EQUAL( PSA_ECC_CURVE_SECP521R1, PSA_ECC_CURVE_SECP_R1 );
+    TEST_EQUAL( PSA_ECC_CURVE_SECP160R2, PSA_ECC_CURVE_SECP_R2 );
+    TEST_EQUAL( PSA_ECC_CURVE_SECT163K1, PSA_ECC_CURVE_SECT_K1 );
+    TEST_EQUAL( PSA_ECC_CURVE_SECT233K1, PSA_ECC_CURVE_SECT_K1 );
+    TEST_EQUAL( PSA_ECC_CURVE_SECT239K1, PSA_ECC_CURVE_SECT_K1 );
+    TEST_EQUAL( PSA_ECC_CURVE_SECT283K1, PSA_ECC_CURVE_SECT_K1 );
+    TEST_EQUAL( PSA_ECC_CURVE_SECT409K1, PSA_ECC_CURVE_SECT_K1 );
+    TEST_EQUAL( PSA_ECC_CURVE_SECT571K1, PSA_ECC_CURVE_SECT_K1 );
+    TEST_EQUAL( PSA_ECC_CURVE_SECT163R1, PSA_ECC_CURVE_SECT_R1 );
+    TEST_EQUAL( PSA_ECC_CURVE_SECT193R1, PSA_ECC_CURVE_SECT_R1 );
+    TEST_EQUAL( PSA_ECC_CURVE_SECT233R1, PSA_ECC_CURVE_SECT_R1 );
+    TEST_EQUAL( PSA_ECC_CURVE_SECT283R1, PSA_ECC_CURVE_SECT_R1 );
+    TEST_EQUAL( PSA_ECC_CURVE_SECT409R1, PSA_ECC_CURVE_SECT_R1 );
+    TEST_EQUAL( PSA_ECC_CURVE_SECT571R1, PSA_ECC_CURVE_SECT_R1 );
+    TEST_EQUAL( PSA_ECC_CURVE_SECT163R2, PSA_ECC_CURVE_SECT_R2 );
+    TEST_EQUAL( PSA_ECC_CURVE_SECT193R2, PSA_ECC_CURVE_SECT_R2 );
+    TEST_EQUAL( PSA_ECC_CURVE_BRAINPOOL_P256R1, PSA_ECC_CURVE_BRAINPOOL_P_R1 );
+    TEST_EQUAL( PSA_ECC_CURVE_BRAINPOOL_P384R1, PSA_ECC_CURVE_BRAINPOOL_P_R1 );
+    TEST_EQUAL( PSA_ECC_CURVE_BRAINPOOL_P512R1, PSA_ECC_CURVE_BRAINPOOL_P_R1 );
+    TEST_EQUAL( PSA_ECC_CURVE_CURVE25519, PSA_ECC_CURVE_MONTGOMERY );
+    TEST_EQUAL( PSA_ECC_CURVE_CURVE448, PSA_ECC_CURVE_MONTGOMERY );
+
+    TEST_EQUAL( PSA_DH_GROUP_FFDHE2048, PSA_DH_GROUP_RFC7919 );
+    TEST_EQUAL( PSA_DH_GROUP_FFDHE3072, PSA_DH_GROUP_RFC7919 );
+    TEST_EQUAL( PSA_DH_GROUP_FFDHE4096, PSA_DH_GROUP_RFC7919 );
+    TEST_EQUAL( PSA_DH_GROUP_FFDHE6144, PSA_DH_GROUP_RFC7919 );
+    TEST_EQUAL( PSA_DH_GROUP_FFDHE8192, PSA_DH_GROUP_RFC7919 );
+#endif
 }
 /* END_CASE */
 
@@ -2424,6 +2461,109 @@ void hash_setup( int alg_arg,
     PSA_ASSERT( psa_hash_setup( &operation, KNOWN_SUPPORTED_HASH_ALG ) );
     PSA_ASSERT( psa_hash_abort( &operation ) );
 #endif
+
+exit:
+    PSA_DONE( );
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void hash_compute_fail( int alg_arg, data_t *input,
+                        int output_size_arg, int expected_status_arg )
+{
+    psa_algorithm_t alg = alg_arg;
+    uint8_t *output = NULL;
+    size_t output_size = output_size_arg;
+    size_t output_length = INVALID_EXPORT_LENGTH;
+    psa_status_t expected_status = expected_status_arg;
+    psa_status_t status;
+
+    ASSERT_ALLOC( output, output_size );
+
+    PSA_ASSERT( psa_crypto_init( ) );
+
+    status = psa_hash_compute( alg, input->x, input->len,
+                               output, output_size, &output_length );
+    TEST_EQUAL( status, expected_status );
+    TEST_ASSERT( output_length <= output_size );
+
+exit:
+    mbedtls_free( output );
+    PSA_DONE( );
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void hash_compare_fail( int alg_arg, data_t *input,
+                        data_t *reference_hash,
+                        int expected_status_arg )
+{
+    psa_algorithm_t alg = alg_arg;
+    psa_status_t expected_status = expected_status_arg;
+    psa_status_t status;
+
+    PSA_ASSERT( psa_crypto_init( ) );
+
+    status = psa_hash_compare( alg, input->x, input->len,
+                               reference_hash->x, reference_hash->len );
+    TEST_EQUAL( status, expected_status );
+
+exit:
+    PSA_DONE( );
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void hash_compute_compare( int alg_arg, data_t *input,
+                           data_t *expected_output )
+{
+    psa_algorithm_t alg = alg_arg;
+    uint8_t output[PSA_HASH_MAX_SIZE + 1];
+    size_t output_length = INVALID_EXPORT_LENGTH;
+    size_t i;
+
+    PSA_ASSERT( psa_crypto_init( ) );
+
+    /* Compute with tight buffer */
+    PSA_ASSERT( psa_hash_compute( alg, input->x, input->len,
+                                  output, PSA_HASH_SIZE( alg ),
+                                  &output_length ) );
+    TEST_EQUAL( output_length, PSA_HASH_SIZE( alg ) );
+    ASSERT_COMPARE( output, output_length,
+                    expected_output->x, expected_output->len );
+
+    /* Compute with larger buffer */
+    PSA_ASSERT( psa_hash_compute( alg, input->x, input->len,
+                                  output, sizeof( output ),
+                                  &output_length ) );
+    TEST_EQUAL( output_length, PSA_HASH_SIZE( alg ) );
+    ASSERT_COMPARE( output, output_length,
+                    expected_output->x, expected_output->len );
+
+    /* Compare with correct hash */
+    PSA_ASSERT( psa_hash_compare( alg, input->x, input->len,
+                                  output, output_length ) );
+
+    /* Compare with trailing garbage */
+    TEST_EQUAL( psa_hash_compare( alg, input->x, input->len,
+                                  output, output_length + 1 ),
+                PSA_ERROR_INVALID_SIGNATURE );
+
+    /* Compare with truncated hash */
+    TEST_EQUAL( psa_hash_compare( alg, input->x, input->len,
+                                  output, output_length - 1 ),
+                PSA_ERROR_INVALID_SIGNATURE );
+
+    /* Compare with corrupted value */
+    for( i = 0; i < output_length; i++ )
+    {
+        test_set_step( i );
+        output[i] ^= 1;
+        TEST_EQUAL( psa_hash_compare( alg, input->x, input->len,
+                                      output, output_length ),
+                    PSA_ERROR_INVALID_SIGNATURE );
+        output[i] ^= 1;
+    }
 
 exit:
     PSA_DONE( );
