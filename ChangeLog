@@ -3,16 +3,13 @@ mbed TLS ChangeLog (Sorted per branch, date)
 = mbed TLS X.X.X branch released XXXX-XX-XX
 
 New deprecations
-   * Deprecate MBEDTLS_SSL_SRV_SUPPORT_SSLV2_CLIENT_HELLO that enables parsing
-     SSLv2 ClientHello messages.
-   * Deprecate MBEDTLS_SSL_PROTO_SSL3 that enables support for SSLv3.
+   * Deprecate for MBEDTLS_PKCS11_C, the wrapper around the pkcs11-helper
+     library which allows TLS authentication to use keys stored in a
+     PKCS#11 token such as a smartcard.
 
 Bugfix
    * Allow loading symlinked certificates. Fixes #3005. Reported and fixed
      by Jonathan Bennett <JBennett@incomsystems.biz> via #3008.
-   * Fix an unchecked call to mbedtls_md() in the x509write module.
-   * Fix build failure with MBEDTLS_ZLIB_SUPPORT enabled. Reported by
-     Jack Lloyd in #2859. Fix submitted by jiblime in #2963.
 
 = mbed TLS 2.20.0 branch released 2020-01-15
 
@@ -108,8 +105,6 @@ Changes
 = mbed TLS 2.19.1 branch released 2019-09-16
 
 Features
-   * Declare include headers as PUBLIC to propagate to CMake project consumers
-     Contributed by Zachary J. Fields in PR #2949.
    * Add nss_keylog to ssl_client2 and ssl_server2, enabling easier analysis of
      TLS sessions with tools like Wireshark.
 
