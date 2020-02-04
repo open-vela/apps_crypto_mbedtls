@@ -697,45 +697,6 @@ component_test_full_cmake_gcc_asan () {
     if_build_succeeded tests/compat.sh
 }
 
-component_test_zlib_make() {
-    msg "build: zlib enabled, make"
-    scripts/config.py set MBEDTLS_ZLIB_SUPPORT
-    make ZLIB=1 CFLAGS='-Werror -O1'
-
-    msg "test: main suites (zlib, make)"
-    make test
-
-    msg "test: ssl-opt.sh (zlib, make)"
-    if_build_succeeded tests/ssl-opt.sh
-}
-support_test_zlib_make () {
-    base=support_test_zlib_$$
-    cat <<'EOF' > ${base}.c
-#include "zlib.h"
-int main(void) { return 0; }
-EOF
-    gcc -o ${base}.exe ${base}.c -lz 2>/dev/null
-    ret=$?
-    rm -f ${base}.*
-    return $ret
-}
-
-component_test_zlib_cmake() {
-    msg "build: zlib enabled, cmake"
-    scripts/config.py set MBEDTLS_ZLIB_SUPPORT
-    cmake -D ENABLE_ZLIB_SUPPORT=On -D CMAKE_BUILD_TYPE:String=Check .
-    make
-
-    msg "test: main suites (zlib, cmake)"
-    make test
-
-    msg "test: ssl-opt.sh (zlib, cmake)"
-    if_build_succeeded tests/ssl-opt.sh
-}
-support_test_zlib_cmake () {
-    support_test_zlib_make "$@"
-}
-
 component_test_ref_configs () {
     msg "test/build: ref-configs (ASan build)" # ~ 6 min 20s
     CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
@@ -951,6 +912,9 @@ component_test_no_use_psa_crypto_full_cmake_asan() {
     msg "test: compat.sh default (full minus MBEDTLS_USE_PSA_CRYPTO)"
     if_build_succeeded tests/compat.sh
 
+    msg "test: compat.sh ssl3 (full minus MBEDTLS_USE_PSA_CRYPTO)"
+    if_build_succeeded env OPENSSL_CMD="$OPENSSL_LEGACY" tests/compat.sh -m 'ssl3'
+
     msg "test: compat.sh RC4, DES & NULL (full minus MBEDTLS_USE_PSA_CRYPTO)"
     if_build_succeeded env OPENSSL_CMD="$OPENSSL_LEGACY" GNUTLS_CLI="$GNUTLS_LEGACY_CLI" GNUTLS_SERV="$GNUTLS_LEGACY_SERV" tests/compat.sh -e '3DES\|DES-CBC3' -f 'NULL\|DES\|RC4\|ARCFOUR'
 
@@ -1011,8 +975,8 @@ component_test_no_platform () {
     scripts/config.py unset MBEDTLS_PSA_ITS_FILE_C
     # Note, _DEFAULT_SOURCE needs to be defined for platforms using glibc version >2.19,
     # to re-enable platform integration features otherwise disabled in C99 builds
-    make CC=gcc CFLAGS='-Werror -Wall -Wextra -std=c99 -pedantic -Os -D_DEFAULT_SOURCE' lib programs
-    make CC=gcc CFLAGS='-Werror -Wall -Wextra -Os' test
+    make CC=gcc CFLAGS='-Werror -Wall -Wextra -std=c99 -pedantic -O0 -D_DEFAULT_SOURCE' lib programs
+    make CC=gcc CFLAGS='-Werror -Wall -Wextra -O0' test
 }
 
 component_build_no_std_function () {
@@ -1021,21 +985,21 @@ component_build_no_std_function () {
     scripts/config.py full
     scripts/config.py set MBEDTLS_PLATFORM_NO_STD_FUNCTIONS
     scripts/config.py unset MBEDTLS_ENTROPY_NV_SEED
-    make CC=gcc CFLAGS='-Werror -Wall -Wextra -Os'
+    make CC=gcc CFLAGS='-Werror -Wall -Wextra -O0'
 }
 
 component_build_no_ssl_srv () {
     msg "build: full config except ssl_srv.c, make, gcc" # ~ 30s
     scripts/config.py full
     scripts/config.py unset MBEDTLS_SSL_SRV_C
-    make CC=gcc CFLAGS='-Werror -Wall -Wextra -O1'
+    make CC=gcc CFLAGS='-Werror -Wall -Wextra -O0'
 }
 
 component_build_no_ssl_cli () {
     msg "build: full config except ssl_cli.c, make, gcc" # ~ 30s
     scripts/config.py full
     scripts/config.py unset MBEDTLS_SSL_CLI_C
-    make CC=gcc CFLAGS='-Werror -Wall -Wextra -O1'
+    make CC=gcc CFLAGS='-Werror -Wall -Wextra -O0'
 }
 
 component_build_no_sockets () {
@@ -1045,7 +1009,7 @@ component_build_no_sockets () {
     scripts/config.py full
     scripts/config.py unset MBEDTLS_NET_C # getaddrinfo() undeclared, etc.
     scripts/config.py set MBEDTLS_NO_PLATFORM_ENTROPY # uses syscall() on GNU/Linux
-    make CC=gcc CFLAGS='-Werror -Wall -Wextra -O1 -std=c99 -pedantic' lib
+    make CC=gcc CFLAGS='-Werror -Wall -Wextra -O0 -std=c99 -pedantic' lib
 }
 
 component_test_memory_buffer_allocator_backtrace () {
@@ -1168,30 +1132,6 @@ component_test_cmake_shared () {
     make
     ldd programs/util/strerror | grep libmbedcrypto
     make test
-}
-
-test_build_opt () {
-    info=$1 cc=$2; shift 2
-    for opt in "$@"; do
-          msg "build/test: $cc $opt, $info" # ~ 30s
-          make CC="$cc" CFLAGS="$opt -Wall -Wextra -Werror"
-          # We're confident enough in compilers to not run _all_ the tests,
-          # but at least run the unit tests. In particular, runs with
-          # optimizations use inline assembly whereas runs with -O0
-          # skip inline assembly.
-          make test # ~30s
-          make clean
-    done
-}
-
-component_test_clang_opt () {
-    scripts/config.pl full
-    test_build_opt 'full config' clang -O0 -Os -O2
-}
-
-component_test_gcc_opt () {
-    scripts/config.pl full
-    test_build_opt 'full config' gcc -O0 -Os -O2
 }
 
 component_build_mbedtls_config_file () {
