@@ -61,13 +61,26 @@
 #include "mbedtls/oid.h"
 #endif
 
+static void ssl_reset_in_out_pointers( mbedtls_ssl_context *ssl );
 static uint32_t ssl_get_hs_total_len( mbedtls_ssl_context const *ssl );
+
+/* Length of the "epoch" field in the record header */
+static inline size_t ssl_ep_len( const mbedtls_ssl_context *ssl )
+{
+#if defined(MBEDTLS_SSL_PROTO_DTLS)
+    if( ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM )
+        return( 2 );
+#else
+    ((void) ssl);
+#endif
+    return( 0 );
+}
 
 /*
  * Start a timer.
  * Passing millisecs = 0 cancels a running timer.
  */
-void mbedtls_ssl_set_timer( mbedtls_ssl_context *ssl, uint32_t millisecs )
+static void ssl_set_timer( mbedtls_ssl_context *ssl, uint32_t millisecs )
 {
     if( ssl->f_set_timer == NULL )
         return;
@@ -79,7 +92,7 @@ void mbedtls_ssl_set_timer( mbedtls_ssl_context *ssl, uint32_t millisecs )
 /*
  * Return -1 is timer is expired, 0 if it isn't.
  */
-int mbedtls_ssl_check_timer( mbedtls_ssl_context *ssl )
+static int ssl_check_timer( mbedtls_ssl_context *ssl )
 {
     if( ssl->f_get_timer == NULL )
         return( 0 );
@@ -92,6 +105,10 @@ int mbedtls_ssl_check_timer( mbedtls_ssl_context *ssl )
 
     return( 0 );
 }
+
+static void ssl_update_out_pointers( mbedtls_ssl_context *ssl,
+                                     mbedtls_ssl_transform *transform );
+static void ssl_update_in_pointers( mbedtls_ssl_context *ssl );
 
 #if defined(MBEDTLS_SSL_RECORD_CHECKING)
 static int ssl_parse_record_header( mbedtls_ssl_context const *ssl,
@@ -258,6 +275,7 @@ int mbedtls_ssl_get_peer_cid( mbedtls_ssl_context *ssl,
 #endif /* MBEDTLS_SSL_DTLS_CONNECTION_ID */
 
 /* Forward declarations for functions related to message buffering. */
+static void ssl_buffering_free( mbedtls_ssl_context *ssl );
 static void ssl_buffering_free_slot( mbedtls_ssl_context *ssl,
                                      uint8_t slot );
 static void ssl_free_buffered_record( mbedtls_ssl_context *ssl );
@@ -268,9 +286,10 @@ static int ssl_buffer_future_record( mbedtls_ssl_context *ssl,
                                      mbedtls_record const *rec );
 static int ssl_next_record_is_in_datagram( mbedtls_ssl_context *ssl );
 
+static size_t ssl_get_current_mtu( const mbedtls_ssl_context *ssl );
 static size_t ssl_get_maximum_datagram_size( mbedtls_ssl_context const *ssl )
 {
-    size_t mtu = mbedtls_ssl_get_current_mtu( ssl );
+    size_t mtu = ssl_get_current_mtu( ssl );
 
     if( mtu != 0 && mtu < MBEDTLS_SSL_OUT_BUFFER_LEN )
         return( mtu );
@@ -3542,7 +3561,7 @@ static int ssl_decompress_buf( mbedtls_ssl_context *ssl )
 static int ssl_write_hello_request( mbedtls_ssl_context *ssl );
 
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
-int mbedtls_ssl_resend_hello_request( mbedtls_ssl_context *ssl )
+static int ssl_resend_hello_request( mbedtls_ssl_context *ssl )
 {
     /* If renegotiation is not enforced, retransmit until we would reach max
      * timeout if we were using the usual handshake doubling scheme */
@@ -3677,7 +3696,7 @@ int mbedtls_ssl_fetch_input( mbedtls_ssl_context *ssl, size_t nb_want )
          * This avoids by-passing the timer when repeatedly receiving messages
          * that will end up being dropped.
          */
-        if( mbedtls_ssl_check_timer( ssl ) != 0 )
+        if( ssl_check_timer( ssl ) != 0 )
         {
             MBEDTLS_SSL_DEBUG_MSG( 2, ( "timer has expired" ) );
             ret = MBEDTLS_ERR_SSL_TIMEOUT;
@@ -3708,7 +3727,7 @@ int mbedtls_ssl_fetch_input( mbedtls_ssl_context *ssl, size_t nb_want )
         if( ret == MBEDTLS_ERR_SSL_TIMEOUT )
         {
             MBEDTLS_SSL_DEBUG_MSG( 2, ( "timeout" ) );
-            mbedtls_ssl_set_timer( ssl, 0 );
+            ssl_set_timer( ssl, 0 );
 
             if( ssl->state != MBEDTLS_SSL_HANDSHAKE_OVER )
             {
@@ -3730,10 +3749,9 @@ int mbedtls_ssl_fetch_input( mbedtls_ssl_context *ssl, size_t nb_want )
             else if( ssl->conf->endpoint == MBEDTLS_SSL_IS_SERVER &&
                      ssl->renego_status == MBEDTLS_SSL_RENEGOTIATION_PENDING )
             {
-                if( ( ret = mbedtls_ssl_resend_hello_request( ssl ) ) != 0 )
+                if( ( ret = ssl_resend_hello_request( ssl ) ) != 0 )
                 {
-                    MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_resend_hello_request",
-                                           ret );
+                    MBEDTLS_SSL_DEBUG_RET( 1, "ssl_resend_hello_request", ret );
                     return( ret );
                 }
 
@@ -3757,7 +3775,7 @@ int mbedtls_ssl_fetch_input( mbedtls_ssl_context *ssl, size_t nb_want )
         {
             len = nb_want - ssl->in_left;
 
-            if( mbedtls_ssl_check_timer( ssl ) != 0 )
+            if( ssl_check_timer( ssl ) != 0 )
                 ret = MBEDTLS_ERR_SSL_TIMEOUT;
             else
             {
@@ -3859,7 +3877,7 @@ int mbedtls_ssl_flush_output( mbedtls_ssl_context *ssl )
     {
         ssl->out_hdr = ssl->out_buf + 8;
     }
-    mbedtls_ssl_update_out_pointers( ssl, ssl->transform_out );
+    ssl_update_out_pointers( ssl, ssl->transform_out );
 
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= flush output" ) );
 
@@ -3919,7 +3937,7 @@ static int ssl_flight_append( mbedtls_ssl_context *ssl )
 /*
  * Free the current flight of handshake messages
  */
-void mbedtls_ssl_flight_free( mbedtls_ssl_flight_item *flight )
+static void ssl_flight_free( mbedtls_ssl_flight_item *flight )
 {
     mbedtls_ssl_flight_item *cur = flight;
     mbedtls_ssl_flight_item *next;
@@ -3934,6 +3952,10 @@ void mbedtls_ssl_flight_free( mbedtls_ssl_flight_item *flight )
         cur = next;
     }
 }
+
+#if defined(MBEDTLS_SSL_DTLS_ANTI_REPLAY)
+static void ssl_dtls_replay_reset( mbedtls_ssl_context *ssl );
+#endif
 
 /*
  * Swap transform_out and out_ctr with the alternative ones
@@ -3962,7 +3984,7 @@ static void ssl_swap_epochs( mbedtls_ssl_context *ssl )
     memcpy( ssl->handshake->alt_out_ctr, tmp_out_ctr,                 8 );
 
     /* Adjust to the newly activated transform */
-    mbedtls_ssl_update_out_pointers( ssl, ssl->transform_out );
+    ssl_update_out_pointers( ssl, ssl->transform_out );
 
 #if defined(MBEDTLS_SSL_HW_RECORD_ACCEL)
     if( mbedtls_ssl_hw_record_activate != NULL )
@@ -4145,7 +4167,7 @@ int mbedtls_ssl_flight_transmit( mbedtls_ssl_context *ssl )
     else
     {
         ssl->handshake->retransmit_state = MBEDTLS_SSL_RETRANS_WAITING;
-        mbedtls_ssl_set_timer( ssl, ssl->handshake->retransmit_timeout );
+        ssl_set_timer( ssl, ssl->handshake->retransmit_timeout );
     }
 
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= mbedtls_ssl_flight_transmit" ) );
@@ -4159,7 +4181,7 @@ int mbedtls_ssl_flight_transmit( mbedtls_ssl_context *ssl )
 void mbedtls_ssl_recv_flight_completed( mbedtls_ssl_context *ssl )
 {
     /* We won't need to resend that one any more */
-    mbedtls_ssl_flight_free( ssl->handshake->flight );
+    ssl_flight_free( ssl->handshake->flight );
     ssl->handshake->flight = NULL;
     ssl->handshake->cur_msg = NULL;
 
@@ -4170,10 +4192,10 @@ void mbedtls_ssl_recv_flight_completed( mbedtls_ssl_context *ssl )
     ssl->handshake->buffering.seen_ccs = 0;
 
     /* Clear future message buffering structure. */
-    mbedtls_ssl_buffering_free( ssl );
+    ssl_buffering_free( ssl );
 
     /* Cancel timer */
-    mbedtls_ssl_set_timer( ssl, 0 );
+    ssl_set_timer( ssl, 0 );
 
     if( ssl->in_msgtype == MBEDTLS_SSL_MSG_HANDSHAKE &&
         ssl->in_msg[0] == MBEDTLS_SSL_HS_FINISHED )
@@ -4190,7 +4212,7 @@ void mbedtls_ssl_recv_flight_completed( mbedtls_ssl_context *ssl )
 void mbedtls_ssl_send_flight_completed( mbedtls_ssl_context *ssl )
 {
     ssl_reset_retransmit_timeout( ssl );
-    mbedtls_ssl_set_timer( ssl, ssl->handshake->retransmit_timeout );
+    ssl_set_timer( ssl, ssl->handshake->retransmit_timeout );
 
     if( ssl->in_msgtype == MBEDTLS_SSL_MSG_HANDSHAKE &&
         ssl->in_msg[0] == MBEDTLS_SSL_HS_FINISHED )
@@ -4515,14 +4537,14 @@ int mbedtls_ssl_write_record( mbedtls_ssl_context *ssl, uint8_t force_flush )
 
         ssl->out_left += protected_record_size;
         ssl->out_hdr  += protected_record_size;
-        mbedtls_ssl_update_out_pointers( ssl, ssl->transform_out );
+        ssl_update_out_pointers( ssl, ssl->transform_out );
 
-        for( i = 8; i > mbedtls_ssl_ep_len( ssl ); i-- )
+        for( i = 8; i > ssl_ep_len( ssl ); i-- )
             if( ++ssl->cur_out_ctr[i - 1] != 0 )
                 break;
 
         /* The loop goes to its end iff the counter is wrapping */
-        if( i == mbedtls_ssl_ep_len( ssl ) )
+        if( i == ssl_ep_len( ssl ) )
         {
             MBEDTLS_SSL_DEBUG_MSG( 1, ( "outgoing message counter would wrap" ) );
             return( MBEDTLS_ERR_SSL_COUNTER_WRAPPING );
@@ -4842,7 +4864,7 @@ void mbedtls_ssl_update_handshake_status( mbedtls_ssl_context *ssl )
  * not seen yet).
  */
 #if defined(MBEDTLS_SSL_DTLS_ANTI_REPLAY)
-void mbedtls_ssl_dtls_replay_reset( mbedtls_ssl_context *ssl )
+static void ssl_dtls_replay_reset( mbedtls_ssl_context *ssl )
 {
     ssl->in_window_top = 0;
     ssl->in_window = 0;
@@ -4939,6 +4961,9 @@ void mbedtls_ssl_dtls_replay_update( mbedtls_ssl_context *ssl )
 #endif /* MBEDTLS_SSL_DTLS_ANTI_REPLAY */
 
 #if defined(MBEDTLS_SSL_DTLS_CLIENT_PORT_REUSE) && defined(MBEDTLS_SSL_SRV_C)
+/* Forward declaration */
+static int ssl_session_reset_int( mbedtls_ssl_context *ssl, int partial );
+
 /*
  * Without any SSL context, check if a datagram looks like a ClientHello with
  * a valid cookie, and if it doesn't, generate a HelloVerifyRequest message.
@@ -5116,7 +5141,7 @@ static int ssl_handle_possible_reconnect( mbedtls_ssl_context *ssl )
     if( ret == 0 )
     {
         /* Got a valid cookie, partially reset context */
-        if( ( ret = mbedtls_ssl_session_reset_int( ssl, 1 ) ) != 0 )
+        if( ( ret = ssl_session_reset_int( ssl, 1 ) ) != 0 )
         {
             MBEDTLS_SSL_DEBUG_RET( 1, "reset", ret );
             return( ret );
@@ -5533,12 +5558,12 @@ static int ssl_prepare_record_content( mbedtls_ssl_context *ssl,
 #endif
         {
             unsigned i;
-            for( i = 8; i > mbedtls_ssl_ep_len( ssl ); i-- )
+            for( i = 8; i > ssl_ep_len( ssl ); i-- )
                 if( ++ssl->in_ctr[i - 1] != 0 )
                     break;
 
             /* The loop goes to its end iff the counter is wrapping */
-            if( i == mbedtls_ssl_ep_len( ssl ) )
+            if( i == ssl_ep_len( ssl ) )
             {
                 MBEDTLS_SSL_DEBUG_MSG( 1, ( "incoming message counter would wrap" ) );
                 return( MBEDTLS_ERR_SSL_COUNTER_WRAPPING );
@@ -5564,6 +5589,8 @@ static int ssl_prepare_record_content( mbedtls_ssl_context *ssl,
 
     return( 0 );
 }
+
+static void ssl_handshake_wrapup_free_hs_transform( mbedtls_ssl_context *ssl );
 
 /*
  * Read a record.
@@ -6274,7 +6301,7 @@ static int ssl_get_next_record( mbedtls_ssl_context *ssl )
                 /* Reset in pointers to default state for TLS/DTLS records,
                  * assuming no CID and no offset between record content and
                  * record plaintext. */
-                mbedtls_ssl_update_in_pointers( ssl );
+                ssl_update_in_pointers( ssl );
 
                 /* Setup internal message pointers from record structure. */
                 ssl->in_msgtype = rec.type;
@@ -6411,7 +6438,7 @@ static int ssl_get_next_record( mbedtls_ssl_context *ssl )
     /* Reset in pointers to default state for TLS/DTLS records,
      * assuming no CID and no offset between record content and
      * record plaintext. */
-    mbedtls_ssl_update_in_pointers( ssl );
+    ssl_update_in_pointers( ssl );
 #if defined(MBEDTLS_SSL_DTLS_CONNECTION_ID)
     ssl->in_len = ssl->in_cid + rec.cid_len;
 #endif /* MBEDTLS_SSL_DTLS_CONNECTION_ID */
@@ -6579,7 +6606,7 @@ int mbedtls_ssl_handle_message_type( mbedtls_ssl_context *ssl )
         if( ssl->handshake != NULL &&
             ssl->state == MBEDTLS_SSL_HANDSHAKE_OVER  )
         {
-            mbedtls_ssl_handshake_wrapup_free_hs_transform( ssl );
+            ssl_handshake_wrapup_free_hs_transform( ssl );
         }
     }
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
@@ -7530,7 +7557,7 @@ int mbedtls_ssl_parse_change_cipher_spec( mbedtls_ssl_context *ssl )
     if( ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM )
     {
 #if defined(MBEDTLS_SSL_DTLS_ANTI_REPLAY)
-        mbedtls_ssl_dtls_replay_reset( ssl );
+        ssl_dtls_replay_reset( ssl );
 #endif
 
         /* Increment epoch */
@@ -7546,7 +7573,7 @@ int mbedtls_ssl_parse_change_cipher_spec( mbedtls_ssl_context *ssl )
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
     memset( ssl->in_ctr, 0, 8 );
 
-    mbedtls_ssl_update_in_pointers( ssl );
+    ssl_update_in_pointers( ssl );
 
 #if defined(MBEDTLS_SSL_HW_RECORD_ACCEL)
     if( mbedtls_ssl_hw_record_activate != NULL )
@@ -7983,7 +8010,7 @@ static void ssl_calc_finished_tls_sha384(
 #endif /* MBEDTLS_SHA512_C */
 #endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
 
-void mbedtls_ssl_handshake_wrapup_free_hs_transform( mbedtls_ssl_context *ssl )
+static void ssl_handshake_wrapup_free_hs_transform( mbedtls_ssl_context *ssl )
 {
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "=> handshake wrapup: final free" ) );
 
@@ -8055,7 +8082,7 @@ void mbedtls_ssl_handshake_wrapup( mbedtls_ssl_context *ssl )
         ssl->handshake->flight != NULL )
     {
         /* Cancel handshake timer */
-        mbedtls_ssl_set_timer( ssl, 0 );
+        ssl_set_timer( ssl, 0 );
 
         /* Keep last flight around in case we need to resend it:
          * we need the handshake and transform structures for that */
@@ -8063,7 +8090,7 @@ void mbedtls_ssl_handshake_wrapup( mbedtls_ssl_context *ssl )
     }
     else
 #endif
-        mbedtls_ssl_handshake_wrapup_free_hs_transform( ssl );
+        ssl_handshake_wrapup_free_hs_transform( ssl );
 
     ssl->state++;
 
@@ -8076,7 +8103,7 @@ int mbedtls_ssl_write_finished( mbedtls_ssl_context *ssl )
 
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> write finished" ) );
 
-    mbedtls_ssl_update_out_pointers( ssl, ssl->transform_negotiate );
+    ssl_update_out_pointers( ssl, ssl->transform_negotiate );
 
     ssl->handshake->calc_finished( ssl, ssl->out_msg + 4, ssl->conf->endpoint );
 
@@ -8420,7 +8447,7 @@ static int ssl_handshake_init( mbedtls_ssl_context *ssl )
         else
             ssl->handshake->retransmit_state = MBEDTLS_SSL_RETRANS_WAITING;
 
-        mbedtls_ssl_set_timer( ssl, 0 );
+        ssl_set_timer( ssl, 0 );
     }
 #endif
 
@@ -8464,8 +8491,8 @@ static int ssl_cookie_check_dummy( void *ctx,
  *       and the caller has to make sure there's space for this.
  */
 
-void mbedtls_ssl_update_out_pointers( mbedtls_ssl_context *ssl,
-                                      mbedtls_ssl_transform *transform )
+static void ssl_update_out_pointers( mbedtls_ssl_context *ssl,
+                                     mbedtls_ssl_transform *transform )
 {
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
     if( ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM )
@@ -8510,7 +8537,7 @@ void mbedtls_ssl_update_out_pointers( mbedtls_ssl_context *ssl,
  *       and the caller has to make sure there's space for this.
  */
 
-void mbedtls_ssl_update_in_pointers( mbedtls_ssl_context *ssl )
+static void ssl_update_in_pointers( mbedtls_ssl_context *ssl )
 {
     /* This function sets the pointers to match the case
      * of unprotected TLS/DTLS records, with both  ssl->in_iv
@@ -8565,7 +8592,7 @@ void mbedtls_ssl_init( mbedtls_ssl_context *ssl )
  * Setup an SSL context
  */
 
-void mbedtls_ssl_reset_in_out_pointers( mbedtls_ssl_context *ssl )
+static void ssl_reset_in_out_pointers( mbedtls_ssl_context *ssl )
 {
     /* Set the incoming and outgoing record pointers. */
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
@@ -8582,8 +8609,8 @@ void mbedtls_ssl_reset_in_out_pointers( mbedtls_ssl_context *ssl )
     }
 
     /* Derive other internal pointers. */
-    mbedtls_ssl_update_out_pointers( ssl, NULL /* no transform enabled */ );
-    mbedtls_ssl_update_in_pointers ( ssl );
+    ssl_update_out_pointers( ssl, NULL /* no transform enabled */ );
+    ssl_update_in_pointers ( ssl );
 }
 
 int mbedtls_ssl_setup( mbedtls_ssl_context *ssl,
@@ -8616,7 +8643,7 @@ int mbedtls_ssl_setup( mbedtls_ssl_context *ssl,
         goto error;
     }
 
-    mbedtls_ssl_reset_in_out_pointers( ssl );
+    ssl_reset_in_out_pointers( ssl );
 
     if( ( ret = ssl_handshake_init( ssl ) ) != 0 )
         goto error;
@@ -8654,7 +8681,7 @@ error:
  * If partial is non-zero, keep data in the input buffer and client ID.
  * (Use when a DTLS client reconnects from the same port.)
  */
-int mbedtls_ssl_session_reset_int( mbedtls_ssl_context *ssl, int partial )
+static int ssl_session_reset_int( mbedtls_ssl_context *ssl, int partial )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
 
@@ -8666,7 +8693,7 @@ int mbedtls_ssl_session_reset_int( mbedtls_ssl_context *ssl, int partial )
     ssl->state = MBEDTLS_SSL_HELLO_REQUEST;
 
     /* Cancel any possibly running timer */
-    mbedtls_ssl_set_timer( ssl, 0 );
+    ssl_set_timer( ssl, 0 );
 
 #if defined(MBEDTLS_SSL_RENEGOTIATION)
     ssl->renego_status = MBEDTLS_SSL_INITIAL_HANDSHAKE;
@@ -8679,7 +8706,7 @@ int mbedtls_ssl_session_reset_int( mbedtls_ssl_context *ssl, int partial )
     ssl->secure_renegotiation = MBEDTLS_SSL_LEGACY_RENEGOTIATION;
 
     ssl->in_offt = NULL;
-    mbedtls_ssl_reset_in_out_pointers( ssl );
+    ssl_reset_in_out_pointers( ssl );
 
     ssl->in_msgtype = 0;
     ssl->in_msglen = 0;
@@ -8688,7 +8715,7 @@ int mbedtls_ssl_session_reset_int( mbedtls_ssl_context *ssl, int partial )
     ssl->in_epoch = 0;
 #endif
 #if defined(MBEDTLS_SSL_DTLS_ANTI_REPLAY)
-    mbedtls_ssl_dtls_replay_reset( ssl );
+    ssl_dtls_replay_reset( ssl );
 #endif
 
     ssl->in_hslen = 0;
@@ -8775,7 +8802,7 @@ int mbedtls_ssl_session_reset_int( mbedtls_ssl_context *ssl, int partial )
  */
 int mbedtls_ssl_session_reset( mbedtls_ssl_context *ssl )
 {
-    return( mbedtls_ssl_session_reset_int( ssl, 0 ) );
+    return( ssl_session_reset_int( ssl, 0 ) );
 }
 
 /*
@@ -8886,7 +8913,7 @@ void mbedtls_ssl_set_timer_cb( mbedtls_ssl_context *ssl,
     ssl->f_get_timer    = f_get_timer;
 
     /* Make sure we start with no timer running */
-    mbedtls_ssl_set_timer( ssl, 0 );
+    ssl_set_timer( ssl, 0 );
 }
 
 #if defined(MBEDTLS_SSL_SRV_C)
@@ -9816,7 +9843,7 @@ size_t mbedtls_ssl_get_max_frag_len( const mbedtls_ssl_context *ssl )
 #endif /* MBEDTLS_SSL_MAX_FRAGMENT_LENGTH */
 
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
-size_t mbedtls_ssl_get_current_mtu( const mbedtls_ssl_context *ssl )
+static size_t ssl_get_current_mtu( const mbedtls_ssl_context *ssl )
 {
     /* Return unlimited mtu for client hello messages to avoid fragmentation. */
     if( ssl->conf->endpoint == MBEDTLS_SSL_IS_CLIENT &&
@@ -9852,9 +9879,9 @@ int mbedtls_ssl_get_max_out_record_payload( const mbedtls_ssl_context *ssl )
 #endif
 
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
-    if( mbedtls_ssl_get_current_mtu( ssl ) != 0 )
+    if( ssl_get_current_mtu( ssl ) != 0 )
     {
-        const size_t mtu = mbedtls_ssl_get_current_mtu( ssl );
+        const size_t mtu = ssl_get_current_mtu( ssl );
         const int ret = mbedtls_ssl_get_record_expansion( ssl );
         const size_t overhead = (size_t) ret;
 
@@ -10560,7 +10587,7 @@ static int ssl_write_hello_request( mbedtls_ssl_context *ssl )
  * If the handshake doesn't complete due to waiting for I/O, it will continue
  * during the next calls to mbedtls_ssl_renegotiate() or mbedtls_ssl_read() respectively.
  */
-int mbedtls_ssl_start_renegotiation( mbedtls_ssl_context *ssl )
+static int ssl_start_renegotiation( mbedtls_ssl_context *ssl )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
 
@@ -10634,9 +10661,9 @@ int mbedtls_ssl_renegotiate( mbedtls_ssl_context *ssl )
         if( ssl->state != MBEDTLS_SSL_HANDSHAKE_OVER )
             return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
 
-        if( ( ret = mbedtls_ssl_start_renegotiation( ssl ) ) != 0 )
+        if( ( ret = ssl_start_renegotiation( ssl ) ) != 0 )
         {
-            MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_start_renegotiation", ret );
+            MBEDTLS_SSL_DEBUG_RET( 1, "ssl_start_renegotiation", ret );
             return( ret );
         }
     }
@@ -10658,7 +10685,7 @@ int mbedtls_ssl_renegotiate( mbedtls_ssl_context *ssl )
  */
 static int ssl_check_ctr_renegotiate( mbedtls_ssl_context *ssl )
 {
-    size_t ep_len = mbedtls_ssl_ep_len( ssl );
+    size_t ep_len = ssl_ep_len( ssl );
     int in_ctr_cmp;
     int out_ctr_cmp;
 
@@ -10752,7 +10779,7 @@ int mbedtls_ssl_read( mbedtls_ssl_context *ssl, unsigned char *buf, size_t len )
         if( ssl->f_get_timer != NULL &&
             ssl->f_get_timer( ssl->p_timer ) == -1 )
         {
-            mbedtls_ssl_set_timer( ssl, ssl->conf->read_timeout );
+            ssl_set_timer( ssl, ssl->conf->read_timeout );
         }
 
         if( ( ret = mbedtls_ssl_read_record( ssl, 1 ) ) != 0 )
@@ -10844,12 +10871,11 @@ int mbedtls_ssl_read( mbedtls_ssl_context *ssl, unsigned char *buf, size_t len )
                     ssl->renego_status = MBEDTLS_SSL_RENEGOTIATION_PENDING;
                 }
 #endif
-                ret = mbedtls_ssl_start_renegotiation( ssl );
+                ret = ssl_start_renegotiation( ssl );
                 if( ret != MBEDTLS_ERR_SSL_WAITING_SERVER_HELLO_RENEGO &&
                     ret != 0 )
                 {
-                    MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_start_renegotiation",
-                                           ret );
+                    MBEDTLS_SSL_DEBUG_RET( 1, "ssl_start_renegotiation", ret );
                     return( ret );
                 }
             }
@@ -10946,7 +10972,7 @@ int mbedtls_ssl_read( mbedtls_ssl_context *ssl, unsigned char *buf, size_t len )
         /* We're going to return something now, cancel timer,
          * except if handshake (renegotiation) is in progress */
         if( ssl->state == MBEDTLS_SSL_HANDSHAKE_OVER )
-            mbedtls_ssl_set_timer( ssl, 0 );
+            ssl_set_timer( ssl, 0 );
 
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
         /* If we requested renego but received AppData, resend HelloRequest.
@@ -10956,10 +10982,9 @@ int mbedtls_ssl_read( mbedtls_ssl_context *ssl, unsigned char *buf, size_t len )
         if( ssl->conf->endpoint == MBEDTLS_SSL_IS_SERVER &&
             ssl->renego_status == MBEDTLS_SSL_RENEGOTIATION_PENDING )
         {
-            if( ( ret = mbedtls_ssl_resend_hello_request( ssl ) ) != 0 )
+            if( ( ret = ssl_resend_hello_request( ssl ) ) != 0 )
             {
-                MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_resend_hello_request",
-                                       ret );
+                MBEDTLS_SSL_DEBUG_RET( 1, "ssl_resend_hello_request", ret );
                 return( ret );
             }
         }
@@ -11210,7 +11235,7 @@ static void ssl_key_cert_free( mbedtls_ssl_key_cert *key_cert )
 
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
 
-void mbedtls_ssl_buffering_free( mbedtls_ssl_context *ssl )
+static void ssl_buffering_free( mbedtls_ssl_context *ssl )
 {
     unsigned offset;
     mbedtls_ssl_handshake_params * const hs = ssl->handshake;
@@ -11345,8 +11370,8 @@ void mbedtls_ssl_handshake_free( mbedtls_ssl_context *ssl )
 
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
     mbedtls_free( handshake->verify_cookie );
-    mbedtls_ssl_flight_free( handshake->flight );
-    mbedtls_ssl_buffering_free( ssl );
+    ssl_flight_free( handshake->flight );
+    ssl_buffering_free( ssl );
 #endif
 
 #if defined(MBEDTLS_ECDH_C) &&                  \
@@ -11692,7 +11717,7 @@ int mbedtls_ssl_context_save( mbedtls_ssl_context *ssl,
 
     MBEDTLS_SSL_DEBUG_BUF( 4, "saved context", buf, used );
 
-    return( mbedtls_ssl_session_reset_int( ssl, 0 ) );
+    return( ssl_session_reset_int( ssl, 0 ) );
 }
 
 /*
@@ -11789,7 +11814,7 @@ static int ssl_context_load( mbedtls_ssl_context *ssl,
     p += 4;
 
     /* This has been allocated by ssl_handshake_init(), called by
-     * by either mbedtls_ssl_session_reset_int() or mbedtls_ssl_setup(). */
+     * by either ssl_session_reset_int() or mbedtls_ssl_setup(). */
     ssl->session = ssl->session_negotiate;
     ssl->session_in = ssl->session;
     ssl->session_out = ssl->session;
@@ -11812,7 +11837,7 @@ static int ssl_context_load( mbedtls_ssl_context *ssl,
      */
 
     /* This has been allocated by ssl_handshake_init(), called by
-     * by either mbedtls_ssl_session_reset_int() or mbedtls_ssl_setup(). */
+     * by either ssl_session_reset_int() or mbedtls_ssl_setup(). */
     ssl->transform = ssl->transform_negotiate;
     ssl->transform_in = ssl->transform;
     ssl->transform_out = ssl->transform;
@@ -11973,7 +11998,7 @@ static int ssl_context_load( mbedtls_ssl_context *ssl,
 
     /* Adjust pointers for header fields of outgoing records to
      * the given transform, accounting for explicit IV and CID. */
-    mbedtls_ssl_update_out_pointers( ssl, ssl->transform );
+    ssl_update_out_pointers( ssl, ssl->transform );
 
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
     ssl->in_epoch = 1;
@@ -11981,8 +12006,7 @@ static int ssl_context_load( mbedtls_ssl_context *ssl,
 
     /* mbedtls_ssl_reset() leaves the handshake sub-structure allocated,
      * which we don't want - otherwise we'd end up freeing the wrong transform
-     * by calling mbedtls_ssl_handshake_wrapup_free_hs_transform()
-     * inappropriately. */
+     * by calling ssl_handshake_wrapup_free_hs_transform() inappropriately. */
     if( ssl->handshake != NULL )
     {
         mbedtls_ssl_handshake_free( ssl );
