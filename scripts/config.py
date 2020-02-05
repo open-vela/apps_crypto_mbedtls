@@ -183,6 +183,8 @@ def include_in_full(name):
             'MBEDTLS_REMOVE_ARC4_CIPHERSUITES',
             'MBEDTLS_RSA_NO_CRT',
             'MBEDTLS_SSL_HW_RECORD_ACCEL',
+            'MBEDTLS_SSL_PROTO_SSL3',
+            'MBEDTLS_SSL_SRV_SUPPORT_SSLV2_CLIENT_HELLO',
             'MBEDTLS_TEST_NULL_ENTROPY',
             'MBEDTLS_X509_ALLOW_EXTENSIONS_NON_V3',
             'MBEDTLS_X509_ALLOW_UNSUPPORTED_CRITICAL_EXTENSION',
@@ -229,6 +231,35 @@ def baremetal_adapter(name, active, section):
     if name == 'MBEDTLS_NO_PLATFORM_ENTROPY':
         return True
     return include_in_full(name) and keep_in_baremetal(name)
+
+def include_in_crypto(name):
+    """Rules for symbols in a crypto configuration."""
+    if name.startswith('MBEDTLS_X509_') or \
+       name.startswith('MBEDTLS_SSL_') or \
+       name.startswith('MBEDTLS_KEY_EXCHANGE_'):
+        return False
+    if name in [
+            'MBEDTLS_CERTS_C',
+            'MBEDTLS_DEBUG_C',
+            'MBEDTLS_NET_C',
+            'MBEDTLS_PKCS11_C',
+    ]:
+        return False
+    return True
+
+def crypto_adapter(adapter):
+    """Modify an adapter to disable non-crypto symbols.
+
+    ``crypto_adapter(adapter)(name, active, section)`` is like
+    ``adapter(name, active, section)``, but unsets all X.509 and TLS symbols.
+    """
+    def continuation(name, active, section):
+        if not include_in_crypto(name):
+            return False
+        if adapter is None:
+            return active
+        return adapter(name, active, section)
+    return continuation
 
 class ConfigFile(Config):
     """Representation of the Mbed TLS configuration read for a file.
@@ -394,6 +425,14 @@ if __name__ == '__main__':
         add_adapter('realfull', realfull_adapter,
                     """Uncomment all boolean #defines.
                     Suitable for generating documentation, but not for building.""")
+        add_adapter('crypto', crypto_adapter(None),
+                    """Only include crypto features. Exclude X.509 and TLS.""")
+        add_adapter('crypto_baremetal', crypto_adapter(baremetal_adapter),
+                    """Like baremetal, but with only crypto features,
+                    excluding X.509 and TLS.""")
+        add_adapter('crypto_full', crypto_adapter(full_adapter),
+                    """Like full, but with only crypto features,
+                    excluding X.509 and TLS.""")
 
         args = parser.parse_args()
         config = ConfigFile(args.file)
