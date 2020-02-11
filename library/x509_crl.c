@@ -541,7 +541,7 @@ int mbedtls_x509_crl_parse( mbedtls_x509_crl *chain, const unsigned char *buf, s
 {
 #if defined(MBEDTLS_PEM_PARSE_C)
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
-    size_t use_len = 0;
+    size_t use_len;
     mbedtls_pem_context pem;
     int is_pem = 0;
 
