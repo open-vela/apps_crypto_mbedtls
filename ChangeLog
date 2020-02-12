@@ -6,13 +6,16 @@ New deprecations
    * Deprecate MBEDTLS_SSL_SRV_SUPPORT_SSLV2_CLIENT_HELLO that enables parsing
      SSLv2 ClientHello messages.
    * Deprecate MBEDTLS_SSL_PROTO_SSL3 that enables support for SSLv3.
+   * Deprecate for MBEDTLS_PKCS11_C, the wrapper around the pkcs11-helper
+     library which allows TLS authentication to use keys stored in a
+     PKCS#11 token such as a smartcard.
 
 Bugfix
-   * Allow loading symlinked certificates. Fixes #3005. Reported and fixed
-     by Jonathan Bennett <JBennett@incomsystems.biz> via #3008.
    * Fix an unchecked call to mbedtls_md() in the x509write module.
    * Fix build failure with MBEDTLS_ZLIB_SUPPORT enabled. Reported by
      Jack Lloyd in #2859. Fix submitted by jiblime in #2963.
+   * Fix some false-positive uninitialized variable warnings in X.509. Fix
+     contributed by apple-ihack-geek in #2663.
 
 = mbed TLS 2.20.0 branch released 2020-01-15
 
@@ -85,8 +88,6 @@ Bugfix
    * mbedtls_ctr_drbg_set_entropy_len() and
      mbedtls_hmac_drbg_set_entropy_len() now work if you call them before
      mbedtls_ctr_drbg_seed() or mbedtls_hmac_drbg_seed().
-   * Fix some false-positive uninitialized variable warnings. Fix contributed
-     by apple-ihack-geek in #2663.
 
 Changes
    * Remove the technical possibility to define custom mbedtls_md_info
@@ -117,6 +118,10 @@ API Changes
    * Make client_random and server_random const in
      mbedtls_ssl_export_keys_ext_t, so that the key exporter is discouraged
      from modifying the client/server hello.
+
+Bugfix
+   * Fix some false-positive uninitialized variable warnings in crypto. Fix
+     contributed by apple-ihack-geek in #2663.
 
 = mbed TLS 2.19.0 branch released 2019-09-06
 
