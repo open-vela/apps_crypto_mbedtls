@@ -4,7 +4,8 @@
 # 2010
 #
 # Must be run from mbedTLS root or scripts directory.
-# Takes no argument.
+# Takes "include_crypto" as an argument that can be either 0 (don't include) or
+# 1 (include). On by default.
 
 use warnings;
 use strict;
@@ -18,24 +19,29 @@ my $vsx_main_file = "$vsx_dir/mbedTLS.$vsx_ext";
 my $vsx_sln_tpl_file = "scripts/data_files/vs2010-sln-template.sln";
 my $vsx_sln_file = "$vsx_dir/mbedTLS.sln";
 
-my $programs_dir = 'programs';
-my $mbedtls_header_dir = 'include/mbedtls';
-my $psa_header_dir = 'include/psa';
-my $source_dir = 'library';
+my $include_crypto = 1;
+if( @ARGV ) {
+    die "Invalid number of arguments" if scalar @ARGV != 1;
+    ($include_crypto) = @ARGV;
+}
 
-my @thirdparty_header_dirs = qw(
-    3rdparty/everest/include/everest
-);
-my @thirdparty_source_dirs = qw(
-    3rdparty/everest/library
-    3rdparty/everest/library/kremlib
-    3rdparty/everest/library/legacy
-);
-my @thirdparty_excluded = qw(
-    3rdparty/everest/library/Hacl_Curve25519.c
-);
+my $programs_dir = 'programs';
+my $header_dir = 'include/mbedtls';
+my $crypto_headers_dir = 'include/psa';
+my $source_dir = 'library';
+my $crypto_dir = 'crypto';
 
 # Need windows line endings!
+my $include_directories = <<EOT;
+../../include\r
+EOT
+
+if ($include_crypto) {
+  $include_directories = <<EOT;
+../../include;../../crypto/include;../../crypto/3rdparty/everest/include/;../../crypto/3rdparty/everest/include/everest;../../crypto/3rdparty/everest/include/everest/vs2010;../../crypto/3rdparty/everest/include/everest/kremlib\r
+EOT
+}
+
 my $vsx_hdr_tpl = <<EOT;
     <ClInclude Include="..\\..\\{NAME}" />\r
 EOT
@@ -65,14 +71,12 @@ EOT
 exit( main() );
 
 sub check_dirs {
-    foreach my $d (@thirdparty_header_dirs, @thirdparty_source_dirs) {
-        if (not (-d $d)) { return 0; }
-    }
     return -d $vsx_dir
-        && -d $mbedtls_header_dir
-        && -d $psa_header_dir
+        && -d $header_dir
         && -d $source_dir
-        && -d $programs_dir;
+        && -d $programs_dir
+        && -d $crypto_dir
+        && -d "$crypto_dir/$crypto_headers_dir";
 }
 
 sub slurp_file {
@@ -103,11 +107,6 @@ sub gen_app_guid {
     return $guid;
 }
 
-sub is_thirdparty_excluded {
-    my ($path) = @_;
-    return grep { $path eq $_ } @thirdparty_excluded;
-}
-
 sub gen_app {
     my ($path, $template, $dir, $ext) = @_;
 
@@ -118,13 +117,14 @@ sub gen_app {
     my $srcs = "\n    <ClCompile Include=\"..\\..\\programs\\$path.c\" \/>\r";
     if( $appname eq "ssl_client2" or $appname eq "ssl_server2" or
         $appname eq "query_compile_time_config" ) {
-        $srcs .= "\n    <ClCompile Include=\"..\\..\\programs\\test\\query_config.c\" \/>\r";
+        $srcs .= "\n    <ClCompile Include=\"..\\..\\programs\\ssl\\query_config.c\" \/>\r";
     }
 
     my $content = $template;
     $content =~ s/<SOURCES>/$srcs/g;
     $content =~ s/<APPNAME>/$appname/g;
     $content =~ s/<GUID>/$guid/g;
+    $content =~ s/INCLUDE_DIRECTORIES\r\n/$include_directories/g;
 
     content_to_file( $content, "$dir/$appname.$ext" );
 }
@@ -159,18 +159,15 @@ sub gen_entry_list {
 }
 
 sub gen_main_file {
-    my ($mbedtls_headers, $psa_headers, $source_headers, $thirdparty_headers, $sources, $thirdparty_sources, $hdr_tpl, $src_tpl, $main_tpl, $main_out) = @_;
+    my ($headers, $sources, $hdr_tpl, $src_tpl, $main_tpl, $main_out) = @_;
 
-    my $header_entries = gen_entry_list( $hdr_tpl, @$mbedtls_headers );
-    $header_entries .= gen_entry_list( $hdr_tpl, @$psa_headers );
-    $header_entries .= gen_entry_list( $hdr_tpl, @$source_headers );
-    $header_entries .= gen_entry_list( $hdr_tpl, @$thirdparty_headers );
+    my $header_entries = gen_entry_list( $hdr_tpl, @$headers );
     my $source_entries = gen_entry_list( $src_tpl, @$sources );
-    $source_entries .= gen_entry_list( $src_tpl, @$thirdparty_sources );
 
     my $out = slurp_file( $main_tpl );
     $out =~ s/SOURCE_ENTRIES\r\n/$source_entries/m;
     $out =~ s/HEADER_ENTRIES\r\n/$header_entries/m;
+    $out =~ s/INCLUDE_DIRECTORIES\r\n/$include_directories/g;
 
     content_to_file( $out, $main_out );
 }
@@ -219,25 +216,28 @@ sub main {
     del_vsx_files();
 
     my @app_list = get_app_list();
-    my @mbedtls_headers = <$mbedtls_header_dir/*.h>;
-    my @psa_headers = <$psa_header_dir/*.h>;
-    my @source_headers = <$source_dir/*.h>;
-    my @sources = <$source_dir/*.c>;
-    map { s!/!\\!g } @mbedtls_headers;
-    map { s!/!\\!g } @psa_headers;
-    map { s!/!\\!g } @sources;
+    my @headers = <$header_dir/*.h>;
 
-    my @thirdparty_headers = map { <$_/*.h> } @thirdparty_header_dirs;
-    my @thirdparty_sources = map { <$_/*.c> } @thirdparty_source_dirs;
-    @thirdparty_sources = grep { ! is_thirdparty_excluded($_) } @thirdparty_sources;
-    map { s!/!\\!g } @thirdparty_headers;
-    map { s!/!\\!g } @thirdparty_sources;
+    my @sources = ();
+    if ($include_crypto) {
+        @sources = <$crypto_dir/$source_dir/*.c>;
+        foreach my $file (<$source_dir/*.c>) {
+            my $basename = $file; $basename =~ s!.*/!!;
+            push @sources, $file unless -e "$crypto_dir/$source_dir/$basename";
+        }
+        push @headers, <$crypto_dir/$crypto_headers_dir/*.h>;
+    } else {
+         @sources = <$source_dir/*.c>;
+    }
+
+    map { s!/!\\!g } @headers;
+    map { s!/!\\!g } @sources;
 
     gen_app_files( @app_list );
 
-    gen_main_file( \@mbedtls_headers, \@psa_headers, \@source_headers,
-                   \@thirdparty_headers, \@sources, \@thirdparty_sources, $vsx_hdr_tpl,
-                   $vsx_src_tpl, $vsx_main_tpl_file, $vsx_main_file );
+    gen_main_file( \@headers, \@sources,
+                   $vsx_hdr_tpl, $vsx_src_tpl,
+                   $vsx_main_tpl_file, $vsx_main_file );
 
     gen_vsx_solution( @app_list );
 
