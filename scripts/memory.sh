@@ -46,10 +46,10 @@ do_config()
     echo ""
     echo "config-$NAME:"
     cp configs/config-$NAME.h $CONFIG_H
-    scripts/config.py unset MBEDTLS_SSL_SRV_C
+    scripts/config.pl unset MBEDTLS_SSL_SRV_C
 
     for FLAG in $UNSET_LIST; do
-        scripts/config.py unset $FLAG
+        scripts/config.pl unset $FLAG
     done
 
     grep -F SSL_MAX_CONTENT_LEN $CONFIG_H || echo 'SSL_MAX_CONTENT_LEN=16384'
