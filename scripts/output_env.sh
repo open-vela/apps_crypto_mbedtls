@@ -23,15 +23,11 @@ print_version()
     shift
     ARGS="$1"
     shift
-    VARIANT="$1"
+    FAIL_MSG="$1"
     shift
 
-    if [ -n "$VARIANT" ]; then
-        VARIANT=" ($VARIANT)"
-    fi
-
-    if ! type "$BIN" > /dev/null 2>&1; then
-        echo " * ${BIN##*/}$VARIANT: Not found."
+    if ! `type "$BIN" > /dev/null 2>&1`; then
+        echo "* $FAIL_MSG"
         return 0
     fi
 
@@ -45,118 +41,81 @@ print_version()
         VERSION_STR=`echo "$VERSION_STR" | $FILTER`
     done
 
-    if [ -z "$VERSION_STR" ]; then
-        VERSION_STR="Version could not be determined."
-    fi
-
-    echo " * ${BIN##*/}$VARIANT: ${BIN} : ${VERSION_STR} "
+    echo "* ${BIN##*/}: $BIN: $VERSION_STR"
 }
 
-echo "** Platform:"
-echo
-
-if [ `uname -s` = "Linux" ]; then
-    echo "Linux variant"
-    lsb_release -d -c
-else
-    echo "Unknown Unix variant"
-fi
-
-echo
-
 print_version "uname" "-a" ""
-
-echo
-echo
-echo "** Tool Versions:"
 echo
 
 if [ "${RUN_ARMCC:-1}" -ne 0 ]; then
     : "${ARMC5_CC:=armcc}"
-    print_version "$ARMC5_CC" "--vsn" "" "head -n 2"
+    print_version "$ARMC5_CC" "--vsn" "armcc not found!" "head -n 2"
     echo
 
     : "${ARMC6_CC:=armclang}"
-    print_version "$ARMC6_CC" "--vsn" "" "head -n 2"
+    print_version "$ARMC6_CC" "--vsn" "armclang not found!" "head -n 2"
     echo
 fi
 
-print_version "arm-none-eabi-gcc" "--version" "" "head -n 1"
+print_version "arm-none-eabi-gcc" "--version" "gcc-arm not found!" "head -n 1"
 echo
 
-print_version "gcc" "--version" "" "head -n 1"
+print_version "gcc" "--version" "gcc not found!" "head -n 1"
 echo
 
-print_version "clang" "--version" "" "head -n 2"
+print_version "clang" "--version" "clang not found" "head -n 2"
 echo
 
-print_version "ldd" "--version" "" "head -n 1"
+print_version "ldd" "--version"                     \
+    "No ldd present: can't determine libc version!" \
+    "head -n 1"
 echo
 
-print_version "valgrind" "--version" ""
-echo
-
-print_version "gdb" "--version" "" "head -n 1"
-echo
-
-print_version "perl" "--version" "" "head -n 2" "grep ."
-echo
-
-print_version "python" "--version" "" "head -n 1"
-echo
-
-print_version "pylint3" "--version" "" "sed /^.*config/d" "grep pylint"
+print_version "valgrind" "--version" "valgrind not found!"
 echo
 
 : ${OPENSSL:=openssl}
-print_version "$OPENSSL" "version" "default"
+print_version "$OPENSSL" "version" "openssl not found!"
 echo
 
 if [ -n "${OPENSSL_LEGACY+set}" ]; then
-    print_version "$OPENSSL_LEGACY" "version" "legacy"
-else
-    echo " * openssl (legacy): Not configured."
+    print_version "$OPENSSL_LEGACY" "version" "openssl legacy version not found!"
+    echo
 fi
-echo
 
 if [ -n "${OPENSSL_NEXT+set}" ]; then
-    print_version "$OPENSSL_NEXT" "version" "next"
-else
-    echo " * openssl (next): Not configured."
+    print_version "$OPENSSL_NEXT" "version" "openssl next version not found!"
+    echo
 fi
-echo
 
 : ${GNUTLS_CLI:=gnutls-cli}
-print_version "$GNUTLS_CLI" "--version" "default" "head -n 1"
+print_version "$GNUTLS_CLI" "--version" "gnuTLS client not found!" "head -n 1"
 echo
 
 : ${GNUTLS_SERV:=gnutls-serv}
-print_version "$GNUTLS_SERV" "--version" "default" "head -n 1"
+print_version "$GNUTLS_SERV" "--version" "gnuTLS server not found!" "head -n 1"
 echo
 
 if [ -n "${GNUTLS_LEGACY_CLI+set}" ]; then
-    print_version "$GNUTLS_LEGACY_CLI" "--version" "legacy" "head -n 1"
-else
-     echo " * gnutls-cli (legacy): Not configured."
+    print_version "$GNUTLS_LEGACY_CLI" "--version" \
+        "gnuTLS client legacy version not found!"  \
+        "head -n 1"
+    echo
 fi
-echo
 
 if [ -n "${GNUTLS_LEGACY_SERV+set}" ]; then
-    print_version "$GNUTLS_LEGACY_SERV" "--version" "legacy" "head -n 1"
-else
-    echo " * gnutls-serv (legacy): Not configured."
+    print_version "$GNUTLS_LEGACY_SERV" "--version" \
+        "gnuTLS server legacy version not found!"   \
+        "head -n 1"
+    echo
 fi
-echo
 
-echo " * Installed asan versions:"
-if type dpkg-query >/dev/null 2>/dev/null; then
-    if ! dpkg-query -f '${Status} ${Package}: ${Version}\n' -W 'libasan*' |
-         awk '$3 == "installed" && $4 !~ /-/ {print $4, $5}' |
-         grep .
-    then
-        echo "   No asan versions installed."
-    fi
+if `hash dpkg > /dev/null 2>&1`; then
+    echo "* asan:"
+    dpkg -s libasan2 2> /dev/null | grep -i version
+    dpkg -s libasan1 2> /dev/null | grep -i version
+    dpkg -s libasan0 2> /dev/null | grep -i version
 else
-    echo "  Unable to determine the asan version without dpkg."
+    echo "* No dpkg present: can't determine asan version!"
 fi
 echo
