@@ -223,7 +223,7 @@ requires_config_value_at_most() {
 }
 
 requires_ciphersuite_enabled() {
-    if [ -z "$($P_CLI --help | grep $1)" ]; then
+    if [ -z "$($P_CLI --help 2>/dev/null | grep $1)" ]; then
         SKIP_NEXT="YES"
     fi
 }
@@ -519,6 +519,45 @@ check_server_hello_time() {
         return 1
     elif [ $SERVER_HELLO_TIME -gt $(( $CUR_TIME + $THRESHOLD_IN_SECS )) ]; then
         # The time in ServerHello is at least 5 minutes later than now
+        return 1
+    else
+        return 0
+    fi
+}
+
+# Get handshake memory usage from server or client output and put it into the variable specified by the first argument
+handshake_memory_get() {
+    OUTPUT_VARIABLE="$1"
+    OUTPUT_FILE="$2"
+
+    # Get memory usage from a pattern like "Heap memory usage after handshake: 23112 bytes. Peak memory usage was 33112"
+    MEM_USAGE=$(sed -n 's/.*Heap memory usage after handshake: //p' < "$OUTPUT_FILE" | grep -o "[0-9]*" | head -1)
+
+    # Check if memory usage was read
+    if [ -z "$MEM_USAGE" ]; then
+        echo "Error: Can not read the value of handshake memory usage"
+        return 1
+    else
+        eval "$OUTPUT_VARIABLE=$MEM_USAGE"
+        return 0
+    fi
+}
+
+# Get handshake memory usage from server or client output and check if this value
+# is not higher than the maximum given by the first argument
+handshake_memory_check() {
+    MAX_MEMORY="$1"
+    OUTPUT_FILE="$2"
+
+    # Get memory usage
+    if ! handshake_memory_get "MEMORY_USAGE" "$OUTPUT_FILE"; then
+        return 1
+    fi
+
+    # Check if memory usage is below max value
+    if [ "$MEMORY_USAGE" -gt "$MAX_MEMORY" ]; then
+        echo "\nFailed: Handshake memory usage was $MEMORY_USAGE bytes," \
+             "but should be below $MAX_MEMORY bytes"
         return 1
     else
         return 0
@@ -863,6 +902,58 @@ run_test_psa_force_curve() {
                 -c "Perform PSA-based computation of digest of ServerKeyExchange" \
                 -S "error" \
                 -C "error"
+}
+
+# Test that the server's memory usage after a handshake is reduced when a client specifies
+# a maximum fragment length.
+#  first argument ($1) is MFL for SSL client
+#  second argument ($2) is memory usage for SSL client with default MFL (16k)
+run_test_memory_after_hanshake_with_mfl()
+{
+    # The test passes if the difference is around 2*(16k-MFL)
+    local MEMORY_USAGE_LIMIT="$(( $2 - ( 2 * ( 16384 - $1 )) ))"
+
+    # Leave some margin for robustness
+    MEMORY_USAGE_LIMIT="$(( ( MEMORY_USAGE_LIMIT * 110 ) / 100 ))"
+
+    run_test    "Handshake memory usage (MFL $1)" \
+                "$P_SRV debug_level=3 auth_mode=required force_version=tls1_2" \
+                "$P_CLI debug_level=3 force_version=tls1_2 \
+                    crt_file=data_files/server5.crt key_file=data_files/server5.key \
+                    force_ciphersuite=TLS-ECDHE-ECDSA-WITH-AES-128-CCM max_frag_len=$1" \
+                0 \
+                -F "handshake_memory_check $MEMORY_USAGE_LIMIT"
+}
+
+
+# Test that the server's memory usage after a handshake is reduced when a client specifies
+# different values of Maximum Fragment Length: default (16k), 4k, 2k, 1k and 512 bytes
+run_tests_memory_after_hanshake()
+{
+    # all tests in this sequence requires the same configuration (see requires_config_enabled())
+    SKIP_THIS_TESTS="$SKIP_NEXT"
+
+    # first test with default MFU is to get reference memory usage
+    MEMORY_USAGE_MFL_16K=0
+    run_test    "Handshake memory usage initial (MFL 16384 - default)" \
+                "$P_SRV debug_level=3 auth_mode=required force_version=tls1_2" \
+                "$P_CLI debug_level=3 force_version=tls1_2 \
+                    crt_file=data_files/server5.crt key_file=data_files/server5.key \
+                    force_ciphersuite=TLS-ECDHE-ECDSA-WITH-AES-128-CCM" \
+                0 \
+                -F "handshake_memory_get MEMORY_USAGE_MFL_16K"
+
+    SKIP_NEXT="$SKIP_THIS_TESTS"
+    run_test_memory_after_hanshake_with_mfl 4096 "$MEMORY_USAGE_MFL_16K"
+
+    SKIP_NEXT="$SKIP_THIS_TESTS"
+    run_test_memory_after_hanshake_with_mfl 2048 "$MEMORY_USAGE_MFL_16K"
+
+    SKIP_NEXT="$SKIP_THIS_TESTS"
+    run_test_memory_after_hanshake_with_mfl 1024 "$MEMORY_USAGE_MFL_16K"
+
+    SKIP_NEXT="$SKIP_THIS_TESTS"
+    run_test_memory_after_hanshake_with_mfl 512 "$MEMORY_USAGE_MFL_16K"
 }
 
 cleanup() {
@@ -2535,7 +2626,7 @@ run_test    "Session resume using tickets: openssl client" \
 
 run_test    "Session resume using tickets, DTLS: basic" \
             "$P_SRV debug_level=3 dtls=1 tickets=1" \
-            "$P_CLI debug_level=3 dtls=1 tickets=1 reconnect=1" \
+            "$P_CLI debug_level=3 dtls=1 tickets=1 reconnect=1 skip_close_notify=1" \
             0 \
             -c "client hello, adding session ticket extension" \
             -s "found session ticket extension" \
@@ -2549,7 +2640,7 @@ run_test    "Session resume using tickets, DTLS: basic" \
 
 run_test    "Session resume using tickets, DTLS: cache disabled" \
             "$P_SRV debug_level=3 dtls=1 tickets=1 cache_max=0" \
-            "$P_CLI debug_level=3 dtls=1 tickets=1 reconnect=1" \
+            "$P_CLI debug_level=3 dtls=1 tickets=1 reconnect=1 skip_close_notify=1" \
             0 \
             -c "client hello, adding session ticket extension" \
             -s "found session ticket extension" \
@@ -2563,7 +2654,7 @@ run_test    "Session resume using tickets, DTLS: cache disabled" \
 
 run_test    "Session resume using tickets, DTLS: timeout" \
             "$P_SRV debug_level=3 dtls=1 tickets=1 cache_max=0 ticket_timeout=1" \
-            "$P_CLI debug_level=3 dtls=1 tickets=1 reconnect=1 reco_delay=2" \
+            "$P_CLI debug_level=3 dtls=1 tickets=1 reconnect=1 skip_close_notify=1 reco_delay=2" \
             0 \
             -c "client hello, adding session ticket extension" \
             -s "found session ticket extension" \
@@ -2577,7 +2668,7 @@ run_test    "Session resume using tickets, DTLS: timeout" \
 
 run_test    "Session resume using tickets, DTLS: session copy" \
             "$P_SRV debug_level=3 dtls=1 tickets=1 cache_max=0" \
-            "$P_CLI debug_level=3 dtls=1 tickets=1 reconnect=1 reco_mode=0" \
+            "$P_CLI debug_level=3 dtls=1 tickets=1 reconnect=1 skip_close_notify=1 reco_mode=0" \
             0 \
             -c "client hello, adding session ticket extension" \
             -s "found session ticket extension" \
@@ -2718,7 +2809,7 @@ run_test    "Session resume using cache: openssl server" \
 
 run_test    "Session resume using cache, DTLS: tickets enabled on client" \
             "$P_SRV dtls=1 debug_level=3 tickets=0" \
-            "$P_CLI dtls=1 debug_level=3 tickets=1 reconnect=1" \
+            "$P_CLI dtls=1 debug_level=3 tickets=1 reconnect=1 skip_close_notify=1" \
             0 \
             -c "client hello, adding session ticket extension" \
             -s "found session ticket extension" \
@@ -2732,7 +2823,7 @@ run_test    "Session resume using cache, DTLS: tickets enabled on client" \
 
 run_test    "Session resume using cache, DTLS: tickets enabled on server" \
             "$P_SRV dtls=1 debug_level=3 tickets=1" \
-            "$P_CLI dtls=1 debug_level=3 tickets=0 reconnect=1" \
+            "$P_CLI dtls=1 debug_level=3 tickets=0 reconnect=1 skip_close_notify=1" \
             0 \
             -C "client hello, adding session ticket extension" \
             -S "found session ticket extension" \
@@ -2746,7 +2837,7 @@ run_test    "Session resume using cache, DTLS: tickets enabled on server" \
 
 run_test    "Session resume using cache, DTLS: cache_max=0" \
             "$P_SRV dtls=1 debug_level=3 tickets=0 cache_max=0" \
-            "$P_CLI dtls=1 debug_level=3 tickets=0 reconnect=1" \
+            "$P_CLI dtls=1 debug_level=3 tickets=0 reconnect=1 skip_close_notify=1" \
             0 \
             -S "session successfully restored from cache" \
             -S "session successfully restored from ticket" \
@@ -2755,7 +2846,7 @@ run_test    "Session resume using cache, DTLS: cache_max=0" \
 
 run_test    "Session resume using cache, DTLS: cache_max=1" \
             "$P_SRV dtls=1 debug_level=3 tickets=0 cache_max=1" \
-            "$P_CLI dtls=1 debug_level=3 tickets=0 reconnect=1" \
+            "$P_CLI dtls=1 debug_level=3 tickets=0 reconnect=1 skip_close_notify=1" \
             0 \
             -s "session successfully restored from cache" \
             -S "session successfully restored from ticket" \
@@ -2764,7 +2855,7 @@ run_test    "Session resume using cache, DTLS: cache_max=1" \
 
 run_test    "Session resume using cache, DTLS: timeout > delay" \
             "$P_SRV dtls=1 debug_level=3 tickets=0" \
-            "$P_CLI dtls=1 debug_level=3 tickets=0 reconnect=1 reco_delay=0" \
+            "$P_CLI dtls=1 debug_level=3 tickets=0 reconnect=1 skip_close_notify=1 reco_delay=0" \
             0 \
             -s "session successfully restored from cache" \
             -S "session successfully restored from ticket" \
@@ -2773,7 +2864,7 @@ run_test    "Session resume using cache, DTLS: timeout > delay" \
 
 run_test    "Session resume using cache, DTLS: timeout < delay" \
             "$P_SRV dtls=1 debug_level=3 tickets=0 cache_timeout=1" \
-            "$P_CLI dtls=1 debug_level=3 tickets=0 reconnect=1 reco_delay=2" \
+            "$P_CLI dtls=1 debug_level=3 tickets=0 reconnect=1 skip_close_notify=1 reco_delay=2" \
             0 \
             -S "session successfully restored from cache" \
             -S "session successfully restored from ticket" \
@@ -2782,7 +2873,7 @@ run_test    "Session resume using cache, DTLS: timeout < delay" \
 
 run_test    "Session resume using cache, DTLS: no timeout" \
             "$P_SRV dtls=1 debug_level=3 tickets=0 cache_timeout=0" \
-            "$P_CLI dtls=1 debug_level=3 tickets=0 reconnect=1 reco_delay=2" \
+            "$P_CLI dtls=1 debug_level=3 tickets=0 reconnect=1 skip_close_notify=1 reco_delay=2" \
             0 \
             -s "session successfully restored from cache" \
             -S "session successfully restored from ticket" \
@@ -2791,7 +2882,7 @@ run_test    "Session resume using cache, DTLS: no timeout" \
 
 run_test    "Session resume using cache, DTLS: session copy" \
             "$P_SRV dtls=1 debug_level=3 tickets=0" \
-            "$P_CLI dtls=1 debug_level=3 tickets=0 reconnect=1 reco_mode=0" \
+            "$P_CLI dtls=1 debug_level=3 tickets=0 reconnect=1 skip_close_notify=1 reco_mode=0" \
             0 \
             -s "session successfully restored from cache" \
             -S "session successfully restored from ticket" \
@@ -4543,19 +4634,19 @@ run_test    "Event-driven I/O, DTLS: ticket + client auth" \
 
 run_test    "Event-driven I/O, DTLS: ticket + client auth + resume" \
             "$P_SRV dtls=1 event=1 tickets=1 auth_mode=required" \
-            "$P_CLI dtls=1 event=1 tickets=1 reconnect=1" \
+            "$P_CLI dtls=1 event=1 tickets=1 reconnect=1 skip_close_notify=1" \
             0 \
             -c "Read from server: .* bytes read"
 
 run_test    "Event-driven I/O, DTLS: ticket + resume" \
             "$P_SRV dtls=1 event=1 tickets=1 auth_mode=none" \
-            "$P_CLI dtls=1 event=1 tickets=1 reconnect=1" \
+            "$P_CLI dtls=1 event=1 tickets=1 reconnect=1 skip_close_notify=1" \
             0 \
             -c "Read from server: .* bytes read"
 
 run_test    "Event-driven I/O, DTLS: session-id resume" \
             "$P_SRV dtls=1 event=1 tickets=0 auth_mode=none" \
-            "$P_CLI dtls=1 event=1 tickets=0 reconnect=1" \
+            "$P_CLI dtls=1 event=1 tickets=0 reconnect=1 skip_close_notify=1" \
             0 \
             -c "Read from server: .* bytes read"
 
@@ -4567,7 +4658,7 @@ run_test    "Event-driven I/O, DTLS: session-id resume" \
 run_test    "Event-driven I/O, DTLS: session-id resume, UDP packing" \
             -p "$P_PXY pack=50" \
             "$P_SRV dtls=1 event=1 tickets=0 auth_mode=required" \
-            "$P_CLI dtls=1 event=1 tickets=0 reconnect=1" \
+            "$P_CLI dtls=1 event=1 tickets=0 reconnect=1 skip_close_notify=1" \
             0 \
             -c "Read from server: .* bytes read"
 
@@ -7807,7 +7898,7 @@ run_test    "DTLS fragmenting: proxy MTU, resumed handshake" \
              key_file=data_files/server8.key \
              hs_timeout=10000-60000 \
              force_ciphersuite=TLS-ECDHE-ECDSA-WITH-AES-128-GCM-SHA256 \
-             mtu=1450 reconnect=1 reco_delay=1" \
+             mtu=1450 reconnect=1 skip_close_notify=1 reco_delay=1" \
             0 \
             -S "autoreduction" \
             -s "found fragmented DTLS handshake message" \
@@ -8656,7 +8747,7 @@ run_test    "DTLS proxy: 3d, min handshake, resumption" \
             "$P_SRV dtls=1 dgram_packing=0 hs_timeout=500-10000 tickets=0 auth_mode=none \
              psk=abc123 debug_level=3" \
             "$P_CLI dtls=1 dgram_packing=0 hs_timeout=500-10000 tickets=0 psk=abc123 \
-             debug_level=3 reconnect=1 read_timeout=1000 max_resend=10 \
+             debug_level=3 reconnect=1 skip_close_notify=1 read_timeout=1000 max_resend=10 \
              force_ciphersuite=TLS-PSK-WITH-AES-128-CCM-8" \
             0 \
             -s "a session has been resumed" \
@@ -8670,7 +8761,7 @@ run_test    "DTLS proxy: 3d, min handshake, resumption, nbio" \
             "$P_SRV dtls=1 dgram_packing=0 hs_timeout=500-10000 tickets=0 auth_mode=none \
              psk=abc123 debug_level=3 nbio=2" \
             "$P_CLI dtls=1 dgram_packing=0 hs_timeout=500-10000 tickets=0 psk=abc123 \
-             debug_level=3 reconnect=1 read_timeout=1000 max_resend=10 \
+             debug_level=3 reconnect=1 skip_close_notify=1 read_timeout=1000 max_resend=10 \
              force_ciphersuite=TLS-PSK-WITH-AES-128-CCM-8 nbio=2" \
             0 \
             -s "a session has been resumed" \
@@ -8819,6 +8910,12 @@ run_test    "export keys functionality" \
             -c "exported maclen is " \
             -c "exported keylen is " \
             -c "exported ivlen is "
+
+# Test heap memory usage after handshake
+requires_config_enabled MBEDTLS_MEMORY_DEBUG
+requires_config_enabled MBEDTLS_MEMORY_BUFFER_ALLOC_C
+requires_config_enabled MBEDTLS_SSL_MAX_FRAGMENT_LENGTH
+run_tests_memory_after_hanshake
 
 # Final report
 

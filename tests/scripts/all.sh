@@ -1142,6 +1142,75 @@ component_test_no_max_fragment_length_small_ssl_out_content_len () {
     if_build_succeeded tests/ssl-opt.sh -f "Max fragment length\|Large buffer"
 }
 
+component_test_variable_ssl_in_out_buffer_len () {
+    msg "build: MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH enabled (ASan build)"
+    scripts/config.py set MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH
+    CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
+    make
+
+    msg "test: MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH enabled"
+    make test
+
+    msg "test: ssl-opt.sh, MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH enabled"
+    if_build_succeeded tests/ssl-opt.sh
+
+    msg "test: compat.sh, MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH enabled"
+    if_build_succeeded tests/compat.sh
+}
+
+component_test_variable_ssl_in_out_buffer_len_CID () {
+    msg "build: MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH and MBEDTLS_SSL_DTLS_CONNECTION_ID enabled (ASan build)"
+    scripts/config.py set MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH
+    scripts/config.py set MBEDTLS_SSL_DTLS_CONNECTION_ID
+
+    CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
+    make
+
+    msg "test: MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH and MBEDTLS_SSL_DTLS_CONNECTION_ID"
+    make test
+
+    msg "test: ssl-opt.sh, MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH and MBEDTLS_SSL_DTLS_CONNECTION_ID enabled"
+    if_build_succeeded tests/ssl-opt.sh
+
+    msg "test: compat.sh, MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH and MBEDTLS_SSL_DTLS_CONNECTION_ID enabled"
+    if_build_succeeded tests/compat.sh
+}
+
+component_test_variable_ssl_in_out_buffer_len_record_splitting () {
+    msg "build: MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH and MBEDTLS_SSL_CBC_RECORD_SPLITTING enabled (ASan build)"
+    scripts/config.py set MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH
+    scripts/config.py set MBEDTLS_SSL_CBC_RECORD_SPLITTING
+
+    CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
+    make
+
+    msg "test: MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH and MBEDTLS_SSL_CBC_RECORD_SPLITTING"
+    make test
+
+    msg "test: ssl-opt.sh, MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH and MBEDTLS_SSL_CBC_RECORD_SPLITTING enabled"
+    if_build_succeeded tests/ssl-opt.sh
+
+    msg "test: compat.sh, MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH and MBEDTLS_SSL_CBC_RECORD_SPLITTING enabled"
+    if_build_succeeded tests/compat.sh
+}
+
+component_test_ssl_alloc_buffer_and_mfl () {
+    msg "build: default config with memory buffer allocator and MFL extension"
+    scripts/config.py set MBEDTLS_MEMORY_BUFFER_ALLOC_C
+    scripts/config.py set MBEDTLS_PLATFORM_MEMORY
+    scripts/config.py set MBEDTLS_MEMORY_DEBUG
+    scripts/config.py set MBEDTLS_SSL_MAX_FRAGMENT_LENGTH
+    scripts/config.py set MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH
+    CC=gcc cmake .
+    make
+
+    msg "test: MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH, MBEDTLS_MEMORY_BUFFER_ALLOC_C, MBEDTLS_MEMORY_DEBUG and MBEDTLS_SSL_MAX_FRAGMENT_LENGTH"
+    make test
+
+    msg "test: MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH, MBEDTLS_MEMORY_BUFFER_ALLOC_C, MBEDTLS_MEMORY_DEBUG and MBEDTLS_SSL_MAX_FRAGMENT_LENGTH"
+    if_build_succeeded tests/ssl-opt.sh -f "Handshake memory usage"
+}
+
 component_test_when_no_ciphersuites_have_mac () {
     msg "build: when no ciphersuites have MAC"
     scripts/config.py unset MBEDTLS_CIPHER_NULL_CIPHER
@@ -1185,8 +1254,8 @@ component_test_platform_calloc_macro () {
 
 component_test_malloc_0_null () {
     msg "build: malloc(0) returns NULL (ASan+UBSan build)"
-    scripts/config.pl full
-    scripts/config.pl unset MBEDTLS_MEMORY_BUFFER_ALLOC_C
+    scripts/config.py full
+    scripts/config.py unset MBEDTLS_MEMORY_BUFFER_ALLOC_C
     make CC=gcc CFLAGS="'-DMBEDTLS_CONFIG_FILE=\"$PWD/tests/configs/config-wrapper-malloc-0-null.h\"' -O -Werror -Wall -Wextra -fsanitize=address,undefined" LDFLAGS='-fsanitize=address,undefined'
 
     msg "test: malloc(0) returns NULL (ASan+UBSan build)"
@@ -1235,12 +1304,12 @@ test_build_opt () {
 }
 
 component_test_clang_opt () {
-    scripts/config.pl full
+    scripts/config.py full
     test_build_opt 'full config' clang -O0 -Os -O2
 }
 
 component_test_gcc_opt () {
-    scripts/config.pl full
+    scripts/config.py full
     test_build_opt 'full config' gcc -O0 -Os -O2
 }
 
