@@ -189,7 +189,7 @@
 #endif
 
 #if defined(MBEDTLS_GCM_C) && (                                        \
-        !defined(MBEDTLS_AES_C) && !defined(MBEDTLS_CAMELLIA_C) && !defined(MBEDTLS_ARIA_C) )
+        !defined(MBEDTLS_AES_C) && !defined(MBEDTLS_CAMELLIA_C) )
 #error "MBEDTLS_GCM_C defined, but not all prerequisites"
 #endif
 
@@ -341,6 +341,14 @@
 #if defined(MBEDTLS_PKCS11_C) && !defined(MBEDTLS_PK_C)
 #error "MBEDTLS_PKCS11_C defined, but not all prerequisites"
 #endif
+
+#if defined(MBEDTLS_PKCS11_C)
+#if defined(MBEDTLS_DEPRECATED_REMOVED)
+#error "MBEDTLS_PKCS11_C is deprecated and will be removed in a future version of Mbed TLS"
+#elif defined(MBEDTLS_DEPRECATED_WARNING)
+#warning "MBEDTLS_PKCS11_C is deprecated and will be removed in a future version of Mbed TLS"
+#endif
+#endif /* MBEDTLS_PKCS11_C */
 
 #if defined(MBEDTLS_PLATFORM_EXIT_ALT) && !defined(MBEDTLS_PLATFORM_C)
 #error "MBEDTLS_PLATFORM_EXIT_ALT defined, but not all prerequisites"
@@ -545,12 +553,6 @@
 #error "MBEDTLS_PSA_CRYPTO_SPM defined, but not all prerequisites"
 #endif
 
-#if defined(MBEDTLS_PSA_CRYPTO_SE_C) &&    \
-    ! ( defined(MBEDTLS_PSA_CRYPTO_C) && \
-        defined(MBEDTLS_PSA_CRYPTO_STORAGE_C) )
-#error "MBEDTLS_PSA_CRYPTO_SE_C defined, but not all prerequisites"
-#endif
-
 #if defined(MBEDTLS_PSA_CRYPTO_STORAGE_C) &&            \
     ! defined(MBEDTLS_PSA_CRYPTO_C)
 #error "MBEDTLS_PSA_CRYPTO_STORAGE_C defined, but not all prerequisites"
@@ -585,10 +587,6 @@
 #if defined(MBEDTLS_X509_RSASSA_PSS_SUPPORT) &&                        \
     ( !defined(MBEDTLS_RSA_C) || !defined(MBEDTLS_PKCS1_V21) )
 #error "MBEDTLS_X509_RSASSA_PSS_SUPPORT defined, but not all prerequisites"
-#endif
-
-#if defined(MBEDTLS_SHA512_NO_SHA384) && !defined(MBEDTLS_SHA512_C)
-#error "MBEDTLS_SHA512_NO_SHA384 defined without MBEDTLS_SHA512_C"
 #endif
 
 #if defined(MBEDTLS_SSL_PROTO_SSL3) && ( !defined(MBEDTLS_MD5_C) ||     \
@@ -664,6 +662,23 @@
 #if defined(MBEDTLS_SSL_DTLS_ANTI_REPLAY) &&                              \
     ( !defined(MBEDTLS_SSL_TLS_C) || !defined(MBEDTLS_SSL_PROTO_DTLS) )
 #error "MBEDTLS_SSL_DTLS_ANTI_REPLAY  defined, but not all prerequisites"
+#endif
+
+#if defined(MBEDTLS_SSL_DTLS_CONNECTION_ID) &&                              \
+    ( !defined(MBEDTLS_SSL_TLS_C) || !defined(MBEDTLS_SSL_PROTO_DTLS) )
+#error "MBEDTLS_SSL_DTLS_CONNECTION_ID  defined, but not all prerequisites"
+#endif
+
+#if defined(MBEDTLS_SSL_DTLS_CONNECTION_ID)            &&                 \
+    defined(MBEDTLS_SSL_CID_IN_LEN_MAX) &&                 \
+    MBEDTLS_SSL_CID_IN_LEN_MAX > 255
+#error "MBEDTLS_SSL_CID_IN_LEN_MAX too large (max 255)"
+#endif
+
+#if defined(MBEDTLS_SSL_DTLS_CONNECTION_ID)            &&                  \
+    defined(MBEDTLS_SSL_CID_OUT_LEN_MAX) &&                 \
+    MBEDTLS_SSL_CID_OUT_LEN_MAX > 255
+#error "MBEDTLS_SSL_CID_OUT_LEN_MAX too large (max 255)"
 #endif
 
 #if defined(MBEDTLS_SSL_DTLS_BADMAC_LIMIT) &&                              \
@@ -766,6 +781,30 @@
     defined(MBEDTLS_HAVE_ASM)
 #error "MBEDTLS_HAVE_INT32/MBEDTLS_HAVE_INT64 and MBEDTLS_HAVE_ASM cannot be defined simultaneously"
 #endif /* (MBEDTLS_HAVE_INT32 || MBEDTLS_HAVE_INT64) && MBEDTLS_HAVE_ASM */
+
+#if defined(MBEDTLS_SSL_PROTO_SSL3)
+#if defined(MBEDTLS_DEPRECATED_REMOVED)
+#error "MBEDTLS_SSL_PROTO_SSL3 is deprecated and will be removed in a future version of Mbed TLS"
+#elif defined(MBEDTLS_DEPRECATED_WARNING)
+#warning "MBEDTLS_SSL_PROTO_SSL3 is deprecated and will be removed in a future version of Mbed TLS"
+#endif
+#endif /* MBEDTLS_SSL_PROTO_SSL3 */
+
+#if defined(MBEDTLS_SSL_SRV_SUPPORT_SSLV2_CLIENT_HELLO)
+#if defined(MBEDTLS_DEPRECATED_REMOVED)
+#error "MBEDTLS_SSL_SRV_SUPPORT_SSLV2_CLIENT_HELLO is deprecated and will be removed in a future version of Mbed TLS"
+#elif defined(MBEDTLS_DEPRECATED_WARNING)
+#warning "MBEDTLS_SSL_SRV_SUPPORT_SSLV2_CLIENT_HELLO is deprecated and will be removed in a future version of Mbed TLS"
+#endif
+#endif /* MBEDTLS_SSL_SRV_SUPPORT_SSLV2_CLIENT_HELLO */
+
+#if defined(MBEDTLS_SSL_HW_RECORD_ACCEL)
+#if defined(MBEDTLS_DEPRECATED_REMOVED)
+#error "MBEDTLS_SSL_HW_RECORD_ACCEL is deprecated and will be removed in a future version of Mbed TLS"
+#elif defined(MBEDTLS_DEPRECATED_WARNING)
+#warning "MBEDTLS_SSL_HW_RECORD_ACCEL is deprecated and will be removed in a future version of Mbed TLS"
+#endif /* MBEDTLS_DEPRECATED_REMOVED */
+#endif /* MBEDTLS_SSL_HW_RECORD_ACCEL */
 
 /*
  * Avoid warning from -pedantic. This is a convenient place for this

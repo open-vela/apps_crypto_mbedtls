@@ -35,9 +35,10 @@
 #define mbedtls_free      free
 #endif
 
-#include "mbedtls/debug.h"
 #include "mbedtls/ssl.h"
 #include "mbedtls/ssl_internal.h"
+#include "mbedtls/debug.h"
+#include "mbedtls/error.h"
 #include "mbedtls/platform_util.h"
 
 #include <string.h>
@@ -85,7 +86,7 @@ static int ssl_parse_servername_ext( mbedtls_ssl_context *ssl,
                                      const unsigned char *buf,
                                      size_t len )
 {
-    int ret;
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     size_t servername_list_size, hostname_len;
     const unsigned char *p;
 
@@ -432,7 +433,7 @@ static int ssl_parse_ecjpake_kkpp( mbedtls_ssl_context *ssl,
                                    const unsigned char *buf,
                                    size_t len )
 {
-    int ret;
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
 
     if( mbedtls_ecjpake_check( &ssl->handshake->ecjpake_ctx ) != 0 )
     {
@@ -474,6 +475,78 @@ static int ssl_parse_max_fragment_length_ext( mbedtls_ssl_context *ssl,
     return( 0 );
 }
 #endif /* MBEDTLS_SSL_MAX_FRAGMENT_LENGTH */
+
+#if defined(MBEDTLS_SSL_DTLS_CONNECTION_ID)
+static int ssl_parse_cid_ext( mbedtls_ssl_context *ssl,
+                              const unsigned char *buf,
+                              size_t len )
+{
+    size_t peer_cid_len;
+
+    /* CID extension only makes sense in DTLS */
+    if( ssl->conf->transport != MBEDTLS_SSL_TRANSPORT_DATAGRAM )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad client hello message" ) );
+        mbedtls_ssl_send_alert_message( ssl, MBEDTLS_SSL_ALERT_LEVEL_FATAL,
+                                        MBEDTLS_SSL_ALERT_MSG_ILLEGAL_PARAMETER );
+        return( MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO );
+    }
+
+    /*
+     * Quoting draft-ietf-tls-dtls-connection-id-05
+     * https://tools.ietf.org/html/draft-ietf-tls-dtls-connection-id-05
+     *
+     *   struct {
+     *      opaque cid<0..2^8-1>;
+     *   } ConnectionId;
+    */
+
+    if( len < 1 )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad client hello message" ) );
+        mbedtls_ssl_send_alert_message( ssl, MBEDTLS_SSL_ALERT_LEVEL_FATAL,
+                                        MBEDTLS_SSL_ALERT_MSG_ILLEGAL_PARAMETER );
+        return( MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO );
+    }
+
+    peer_cid_len = *buf++;
+    len--;
+
+    if( len != peer_cid_len )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad client hello message" ) );
+        mbedtls_ssl_send_alert_message( ssl, MBEDTLS_SSL_ALERT_LEVEL_FATAL,
+                                        MBEDTLS_SSL_ALERT_MSG_ILLEGAL_PARAMETER );
+        return( MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO );
+    }
+
+    /* Ignore CID if the user has disabled its use. */
+    if( ssl->negotiate_cid == MBEDTLS_SSL_CID_DISABLED )
+    {
+        /* Leave ssl->handshake->cid_in_use in its default
+         * value of MBEDTLS_SSL_CID_DISABLED. */
+        MBEDTLS_SSL_DEBUG_MSG( 3, ( "Client sent CID extension, but CID disabled" ) );
+        return( 0 );
+    }
+
+    if( peer_cid_len > MBEDTLS_SSL_CID_OUT_LEN_MAX )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad client hello message" ) );
+        mbedtls_ssl_send_alert_message( ssl, MBEDTLS_SSL_ALERT_LEVEL_FATAL,
+                                        MBEDTLS_SSL_ALERT_MSG_ILLEGAL_PARAMETER );
+        return( MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO );
+    }
+
+    ssl->handshake->cid_in_use = MBEDTLS_SSL_CID_ENABLED;
+    ssl->handshake->peer_cid_len = (uint8_t) peer_cid_len;
+    memcpy( ssl->handshake->peer_cid, buf, peer_cid_len );
+
+    MBEDTLS_SSL_DEBUG_MSG( 3, ( "Use of CID extension negotiated" ) );
+    MBEDTLS_SSL_DEBUG_BUF( 3, "Client CID", buf, peer_cid_len );
+
+    return( 0 );
+}
+#endif /* MBEDTLS_SSL_DTLS_CONNECTION_ID */
 
 #if defined(MBEDTLS_SSL_TRUNCATED_HMAC)
 static int ssl_parse_truncated_hmac_ext( mbedtls_ssl_context *ssl,
@@ -552,7 +625,7 @@ static int ssl_parse_session_ticket_ext( mbedtls_ssl_context *ssl,
                                          unsigned char *buf,
                                          size_t len )
 {
-    int ret;
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     mbedtls_ssl_session session;
 
     mbedtls_ssl_session_init( &session );
@@ -767,6 +840,7 @@ static int ssl_pick_cert( mbedtls_ssl_context *ssl,
 
     for( cur = list; cur != NULL; cur = cur->next )
     {
+        flags = 0;
         MBEDTLS_SSL_DEBUG_CRT( 3, "candidate certificate chain, certificate",
                           cur->cert );
 
@@ -1195,7 +1269,7 @@ have_ciphersuite_v2:
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "selected ciphersuite: %s", ciphersuite_info->name ) );
 
     ssl->session_negotiate->ciphersuite = ciphersuites[i];
-    ssl->transform_negotiate->ciphersuite_info = ciphersuite_info;
+    ssl->handshake->ciphersuite_info = ciphersuite_info;
 
     /*
      * SSLv2 Client Hello relevant renegotiation security checks
@@ -1280,7 +1354,7 @@ read_record_header:
             return( ssl_parse_client_hello_v2( ssl ) );
 #endif
 
-    MBEDTLS_SSL_DEBUG_BUF( 4, "record header", buf, mbedtls_ssl_hdr_len( ssl ) );
+    MBEDTLS_SSL_DEBUG_BUF( 4, "record header", buf, mbedtls_ssl_in_hdr_len( ssl ) );
 
     /*
      * SSLv3/TLS Client Hello
@@ -1369,7 +1443,7 @@ read_record_header:
         }
 
         if( ( ret = mbedtls_ssl_fetch_input( ssl,
-                       mbedtls_ssl_hdr_len( ssl ) + msg_len ) ) != 0 )
+                       mbedtls_ssl_in_hdr_len( ssl ) + msg_len ) ) != 0 )
         {
             MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_fetch_input", ret );
             return( ret );
@@ -1378,7 +1452,7 @@ read_record_header:
     /* Done reading this record, get ready for the next one */
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
         if( ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM )
-            ssl->next_record_offset = msg_len + mbedtls_ssl_hdr_len( ssl );
+            ssl->next_record_offset = msg_len + mbedtls_ssl_in_hdr_len( ssl );
         else
 #endif
             ssl->in_left = 0;
@@ -1823,6 +1897,16 @@ read_record_header:
                 break;
 #endif /* MBEDTLS_SSL_TRUNCATED_HMAC */
 
+#if defined(MBEDTLS_SSL_DTLS_CONNECTION_ID)
+            case MBEDTLS_TLS_EXT_CID:
+                MBEDTLS_SSL_DEBUG_MSG( 3, ( "found CID extension" ) );
+
+                ret = ssl_parse_cid_ext( ssl, ext + 4, ext_size );
+                if( ret != 0 )
+                    return( ret );
+                break;
+#endif /* MBEDTLS_SSL_TRUNCATED_HMAC */
+
 #if defined(MBEDTLS_SSL_ENCRYPT_THEN_MAC)
             case MBEDTLS_TLS_EXT_ENCRYPT_THEN_MAC:
                 MBEDTLS_SSL_DEBUG_MSG( 3, ( "found encrypt then mac extension" ) );
@@ -2039,7 +2123,7 @@ have_ciphersuite:
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "selected ciphersuite: %s", ciphersuite_info->name ) );
 
     ssl->session_negotiate->ciphersuite = ciphersuites[i];
-    ssl->transform_negotiate->ciphersuite_info = ciphersuite_info;
+    ssl->handshake->ciphersuite_info = ciphersuite_info;
 
     ssl->state++;
 
@@ -2099,6 +2183,54 @@ static void ssl_write_truncated_hmac_ext( mbedtls_ssl_context *ssl,
     *olen = 4;
 }
 #endif /* MBEDTLS_SSL_TRUNCATED_HMAC */
+
+#if defined(MBEDTLS_SSL_DTLS_CONNECTION_ID)
+static void ssl_write_cid_ext( mbedtls_ssl_context *ssl,
+                               unsigned char *buf,
+                               size_t *olen )
+{
+    unsigned char *p = buf;
+    size_t ext_len;
+    const unsigned char *end = ssl->out_msg + MBEDTLS_SSL_OUT_CONTENT_LEN;
+
+    *olen = 0;
+
+    /* Skip writing the extension if we don't want to use it or if
+     * the client hasn't offered it. */
+    if( ssl->handshake->cid_in_use == MBEDTLS_SSL_CID_DISABLED )
+        return;
+
+    /* ssl->own_cid_len is at most MBEDTLS_SSL_CID_IN_LEN_MAX
+     * which is at most 255, so the increment cannot overflow. */
+    if( end < p || (size_t)( end - p ) < (unsigned)( ssl->own_cid_len + 5 ) )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "buffer too small" ) );
+        return;
+    }
+
+    MBEDTLS_SSL_DEBUG_MSG( 3, ( "server hello, adding CID extension" ) );
+
+    /*
+     * Quoting draft-ietf-tls-dtls-connection-id-05
+     * https://tools.ietf.org/html/draft-ietf-tls-dtls-connection-id-05
+     *
+     *   struct {
+     *      opaque cid<0..2^8-1>;
+     *   } ConnectionId;
+    */
+
+    *p++ = (unsigned char)( ( MBEDTLS_TLS_EXT_CID >> 8 ) & 0xFF );
+    *p++ = (unsigned char)( ( MBEDTLS_TLS_EXT_CID      ) & 0xFF );
+    ext_len = (size_t) ssl->own_cid_len + 1;
+    *p++ = (unsigned char)( ( ext_len >> 8 ) & 0xFF );
+    *p++ = (unsigned char)( ( ext_len      ) & 0xFF );
+
+    *p++ = (uint8_t) ssl->own_cid_len;
+    memcpy( p, ssl->own_cid, ssl->own_cid_len );
+
+    *olen = ssl->own_cid_len + 5;
+}
+#endif /* MBEDTLS_SSL_DTLS_CONNECTION_ID */
 
 #if defined(MBEDTLS_SSL_ENCRYPT_THEN_MAC)
 static void ssl_write_encrypt_then_mac_ext( mbedtls_ssl_context *ssl,
@@ -2298,7 +2430,7 @@ static void ssl_write_ecjpake_kkpp_ext( mbedtls_ssl_context *ssl,
                                         unsigned char *buf,
                                         size_t *olen )
 {
-    int ret;
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     unsigned char *p = buf;
     const unsigned char *end = ssl->out_msg + MBEDTLS_SSL_OUT_CONTENT_LEN;
     size_t kkpp_len;
@@ -2306,7 +2438,7 @@ static void ssl_write_ecjpake_kkpp_ext( mbedtls_ssl_context *ssl,
     *olen = 0;
 
     /* Skip costly computation if not needed */
-    if( ssl->transform_negotiate->ciphersuite_info->key_exchange !=
+    if( ssl->handshake->ciphersuite_info->key_exchange !=
         MBEDTLS_KEY_EXCHANGE_ECJPAKE )
         return;
 
@@ -2376,7 +2508,7 @@ static void ssl_write_alpn_ext( mbedtls_ssl_context *ssl,
 #if defined(MBEDTLS_SSL_DTLS_HELLO_VERIFY)
 static int ssl_write_hello_verify_request( mbedtls_ssl_context *ssl )
 {
-    int ret;
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     unsigned char *p = ssl->out_msg + 4;
     unsigned char *cookie_len_byte;
 
@@ -2450,7 +2582,7 @@ static int ssl_write_server_hello( mbedtls_ssl_context *ssl )
 #if defined(MBEDTLS_HAVE_TIME)
     mbedtls_time_t t;
 #endif
-    int ret;
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     size_t olen, ext_len = 0, n;
     unsigned char *buf, *p;
 
@@ -2621,6 +2753,11 @@ static int ssl_write_server_hello( mbedtls_ssl_context *ssl )
     ext_len += olen;
 #endif
 
+#if defined(MBEDTLS_SSL_DTLS_CONNECTION_ID)
+    ssl_write_cid_ext( ssl, p + 2 + ext_len, &olen );
+    ext_len += olen;
+#endif
+
 #if defined(MBEDTLS_SSL_ENCRYPT_THEN_MAC)
     ssl_write_encrypt_then_mac_ext( ssl, p + 2 + ext_len, &olen );
     ext_len += olen;
@@ -2684,7 +2821,7 @@ static int ssl_write_server_hello( mbedtls_ssl_context *ssl )
 static int ssl_write_certificate_request( mbedtls_ssl_context *ssl )
 {
     const mbedtls_ssl_ciphersuite_t *ciphersuite_info =
-        ssl->transform_negotiate->ciphersuite_info;
+        ssl->handshake->ciphersuite_info;
 
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> write certificate request" ) );
 
@@ -2703,7 +2840,7 @@ static int ssl_write_certificate_request( mbedtls_ssl_context *ssl )
 {
     int ret = MBEDTLS_ERR_SSL_FEATURE_UNAVAILABLE;
     const mbedtls_ssl_ciphersuite_t *ciphersuite_info =
-        ssl->transform_negotiate->ciphersuite_info;
+        ssl->handshake->ciphersuite_info;
     size_t dn_size, total_dn_size; /* excluding length bytes */
     size_t ct_len, sa_len; /* including length bytes */
     unsigned char *buf, *p;
@@ -2872,7 +3009,7 @@ static int ssl_write_certificate_request( mbedtls_ssl_context *ssl )
     defined(MBEDTLS_KEY_EXCHANGE_ECDH_ECDSA_ENABLED)
 static int ssl_get_ecdh_params_from_cert( mbedtls_ssl_context *ssl )
 {
-    int ret;
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
 
     if( ! mbedtls_pk_can_do( mbedtls_ssl_own_key( ssl ), MBEDTLS_PK_ECKEY ) )
     {
@@ -2926,7 +3063,8 @@ static int ssl_prepare_server_key_exchange( mbedtls_ssl_context *ssl,
                                             size_t *signature_len )
 {
     const mbedtls_ssl_ciphersuite_t *ciphersuite_info =
-                            ssl->transform_negotiate->ciphersuite_info;
+        ssl->handshake->ciphersuite_info;
+
 #if defined(MBEDTLS_KEY_EXCHANGE__SOME_PFS__ENABLED)
 #if defined(MBEDTLS_KEY_EXCHANGE__WITH_SERVER_SIGNATURE__ENABLED)
     unsigned char *dig_signed = NULL;
@@ -2952,7 +3090,7 @@ static int ssl_prepare_server_key_exchange( mbedtls_ssl_context *ssl,
 #if defined(MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED)
     if( ciphersuite_info->key_exchange == MBEDTLS_KEY_EXCHANGE_ECJPAKE )
     {
-        int ret;
+        int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
         size_t len = 0;
 
         ret = mbedtls_ecjpake_write_round_two(
@@ -2992,7 +3130,7 @@ static int ssl_prepare_server_key_exchange( mbedtls_ssl_context *ssl,
 #if defined(MBEDTLS_KEY_EXCHANGE__SOME__DHE_ENABLED)
     if( mbedtls_ssl_ciphersuite_uses_dhe( ciphersuite_info ) )
     {
-        int ret;
+        int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
         size_t len = 0;
 
         if( ssl->conf->dhm_P.p == NULL || ssl->conf->dhm_G.p == NULL )
@@ -3057,7 +3195,7 @@ static int ssl_prepare_server_key_exchange( mbedtls_ssl_context *ssl,
          */
         const mbedtls_ecp_curve_info **curve = NULL;
         const mbedtls_ecp_group_id *gid;
-        int ret;
+        int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
         size_t len = 0;
 
         /* Match our preference list against the offered curves */
@@ -3115,7 +3253,7 @@ curve_matching_done:
         size_t dig_signed_len = ssl->out_msg + ssl->out_msglen - dig_signed;
         size_t hashlen = 0;
         unsigned char hash[MBEDTLS_MD_MAX_SIZE];
-        int ret;
+        int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
 
         /*
          * 2.1: Choose hash algorithm:
@@ -3288,11 +3426,11 @@ curve_matching_done:
  * machine. */
 static int ssl_write_server_key_exchange( mbedtls_ssl_context *ssl )
 {
-    int ret;
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     size_t signature_len = 0;
 #if defined(MBEDTLS_KEY_EXCHANGE__SOME_NON_PFS__ENABLED)
     const mbedtls_ssl_ciphersuite_t *ciphersuite_info =
-                            ssl->transform_negotiate->ciphersuite_info;
+                            ssl->handshake->ciphersuite_info;
 #endif /* MBEDTLS_KEY_EXCHANGE__SOME_NON_PFS__ENABLED */
 
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> write server key exchange" ) );
@@ -3385,7 +3523,7 @@ static int ssl_write_server_key_exchange( mbedtls_ssl_context *ssl )
 
 static int ssl_write_server_hello_done( mbedtls_ssl_context *ssl )
 {
-    int ret;
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
 
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> write server hello done" ) );
 
@@ -3489,7 +3627,7 @@ static int ssl_decrypt_encrypted_pms( mbedtls_ssl_context *ssl,
                                       size_t *peer_pmslen,
                                       size_t peer_pmssize )
 {
-    int ret;
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     mbedtls_pk_context *private_key = mbedtls_ssl_own_key( ssl );
     mbedtls_pk_context *public_key = &mbedtls_ssl_own_cert( ssl )->pk;
     size_t len = mbedtls_pk_get_len( public_key );
@@ -3578,7 +3716,7 @@ static int ssl_parse_encrypted_pms( mbedtls_ssl_context *ssl,
                                     const unsigned char *end,
                                     size_t pms_offset )
 {
-    int ret;
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     unsigned char *pms = ssl->handshake->premaster + pms_offset;
     unsigned char ver[2];
     unsigned char fake_pms[48], peer_pms[48];
@@ -3732,11 +3870,11 @@ static int ssl_parse_client_psk_identity( mbedtls_ssl_context *ssl, unsigned cha
 
 static int ssl_parse_client_key_exchange( mbedtls_ssl_context *ssl )
 {
-    int ret;
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     const mbedtls_ssl_ciphersuite_t *ciphersuite_info;
     unsigned char *p, *end;
 
-    ciphersuite_info = ssl->transform_negotiate->ciphersuite_info;
+    ciphersuite_info = ssl->handshake->ciphersuite_info;
 
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> parse client key exchange" ) );
 
@@ -4039,7 +4177,7 @@ static int ssl_parse_client_key_exchange( mbedtls_ssl_context *ssl )
 static int ssl_parse_certificate_verify( mbedtls_ssl_context *ssl )
 {
     const mbedtls_ssl_ciphersuite_t *ciphersuite_info =
-        ssl->transform_negotiate->ciphersuite_info;
+        ssl->handshake->ciphersuite_info;
 
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> parse certificate verify" ) );
 
@@ -4066,7 +4204,7 @@ static int ssl_parse_certificate_verify( mbedtls_ssl_context *ssl )
 #endif
     mbedtls_md_type_t md_alg;
     const mbedtls_ssl_ciphersuite_t *ciphersuite_info =
-        ssl->transform_negotiate->ciphersuite_info;
+        ssl->handshake->ciphersuite_info;
     mbedtls_pk_context * peer_pk;
 
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> parse certificate verify" ) );
@@ -4225,7 +4363,10 @@ static int ssl_parse_certificate_verify( mbedtls_ssl_context *ssl )
     }
 
     /* Calculate hash and verify signature */
-    ssl->handshake->calc_verify( ssl, hash );
+    {
+        size_t dummy_hlen;
+        ssl->handshake->calc_verify( ssl, hash, &dummy_hlen );
+    }
 
     if( ( ret = mbedtls_pk_verify( peer_pk,
                            md_alg, hash_start, hashlen,
@@ -4246,7 +4387,7 @@ static int ssl_parse_certificate_verify( mbedtls_ssl_context *ssl )
 #if defined(MBEDTLS_SSL_SESSION_TICKETS)
 static int ssl_write_new_session_ticket( mbedtls_ssl_context *ssl )
 {
-    int ret;
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     size_t tlen;
     uint32_t lifetime;
 
