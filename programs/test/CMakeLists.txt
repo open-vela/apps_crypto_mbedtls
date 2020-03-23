@@ -14,7 +14,7 @@ add_executable(selftest selftest.c)
 target_link_libraries(selftest ${libs})
 
 add_executable(benchmark benchmark.c)
-target_link_libraries(benchmark ${libs})
+target_link_libraries(benchmark mbedcrypto)
 
 if(TEST_CPP)
     add_executable(cpp_dummy_build cpp_dummy_build.cpp)
