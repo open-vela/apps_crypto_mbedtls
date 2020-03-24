@@ -8,9 +8,6 @@ endif()
 # Set the project root directory.
 set(MBEDTLS_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
-option(USE_PKCS11_HELPER_LIBRARY "Build mbed TLS with the pkcs11-helper library." OFF)
-option(ENABLE_ZLIB_SUPPORT "Build mbed TLS with zlib library." OFF)
-
 option(ENABLE_PROGRAMS "Build mbed TLS programs." ON)
 
 option(UNSAFE_BUILD "Allow unsafe builds. These builds ARE NOT SECURE." OFF)
@@ -182,14 +179,6 @@ endif()
 include_directories(include/)
 include_directories(library/)
 
-if(ENABLE_ZLIB_SUPPORT)
-    find_package(ZLIB)
-
-    if(ZLIB_FOUND)
-        include_directories(${ZLIB_INCLUDE_DIR})
-    endif(ZLIB_FOUND)
-endif(ENABLE_ZLIB_SUPPORT)
-
 add_subdirectory(include)
 
 add_subdirectory(3rdparty)
@@ -218,8 +207,6 @@ if(ENABLE_TESTING)
         ADD_CUSTOM_TARGET(covtest
             COMMAND make test
             COMMAND programs/test/selftest
-            COMMAND tests/compat.sh
-            COMMAND tests/ssl-opt.sh
         )
 
         ADD_CUSTOM_TARGET(lcov

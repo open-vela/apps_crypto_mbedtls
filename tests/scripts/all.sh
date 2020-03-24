@@ -24,8 +24,7 @@
 # configurations, and can and will arbitrarily change the current CMake
 # configuration. The following files must be committed into git:
 #    * include/mbedtls/config.h
-#    * Makefile, library/Makefile, programs/Makefile, tests/Makefile,
-#      programs/fuzz/Makefile
+#    * Makefile, library/Makefile, programs/Makefile, tests/Makefile
 # After running this script, the CMake cache will be lost and CMake
 # will no longer be initialised.
 #
@@ -39,10 +38,6 @@
 #   * G++
 #   * arm-gcc and mingw-gcc
 #   * ArmCC 5 and ArmCC 6, unless invoked with --no-armcc
-#   * OpenSSL and GnuTLS command line tools, recent enough for the
-#     interoperability tests. If they don't support SSLv3 then a legacy
-#     version of these tools must be present as well (search for LEGACY
-#     below).
 # See the invocation of check_tools below for details.
 #
 # This script must be invoked from the toplevel directory of a git
@@ -76,9 +71,9 @@
 # * Run `make clean`.
 # * Restore `include/mbedtks/config.h` from a backup made before running
 #   the component.
-# * Check out `Makefile`, `library/Makefile`, `programs/Makefile`,
-#   `tests/Makefile` and `programs/fuzz/Makefile` from git.
-#   This cleans up after an in-tree use of CMake.
+# * Check out `Makefile`, `library/Makefile`, `programs/Makefile` and
+#   `tests/Makefile` from git. This cleans up after an in-tree use of
+#   CMake.
 #
 # Any command that is expected to fail must be protected so that the
 # script keeps running in --keep-going mode despite `set -e`. In keep-going
@@ -118,7 +113,6 @@ pre_initialize_variables () {
     CONFIG_BAK="$CONFIG_H.bak"
 
     append_outcome=0
-    MEMORY=0
     FORCE=0
     KEEP_GOING=0
 
@@ -128,13 +122,6 @@ pre_initialize_variables () {
     export MBEDTLS_TEST_PLATFORM
 
     # Default commands, can be overridden by the environment
-    : ${OPENSSL:="openssl"}
-    : ${OPENSSL_LEGACY:="$OPENSSL"}
-    : ${OPENSSL_NEXT:="$OPENSSL"}
-    : ${GNUTLS_CLI:="gnutls-cli"}
-    : ${GNUTLS_SERV:="gnutls-serv"}
-    : ${GNUTLS_LEGACY_CLI:="$GNUTLS_CLI"}
-    : ${GNUTLS_LEGACY_SERV:="$GNUTLS_SERV"}
     : ${OUT_OF_SOURCE_DIR:=./mbedtls_out_of_source_build}
     : ${ARMC5_BIN_DIR:=/usr/bin}
     : ${ARMC6_BIN_DIR:=/usr/bin}
@@ -221,13 +208,6 @@ General options:
 Tool path options:
      --armc5-bin-dir=<ARMC5_bin_dir_path>       ARM Compiler 5 bin directory.
      --armc6-bin-dir=<ARMC6_bin_dir_path>       ARM Compiler 6 bin directory.
-     --gnutls-cli=<GnuTLS_cli_path>             GnuTLS client executable to use for most tests.
-     --gnutls-serv=<GnuTLS_serv_path>           GnuTLS server executable to use for most tests.
-     --gnutls-legacy-cli=<GnuTLS_cli_path>      GnuTLS client executable to use for legacy tests.
-     --gnutls-legacy-serv=<GnuTLS_serv_path>    GnuTLS server executable to use for legacy tests.
-     --openssl=<OpenSSL_path>                   OpenSSL executable to use for most tests.
-     --openssl-legacy=<OpenSSL_path>            OpenSSL executable to use for legacy tests e.g. SSLv3.
-     --openssl-next=<OpenSSL_path>              OpenSSL executable to use for recent things like ARIA
 EOF
 }
 
@@ -248,8 +228,13 @@ cleanup()
               -iname CMakeCache.txt \) -exec rm {} \+
     # Recover files overwritten by in-tree CMake builds
     rm -f include/Makefile include/mbedtls/Makefile programs/*/Makefile
-    git update-index --no-skip-worktree Makefile library/Makefile programs/Makefile tests/Makefile programs/fuzz/Makefile
-    git checkout -- Makefile library/Makefile programs/Makefile tests/Makefile programs/fuzz/Makefile
+    git update-index --no-skip-worktree Makefile library/Makefile programs/Makefile tests/Makefile
+    git checkout -- Makefile library/Makefile programs/Makefile tests/Makefile
+
+    # Remove any artifacts from the component_test_cmake_as_subdirectory test.
+    rm -rf programs/test/cmake_subproject/build
+    rm -f programs/test/cmake_subproject/Makefile
+    rm -f programs/test/cmake_subproject/cmake_subproject
 
     # Remove any artifacts from the component_test_cmake_as_subdirectory test.
     rm -rf programs/test/cmake_subproject/build
@@ -340,28 +325,28 @@ pre_parse_command_line () {
             --armc6-bin-dir) shift; ARMC6_BIN_DIR="$1";;
             --except) all_except=1;;
             --force|-f) FORCE=1;;
-            --gnutls-cli) shift; GNUTLS_CLI="$1";;
-            --gnutls-legacy-cli) shift; GNUTLS_LEGACY_CLI="$1";;
-            --gnutls-legacy-serv) shift; GNUTLS_LEGACY_SERV="$1";;
-            --gnutls-serv) shift; GNUTLS_SERV="$1";;
+            --gnutls-cli) shift;;
+            --gnutls-legacy-cli) shift;;
+            --gnutls-legacy-serv) shift;;
+            --gnutls-serv) shift;;
             --help|-h) usage; exit;;
             --keep-going|-k) KEEP_GOING=1;;
             --list-all-components) printf '%s\n' $ALL_COMPONENTS; exit;;
             --list-components) printf '%s\n' $SUPPORTED_COMPONENTS; exit;;
-            --memory|-m) MEMORY=1;;
+            --memory|-m) ;;
             --no-append-outcome) append_outcome=0;;
             --no-armcc) no_armcc=1;;
             --no-force) FORCE=0;;
             --no-keep-going) KEEP_GOING=0;;
-            --no-memory) MEMORY=0;;
-            --openssl) shift; OPENSSL="$1";;
-            --openssl-legacy) shift; OPENSSL_LEGACY="$1";;
-            --openssl-next) shift; OPENSSL_NEXT="$1";;
+            --no-memory) ;;
+            --openssl) shift;;
+            --openssl-legacy) shift;;
+            --openssl-next) shift;;
             --outcome-file) shift; MBEDTLS_TEST_OUTCOME_FILE="$1";;
             --out-of-source-dir) shift; OUT_OF_SOURCE_DIR="$1";;
-            --random-seed) unset SEED;;
-            --release-test|-r) SEED=1;;
-            --seed|-s) shift; SEED="$1";;
+            --random-seed) ;;
+            --release-test|-r) ;;
+            --seed|-s) shift;;
             -*)
                 echo >&2 "Unknown option: $1"
                 echo >&2 "Run $0 --help for usage."
@@ -497,18 +482,8 @@ pre_prepare_outcome_file () {
 
 pre_print_configuration () {
     msg "info: $0 configuration"
-    echo "MEMORY: $MEMORY"
     echo "FORCE: $FORCE"
     echo "MBEDTLS_TEST_OUTCOME_FILE: ${MBEDTLS_TEST_OUTCOME_FILE:-(none)}"
-    echo "SEED: ${SEED-"UNSET"}"
-    echo
-    echo "OPENSSL: $OPENSSL"
-    echo "OPENSSL_LEGACY: $OPENSSL_LEGACY"
-    echo "OPENSSL_NEXT: $OPENSSL_NEXT"
-    echo "GNUTLS_CLI: $GNUTLS_CLI"
-    echo "GNUTLS_SERV: $GNUTLS_SERV"
-    echo "GNUTLS_LEGACY_CLI: $GNUTLS_LEGACY_CLI"
-    echo "GNUTLS_LEGACY_SERV: $GNUTLS_LEGACY_SERV"
     echo "ARMC5_BIN_DIR: $ARMC5_BIN_DIR"
     echo "ARMC6_BIN_DIR: $ARMC6_BIN_DIR"
 }
@@ -517,30 +492,6 @@ pre_print_configuration () {
 pre_check_tools () {
     # Build the list of variables to pass to output_env.sh.
     set env
-
-    case " $RUN_COMPONENTS " in
-        # Require OpenSSL and GnuTLS if running any tests (as opposed to
-        # only doing builds). Not all tests run OpenSSL and GnuTLS, but this
-        # is a good enough approximation in practice.
-        *" test_"*)
-            # To avoid setting OpenSSL and GnuTLS for each call to compat.sh
-            # and ssl-opt.sh, we just export the variables they require.
-            export OPENSSL_CMD="$OPENSSL"
-            export GNUTLS_CLI="$GNUTLS_CLI"
-            export GNUTLS_SERV="$GNUTLS_SERV"
-            # Avoid passing --seed flag in every call to ssl-opt.sh
-            if [ -n "${SEED-}" ]; then
-                export SEED
-            fi
-            set "$@" OPENSSL="$OPENSSL" OPENSSL_LEGACY="$OPENSSL_LEGACY"
-            set "$@" GNUTLS_CLI="$GNUTLS_CLI" GNUTLS_SERV="$GNUTLS_SERV"
-            set "$@" GNUTLS_LEGACY_CLI="$GNUTLS_LEGACY_CLI"
-            set "$@" GNUTLS_LEGACY_SERV="$GNUTLS_LEGACY_SERV"
-            check_tools "$OPENSSL" "$OPENSSL_LEGACY" "$OPENSSL_NEXT" \
-                        "$GNUTLS_CLI" "$GNUTLS_SERV" \
-                        "$GNUTLS_LEGACY_CLI" "$GNUTLS_LEGACY_SERV"
-            ;;
-    esac
 
     case " $RUN_COMPONENTS " in
         *_doxygen[_\ ]*) check_tools "doxygen" "dot";;
@@ -629,7 +580,6 @@ component_check_doxygen_warnings () {
 }
 
 
-
 ################################################################
 #### Build and test many configurations and targets
 ################################################################
@@ -658,12 +608,6 @@ component_test_default_cmake_gcc_asan () {
 
     msg "test: main suites (inc. selftests) (ASan build)" # ~ 50s
     make test
-
-    msg "test: ssl-opt.sh (ASan build)" # ~ 1 min
-    if_build_succeeded tests/ssl-opt.sh
-
-    msg "test: compat.sh (ASan build)" # ~ 6 min
-    if_build_succeeded tests/compat.sh
 }
 
 component_test_full_cmake_gcc_asan () {
@@ -674,87 +618,12 @@ component_test_full_cmake_gcc_asan () {
 
     msg "test: main suites (inc. selftests) (full config, ASan build)"
     make test
-
-    msg "test: ssl-opt.sh (full config, ASan build)"
-    if_build_succeeded tests/ssl-opt.sh
-
-    msg "test: compat.sh (full config, ASan build)"
-    if_build_succeeded tests/compat.sh
-}
-
-component_test_zlib_make() {
-    msg "build: zlib enabled, make"
-    scripts/config.py set MBEDTLS_ZLIB_SUPPORT
-    make ZLIB=1 CFLAGS='-Werror -O1'
-
-    msg "test: main suites (zlib, make)"
-    make test
-
-    msg "test: ssl-opt.sh (zlib, make)"
-    if_build_succeeded tests/ssl-opt.sh
-}
-support_test_zlib_make () {
-    base=support_test_zlib_$$
-    cat <<'EOF' > ${base}.c
-#include "zlib.h"
-int main(void) { return 0; }
-EOF
-    gcc -o ${base}.exe ${base}.c -lz 2>/dev/null
-    ret=$?
-    rm -f ${base}.*
-    return $ret
-}
-
-component_test_zlib_cmake() {
-    msg "build: zlib enabled, cmake"
-    scripts/config.py set MBEDTLS_ZLIB_SUPPORT
-    cmake -D ENABLE_ZLIB_SUPPORT=On -D CMAKE_BUILD_TYPE:String=Check .
-    make
-
-    msg "test: main suites (zlib, cmake)"
-    make test
-
-    msg "test: ssl-opt.sh (zlib, cmake)"
-    if_build_succeeded tests/ssl-opt.sh
-}
-support_test_zlib_cmake () {
-    support_test_zlib_make "$@"
 }
 
 component_test_ref_configs () {
     msg "test/build: ref-configs (ASan build)" # ~ 6 min 20s
     CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
     record_status tests/scripts/test-ref-configs.pl
-}
-
-component_test_sslv3 () {
-    msg "build: Default + SSLv3 (ASan build)" # ~ 6 min
-    scripts/config.py set MBEDTLS_SSL_PROTO_SSL3
-    CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
-    make
-
-    msg "test: SSLv3 - main suites (inc. selftests) (ASan build)" # ~ 50s
-    make test
-
-    msg "build: SSLv3 - compat.sh (ASan build)" # ~ 6 min
-    if_build_succeeded tests/compat.sh -m 'tls1 tls1_1 tls1_2 dtls1 dtls1_2'
-    if_build_succeeded env OPENSSL_CMD="$OPENSSL_LEGACY" tests/compat.sh -m 'ssl3'
-
-    msg "build: SSLv3 - ssl-opt.sh (ASan build)" # ~ 6 min
-    if_build_succeeded tests/ssl-opt.sh
-}
-
-component_test_no_renegotiation () {
-    msg "build: Default + !MBEDTLS_SSL_RENEGOTIATION (ASan build)" # ~ 6 min
-    scripts/config.py unset MBEDTLS_SSL_RENEGOTIATION
-    CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
-    make
-
-    msg "test: !MBEDTLS_SSL_RENEGOTIATION - main suites (inc. selftests) (ASan build)" # ~ 50s
-    make test
-
-    msg "test: !MBEDTLS_SSL_RENEGOTIATION - ssl-opt.sh (ASan build)" # ~ 6 min
-    if_build_succeeded tests/ssl-opt.sh
 }
 
 component_test_no_pem_no_fs () {
@@ -768,9 +637,6 @@ component_test_no_pem_no_fs () {
 
     msg "test: !MBEDTLS_PEM_PARSE_C !MBEDTLS_FS_IO - main suites (inc. selftests) (ASan build)" # ~ 50s
     make test
-
-    msg "test: !MBEDTLS_PEM_PARSE_C !MBEDTLS_FS_IO - ssl-opt.sh (ASan build)" # ~ 6 min
-    if_build_succeeded tests/ssl-opt.sh
 }
 
 component_test_rsa_no_crt () {
@@ -781,12 +647,6 @@ component_test_rsa_no_crt () {
 
     msg "test: RSA_NO_CRT - main suites (inc. selftests) (ASan build)" # ~ 50s
     make test
-
-    msg "test: RSA_NO_CRT - RSA-related part of ssl-opt.sh (ASan build)" # ~ 5s
-    if_build_succeeded tests/ssl-opt.sh -f RSA
-
-    msg "test: RSA_NO_CRT - RSA-related part of compat.sh (ASan build)" # ~ 3 min
-    if_build_succeeded tests/compat.sh -t RSA
 }
 
 component_test_new_ecdh_context () {
@@ -797,13 +657,6 @@ component_test_new_ecdh_context () {
 
     msg "test: new ECDH context - main suites (inc. selftests) (ASan build)" # ~ 50s
     make test
-
-    msg "test: new ECDH context - ECDH-related part of ssl-opt.sh (ASan build)" # ~ 5s
-    if_build_succeeded tests/ssl-opt.sh -f ECDH
-
-    msg "test: new ECDH context - compat.sh with some ECDH ciphersuites (ASan build)" # ~ 3 min
-    # Exclude some symmetric ciphers that are redundant here to gain time.
-    if_build_succeeded tests/compat.sh -f ECDH -V NO -e 'ARCFOUR\|ARIA\|CAMELLIA\|CHACHA\|DES\|RC4'
 }
 
 component_test_everest () {
@@ -815,55 +668,6 @@ component_test_everest () {
 
     msg "test: Everest ECDH context - main suites (inc. selftests) (ASan build)" # ~ 50s
     make test
-
-    msg "test: Everest ECDH context - ECDH-related part of ssl-opt.sh (ASan build)" # ~ 5s
-    if_build_succeeded tests/ssl-opt.sh -f ECDH
-
-    msg "test: Everest ECDH context - compat.sh with some ECDH ciphersuites (ASan build)" # ~ 3 min
-    # Exclude some symmetric ciphers that are redundant here to gain time.
-    if_build_succeeded tests/compat.sh -f ECDH -V NO -e 'ARCFOUR\|ARIA\|CAMELLIA\|CHACHA\|DES\|RC4'
-}
-
-component_test_small_ssl_out_content_len () {
-    msg "build: small SSL_OUT_CONTENT_LEN (ASan build)"
-    scripts/config.py set MBEDTLS_SSL_IN_CONTENT_LEN 16384
-    scripts/config.py set MBEDTLS_SSL_OUT_CONTENT_LEN 4096
-    CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
-    make
-
-    msg "test: small SSL_OUT_CONTENT_LEN - ssl-opt.sh MFL and large packet tests"
-    if_build_succeeded tests/ssl-opt.sh -f "Max fragment\|Large packet"
-}
-
-component_test_small_ssl_in_content_len () {
-    msg "build: small SSL_IN_CONTENT_LEN (ASan build)"
-    scripts/config.py set MBEDTLS_SSL_IN_CONTENT_LEN 4096
-    scripts/config.py set MBEDTLS_SSL_OUT_CONTENT_LEN 16384
-    CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
-    make
-
-    msg "test: small SSL_IN_CONTENT_LEN - ssl-opt.sh MFL tests"
-    if_build_succeeded tests/ssl-opt.sh -f "Max fragment"
-}
-
-component_test_small_ssl_dtls_max_buffering () {
-    msg "build: small MBEDTLS_SSL_DTLS_MAX_BUFFERING #0"
-    scripts/config.py set MBEDTLS_SSL_DTLS_MAX_BUFFERING 1000
-    CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
-    make
-
-    msg "test: small MBEDTLS_SSL_DTLS_MAX_BUFFERING #0 - ssl-opt.sh specific reordering test"
-    if_build_succeeded tests/ssl-opt.sh -f "DTLS reordering: Buffer out-of-order hs msg before reassembling next, free buffered msg"
-}
-
-component_test_small_mbedtls_ssl_dtls_max_buffering () {
-    msg "build: small MBEDTLS_SSL_DTLS_MAX_BUFFERING #1"
-    scripts/config.py set MBEDTLS_SSL_DTLS_MAX_BUFFERING 190
-    CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
-    make
-
-    msg "test: small MBEDTLS_SSL_DTLS_MAX_BUFFERING #1 - ssl-opt.sh specific reordering test"
-    if_build_succeeded tests/ssl-opt.sh -f "DTLS reordering: Buffer encrypted Finished message, drop for fragmented NewSessionTicket"
 }
 
 component_test_psa_collect_statuses () {
@@ -886,15 +690,15 @@ component_test_full_cmake_clang () {
 
     msg "test: psa_constant_names (full config, clang)" # ~ 1s
     record_status tests/scripts/test_psa_constant_names.py
+}
 
-    msg "test: ssl-opt.sh default, ECJPAKE, SSL async (full config)" # ~ 1s
-    if_build_succeeded tests/ssl-opt.sh -f 'Default\|ECJPAKE\|SSL async private'
+component_test_full_make_gcc_o0 () {
+    msg "build: make, full config, gcc -O0" # ~ 50s
+    scripts/config.py full
+    make CC=gcc CFLAGS='-O0'
 
-    msg "test: compat.sh RC4, DES, 3DES & NULL (full config)" # ~ 2 min
-    if_build_succeeded env OPENSSL_CMD="$OPENSSL_LEGACY" GNUTLS_CLI="$GNUTLS_LEGACY_CLI" GNUTLS_SERV="$GNUTLS_LEGACY_SERV" tests/compat.sh -e '^$' -f 'NULL\|DES\|RC4\|ARCFOUR'
-
-    msg "test: compat.sh ARIA + ChachaPoly"
-    if_build_succeeded env OPENSSL_CMD="$OPENSSL_NEXT" tests/compat.sh -e '^$' -f 'ARIA\|CHACHA'
+    msg "test: main suites (full config, gcc -O0)" # ~ 5s
+    make test
 }
 
 component_build_deprecated () {
@@ -919,33 +723,6 @@ component_build_deprecated () {
     make CC=clang CFLAGS='-O -Werror -Wall -Wextra -Wno-unused-function' tests
 }
 
-# Check that the specified libraries exist and are empty.
-are_empty_libraries () {
-  nm "$@" >/dev/null 2>/dev/null
-  ! nm "$@" 2>/dev/null | grep -v ':$' | grep .
-}
-
-component_build_crypto_default () {
-  msg "build: make, crypto only"
-  scripts/config.py crypto
-  make CFLAGS='-O1 -Werror'
-  if_build_succeeded are_empty_libraries library/libmbedx509.* library/libmbedtls.*
-}
-
-component_build_crypto_full () {
-  msg "build: make, crypto only, full config"
-  scripts/config.py crypto_full
-  make CFLAGS='-O1 -Werror'
-  if_build_succeeded are_empty_libraries library/libmbedx509.* library/libmbedtls.*
-}
-
-component_build_crypto_baremetal () {
-  msg "build: make, crypto only, baremetal config"
-  scripts/config.py crypto_baremetal
-  make CFLAGS='-O1 -Werror'
-  if_build_succeeded are_empty_libraries library/libmbedx509.* library/libmbedtls.*
-}
-
 component_test_depends_curves () {
     msg "test/build: curves.pl (gcc)" # ~ 4 min
     record_status tests/scripts/curves.pl
@@ -959,11 +736,6 @@ component_test_depends_hashes () {
 component_test_depends_pkalgs () {
     msg "test/build: depends-pkalgs.pl (gcc)" # ~ 2 min
     record_status tests/scripts/depends-pkalgs.pl
-}
-
-component_build_key_exchanges () {
-    msg "test/build: key-exchanges (gcc)" # ~ 1 min
-    record_status tests/scripts/key-exchanges.pl
 }
 
 component_build_default_make_gcc_and_cxx () {
@@ -982,7 +754,7 @@ component_test_no_use_psa_crypto_full_cmake_asan() {
     msg "build: cmake, full config minus MBEDTLS_USE_PSA_CRYPTO, ASan"
     scripts/config.py full
     scripts/config.py set MBEDTLS_ECP_RESTARTABLE  # not using PSA, so enable restartable ECC
-    scripts/config.py unset MBEDTLS_PSA_CRYPTO_C
+    scripts/config.py set MBEDTLS_PSA_CRYPTO_C
     scripts/config.py unset MBEDTLS_USE_PSA_CRYPTO
     scripts/config.py unset MBEDTLS_PSA_ITS_FILE_C
     scripts/config.py unset MBEDTLS_PSA_CRYPTO_STORAGE_C
@@ -991,18 +763,6 @@ component_test_no_use_psa_crypto_full_cmake_asan() {
 
     msg "test: main suites (full minus MBEDTLS_USE_PSA_CRYPTO)"
     make test
-
-    msg "test: ssl-opt.sh (full minus MBEDTLS_USE_PSA_CRYPTO)"
-    if_build_succeeded tests/ssl-opt.sh
-
-    msg "test: compat.sh default (full minus MBEDTLS_USE_PSA_CRYPTO)"
-    if_build_succeeded tests/compat.sh
-
-    msg "test: compat.sh RC4, DES & NULL (full minus MBEDTLS_USE_PSA_CRYPTO)"
-    if_build_succeeded env OPENSSL_CMD="$OPENSSL_LEGACY" GNUTLS_CLI="$GNUTLS_LEGACY_CLI" GNUTLS_SERV="$GNUTLS_LEGACY_SERV" tests/compat.sh -e '3DES\|DES-CBC3' -f 'NULL\|DES\|RC4\|ARCFOUR'
-
-    msg "test: compat.sh ARIA + ChachaPoly (full minus MBEDTLS_USE_PSA_CRYPTO)"
-    if_build_succeeded env OPENSSL_CMD="$OPENSSL_NEXT" tests/compat.sh -e '^$' -f 'ARIA\|CHACHA'
 }
 
 component_test_check_params_functionality () {
@@ -1045,7 +805,6 @@ component_test_no_platform () {
     msg "build: full config except platform/fsio/net, make, gcc, C99" # ~ 30s
     scripts/config.py full
     scripts/config.py unset MBEDTLS_PLATFORM_C
-    scripts/config.py unset MBEDTLS_NET_C
     scripts/config.py unset MBEDTLS_PLATFORM_MEMORY
     scripts/config.py unset MBEDTLS_PLATFORM_PRINTF_ALT
     scripts/config.py unset MBEDTLS_PLATFORM_FPRINTF_ALT
@@ -1059,8 +818,8 @@ component_test_no_platform () {
     scripts/config.py unset MBEDTLS_PSA_ITS_FILE_C
     # Note, _DEFAULT_SOURCE needs to be defined for platforms using glibc version >2.19,
     # to re-enable platform integration features otherwise disabled in C99 builds
-    make CC=gcc CFLAGS='-Werror -Wall -Wextra -std=c99 -pedantic -Os -D_DEFAULT_SOURCE' lib programs
-    make CC=gcc CFLAGS='-Werror -Wall -Wextra -Os' test
+    make CC=gcc CFLAGS='-Werror -Wall -Wextra -std=c99 -pedantic -O0 -D_DEFAULT_SOURCE' lib programs
+    make CC=gcc CFLAGS='-Werror -Wall -Wextra -O0' test
 }
 
 component_build_no_std_function () {
@@ -1069,31 +828,7 @@ component_build_no_std_function () {
     scripts/config.py full
     scripts/config.py set MBEDTLS_PLATFORM_NO_STD_FUNCTIONS
     scripts/config.py unset MBEDTLS_ENTROPY_NV_SEED
-    make CC=gcc CFLAGS='-Werror -Wall -Wextra -Os'
-}
-
-component_build_no_ssl_srv () {
-    msg "build: full config except ssl_srv.c, make, gcc" # ~ 30s
-    scripts/config.py full
-    scripts/config.py unset MBEDTLS_SSL_SRV_C
-    make CC=gcc CFLAGS='-Werror -Wall -Wextra -O1'
-}
-
-component_build_no_ssl_cli () {
-    msg "build: full config except ssl_cli.c, make, gcc" # ~ 30s
-    scripts/config.py full
-    scripts/config.py unset MBEDTLS_SSL_CLI_C
-    make CC=gcc CFLAGS='-Werror -Wall -Wextra -O1'
-}
-
-component_build_no_sockets () {
-    # Note, C99 compliance can also be tested with the sockets support disabled,
-    # as that requires a POSIX platform (which isn't the same as C99).
-    msg "build: full config except net_sockets.c, make, gcc -std=c99 -pedantic" # ~ 30s
-    scripts/config.py full
-    scripts/config.py unset MBEDTLS_NET_C # getaddrinfo() undeclared, etc.
-    scripts/config.py set MBEDTLS_NO_PLATFORM_ENTROPY # uses syscall() on GNU/Linux
-    make CC=gcc CFLAGS='-Werror -Wall -Wextra -O1 -std=c99 -pedantic' lib
+    make CC=gcc CFLAGS='-Werror -Wall -Wextra -O0'
 }
 
 component_test_memory_buffer_allocator_backtrace () {
@@ -1118,132 +853,6 @@ component_test_memory_buffer_allocator () {
 
     msg "test: MBEDTLS_MEMORY_BUFFER_ALLOC_C"
     make test
-
-    msg "test: ssl-opt.sh, MBEDTLS_MEMORY_BUFFER_ALLOC_C"
-    # MBEDTLS_MEMORY_BUFFER_ALLOC is slow. Skip tests that tend to time out.
-    if_build_succeeded tests/ssl-opt.sh -e '^DTLS proxy'
-}
-
-component_test_no_max_fragment_length () {
-    # Run max fragment length tests with MFL disabled
-    msg "build: default config except MFL extension (ASan build)" # ~ 30s
-    scripts/config.py unset MBEDTLS_SSL_MAX_FRAGMENT_LENGTH
-    CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
-    make
-
-    msg "test: ssl-opt.sh, MFL-related tests"
-    if_build_succeeded tests/ssl-opt.sh -f "Max fragment length"
-}
-
-component_test_asan_remove_peer_certificate () {
-    msg "build: default config with MBEDTLS_SSL_KEEP_PEER_CERTIFICATE disabled (ASan build)"
-    scripts/config.py unset MBEDTLS_SSL_KEEP_PEER_CERTIFICATE
-    CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
-    make
-
-    msg "test: !MBEDTLS_SSL_KEEP_PEER_CERTIFICATE"
-    make test
-
-    msg "test: ssl-opt.sh, !MBEDTLS_SSL_KEEP_PEER_CERTIFICATE"
-    if_build_succeeded tests/ssl-opt.sh
-
-    msg "test: compat.sh, !MBEDTLS_SSL_KEEP_PEER_CERTIFICATE"
-    if_build_succeeded tests/compat.sh
-}
-
-component_test_no_max_fragment_length_small_ssl_out_content_len () {
-    msg "build: no MFL extension, small SSL_OUT_CONTENT_LEN (ASan build)"
-    scripts/config.py unset MBEDTLS_SSL_MAX_FRAGMENT_LENGTH
-    scripts/config.py set MBEDTLS_SSL_IN_CONTENT_LEN 16384
-    scripts/config.py set MBEDTLS_SSL_OUT_CONTENT_LEN 4096
-    CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
-    make
-
-    msg "test: MFL tests (disabled MFL extension case) & large packet tests"
-    if_build_succeeded tests/ssl-opt.sh -f "Max fragment length\|Large buffer"
-}
-
-component_test_variable_ssl_in_out_buffer_len () {
-    msg "build: MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH enabled (ASan build)"
-    scripts/config.py set MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH
-    CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
-    make
-
-    msg "test: MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH enabled"
-    make test
-
-    msg "test: ssl-opt.sh, MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH enabled"
-    if_build_succeeded tests/ssl-opt.sh
-
-    msg "test: compat.sh, MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH enabled"
-    if_build_succeeded tests/compat.sh
-}
-
-component_test_variable_ssl_in_out_buffer_len_CID () {
-    msg "build: MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH and MBEDTLS_SSL_DTLS_CONNECTION_ID enabled (ASan build)"
-    scripts/config.py set MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH
-    scripts/config.py set MBEDTLS_SSL_DTLS_CONNECTION_ID
-
-    CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
-    make
-
-    msg "test: MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH and MBEDTLS_SSL_DTLS_CONNECTION_ID"
-    make test
-
-    msg "test: ssl-opt.sh, MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH and MBEDTLS_SSL_DTLS_CONNECTION_ID enabled"
-    if_build_succeeded tests/ssl-opt.sh
-
-    msg "test: compat.sh, MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH and MBEDTLS_SSL_DTLS_CONNECTION_ID enabled"
-    if_build_succeeded tests/compat.sh
-}
-
-component_test_variable_ssl_in_out_buffer_len_record_splitting () {
-    msg "build: MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH and MBEDTLS_SSL_CBC_RECORD_SPLITTING enabled (ASan build)"
-    scripts/config.py set MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH
-    scripts/config.py set MBEDTLS_SSL_CBC_RECORD_SPLITTING
-
-    CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
-    make
-
-    msg "test: MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH and MBEDTLS_SSL_CBC_RECORD_SPLITTING"
-    make test
-
-    msg "test: ssl-opt.sh, MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH and MBEDTLS_SSL_CBC_RECORD_SPLITTING enabled"
-    if_build_succeeded tests/ssl-opt.sh
-
-    msg "test: compat.sh, MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH and MBEDTLS_SSL_CBC_RECORD_SPLITTING enabled"
-    if_build_succeeded tests/compat.sh
-}
-
-component_test_ssl_alloc_buffer_and_mfl () {
-    msg "build: default config with memory buffer allocator and MFL extension"
-    scripts/config.py set MBEDTLS_MEMORY_BUFFER_ALLOC_C
-    scripts/config.py set MBEDTLS_PLATFORM_MEMORY
-    scripts/config.py set MBEDTLS_MEMORY_DEBUG
-    scripts/config.py set MBEDTLS_SSL_MAX_FRAGMENT_LENGTH
-    scripts/config.py set MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH
-    CC=gcc cmake .
-    make
-
-    msg "test: MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH, MBEDTLS_MEMORY_BUFFER_ALLOC_C, MBEDTLS_MEMORY_DEBUG and MBEDTLS_SSL_MAX_FRAGMENT_LENGTH"
-    make test
-
-    msg "test: MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH, MBEDTLS_MEMORY_BUFFER_ALLOC_C, MBEDTLS_MEMORY_DEBUG and MBEDTLS_SSL_MAX_FRAGMENT_LENGTH"
-    if_build_succeeded tests/ssl-opt.sh -f "Handshake memory usage"
-}
-
-component_test_when_no_ciphersuites_have_mac () {
-    msg "build: when no ciphersuites have MAC"
-    scripts/config.py unset MBEDTLS_CIPHER_NULL_CIPHER
-    scripts/config.py unset MBEDTLS_ARC4_C
-    scripts/config.py unset MBEDTLS_CIPHER_MODE_CBC
-    make
-
-    msg "test: !MBEDTLS_SSL_SOME_MODES_USE_MAC"
-    make test
-
-    msg "test ssl-opt.sh: !MBEDTLS_SSL_SOME_MODES_USE_MAC"
-    if_build_succeeded tests/ssl-opt.sh -f 'Default\|EtM' -e 'without EtM'
 }
 
 component_test_null_entropy () {
@@ -1285,14 +894,6 @@ component_test_malloc_0_null () {
     # Just the calloc selftest. "make test" ran the others as part of the
     # test suites.
     if_build_succeeded programs/test/selftest calloc
-
-    msg "test ssl-opt.sh: malloc(0) returns NULL (ASan+UBSan build)"
-    # Run a subset of the tests. The choice is a balance between coverage
-    # and time (including time indirectly wasted due to flaky tests).
-    # The current choice is to skip tests whose description includes
-    # "proxy", which is an approximation of skipping tests that use the
-    # UDP proxy, which tend to be slower and flakier.
-    if_build_succeeded tests/ssl-opt.sh -e 'proxy'
 }
 
 component_test_aes_fewer_tables () {
@@ -1325,9 +926,9 @@ component_test_aes_fewer_tables_and_rom_tables () {
 
 component_test_ctr_drbg_aes_256_sha_256 () {
     msg "build: full + MBEDTLS_ENTROPY_FORCE_SHA256 (ASan build)"
-    scripts/config.py full
-    scripts/config.py unset MBEDTLS_MEMORY_BUFFER_ALLOC_C
-    scripts/config.py set MBEDTLS_ENTROPY_FORCE_SHA256
+    scripts/config.pl full
+    scripts/config.pl unset MBEDTLS_MEMORY_BUFFER_ALLOC_C
+    scripts/config.pl set MBEDTLS_ENTROPY_FORCE_SHA256
     CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
     make
 
@@ -1337,9 +938,9 @@ component_test_ctr_drbg_aes_256_sha_256 () {
 
 component_test_ctr_drbg_aes_128_sha_512 () {
     msg "build: full + MBEDTLS_CTR_DRBG_USE_128_BIT_KEY (ASan build)"
-    scripts/config.py full
-    scripts/config.py unset MBEDTLS_MEMORY_BUFFER_ALLOC_C
-    scripts/config.py set MBEDTLS_CTR_DRBG_USE_128_BIT_KEY
+    scripts/config.pl full
+    scripts/config.pl unset MBEDTLS_MEMORY_BUFFER_ALLOC_C
+    scripts/config.pl set MBEDTLS_CTR_DRBG_USE_128_BIT_KEY
     CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
     make
 
@@ -1349,10 +950,10 @@ component_test_ctr_drbg_aes_128_sha_512 () {
 
 component_test_ctr_drbg_aes_128_sha_256 () {
     msg "build: full + MBEDTLS_CTR_DRBG_USE_128_BIT_KEY + MBEDTLS_ENTROPY_FORCE_SHA256 (ASan build)"
-    scripts/config.py full
-    scripts/config.py unset MBEDTLS_MEMORY_BUFFER_ALLOC_C
-    scripts/config.py set MBEDTLS_CTR_DRBG_USE_128_BIT_KEY
-    scripts/config.py set MBEDTLS_ENTROPY_FORCE_SHA256
+    scripts/config.pl full
+    scripts/config.pl unset MBEDTLS_MEMORY_BUFFER_ALLOC_C
+    scripts/config.pl set MBEDTLS_CTR_DRBG_USE_128_BIT_KEY
+    scripts/config.pl set MBEDTLS_ENTROPY_FORCE_SHA256
     CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
     make
 
@@ -1393,30 +994,6 @@ component_test_cmake_shared () {
     make test
 }
 
-test_build_opt () {
-    info=$1 cc=$2; shift 2
-    for opt in "$@"; do
-          msg "build/test: $cc $opt, $info" # ~ 30s
-          make CC="$cc" CFLAGS="$opt -Wall -Wextra -Werror"
-          # We're confident enough in compilers to not run _all_ the tests,
-          # but at least run the unit tests. In particular, runs with
-          # optimizations use inline assembly whereas runs with -O0
-          # skip inline assembly.
-          make test # ~30s
-          make clean
-    done
-}
-
-component_test_clang_opt () {
-    scripts/config.py full
-    test_build_opt 'full config' clang -O0 -Os -O2
-}
-
-component_test_gcc_opt () {
-    scripts/config.py full
-    test_build_opt 'full config' gcc -O0 -Os -O2
-}
-
 component_build_mbedtls_config_file () {
     msg "build: make with MBEDTLS_CONFIG_FILE" # ~40s
     # Use the full config so as to catch a maximum of places where
@@ -1452,9 +1029,6 @@ component_test_m32_o1 () {
 
     msg "test: i386, make, gcc -O1 (ASan build)"
     make test
-
-    msg "test ssl-opt.sh, i386, make, gcc-O1"
-    if_build_succeeded tests/ssl-opt.sh
 }
 support_test_m32_o1 () {
     support_test_m32_o0 "$@"
@@ -1468,13 +1042,6 @@ component_test_m32_everest () {
 
     msg "test: i386, Everest ECDH context - main suites (inc. selftests) (ASan build)" # ~ 50s
     make test
-
-    msg "test: i386, Everest ECDH context - ECDH-related part of ssl-opt.sh (ASan build)" # ~ 5s
-    if_build_succeeded tests/ssl-opt.sh -f ECDH
-
-    msg "test: i386, Everest ECDH context - compat.sh with some ECDH ciphersuites (ASan build)" # ~ 3 min
-    # Exclude some symmetric ciphers that are redundant here to gain time.
-    if_build_succeeded tests/compat.sh -f ECDH -V NO -e 'ARCFOUR\|ARIA\|CAMELLIA\|CHACHA\|DES\|RC4'
 }
 support_test_m32_everest () {
     support_test_m32_o0 "$@"
@@ -1605,21 +1172,6 @@ component_build_armcc () {
     armc6_build_test "--target=aarch64-arm-none-eabi -march=armv8.2-a"
 }
 
-component_build_ssl_hw_record_accel() {
-    msg "build: default config with MBEDTLS_SSL_HW_RECORD_ACCEL enabled"
-    scripts/config.pl set MBEDTLS_SSL_HW_RECORD_ACCEL
-    make CFLAGS='-Werror -O1'
-}
-
-component_test_allow_sha1 () {
-    msg "build: allow SHA1 in certificates by default"
-    scripts/config.py set MBEDTLS_TLS_DEFAULT_ALLOW_SHA1_IN_CERTIFICATES
-    make CFLAGS='-Werror -Wall -Wextra'
-    msg "test: allow SHA1 in certificates by default"
-    make test
-    if_build_succeeded tests/ssl-opt.sh -f SHA-1
-}
-
 component_build_mingw () {
     msg "build: Windows cross build - mingw64, make (Link Library)" # ~ 30s
     make CC=i686-w64-mingw32-gcc AR=i686-w64-mingw32-ar LD=i686-w64-minggw32-ld CFLAGS='-Werror -Wall -Wextra' WINDOWS_BUILD=1 lib programs
@@ -1648,16 +1200,6 @@ component_test_memsan () {
 
     msg "test: main suites (MSan)" # ~ 10s
     make test
-
-    msg "test: ssl-opt.sh (MSan)" # ~ 1 min
-    if_build_succeeded tests/ssl-opt.sh
-
-    # Optional part(s)
-
-    if [ "$MEMORY" -gt 0 ]; then
-        msg "test: compat.sh (MSan)" # ~ 6 min 20s
-        if_build_succeeded tests/compat.sh
-    fi
 }
 
 component_test_valgrind () {
@@ -1667,18 +1209,6 @@ component_test_valgrind () {
 
     msg "test: main suites valgrind (Release)"
     make memcheck
-
-    # Optional parts (slow; currently broken on OS X because programs don't
-    # seem to receive signals under valgrind on OS X).
-    if [ "$MEMORY" -gt 0 ]; then
-        msg "test: ssl-opt.sh --memcheck (Release)"
-        if_build_succeeded tests/ssl-opt.sh --memcheck
-    fi
-
-    if [ "$MEMORY" -gt 1 ]; then
-        msg "test: compat.sh --memcheck (Release)"
-        if_build_succeeded tests/compat.sh --memcheck
-    fi
 }
 
 component_test_cmake_out_of_source () {
@@ -1691,17 +1221,7 @@ component_test_cmake_out_of_source () {
 
     msg "test: cmake 'out-of-source' build"
     make test
-    # Test an SSL option that requires an auxiliary script in test/scripts/.
-    # Also ensure that there are no error messages such as
-    # "No such file or directory", which would indicate that some required
-    # file is missing (ssl-opt.sh tolerates the absence of some files so
-    # may exit with status 0 but emit errors).
-    if_build_succeeded ./tests/ssl-opt.sh -f 'Fallback SCSV: beginning of list' 2>ssl-opt.err
-    if [ -s ssl-opt.err ]; then
-        cat ssl-opt.err >&2
-        record_status [ ! -s ssl-opt.err ]
-        rm ssl-opt.err
-    fi
+
     cd "$MBEDTLS_ROOT_DIR"
     rm -rf "$OUT_OF_SOURCE_DIR"
     unset MBEDTLS_ROOT_DIR
@@ -1751,13 +1271,7 @@ component_test_zeroize () {
 }
 
 support_check_python_files () {
-    # Find the installed version of Pylint. Installed as a distro package this can
-    # be pylint3 and as a PEP egg, pylint.
-    if type pylint >/dev/null 2>/dev/null || type pylint3 >/dev/null 2>/dev/null; then
-        true;
-    else
-        false;
-    fi
+    type pylint3 >/dev/null 2>/dev/null
 }
 component_check_python_files () {
     msg "Lint: Python scripts"
