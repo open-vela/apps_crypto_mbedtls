@@ -1,5 +1,5 @@
 set(libs
-    mbedtls
+    mbedcrypto
 )
 
 # Set the project root directory if it's not already defined, as may happen if
@@ -8,14 +8,6 @@ set(libs
 if(NOT DEFINED MBEDTLS_DIR)
     set(MBEDTLS_DIR ${CMAKE_SOURCE_DIR})
 endif()
-
-if(USE_PKCS11_HELPER_LIBRARY)
-    set(libs ${libs} pkcs11-helper)
-endif(USE_PKCS11_HELPER_LIBRARY)
-
-if(ENABLE_ZLIB_SUPPORT)
-    set(libs ${libs} ${ZLIB_LIBRARIES})
-endif(ENABLE_ZLIB_SUPPORT)
 
 find_package(PythonInterp)
 if(NOT PYTHONINTERP_FOUND)
@@ -44,16 +36,28 @@ function(add_test_suite suite_name)
     add_custom_command(
         OUTPUT test_suite_${data_name}.c
         COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/scripts/generate_test_code.py -f ${CMAKE_CURRENT_SOURCE_DIR}/suites/test_suite_${suite_name}.function -d ${CMAKE_CURRENT_SOURCE_DIR}/suites/test_suite_${data_name}.data -t ${CMAKE_CURRENT_SOURCE_DIR}/suites/main_test.function -p ${CMAKE_CURRENT_SOURCE_DIR}/suites/host_test.function -s ${CMAKE_CURRENT_SOURCE_DIR}/suites --helpers-file ${CMAKE_CURRENT_SOURCE_DIR}/suites/helpers.function -o .
-        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/scripts/generate_test_code.py mbedtls ${CMAKE_CURRENT_SOURCE_DIR}/suites/helpers.function ${CMAKE_CURRENT_SOURCE_DIR}/suites/main_test.function ${CMAKE_CURRENT_SOURCE_DIR}/suites/host_test.function ${CMAKE_CURRENT_SOURCE_DIR}/suites/test_suite_${suite_name}.function ${CMAKE_CURRENT_SOURCE_DIR}/suites/test_suite_${data_name}.data
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/scripts/generate_test_code.py mbedcrypto ${CMAKE_CURRENT_SOURCE_DIR}/suites/helpers.function ${CMAKE_CURRENT_SOURCE_DIR}/suites/main_test.function ${CMAKE_CURRENT_SOURCE_DIR}/suites/host_test.function ${CMAKE_CURRENT_SOURCE_DIR}/suites/test_suite_${suite_name}.function ${CMAKE_CURRENT_SOURCE_DIR}/suites/test_suite_${data_name}.data
     )
 
+    set(exe_name test_suite_${data_name})
+    # Add a prefix to differentiate these tests from those of the parent
+    # module, when this project is built as a submodule.
+    if(USE_CRYPTO_SUBMODULE)
+        set(exe_name crypto.${exe_name})
+    endif()
+
     include_directories(${CMAKE_CURRENT_SOURCE_DIR})
-    add_executable(test_suite_${data_name} test_suite_${data_name}.c)
-    target_link_libraries(test_suite_${data_name} ${libs})
+    add_executable(${exe_name} test_suite_${data_name}.c)
+    target_link_libraries(${exe_name} ${libs})
+    target_include_directories(${exe_name}
+        PUBLIC ${MBEDTLS_DIR}/include/
+        PUBLIC ${MBEDTLS_DIR}/crypto/include/
+        PUBLIC ${MBEDTLS_DIR}/crypto/library/)
+
     if(${data_name} MATCHES ${SKIP_TEST_SUITES_REGEX})
         message(STATUS "The test suite ${data_name} will not be executed.")
     else()
-        add_test(${data_name}-suite test_suite_${data_name} --verbose)
+        add_test(${data_name}-suite ${exe_name} --verbose)
     endif()
 endfunction(add_test_suite)
 
@@ -98,7 +102,6 @@ add_test_suite(cipher cipher.null)
 add_test_suite(cipher cipher.padding)
 add_test_suite(cmac)
 add_test_suite(ctr_drbg)
-add_test_suite(debug)
 add_test_suite(des)
 add_test_suite(dhm)
 add_test_suite(ecdh)
@@ -145,13 +148,12 @@ add_test_suite(psa_crypto_se_driver_hal_mocks)
 add_test_suite(psa_crypto_slot_management)
 add_test_suite(psa_its)
 add_test_suite(shax)
-add_test_suite(ssl)
 add_test_suite(timing)
 add_test_suite(rsa)
-add_test_suite(version)
 add_test_suite(xtea)
-add_test_suite(x509parse)
-add_test_suite(x509write)
+if (NOT USE_CRYPTO_SUBMODULE)
+    add_test_suite(version)
+endif()
 
 # Make scripts and data files needed for testing available in an
 # out-of-source build.
@@ -159,9 +161,7 @@ if (NOT ${CMAKE_CURRENT_BINARY_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
     if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/seedfile")
         link_to_source(seedfile)
     endif()
-    link_to_source(compat.sh)
     link_to_source(data_files)
     link_to_source(scripts)
-    link_to_source(ssl-opt.sh)
     link_to_source(suites)
 endif()
