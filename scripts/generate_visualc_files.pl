@@ -125,10 +125,10 @@ sub gen_app {
     $path =~ s!/!\\!g;
     (my $appname = $path) =~ s/.*\\//;
 
-    my $srcs = "<ClCompile Include=\"..\\..\\programs\\$path.c\" \/>";
+    my $srcs = "\n    <ClCompile Include=\"..\\..\\programs\\$path.c\" \/>\r";
     if( $appname eq "ssl_client2" or $appname eq "ssl_server2" or
         $appname eq "query_compile_time_config" ) {
-        $srcs .= "\r\n    <ClCompile Include=\"..\\..\\programs\\test\\query_config.c\" \/>";
+        $srcs .= "\n    <ClCompile Include=\"..\\..\\programs\\test\\query_config.c\" \/>\r";
     }
 
     my $content = $template;
