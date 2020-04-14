@@ -84,7 +84,6 @@ APPS = \
 	ssl/ssl_client2$(EXEXT) \
 	ssl/ssl_server$(EXEXT) \
 	ssl/ssl_server2$(EXEXT) \
-	ssl/ssl_base64_dump$(EXEXT) \
 	ssl/ssl_fork_server$(EXEXT) \
 	ssl/mini_client$(EXEXT) \
 	ssl/ssl_mail_client$(EXEXT) \
@@ -282,10 +281,6 @@ ssl/ssl_server$(EXEXT): ssl/ssl_server.c $(DEP)
 ssl/ssl_server2$(EXEXT): ssl/ssl_server2.c test/query_config.c $(DEP)
 	echo "  CC    ssl/ssl_server2.c"
 	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) ssl/ssl_server2.c test/query_config.c $(LOCAL_LDFLAGS) $(LDFLAGS) -o $@
-
-ssl/ssl_base64_dump$(EXEXT): ssl/ssl_base64_dump.c test/query_config.c $(DEP)
-	echo "  CC    ssl/ssl_base64_dump.c"
-	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) ssl/ssl_base64_dump.c test/query_config.c $(LOCAL_LDFLAGS) $(LDFLAGS) -o $@
 
 ssl/ssl_fork_server$(EXEXT): ssl/ssl_fork_server.c $(DEP)
 	echo "  CC    ssl/ssl_fork_server.c"
