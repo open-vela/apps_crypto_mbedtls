@@ -1035,7 +1035,6 @@ component_test_check_params_without_platform () {
     scripts/config.py unset MBEDTLS_PLATFORM_TIME_ALT
     scripts/config.py unset MBEDTLS_PLATFORM_FPRINTF_ALT
     scripts/config.py unset MBEDTLS_PLATFORM_MEMORY
-    scripts/config.py unset MBEDTLS_PLATFORM_NV_SEED_ALT
     scripts/config.py unset MBEDTLS_PLATFORM_PRINTF_ALT
     scripts/config.py unset MBEDTLS_PLATFORM_SNPRINTF_ALT
     scripts/config.py unset MBEDTLS_ENTROPY_NV_SEED
@@ -1065,7 +1064,6 @@ component_test_no_platform () {
     scripts/config.py unset MBEDTLS_PLATFORM_SNPRINTF_ALT
     scripts/config.py unset MBEDTLS_PLATFORM_TIME_ALT
     scripts/config.py unset MBEDTLS_PLATFORM_EXIT_ALT
-    scripts/config.py unset MBEDTLS_PLATFORM_NV_SEED_ALT
     scripts/config.py unset MBEDTLS_ENTROPY_NV_SEED
     scripts/config.py unset MBEDTLS_FS_IO
     scripts/config.py unset MBEDTLS_PSA_CRYPTO_SE_C
@@ -1083,7 +1081,6 @@ component_build_no_std_function () {
     scripts/config.py full
     scripts/config.py set MBEDTLS_PLATFORM_NO_STD_FUNCTIONS
     scripts/config.py unset MBEDTLS_ENTROPY_NV_SEED
-    scripts/config.py unset MBEDTLS_PLATFORM_NV_SEED_ALT
     make CC=gcc CFLAGS='-Werror -Wall -Wextra -Os'
 }
 
@@ -1273,7 +1270,6 @@ component_test_null_entropy () {
     scripts/config.py set MBEDTLS_NO_DEFAULT_ENTROPY_SOURCES
     scripts/config.py set MBEDTLS_ENTROPY_C
     scripts/config.py unset MBEDTLS_ENTROPY_NV_SEED
-    scripts/config.py unset MBEDTLS_PLATFORM_NV_SEED_ALT
     scripts/config.py unset MBEDTLS_ENTROPY_HARDWARE_ALT
     scripts/config.py unset MBEDTLS_HAVEGE_C
     CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan -D UNSAFE_BUILD=ON .
