@@ -208,7 +208,7 @@ class GeneratorInputError(Exception):
     pass
 
 
-class FileWrapper(io.FileIO):
+class FileWrapper(io.FileIO, object):
     """
     This class extends built-in io.FileIO class with attribute line_no,
     that indicates line number for the line that is read.
@@ -402,7 +402,8 @@ def parse_dependencies(inp_str):
     :param inp_str: Input string with macros delimited by ':'.
     :return: list of dependencies
     """
-    dependencies = list(map(validate_dependency, inp_str.split(':')))
+    dependencies = [dep for dep in map(validate_dependency,
+                                       inp_str.split(':'))]
     return dependencies
 
 
