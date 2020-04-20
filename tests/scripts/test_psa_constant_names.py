@@ -453,7 +453,7 @@ def main():
     tests.run_all(inputs)
     tests.report(sys.stdout)
     if tests.errors:
-        sys.exit(1)
+        exit(1)
 
 if __name__ == '__main__':
     main()
