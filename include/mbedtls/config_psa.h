@@ -3,11 +3,11 @@
  * \brief PSA crypto configuration options (set of defines)
  *
  *  This set of compile-time options takes settings defined in
- *  include/mbedtls/config.h and include/psa/crypto_config.h and uses
+ *  include/mbedtls/mbedtls_config.h and include/psa/crypto_config.h and uses
  *  those definitions to define symbols used in the library code.
  *
  *  Users and integrators should not edit this file, please edit
- *  include/mbedtls/config.h for MBETLS_XXX settings or
+ *  include/mbedtls/mbedtls_config.h for MBETLS_XXX settings or
  *  include/psa/crypto_config.h for PSA_WANT_XXX settings.
  */
 /*
@@ -433,6 +433,11 @@ extern "C" {
 
 #if defined(PSA_WANT_ECC_MONTGOMERY_448)
 #if !defined(MBEDTLS_PSA_ACCEL_ECC_MONTGOMERY_448)
+/*
+ * Curve448 is not yet supported via the PSA API in Mbed TLS
+ * (https://github.com/ARMmbed/mbedtls/issues/4249).
+ */
+#error "Curve448 is not yet supported via the PSA API in Mbed TLS."
 #define MBEDTLS_ECP_DP_CURVE448_ENABLED
 #define MBEDTLS_PSA_BUILTIN_ECC_MONTGOMERY_448 1
 #endif /* !MBEDTLS_PSA_ACCEL_ECC_MONTGOMERY_448 */
@@ -705,7 +710,8 @@ extern "C" {
 #define PSA_WANT_ECC_MONTGOMERY_255
 #endif
 
-#if defined(MBEDTLS_ECP_DP_CURVE448_ENABLED)
+/* Curve448 is not yet supported via the PSA API (https://github.com/ARMmbed/mbedtls/issues/4249) */
+#if 0 && defined(MBEDTLS_ECP_DP_CURVE448_ENABLED)
 #define MBEDTLS_PSA_BUILTIN_ECC_MONTGOMERY_448 1
 #define PSA_WANT_ECC_MONTGOMERY_448
 #endif
