@@ -854,7 +854,7 @@ static int ssl_populate_transform( mbedtls_ssl_transform *transform,
              * GenericBlockCipher:
              * 1. if EtM is in use: one block plus MAC
              *    otherwise: * first multiple of blocklen greater than maclen
-             * 2. IV
+             * 2. IV except for TLS 1.0
              */
 #if defined(MBEDTLS_SSL_ENCRYPT_THEN_MAC)
             if( encrypt_then_mac == MBEDTLS_SSL_ETM_ENABLED )
@@ -948,14 +948,23 @@ static int ssl_populate_transform( mbedtls_ssl_transform *transform,
 
 #if defined(MBEDTLS_SSL_SOME_SUITES_USE_MAC)
 #if defined(MBEDTLS_SSL_PROTO_TLS1_2)
-    /* For HMAC-based ciphersuites, initialize the HMAC transforms.
-       For AEAD-based ciphersuites, there is nothing to do here. */
-    if( mac_key_len != 0 )
+    if( minor_ver >= MBEDTLS_SSL_MINOR_VERSION_1 )
     {
-        mbedtls_md_hmac_starts( &transform->md_ctx_enc, mac_enc, mac_key_len );
-        mbedtls_md_hmac_starts( &transform->md_ctx_dec, mac_dec, mac_key_len );
+        /* For HMAC-based ciphersuites, initialize the HMAC transforms.
+           For AEAD-based ciphersuites, there is nothing to do here. */
+        if( mac_key_len != 0 )
+        {
+            mbedtls_md_hmac_starts( &transform->md_ctx_enc, mac_enc, mac_key_len );
+            mbedtls_md_hmac_starts( &transform->md_ctx_dec, mac_dec, mac_key_len );
+        }
     }
+    else
 #endif
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
+        ret = MBEDTLS_ERR_SSL_INTERNAL_ERROR;
+        goto end;
+    }
 #endif /* MBEDTLS_SSL_SOME_SUITES_USE_MAC */
 
     ((void) mac_dec);
@@ -1846,13 +1855,19 @@ static int ssl_parse_certificate_chain( mbedtls_ssl_context *ssl,
         return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
     }
 
-    if( ssl->in_msg[0] != MBEDTLS_SSL_HS_CERTIFICATE ||
-        ssl->in_hslen < mbedtls_ssl_hs_hdr_len( ssl ) + 3 + 3 )
+    if( ssl->in_msg[0] != MBEDTLS_SSL_HS_CERTIFICATE  )
+    {
+        mbedtls_ssl_send_alert_message( ssl, MBEDTLS_SSL_ALERT_LEVEL_FATAL,
+                                        MBEDTLS_SSL_ALERT_MSG_UNEXPECTED_MESSAGE );
+        return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
+    }
+
+    if( ssl->in_hslen < mbedtls_ssl_hs_hdr_len( ssl ) + 3 + 3 )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad certificate message" ) );
         mbedtls_ssl_send_alert_message( ssl, MBEDTLS_SSL_ALERT_LEVEL_FATAL,
                                         MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR );
-        return( MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE );
+        return( MBEDTLS_ERR_SSL_DECODE_ERROR );
     }
 
     i = mbedtls_ssl_hs_hdr_len( ssl );
@@ -1868,7 +1883,7 @@ static int ssl_parse_certificate_chain( mbedtls_ssl_context *ssl,
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad certificate message" ) );
         mbedtls_ssl_send_alert_message( ssl, MBEDTLS_SSL_ALERT_LEVEL_FATAL,
                                         MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR );
-        return( MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE );
+        return( MBEDTLS_ERR_SSL_DECODE_ERROR );
     }
 
     /* Make &ssl->in_msg[i] point to the beginning of the CRT chain. */
@@ -1883,7 +1898,7 @@ static int ssl_parse_certificate_chain( mbedtls_ssl_context *ssl,
             mbedtls_ssl_send_alert_message( ssl,
                               MBEDTLS_SSL_ALERT_LEVEL_FATAL,
                               MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR );
-            return( MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE );
+            return( MBEDTLS_ERR_SSL_DECODE_ERROR );
         }
         /* In theory, the CRT can be up to 2**24 Bytes, but we don't support
          * anything beyond 2**16 ~ 64K. */
@@ -1892,8 +1907,8 @@ static int ssl_parse_certificate_chain( mbedtls_ssl_context *ssl,
             MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad certificate message" ) );
             mbedtls_ssl_send_alert_message( ssl,
                             MBEDTLS_SSL_ALERT_LEVEL_FATAL,
-                            MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR );
-            return( MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE );
+                            MBEDTLS_SSL_ALERT_MSG_UNSUPPORTED_CERT );
+            return( MBEDTLS_ERR_SSL_BAD_CERTIFICATE );
         }
 
         /* Read length of the next CRT in the chain. */
@@ -1907,7 +1922,7 @@ static int ssl_parse_certificate_chain( mbedtls_ssl_context *ssl,
             mbedtls_ssl_send_alert_message( ssl,
                                  MBEDTLS_SSL_ALERT_LEVEL_FATAL,
                                  MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR );
-            return( MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE );
+            return( MBEDTLS_ERR_SSL_DECODE_ERROR );
         }
 
         /* Check if we're handling the first CRT in the chain. */
@@ -1929,7 +1944,7 @@ static int ssl_parse_certificate_chain( mbedtls_ssl_context *ssl,
                 mbedtls_ssl_send_alert_message( ssl,
                                                 MBEDTLS_SSL_ALERT_LEVEL_FATAL,
                                                 MBEDTLS_SSL_ALERT_MSG_ACCESS_DENIED );
-                return( MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE );
+                return( MBEDTLS_ERR_SSL_BAD_CERTIFICATE );
             }
 
             /* Now we can safely free the original chain. */
@@ -2139,7 +2154,7 @@ static int ssl_parse_certificate_verify( mbedtls_ssl_context *ssl,
 
             MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad certificate (EC key curve)" ) );
             if( ret == 0 )
-                ret = MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE;
+                ret = MBEDTLS_ERR_SSL_BAD_CERTIFICATE;
         }
     }
 #endif /* MBEDTLS_ECP_C */
@@ -2151,7 +2166,7 @@ static int ssl_parse_certificate_verify( mbedtls_ssl_context *ssl,
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad certificate (usage extensions)" ) );
         if( ret == 0 )
-            ret = MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE;
+            ret = MBEDTLS_ERR_SSL_BAD_CERTIFICATE;
     }
 
     /* mbedtls_x509_crt_verify_with_profile is supposed to report a
@@ -2162,7 +2177,7 @@ static int ssl_parse_certificate_verify( mbedtls_ssl_context *ssl,
      * ssl_parse_certificate even if verification was optional. */
     if( authmode == MBEDTLS_SSL_VERIFY_OPTIONAL &&
         ( ret == MBEDTLS_ERR_X509_CERT_VERIFY_FAILED ||
-          ret == MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE ) )
+          ret == MBEDTLS_ERR_SSL_BAD_CERTIFICATE ) )
     {
         ret = 0;
     }
@@ -2894,13 +2909,19 @@ int mbedtls_ssl_parse_finished( mbedtls_ssl_context *ssl )
 
     hash_len = 12;
 
-    if( ssl->in_msg[0] != MBEDTLS_SSL_HS_FINISHED ||
-        ssl->in_hslen  != mbedtls_ssl_hs_hdr_len( ssl ) + hash_len )
+    if( ssl->in_msg[0] != MBEDTLS_SSL_HS_FINISHED  )
+    {
+        mbedtls_ssl_send_alert_message( ssl, MBEDTLS_SSL_ALERT_LEVEL_FATAL,
+                                        MBEDTLS_SSL_ALERT_MSG_UNEXPECTED_MESSAGE );
+        return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
+    }
+
+    if( ssl->in_hslen  != mbedtls_ssl_hs_hdr_len( ssl ) + hash_len )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad finished message" ) );
         mbedtls_ssl_send_alert_message( ssl, MBEDTLS_SSL_ALERT_LEVEL_FATAL,
                                         MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR );
-        return( MBEDTLS_ERR_SSL_BAD_HS_FINISHED );
+        return( MBEDTLS_ERR_SSL_DECODE_ERROR );
     }
 
     if( mbedtls_ssl_safer_memcmp( ssl->in_msg + mbedtls_ssl_hs_hdr_len( ssl ),
@@ -2908,8 +2929,8 @@ int mbedtls_ssl_parse_finished( mbedtls_ssl_context *ssl )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad finished message" ) );
         mbedtls_ssl_send_alert_message( ssl, MBEDTLS_SSL_ALERT_LEVEL_FATAL,
-                                        MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR );
-        return( MBEDTLS_ERR_SSL_BAD_HS_FINISHED );
+                                        MBEDTLS_SSL_ALERT_MSG_DECRYPT_ERROR );
+        return( MBEDTLS_ERR_SSL_HANDSHAKE_FAILURE );
     }
 
 #if defined(MBEDTLS_SSL_RENEGOTIATION)
@@ -4225,6 +4246,9 @@ const char *mbedtls_ssl_get_version( const mbedtls_ssl_context *ssl )
     {
         switch( ssl->minor_ver )
         {
+            case MBEDTLS_SSL_MINOR_VERSION_2:
+                return( "DTLSv1.0" );
+
             case MBEDTLS_SSL_MINOR_VERSION_3:
                 return( "DTLSv1.2" );
 
@@ -4236,6 +4260,12 @@ const char *mbedtls_ssl_get_version( const mbedtls_ssl_context *ssl )
 
     switch( ssl->minor_ver )
     {
+        case MBEDTLS_SSL_MINOR_VERSION_1:
+            return( "TLSv1.0" );
+
+        case MBEDTLS_SSL_MINOR_VERSION_2:
+            return( "TLSv1.1" );
+
         case MBEDTLS_SSL_MINOR_VERSION_3:
             return( "TLSv1.2" );
 

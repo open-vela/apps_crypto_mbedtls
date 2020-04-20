@@ -5,7 +5,7 @@
  */
 #if defined(MBEDTLS_PSA_CRYPTO_CONFIG)
 /**
- * When #MBEDTLS_PSA_CRYPTO_CONFIG is enabled in config.h,
+ * When #MBEDTLS_PSA_CRYPTO_CONFIG is enabled in mbedtls_config.h,
  * this file determines which cryptographic mechanisms are enabled
  * through the PSA Cryptography API (\c psa_xxx() functions).
  *
@@ -24,7 +24,7 @@
  */
 #else
 /**
- * When \c MBEDTLS_PSA_CRYPTO_CONFIG is disabled in config.h,
+ * When \c MBEDTLS_PSA_CRYPTO_CONFIG is disabled in mbedtls_config.h,
  * this file is not used, and cryptographic mechanisms are supported
  * through the PSA API if and only if they are supported through the
  * mbedtls_xxx API.
@@ -93,7 +93,12 @@
 #define PSA_WANT_ECC_BRAINPOOL_P_R1_384         1
 #define PSA_WANT_ECC_BRAINPOOL_P_R1_512         1
 #define PSA_WANT_ECC_MONTGOMERY_255             1
-#define PSA_WANT_ECC_MONTGOMERY_448             1
+/*
+ * Curve448 is not yet supported via the PSA API in Mbed TLS
+ * (https://github.com/ARMmbed/mbedtls/issues/4249). Thus, do not enable it by
+ * default.
+ */
+//#define PSA_WANT_ECC_MONTGOMERY_448             1
 #define PSA_WANT_ECC_SECP_K1_192                1
 /*
  * SECP224K1 is buggy via the PSA API in Mbed TLS
