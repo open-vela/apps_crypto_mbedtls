@@ -77,6 +77,7 @@
 #include "mbedtls/platform_util.h"
 #include "mbedtls/error.h"
 
+#include "bn_mul.h"
 #include "ecp_invasive.h"
 
 #include <string.h>
@@ -2746,6 +2747,97 @@ int mbedtls_ecp_muladd( mbedtls_ecp_group *grp, mbedtls_ecp_point *R,
 #endif /* MBEDTLS_ECP_SHORT_WEIERSTRASS_ENABLED */
 
 #if defined(MBEDTLS_ECP_MONTGOMERY_ENABLED)
+#if defined(MBEDTLS_ECP_DP_CURVE25519_ENABLED)
+#define ECP_MPI_INIT(s, n, p) {s, (n), (mbedtls_mpi_uint *)(p)}
+#define ECP_MPI_INIT_ARRAY(x)   \
+    ECP_MPI_INIT(1, sizeof(x) / sizeof(mbedtls_mpi_uint), x)
+/*
+ * Constants for the two points other than 0, 1, -1 (mod p) in
+ * https://cr.yp.to/ecdh.html#validate
+ * See ecp_check_pubkey_x25519().
+ */
+static const mbedtls_mpi_uint x25519_bad_point_1[] = {
+    MBEDTLS_BYTES_TO_T_UINT_8( 0xe0, 0xeb, 0x7a, 0x7c, 0x3b, 0x41, 0xb8, 0xae ),
+    MBEDTLS_BYTES_TO_T_UINT_8( 0x16, 0x56, 0xe3, 0xfa, 0xf1, 0x9f, 0xc4, 0x6a ),
+    MBEDTLS_BYTES_TO_T_UINT_8( 0xda, 0x09, 0x8d, 0xeb, 0x9c, 0x32, 0xb1, 0xfd ),
+    MBEDTLS_BYTES_TO_T_UINT_8( 0x86, 0x62, 0x05, 0x16, 0x5f, 0x49, 0xb8, 0x00 ),
+};
+static const mbedtls_mpi_uint x25519_bad_point_2[] = {
+    MBEDTLS_BYTES_TO_T_UINT_8( 0x5f, 0x9c, 0x95, 0xbc, 0xa3, 0x50, 0x8c, 0x24 ),
+    MBEDTLS_BYTES_TO_T_UINT_8( 0xb1, 0xd0, 0xb1, 0x55, 0x9c, 0x83, 0xef, 0x5b ),
+    MBEDTLS_BYTES_TO_T_UINT_8( 0x04, 0x44, 0x5c, 0xc4, 0x58, 0x1c, 0x8e, 0x86 ),
+    MBEDTLS_BYTES_TO_T_UINT_8( 0xd8, 0x22, 0x4e, 0xdd, 0xd0, 0x9f, 0x11, 0x57 ),
+};
+static const mbedtls_mpi ecp_x25519_bad_point_1 = ECP_MPI_INIT_ARRAY(
+        x25519_bad_point_1 );
+static const mbedtls_mpi ecp_x25519_bad_point_2 = ECP_MPI_INIT_ARRAY(
+        x25519_bad_point_2 );
+#endif /* MBEDTLS_ECP_DP_CURVE25519_ENABLED */
+
+/*
+ * Check that the input point is not one of the low-order points.
+ * This is recommended by the "May the Fourth" paper:
+ * https://eprint.iacr.org/2017/806.pdf
+ * Those points are never sent by an honest peer.
+ */
+static int ecp_check_bad_points_mx( const mbedtls_mpi *X, const mbedtls_mpi *P,
+                                    const mbedtls_ecp_group_id grp_id )
+{
+    int ret;
+    mbedtls_mpi XmP;
+
+    mbedtls_mpi_init( &XmP );
+
+    /* Reduce X mod P so that we only need to check values less than P.
+     * We know X < 2^256 so we can proceed by subtraction. */
+    MBEDTLS_MPI_CHK( mbedtls_mpi_copy( &XmP, X ) );
+    while( mbedtls_mpi_cmp_mpi( &XmP, P ) >= 0 )
+        MBEDTLS_MPI_CHK( mbedtls_mpi_sub_mpi( &XmP, &XmP, P ) );
+
+    /* Check against the known bad values that are less than P. For Curve448
+     * these are 0, 1 and -1. For Curve25519 we check the values less than P
+     * from the following list: https://cr.yp.to/ecdh.html#validate */
+    if( mbedtls_mpi_cmp_int( &XmP, 1 ) <= 0 ) /* takes care of 0 and 1 */
+    {
+        ret = MBEDTLS_ERR_ECP_INVALID_KEY;
+        goto cleanup;
+    }
+
+#if defined(MBEDTLS_ECP_DP_CURVE25519_ENABLED)
+    if( grp_id == MBEDTLS_ECP_DP_CURVE25519 )
+    {
+        if( mbedtls_mpi_cmp_mpi( &XmP, &ecp_x25519_bad_point_1 ) == 0 )
+        {
+            ret = MBEDTLS_ERR_ECP_INVALID_KEY;
+            goto cleanup;
+        }
+
+        if( mbedtls_mpi_cmp_mpi( &XmP, &ecp_x25519_bad_point_2 ) == 0 )
+        {
+            ret = MBEDTLS_ERR_ECP_INVALID_KEY;
+            goto cleanup;
+        }
+    }
+#else
+    (void) grp_id;
+#endif
+
+    /* Final check: check if XmP + 1 is P (final because it changes XmP!) */
+    MBEDTLS_MPI_CHK( mbedtls_mpi_add_int( &XmP, &XmP, 1 ) );
+    if( mbedtls_mpi_cmp_mpi( &XmP, P ) == 0 )
+    {
+        ret = MBEDTLS_ERR_ECP_INVALID_KEY;
+        goto cleanup;
+    }
+
+    ret = 0;
+
+cleanup:
+    mbedtls_mpi_free( &XmP );
+
+    return( ret );
+}
+
 /*
  * Check validity of a public key for Montgomery curves with x-only schemes
  */
@@ -2757,7 +2849,13 @@ static int ecp_check_pubkey_mx( const mbedtls_ecp_group *grp, const mbedtls_ecp_
     if( mbedtls_mpi_size( &pt->X ) > ( grp->nbits + 7 ) / 8 )
         return( MBEDTLS_ERR_ECP_INVALID_KEY );
 
-    return( 0 );
+    /* Implicit in all standards (as they don't consider negative numbers):
+     * X must be non-negative. This is normally ensured by the way it's
+     * encoded for transmission, but let's be extra sure. */
+    if( mbedtls_mpi_cmp_int( &pt->X, 0 ) < 0 )
+        return( MBEDTLS_ERR_ECP_INVALID_KEY );
+
+    return( ecp_check_bad_points_mx( &pt->X, &grp->P, grp->id ) );
 }
 #endif /* MBEDTLS_ECP_MONTGOMERY_ENABLED */
 
@@ -2956,7 +3054,6 @@ int mbedtls_ecp_gen_key( mbedtls_ecp_group_id grp_id, mbedtls_ecp_keypair *key,
 }
 
 #define ECP_CURVE25519_KEY_SIZE 32
-#define ECP_CURVE448_KEY_SIZE   56
 /*
  * Read a private key.
  */
@@ -2977,12 +3074,12 @@ int mbedtls_ecp_read_key( mbedtls_ecp_group_id grp_id, mbedtls_ecp_keypair *key,
     if( mbedtls_ecp_get_type( &key->grp ) == MBEDTLS_ECP_TYPE_MONTGOMERY )
     {
         /*
-         * Mask the key as mandated by RFC7748 for Curve25519 and Curve448.
+         * If it is Curve25519 curve then mask the key as mandated by RFC7748
          */
         if( grp_id == MBEDTLS_ECP_DP_CURVE25519 )
         {
             if( buflen != ECP_CURVE25519_KEY_SIZE )
-                return( MBEDTLS_ERR_ECP_INVALID_KEY );
+                return MBEDTLS_ERR_ECP_INVALID_KEY;
 
             MBEDTLS_MPI_CHK( mbedtls_mpi_read_binary_le( &key->d, buf, buflen ) );
 
@@ -3003,23 +3100,8 @@ int mbedtls_ecp_read_key( mbedtls_ecp_group_id grp_id, mbedtls_ecp_keypair *key,
                                          ECP_CURVE25519_KEY_SIZE * 8 - 2, 1 )
                     );
         }
-        else if( grp_id == MBEDTLS_ECP_DP_CURVE448 )
-        {
-            if( buflen != ECP_CURVE448_KEY_SIZE )
-                return( MBEDTLS_ERR_ECP_INVALID_KEY );
-
-            MBEDTLS_MPI_CHK( mbedtls_mpi_read_binary_le( &key->d, buf, buflen ) );
-
-            /* Set the two least significant bits to 0 */
-            MBEDTLS_MPI_CHK( mbedtls_mpi_set_bit( &key->d, 0, 0 ) );
-            MBEDTLS_MPI_CHK( mbedtls_mpi_set_bit( &key->d, 1, 0 ) );
-
-            /* Set the most significant bit to 1 */
-            MBEDTLS_MPI_CHK(
-                    mbedtls_mpi_set_bit( &key->d,
-                                         ECP_CURVE448_KEY_SIZE * 8 - 1, 1 )
-                    );
-        }
+        else
+            ret = MBEDTLS_ERR_ECP_FEATURE_UNAVAILABLE;
     }
 
 #endif
@@ -3057,16 +3139,14 @@ int mbedtls_ecp_write_key( mbedtls_ecp_keypair *key,
         if( key->grp.id == MBEDTLS_ECP_DP_CURVE25519 )
         {
             if( buflen < ECP_CURVE25519_KEY_SIZE )
-                return( MBEDTLS_ERR_ECP_BUFFER_TOO_SMALL );
+                return MBEDTLS_ERR_ECP_BUFFER_TOO_SMALL;
 
+            MBEDTLS_MPI_CHK( mbedtls_mpi_write_binary_le( &key->d, buf, buflen ) );
         }
-        else if( key->grp.id == MBEDTLS_ECP_DP_CURVE448 )
-        {
-            if( buflen < ECP_CURVE448_KEY_SIZE )
-                return( MBEDTLS_ERR_ECP_BUFFER_TOO_SMALL );
-        }
-        MBEDTLS_MPI_CHK( mbedtls_mpi_write_binary_le( &key->d, buf, buflen ) );
+        else
+            ret = MBEDTLS_ERR_ECP_FEATURE_UNAVAILABLE;
     }
+
 #endif
 #if defined(MBEDTLS_ECP_SHORT_WEIERSTRASS_ENABLED)
     if( mbedtls_ecp_get_type( &key->grp ) == MBEDTLS_ECP_TYPE_SHORT_WEIERSTRASS )
