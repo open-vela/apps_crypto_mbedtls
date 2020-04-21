@@ -2682,9 +2682,6 @@ int mbedtls_ssl_conf_own_cert( mbedtls_ssl_config *conf,
  * \note           This is mainly useful for clients. Servers will usually
  *                 want to use \c mbedtls_ssl_conf_psk_cb() instead.
  *
- * \note           A PSK set by \c mbedtls_ssl_set_hs_psk() in the PSK callback
- *                 takes precedence over a PSK configured by this function.
- *
  * \warning        Currently, clients can only register a single pre-shared key.
  *                 Calling this function or mbedtls_ssl_conf_psk_opaque() more
  *                 than once will overwrite values configured in previous calls.
@@ -2717,10 +2714,6 @@ int mbedtls_ssl_conf_psk( mbedtls_ssl_config *conf,
  *
  * \note           This is mainly useful for clients. Servers will usually
  *                 want to use \c mbedtls_ssl_conf_psk_cb() instead.
- *
- * \note           An opaque PSK set by \c mbedtls_ssl_set_hs_psk_opaque() in
- *                 the PSK callback takes precedence over an opaque PSK
- *                 configured by this function.
  *
  * \warning        Currently, clients can only register a single pre-shared key.
  *                 Calling this function or mbedtls_ssl_conf_psk() more than
@@ -2759,9 +2752,6 @@ int mbedtls_ssl_conf_psk_opaque( mbedtls_ssl_config *conf,
  * \note           This should only be called inside the PSK callback,
  *                 i.e. the function passed to \c mbedtls_ssl_conf_psk_cb().
  *
- * \note           A PSK set by this function takes precedence over a PSK
- *                 configured by \c mbedtls_ssl_conf_psk().
- *
  * \param ssl      The SSL context to configure a PSK for.
  * \param psk      The pointer to the pre-shared key.
  * \param psk_len  The length of the pre-shared key in bytes.
@@ -2778,9 +2768,6 @@ int mbedtls_ssl_set_hs_psk( mbedtls_ssl_context *ssl,
  *
  * \note           This should only be called inside the PSK callback,
  *                 i.e. the function passed to \c mbedtls_ssl_conf_psk_cb().
- *
- * \note           An opaque PSK set by this function takes precedence over an
- *                 opaque PSK configured by \c mbedtls_ssl_conf_psk_opaque().
  *
  * \param ssl      The SSL context to configure a PSK for.
  * \param psk      The identifier of the key slot holding the PSK.
@@ -2820,14 +2807,9 @@ int mbedtls_ssl_set_hs_psk_opaque( mbedtls_ssl_context *ssl,
  *                 on the SSL context to set the correct PSK and return \c 0.
  *                 Any other return value will result in a denied PSK identity.
  *
- * \note           A dynamic PSK (i.e. set by the PSK callback) takes
- *                 precedence over a static PSK (i.e. set by
- *                 \c mbedtls_ssl_conf_psk() or
- *                 \c mbedtls_ssl_conf_psk_opaque()).
- *                 This means that if you set a PSK callback using this
- *                 function, you don't need to set a PSK using
- *                 \c mbedtls_ssl_conf_psk() or
- *                 \c mbedtls_ssl_conf_psk_opaque()).
+ * \note           If you set a PSK callback using this function, then you
+ *                 don't need to set a PSK key and identity using
+ *                 \c mbedtls_ssl_conf_psk().
  *
  * \param conf     The SSL configuration to register the callback with.
  * \param f_psk    The callback for selecting and setting the PSK based
@@ -3541,61 +3523,18 @@ int mbedtls_ssl_get_record_expansion( const mbedtls_ssl_context *ssl );
 
 #if defined(MBEDTLS_SSL_MAX_FRAGMENT_LENGTH)
 /**
- * \brief          Return the maximum fragment length (payload, in bytes) for
- *                 the output buffer. For the client, this is the configured
- *                 value. For the server, it is the minimum of two - the
- *                 configured value and the negotiated one.
+ * \brief          Return the maximum fragment length (payload, in bytes).
+ *                 This is the value negotiated with peer if any,
+ *                 or the locally configured value.
  *
  * \sa             mbedtls_ssl_conf_max_frag_len()
  * \sa             mbedtls_ssl_get_max_record_payload()
  *
  * \param ssl      SSL context
  *
- * \return         Current maximum fragment length for the output buffer.
+ * \return         Current maximum fragment length.
  */
-size_t mbedtls_ssl_get_output_max_frag_len( const mbedtls_ssl_context *ssl );
-
-/**
- * \brief          Return the maximum fragment length (payload, in bytes) for
- *                 the input buffer. This is the negotiated maximum fragment
- *                 length, or, if there is none, MBEDTLS_SSL_MAX_CONTENT_LEN.
- *                 If it is not defined either, the value is 2^14. This function
- *                 works as its predecessor, \c mbedtls_ssl_get_max_frag_len().
- *
- * \sa             mbedtls_ssl_conf_max_frag_len()
- * \sa             mbedtls_ssl_get_max_record_payload()
- *
- * \param ssl      SSL context
- *
- * \return         Current maximum fragment length for the output buffer.
- */
-size_t mbedtls_ssl_get_input_max_frag_len( const mbedtls_ssl_context *ssl );
-
-#if !defined(MBEDTLS_DEPRECATED_REMOVED)
-
-#if defined(MBEDTLS_DEPRECATED_WARNING)
-#define MBEDTLS_DEPRECATED    __attribute__((deprecated))
-#else
-#define MBEDTLS_DEPRECATED
-#endif
-
-/**
- * \brief          This function is a deprecated approach to getting the max
- *                 fragment length. Its an alias for
- *                 \c mbedtls_ssl_get_output_max_frag_len(), as the behaviour
- *                 is the same. See \c mbedtls_ssl_get_output_max_frag_len() for
- *                 more detail.
- *
- * \sa             mbedtls_ssl_get_input_max_frag_len()
- * \sa             mbedtls_ssl_get_output_max_frag_len()
- *
- * \param ssl      SSL context
- *
- * \return         Current maximum fragment length for the output buffer.
- */
-MBEDTLS_DEPRECATED size_t mbedtls_ssl_get_max_frag_len(
-                                        const mbedtls_ssl_context *ssl );
-#endif /* MBEDTLS_DEPRECATED_REMOVED */
+size_t mbedtls_ssl_get_max_frag_len( const mbedtls_ssl_context *ssl );
 #endif /* MBEDTLS_SSL_MAX_FRAGMENT_LENGTH */
 
 /**
@@ -3616,8 +3555,7 @@ MBEDTLS_DEPRECATED size_t mbedtls_ssl_get_max_frag_len(
  *                 when record compression is enabled.
  *
  * \sa             mbedtls_ssl_set_mtu()
- * \sa             mbedtls_ssl_get_output_max_frag_len()
- * \sa             mbedtls_ssl_get_input_max_frag_len()
+ * \sa             mbedtls_ssl_get_max_frag_len()
  * \sa             mbedtls_ssl_get_record_expansion()
  *
  * \param ssl      SSL context
@@ -3925,8 +3863,8 @@ int mbedtls_ssl_read( mbedtls_ssl_context *ssl, unsigned char *buf, size_t len )
  *                 or negotiated with the peer), then:
  *                 - with TLS, less bytes than requested are written.
  *                 - with DTLS, MBEDTLS_ERR_SSL_BAD_INPUT_DATA is returned.
- *                 \c mbedtls_ssl_get_output_max_frag_len() may be used to
- *                 query the active maximum fragment length.
+ *                 \c mbedtls_ssl_get_max_frag_len() may be used to query the
+ *                 active maximum fragment length.
  *
  * \note           Attempting to write 0 bytes will result in an empty TLS
  *                 application record being sent.
