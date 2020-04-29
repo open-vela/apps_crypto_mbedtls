@@ -34,7 +34,7 @@
 
 #if !defined(unix) && !defined(__unix__) && !defined(__unix) && \
     !defined(__APPLE__) && !defined(_WIN32) && !defined(__QNXNTO__) && \
-    !defined(__HAIKU__) && !defined(__midipix__)
+    !defined(__HAIKU__)
 #error "This module only works on Unix and Windows, see MBEDTLS_NET_C in config.h"
 #endif
 
@@ -54,7 +54,8 @@
 
 #define IS_EINTR( ret ) ( ( ret ) == WSAEINTR )
 
-#if !defined(_WIN32_WINNT)
+#if !defined(_WIN32_WINNT) || (_WIN32_WINNT < 0x0501)
+#undef _WIN32_WINNT
 /* Enables getaddrinfo() & Co */
 #define _WIN32_WINNT 0x0501
 #endif
@@ -63,9 +64,6 @@
 
 #include <winsock2.h>
 #include <windows.h>
-#if (_WIN32_WINNT < 0x0501)
-#include <wspiapi.h>
-#endif
 
 #if defined(_MSC_VER)
 #if defined(_WIN32_WCE)

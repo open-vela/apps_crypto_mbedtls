@@ -52,10 +52,6 @@
 #include "mbedtls/aria.h"
 #endif
 
-#if defined(MBEDTLS_ASN1_PARSE_C)
-#include "mbedtls/asn1.h"
-#endif
-
 #if defined(MBEDTLS_BASE64_C)
 #include "mbedtls/base64.h"
 #endif
@@ -220,6 +216,7 @@
 const char * mbedtls_high_level_strerr( int error_code )
 {
     int high_level_error_code;
+    const char *error_description = NULL;
 
     if( error_code < 0 )
         error_code = -error_code;
@@ -232,343 +229,497 @@ const char * mbedtls_high_level_strerr( int error_code )
         /* Begin Auto-Generated Code. */
 #if defined(MBEDTLS_CIPHER_C)
         case -(MBEDTLS_ERR_CIPHER_FEATURE_UNAVAILABLE):
-            return( "CIPHER - The selected feature is not available" );
+            error_description = "CIPHER - The selected feature is not available";
+            break;
         case -(MBEDTLS_ERR_CIPHER_BAD_INPUT_DATA):
-            return( "CIPHER - Bad input parameters" );
+            error_description = "CIPHER - Bad input parameters";
+            break;
         case -(MBEDTLS_ERR_CIPHER_ALLOC_FAILED):
-            return( "CIPHER - Failed to allocate memory" );
+            error_description = "CIPHER - Failed to allocate memory";
+            break;
         case -(MBEDTLS_ERR_CIPHER_INVALID_PADDING):
-            return( "CIPHER - Input data contains invalid padding and is rejected" );
+            error_description = "CIPHER - Input data contains invalid padding and is rejected";
+            break;
         case -(MBEDTLS_ERR_CIPHER_FULL_BLOCK_EXPECTED):
-            return( "CIPHER - Decryption of block requires a full block" );
+            error_description = "CIPHER - Decryption of block requires a full block";
+            break;
         case -(MBEDTLS_ERR_CIPHER_AUTH_FAILED):
-            return( "CIPHER - Authentication failed (for AEAD modes)" );
+            error_description = "CIPHER - Authentication failed (for AEAD modes)";
+            break;
         case -(MBEDTLS_ERR_CIPHER_INVALID_CONTEXT):
-            return( "CIPHER - The context is invalid. For example, because it was freed" );
+            error_description = "CIPHER - The context is invalid. For example, because it was freed";
+            break;
         case -(MBEDTLS_ERR_CIPHER_HW_ACCEL_FAILED):
-            return( "CIPHER - Cipher hardware accelerator failed" );
+            error_description = "CIPHER - Cipher hardware accelerator failed";
+            break;
 #endif /* MBEDTLS_CIPHER_C */
 
 #if defined(MBEDTLS_DHM_C)
         case -(MBEDTLS_ERR_DHM_BAD_INPUT_DATA):
-            return( "DHM - Bad input parameters" );
+            error_description = "DHM - Bad input parameters";
+            break;
         case -(MBEDTLS_ERR_DHM_READ_PARAMS_FAILED):
-            return( "DHM - Reading of the DHM parameters failed" );
+            error_description = "DHM - Reading of the DHM parameters failed";
+            break;
         case -(MBEDTLS_ERR_DHM_MAKE_PARAMS_FAILED):
-            return( "DHM - Making of the DHM parameters failed" );
+            error_description = "DHM - Making of the DHM parameters failed";
+            break;
         case -(MBEDTLS_ERR_DHM_READ_PUBLIC_FAILED):
-            return( "DHM - Reading of the public values failed" );
+            error_description = "DHM - Reading of the public values failed";
+            break;
         case -(MBEDTLS_ERR_DHM_MAKE_PUBLIC_FAILED):
-            return( "DHM - Making of the public value failed" );
+            error_description = "DHM - Making of the public value failed";
+            break;
         case -(MBEDTLS_ERR_DHM_CALC_SECRET_FAILED):
-            return( "DHM - Calculation of the DHM secret failed" );
+            error_description = "DHM - Calculation of the DHM secret failed";
+            break;
         case -(MBEDTLS_ERR_DHM_INVALID_FORMAT):
-            return( "DHM - The ASN.1 data is not formatted correctly" );
+            error_description = "DHM - The ASN.1 data is not formatted correctly";
+            break;
         case -(MBEDTLS_ERR_DHM_ALLOC_FAILED):
-            return( "DHM - Allocation of memory failed" );
+            error_description = "DHM - Allocation of memory failed";
+            break;
         case -(MBEDTLS_ERR_DHM_FILE_IO_ERROR):
-            return( "DHM - Read or write of file failed" );
+            error_description = "DHM - Read or write of file failed";
+            break;
         case -(MBEDTLS_ERR_DHM_HW_ACCEL_FAILED):
-            return( "DHM - DHM hardware accelerator failed" );
+            error_description = "DHM - DHM hardware accelerator failed";
+            break;
         case -(MBEDTLS_ERR_DHM_SET_GROUP_FAILED):
-            return( "DHM - Setting the modulus and generator failed" );
+            error_description = "DHM - Setting the modulus and generator failed";
+            break;
 #endif /* MBEDTLS_DHM_C */
 
 #if defined(MBEDTLS_ECP_C)
         case -(MBEDTLS_ERR_ECP_BAD_INPUT_DATA):
-            return( "ECP - Bad input parameters to function" );
+            error_description = "ECP - Bad input parameters to function";
+            break;
         case -(MBEDTLS_ERR_ECP_BUFFER_TOO_SMALL):
-            return( "ECP - The buffer is too small to write to" );
+            error_description = "ECP - The buffer is too small to write to";
+            break;
         case -(MBEDTLS_ERR_ECP_FEATURE_UNAVAILABLE):
-            return( "ECP - The requested feature is not available, for example, the requested curve is not supported" );
+            error_description = "ECP - The requested feature is not available, for example, the requested curve is not supported";
+            break;
         case -(MBEDTLS_ERR_ECP_VERIFY_FAILED):
-            return( "ECP - The signature is not valid" );
+            error_description = "ECP - The signature is not valid";
+            break;
         case -(MBEDTLS_ERR_ECP_ALLOC_FAILED):
-            return( "ECP - Memory allocation failed" );
+            error_description = "ECP - Memory allocation failed";
+            break;
         case -(MBEDTLS_ERR_ECP_RANDOM_FAILED):
-            return( "ECP - Generation of random value, such as ephemeral key, failed" );
+            error_description = "ECP - Generation of random value, such as ephemeral key, failed";
+            break;
         case -(MBEDTLS_ERR_ECP_INVALID_KEY):
-            return( "ECP - Invalid private or public key" );
+            error_description = "ECP - Invalid private or public key";
+            break;
         case -(MBEDTLS_ERR_ECP_SIG_LEN_MISMATCH):
-            return( "ECP - The buffer contains a valid signature followed by more data" );
+            error_description = "ECP - The buffer contains a valid signature followed by more data";
+            break;
         case -(MBEDTLS_ERR_ECP_HW_ACCEL_FAILED):
-            return( "ECP - The ECP hardware accelerator failed" );
+            error_description = "ECP - The ECP hardware accelerator failed";
+            break;
         case -(MBEDTLS_ERR_ECP_IN_PROGRESS):
-            return( "ECP - Operation in progress, call again with the same parameters to continue" );
+            error_description = "ECP - Operation in progress, call again with the same parameters to continue";
+            break;
 #endif /* MBEDTLS_ECP_C */
 
 #if defined(MBEDTLS_MD_C)
         case -(MBEDTLS_ERR_MD_FEATURE_UNAVAILABLE):
-            return( "MD - The selected feature is not available" );
+            error_description = "MD - The selected feature is not available";
+            break;
         case -(MBEDTLS_ERR_MD_BAD_INPUT_DATA):
-            return( "MD - Bad input parameters to function" );
+            error_description = "MD - Bad input parameters to function";
+            break;
         case -(MBEDTLS_ERR_MD_ALLOC_FAILED):
-            return( "MD - Failed to allocate memory" );
+            error_description = "MD - Failed to allocate memory";
+            break;
         case -(MBEDTLS_ERR_MD_FILE_IO_ERROR):
-            return( "MD - Opening or reading of file failed" );
+            error_description = "MD - Opening or reading of file failed";
+            break;
         case -(MBEDTLS_ERR_MD_HW_ACCEL_FAILED):
-            return( "MD - MD hardware accelerator failed" );
+            error_description = "MD - MD hardware accelerator failed";
+            break;
 #endif /* MBEDTLS_MD_C */
 
 #if defined(MBEDTLS_PEM_PARSE_C) || defined(MBEDTLS_PEM_WRITE_C)
         case -(MBEDTLS_ERR_PEM_NO_HEADER_FOOTER_PRESENT):
-            return( "PEM - No PEM header or footer found" );
+            error_description = "PEM - No PEM header or footer found";
+            break;
         case -(MBEDTLS_ERR_PEM_INVALID_DATA):
-            return( "PEM - PEM string is not as expected" );
+            error_description = "PEM - PEM string is not as expected";
+            break;
         case -(MBEDTLS_ERR_PEM_ALLOC_FAILED):
-            return( "PEM - Failed to allocate memory" );
+            error_description = "PEM - Failed to allocate memory";
+            break;
         case -(MBEDTLS_ERR_PEM_INVALID_ENC_IV):
-            return( "PEM - RSA IV is not in hex-format" );
+            error_description = "PEM - RSA IV is not in hex-format";
+            break;
         case -(MBEDTLS_ERR_PEM_UNKNOWN_ENC_ALG):
-            return( "PEM - Unsupported key encryption algorithm" );
+            error_description = "PEM - Unsupported key encryption algorithm";
+            break;
         case -(MBEDTLS_ERR_PEM_PASSWORD_REQUIRED):
-            return( "PEM - Private key password can't be empty" );
+            error_description = "PEM - Private key password can't be empty";
+            break;
         case -(MBEDTLS_ERR_PEM_PASSWORD_MISMATCH):
-            return( "PEM - Given private key password does not allow for correct decryption" );
+            error_description = "PEM - Given private key password does not allow for correct decryption";
+            break;
         case -(MBEDTLS_ERR_PEM_FEATURE_UNAVAILABLE):
-            return( "PEM - Unavailable feature, e.g. hashing/encryption combination" );
+            error_description = "PEM - Unavailable feature, e.g. hashing/encryption combination";
+            break;
         case -(MBEDTLS_ERR_PEM_BAD_INPUT_DATA):
-            return( "PEM - Bad input parameters to function" );
+            error_description = "PEM - Bad input parameters to function";
+            break;
 #endif /* MBEDTLS_PEM_PARSE_C || MBEDTLS_PEM_WRITE_C */
 
 #if defined(MBEDTLS_PK_C)
         case -(MBEDTLS_ERR_PK_ALLOC_FAILED):
-            return( "PK - Memory allocation failed" );
+            error_description = "PK - Memory allocation failed";
+            break;
         case -(MBEDTLS_ERR_PK_TYPE_MISMATCH):
-            return( "PK - Type mismatch, eg attempt to encrypt with an ECDSA key" );
+            error_description = "PK - Type mismatch, eg attempt to encrypt with an ECDSA key";
+            break;
         case -(MBEDTLS_ERR_PK_BAD_INPUT_DATA):
-            return( "PK - Bad input parameters to function" );
+            error_description = "PK - Bad input parameters to function";
+            break;
         case -(MBEDTLS_ERR_PK_FILE_IO_ERROR):
-            return( "PK - Read/write of file failed" );
+            error_description = "PK - Read/write of file failed";
+            break;
         case -(MBEDTLS_ERR_PK_KEY_INVALID_VERSION):
-            return( "PK - Unsupported key version" );
+            error_description = "PK - Unsupported key version";
+            break;
         case -(MBEDTLS_ERR_PK_KEY_INVALID_FORMAT):
-            return( "PK - Invalid key tag or value" );
+            error_description = "PK - Invalid key tag or value";
+            break;
         case -(MBEDTLS_ERR_PK_UNKNOWN_PK_ALG):
-            return( "PK - Key algorithm is unsupported (only RSA and EC are supported)" );
+            error_description = "PK - Key algorithm is unsupported (only RSA and EC are supported)";
+            break;
         case -(MBEDTLS_ERR_PK_PASSWORD_REQUIRED):
-            return( "PK - Private key password can't be empty" );
+            error_description = "PK - Private key password can't be empty";
+            break;
         case -(MBEDTLS_ERR_PK_PASSWORD_MISMATCH):
-            return( "PK - Given private key password does not allow for correct decryption" );
+            error_description = "PK - Given private key password does not allow for correct decryption";
+            break;
         case -(MBEDTLS_ERR_PK_INVALID_PUBKEY):
-            return( "PK - The pubkey tag or value is invalid (only RSA and EC are supported)" );
+            error_description = "PK - The pubkey tag or value is invalid (only RSA and EC are supported)";
+            break;
         case -(MBEDTLS_ERR_PK_INVALID_ALG):
-            return( "PK - The algorithm tag or value is invalid" );
+            error_description = "PK - The algorithm tag or value is invalid";
+            break;
         case -(MBEDTLS_ERR_PK_UNKNOWN_NAMED_CURVE):
-            return( "PK - Elliptic curve is unsupported (only NIST curves are supported)" );
+            error_description = "PK - Elliptic curve is unsupported (only NIST curves are supported)";
+            break;
         case -(MBEDTLS_ERR_PK_FEATURE_UNAVAILABLE):
-            return( "PK - Unavailable feature, e.g. RSA disabled for RSA key" );
+            error_description = "PK - Unavailable feature, e.g. RSA disabled for RSA key";
+            break;
         case -(MBEDTLS_ERR_PK_SIG_LEN_MISMATCH):
-            return( "PK - The buffer contains a valid signature followed by more data" );
+            error_description = "PK - The buffer contains a valid signature followed by more data";
+            break;
         case -(MBEDTLS_ERR_PK_HW_ACCEL_FAILED):
-            return( "PK - PK hardware accelerator failed" );
+            error_description = "PK - PK hardware accelerator failed";
+            break;
 #endif /* MBEDTLS_PK_C */
 
 #if defined(MBEDTLS_PKCS12_C)
         case -(MBEDTLS_ERR_PKCS12_BAD_INPUT_DATA):
-            return( "PKCS12 - Bad input parameters to function" );
+            error_description = "PKCS12 - Bad input parameters to function";
+            break;
         case -(MBEDTLS_ERR_PKCS12_FEATURE_UNAVAILABLE):
-            return( "PKCS12 - Feature not available, e.g. unsupported encryption scheme" );
+            error_description = "PKCS12 - Feature not available, e.g. unsupported encryption scheme";
+            break;
         case -(MBEDTLS_ERR_PKCS12_PBE_INVALID_FORMAT):
-            return( "PKCS12 - PBE ASN.1 data not as expected" );
+            error_description = "PKCS12 - PBE ASN.1 data not as expected";
+            break;
         case -(MBEDTLS_ERR_PKCS12_PASSWORD_MISMATCH):
-            return( "PKCS12 - Given private key password does not allow for correct decryption" );
+            error_description = "PKCS12 - Given private key password does not allow for correct decryption";
+            break;
 #endif /* MBEDTLS_PKCS12_C */
 
 #if defined(MBEDTLS_PKCS5_C)
         case -(MBEDTLS_ERR_PKCS5_BAD_INPUT_DATA):
-            return( "PKCS5 - Bad input parameters to function" );
+            error_description = "PKCS5 - Bad input parameters to function";
+            break;
         case -(MBEDTLS_ERR_PKCS5_INVALID_FORMAT):
-            return( "PKCS5 - Unexpected ASN.1 data" );
+            error_description = "PKCS5 - Unexpected ASN.1 data";
+            break;
         case -(MBEDTLS_ERR_PKCS5_FEATURE_UNAVAILABLE):
-            return( "PKCS5 - Requested encryption or digest alg not available" );
+            error_description = "PKCS5 - Requested encryption or digest alg not available";
+            break;
         case -(MBEDTLS_ERR_PKCS5_PASSWORD_MISMATCH):
-            return( "PKCS5 - Given private key password does not allow for correct decryption" );
+            error_description = "PKCS5 - Given private key password does not allow for correct decryption";
+            break;
 #endif /* MBEDTLS_PKCS5_C */
 
 #if defined(MBEDTLS_RSA_C)
         case -(MBEDTLS_ERR_RSA_BAD_INPUT_DATA):
-            return( "RSA - Bad input parameters to function" );
+            error_description = "RSA - Bad input parameters to function";
+            break;
         case -(MBEDTLS_ERR_RSA_INVALID_PADDING):
-            return( "RSA - Input data contains invalid padding and is rejected" );
+            error_description = "RSA - Input data contains invalid padding and is rejected";
+            break;
         case -(MBEDTLS_ERR_RSA_KEY_GEN_FAILED):
-            return( "RSA - Something failed during generation of a key" );
+            error_description = "RSA - Something failed during generation of a key";
+            break;
         case -(MBEDTLS_ERR_RSA_KEY_CHECK_FAILED):
-            return( "RSA - Key failed to pass the validity check of the library" );
+            error_description = "RSA - Key failed to pass the validity check of the library";
+            break;
         case -(MBEDTLS_ERR_RSA_PUBLIC_FAILED):
-            return( "RSA - The public key operation failed" );
+            error_description = "RSA - The public key operation failed";
+            break;
         case -(MBEDTLS_ERR_RSA_PRIVATE_FAILED):
-            return( "RSA - The private key operation failed" );
+            error_description = "RSA - The private key operation failed";
+            break;
         case -(MBEDTLS_ERR_RSA_VERIFY_FAILED):
-            return( "RSA - The PKCS#1 verification failed" );
+            error_description = "RSA - The PKCS#1 verification failed";
+            break;
         case -(MBEDTLS_ERR_RSA_OUTPUT_TOO_LARGE):
-            return( "RSA - The output buffer for decryption is not large enough" );
+            error_description = "RSA - The output buffer for decryption is not large enough";
+            break;
         case -(MBEDTLS_ERR_RSA_RNG_FAILED):
-            return( "RSA - The random generator failed to generate non-zeros" );
+            error_description = "RSA - The random generator failed to generate non-zeros";
+            break;
         case -(MBEDTLS_ERR_RSA_UNSUPPORTED_OPERATION):
-            return( "RSA - The implementation does not offer the requested operation, for example, because of security violations or lack of functionality" );
+            error_description = "RSA - The implementation does not offer the requested operation, for example, because of security violations or lack of functionality";
+            break;
         case -(MBEDTLS_ERR_RSA_HW_ACCEL_FAILED):
-            return( "RSA - RSA hardware accelerator failed" );
+            error_description = "RSA - RSA hardware accelerator failed";
+            break;
 #endif /* MBEDTLS_RSA_C */
 
 #if defined(MBEDTLS_SSL_TLS_C)
         case -(MBEDTLS_ERR_SSL_FEATURE_UNAVAILABLE):
-            return( "SSL - The requested feature is not available" );
+            error_description = "SSL - The requested feature is not available";
+            break;
         case -(MBEDTLS_ERR_SSL_BAD_INPUT_DATA):
-            return( "SSL - Bad input parameters to function" );
+            error_description = "SSL - Bad input parameters to function";
+            break;
         case -(MBEDTLS_ERR_SSL_INVALID_MAC):
-            return( "SSL - Verification of the message MAC failed" );
+            error_description = "SSL - Verification of the message MAC failed";
+            break;
         case -(MBEDTLS_ERR_SSL_INVALID_RECORD):
-            return( "SSL - An invalid SSL record was received" );
+            error_description = "SSL - An invalid SSL record was received";
+            break;
         case -(MBEDTLS_ERR_SSL_CONN_EOF):
-            return( "SSL - The connection indicated an EOF" );
+            error_description = "SSL - The connection indicated an EOF";
+            break;
         case -(MBEDTLS_ERR_SSL_UNKNOWN_CIPHER):
-            return( "SSL - An unknown cipher was received" );
+            error_description = "SSL - An unknown cipher was received";
+            break;
         case -(MBEDTLS_ERR_SSL_NO_CIPHER_CHOSEN):
-            return( "SSL - The server has no ciphersuites in common with the client" );
+            error_description = "SSL - The server has no ciphersuites in common with the client";
+            break;
         case -(MBEDTLS_ERR_SSL_NO_RNG):
-            return( "SSL - No RNG was provided to the SSL module" );
+            error_description = "SSL - No RNG was provided to the SSL module";
+            break;
         case -(MBEDTLS_ERR_SSL_NO_CLIENT_CERTIFICATE):
-            return( "SSL - No client certification received from the client, but required by the authentication mode" );
+            error_description = "SSL - No client certification received from the client, but required by the authentication mode";
+            break;
         case -(MBEDTLS_ERR_SSL_CERTIFICATE_TOO_LARGE):
-            return( "SSL - Our own certificate(s) is/are too large to send in an SSL message" );
+            error_description = "SSL - Our own certificate(s) is/are too large to send in an SSL message";
+            break;
         case -(MBEDTLS_ERR_SSL_CERTIFICATE_REQUIRED):
-            return( "SSL - The own certificate is not set, but needed by the server" );
+            error_description = "SSL - The own certificate is not set, but needed by the server";
+            break;
         case -(MBEDTLS_ERR_SSL_PRIVATE_KEY_REQUIRED):
-            return( "SSL - The own private key or pre-shared key is not set, but needed" );
+            error_description = "SSL - The own private key or pre-shared key is not set, but needed";
+            break;
         case -(MBEDTLS_ERR_SSL_CA_CHAIN_REQUIRED):
-            return( "SSL - No CA Chain is set, but required to operate" );
+            error_description = "SSL - No CA Chain is set, but required to operate";
+            break;
         case -(MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE):
-            return( "SSL - An unexpected message was received from our peer" );
+            error_description = "SSL - An unexpected message was received from our peer";
+            break;
         case -(MBEDTLS_ERR_SSL_FATAL_ALERT_MESSAGE):
-            return( "SSL - A fatal alert message was received from our peer" );
+            error_description = "SSL - A fatal alert message was received from our peer";
+            break;
         case -(MBEDTLS_ERR_SSL_PEER_VERIFY_FAILED):
-            return( "SSL - Verification of our peer failed" );
+            error_description = "SSL - Verification of our peer failed";
+            break;
         case -(MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY):
-            return( "SSL - The peer notified us that the connection is going to be closed" );
+            error_description = "SSL - The peer notified us that the connection is going to be closed";
+            break;
         case -(MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO):
-            return( "SSL - Processing of the ClientHello handshake message failed" );
+            error_description = "SSL - Processing of the ClientHello handshake message failed";
+            break;
         case -(MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO):
-            return( "SSL - Processing of the ServerHello handshake message failed" );
+            error_description = "SSL - Processing of the ServerHello handshake message failed";
+            break;
         case -(MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE):
-            return( "SSL - Processing of the Certificate handshake message failed" );
+            error_description = "SSL - Processing of the Certificate handshake message failed";
+            break;
         case -(MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE_REQUEST):
-            return( "SSL - Processing of the CertificateRequest handshake message failed" );
+            error_description = "SSL - Processing of the CertificateRequest handshake message failed";
+            break;
         case -(MBEDTLS_ERR_SSL_BAD_HS_SERVER_KEY_EXCHANGE):
-            return( "SSL - Processing of the ServerKeyExchange handshake message failed" );
+            error_description = "SSL - Processing of the ServerKeyExchange handshake message failed";
+            break;
         case -(MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO_DONE):
-            return( "SSL - Processing of the ServerHelloDone handshake message failed" );
+            error_description = "SSL - Processing of the ServerHelloDone handshake message failed";
+            break;
         case -(MBEDTLS_ERR_SSL_BAD_HS_CLIENT_KEY_EXCHANGE):
-            return( "SSL - Processing of the ClientKeyExchange handshake message failed" );
+            error_description = "SSL - Processing of the ClientKeyExchange handshake message failed";
+            break;
         case -(MBEDTLS_ERR_SSL_BAD_HS_CLIENT_KEY_EXCHANGE_RP):
-            return( "SSL - Processing of the ClientKeyExchange handshake message failed in DHM / ECDH Read Public" );
+            error_description = "SSL - Processing of the ClientKeyExchange handshake message failed in DHM / ECDH Read Public";
+            break;
         case -(MBEDTLS_ERR_SSL_BAD_HS_CLIENT_KEY_EXCHANGE_CS):
-            return( "SSL - Processing of the ClientKeyExchange handshake message failed in DHM / ECDH Calculate Secret" );
+            error_description = "SSL - Processing of the ClientKeyExchange handshake message failed in DHM / ECDH Calculate Secret";
+            break;
         case -(MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE_VERIFY):
-            return( "SSL - Processing of the CertificateVerify handshake message failed" );
+            error_description = "SSL - Processing of the CertificateVerify handshake message failed";
+            break;
         case -(MBEDTLS_ERR_SSL_BAD_HS_CHANGE_CIPHER_SPEC):
-            return( "SSL - Processing of the ChangeCipherSpec handshake message failed" );
+            error_description = "SSL - Processing of the ChangeCipherSpec handshake message failed";
+            break;
         case -(MBEDTLS_ERR_SSL_BAD_HS_FINISHED):
-            return( "SSL - Processing of the Finished handshake message failed" );
+            error_description = "SSL - Processing of the Finished handshake message failed";
+            break;
         case -(MBEDTLS_ERR_SSL_ALLOC_FAILED):
-            return( "SSL - Memory allocation failed" );
+            error_description = "SSL - Memory allocation failed";
+            break;
         case -(MBEDTLS_ERR_SSL_HW_ACCEL_FAILED):
-            return( "SSL - Hardware acceleration function returned with error" );
+            error_description = "SSL - Hardware acceleration function returned with error";
+            break;
         case -(MBEDTLS_ERR_SSL_HW_ACCEL_FALLTHROUGH):
-            return( "SSL - Hardware acceleration function skipped / left alone data" );
+            error_description = "SSL - Hardware acceleration function skipped / left alone data";
+            break;
         case -(MBEDTLS_ERR_SSL_COMPRESSION_FAILED):
-            return( "SSL - Processing of the compression / decompression failed" );
+            error_description = "SSL - Processing of the compression / decompression failed";
+            break;
         case -(MBEDTLS_ERR_SSL_BAD_HS_PROTOCOL_VERSION):
-            return( "SSL - Handshake protocol not within min/max boundaries" );
+            error_description = "SSL - Handshake protocol not within min/max boundaries";
+            break;
         case -(MBEDTLS_ERR_SSL_BAD_HS_NEW_SESSION_TICKET):
-            return( "SSL - Processing of the NewSessionTicket handshake message failed" );
+            error_description = "SSL - Processing of the NewSessionTicket handshake message failed";
+            break;
         case -(MBEDTLS_ERR_SSL_SESSION_TICKET_EXPIRED):
-            return( "SSL - Session ticket has expired" );
+            error_description = "SSL - Session ticket has expired";
+            break;
         case -(MBEDTLS_ERR_SSL_PK_TYPE_MISMATCH):
-            return( "SSL - Public key type mismatch (eg, asked for RSA key exchange and presented EC key)" );
+            error_description = "SSL - Public key type mismatch (eg, asked for RSA key exchange and presented EC key)";
+            break;
         case -(MBEDTLS_ERR_SSL_UNKNOWN_IDENTITY):
-            return( "SSL - Unknown identity received (eg, PSK identity)" );
+            error_description = "SSL - Unknown identity received (eg, PSK identity)";
+            break;
         case -(MBEDTLS_ERR_SSL_INTERNAL_ERROR):
-            return( "SSL - Internal error (eg, unexpected failure in lower-level module)" );
+            error_description = "SSL - Internal error (eg, unexpected failure in lower-level module)";
+            break;
         case -(MBEDTLS_ERR_SSL_COUNTER_WRAPPING):
-            return( "SSL - A counter would wrap (eg, too many messages exchanged)" );
+            error_description = "SSL - A counter would wrap (eg, too many messages exchanged)";
+            break;
         case -(MBEDTLS_ERR_SSL_WAITING_SERVER_HELLO_RENEGO):
-            return( "SSL - Unexpected message at ServerHello in renegotiation" );
+            error_description = "SSL - Unexpected message at ServerHello in renegotiation";
+            break;
         case -(MBEDTLS_ERR_SSL_HELLO_VERIFY_REQUIRED):
-            return( "SSL - DTLS client must retry for hello verification" );
+            error_description = "SSL - DTLS client must retry for hello verification";
+            break;
         case -(MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL):
-            return( "SSL - A buffer is too small to receive or write a message" );
+            error_description = "SSL - A buffer is too small to receive or write a message";
+            break;
         case -(MBEDTLS_ERR_SSL_NO_USABLE_CIPHERSUITE):
-            return( "SSL - None of the common ciphersuites is usable (eg, no suitable certificate, see debug messages)" );
+            error_description = "SSL - None of the common ciphersuites is usable (eg, no suitable certificate, see debug messages)";
+            break;
         case -(MBEDTLS_ERR_SSL_WANT_READ):
-            return( "SSL - No data of requested type currently available on underlying transport" );
+            error_description = "SSL - No data of requested type currently available on underlying transport";
+            break;
         case -(MBEDTLS_ERR_SSL_WANT_WRITE):
-            return( "SSL - Connection requires a write call" );
+            error_description = "SSL - Connection requires a write call";
+            break;
         case -(MBEDTLS_ERR_SSL_TIMEOUT):
-            return( "SSL - The operation timed out" );
+            error_description = "SSL - The operation timed out";
+            break;
         case -(MBEDTLS_ERR_SSL_CLIENT_RECONNECT):
-            return( "SSL - The client initiated a reconnect from the same port" );
+            error_description = "SSL - The client initiated a reconnect from the same port";
+            break;
         case -(MBEDTLS_ERR_SSL_UNEXPECTED_RECORD):
-            return( "SSL - Record header looks valid but is not expected" );
+            error_description = "SSL - Record header looks valid but is not expected";
+            break;
         case -(MBEDTLS_ERR_SSL_NON_FATAL):
-            return( "SSL - The alert message received indicates a non-fatal error" );
+            error_description = "SSL - The alert message received indicates a non-fatal error";
+            break;
         case -(MBEDTLS_ERR_SSL_INVALID_VERIFY_HASH):
-            return( "SSL - Couldn't set the hash for verifying CertificateVerify" );
+            error_description = "SSL - Couldn't set the hash for verifying CertificateVerify";
+            break;
         case -(MBEDTLS_ERR_SSL_CONTINUE_PROCESSING):
-            return( "SSL - Internal-only message signaling that further message-processing should be done" );
+            error_description = "SSL - Internal-only message signaling that further message-processing should be done";
+            break;
         case -(MBEDTLS_ERR_SSL_ASYNC_IN_PROGRESS):
-            return( "SSL - The asynchronous operation is not completed yet" );
+            error_description = "SSL - The asynchronous operation is not completed yet";
+            break;
         case -(MBEDTLS_ERR_SSL_EARLY_MESSAGE):
-            return( "SSL - Internal-only message signaling that a message arrived early" );
+            error_description = "SSL - Internal-only message signaling that a message arrived early";
+            break;
         case -(MBEDTLS_ERR_SSL_UNEXPECTED_CID):
-            return( "SSL - An encrypted DTLS-frame with an unexpected CID was received" );
+            error_description = "SSL - An encrypted DTLS-frame with an unexpected CID was received";
+            break;
         case -(MBEDTLS_ERR_SSL_VERSION_MISMATCH):
-            return( "SSL - An operation failed due to an unexpected version or configuration" );
+            error_description = "SSL - An operation failed due to an unexpected version or configuration";
+            break;
         case -(MBEDTLS_ERR_SSL_CRYPTO_IN_PROGRESS):
-            return( "SSL - A cryptographic operation is in progress. Try again later" );
+            error_description = "SSL - A cryptographic operation is in progress. Try again later";
+            break;
 #endif /* MBEDTLS_SSL_TLS_C */
 
 #if defined(MBEDTLS_X509_USE_C) || defined(MBEDTLS_X509_CREATE_C)
         case -(MBEDTLS_ERR_X509_FEATURE_UNAVAILABLE):
-            return( "X509 - Unavailable feature, e.g. RSA hashing/encryption combination" );
+            error_description = "X509 - Unavailable feature, e.g. RSA hashing/encryption combination";
+            break;
         case -(MBEDTLS_ERR_X509_UNKNOWN_OID):
-            return( "X509 - Requested OID is unknown" );
+            error_description = "X509 - Requested OID is unknown";
+            break;
         case -(MBEDTLS_ERR_X509_INVALID_FORMAT):
-            return( "X509 - The CRT/CRL/CSR format is invalid, e.g. different type expected" );
+            error_description = "X509 - The CRT/CRL/CSR format is invalid, e.g. different type expected";
+            break;
         case -(MBEDTLS_ERR_X509_INVALID_VERSION):
-            return( "X509 - The CRT/CRL/CSR version element is invalid" );
+            error_description = "X509 - The CRT/CRL/CSR version element is invalid";
+            break;
         case -(MBEDTLS_ERR_X509_INVALID_SERIAL):
-            return( "X509 - The serial tag or value is invalid" );
+            error_description = "X509 - The serial tag or value is invalid";
+            break;
         case -(MBEDTLS_ERR_X509_INVALID_ALG):
-            return( "X509 - The algorithm tag or value is invalid" );
+            error_description = "X509 - The algorithm tag or value is invalid";
+            break;
         case -(MBEDTLS_ERR_X509_INVALID_NAME):
-            return( "X509 - The name tag or value is invalid" );
+            error_description = "X509 - The name tag or value is invalid";
+            break;
         case -(MBEDTLS_ERR_X509_INVALID_DATE):
-            return( "X509 - The date tag or value is invalid" );
+            error_description = "X509 - The date tag or value is invalid";
+            break;
         case -(MBEDTLS_ERR_X509_INVALID_SIGNATURE):
-            return( "X509 - The signature tag or value invalid" );
+            error_description = "X509 - The signature tag or value invalid";
+            break;
         case -(MBEDTLS_ERR_X509_INVALID_EXTENSIONS):
-            return( "X509 - The extension tag or value is invalid" );
+            error_description = "X509 - The extension tag or value is invalid";
+            break;
         case -(MBEDTLS_ERR_X509_UNKNOWN_VERSION):
-            return( "X509 - CRT/CRL/CSR has an unsupported version number" );
+            error_description = "X509 - CRT/CRL/CSR has an unsupported version number";
+            break;
         case -(MBEDTLS_ERR_X509_UNKNOWN_SIG_ALG):
-            return( "X509 - Signature algorithm (oid) is unsupported" );
+            error_description = "X509 - Signature algorithm (oid) is unsupported";
+            break;
         case -(MBEDTLS_ERR_X509_SIG_MISMATCH):
-            return( "X509 - Signature algorithms do not match. (see \\c ::mbedtls_x509_crt sig_oid)" );
+            error_description = "X509 - Signature algorithms do not match. (see \\c ::mbedtls_x509_crt sig_oid)";
+            break;
         case -(MBEDTLS_ERR_X509_CERT_VERIFY_FAILED):
-            return( "X509 - Certificate verification failed, e.g. CRL, CA or signature check failed" );
+            error_description = "X509 - Certificate verification failed, e.g. CRL, CA or signature check failed";
+            break;
         case -(MBEDTLS_ERR_X509_CERT_UNKNOWN_FORMAT):
-            return( "X509 - Format not recognized as DER or PEM" );
+            error_description = "X509 - Format not recognized as DER or PEM";
+            break;
         case -(MBEDTLS_ERR_X509_BAD_INPUT_DATA):
-            return( "X509 - Input invalid" );
+            error_description = "X509 - Input invalid";
+            break;
         case -(MBEDTLS_ERR_X509_ALLOC_FAILED):
-            return( "X509 - Allocation of memory failed" );
+            error_description = "X509 - Allocation of memory failed";
+            break;
         case -(MBEDTLS_ERR_X509_FILE_IO_ERROR):
-            return( "X509 - Read/write of file failed" );
+            error_description = "X509 - Read/write of file failed";
+            break;
         case -(MBEDTLS_ERR_X509_BUFFER_TOO_SMALL):
-            return( "X509 - Destination buffer is too small" );
+            error_description = "X509 - Destination buffer is too small";
+            break;
         case -(MBEDTLS_ERR_X509_FATAL_ERROR):
-            return( "X509 - A fatal error occurred, eg the chain is too long or the vrfy callback failed" );
+            error_description = "X509 - A fatal error occurred, eg the chain is too long or the vrfy callback failed";
+            break;
 #endif /* MBEDTLS_X509_USE_C || MBEDTLS_X509_CREATE_C */
         /* End Auto-Generated Code. */
 
@@ -576,12 +727,13 @@ const char * mbedtls_high_level_strerr( int error_code )
             break;
     }
 
-    return( NULL );
+    return error_description;
 }
 
 const char * mbedtls_low_level_strerr( int error_code )
 {
     int low_level_error_code;
+    const char *error_description = NULL;
 
     if( error_code < 0 )
         error_code = -error_code;
@@ -594,299 +746,398 @@ const char * mbedtls_low_level_strerr( int error_code )
         /* Begin Auto-Generated Code. */
 #if defined(MBEDTLS_AES_C)
         case -(MBEDTLS_ERR_AES_INVALID_KEY_LENGTH):
-            return( "AES - Invalid key length" );
+            error_description = "AES - Invalid key length";
+            break;
         case -(MBEDTLS_ERR_AES_INVALID_INPUT_LENGTH):
-            return( "AES - Invalid data input length" );
+            error_description = "AES - Invalid data input length";
+            break;
         case -(MBEDTLS_ERR_AES_BAD_INPUT_DATA):
-            return( "AES - Invalid input data" );
+            error_description = "AES - Invalid input data";
+            break;
         case -(MBEDTLS_ERR_AES_FEATURE_UNAVAILABLE):
-            return( "AES - Feature not available. For example, an unsupported AES key size" );
+            error_description = "AES - Feature not available. For example, an unsupported AES key size";
+            break;
         case -(MBEDTLS_ERR_AES_HW_ACCEL_FAILED):
-            return( "AES - AES hardware accelerator failed" );
+            error_description = "AES - AES hardware accelerator failed";
+            break;
 #endif /* MBEDTLS_AES_C */
 
 #if defined(MBEDTLS_ARC4_C)
         case -(MBEDTLS_ERR_ARC4_HW_ACCEL_FAILED):
-            return( "ARC4 - ARC4 hardware accelerator failed" );
+            error_description = "ARC4 - ARC4 hardware accelerator failed";
+            break;
 #endif /* MBEDTLS_ARC4_C */
 
 #if defined(MBEDTLS_ARIA_C)
         case -(MBEDTLS_ERR_ARIA_BAD_INPUT_DATA):
-            return( "ARIA - Bad input data" );
+            error_description = "ARIA - Bad input data";
+            break;
         case -(MBEDTLS_ERR_ARIA_INVALID_INPUT_LENGTH):
-            return( "ARIA - Invalid data input length" );
+            error_description = "ARIA - Invalid data input length";
+            break;
         case -(MBEDTLS_ERR_ARIA_FEATURE_UNAVAILABLE):
-            return( "ARIA - Feature not available. For example, an unsupported ARIA key size" );
+            error_description = "ARIA - Feature not available. For example, an unsupported ARIA key size";
+            break;
         case -(MBEDTLS_ERR_ARIA_HW_ACCEL_FAILED):
-            return( "ARIA - ARIA hardware accelerator failed" );
+            error_description = "ARIA - ARIA hardware accelerator failed";
+            break;
 #endif /* MBEDTLS_ARIA_C */
 
 #if defined(MBEDTLS_ASN1_PARSE_C)
         case -(MBEDTLS_ERR_ASN1_OUT_OF_DATA):
-            return( "ASN1 - Out of data when parsing an ASN1 data structure" );
+            error_description = "ASN1 - Out of data when parsing an ASN1 data structure";
+            break;
         case -(MBEDTLS_ERR_ASN1_UNEXPECTED_TAG):
-            return( "ASN1 - ASN1 tag was of an unexpected value" );
+            error_description = "ASN1 - ASN1 tag was of an unexpected value";
+            break;
         case -(MBEDTLS_ERR_ASN1_INVALID_LENGTH):
-            return( "ASN1 - Error when trying to determine the length or invalid length" );
+            error_description = "ASN1 - Error when trying to determine the length or invalid length";
+            break;
         case -(MBEDTLS_ERR_ASN1_LENGTH_MISMATCH):
-            return( "ASN1 - Actual length differs from expected length" );
+            error_description = "ASN1 - Actual length differs from expected length";
+            break;
         case -(MBEDTLS_ERR_ASN1_INVALID_DATA):
-            return( "ASN1 - Data is invalid" );
+            error_description = "ASN1 - Data is invalid";
+            break;
         case -(MBEDTLS_ERR_ASN1_ALLOC_FAILED):
-            return( "ASN1 - Memory allocation failed" );
+            error_description = "ASN1 - Memory allocation failed";
+            break;
         case -(MBEDTLS_ERR_ASN1_BUF_TOO_SMALL):
-            return( "ASN1 - Buffer too small when writing ASN.1 data structure" );
+            error_description = "ASN1 - Buffer too small when writing ASN.1 data structure";
+            break;
 #endif /* MBEDTLS_ASN1_PARSE_C */
 
 #if defined(MBEDTLS_BASE64_C)
         case -(MBEDTLS_ERR_BASE64_BUFFER_TOO_SMALL):
-            return( "BASE64 - Output buffer too small" );
+            error_description = "BASE64 - Output buffer too small";
+            break;
         case -(MBEDTLS_ERR_BASE64_INVALID_CHARACTER):
-            return( "BASE64 - Invalid character in input" );
+            error_description = "BASE64 - Invalid character in input";
+            break;
 #endif /* MBEDTLS_BASE64_C */
 
 #if defined(MBEDTLS_BIGNUM_C)
         case -(MBEDTLS_ERR_MPI_FILE_IO_ERROR):
-            return( "BIGNUM - An error occurred while reading from or writing to a file" );
+            error_description = "BIGNUM - An error occurred while reading from or writing to a file";
+            break;
         case -(MBEDTLS_ERR_MPI_BAD_INPUT_DATA):
-            return( "BIGNUM - Bad input parameters to function" );
+            error_description = "BIGNUM - Bad input parameters to function";
+            break;
         case -(MBEDTLS_ERR_MPI_INVALID_CHARACTER):
-            return( "BIGNUM - There is an invalid character in the digit string" );
+            error_description = "BIGNUM - There is an invalid character in the digit string";
+            break;
         case -(MBEDTLS_ERR_MPI_BUFFER_TOO_SMALL):
-            return( "BIGNUM - The buffer is too small to write to" );
+            error_description = "BIGNUM - The buffer is too small to write to";
+            break;
         case -(MBEDTLS_ERR_MPI_NEGATIVE_VALUE):
-            return( "BIGNUM - The input arguments are negative or result in illegal output" );
+            error_description = "BIGNUM - The input arguments are negative or result in illegal output";
+            break;
         case -(MBEDTLS_ERR_MPI_DIVISION_BY_ZERO):
-            return( "BIGNUM - The input argument for division is zero, which is not allowed" );
+            error_description = "BIGNUM - The input argument for division is zero, which is not allowed";
+            break;
         case -(MBEDTLS_ERR_MPI_NOT_ACCEPTABLE):
-            return( "BIGNUM - The input arguments are not acceptable" );
+            error_description = "BIGNUM - The input arguments are not acceptable";
+            break;
         case -(MBEDTLS_ERR_MPI_ALLOC_FAILED):
-            return( "BIGNUM - Memory allocation failed" );
+            error_description = "BIGNUM - Memory allocation failed";
+            break;
 #endif /* MBEDTLS_BIGNUM_C */
 
 #if defined(MBEDTLS_BLOWFISH_C)
         case -(MBEDTLS_ERR_BLOWFISH_BAD_INPUT_DATA):
-            return( "BLOWFISH - Bad input data" );
+            error_description = "BLOWFISH - Bad input data";
+            break;
         case -(MBEDTLS_ERR_BLOWFISH_INVALID_INPUT_LENGTH):
-            return( "BLOWFISH - Invalid data input length" );
+            error_description = "BLOWFISH - Invalid data input length";
+            break;
         case -(MBEDTLS_ERR_BLOWFISH_HW_ACCEL_FAILED):
-            return( "BLOWFISH - Blowfish hardware accelerator failed" );
+            error_description = "BLOWFISH - Blowfish hardware accelerator failed";
+            break;
 #endif /* MBEDTLS_BLOWFISH_C */
 
 #if defined(MBEDTLS_CAMELLIA_C)
         case -(MBEDTLS_ERR_CAMELLIA_BAD_INPUT_DATA):
-            return( "CAMELLIA - Bad input data" );
+            error_description = "CAMELLIA - Bad input data";
+            break;
         case -(MBEDTLS_ERR_CAMELLIA_INVALID_INPUT_LENGTH):
-            return( "CAMELLIA - Invalid data input length" );
+            error_description = "CAMELLIA - Invalid data input length";
+            break;
         case -(MBEDTLS_ERR_CAMELLIA_HW_ACCEL_FAILED):
-            return( "CAMELLIA - Camellia hardware accelerator failed" );
+            error_description = "CAMELLIA - Camellia hardware accelerator failed";
+            break;
 #endif /* MBEDTLS_CAMELLIA_C */
 
 #if defined(MBEDTLS_CCM_C)
         case -(MBEDTLS_ERR_CCM_BAD_INPUT):
-            return( "CCM - Bad input parameters to the function" );
+            error_description = "CCM - Bad input parameters to the function";
+            break;
         case -(MBEDTLS_ERR_CCM_AUTH_FAILED):
-            return( "CCM - Authenticated decryption failed" );
+            error_description = "CCM - Authenticated decryption failed";
+            break;
         case -(MBEDTLS_ERR_CCM_HW_ACCEL_FAILED):
-            return( "CCM - CCM hardware accelerator failed" );
+            error_description = "CCM - CCM hardware accelerator failed";
+            break;
 #endif /* MBEDTLS_CCM_C */
 
 #if defined(MBEDTLS_CHACHA20_C)
         case -(MBEDTLS_ERR_CHACHA20_BAD_INPUT_DATA):
-            return( "CHACHA20 - Invalid input parameter(s)" );
+            error_description = "CHACHA20 - Invalid input parameter(s)";
+            break;
         case -(MBEDTLS_ERR_CHACHA20_FEATURE_UNAVAILABLE):
-            return( "CHACHA20 - Feature not available. For example, s part of the API is not implemented" );
+            error_description = "CHACHA20 - Feature not available. For example, s part of the API is not implemented";
+            break;
         case -(MBEDTLS_ERR_CHACHA20_HW_ACCEL_FAILED):
-            return( "CHACHA20 - Chacha20 hardware accelerator failed" );
+            error_description = "CHACHA20 - Chacha20 hardware accelerator failed";
+            break;
 #endif /* MBEDTLS_CHACHA20_C */
 
 #if defined(MBEDTLS_CHACHAPOLY_C)
         case -(MBEDTLS_ERR_CHACHAPOLY_BAD_STATE):
-            return( "CHACHAPOLY - The requested operation is not permitted in the current state" );
+            error_description = "CHACHAPOLY - The requested operation is not permitted in the current state";
+            break;
         case -(MBEDTLS_ERR_CHACHAPOLY_AUTH_FAILED):
-            return( "CHACHAPOLY - Authenticated decryption failed: data was not authentic" );
+            error_description = "CHACHAPOLY - Authenticated decryption failed: data was not authentic";
+            break;
 #endif /* MBEDTLS_CHACHAPOLY_C */
 
 #if defined(MBEDTLS_CMAC_C)
         case -(MBEDTLS_ERR_CMAC_HW_ACCEL_FAILED):
-            return( "CMAC - CMAC hardware accelerator failed" );
+            error_description = "CMAC - CMAC hardware accelerator failed";
+            break;
 #endif /* MBEDTLS_CMAC_C */
 
 #if defined(MBEDTLS_CTR_DRBG_C)
         case -(MBEDTLS_ERR_CTR_DRBG_ENTROPY_SOURCE_FAILED):
-            return( "CTR_DRBG - The entropy source failed" );
+            error_description = "CTR_DRBG - The entropy source failed";
+            break;
         case -(MBEDTLS_ERR_CTR_DRBG_REQUEST_TOO_BIG):
-            return( "CTR_DRBG - The requested random buffer length is too big" );
+            error_description = "CTR_DRBG - The requested random buffer length is too big";
+            break;
         case -(MBEDTLS_ERR_CTR_DRBG_INPUT_TOO_BIG):
-            return( "CTR_DRBG - The input (entropy + additional data) is too large" );
+            error_description = "CTR_DRBG - The input (entropy + additional data) is too large";
+            break;
         case -(MBEDTLS_ERR_CTR_DRBG_FILE_IO_ERROR):
-            return( "CTR_DRBG - Read or write error in file" );
+            error_description = "CTR_DRBG - Read or write error in file";
+            break;
 #endif /* MBEDTLS_CTR_DRBG_C */
 
 #if defined(MBEDTLS_DES_C)
         case -(MBEDTLS_ERR_DES_INVALID_INPUT_LENGTH):
-            return( "DES - The data input has an invalid length" );
+            error_description = "DES - The data input has an invalid length";
+            break;
         case -(MBEDTLS_ERR_DES_HW_ACCEL_FAILED):
-            return( "DES - DES hardware accelerator failed" );
+            error_description = "DES - DES hardware accelerator failed";
+            break;
 #endif /* MBEDTLS_DES_C */
 
 #if defined(MBEDTLS_ENTROPY_C)
         case -(MBEDTLS_ERR_ENTROPY_SOURCE_FAILED):
-            return( "ENTROPY - Critical entropy source failure" );
+            error_description = "ENTROPY - Critical entropy source failure";
+            break;
         case -(MBEDTLS_ERR_ENTROPY_MAX_SOURCES):
-            return( "ENTROPY - No more sources can be added" );
+            error_description = "ENTROPY - No more sources can be added";
+            break;
         case -(MBEDTLS_ERR_ENTROPY_NO_SOURCES_DEFINED):
-            return( "ENTROPY - No sources have been added to poll" );
+            error_description = "ENTROPY - No sources have been added to poll";
+            break;
         case -(MBEDTLS_ERR_ENTROPY_NO_STRONG_SOURCE):
-            return( "ENTROPY - No strong sources have been added to poll" );
+            error_description = "ENTROPY - No strong sources have been added to poll";
+            break;
         case -(MBEDTLS_ERR_ENTROPY_FILE_IO_ERROR):
-            return( "ENTROPY - Read/write error in file" );
+            error_description = "ENTROPY - Read/write error in file";
+            break;
 #endif /* MBEDTLS_ENTROPY_C */
 
 #if defined(MBEDTLS_ERROR_C)
         case -(MBEDTLS_ERR_ERROR_GENERIC_ERROR):
-            return( "ERROR - Generic error" );
+            error_description = "ERROR - Generic error";
+            break;
         case -(MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED):
-            return( "ERROR - This is a bug in the library" );
+            error_description = "ERROR - This is a bug in the library";
+            break;
 #endif /* MBEDTLS_ERROR_C */
 
 #if defined(MBEDTLS_GCM_C)
         case -(MBEDTLS_ERR_GCM_AUTH_FAILED):
-            return( "GCM - Authenticated decryption failed" );
+            error_description = "GCM - Authenticated decryption failed";
+            break;
         case -(MBEDTLS_ERR_GCM_HW_ACCEL_FAILED):
-            return( "GCM - GCM hardware accelerator failed" );
+            error_description = "GCM - GCM hardware accelerator failed";
+            break;
         case -(MBEDTLS_ERR_GCM_BAD_INPUT):
-            return( "GCM - Bad input parameters to function" );
+            error_description = "GCM - Bad input parameters to function";
+            break;
 #endif /* MBEDTLS_GCM_C */
 
 #if defined(MBEDTLS_HKDF_C)
         case -(MBEDTLS_ERR_HKDF_BAD_INPUT_DATA):
-            return( "HKDF - Bad input parameters to function" );
+            error_description = "HKDF - Bad input parameters to function";
+            break;
 #endif /* MBEDTLS_HKDF_C */
 
 #if defined(MBEDTLS_HMAC_DRBG_C)
         case -(MBEDTLS_ERR_HMAC_DRBG_REQUEST_TOO_BIG):
-            return( "HMAC_DRBG - Too many random requested in single call" );
+            error_description = "HMAC_DRBG - Too many random requested in single call";
+            break;
         case -(MBEDTLS_ERR_HMAC_DRBG_INPUT_TOO_BIG):
-            return( "HMAC_DRBG - Input too large (Entropy + additional)" );
+            error_description = "HMAC_DRBG - Input too large (Entropy + additional)";
+            break;
         case -(MBEDTLS_ERR_HMAC_DRBG_FILE_IO_ERROR):
-            return( "HMAC_DRBG - Read/write error in file" );
+            error_description = "HMAC_DRBG - Read/write error in file";
+            break;
         case -(MBEDTLS_ERR_HMAC_DRBG_ENTROPY_SOURCE_FAILED):
-            return( "HMAC_DRBG - The entropy source failed" );
+            error_description = "HMAC_DRBG - The entropy source failed";
+            break;
 #endif /* MBEDTLS_HMAC_DRBG_C */
 
 #if defined(MBEDTLS_MD2_C)
         case -(MBEDTLS_ERR_MD2_HW_ACCEL_FAILED):
-            return( "MD2 - MD2 hardware accelerator failed" );
+            error_description = "MD2 - MD2 hardware accelerator failed";
+            break;
 #endif /* MBEDTLS_MD2_C */
 
 #if defined(MBEDTLS_MD4_C)
         case -(MBEDTLS_ERR_MD4_HW_ACCEL_FAILED):
-            return( "MD4 - MD4 hardware accelerator failed" );
+            error_description = "MD4 - MD4 hardware accelerator failed";
+            break;
 #endif /* MBEDTLS_MD4_C */
 
 #if defined(MBEDTLS_MD5_C)
         case -(MBEDTLS_ERR_MD5_HW_ACCEL_FAILED):
-            return( "MD5 - MD5 hardware accelerator failed" );
+            error_description = "MD5 - MD5 hardware accelerator failed";
+            break;
 #endif /* MBEDTLS_MD5_C */
 
 #if defined(MBEDTLS_NET_C)
         case -(MBEDTLS_ERR_NET_SOCKET_FAILED):
-            return( "NET - Failed to open a socket" );
+            error_description = "NET - Failed to open a socket";
+            break;
         case -(MBEDTLS_ERR_NET_CONNECT_FAILED):
-            return( "NET - The connection to the given server / port failed" );
+            error_description = "NET - The connection to the given server / port failed";
+            break;
         case -(MBEDTLS_ERR_NET_BIND_FAILED):
-            return( "NET - Binding of the socket failed" );
+            error_description = "NET - Binding of the socket failed";
+            break;
         case -(MBEDTLS_ERR_NET_LISTEN_FAILED):
-            return( "NET - Could not listen on the socket" );
+            error_description = "NET - Could not listen on the socket";
+            break;
         case -(MBEDTLS_ERR_NET_ACCEPT_FAILED):
-            return( "NET - Could not accept the incoming connection" );
+            error_description = "NET - Could not accept the incoming connection";
+            break;
         case -(MBEDTLS_ERR_NET_RECV_FAILED):
-            return( "NET - Reading information from the socket failed" );
+            error_description = "NET - Reading information from the socket failed";
+            break;
         case -(MBEDTLS_ERR_NET_SEND_FAILED):
-            return( "NET - Sending information through the socket failed" );
+            error_description = "NET - Sending information through the socket failed";
+            break;
         case -(MBEDTLS_ERR_NET_CONN_RESET):
-            return( "NET - Connection was reset by peer" );
+            error_description = "NET - Connection was reset by peer";
+            break;
         case -(MBEDTLS_ERR_NET_UNKNOWN_HOST):
-            return( "NET - Failed to get an IP address for the given hostname" );
+            error_description = "NET - Failed to get an IP address for the given hostname";
+            break;
         case -(MBEDTLS_ERR_NET_BUFFER_TOO_SMALL):
-            return( "NET - Buffer is too small to hold the data" );
+            error_description = "NET - Buffer is too small to hold the data";
+            break;
         case -(MBEDTLS_ERR_NET_INVALID_CONTEXT):
-            return( "NET - The context is invalid, eg because it was free()ed" );
+            error_description = "NET - The context is invalid, eg because it was free()ed";
+            break;
         case -(MBEDTLS_ERR_NET_POLL_FAILED):
-            return( "NET - Polling the net context failed" );
+            error_description = "NET - Polling the net context failed";
+            break;
         case -(MBEDTLS_ERR_NET_BAD_INPUT_DATA):
-            return( "NET - Input invalid" );
+            error_description = "NET - Input invalid";
+            break;
 #endif /* MBEDTLS_NET_C */
 
 #if defined(MBEDTLS_OID_C)
         case -(MBEDTLS_ERR_OID_NOT_FOUND):
-            return( "OID - OID is not found" );
+            error_description = "OID - OID is not found";
+            break;
         case -(MBEDTLS_ERR_OID_BUF_TOO_SMALL):
-            return( "OID - output buffer is too small" );
+            error_description = "OID - output buffer is too small";
+            break;
 #endif /* MBEDTLS_OID_C */
 
 #if defined(MBEDTLS_PADLOCK_C)
         case -(MBEDTLS_ERR_PADLOCK_DATA_MISALIGNED):
-            return( "PADLOCK - Input data should be aligned" );
+            error_description = "PADLOCK - Input data should be aligned";
+            break;
 #endif /* MBEDTLS_PADLOCK_C */
 
 #if defined(MBEDTLS_PLATFORM_C)
         case -(MBEDTLS_ERR_PLATFORM_HW_ACCEL_FAILED):
-            return( "PLATFORM - Hardware accelerator failed" );
+            error_description = "PLATFORM - Hardware accelerator failed";
+            break;
         case -(MBEDTLS_ERR_PLATFORM_FEATURE_UNSUPPORTED):
-            return( "PLATFORM - The requested feature is not supported by the platform" );
+            error_description = "PLATFORM - The requested feature is not supported by the platform";
+            break;
 #endif /* MBEDTLS_PLATFORM_C */
 
 #if defined(MBEDTLS_POLY1305_C)
         case -(MBEDTLS_ERR_POLY1305_BAD_INPUT_DATA):
-            return( "POLY1305 - Invalid input parameter(s)" );
+            error_description = "POLY1305 - Invalid input parameter(s)";
+            break;
         case -(MBEDTLS_ERR_POLY1305_FEATURE_UNAVAILABLE):
-            return( "POLY1305 - Feature not available. For example, s part of the API is not implemented" );
+            error_description = "POLY1305 - Feature not available. For example, s part of the API is not implemented";
+            break;
         case -(MBEDTLS_ERR_POLY1305_HW_ACCEL_FAILED):
-            return( "POLY1305 - Poly1305 hardware accelerator failed" );
+            error_description = "POLY1305 - Poly1305 hardware accelerator failed";
+            break;
 #endif /* MBEDTLS_POLY1305_C */
 
 #if defined(MBEDTLS_RIPEMD160_C)
         case -(MBEDTLS_ERR_RIPEMD160_HW_ACCEL_FAILED):
-            return( "RIPEMD160 - RIPEMD160 hardware accelerator failed" );
+            error_description = "RIPEMD160 - RIPEMD160 hardware accelerator failed";
+            break;
 #endif /* MBEDTLS_RIPEMD160_C */
 
 #if defined(MBEDTLS_SHA1_C)
         case -(MBEDTLS_ERR_SHA1_HW_ACCEL_FAILED):
-            return( "SHA1 - SHA-1 hardware accelerator failed" );
+            error_description = "SHA1 - SHA-1 hardware accelerator failed";
+            break;
         case -(MBEDTLS_ERR_SHA1_BAD_INPUT_DATA):
-            return( "SHA1 - SHA-1 input data was malformed" );
+            error_description = "SHA1 - SHA-1 input data was malformed";
+            break;
 #endif /* MBEDTLS_SHA1_C */
 
 #if defined(MBEDTLS_SHA256_C)
         case -(MBEDTLS_ERR_SHA256_HW_ACCEL_FAILED):
-            return( "SHA256 - SHA-256 hardware accelerator failed" );
+            error_description = "SHA256 - SHA-256 hardware accelerator failed";
+            break;
         case -(MBEDTLS_ERR_SHA256_BAD_INPUT_DATA):
-            return( "SHA256 - SHA-256 input data was malformed" );
+            error_description = "SHA256 - SHA-256 input data was malformed";
+            break;
 #endif /* MBEDTLS_SHA256_C */
 
 #if defined(MBEDTLS_SHA512_C)
         case -(MBEDTLS_ERR_SHA512_HW_ACCEL_FAILED):
-            return( "SHA512 - SHA-512 hardware accelerator failed" );
+            error_description = "SHA512 - SHA-512 hardware accelerator failed";
+            break;
         case -(MBEDTLS_ERR_SHA512_BAD_INPUT_DATA):
-            return( "SHA512 - SHA-512 input data was malformed" );
+            error_description = "SHA512 - SHA-512 input data was malformed";
+            break;
 #endif /* MBEDTLS_SHA512_C */
 
 #if defined(MBEDTLS_THREADING_C)
         case -(MBEDTLS_ERR_THREADING_FEATURE_UNAVAILABLE):
-            return( "THREADING - The selected feature is not available" );
+            error_description = "THREADING - The selected feature is not available";
+            break;
         case -(MBEDTLS_ERR_THREADING_BAD_INPUT_DATA):
-            return( "THREADING - Bad input parameters to function" );
+            error_description = "THREADING - Bad input parameters to function";
+            break;
         case -(MBEDTLS_ERR_THREADING_MUTEX_ERROR):
-            return( "THREADING - Locking / unlocking / free failed with error code" );
+            error_description = "THREADING - Locking / unlocking / free failed with error code";
+            break;
 #endif /* MBEDTLS_THREADING_C */
 
 #if defined(MBEDTLS_XTEA_C)
         case -(MBEDTLS_ERR_XTEA_INVALID_INPUT_LENGTH):
-            return( "XTEA - The data input has an invalid length" );
+            error_description = "XTEA - The data input has an invalid length";
+            break;
         case -(MBEDTLS_ERR_XTEA_HW_ACCEL_FAILED):
-            return( "XTEA - XTEA hardware accelerator failed" );
+            error_description = "XTEA - XTEA hardware accelerator failed";
+            break;
 #endif /* MBEDTLS_XTEA_C */
         /* End Auto-Generated Code. */
 
@@ -894,7 +1145,7 @@ const char * mbedtls_low_level_strerr( int error_code )
             break;
     }
 
-    return( NULL );
+    return error_description;
 }
 
 void mbedtls_strerror( int ret, char *buf, size_t buflen )
