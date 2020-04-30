@@ -64,7 +64,8 @@ int main( void )
 int main( int argc, char *argv[] )
 {
     FILE *f;
-    int ret = 1, c;
+    int ret = 1;
+    unsigned c;
     int exit_code = MBEDTLS_EXIT_FAILURE;
     size_t i, olen = 0;
     mbedtls_pk_context pk;
@@ -100,7 +101,7 @@ int main( int argc, char *argv[] )
                                        strlen( pers ) ) ) != 0 )
     {
         mbedtls_printf( " failed\n  ! mbedtls_ctr_drbg_seed returned -0x%04x\n",
-                        (unsigned int) -ret );
+                        -ret );
         goto exit;
     }
 
@@ -109,7 +110,7 @@ int main( int argc, char *argv[] )
 
     if( ( ret = mbedtls_pk_parse_keyfile( &pk, argv[1], "" ) ) != 0 )
     {
-        mbedtls_printf( " failed\n  ! mbedtls_pk_parse_keyfile returned -0x%04x\n", (unsigned int) -ret );
+        mbedtls_printf( " failed\n  ! mbedtls_pk_parse_keyfile returned -0x%04x\n", -ret );
         goto exit;
     }
 
@@ -124,7 +125,7 @@ int main( int argc, char *argv[] )
     }
 
     i = 0;
-    while( fscanf( f, "%02X", (unsigned int*) &c ) > 0 &&
+    while( fscanf( f, "%02X", &c ) > 0 &&
            i < (int) sizeof( buf ) )
     {
         buf[i++] = (unsigned char) c;
@@ -142,7 +143,7 @@ int main( int argc, char *argv[] )
                             mbedtls_ctr_drbg_random, &ctr_drbg ) ) != 0 )
     {
         mbedtls_printf( " failed\n  ! mbedtls_pk_decrypt returned -0x%04x\n",
-                        (unsigned int) -ret );
+                        -ret );
         goto exit;
     }
 
