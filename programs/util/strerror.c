@@ -29,9 +29,7 @@
 #include "mbedtls/platform.h"
 #else
 #include <stdio.h>
-#include <stdlib.h>
 #define mbedtls_printf     printf
-#define mbedtls_exit       exit
 #endif
 
 #if defined(MBEDTLS_ERROR_C) || defined(MBEDTLS_ERROR_STRERROR_DUMMY)
@@ -50,7 +48,7 @@
 int main( void )
 {
     mbedtls_printf("MBEDTLS_ERROR_C and/or MBEDTLS_ERROR_STRERROR_DUMMY not defined.\n");
-    mbedtls_exit( 0 );
+    return( 0 );
 }
 #else
 int main( int argc, char *argv[] )
@@ -61,7 +59,7 @@ int main( int argc, char *argv[] )
     if( argc != 2 )
     {
         mbedtls_printf( USAGE );
-        mbedtls_exit( 0 );
+        return( 0 );
     }
 
     val = strtol( argv[1], &end, 10 );
@@ -89,6 +87,6 @@ int main( int argc, char *argv[] )
     fflush( stdout ); getchar();
 #endif
 
-    mbedtls_exit( val );
+    return( val );
 }
 #endif /* MBEDTLS_ERROR_C */

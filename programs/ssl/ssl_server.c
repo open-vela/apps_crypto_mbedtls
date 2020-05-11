@@ -52,7 +52,7 @@ int main( void )
            "MBEDTLS_NET_C and/or MBEDTLS_RSA_C and/or "
            "MBEDTLS_CTR_DRBG_C and/or MBEDTLS_X509_CRT_PARSE_C "
            "and/or MBEDTLS_PEM_PARSE_C not defined.\n");
-    mbedtls_exit( 0 );
+    return( 0 );
 }
 #else
 
@@ -397,7 +397,7 @@ exit:
     fflush( stdout ); getchar();
 #endif
 
-    mbedtls_exit( ret );
+    return( ret );
 }
 #endif /* MBEDTLS_BIGNUM_C && MBEDTLS_CERTS_C && MBEDTLS_ENTROPY_C &&
           MBEDTLS_SSL_TLS_C && MBEDTLS_SSL_SRV_C && MBEDTLS_NET_C &&
