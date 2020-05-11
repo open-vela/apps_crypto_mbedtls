@@ -45,7 +45,7 @@ int main( void )
     mbedtls_printf("MBEDTLS_BIGNUM_C and/or MBEDTLS_MD_C and/or "
            "MBEDTLS_SHA256_C and/or MBEDTLS_PK_PARSE_C and/or "
            "MBEDTLS_FS_IO not defined.\n");
-    mbedtls_exit( 0 );
+    return( 0 );
 }
 #else
 
@@ -65,7 +65,7 @@ int main( int argc, char *argv[] )
     size_t i;
     mbedtls_pk_context pk;
     unsigned char hash[32];
-    unsigned char buf[MBEDTLS_MPI_MAX_SIZE];
+    unsigned char buf[MBEDTLS_PK_SIGNATURE_MAX_SIZE];
     char filename[512];
 
     mbedtls_pk_init( &pk );
@@ -147,7 +147,7 @@ exit:
     fflush( stdout ); getchar();
 #endif
 
-    mbedtls_exit( exit_code );
+    return( exit_code );
 }
 #endif /* MBEDTLS_BIGNUM_C && MBEDTLS_SHA256_C &&
           MBEDTLS_PK_PARSE_C && MBEDTLS_FS_IO */
