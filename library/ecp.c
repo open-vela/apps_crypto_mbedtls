@@ -1544,10 +1544,7 @@ static int ecp_randomize_jac( const mbedtls_ecp_group *grp, mbedtls_ecp_point *p
             MBEDTLS_MPI_CHK( mbedtls_mpi_shift_r( &l, 1 ) );
 
         if( count++ > 10 )
-        {
-            ret = MBEDTLS_ERR_ECP_RANDOM_FAILED;
-            goto cleanup;
-        }
+            return( MBEDTLS_ERR_ECP_RANDOM_FAILED );
     }
     while( mbedtls_mpi_cmp_int( &l, 1 ) <= 0 );
 
@@ -2281,10 +2278,7 @@ static int ecp_randomize_mxz( const mbedtls_ecp_group *grp, mbedtls_ecp_point *P
             MBEDTLS_MPI_CHK( mbedtls_mpi_shift_r( &l, 1 ) );
 
         if( count++ > 10 )
-        {
-            ret = MBEDTLS_ERR_ECP_RANDOM_FAILED;
-            goto cleanup;
-        }
+            return( MBEDTLS_ERR_ECP_RANDOM_FAILED );
     }
     while( mbedtls_mpi_cmp_int( &l, 1 ) <= 0 );
 
