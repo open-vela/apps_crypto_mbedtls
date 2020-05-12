@@ -1520,8 +1520,8 @@
 
 /** \def MBEDTLS_SSL_EXTENDED_MASTER_SECRET
  *
- * Enable support for Extended Master Secret, aka Session Hash
- * (draft-ietf-tls-session-hash-02).
+ * Enable support for RFC 7627: Session Hash and Extended Master Secret
+ * Extension.
  *
  * This was introduced as "the proper fix" to the Triple Handshake familiy of
  * attacks, but it is recommended to always use it (even if you disable
@@ -1539,7 +1539,8 @@
 /**
  * \def MBEDTLS_SSL_FALLBACK_SCSV
  *
- * Enable support for FALLBACK_SCSV (draft-ietf-tls-downgrade-scsv-00).
+ * Enable support for RFC 7507: Fallback Signaling Cipher Suite Value (SCSV)
+ * for Preventing Protocol Downgrade Attacks.
  *
  * For servers, it is recommended to always enable this, unless you support
  * only one version of TLS, or know for sure that none of your clients
@@ -1863,26 +1864,6 @@
  * Enable modifying the maximum I/O buffer size.
  */
 //#define MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH
-
-/**
- * \def MBEDTLS_TEST_HOOKS
- *
- * Enable features for invasive testing such as introspection functions and
- * hooks for fault injection. This enables additional unit tests.
- *
- * Merely enabling this feature should not change the behavior of the product.
- * It only adds new code, and new branching points where the default behavior
- * is the same as when this feature is disabled.
- * However, this feature increases the attack surface: there is an added
- * risk of vulnerabilities, and more gadgets that can make exploits easier.
- * Therefore this feature must never be enabled in production.
- *
- * See `docs/architecture/testing/mbed-crypto-invasive-testing.md` for more
- * information.
- *
- * Uncomment to enable invasive tests.
- */
-//#define MBEDTLS_TEST_HOOKS
 
 /**
  * \def MBEDTLS_THREADING_ALT
