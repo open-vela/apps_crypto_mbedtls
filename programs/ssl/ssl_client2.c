@@ -50,7 +50,7 @@ int main( void )
     mbedtls_printf("MBEDTLS_ENTROPY_C and/or "
            "MBEDTLS_SSL_TLS_C and/or MBEDTLS_SSL_CLI_C and/or "
            "MBEDTLS_NET_C and/or MBEDTLS_CTR_DRBG_C and/or not defined.\n");
-    return( 0 );
+    mbedtls_exit( 0 );
 }
 #else
 
@@ -67,6 +67,7 @@ int main( void )
 #include "mbedtls/error.h"
 #include "mbedtls/debug.h"
 #include "mbedtls/timing.h"
+#include "mbedtls/base64.h"
 
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
 #include "psa/crypto.h"
@@ -139,6 +140,7 @@ int main( void )
 #define DFL_EXTENDED_MS         -1
 #define DFL_ETM                 -1
 #define DFL_SERIALIZE           0
+#define DFL_CONTEXT_FILE        ""
 #define DFL_EXTENDED_MS_ENFORCE -1
 #define DFL_CA_CALLBACK         0
 #define DFL_EAP_TLS             0
@@ -363,14 +365,21 @@ int main( void )
 
 #if defined(MBEDTLS_SSL_CONTEXT_SERIALIZATION)
 #define USAGE_SERIALIZATION \
-    "    serialize=%%d        default: 0 (do not serialize/deserialize)\n" \
-    "                        options: 1 (serialize)\n"                    \
-    "                                 2 (serialize with re-initialization)\n"
+    "    serialize=%%d        default: 0 (do not serialize/deserialize)\n"     \
+    "                        options: 1 (serialize)\n"                         \
+    "                                 2 (serialize with re-initialization)\n"  \
+    "    context_file=%%s     The file path to write a serialized connection\n"\
+    "                        in the form of base64 code (serialize option\n"   \
+    "                        must be set)\n"                                   \
+    "                         default: \"\" (do nothing)\n"                    \
+    "                         option: a file path\n"
 #else
 #define USAGE_SERIALIZATION ""
 #endif
 
-#define USAGE \
+/* USAGE is arbitrarily split to stay under the portable string literal
+ * length limit: 4095 bytes in C99. */
+#define USAGE1 \
     "\n usage: ssl_client2 param=<>...\n"                   \
     "\n acceptable parameters:\n"                           \
     "    server_name=%%s      default: localhost\n"         \
@@ -394,7 +403,8 @@ int main( void )
     "\n"                                                    \
     USAGE_DTLS                                              \
     USAGE_CID                                               \
-    "\n"                                                    \
+    "\n"
+#define USAGE2 \
     "    auth_mode=%%s        default: (library default: none)\n" \
     "                        options: none, optional, required\n" \
     USAGE_IO                                                \
@@ -404,7 +414,8 @@ int main( void )
     USAGE_PSK                                               \
     USAGE_ECJPAKE                                           \
     USAGE_ECRESTART                                         \
-    "\n"                                                    \
+    "\n"
+#define USAGE3 \
     "    allow_legacy=%%d     default: (library default: no)\n"   \
     USAGE_RENEGO                                            \
     "    exchanges=%%d        default: 1\n"                 \
@@ -427,7 +438,8 @@ int main( void )
     USAGE_CURVES                                            \
     USAGE_RECSPLIT                                          \
     USAGE_DHMLEN                                            \
-    "\n"                                                    \
+    "\n"
+#define USAGE4 \
     "    arc4=%%d             default: (library default: 0)\n" \
     "    allow_sha1=%%d       default: 0\n"                             \
     "    min_version=%%s      default: (library default: tls1)\n"       \
@@ -516,6 +528,9 @@ struct options
                                  * during renegotiation                     */
     const char *cid_val;        /* the CID to use for incoming messages     */
     int serialize;              /* serialize/deserialize connection         */
+    const char *context_file;   /* the file to write a serialized connection
+                                 * in the form of base64 code (serialize
+                                 * option must be set)                      */
     const char *cid_val_renego; /* the CID to use for incoming messages
                                  * after renegotiation                      */
     int reproducible;           /* make communication reproducible          */
@@ -823,7 +838,7 @@ static int ssl_check_record( mbedtls_ssl_context const *ssl,
                 break;
 
             default:
-                mbedtls_printf( "mbedtls_ssl_check_record() failed fatally with -%#04x.\n", -ret );
+                mbedtls_printf( "mbedtls_ssl_check_record() failed fatally with -%#04x.\n", (unsigned int) -ret );
                 return( -1 );
         }
 
@@ -1067,7 +1082,7 @@ int report_cid_usage( mbedtls_ssl_context *ssl,
     if( ret != 0 )
     {
         mbedtls_printf( " failed\n  ! mbedtls_ssl_get_peer_cid returned -0x%x\n\n",
-                        -ret );
+                        (unsigned int) -ret );
         return( ret );
     }
 
@@ -1091,7 +1106,7 @@ int report_cid_usage( mbedtls_ssl_context *ssl,
         if( ret != 0 )
         {
             mbedtls_printf( " failed\n  ! mbedtls_ssl_get_peer_cid returned -0x%x\n\n",
-                            -ret );
+                            (unsigned int) -ret );
             return( ret );
         }
 
@@ -1101,7 +1116,7 @@ int report_cid_usage( mbedtls_ssl_context *ssl,
         if( ret != 0 )
         {
             mbedtls_printf( " failed\n  ! mbedtls_ssl_get_peer_cid returned -0x%x\n\n",
-                            -ret );
+                            (unsigned int) -ret );
             return( ret );
         }
         mbedtls_printf( "(%s) Peer CID (length %u Bytes): ",
@@ -1234,7 +1249,10 @@ int main( int argc, char *argv[] )
         if( ret == 0 )
             ret = 1;
 
-        mbedtls_printf( USAGE );
+        mbedtls_printf( USAGE1 );
+        mbedtls_printf( USAGE2 );
+        mbedtls_printf( USAGE3 );
+        mbedtls_printf( USAGE4 );
 
         list = mbedtls_ssl_list_ciphersuites();
         while( *list )
@@ -1310,6 +1328,7 @@ int main( int argc, char *argv[] )
     opt.etm                 = DFL_ETM;
     opt.dgram_packing       = DFL_DGRAM_PACKING;
     opt.serialize           = DFL_SERIALIZE;
+    opt.context_file        = DFL_CONTEXT_FILE;
     opt.eap_tls             = DFL_EAP_TLS;
     opt.reproducible        = DFL_REPRODUCIBLE;
     opt.nss_keylog          = DFL_NSS_KEYLOG;
@@ -1699,13 +1718,17 @@ int main( int argc, char *argv[] )
         }
         else if( strcmp( p, "query_config" ) == 0 )
         {
-            return query_config( q );
+            mbedtls_exit( query_config( q ) );
         }
         else if( strcmp( p, "serialize") == 0 )
         {
             opt.serialize = atoi( q );
             if( opt.serialize < 0 || opt.serialize > 2)
                 goto usage;
+        }
+        else if( strcmp( p, "context_file") == 0 )
+        {
+            opt.context_file = q;
         }
         else if( strcmp( p, "eap_tls" ) == 0 )
         {
@@ -1998,7 +2021,7 @@ int main( int argc, char *argv[] )
                                            strlen( pers ) ) ) != 0 )
         {
             mbedtls_printf( " failed\n  ! mbedtls_ctr_drbg_seed returned -0x%x\n",
-                            -ret );
+                            (unsigned int) -ret );
             goto exit;
         }
     }
@@ -2009,7 +2032,7 @@ int main( int argc, char *argv[] )
                                            strlen( pers ) ) ) != 0 )
         {
             mbedtls_printf( " failed\n  ! mbedtls_ctr_drbg_seed returned -0x%x\n",
-                            -ret );
+                            (unsigned int) -ret );
             goto exit;
         }
     }
@@ -2067,7 +2090,7 @@ int main( int argc, char *argv[] )
     if( ret < 0 )
     {
         mbedtls_printf( " failed\n  !  mbedtls_x509_crt_parse returned -0x%x\n\n",
-                        -ret );
+                        (unsigned int) -ret );
         goto exit;
     }
 
@@ -2102,7 +2125,7 @@ int main( int argc, char *argv[] )
     if( ret != 0 )
     {
         mbedtls_printf( " failed\n  !  mbedtls_x509_crt_parse returned -0x%x\n\n",
-                        -ret );
+                        (unsigned int) -ret );
         goto exit;
     }
 
@@ -2127,7 +2150,7 @@ int main( int argc, char *argv[] )
     if( ret != 0 )
     {
         mbedtls_printf( " failed\n  !  mbedtls_pk_parse_key returned -0x%x\n\n",
-                        -ret );
+                        (unsigned int) -ret );
         goto exit;
     }
 
@@ -2164,7 +2187,7 @@ int main( int argc, char *argv[] )
                        MBEDTLS_NET_PROTO_TCP : MBEDTLS_NET_PROTO_UDP ) ) != 0 )
     {
         mbedtls_printf( " failed\n  ! mbedtls_net_connect returned -0x%x\n\n",
-                        -ret );
+                        (unsigned int) -ret );
         goto exit;
     }
 
@@ -2175,7 +2198,7 @@ int main( int argc, char *argv[] )
     if( ret != 0 )
     {
         mbedtls_printf( " failed\n  ! net_set_(non)block() returned -0x%x\n\n",
-                        -ret );
+                        (unsigned int) -ret );
         goto exit;
     }
 
@@ -2193,7 +2216,7 @@ int main( int argc, char *argv[] )
                     MBEDTLS_SSL_PRESET_DEFAULT ) ) != 0 )
     {
         mbedtls_printf( " failed\n  ! mbedtls_ssl_config_defaults returned -0x%x\n\n",
-                        -ret );
+                        (unsigned int) -ret );
         goto exit;
     }
 
@@ -2234,7 +2257,7 @@ int main( int argc, char *argv[] )
         if( ret != 0 )
         {
             mbedtls_printf( " failed\n  ! mbedtls_ssl_conf_cid_len returned -%#04x\n\n",
-                            -ret );
+                            (unsigned int) -ret );
             goto exit;
         }
     }
@@ -2432,7 +2455,7 @@ int main( int argc, char *argv[] )
     if( ( ret = mbedtls_ssl_setup( &ssl, &conf ) ) != 0 )
     {
         mbedtls_printf( " failed\n  ! mbedtls_ssl_setup returned -0x%x\n\n",
-                        -ret );
+                        (unsigned int) -ret );
         goto exit;
     }
 
@@ -2512,7 +2535,7 @@ int main( int argc, char *argv[] )
             ret != MBEDTLS_ERR_SSL_CRYPTO_IN_PROGRESS )
         {
             mbedtls_printf( " failed\n  ! mbedtls_ssl_handshake returned -0x%x\n",
-                            -ret );
+                            (unsigned int) -ret );
             if( ret == MBEDTLS_ERR_X509_CERT_VERIFY_FAILED )
                 mbedtls_printf(
                     "    Unable to verify the server's certificate. "
@@ -2553,8 +2576,10 @@ int main( int argc, char *argv[] )
         mbedtls_printf( "    [ Record expansion is unknown (compression) ]\n" );
 
 #if defined(MBEDTLS_SSL_MAX_FRAGMENT_LENGTH)
-    mbedtls_printf( "    [ Maximum fragment length is %u ]\n",
-                    (unsigned int) mbedtls_ssl_get_max_frag_len( &ssl ) );
+    mbedtls_printf( "    [ Maximum input fragment length is %u ]\n",
+                    (unsigned int) mbedtls_ssl_get_input_max_frag_len( &ssl ) );
+    mbedtls_printf( "    [ Maximum output fragment length is %u ]\n",
+                    (unsigned int) mbedtls_ssl_get_output_max_frag_len( &ssl ) );
 #endif
 
 #if defined(MBEDTLS_SSL_ALPN)
@@ -2582,7 +2607,7 @@ int main( int argc, char *argv[] )
                                          != 0 )
         {
             mbedtls_printf( " failed\n  ! mbedtls_ssl_tls_prf returned -0x%x\n\n",
-                            -ret );
+                            (unsigned int) -ret );
             goto exit;
         }
 
@@ -2603,7 +2628,7 @@ int main( int argc, char *argv[] )
                                          sizeof( eap_tls_iv ) ) ) != 0 )
          {
              mbedtls_printf( " failed\n  ! mbedtls_ssl_tls_prf returned -0x%x\n\n",
-                             -ret );
+                             (unsigned int) -ret );
              goto exit;
          }
 
@@ -2650,7 +2675,7 @@ int main( int argc, char *argv[] )
                                                   &session_data_len ) ) != 0 )
             {
                 mbedtls_printf( " failed\n  ! mbedtls_ssl_session_saved returned -0x%04x\n\n",
-                                -ret );
+                                (unsigned int) -ret );
                 goto exit;
             }
         }
@@ -2659,7 +2684,7 @@ int main( int argc, char *argv[] )
             if( ( ret = mbedtls_ssl_get_session( &ssl, &saved_session ) ) != 0 )
             {
                 mbedtls_printf( " failed\n  ! mbedtls_ssl_get_session returned -0x%x\n\n",
-                                -ret );
+                                (unsigned int) -ret );
                 goto exit;
             }
         }
@@ -2810,7 +2835,7 @@ send_request:
                     ret != MBEDTLS_ERR_SSL_CRYPTO_IN_PROGRESS )
                 {
                     mbedtls_printf( " failed\n  ! mbedtls_ssl_write returned -0x%x\n\n",
-                                    -ret );
+                                    (unsigned int) -ret );
                     goto exit;
                 }
 
@@ -2938,7 +2963,7 @@ send_request:
 
                     default:
                         mbedtls_printf( " mbedtls_ssl_read returned -0x%x\n",
-                                        -ret );
+                                        (unsigned int) -ret );
                         goto exit;
                 }
             }
@@ -3002,7 +3027,7 @@ send_request:
                     goto close_notify;
 
                 default:
-                    mbedtls_printf( " mbedtls_ssl_read returned -0x%x\n", -ret );
+                    mbedtls_printf( " mbedtls_ssl_read returned -0x%x\n", (unsigned int) -ret );
                     goto exit;
             }
         }
@@ -3030,7 +3055,7 @@ send_request:
         if( ( ret = mbedtls_ssl_session_reset( &ssl ) ) != 0 )
         {
             mbedtls_printf( " failed\n  ! mbedtls_ssl_session_reset returned -0x%x\n\n",
-                            -ret );
+                            (unsigned int) -ret );
             goto exit;
         }
 
@@ -3041,7 +3066,7 @@ send_request:
                 ret != MBEDTLS_ERR_SSL_CRYPTO_IN_PROGRESS )
             {
                 mbedtls_printf( " failed\n  ! mbedtls_ssl_handshake returned -0x%x\n\n",
-                                -ret );
+                                (unsigned int) -ret );
                 goto exit;
             }
 
@@ -3075,7 +3100,7 @@ send_request:
         if( ret != MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL )
         {
             mbedtls_printf( " failed\n  ! mbedtls_ssl_context_save returned "
-                            "-0x%x\n\n", -ret );
+                            "-0x%x\n\n", (unsigned int) -ret );
 
             goto exit;
         }
@@ -3093,17 +3118,67 @@ send_request:
                                               buf_len, &buf_len ) ) != 0 )
         {
             mbedtls_printf( " failed\n  ! mbedtls_ssl_context_save returned "
-                            "-0x%x\n\n", -ret );
+                            "-0x%x\n\n", (unsigned int) -ret );
 
             goto exit;
         }
 
         mbedtls_printf( " ok\n" );
 
+        /* Save serialized context to the 'opt.context_file' as a base64 code */
+        if( 0 < strlen( opt.context_file ) )
+        {
+            FILE *b64_file;
+            uint8_t *b64_buf;
+            size_t b64_len;
+
+            mbedtls_printf( "  . Save serialized context to a file... " );
+
+            mbedtls_base64_encode( NULL, 0, &b64_len, context_buf, buf_len );
+
+            if( ( b64_buf = mbedtls_calloc( 1, b64_len ) ) == NULL )
+            {
+                mbedtls_printf( "failed\n  ! Couldn't allocate buffer for "
+                                "the base64 code\n" );
+                goto exit;
+            }
+
+            if( ( ret = mbedtls_base64_encode( b64_buf, b64_len, &b64_len,
+                                               context_buf, buf_len ) ) != 0 )
+            {
+                mbedtls_printf( "failed\n  ! mbedtls_base64_encode returned "
+                            "-0x%x\n", (unsigned int) -ret );
+                mbedtls_free( b64_buf );
+                goto exit;
+            }
+
+            if( ( b64_file = fopen( opt.context_file, "w" ) ) == NULL )
+            {
+                mbedtls_printf( "failed\n  ! Cannot open '%s' for writing.\n",
+                                opt.context_file );
+                mbedtls_free( b64_buf );
+                goto exit;
+            }
+
+            if( b64_len != fwrite( b64_buf, 1, b64_len, b64_file ) )
+            {
+                mbedtls_printf( "failed\n  ! fwrite(%ld bytes) failed\n",
+                                (long) b64_len );
+                mbedtls_free( b64_buf );
+                fclose( b64_file );
+                goto exit;
+            }
+
+            mbedtls_free( b64_buf );
+            fclose( b64_file );
+
+            mbedtls_printf( "ok\n" );
+        }
+
         if( opt.serialize == 1 )
         {
             /* nothing to do here, done by context_save() already */
-            mbedtls_printf( "  . Context has been reset... ok" );
+            mbedtls_printf( "  . Context has been reset... ok\n" );
         }
 
         if( opt.serialize == 2 )
@@ -3117,7 +3192,7 @@ send_request:
             if( ( ret = mbedtls_ssl_setup( &ssl, &conf ) ) != 0 )
             {
                 mbedtls_printf( " failed\n  ! mbedtls_ssl_setup returned "
-                                "-0x%x\n\n", -ret );
+                                "-0x%x\n\n", (unsigned int) -ret );
                 goto exit;
             }
 
@@ -3144,7 +3219,7 @@ send_request:
                                               buf_len ) ) != 0 )
         {
             mbedtls_printf( "failed\n  ! mbedtls_ssl_context_load returned "
-                            "-0x%x\n\n", -ret );
+                            "-0x%x\n\n", (unsigned int) -ret );
 
             goto exit;
         }
@@ -3216,7 +3291,7 @@ reconnect:
         if( ( ret = mbedtls_ssl_session_reset( &ssl ) ) != 0 )
         {
             mbedtls_printf( " failed\n  ! mbedtls_ssl_session_reset returned -0x%x\n\n",
-                            -ret );
+                            (unsigned int) -ret );
             goto exit;
         }
 
@@ -3227,7 +3302,7 @@ reconnect:
                                                   session_data_len ) ) != 0 )
             {
                 mbedtls_printf( " failed\n  ! mbedtls_ssl_session_load returned -0x%x\n\n",
-                                -ret );
+                                (unsigned int) -ret );
                 goto exit;
             }
         }
@@ -3235,7 +3310,7 @@ reconnect:
         if( ( ret = mbedtls_ssl_set_session( &ssl, &saved_session ) ) != 0 )
         {
             mbedtls_printf( " failed\n  ! mbedtls_ssl_set_session returned -0x%x\n\n",
-                            -ret );
+                            (unsigned int) -ret );
             goto exit;
         }
 
@@ -3245,7 +3320,7 @@ reconnect:
                         MBEDTLS_NET_PROTO_TCP : MBEDTLS_NET_PROTO_UDP ) ) != 0 )
         {
             mbedtls_printf( " failed\n  ! mbedtls_net_connect returned -0x%x\n\n",
-                            -ret );
+                            (unsigned int) -ret );
             goto exit;
         }
 
@@ -3256,7 +3331,7 @@ reconnect:
         if( ret != 0 )
         {
             mbedtls_printf( " failed\n  ! net_set_(non)block() returned -0x%x\n\n",
-                            -ret );
+                            (unsigned int) -ret );
             goto exit;
         }
 
@@ -3267,7 +3342,7 @@ reconnect:
                 ret != MBEDTLS_ERR_SSL_CRYPTO_IN_PROGRESS )
             {
                 mbedtls_printf( " failed\n  ! mbedtls_ssl_handshake returned -0x%x\n\n",
-                                -ret );
+                                (unsigned int) -ret );
                 goto exit;
             }
         }
@@ -3286,7 +3361,7 @@ exit:
     {
         char error_buf[100];
         mbedtls_strerror( ret, error_buf, 100 );
-        mbedtls_printf("Last error was: -0x%X - %s\n\n", -ret, error_buf );
+        mbedtls_printf("Last error was: -0x%X - %s\n\n", (unsigned int) -ret, error_buf );
     }
 #endif
 
@@ -3350,7 +3425,7 @@ exit:
     if( ret < 0 )
         ret = 1;
 
-    return( ret );
+    mbedtls_exit( ret );
 }
 #endif /* MBEDTLS_BIGNUM_C && MBEDTLS_ENTROPY_C && MBEDTLS_SSL_TLS_C &&
           MBEDTLS_SSL_CLI_C && MBEDTLS_NET_C && MBEDTLS_RSA_C &&
