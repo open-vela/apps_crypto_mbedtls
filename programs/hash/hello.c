@@ -44,7 +44,7 @@
 int main( void )
 {
     mbedtls_printf("MBEDTLS_MD5_C not defined.\n");
-    mbedtls_exit( 0 );
+    return( 0 );
 }
 #else
 
@@ -58,7 +58,7 @@ int main( void )
     mbedtls_printf( "\n  MD5('%s') = ", str );
 
     if( ( ret = mbedtls_md5_ret( (unsigned char *) str, 13, digest ) ) != 0 )
-        mbedtls_exit( MBEDTLS_EXIT_FAILURE );
+        return( MBEDTLS_EXIT_FAILURE );
 
     for( i = 0; i < 16; i++ )
         mbedtls_printf( "%02x", digest[i] );
@@ -70,6 +70,6 @@ int main( void )
     fflush( stdout ); getchar();
 #endif
 
-    mbedtls_exit( MBEDTLS_EXIT_SUCCESS );
+    return( MBEDTLS_EXIT_SUCCESS );
 }
 #endif /* MBEDTLS_MD5_C */
