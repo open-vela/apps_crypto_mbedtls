@@ -56,7 +56,7 @@ int main( void )
     mbedtls_printf("MBEDTLS_BIGNUM_C and/or MBEDTLS_PK_PARSE_C and/or "
            "MBEDTLS_FS_IO and/or MBEDTLS_ENTROPY_C and/or "
            "MBEDTLS_CTR_DRBG_C not defined.\n");
-    mbedtls_exit( 0 );
+    return( 0 );
 }
 #else
 
@@ -64,8 +64,7 @@ int main( void )
 int main( int argc, char *argv[] )
 {
     FILE *f;
-    int ret = 1;
-    unsigned c;
+    int ret = 1, c;
     int exit_code = MBEDTLS_EXIT_FAILURE;
     size_t i, olen = 0;
     mbedtls_pk_context pk;
@@ -172,7 +171,7 @@ exit:
     fflush( stdout ); getchar();
 #endif
 
-    mbedtls_exit( exit_code );
+    return( exit_code );
 }
 #endif /* MBEDTLS_BIGNUM_C && MBEDTLS_PK_PARSE_C && MBEDTLS_FS_IO &&
           MBEDTLS_ENTROPY_C && MBEDTLS_CTR_DRBG_C */
