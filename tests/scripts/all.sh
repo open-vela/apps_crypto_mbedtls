@@ -625,18 +625,6 @@ component_check_files () {
     record_status tests/scripts/check-files.py
 }
 
-component_check_changelog () {
-    msg "Check: changelog entries" # < 1s
-    rm -f ChangeLog.new
-    record_status scripts/assemble_changelog.py -o ChangeLog.new
-    if [ -e ChangeLog.new ]; then
-        # Show the diff for information. It isn't an error if the diff is
-        # non-empty.
-        diff -u ChangeLog ChangeLog.new || true
-        rm ChangeLog.new
-    fi
-}
-
 component_check_names () {
     msg "Check: declared and exported names (builds the library)" # < 3s
     record_status tests/scripts/check-names.sh -v
@@ -1711,15 +1699,6 @@ component_test_allow_sha1 () {
     msg "test: allow SHA1 in certificates by default"
     make test
     if_build_succeeded tests/ssl-opt.sh -f SHA-1
-}
-
-component_test_tls13_experimental () {
-    msg "build: default config with MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL enabled"
-    scripts/config.pl set MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
-    CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
-    make
-    msg "test: default config with MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL enabled"
-    make test
 }
 
 component_build_mingw () {

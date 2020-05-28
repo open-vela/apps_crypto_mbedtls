@@ -1707,25 +1707,6 @@
 #define MBEDTLS_SSL_PROTO_TLS1_2
 
 /**
- * \def MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
- *
- * This macro is used to selectively enable experimental parts
- * of the code that contribute to the ongoing development of
- * the prototype TLS 1.3 and DTLS 1.3 implementation, and provide
- * no other purpose.
- *
- * \warning TLS 1.3 and DTLS 1.3 aren't yet supported in Mbed TLS,
- *          and no feature exposed through this macro is part of the
- *          public API. In particular, features under the control
- *          of this macro are experimental and don't come with any
- *          stability guarantees.
- *
- * Uncomment this macro to enable experimental and partial
- * functionality specific to TLS 1.3.
- */
-//#define MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
-
-/**
  * \def MBEDTLS_SSL_PROTO_DTLS
  *
  * Enable support for DTLS (all available versions).
