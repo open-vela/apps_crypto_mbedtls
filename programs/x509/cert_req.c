@@ -46,7 +46,7 @@ int main( void )
             "MBEDTLS_PK_PARSE_C and/or MBEDTLS_SHA256_C and/or "
             "MBEDTLS_ENTROPY_C and/or MBEDTLS_CTR_DRBG_C "
             "not defined.\n");
-    mbedtls_exit( 0 );
+    return( 0 );
 }
 #else
 
@@ -444,7 +444,7 @@ exit:
     fflush( stdout ); getchar();
 #endif
 
-    mbedtls_exit( exit_code );
+    return( exit_code );
 }
 #endif /* MBEDTLS_X509_CSR_WRITE_C && MBEDTLS_PK_PARSE_C && MBEDTLS_FS_IO &&
           MBEDTLS_ENTROPY_C && MBEDTLS_CTR_DRBG_C && MBEDTLS_PEM_WRITE_C */
