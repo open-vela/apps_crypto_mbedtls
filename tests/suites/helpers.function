@@ -2,6 +2,9 @@
 /*----------------------------------------------------------------------------*/
 /* Headers */
 
+#include <test/macros.h>
+#include <test/helpers.h>
+
 #include <stdlib.h>
 
 #if defined(MBEDTLS_PLATFORM_C)
@@ -311,65 +314,6 @@ typedef enum
 #define TEST_VALID_PARAM( TEST )                                    \
     TEST_ASSERT( ( TEST, 1 ) );
 
-#define TEST_HELPER_ASSERT(a) if( !( a ) )                          \
-{                                                                   \
-    mbedtls_fprintf( stderr, "Assertion Failed at %s:%d - %s\n",    \
-                             __FILE__, __LINE__, #a );              \
-    mbedtls_exit( 1 );                                              \
-}
-
-#if defined(__GNUC__)
-/* Test if arg and &(arg)[0] have the same type. This is true if arg is
- * an array but not if it's a pointer. */
-#define IS_ARRAY_NOT_POINTER( arg )                                     \
-    ( ! __builtin_types_compatible_p( __typeof__( arg ),                \
-                                      __typeof__( &( arg )[0] ) ) )
-#else
-/* On platforms where we don't know how to implement this check,
- * omit it. Oh well, a non-portable check is better than nothing. */
-#define IS_ARRAY_NOT_POINTER( arg ) 1
-#endif
-
-/* A compile-time constant with the value 0. If `const_expr` is not a
- * compile-time constant with a nonzero value, cause a compile-time error. */
-#define STATIC_ASSERT_EXPR( const_expr )                                \
-    ( 0 && sizeof( struct { int STATIC_ASSERT : 1 - 2 * ! ( const_expr ); } ) )
-/* Return the scalar value `value` (possibly promoted). This is a compile-time
- * constant if `value` is. `condition` must be a compile-time constant.
- * If `condition` is false, arrange to cause a compile-time error. */
-#define STATIC_ASSERT_THEN_RETURN( condition, value )   \
-    ( STATIC_ASSERT_EXPR( condition ) ? 0 : ( value ) )
-
-#define ARRAY_LENGTH_UNSAFE( array )            \
-    ( sizeof( array ) / sizeof( *( array ) ) )
-/** Return the number of elements of a static or stack array.
- *
- * \param array         A value of array (not pointer) type.
- *
- * \return The number of elements of the array.
- */
-#define ARRAY_LENGTH( array )                                           \
-    ( STATIC_ASSERT_THEN_RETURN( IS_ARRAY_NOT_POINTER( array ),         \
-                                 ARRAY_LENGTH_UNSAFE( array ) ) )
-
-/** Return the smaller of two values.
- *
- * \param x         An integer-valued expression without side effects.
- * \param y         An integer-valued expression without side effects.
- *
- * \return The smaller of \p x and \p y.
- */
-#define MIN( x, y ) ( ( x ) < ( y ) ? ( x ) : ( y ) )
-
-/** Return the larger of two values.
- *
- * \param x         An integer-valued expression without side effects.
- * \param y         An integer-valued expression without side effects.
- *
- * \return The larger of \p x and \p y.
- */
-#define MAX( x, y ) ( ( x ) > ( y ) ? ( x ) : ( y ) )
-
 /** Allocate memory dynamically and fail the test case if this fails.
  *
  * You must set \p pointer to \c NULL before calling this macro and
@@ -402,30 +346,6 @@ typedef enum
     }                                                             \
     while( 0 )
 
-/*
- * 32-bit integer manipulation macros (big endian)
- */
-#ifndef GET_UINT32_BE
-#define GET_UINT32_BE(n,b,i)                            \
-{                                                       \
-    (n) = ( (uint32_t) (b)[(i)    ] << 24 )             \
-        | ( (uint32_t) (b)[(i) + 1] << 16 )             \
-        | ( (uint32_t) (b)[(i) + 2] <<  8 )             \
-        | ( (uint32_t) (b)[(i) + 3]       );            \
-}
-#endif
-
-#ifndef PUT_UINT32_BE
-#define PUT_UINT32_BE(n,b,i)                            \
-{                                                       \
-    (b)[(i)    ] = (unsigned char) ( (n) >> 24 );       \
-    (b)[(i) + 1] = (unsigned char) ( (n) >> 16 );       \
-    (b)[(i) + 2] = (unsigned char) ( (n) >>  8 );       \
-    (b)[(i) + 3] = (unsigned char) ( (n)       );       \
-}
-#endif
-
-
 /*----------------------------------------------------------------------------*/
 /* Global variables */
 
@@ -449,7 +369,7 @@ test_info_t;
 static test_info_t test_info;
 
 #if defined(MBEDTLS_PLATFORM_C)
-mbedtls_platform_context platform_ctx;
+static mbedtls_platform_context platform_ctx;
 #endif
 
 #if defined(MBEDTLS_CHECK_PARAMS)
@@ -504,7 +424,7 @@ void test_skip( const char *test, int line_no, const char* filename )
     test_info.filename = filename;
 }
 
-static int platform_setup()
+int platform_setup()
 {
     int ret = 0;
 #if defined(MBEDTLS_PLATFORM_C)
@@ -513,7 +433,7 @@ static int platform_setup()
     return( ret );
 }
 
-static void platform_teardown()
+void platform_teardown()
 {
 #if defined(MBEDTLS_PLATFORM_C)
     mbedtls_platform_teardown( &platform_ctx );
@@ -652,7 +572,7 @@ void hexify( unsigned char *obuf, const unsigned char *ibuf, int len )
  *
  * For convenience, dies if allocation fails.
  */
-static unsigned char *zero_alloc( size_t len )
+unsigned char *zero_alloc( size_t len )
 {
     void *p;
     size_t actual_len = ( len != 0 ) ? len : 1;
@@ -701,7 +621,7 @@ unsigned char *unhexify_alloc( const char *ibuf, size_t *olen )
  *
  * rng_state shall be NULL.
  */
-static int rnd_std_rand( void *rng_state, unsigned char *output, size_t len )
+int rnd_std_rand( void *rng_state, unsigned char *output, size_t len )
 {
 #if !defined(__OpenBSD__)
     size_t i;
