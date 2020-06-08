@@ -123,6 +123,10 @@ pre_initialize_variables () {
     QUIET=0
     KEEP_GOING=0
 
+    # Seed value used with the --release-test option.
+    # !!! Keep this in sync with SEED in basic-build-test.sh !!!
+    RELEASE_SEED=1
+
     : ${MBEDTLS_TEST_OUTCOME_FILE=}
     : ${MBEDTLS_TEST_PLATFORM="$(uname -s | tr -c \\n0-9A-Za-z _)-$(uname -m | tr -c \\n0-9A-Za-z _)"}
     export MBEDTLS_TEST_OUTCOME_FILE
@@ -222,7 +226,7 @@ General options:
      --outcome-file=<path>  File where test outcomes are written (not done if
                             empty; default: \$MBEDTLS_TEST_OUTCOME_FILE).
      --random-seed      Use a random seed value for randomized tests (default).
-  -r|--release-test     Run this script in release mode. This fixes the seed value to 1.
+  -r|--release-test     Run this script in release mode. This fixes the seed value to ${RELEASE_SEED}.
   -s|--seed             Integer seed value to use for this test run.
 
 Tool path options:
@@ -379,7 +383,7 @@ pre_parse_command_line () {
             --out-of-source-dir) shift; OUT_OF_SOURCE_DIR="$1";;
             --quiet|-q) QUIET=1;;
             --random-seed) unset SEED;;
-            --release-test|-r) SEED=1;;
+            --release-test|-r) SEED=$RELEASE_SEED;;
             --seed|-s) shift; SEED="$1";;
             -*)
                 echo >&2 "Unknown option: $1"
