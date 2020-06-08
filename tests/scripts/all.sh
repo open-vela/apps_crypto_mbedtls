@@ -2,22 +2,9 @@
 
 # all.sh
 #
+# This file is part of mbed TLS (https://tls.mbed.org)
+#
 # Copyright (c) 2014-2017, ARM Limited, All Rights Reserved
-# SPDX-License-Identifier: Apache-2.0
-#
-# Licensed under the Apache License, Version 2.0 (the "License"); you may
-# not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-# http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-#
-# This file is part of Mbed TLS (https://tls.mbed.org)
 
 
 
@@ -638,18 +625,6 @@ component_check_files () {
     record_status tests/scripts/check-files.py
 }
 
-component_check_changelog () {
-    msg "Check: changelog entries" # < 1s
-    rm -f ChangeLog.new
-    record_status scripts/assemble_changelog.py -o ChangeLog.new
-    if [ -e ChangeLog.new ]; then
-        # Show the diff for information. It isn't an error if the diff is
-        # non-empty.
-        diff -u ChangeLog ChangeLog.new || true
-        rm ChangeLog.new
-    fi
-}
-
 component_check_names () {
     msg "Check: declared and exported names (builds the library)" # < 3s
     record_status tests/scripts/check-names.sh -v
@@ -842,40 +817,6 @@ component_test_rsa_no_crt () {
 
     msg "test: RSA_NO_CRT - RSA-related part of context-info.sh (ASan build)" # ~ 15 sec
     if_build_succeeded tests/context-info.sh
-}
-
-component_test_no_ctr_drbg () {
-    msg "build: Full minus CTR_DRBG"
-    scripts/config.py full
-    scripts/config.py unset MBEDTLS_CTR_DRBG_C
-    scripts/config.py unset MBEDTLS_PSA_CRYPTO_C # requires CTR_DRBG
-    scripts/config.py unset MBEDTLS_PSA_CRYPTO_STORAGE_C # requires PSA Crypto
-    scripts/config.py unset MBEDTLS_PSA_CRYPTO_SE_C # requires PSA Crypto
-    scripts/config.py unset MBEDTLS_USE_PSA_CRYPTO # requires PSA Crypto
-
-    CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
-    make
-
-    msg "test: no CTR_DRBG"
-    make test
-
-    # no ssl-opt.sh/compat.sh as they all depend on CTR_DRBG so far
-}
-
-component_test_no_hmac_drbg () {
-    msg "build: Full minus HMAC_DRBG"
-    scripts/config.py full
-    scripts/config.py unset MBEDTLS_HMAC_DRBG_C
-    scripts/config.py unset MBEDTLS_ECDSA_DETERMINISTIC # requires HMAC_DRBG
-
-    CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
-    make
-
-    msg "test: no HMAC_DRBG"
-    make test
-
-    # No ssl-opt.sh/compat.sh as they never use HMAC_DRBG so far,
-    # so there's little value in running those lengthy tests here.
 }
 
 component_test_new_ecdh_context () {
@@ -1758,15 +1699,6 @@ component_test_allow_sha1 () {
     msg "test: allow SHA1 in certificates by default"
     make test
     if_build_succeeded tests/ssl-opt.sh -f SHA-1
-}
-
-component_test_tls13_experimental () {
-    msg "build: default config with MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL enabled"
-    scripts/config.pl set MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
-    CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
-    make
-    msg "test: default config with MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL enabled"
-    make test
 }
 
 component_build_mingw () {

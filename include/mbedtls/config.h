@@ -29,8 +29,6 @@
 #ifndef MBEDTLS_CONFIG_H
 #define MBEDTLS_CONFIG_H
 
-#include <nuttx/config.h>
-
 #if defined(_MSC_VER) && !defined(_CRT_SECURE_NO_DEPRECATE)
 #define _CRT_SECURE_NO_DEPRECATE 1
 #endif
@@ -179,9 +177,7 @@
  *
  * Enable this layer to allow use of alternative memory allocators.
  */
-#ifdef CONFIG_MBEDTLS_PLATFORM_MEMORY
-#define MBEDTLS_PLATFORM_MEMORY
-#endif
+//#define MBEDTLS_PLATFORM_MEMORY
 
 /**
  * \def MBEDTLS_PLATFORM_NO_STD_FUNCTIONS
@@ -557,9 +553,7 @@
  *
  * Uncomment to use your own hardware entropy collector.
  */
-#ifdef CONFIG_MBEDTLS_ENTROPY_HARDWARE_ALT
-#define MBEDTLS_ENTROPY_HARDWARE_ALT
-#endif
+//#define MBEDTLS_ENTROPY_HARDWARE_ALT
 
 /**
  * \def MBEDTLS_AES_ROM_TABLES
@@ -579,9 +573,7 @@
  * This option is independent of \c MBEDTLS_AES_FEWER_TABLES.
  *
  */
-#ifdef CONFIG_MBEDTLS_AES_ROM_TABLES
-#define MBEDTLS_AES_ROM_TABLES
-#endif
+//#define MBEDTLS_AES_ROM_TABLES
 
 /**
  * \def MBEDTLS_AES_FEWER_TABLES
@@ -734,9 +726,7 @@
  *
  * Uncomment this macro to remove RC4 ciphersuites by default.
  */
-#ifdef CONFIG_MBEDTLS_REMOVE_ARC4_CIPHERSUITES
 #define MBEDTLS_REMOVE_ARC4_CIPHERSUITES
-#endif
 
 /**
  * \def MBEDTLS_REMOVE_3DES_CIPHERSUITES
@@ -1200,9 +1190,7 @@
  *
  * Uncomment this macro to disable the built-in platform entropy functions.
  */
-#ifdef CONFIG_MBEDTLS_NO_PLATFORM_ENTROPY
-#define MBEDTLS_NO_PLATFORM_ENTROPY
-#endif
+//#define MBEDTLS_NO_PLATFORM_ENTROPY
 
 /**
  * \def MBEDTLS_ENTROPY_FORCE_SHA256
@@ -1362,9 +1350,7 @@
  *
  * Enable the checkup functions (*_self_test).
  */
-#ifdef CONFIG_MBEDTLS_SELF_TEST
 #define MBEDTLS_SELF_TEST
-#endif
 
 /**
  * \def MBEDTLS_SHA256_SMALLER
@@ -1721,25 +1707,6 @@
 #define MBEDTLS_SSL_PROTO_TLS1_2
 
 /**
- * \def MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
- *
- * This macro is used to selectively enable experimental parts
- * of the code that contribute to the ongoing development of
- * the prototype TLS 1.3 and DTLS 1.3 implementation, and provide
- * no other purpose.
- *
- * \warning TLS 1.3 and DTLS 1.3 aren't yet supported in Mbed TLS,
- *          and no feature exposed through this macro is part of the
- *          public API. In particular, features under the control
- *          of this macro are experimental and don't come with any
- *          stability guarantees.
- *
- * Uncomment this macro to enable experimental and partial
- * functionality specific to TLS 1.3.
- */
-//#define MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
-
-/**
  * \def MBEDTLS_SSL_PROTO_DTLS
  *
  * Enable support for DTLS (all available versions).
@@ -1810,9 +1777,7 @@
  *
  * Comment this to disable support for clients reusing the source port.
  */
-#ifdef CONFIG_MBEDTLS_SSL_DTLS_CLIENT_PORT_REUSE
 #define MBEDTLS_SSL_DTLS_CLIENT_PORT_REUSE
-#endif
 
 /**
  * \def MBEDTLS_SSL_DTLS_BADMAC_LIMIT
@@ -1899,26 +1864,6 @@
  * Enable modifying the maximum I/O buffer size.
  */
 //#define MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH
-
-/**
- * \def MBEDTLS_TEST_HOOKS
- *
- * Enable features for invasive testing such as introspection functions and
- * hooks for fault injection. This enables additional unit tests.
- *
- * Merely enabling this feature should not change the behavior of the product.
- * It only adds new code, and new branching points where the default behavior
- * is the same as when this feature is disabled.
- * However, this feature increases the attack surface: there is an added
- * risk of vulnerabilities, and more gadgets that can make exploits easier.
- * Therefore this feature must never be enabled in production.
- *
- * See `docs/architecture/testing/mbed-crypto-invasive-testing.md` for more
- * information.
- *
- * Uncomment to enable invasive tests.
- */
-//#define MBEDTLS_TEST_HOOKS
 
 /**
  * \def MBEDTLS_THREADING_ALT
@@ -2274,9 +2219,7 @@
  *
  * Module:  library/blowfish.c
  */
-#ifdef CONFIG_MBEDTLS_BLOWFISH_C
 #define MBEDTLS_BLOWFISH_C
-#endif
 
 /**
  * \def MBEDTLS_CAMELLIA_C
@@ -2331,9 +2274,7 @@
  *      MBEDTLS_TLS_PSK_WITH_CAMELLIA_128_GCM_SHA256
  *      MBEDTLS_TLS_PSK_WITH_CAMELLIA_128_CBC_SHA256
  */
-#ifdef CONFIG_MBEDTLS_CAMELLIA_C
 #define MBEDTLS_CAMELLIA_C
-#endif
 
 /**
  * \def MBEDTLS_ARIA_C
@@ -2411,9 +2352,7 @@
  *
  * This module is used for testing (ssl_client/server).
  */
-#ifdef CONFIG_MBEDTLS_CERTS_C
 #define MBEDTLS_CERTS_C
-#endif
 
 /**
  * \def MBEDTLS_CHACHA20_C
@@ -2492,9 +2431,7 @@
  *
  * This module provides debugging functions.
  */
-#ifdef CONFIG_MBEDTLS_DEBUG_C
 #define MBEDTLS_DEBUG_C
-#endif
 
 /**
  * \def MBEDTLS_DES_C
@@ -2853,9 +2790,7 @@
  *
  * This modules adds support for the VIA PadLock on x86.
  */
-#ifdef CONFIG_MBEDTLS_PADLOCK_C
 #define MBEDTLS_PADLOCK_C
-#endif
 
 /**
  * \def MBEDTLS_PEM_PARSE_C
@@ -3214,9 +3149,7 @@
  *
  * This module is required for SSL/TLS server support.
  */
-#ifdef CONFIG_MBEDTLS_SSL_SRV_C
 #define MBEDTLS_SSL_SRV_C
-#endif
 
 /**
  * \def MBEDTLS_SSL_TLS_C
@@ -3277,9 +3210,7 @@
  *
  * This module is used by the HAVEGE random number generator.
  */
-#ifdef CONFIG_MBEDTLS_TIMING_C
 #define MBEDTLS_TIMING_C
-#endif
 
 /**
  * \def MBEDTLS_VERSION_C
@@ -3546,9 +3477,7 @@
  * Uncomment to set the maximum plaintext size of both
  * incoming and outgoing I/O buffers.
  */
-#ifdef CONFIG_MBEDTLS_SSL_MAX_CONTENT_LEN
-#define MBEDTLS_SSL_MAX_CONTENT_LEN             CONFIG_MBEDTLS_SSL_MAX_CONTENT_LEN
-#endif
+//#define MBEDTLS_SSL_MAX_CONTENT_LEN             16384
 
 /** \def MBEDTLS_SSL_IN_CONTENT_LEN
  *
@@ -3605,22 +3534,6 @@
  *
  */
 //#define MBEDTLS_SSL_CID_PADDING_GRANULARITY 16
-
-/** \def MBEDTLS_SSL_TLS1_3_PADDING_GRANULARITY
- *
- * This option controls the use of record plaintext padding
- * in TLS 1.3.
- *
- * The padding will always be chosen so that the length of the
- * padded plaintext is a multiple of the value of this option.
- *
- * Note: A value of \c 1 means that no padding will be used
- *       for outgoing records.
- *
- * Note: On systems lacking division instructions,
- *       a power of two should be preferred.
- */
-//#define MBEDTLS_SSL_TLS1_3_PADDING_GRANULARITY 1
 
 /** \def MBEDTLS_SSL_OUT_CONTENT_LEN
  *
