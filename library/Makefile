@@ -34,6 +34,8 @@
 
 -include $(TOPDIR)/Make.defs
 
+bignum.c_CFLAGS += -fno-lto
+
 CFLAGS += -D__unix__ -D__socklen_t_defined
 CSRCS = $(wildcard *.c)
 
