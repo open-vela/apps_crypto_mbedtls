@@ -1,0 +1,32 @@
+#
+# For a description of the syntax of this configuration file,
+# see kconfig-language at https://www.kernel.org/doc/Documentation/kbuild/kconfig-language.txt
+#
+
+config LIB_MBEDTLS
+	bool "The mbed tls library support"
+	default n
+	---help---
+		Enable support for the mbed tls library
+
+if LIB_MBEDTLS
+
+config MBEDTLS_DEBUG_C
+  bool "This module provides debugging functions."
+  default n
+  help
+    This module provides debugging functions.
+
+config MBEDTLS_SSL_MAX_CONTENT_LEN
+  int "Maximum length (in bytes) of incoming and outgoing plaintext fragments."
+  default 16384
+  help
+    Maximum length (in bytes) of incoming and outgoing plaintext fragments.
+
+config MBEDTLS_SSL_SRV_C
+  bool "This module is required for SSL/TLS server support."
+  default n
+  help
+    This module is required for SSL/TLS server support.
+
+endif
