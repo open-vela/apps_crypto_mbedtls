@@ -863,7 +863,7 @@ static int ssl_populate_transform( mbedtls_ssl_transform *transform,
     unsigned char *key2;
     unsigned char *mac_enc;
     unsigned char *mac_dec;
-    size_t mac_key_len;
+    size_t mac_key_len = 0;
     size_t iv_copy_len;
     unsigned keylen;
     const mbedtls_ssl_ciphersuite_t *ciphersuite_info;
@@ -973,15 +973,28 @@ static int ssl_populate_transform( mbedtls_ssl_transform *transform,
         transform->taglen =
             ciphersuite_info->flags & MBEDTLS_CIPHERSUITE_SHORT_TAG ? 8 : 16;
 
-        /* All modes haves 96-bit IVs;
-         * GCM and CCM has 4 implicit and 8 explicit bytes
-         * ChachaPoly has all 12 bytes implicit
+        /* All modes haves 96-bit IVs, but the length of the static parts vary
+         * with mode and version:
+         * - For GCM and CCM in TLS 1.2, there's a static IV of 4 Bytes
+         *   (to be concatenated with a dynamically chosen IV of 8 Bytes)
+         * - For ChaChaPoly in TLS 1.2, and all modes in TLS 1.3, there's
+         *   a static IV of 12 Bytes (to be XOR'ed with the 8 Byte record
+         *   sequence number).
          */
         transform->ivlen = 12;
-        if( cipher_info->mode == MBEDTLS_MODE_CHACHAPOLY )
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+        if( minor_ver == MBEDTLS_SSL_MINOR_VERSION_4 )
+        {
             transform->fixed_ivlen = 12;
+        }
         else
-            transform->fixed_ivlen = 4;
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+        {
+            if( cipher_info->mode == MBEDTLS_MODE_CHACHAPOLY )
+                transform->fixed_ivlen = 12;
+            else
+                transform->fixed_ivlen = 4;
+        }
 
         /* Minimum length of encrypted record */
         explicit_ivlen = transform->ivlen - transform->fixed_ivlen;
@@ -1175,7 +1188,7 @@ static int ssl_populate_transform( mbedtls_ssl_transform *transform,
 #if defined(MBEDTLS_SSL_HW_RECORD_ACCEL)
     if( mbedtls_ssl_hw_record_init != NULL )
     {
-        int ret = 0;
+        ret = 0;
 
         MBEDTLS_SSL_DEBUG_MSG( 2, ( "going for mbedtls_ssl_hw_record_init()" ) );
 
@@ -4652,9 +4665,7 @@ int mbedtls_ssl_conf_alpn_protocols( mbedtls_ssl_config *conf, const char **prot
         cur_len = strlen( *p );
         tot_len += cur_len;
 
-        if( ( cur_len == 0 ) ||
-            ( cur_len > MBEDTLS_SSL_MAX_ALPN_NAME_LEN ) ||
-            ( tot_len > MBEDTLS_SSL_MAX_ALPN_LIST_LEN ) )
+        if( cur_len == 0 || cur_len > 255 || tot_len > 65535 )
             return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
     }
 
@@ -6663,14 +6674,6 @@ int mbedtls_ssl_context_load( mbedtls_ssl_context *context,
  */
 void mbedtls_ssl_free( mbedtls_ssl_context *ssl )
 {
-#if defined(MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH)
-    size_t in_buf_len = ssl->in_buf_len;
-    size_t out_buf_len = ssl->out_buf_len;
-#else
-    size_t in_buf_len = MBEDTLS_SSL_IN_BUFFER_LEN;
-    size_t out_buf_len = MBEDTLS_SSL_OUT_BUFFER_LEN;
-#endif
-
     if( ssl == NULL )
         return;
 
@@ -6678,6 +6681,12 @@ void mbedtls_ssl_free( mbedtls_ssl_context *ssl )
 
     if( ssl->out_buf != NULL )
     {
+#if defined(MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH)
+        size_t out_buf_len = ssl->out_buf_len;
+#else
+        size_t out_buf_len = MBEDTLS_SSL_OUT_BUFFER_LEN;
+#endif
+
         mbedtls_platform_zeroize( ssl->out_buf, out_buf_len );
         mbedtls_free( ssl->out_buf );
         ssl->out_buf = NULL;
@@ -6685,6 +6694,12 @@ void mbedtls_ssl_free( mbedtls_ssl_context *ssl )
 
     if( ssl->in_buf != NULL )
     {
+#if defined(MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH)
+        size_t in_buf_len = ssl->in_buf_len;
+#else
+        size_t in_buf_len = MBEDTLS_SSL_IN_BUFFER_LEN;
+#endif
+
         mbedtls_platform_zeroize( ssl->in_buf, in_buf_len );
         mbedtls_free( ssl->in_buf );
         ssl->in_buf = NULL;
