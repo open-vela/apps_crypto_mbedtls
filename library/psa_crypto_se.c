@@ -66,7 +66,7 @@ typedef struct
 
 struct psa_se_drv_table_entry_s
 {
-    psa_key_location_t location;
+    psa_key_lifetime_t lifetime;
     const psa_drv_se_t *methods;
     union
     {
@@ -81,16 +81,15 @@ psa_se_drv_table_entry_t *psa_get_se_driver_entry(
     psa_key_lifetime_t lifetime )
 {
     size_t i;
-    psa_key_location_t location = PSA_KEY_LIFETIME_GET_LOCATION( lifetime );
-    /* In the driver table, location=0 means an entry that isn't used.
-     * No driver has a location of 0 because it's a reserved value
-     * (which designates transparent keys). Make sure we never return
-     * a driver entry for location 0. */
-    if( location == 0 )
+    /* In the driver table, lifetime=0 means an entry that isn't used.
+     * No driver has a lifetime of 0 because it's a reserved value
+     * (which designates volatile keys). Make sure we never return
+     * a driver entry for lifetime 0. */
+    if( lifetime == 0 )
         return( NULL );
     for( i = 0; i < PSA_MAX_SE_DRIVERS; i++ )
     {
-        if( driver_table[i].location == location )
+        if( driver_table[i].lifetime == lifetime )
             return( &driver_table[i] );
     }
     return( NULL );
@@ -130,7 +129,7 @@ static psa_status_t psa_get_se_driver_its_file_uid(
     const psa_se_drv_table_entry_t *driver,
     psa_storage_uid_t *uid )
 {
-    if( driver->location > PSA_MAX_SE_LOCATION )
+    if( driver->lifetime > PSA_MAX_SE_LIFETIME )
         return( PSA_ERROR_NOT_SUPPORTED );
 
 #if SIZE_MAX > UINT32_MAX
@@ -140,7 +139,7 @@ static psa_status_t psa_get_se_driver_its_file_uid(
 #endif
 
     /* See the documentation of PSA_CRYPTO_SE_DRIVER_ITS_UID_BASE. */
-    *uid = PSA_CRYPTO_SE_DRIVER_ITS_UID_BASE + driver->location;
+    *uid = PSA_CRYPTO_SE_DRIVER_ITS_UID_BASE + driver->lifetime;
     return( PSA_SUCCESS );
 }
 
@@ -187,12 +186,12 @@ psa_status_t psa_save_se_persistent_data(
                          0 ) );
 }
 
-psa_status_t psa_destroy_se_persistent_data( psa_key_location_t location )
+psa_status_t psa_destroy_se_persistent_data( psa_key_lifetime_t lifetime )
 {
     psa_storage_uid_t uid;
-    if( location > PSA_MAX_SE_LOCATION )
+    if( lifetime > PSA_MAX_SE_LIFETIME )
         return( PSA_ERROR_NOT_SUPPORTED );
-    uid = PSA_CRYPTO_SE_DRIVER_ITS_UID_BASE + location;
+    uid = PSA_CRYPTO_SE_DRIVER_ITS_UID_BASE + lifetime;
     return( psa_its_remove( uid ) );
 }
 
@@ -203,11 +202,9 @@ psa_status_t psa_find_se_slot_for_key(
     psa_key_slot_number_t *slot_number )
 {
     psa_status_t status;
-    psa_key_location_t key_location =
-        PSA_KEY_LIFETIME_GET_LOCATION( psa_get_key_lifetime( attributes ) );
 
-    /* If the location is wrong, it's a bug in the library. */
-    if( driver->location != key_location )
+    /* If the lifetime is wrong, it's a bug in the library. */
+    if( driver->lifetime != psa_get_key_lifetime( attributes ) )
         return( PSA_ERROR_CORRUPTION_DETECTED );
 
     /* If the driver doesn't support key creation in any way, give up now. */
@@ -281,7 +278,7 @@ psa_status_t psa_init_all_se_drivers( void )
     for( i = 0; i < PSA_MAX_SE_DRIVERS; i++ )
     {
         psa_se_drv_table_entry_t *driver = &driver_table[i];
-        if( driver->location == 0 )
+        if( driver->lifetime == 0 )
             continue; /* skipping unused entry */
         const psa_drv_se_t *methods = psa_get_se_driver_methods( driver );
         if( methods->p_init != NULL )
@@ -289,7 +286,7 @@ psa_status_t psa_init_all_se_drivers( void )
             psa_status_t status = methods->p_init(
                 &driver->u.context,
                 driver->u.internal.persistent_data,
-                driver->location );
+                driver->lifetime );
             if( status != PSA_SUCCESS )
                 return( status );
             status = psa_save_se_persistent_data( driver );
@@ -307,7 +304,7 @@ psa_status_t psa_init_all_se_drivers( void )
 /****************************************************************/
 
 psa_status_t psa_register_se_driver(
-    psa_key_location_t location,
+    psa_key_lifetime_t lifetime,
     const psa_drv_se_t *methods)
 {
     size_t i;
@@ -316,30 +313,33 @@ psa_status_t psa_register_se_driver(
     if( methods->hal_version != PSA_DRV_SE_HAL_VERSION )
         return( PSA_ERROR_NOT_SUPPORTED );
     /* Driver table entries are 0-initialized. 0 is not a valid driver
-     * location because it means a transparent key. */
+     * lifetime because it means a volatile key. */
 #if defined(static_assert)
-    static_assert( PSA_KEY_LOCATION_LOCAL_STORAGE == 0,
-                   "Secure element support requires 0 to mean a local key" );
+    static_assert( PSA_KEY_LIFETIME_VOLATILE == 0,
+                   "Secure element support requires 0 to mean a volatile key" );
 #endif
-    if( location == PSA_KEY_LOCATION_LOCAL_STORAGE )
+    if( lifetime == PSA_KEY_LIFETIME_VOLATILE ||
+        lifetime == PSA_KEY_LIFETIME_PERSISTENT )
+    {
         return( PSA_ERROR_INVALID_ARGUMENT );
-    if( location > PSA_MAX_SE_LOCATION )
+    }
+    if( lifetime > PSA_MAX_SE_LIFETIME )
         return( PSA_ERROR_NOT_SUPPORTED );
 
     for( i = 0; i < PSA_MAX_SE_DRIVERS; i++ )
     {
-        if( driver_table[i].location == 0 )
+        if( driver_table[i].lifetime == 0 )
             break;
-        /* Check that location isn't already in use up to the first free
+        /* Check that lifetime isn't already in use up to the first free
          * entry. Since entries are created in order and never deleted,
          * there can't be a used entry after the first free entry. */
-        if( driver_table[i].location == location )
+        if( driver_table[i].lifetime == lifetime )
             return( PSA_ERROR_ALREADY_EXISTS );
     }
     if( i == PSA_MAX_SE_DRIVERS )
         return( PSA_ERROR_INSUFFICIENT_MEMORY );
 
-    driver_table[i].location = location;
+    driver_table[i].lifetime = lifetime;
     driver_table[i].methods = methods;
     driver_table[i].u.internal.persistent_data_size =
         methods->persistent_data_size;
