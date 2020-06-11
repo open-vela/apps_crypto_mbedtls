@@ -520,6 +520,7 @@ static const size_t test_lengths[2] =
     375U
 };
 
+#undef ASSERT
 #define ASSERT( cond, args )            \
     do                                  \
     {                                   \
