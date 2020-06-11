@@ -34,7 +34,7 @@
 
 -include $(TOPDIR)/Make.defs
 
-CFLAGS += -D__unix__
+CFLAGS += -D__unix__ -D__socklen_t_defined
 CSRCS = $(wildcard *.c)
 
 include $(APPDIR)/Application.mk
