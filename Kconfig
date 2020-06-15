@@ -12,6 +12,12 @@ config LIB_MBEDTLS
 
 if LIB_MBEDTLS
 
+config LIB_MBEDTLS_VERSION
+  string "The mbed tls library version"
+  default "master"
+  help
+    This module describes mbedtls version information.
+
 config MBEDTLS_DEBUG_C
   bool "This module provides debugging functions."
   default n
