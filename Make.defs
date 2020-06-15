@@ -1,5 +1,4 @@
-############################################################################
-# external/mbedtls/library/Makefile
+# external/mbedtls/Make.defs
 #
 #   Copyright (C) 2019 Xiaomi Inc. All rights reserved.
 #
@@ -32,11 +31,4 @@
 #
 ############################################################################
 
--include $(TOPDIR)/Make.defs
-
-bignum.c_CFLAGS += -fno-lto
-
-CFLAGS += -D__unix__ -D__socklen_t_defined
-CSRCS = $(wildcard *.c)
-
-include $(APPDIR)/Application.mk
+include $(wildcard $(APPDIR)/external/mbedtls/*/Make.defs)
