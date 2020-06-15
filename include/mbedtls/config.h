@@ -2470,9 +2470,7 @@
  *
  * This module provides debugging functions.
  */
-#ifdef CONFIG_MBEDTLS_DEBUG_C
 #define MBEDTLS_DEBUG_C
-#endif
 
 /**
  * \def MBEDTLS_DES_C
@@ -3190,9 +3188,7 @@
  *
  * This module is required for SSL/TLS server support.
  */
-#ifdef CONFIG_MBEDTLS_SSL_SRV_C
 #define MBEDTLS_SSL_SRV_C
-#endif
 
 /**
  * \def MBEDTLS_SSL_TLS_C
@@ -3520,9 +3516,7 @@
  * Uncomment to set the maximum plaintext size of both
  * incoming and outgoing I/O buffers.
  */
-#ifdef CONFIG_MBEDTLS_SSL_MAX_CONTENT_LEN
-#define MBEDTLS_SSL_MAX_CONTENT_LEN             CONFIG_MBEDTLS_SSL_MAX_CONTENT_LEN
-#endif
+//#define MBEDTLS_SSL_MAX_CONTENT_LEN             16384
 
 /** \def MBEDTLS_SSL_IN_CONTENT_LEN
  *
