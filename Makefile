@@ -1,7 +1,7 @@
 ############################################################################
-# external/mbedtls/Makefile
+# external/mbedtls/master/Makefile
 #
-#   Copyright (C) 2019 Xiaomi Inc. All rights reserved.
+#   Copyright (C) 2020 Xiaomi Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -32,6 +32,11 @@
 #
 ############################################################################
 
-MENUDESC = "Mbed TLS"
+-include $(TOPDIR)/Make.defs
 
-include $(APPDIR)/Directory.mk
+library/bignum.c_CFLAGS += -fno-lto
+
+CFLAGS += -D__unix__ -D__socklen_t_defined
+CSRCS = $(wildcard library/*.c)
+
+include $(APPDIR)/Application.mk
