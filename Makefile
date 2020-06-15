@@ -34,9 +34,11 @@
 
 -include $(TOPDIR)/Make.defs
 
-library/bignum.c_CFLAGS += -fno-lto
+mbedtls_subdir = $(shell echo $(CONFIG_LIB_MBEDTLS_VERSION))
+
+../$(mbedtls_subdir)/library/bignum.c_CFLAGS += -fno-lto
 
 CFLAGS += -D__unix__ -D__socklen_t_defined
-CSRCS = $(wildcard library/*.c)
+CSRCS = $(wildcard ../$(mbedtls_subdir)/library/*.c)
 
 include $(APPDIR)/Application.mk
