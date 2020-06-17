@@ -39,6 +39,11 @@ mbedtls_subdir = $(shell echo $(CONFIG_LIB_MBEDTLS_VERSION))
 ../$(mbedtls_subdir)/library/bignum.c_CFLAGS += -fno-lto
 
 CFLAGS += -D__unix__ -D__socklen_t_defined
-CSRCS = $(wildcard ../$(mbedtls_subdir)/library/*.c)
+
+ifneq ($(mbedtls_subdir),master)
+include ../$(mbedtls_subdir)/NuttX.mk
+else
+CSRCS = $(wildcard ../master/library/*.c)
+endif
 
 include $(APPDIR)/Application.mk

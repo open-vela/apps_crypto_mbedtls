@@ -29,6 +29,8 @@
 #ifndef MBEDTLS_CONFIG_H
 #define MBEDTLS_CONFIG_H
 
+#include <nuttx/config.h>
+
 #if defined(_MSC_VER) && !defined(_CRT_SECURE_NO_DEPRECATE)
 #define _CRT_SECURE_NO_DEPRECATE 1
 #endif
@@ -177,7 +179,9 @@
  *
  * Enable this layer to allow use of alternative memory allocators.
  */
-//#define MBEDTLS_PLATFORM_MEMORY
+#ifdef CONFIG_MBEDTLS_PLATFORM_MEMORY
+#define MBEDTLS_PLATFORM_MEMORY
+#endif
 
 /**
  * \def MBEDTLS_PLATFORM_NO_STD_FUNCTIONS
@@ -553,7 +557,9 @@
  *
  * Uncomment to use your own hardware entropy collector.
  */
-//#define MBEDTLS_ENTROPY_HARDWARE_ALT
+#ifdef CONFIG_MBEDTLS_ENTROPY_HARDWARE_ALT
+#define MBEDTLS_ENTROPY_HARDWARE_ALT
+#endif
 
 /**
  * \def MBEDTLS_AES_ROM_TABLES
@@ -573,7 +579,9 @@
  * This option is independent of \c MBEDTLS_AES_FEWER_TABLES.
  *
  */
-//#define MBEDTLS_AES_ROM_TABLES
+#ifdef CONFIG_MBEDTLS_AES_ROM_TABLES
+#define MBEDTLS_AES_ROM_TABLES
+#endif
 
 /**
  * \def MBEDTLS_AES_FEWER_TABLES
@@ -726,7 +734,9 @@
  *
  * Uncomment this macro to remove RC4 ciphersuites by default.
  */
+#ifdef CONFIG_MBEDTLS_REMOVE_ARC4_CIPHERSUITES
 #define MBEDTLS_REMOVE_ARC4_CIPHERSUITES
+#endif
 
 /**
  * \def MBEDTLS_REMOVE_3DES_CIPHERSUITES
@@ -1190,7 +1200,9 @@
  *
  * Uncomment this macro to disable the built-in platform entropy functions.
  */
-//#define MBEDTLS_NO_PLATFORM_ENTROPY
+#ifdef CONFIG_MBEDTLS_NO_PLATFORM_ENTROPY
+#define MBEDTLS_NO_PLATFORM_ENTROPY
+#endif
 
 /**
  * \def MBEDTLS_ENTROPY_FORCE_SHA256
@@ -1350,7 +1362,9 @@
  *
  * Enable the checkup functions (*_self_test).
  */
+#ifdef CONFIG_MBEDTLS_SELF_TEST
 #define MBEDTLS_SELF_TEST
+#endif
 
 /**
  * \def MBEDTLS_SHA256_SMALLER
@@ -1796,7 +1810,9 @@
  *
  * Comment this to disable support for clients reusing the source port.
  */
+#ifdef CONFIG_MBEDTLS_SSL_DTLS_CLIENT_PORT_REUSE
 #define MBEDTLS_SSL_DTLS_CLIENT_PORT_REUSE
+#endif
 
 /**
  * \def MBEDTLS_SSL_DTLS_BADMAC_LIMIT
@@ -2258,7 +2274,9 @@
  *
  * Module:  library/blowfish.c
  */
+#ifdef CONFIG_MBEDTLS_BLOWFISH_C
 #define MBEDTLS_BLOWFISH_C
+#endif
 
 /**
  * \def MBEDTLS_CAMELLIA_C
@@ -2313,7 +2331,9 @@
  *      MBEDTLS_TLS_PSK_WITH_CAMELLIA_128_GCM_SHA256
  *      MBEDTLS_TLS_PSK_WITH_CAMELLIA_128_CBC_SHA256
  */
+#ifdef CONFIG_MBEDTLS_CAMELLIA_C
 #define MBEDTLS_CAMELLIA_C
+#endif
 
 /**
  * \def MBEDTLS_ARIA_C
@@ -2391,7 +2411,9 @@
  *
  * This module is used for testing (ssl_client/server).
  */
+#ifdef CONFIG_MBEDTLS_CERTS_C
 #define MBEDTLS_CERTS_C
+#endif
 
 /**
  * \def MBEDTLS_CHACHA20_C
@@ -2831,7 +2853,9 @@
  *
  * This modules adds support for the VIA PadLock on x86.
  */
+#ifdef CONFIG_MBEDTLS_PADLOCK_C
 #define MBEDTLS_PADLOCK_C
+#endif
 
 /**
  * \def MBEDTLS_PEM_PARSE_C
@@ -3253,7 +3277,9 @@
  *
  * This module is used by the HAVEGE random number generator.
  */
+#ifdef CONFIG_MBEDTLS_TIMING_C
 #define MBEDTLS_TIMING_C
+#endif
 
 /**
  * \def MBEDTLS_VERSION_C
