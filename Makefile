@@ -41,7 +41,7 @@ mbedtls_subdir = $(shell echo $(CONFIG_LIB_MBEDTLS_VERSION))
 CFLAGS += -D__unix__ -D__socklen_t_defined
 
 ifneq ($(mbedtls_subdir),master)
-include ../$(mbedtls_subdir)/NuttX.mk
+-include ../$(mbedtls_subdir)/NuttX.mk
 else
 CSRCS = $(wildcard ../master/library/*.c)
 endif
