@@ -9141,11 +9141,7 @@ run_test    "export keys functionality" \
             -s "exported ivlen is "  \
             -c "exported maclen is " \
             -c "exported keylen is " \
-            -c "exported ivlen is " \
-            -c "EAP-TLS key material is:"\
-            -s "EAP-TLS key material is:"\
-            -c "EAP-TLS IV is:" \
-            -s "EAP-TLS IV is:"
+            -c "exported ivlen is "
 
 # Test heap memory usage after handshake
 requires_config_enabled MBEDTLS_MEMORY_DEBUG

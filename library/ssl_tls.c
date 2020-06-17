@@ -4665,9 +4665,7 @@ int mbedtls_ssl_conf_alpn_protocols( mbedtls_ssl_config *conf, const char **prot
         cur_len = strlen( *p );
         tot_len += cur_len;
 
-        if( ( cur_len == 0 ) ||
-            ( cur_len > MBEDTLS_SSL_MAX_ALPN_NAME_LEN ) ||
-            ( tot_len > MBEDTLS_SSL_MAX_ALPN_LIST_LEN ) )
+        if( cur_len == 0 || cur_len > 255 || tot_len > 65535 )
             return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
     }
 
