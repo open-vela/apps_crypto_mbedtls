@@ -22,7 +22,7 @@
 #ifndef PSA_CRYPTO_HELPERS_H
 #define PSA_CRYPTO_HELPERS_H
 
-#include "test/psa_helpers.h"
+#include "psa_helpers.h"
 
 #include <psa/crypto.h>
 
