@@ -14,8 +14,6 @@ import os
 import argparse
 import logging
 import codecs
-import re
-import subprocess
 import sys
 
 
@@ -25,48 +23,28 @@ class FileIssueTracker:
     To implement a checker that processes a file as a whole, inherit from
     this class and implement `check_file_for_issue` and define ``heading``.
 
-    ``suffix_exemptions``: files whose name ends with a string in this set
+    ``files_exemptions``: files whose name ends with a string in this set
      will not be checked.
-
-    ``path_exemptions``: files whose path (relative to the root of the source
-    tree) matches this regular expression will not be checked. This can be
-    ``None`` to match no path. Paths are normalized and converted to ``/``
-    separators before matching.
 
     ``heading``: human-readable description of the issue
     """
 
-    suffix_exemptions = frozenset()
-    path_exemptions = None
+    files_exemptions = frozenset()
     # heading must be defined in derived classes.
     # pylint: disable=no-member
 
     def __init__(self):
         self.files_with_issues = {}
 
-    @staticmethod
-    def normalize_path(filepath):
-        """Normalize ``filepath`` with / as the directory separator."""
-        filepath = os.path.normpath(filepath)
-        # On Windows, we may have backslashes to separate directories.
-        # We need slashes to match exemption lists.
-        seps = os.path.sep
-        if os.path.altsep is not None:
-            seps += os.path.altsep
-        return '/'.join(filepath.split(seps))
-
     def should_check_file(self, filepath):
         """Whether the given file name should be checked.
 
-        Files whose name ends with a string listed in ``self.suffix_exemptions``
-        or whose path matches ``self.path_exemptions`` will not be checked.
+        Files whose name ends with a string listed in ``self.files_exemptions``
+        will not be checked.
         """
-        for files_exemption in self.suffix_exemptions:
+        for files_exemption in self.files_exemptions:
             if filepath.endswith(files_exemption):
                 return False
-        if self.path_exemptions and \
-           re.match(self.path_exemptions, self.normalize_path(filepath)):
-            return False
         return True
 
     def check_file_for_issue(self, filepath):
@@ -95,26 +73,12 @@ class FileIssueTracker:
                     logger.info(filename)
             logger.info("")
 
-BINARY_FILE_PATH_RE_LIST = [
-    r'docs/.*\.pdf\Z',
-    r'programs/fuzz/corpuses/[^.]+\Z',
-    r'tests/data_files/[^.]+\Z',
-    r'tests/data_files/.*\.(crt|csr|db|der|key|pubkey)\Z',
-    r'tests/data_files/.*\.req\.[^/]+\Z',
-    r'tests/data_files/.*malformed[^/]+\Z',
-    r'tests/data_files/format_pkcs12\.fmt\Z',
-]
-BINARY_FILE_PATH_RE = re.compile('|'.join(BINARY_FILE_PATH_RE_LIST))
-
 class LineIssueTracker(FileIssueTracker):
     """Base class for line-by-line issue tracking.
 
     To implement a checker that processes files line by line, inherit from
     this class and implement `line_with_issue`.
     """
-
-    # Exclude binary files.
-    path_exemptions = BINARY_FILE_PATH_RE
 
     def issue_with_line(self, line, filepath):
         """Check the specified line for the issue that this class is for.
@@ -139,7 +103,7 @@ class LineIssueTracker(FileIssueTracker):
 
 def is_windows_file(filepath):
     _root, ext = os.path.splitext(filepath)
-    return ext in ('.bat', '.dsp', '.dsw', '.sln', '.vcxproj')
+    return ext in ('.bat', '.dsp', '.sln', '.vcxproj')
 
 
 class PermissionIssueTracker(FileIssueTracker):
@@ -162,18 +126,9 @@ class EndOfFileNewlineIssueTracker(FileIssueTracker):
 
     heading = "Missing newline at end of file:"
 
-    path_exemptions = BINARY_FILE_PATH_RE
-
     def check_file_for_issue(self, filepath):
         with open(filepath, "rb") as f:
-            try:
-                f.seek(-1, 2)
-            except OSError:
-                # This script only works on regular files. If we can't seek
-                # 1 before the end, it means that this position is before
-                # the beginning of the file, i.e. that the file is empty.
-                return
-            if f.read(1) != b"\n":
+            if not f.read().endswith(b"\n"):
                 self.files_with_issues[filepath] = None
 
 
@@ -183,8 +138,7 @@ class Utf8BomIssueTracker(FileIssueTracker):
 
     heading = "UTF-8 BOM present:"
 
-    suffix_exemptions = frozenset([".vcxproj", ".sln"])
-    path_exemptions = BINARY_FILE_PATH_RE
+    files_exemptions = frozenset([".vcxproj", ".sln"])
 
     def check_file_for_issue(self, filepath):
         with open(filepath, "rb") as f:
@@ -198,8 +152,6 @@ class UnixLineEndingIssueTracker(LineIssueTracker):
     heading = "Non-Unix line endings:"
 
     def should_check_file(self, filepath):
-        if not super().should_check_file(filepath):
-            return False
         return not is_windows_file(filepath)
 
     def issue_with_line(self, line, _filepath):
@@ -212,8 +164,6 @@ class WindowsLineEndingIssueTracker(LineIssueTracker):
     heading = "Non-Windows line endings:"
 
     def should_check_file(self, filepath):
-        if not super().should_check_file(filepath):
-            return False
         return is_windows_file(filepath)
 
     def issue_with_line(self, line, _filepath):
@@ -224,7 +174,7 @@ class TrailingWhitespaceIssueTracker(LineIssueTracker):
     """Track lines with trailing whitespace."""
 
     heading = "Trailing whitespace:"
-    suffix_exemptions = frozenset([".dsp", ".md"])
+    files_exemptions = frozenset([".dsp", ".md"])
 
     def issue_with_line(self, line, _filepath):
         return line.rstrip(b"\r\n") != line.rstrip()
@@ -234,8 +184,7 @@ class TabIssueTracker(LineIssueTracker):
     """Track lines with tabs."""
 
     heading = "Tabs present:"
-    suffix_exemptions = frozenset([
-        ".pem", # some openssl dumps have tabs
+    files_exemptions = frozenset([
         ".sln",
         "/Makefile",
         "/Makefile.inc",
@@ -274,6 +223,32 @@ class IntegrityChecker:
         self.check_repo_path()
         self.logger = None
         self.setup_logger(log_file)
+        self.extensions_to_check = (
+            ".bat",
+            ".c",
+            ".data",
+            ".dsp",
+            ".function",
+            ".h",
+            ".md",
+            ".pl",
+            ".py",
+            ".sh",
+            ".sln",
+            ".vcxproj",
+            "/CMakeLists.txt",
+            "/ChangeLog",
+            "/Makefile",
+            "/Makefile.inc",
+        )
+        self.excluded_directories = [
+            '.git',
+            'mbed-os',
+        ]
+        self.excluded_paths = list(map(os.path.normpath, [
+            'cov-int',
+            'examples',
+        ]))
         self.issues_to_check = [
             PermissionIssueTracker(),
             EndOfFileNewlineIssueTracker(),
@@ -300,22 +275,23 @@ class IntegrityChecker:
             console = logging.StreamHandler()
             self.logger.addHandler(console)
 
-    @staticmethod
-    def collect_files():
-        bytes_output = subprocess.check_output(['git', 'ls-files', '-z'])
-        bytes_filepaths = bytes_output.split(b'\0')[:-1]
-        ascii_filepaths = map(lambda fp: fp.decode('ascii'), bytes_filepaths)
-        # Prepend './' to files in the top-level directory so that
-        # something like `'/Makefile' in fp` matches in the top-level
-        # directory as well as in subdirectories.
-        return [fp if os.path.dirname(fp) else os.path.join(os.curdir, fp)
-                for fp in ascii_filepaths]
+    def prune_branch(self, root, d):
+        if d in self.excluded_directories:
+            return True
+        if os.path.normpath(os.path.join(root, d)) in self.excluded_paths:
+            return True
+        return False
 
     def check_files(self):
-        for issue_to_check in self.issues_to_check:
-            for filepath in self.collect_files():
-                if issue_to_check.should_check_file(filepath):
-                    issue_to_check.check_file_for_issue(filepath)
+        for root, dirs, files in os.walk("."):
+            dirs[:] = sorted(d for d in dirs if not self.prune_branch(root, d))
+            for filename in sorted(files):
+                filepath = os.path.join(root, filename)
+                if not filepath.endswith(self.extensions_to_check):
+                    continue
+                for issue_to_check in self.issues_to_check:
+                    if issue_to_check.should_check_file(filepath):
+                        issue_to_check.check_file_for_issue(filepath)
 
     def output_issues(self):
         integrity_return_code = 0
