@@ -513,7 +513,6 @@ static const unsigned char test_mac[2][16] =
     }
 };
 
-#undef ASSERT
 #define ASSERT( cond, args )            \
     do                                  \
     {                                   \
