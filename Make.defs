@@ -1,5 +1,4 @@
-############################################################################
-# external/mbedtls/master/Makefile
+# external/mbedtls/master/Make.defs
 #
 #   Copyright (C) 2020 Xiaomi Inc. All rights reserved.
 #
@@ -32,18 +31,10 @@
 #
 ############################################################################
 
--include $(TOPDIR)/Make.defs
+ifeq ($(CONFIG_LIB_MBEDTLS),y)
+CONFIGURED_APPS += $(APPDIR)/external/mbedtls/master
 
-mbedtls_subdir = $(shell echo $(CONFIG_LIB_MBEDTLS_VERSION))
+CFLAGS += ${shell $(INCDIR) $(INCDIROPT) "$(CC)" $(APPDIR)/external/mbedtls/$(CONFIG_LIB_MBEDTLS_VERSION)/include}
+CXXFLAGS += ${shell $(INCDIR) $(INCDIROPT) "$(CC)" $(APPDIR)/external/mbedtls/$(CONFIG_LIB_MBEDTLS_VERSION)/include}
 
-../$(mbedtls_subdir)/library/bignum.c_CFLAGS += -fno-lto
-
-CFLAGS += -D__unix__ -D__socklen_t_defined
-
-ifneq ($(mbedtls_subdir),master)
--include ../$(mbedtls_subdir)/NuttX.mk
-else
-CSRCS = $(wildcard ../master/library/*.c)
 endif
-
-include $(APPDIR)/Application.mk
