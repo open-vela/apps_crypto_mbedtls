@@ -2,22 +2,9 @@
 
 # all.sh
 #
+# This file is part of mbed TLS (https://tls.mbed.org)
+#
 # Copyright (c) 2014-2017, ARM Limited, All Rights Reserved
-# SPDX-License-Identifier: Apache-2.0
-#
-# Licensed under the Apache License, Version 2.0 (the "License"); you may
-# not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-# http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-#
-# This file is part of Mbed TLS (https://tls.mbed.org)
 
 
 
@@ -135,14 +122,6 @@ pre_initialize_variables () {
     FORCE=0
     KEEP_GOING=0
 
-    # Seed value used with the --release-test option.
-    #
-    # See also RELEASE_SEED in basic-build-test.sh. Debugging is easier if
-    # both values are kept in sync. If you change the value here because it
-    # breaks some tests, you'll definitely want to change it in
-    # basic-build-test.sh as well.
-    RELEASE_SEED=1
-
     : ${MBEDTLS_TEST_OUTCOME_FILE=}
     : ${MBEDTLS_TEST_PLATFORM="$(uname -s | tr -c \\n0-9A-Za-z _)-$(uname -m | tr -c \\n0-9A-Za-z _)"}
     export MBEDTLS_TEST_OUTCOME_FILE
@@ -240,7 +219,7 @@ General options:
      --outcome-file=<path>  File where test outcomes are written (not done if
                             empty; default: \$MBEDTLS_TEST_OUTCOME_FILE).
      --random-seed      Use a random seed value for randomized tests (default).
-  -r|--release-test     Run this script in release mode. This fixes the seed value to ${RELEASE_SEED}.
+  -r|--release-test     Run this script in release mode. This fixes the seed value to 1.
   -s|--seed             Integer seed value to use for this test run.
 
 Tool path options:
@@ -390,7 +369,7 @@ pre_parse_command_line () {
             --outcome-file) shift; MBEDTLS_TEST_OUTCOME_FILE="$1";;
             --out-of-source-dir) shift; OUT_OF_SOURCE_DIR="$1";;
             --random-seed) unset SEED;;
-            --release-test|-r) SEED=$RELEASE_SEED;;
+            --release-test|-r) SEED=1;;
             --seed|-s) shift; SEED="$1";;
             -*)
                 echo >&2 "Unknown option: $1"
