@@ -120,7 +120,6 @@ pre_initialize_variables () {
     append_outcome=0
     MEMORY=0
     FORCE=0
-    QUIET=0
     KEEP_GOING=0
 
     : ${MBEDTLS_TEST_OUTCOME_FILE=}
@@ -201,7 +200,6 @@ Special options:
   --list-components     List components supported on this platform and exit.
 
 General options:
-  -q|--quiet            Only output component names, and errors if any.
   -f|--force            Force the tests to overwrite any modified files.
   -k|--keep-going       Run all tests and report errors at the end.
   -m|--memory           Additional optional memory tests.
@@ -217,7 +215,6 @@ General options:
      --no-force         Refuse to overwrite modified files (default).
      --no-keep-going    Stop at the first error (default).
      --no-memory        No additional memory tests (default).
-     --no-quiet         Print full ouput from components.
      --out-of-source-dir=<path>  Directory used for CMake out-of-source build tests.
      --outcome-file=<path>  File where test outcomes are written (not done if
                             empty; default: \$MBEDTLS_TEST_OUTCOME_FILE).
@@ -291,11 +288,6 @@ msg()
     else
         current_section="$1"
     fi
-
-    if [ $QUIET -eq 1 ]; then
-        return
-    fi
-
     echo ""
     echo "******************************************************************"
     echo "* $current_section "
@@ -371,13 +363,11 @@ pre_parse_command_line () {
             --no-force) FORCE=0;;
             --no-keep-going) KEEP_GOING=0;;
             --no-memory) MEMORY=0;;
-            --no-quiet) QUIET=0;;
             --openssl) shift; OPENSSL="$1";;
             --openssl-legacy) shift; OPENSSL_LEGACY="$1";;
             --openssl-next) shift; OPENSSL_NEXT="$1";;
             --outcome-file) shift; MBEDTLS_TEST_OUTCOME_FILE="$1";;
             --out-of-source-dir) shift; OUT_OF_SOURCE_DIR="$1";;
-            --quiet|-q) QUIET=1;;
             --random-seed) unset SEED;;
             --release-test|-r) SEED=1;;
             --seed|-s) shift; SEED="$1";;
@@ -459,7 +449,7 @@ pre_setup_keep_going () {
             failure_summary="$failure_summary
 $text"
             failure_count=$((failure_count + 1))
-            echo "${start_red}^^^^$text^^^^${end_color}" >&2
+            echo "${start_red}^^^^$text^^^^${end_color}"
         fi
     }
     make () {
@@ -505,24 +495,6 @@ not() {
     ! "$@"
 }
 
-pre_setup_quiet_redirect () {
-    if [ $QUIET -ne 1 ]; then
-        redirect_out () {
-            "$@"
-        }
-        redirect_err () {
-            "$@"
-        }
-    else
-        redirect_out () {
-            "$@" >/dev/null
-        }
-        redirect_err () {
-            "$@" 2>/dev/null
-        }
-    fi
-}
-
 pre_prepare_outcome_file () {
     case "$MBEDTLS_TEST_OUTCOME_FILE" in
       [!/]*) MBEDTLS_TEST_OUTCOME_FILE="$PWD/$MBEDTLS_TEST_OUTCOME_FILE";;
@@ -533,10 +505,6 @@ pre_prepare_outcome_file () {
 }
 
 pre_print_configuration () {
-    if [ $QUIET -eq 1 ]; then
-        return
-    fi
-
     msg "info: $0 configuration"
     echo "MEMORY: $MEMORY"
     echo "FORCE: $FORCE"
@@ -611,11 +579,6 @@ pre_check_tools () {
                         "$ARMC6_CC" "$ARMC6_AR" "$ARMC6_FROMELF";;
     esac
 
-    # past this point, no call to check_tool, only printing output
-    if [ $QUIET -eq 1 ]; then
-        return
-    fi
-
     msg "info: output_env.sh"
     case $RUN_COMPONENTS in
         *_armcc*)
@@ -681,13 +644,7 @@ component_check_names () {
 
 component_check_test_cases () {
     msg "Check: test case descriptions" # < 1s
-    if [ $QUIET -eq 1 ]; then
-        opt='--quiet'
-    else
-        opt=''
-    fi
-    record_status tests/scripts/check-test-cases.py $opt
-    unset opt
+    record_status tests/scripts/check-test-cases.py
 }
 
 component_check_doxygen_warnings () {
@@ -1941,10 +1898,7 @@ component_check_python_files () {
 
 component_check_generate_test_code () {
     msg "uint test: generate_test_code.py"
-    # unittest writes out mundane stuff like number or tests run on stderr.
-    # Our convention is to reserve stderr for actual errors, and write
-    # harmless info on stdout so it can be suppress with --quiet.
-    record_status ./tests/scripts/test_generate_test_code.py 2>&1
+    record_status ./tests/scripts/test_generate_test_code.py
 }
 
 ################################################################
@@ -1975,18 +1929,13 @@ run_component () {
     # Unconditionally create a seedfile that's sufficiently long.
     # Do this before each component, because a previous component may
     # have messed it up or shortened it.
-    redirect_err dd if=/dev/urandom of=./tests/seedfile bs=64 count=1
+    dd if=/dev/urandom of=./tests/seedfile bs=64 count=1
 
     # Run the component code.
-    if [ $QUIET -eq 1 ]; then
-        # msg() is silenced, so just print the component name here
-        echo "${current_component#component_}"
-    fi
-    redirect_out "$@"
+    "$@"
 
     # Restore the build tree to a clean state.
     cleanup
-    unset current_component
 }
 
 # Preliminary setup
@@ -2004,7 +1953,6 @@ else
         "$@"
     }
 fi
-pre_setup_quiet_redirect
 pre_prepare_outcome_file
 pre_print_configuration
 pre_check_tools
