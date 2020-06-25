@@ -39,8 +39,6 @@ my $programs_dir = 'programs';
 my $mbedtls_header_dir = 'include/mbedtls';
 my $psa_header_dir = 'include/psa';
 my $source_dir = 'library';
-my $test_source_dir = 'tests/src';
-my $test_header_dir = 'tests/include/test';
 
 my @thirdparty_header_dirs = qw(
     3rdparty/everest/include/everest
@@ -60,7 +58,6 @@ my @include_directories = qw(
     3rdparty/everest/include/everest
     3rdparty/everest/include/everest/vs2010
     3rdparty/everest/include/everest/kremlib
-    tests/include
 );
 my $include_directories = join(';', map {"../../$_"} @include_directories);
 
@@ -107,8 +104,6 @@ sub check_dirs {
         && -d $mbedtls_header_dir
         && -d $psa_header_dir
         && -d $source_dir
-        && -d $test_source_dir
-        && -d $test_header_dir
         && -d $programs_dir;
 }
 
@@ -254,14 +249,12 @@ sub main {
     my @header_dirs = (
                        $mbedtls_header_dir,
                        $psa_header_dir,
-                       $test_header_dir,
                        $source_dir,
                        @thirdparty_header_dirs,
                       );
     my @headers = (map { <$_/*.h> } @header_dirs);
     my @source_dirs = (
                        $source_dir,
-                       $test_source_dir,
                        @thirdparty_source_dirs,
                       );
     my @sources = (map { <$_/*.c> } @source_dirs);
