@@ -76,13 +76,10 @@ def check_description(results, seen, file_name, line_number, description):
                         len(description))
     seen[description] = line_number
 
-def walk_test_suite(function, results, descriptions, data_file_name):
-    """Iterate over the test cases in the given unit test data file.
-
-Call function(results, descriptions, data_file_name, line_number, description)
-on each description.
-"""
+def check_test_suite(results, data_file_name):
+    """Check the test cases in the given unit test data file."""
     in_paragraph = False
+    descriptions = {}
     with open(data_file_name, 'rb') as data_file:
         for line_number, line in enumerate(data_file, 1):
             line = line.rstrip(b'\r\n')
@@ -93,16 +90,13 @@ on each description.
                 continue
             if not in_paragraph:
                 # This is a test case description line.
-                function(results, descriptions,
-                         data_file_name, line_number, line)
+                check_description(results, descriptions,
+                                  data_file_name, line_number, line)
             in_paragraph = True
 
-def walk_ssl_opt_sh(function, results, descriptions, file_name):
-    """Iterate over the test cases in ssl-opt.sh or a file with a similar format.
-
-Call function(results, descriptions, file_name, line_number, description)
-on each description.
-"""
+def check_ssl_opt_sh(results, file_name):
+    """Check the test cases in ssl-opt.sh or a file with a similar format."""
+    descriptions = {}
     with open(file_name, 'rb') as file_contents:
         for line_number, line in enumerate(file_contents, 1):
             # Assume that all run_test calls have the same simple form
@@ -112,23 +106,8 @@ on each description.
             if not m:
                 continue
             description = m.group(1)
-            function(results, descriptions,
-                     file_name, line_number, description)
-
-def walk_all(function, results):
-    """Iterate over all named test cases.
-
-Call function(results, {}, file_name, line_number, description)
-on each description.
-"""
-    test_directories = collect_test_directories()
-    for directory in test_directories:
-        for data_file_name in glob.glob(os.path.join(directory, 'suites',
-                                                     '*.data')):
-            walk_test_suite(function, results, {}, data_file_name)
-        ssl_opt_sh = os.path.join(directory, 'ssl-opt.sh')
-        if os.path.exists(ssl_opt_sh):
-            walk_ssl_opt_sh(function, results, {}, ssl_opt_sh)
+            check_description(results, descriptions,
+                              file_name, line_number, description)
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -139,8 +118,15 @@ def main():
                         action='store_false', dest='quiet',
                         help='Show warnings (default: on; undoes --quiet)')
     options = parser.parse_args()
+    test_directories = collect_test_directories()
     results = Results(options)
-    walk_all(check_description, results)
+    for directory in test_directories:
+        for data_file_name in glob.glob(os.path.join(directory, 'suites',
+                                                     '*.data')):
+            check_test_suite(results, data_file_name)
+        ssl_opt_sh = os.path.join(directory, 'ssl-opt.sh')
+        if os.path.exists(ssl_opt_sh):
+            check_ssl_opt_sh(results, ssl_opt_sh)
     if (results.warnings or results.errors) and not options.quiet:
         sys.stderr.write('{}: {} errors, {} warnings\n'
                          .format(sys.argv[0], results.errors, results.warnings))
