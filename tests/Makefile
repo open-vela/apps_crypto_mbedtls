@@ -77,9 +77,7 @@ all: $(BINARIES)
 $(MBEDLIBS):
 	$(MAKE) -C ../library
 
-MBEDTLS_TEST_OBJS=$(patsubst %.c,%.o,$(wildcard src/*.c))
-
-mbedtls_test: $(MBEDTLS_TEST_OBJS)
+MBEDTESTS_OBJS=$(patsubst %.c,%.o,$(wildcard src/*.c))
 
 # Rule to compile common test C files in src folder
 src/%.o : src/%.c
@@ -114,9 +112,9 @@ C_FILES := $(addsuffix .c,$(APPS))
 		-o .
 
 
-$(BINARIES): %$(EXEXT): %.c $(MBEDLIBS) $(MBEDTLS_TEST_OBJS)
+$(BINARIES): %$(EXEXT): %.c $(MBEDLIBS) $(MBEDTESTS_OBJS)
 	echo "  CC    $<"
-	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) $< $(MBEDTLS_TEST_OBJS) $(LOCAL_LDFLAGS) $(LDFLAGS) -o $@
+	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) $< $(MBEDTESTS_OBJS) $(LOCAL_LDFLAGS) $(LDFLAGS) -o $@
 
 # Some test suites require additional header files.
 $(filter test_suite_psa_crypto%, $(BINARIES)): include/test/psa_crypto_helpers.h
