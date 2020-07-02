@@ -179,19 +179,24 @@ endif(USE_STATIC_MBEDTLS_LIBRARY)
 
 if(USE_SHARED_MBEDTLS_LIBRARY)
     add_library(mbedcrypto SHARED ${src_crypto})
-    set_target_properties(mbedcrypto PROPERTIES VERSION 2.23.0 SOVERSION 5)
+    set_target_properties(mbedcrypto PROPERTIES VERSION 2.22.0 SOVERSION 4)
     target_link_libraries(mbedcrypto ${libs})
 
     add_library(mbedx509 SHARED ${src_x509})
-    set_target_properties(mbedx509 PROPERTIES VERSION 2.23.0 SOVERSION 1)
+    set_target_properties(mbedx509 PROPERTIES VERSION 2.22.0 SOVERSION 1)
     target_link_libraries(mbedx509 ${libs} mbedcrypto)
 
     add_library(mbedtls SHARED ${src_tls})
-    set_target_properties(mbedtls PROPERTIES VERSION 2.23.0 SOVERSION 13)
+    set_target_properties(mbedtls PROPERTIES VERSION 2.22.0 SOVERSION 13)
     target_link_libraries(mbedtls ${libs} mbedx509)
 endif(USE_SHARED_MBEDTLS_LIBRARY)
 
 foreach(target IN LISTS target_libraries)
+    # Include public header files from /include and other directories
+    # declared by /3rdparty/**/CMakeLists.txt. Include private header files
+    # from /library and others declared by /3rdparty/**/CMakeLists.txt.
+    # /library needs to be listed explicitly when building .c files outside
+    # of /library (which currently means: under /3rdparty).
     target_include_directories(${target}
         PUBLIC ${MBEDTLS_DIR}/include/
         PUBLIC ${thirdparty_inc_public}
