@@ -10,17 +10,14 @@ all: programs tests
 
 no_test: programs
 
-programs: lib mbedtls_test
+programs: lib
 	$(MAKE) -C programs
 
 lib:
 	$(MAKE) -C library
 
-tests: lib mbedtls_test
+tests: lib
 	$(MAKE) -C tests
-
-mbedtls_test:
-	$(MAKE) -C tests mbedtls_test
 
 ifndef WINDOWS
 install: no_test
