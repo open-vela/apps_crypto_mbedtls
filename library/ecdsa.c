@@ -25,7 +25,11 @@
  * SEC1 http://www.secg.org/index.php?action=secg,docs_secg
  */
 
-#include "common.h"
+#if !defined(MBEDTLS_CONFIG_FILE)
+#include "mbedtls/config.h"
+#else
+#include MBEDTLS_CONFIG_FILE
+#endif
 
 #if defined(MBEDTLS_ECDSA_C)
 
