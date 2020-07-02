@@ -680,7 +680,7 @@ component_check_doxy_blocks () {
 
 component_check_files () {
     msg "Check: file sanity checks (permissions, encodings)" # < 1s
-    record_status tests/scripts/check_files.py
+    record_status tests/scripts/check-files.py
 }
 
 component_check_changelog () {
@@ -707,7 +707,7 @@ component_check_test_cases () {
     else
         opt=''
     fi
-    record_status tests/scripts/check_test_cases.py $opt
+    record_status tests/scripts/check-test-cases.py $opt
     unset opt
 }
 
@@ -1220,7 +1220,9 @@ component_test_check_params_functionality () {
     scripts/config.py full # includes CHECK_PARAMS
     # Make MBEDTLS_PARAM_FAILED call mbedtls_param_failed().
     scripts/config.py unset MBEDTLS_CHECK_PARAMS_ASSERT
-    make CC=gcc CFLAGS='-Werror -O1' all test
+    # Only build and run tests. Do not build sample programs, because
+    # they don't have a mbedtls_param_failed() function.
+    make CC=gcc CFLAGS='-Werror -O1' lib test
 }
 
 component_test_check_params_without_platform () {

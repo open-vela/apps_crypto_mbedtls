@@ -241,33 +241,6 @@ requires_ciphersuite_enabled() {
     fi
 }
 
-# maybe_requires_ciphersuite_enabled CMD [RUN_TEST_OPTION...]
-# If CMD (call to a TLS client or server program) requires a specific
-# ciphersuite, arrange to only run the test case if this ciphersuite is
-# enabled. As an exception, do run the test case if it expects a ciphersuite
-# mismatch.
-maybe_requires_ciphersuite_enabled() {
-    case "$1" in
-        *\ force_ciphersuite=*) :;;
-        *) return;; # No specific required ciphersuite
-    esac
-    ciphersuite="${1##*\ force_ciphersuite=}"
-    ciphersuite="${ciphersuite%%[!-0-9A-Z_a-z]*}"
-    shift
-
-    case "$*" in
-        *"-s SSL - The server has no ciphersuites in common"*)
-            # This test case expects a ciphersuite mismatch, so it doesn't
-            # require the ciphersuite to be enabled.
-            ;;
-        *)
-            requires_ciphersuite_enabled "$ciphersuite"
-            ;;
-    esac
-
-    unset ciphersuite
-}
-
 # skip next test if OpenSSL doesn't support FALLBACK_SCSV
 requires_openssl_with_fallback_scsv() {
     if [ -z "${OPENSSL_HAS_FBSCSV:-}" ]; then
@@ -445,7 +418,7 @@ fail() {
     fi
     echo "  ! outputs saved to o-XXX-${TESTS}.log"
 
-    if [ "${LOG_FAILURE_ON_STDOUT:-0}" != 0 ]; then
+    if [ "X${USER:-}" = Xbuildbot -o "X${LOGNAME:-}" = Xbuildbot -o "${LOG_FAILURE_ON_STDOUT:-0}" != 0 ]; then
         echo "  ! server output:"
         cat o-srv-${TESTS}.log
         echo "  ! ========================================================"
@@ -685,9 +658,17 @@ run_test() {
        requires_config_enabled MBEDTLS_FS_IO
     fi
 
-    # If the client or serve requires a ciphersuite, check that it's enabled.
-    maybe_requires_ciphersuite_enabled "$SRV_CMD" "$@"
-    maybe_requires_ciphersuite_enabled "$CLI_CMD" "$@"
+    # Check if server forces ciphersuite
+    FORCE_CIPHERSUITE=$(echo "$SRV_CMD" | sed -n 's/^.*force_ciphersuite=\([a-zA-Z0-9\-]*\).*$/\1/p')
+    if [ ! -z "$FORCE_CIPHERSUITE" ]; then
+       requires_ciphersuite_enabled $FORCE_CIPHERSUITE
+    fi
+
+    # Check if client forces ciphersuite
+    FORCE_CIPHERSUITE=$(echo "$CLI_CMD" | sed -n 's/^.*force_ciphersuite=\([a-zA-Z0-9\-]*\).*$/\1/p')
+    if [ ! -z "$FORCE_CIPHERSUITE" ]; then
+       requires_ciphersuite_enabled $FORCE_CIPHERSUITE
+    fi
 
     # should we skip?
     if [ "X$SKIP_NEXT" = "XYES" ]; then
@@ -697,21 +678,15 @@ run_test() {
         return
     fi
 
-    # update DTLS variable
-    detect_dtls "$SRV_CMD"
-
-    # if the test uses DTLS but no custom proxy, add a simple proxy
-    # as it provides timing info that's useful to debug failures
-    if [ -z "$PXY_CMD" ] && [ "$DTLS" -eq 1 ]; then
-        PXY_CMD="$P_PXY"
-    fi
-
     # fix client port
     if [ -n "$PXY_CMD" ]; then
         CLI_CMD=$( echo "$CLI_CMD" | sed s/+SRV_PORT/$PXY_PORT/g )
     else
         CLI_CMD=$( echo "$CLI_CMD" | sed s/+SRV_PORT/$SRV_PORT/g )
     fi
+
+    # update DTLS variable
+    detect_dtls "$SRV_CMD"
 
     # prepend valgrind to our commands if active
     if [ "$MEMCHECK" -gt 0 ]; then
@@ -729,19 +704,19 @@ run_test() {
 
         # run the commands
         if [ -n "$PXY_CMD" ]; then
-            printf "# $NAME\n$PXY_CMD\n" > $PXY_OUT
+            echo "$PXY_CMD" > $PXY_OUT
             $PXY_CMD >> $PXY_OUT 2>&1 &
             PXY_PID=$!
             wait_proxy_start "$PXY_PORT" "$PXY_PID"
         fi
 
         check_osrv_dtls
-        printf "# $NAME\n$SRV_CMD\n" > $SRV_OUT
+        echo "$SRV_CMD" > $SRV_OUT
         provide_input | $SRV_CMD >> $SRV_OUT 2>&1 &
         SRV_PID=$!
         wait_server_start "$SRV_PORT" "$SRV_PID"
 
-        printf "# $NAME\n$CLI_CMD\n" > $CLI_OUT
+        echo "$CLI_CMD" > $CLI_OUT
         eval "$CLI_CMD" >> $CLI_OUT 2>&1 &
         wait_client_done
 
