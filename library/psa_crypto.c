@@ -372,12 +372,12 @@ static inline int psa_key_slot_is_external( const psa_key_slot_t *slot )
 #endif /* MBEDTLS_PSA_CRYPTO_SE_C */
 
 #if defined(MBEDTLS_ECP_C)
-mbedtls_ecp_group_id mbedtls_ecc_group_of_psa( psa_ecc_curve_t curve,
+mbedtls_ecp_group_id mbedtls_ecc_group_of_psa( psa_ecc_family_t curve,
                                                size_t byte_length )
 {
     switch( curve )
     {
-        case PSA_ECC_CURVE_SECP_R1:
+        case PSA_ECC_FAMILY_SECP_R1:
             switch( byte_length )
             {
                 case PSA_BITS_TO_BYTES( 192 ):
@@ -395,7 +395,7 @@ mbedtls_ecp_group_id mbedtls_ecc_group_of_psa( psa_ecc_curve_t curve,
             }
             break;
 
-        case PSA_ECC_CURVE_BRAINPOOL_P_R1:
+        case PSA_ECC_FAMILY_BRAINPOOL_P_R1:
             switch( byte_length )
             {
                 case PSA_BITS_TO_BYTES( 256 ):
@@ -409,7 +409,7 @@ mbedtls_ecp_group_id mbedtls_ecc_group_of_psa( psa_ecc_curve_t curve,
             }
             break;
 
-        case PSA_ECC_CURVE_MONTGOMERY:
+        case PSA_ECC_FAMILY_MONTGOMERY:
             switch( byte_length )
             {
                 case PSA_BITS_TO_BYTES( 255 ):
@@ -421,7 +421,7 @@ mbedtls_ecp_group_id mbedtls_ecc_group_of_psa( psa_ecc_curve_t curve,
             }
             break;
 
-        case PSA_ECC_CURVE_SECP_K1:
+        case PSA_ECC_FAMILY_SECP_K1:
             switch( byte_length )
             {
                 case PSA_BITS_TO_BYTES( 192 ):
@@ -582,7 +582,7 @@ exit:
 #endif /* defined(MBEDTLS_RSA_C) && defined(MBEDTLS_PK_PARSE_C) */
 
 #if defined(MBEDTLS_ECP_C)
-static psa_status_t psa_prepare_import_ec_key( psa_ecc_curve_t curve,
+static psa_status_t psa_prepare_import_ec_key( psa_ecc_family_t curve,
                                                size_t data_length,
                                                int is_public,
                                                mbedtls_ecp_keypair **p_ecp )
@@ -616,7 +616,7 @@ static psa_status_t psa_prepare_import_ec_key( psa_ecc_curve_t curve,
 
 /* Import a public key given as the uncompressed representation defined by SEC1
  * 2.3.3 as the content of an ECPoint. */
-static psa_status_t psa_import_ec_public_key( psa_ecc_curve_t curve,
+static psa_status_t psa_import_ec_public_key( psa_ecc_family_t curve,
                                               const uint8_t *data,
                                               size_t data_length,
                                               mbedtls_ecp_keypair **p_ecp )
@@ -655,7 +655,7 @@ exit:
 
 /* Import a private key given as a byte string which is the private value
  * in big-endian order. */
-static psa_status_t psa_import_ec_private_key( psa_ecc_curve_t curve,
+static psa_status_t psa_import_ec_private_key( psa_ecc_family_t curve,
                                                const uint8_t *data,
                                                size_t data_length,
                                                mbedtls_ecp_keypair **p_ecp )
@@ -667,12 +667,16 @@ static psa_status_t psa_import_ec_private_key( psa_ecc_curve_t curve,
     if( status != PSA_SUCCESS )
         goto exit;
 
-    /* Load and validate the secret key */
+    /* Load the secret value. */
     status = mbedtls_to_psa_error(
-        mbedtls_ecp_read_key( ecp->grp.id, ecp, data, data_length ) );
+        mbedtls_mpi_read_binary( &ecp->d, data, data_length ) );
     if( status != PSA_SUCCESS )
         goto exit;
-
+    /* Validate the private key. */
+    status = mbedtls_to_psa_error(
+        mbedtls_ecp_check_privkey( &ecp->grp, &ecp->d ) );
+    if( status != PSA_SUCCESS )
+        goto exit;
     /* Calculate the public key from the private key. */
     status = mbedtls_to_psa_error(
         mbedtls_ecp_mul( &ecp->grp, &ecp->Q, &ecp->d, &ecp->grp.G,
@@ -761,14 +765,14 @@ psa_status_t psa_import_key_into_slot( psa_key_slot_t *slot,
 #if defined(MBEDTLS_ECP_C)
     if( PSA_KEY_TYPE_IS_ECC_KEY_PAIR( slot->attr.type ) )
     {
-        status = psa_import_ec_private_key( PSA_KEY_TYPE_GET_CURVE( slot->attr.type ),
+        status = psa_import_ec_private_key( PSA_KEY_TYPE_ECC_GET_FAMILY( slot->attr.type ),
                                             data, data_length,
                                             &slot->data.ecp );
     }
     else if( PSA_KEY_TYPE_IS_ECC_PUBLIC_KEY( slot->attr.type ) )
     {
         status = psa_import_ec_public_key(
-            PSA_KEY_TYPE_GET_CURVE( slot->attr.type ),
+            PSA_KEY_TYPE_ECC_GET_FAMILY( slot->attr.type ),
             data, data_length,
             &slot->data.ecp );
     }
@@ -1323,8 +1327,7 @@ static psa_status_t psa_internal_export_key( const psa_key_slot_t *slot,
         if( bytes > data_size )
             return( PSA_ERROR_BUFFER_TOO_SMALL );
         status = mbedtls_to_psa_error(
-            mbedtls_ecp_write_key(slot->data.ecp->grp.id, slot->data.ecp,
-                                  data, bytes) );
+            mbedtls_mpi_write_binary( &slot->data.ecp->d, data, bytes ) );
         if( status != PSA_SUCCESS )
             return( status );
         memset( data + bytes, 0, data_size - bytes );
@@ -2514,9 +2517,6 @@ static const mbedtls_cipher_info_t *mbedtls_cipher_info_from_psa(
                 break;
             case PSA_ALG_OFB:
                 mode = MBEDTLS_MODE_OFB;
-                break;
-            case PSA_ALG_ECB_NO_PADDING:
-                mode = MBEDTLS_MODE_ECB;
                 break;
             case PSA_ALG_CBC_NO_PADDING:
                 mode = MBEDTLS_MODE_CBC;
@@ -3746,11 +3746,7 @@ static psa_status_t psa_cipher_init( psa_cipher_operation_t *operation,
     operation->alg = alg;
     operation->key_set = 0;
     operation->iv_set = 0;
-    if( alg == PSA_ALG_ECB_NO_PADDING ) {
-        operation->iv_required = 0;
-    } else {
-        operation->iv_required = 1;
-    }
+    operation->iv_required = 1;
     operation->iv_size = 0;
     operation->block_size = 0;
     mbedtls_cipher_init( &operation->ctx.cipher );
@@ -3841,7 +3837,7 @@ static psa_status_t psa_cipher_setup( psa_cipher_operation_t *operation,
     operation->key_set = 1;
     operation->block_size = ( PSA_ALG_IS_STREAM_CIPHER( alg ) ? 1 :
                               PSA_BLOCK_CIPHER_BLOCK_SIZE( slot->attr.type ) );
-    if( alg & PSA_ALG_CIPHER_FROM_BLOCK_FLAG && alg != PSA_ALG_ECB_NO_PADDING )
+    if( alg & PSA_ALG_CIPHER_FROM_BLOCK_FLAG )
     {
         operation->iv_size = PSA_BLOCK_CIPHER_BLOCK_SIZE( slot->attr.type );
     }
@@ -3995,14 +3991,12 @@ psa_status_t psa_cipher_finish( psa_cipher_operation_t *operation,
         return( PSA_ERROR_BAD_STATE );
     }
 
-    if( operation->ctx.cipher.unprocessed_len != 0 )
+    if( operation->ctx.cipher.operation == MBEDTLS_ENCRYPT &&
+        operation->alg == PSA_ALG_CBC_NO_PADDING &&
+        operation->ctx.cipher.unprocessed_len != 0 )
     {
-        if( operation->alg == PSA_ALG_ECB_NO_PADDING ||
-            ( operation->alg == PSA_ALG_CBC_NO_PADDING &&
-              operation->ctx.cipher.operation == MBEDTLS_ENCRYPT ) ) {
             status = PSA_ERROR_INVALID_ARGUMENT;
             goto error;
-        }
     }
 
     cipher_ret = mbedtls_cipher_finish( &operation->ctx.cipher,
@@ -5277,7 +5271,7 @@ static psa_status_t psa_key_agreement_ecdh( const uint8_t *peer_key,
     mbedtls_ecdh_context ecdh;
     psa_status_t status;
     size_t bits = 0;
-    psa_ecc_curve_t curve = mbedtls_ecc_group_to_psa( our_key->grp.id, &bits );
+    psa_ecc_family_t curve = mbedtls_ecc_group_to_psa( our_key->grp.id, &bits );
     mbedtls_ecdh_init( &ecdh );
 
     status = psa_import_ec_public_key( curve,
@@ -5590,7 +5584,7 @@ static psa_status_t psa_generate_key_internal(
 #if defined(MBEDTLS_ECP_C)
     if ( PSA_KEY_TYPE_IS_ECC( type ) && PSA_KEY_TYPE_IS_KEY_PAIR( type ) )
     {
-        psa_ecc_curve_t curve = PSA_KEY_TYPE_GET_CURVE( type );
+        psa_ecc_family_t curve = PSA_KEY_TYPE_ECC_GET_FAMILY( type );
         mbedtls_ecp_group_id grp_id =
             mbedtls_ecc_group_of_psa( curve, PSA_BITS_TO_BYTES( bits ) );
         const mbedtls_ecp_curve_info *curve_info =
