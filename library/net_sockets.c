@@ -25,7 +25,11 @@
 #define _POSIX_C_SOURCE 200112L
 #define _XOPEN_SOURCE 600 /* sockaddr_storage */
 
-#include "common.h"
+#if !defined(MBEDTLS_CONFIG_FILE)
+#include "mbedtls/config.h"
+#else
+#include MBEDTLS_CONFIG_FILE
+#endif
 
 #if defined(MBEDTLS_NET_C)
 
