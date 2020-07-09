@@ -25,7 +25,11 @@
  *  References below are based on rev. 1 (January 2012).
  */
 
-#include "common.h"
+#if !defined(MBEDTLS_CONFIG_FILE)
+#include "mbedtls/config.h"
+#else
+#include MBEDTLS_CONFIG_FILE
+#endif
 
 #if defined(MBEDTLS_HMAC_DRBG_C)
 
