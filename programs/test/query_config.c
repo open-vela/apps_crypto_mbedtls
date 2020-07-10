@@ -986,6 +986,14 @@ int query_config( const char *config )
     }
 #endif /* MBEDTLS_ECP_NIST_OPTIM */
 
+#if defined(MBEDTLS_ECP_NO_INTERNAL_RNG)
+    if( strcmp( "MBEDTLS_ECP_NO_INTERNAL_RNG", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( MBEDTLS_ECP_NO_INTERNAL_RNG );
+        return( 0 );
+    }
+#endif /* MBEDTLS_ECP_NO_INTERNAL_RNG */
+
 #if defined(MBEDTLS_ECP_RESTARTABLE)
     if( strcmp( "MBEDTLS_ECP_RESTARTABLE", config ) == 0 )
     {
@@ -1529,6 +1537,14 @@ int query_config( const char *config )
         return( 0 );
     }
 #endif /* MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH */
+
+#if defined(MBEDTLS_TEST_CONSTANT_FLOW_MEMSAN)
+    if( strcmp( "MBEDTLS_TEST_CONSTANT_FLOW_MEMSAN", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( MBEDTLS_TEST_CONSTANT_FLOW_MEMSAN );
+        return( 0 );
+    }
+#endif /* MBEDTLS_TEST_CONSTANT_FLOW_MEMSAN */
 
 #if defined(MBEDTLS_TEST_HOOKS)
     if( strcmp( "MBEDTLS_TEST_HOOKS", config ) == 0 )
