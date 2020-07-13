@@ -74,8 +74,6 @@ int main( void )
 #include "mbedtls/psa_util.h"
 #endif
 
-#include <test/helpers.h>
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -1018,6 +1016,45 @@ int idle( mbedtls_net_context *fd,
     return( 0 );
 }
 
+/* Unhexify `hex` into `dst`. `dst` must have
+ * size at least `strlen( hex ) / 2`. */
+int unhexify( char const *hex, unsigned char *dst )
+{
+    unsigned char c;
+    size_t j;
+    size_t len = strlen( hex );
+
+    if( len % 2 != 0 )
+        return( -1 );
+
+    for( j = 0; j < len; j += 2 )
+    {
+        c = hex[j];
+        if( c >= '0' && c <= '9' )
+            c -= '0';
+        else if( c >= 'a' && c <= 'f' )
+            c -= 'a' - 10;
+        else if( c >= 'A' && c <= 'F' )
+            c -= 'A' - 10;
+        else
+            return( -1 );
+        dst[ j / 2 ] = c << 4;
+
+        c = hex[j + 1];
+        if( c >= '0' && c <= '9' )
+            c -= '0';
+        else if( c >= 'a' && c <= 'f' )
+            c -= 'a' - 10;
+        else if( c >= 'A' && c <= 'F' )
+            c -= 'A' - 10;
+        else
+            return( -1 );
+        dst[ j / 2 ] |= c;
+    }
+
+    return( 0 );
+}
+
 #if defined(MBEDTLS_SSL_DTLS_CONNECTION_ID)
 int report_cid_usage( mbedtls_ssl_context *ssl,
                       const char *additional_description )
@@ -1748,10 +1785,16 @@ int main( int argc, char *argv[] )
      */
     if( strlen( opt.psk ) )
     {
-        if( mbedtls_test_unhexify( psk, sizeof( psk ),
-                                   opt.psk, &psk_len ) != 0 )
+        psk_len = strlen( opt.psk ) / 2;
+        if( psk_len > sizeof( psk ) )
         {
-            mbedtls_printf( "pre-shared key not valid\n" );
+            mbedtls_printf( "pre-shared key too long\n" );
+            goto exit;
+        }
+
+        if( unhexify( opt.psk, psk ) != 0 )
+        {
+            mbedtls_printf( "pre-shared key not valid hex\n" );
             goto exit;
         }
     }
@@ -1853,10 +1896,16 @@ int main( int argc, char *argv[] )
     }
 
 #if defined(MBEDTLS_SSL_DTLS_CONNECTION_ID)
-    if( mbedtls_test_unhexify( cid, sizeof( cid ),
-                               opt.cid_val, &cid_len ) != 0 )
+    cid_len = strlen( opt.cid_val ) / 2;
+    if( cid_len > sizeof( cid ) )
     {
-        mbedtls_printf( "CID not valid\n" );
+        mbedtls_printf( "CID too long\n" );
+        goto exit;
+    }
+
+    if( unhexify( opt.cid_val, cid ) != 0 )
+    {
+        mbedtls_printf( "CID not valid hex\n" );
         goto exit;
     }
 
@@ -1867,10 +1916,16 @@ int main( int argc, char *argv[] )
     if( opt.cid_val_renego == DFL_CID_VALUE_RENEGO )
         opt.cid_val_renego = opt.cid_val;
 
-    if( mbedtls_test_unhexify( cid_renego, sizeof( cid_renego ),
-                               opt.cid_val_renego, &cid_renego_len ) != 0 )
+    cid_renego_len = strlen( opt.cid_val_renego ) / 2;
+    if( cid_renego_len > sizeof( cid_renego ) )
     {
-        mbedtls_printf( "CID not valid\n" );
+        mbedtls_printf( "CID too long\n" );
+        goto exit;
+    }
+
+    if( unhexify( opt.cid_val_renego, cid_renego ) != 0 )
+    {
+        mbedtls_printf( "CID not valid hex\n" );
         goto exit;
     }
 #endif /* MBEDTLS_SSL_DTLS_CONNECTION_ID */
