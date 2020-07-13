@@ -846,9 +846,6 @@ int mbedtls_ecp_tls_write_group( const mbedtls_ecp_group *grp,
  *                  intermediate results to prevent potential timing attacks
  *                  targeting these results. We recommend always providing
  *                  a non-NULL \p f_rng. The overhead is negligible.
- *                  Note: unless #MBEDTLS_ECP_NO_INTERNAL_RNG is defined, when
- *                  \p f_rng is NULL, an internal RNG (seeded from the value
- *                  of \p m) will be used instead.
  *
  * \param grp       The ECP group to use.
  *                  This must be initialized and have group parameters
@@ -1149,6 +1146,26 @@ int mbedtls_ecp_gen_key( mbedtls_ecp_group_id grp_id, mbedtls_ecp_keypair *key,
  */
 int mbedtls_ecp_read_key( mbedtls_ecp_group_id grp_id, mbedtls_ecp_keypair *key,
                           const unsigned char *buf, size_t buflen );
+
+/**
+ * \brief           This function exports an elliptic curve private key.
+ *
+ * \param key       The private key.
+ * \param buf       The output buffer for containing the binary representation
+ *                  of the key. (Big endian integer for Weierstrass curves, byte
+ *                  string for Montgomery curves.)
+ * \param buflen    The total length of the buffer in bytes.
+ *
+ * \return          \c 0 on success.
+ * \return          #MBEDTLS_ERR_ECP_BUFFER_TOO_SMALL if the \p key
+                    representation is larger than the available space in \p buf.
+ * \return          #MBEDTLS_ERR_ECP_FEATURE_UNAVAILABLE if the operation for
+ *                  the group is not implemented.
+ * \return          Another negative error code on different kinds of failure.
+ */
+int mbedtls_ecp_write_key( mbedtls_ecp_keypair *key,
+                           unsigned char *buf, size_t buflen );
+
 /**
  * \brief           This function checks that the keypair objects
  *                  \p pub and \p prv have the same group and the
