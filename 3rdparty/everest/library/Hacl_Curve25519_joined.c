@@ -19,7 +19,11 @@
  *  This file is part of mbed TLS (https://tls.mbed.org)
  */
 
-#include "common.h"
+#if !defined(MBEDTLS_CONFIG_FILE)
+#include "mbedtls/config.h"
+#else
+#include MBEDTLS_CONFIG_FILE
+#endif
 
 #if defined(MBEDTLS_ECDH_VARIANT_EVEREST_ENABLED)
 

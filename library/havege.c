@@ -26,7 +26,11 @@
  *  Contact: seznec(at)irisa_dot_fr - orocheco(at)irisa_dot_fr
  */
 
-#include "common.h"
+#if !defined(MBEDTLS_CONFIG_FILE)
+#include "mbedtls/config.h"
+#else
+#include MBEDTLS_CONFIG_FILE
+#endif
 
 #if defined(MBEDTLS_HAVEGE_C)
 
