@@ -28,7 +28,11 @@
  * RFC 5116 "An Interface and Algorithms for Authenticated Encryption"
  */
 
-#include "common.h"
+#if !defined(MBEDTLS_CONFIG_FILE)
+#include "mbedtls/config.h"
+#else
+#include MBEDTLS_CONFIG_FILE
+#endif
 
 #if defined(MBEDTLS_CCM_C)
 
