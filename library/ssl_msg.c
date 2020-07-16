@@ -28,7 +28,11 @@
  *  http://www.ietf.org/rfc/rfc4346.txt
  */
 
-#include "common.h"
+#if !defined(MBEDTLS_CONFIG_FILE)
+#include "mbedtls/config.h"
+#else
+#include MBEDTLS_CONFIG_FILE
+#endif
 
 #if defined(MBEDTLS_SSL_TLS_C)
 
@@ -46,8 +50,6 @@
 #include "mbedtls/error.h"
 #include "mbedtls/platform_util.h"
 #include "mbedtls/version.h"
-
-#include "ssl_invasive.h"
 
 #include <string.h>
 
@@ -322,7 +324,7 @@ int (*mbedtls_ssl_hw_record_finish)( mbedtls_ssl_context *ssl ) = NULL;
       defined(MBEDTLS_SSL_PROTO_TLS1_2) )
 /* This function makes sure every byte in the memory region is accessed
  * (in ascending addresses order) */
-static void ssl_read_memory( const unsigned char *p, size_t len )
+static void ssl_read_memory( unsigned char *p, size_t len )
 {
     unsigned char acc = 0;
     volatile unsigned char force;
@@ -1071,103 +1073,6 @@ int mbedtls_ssl_encrypt_buf( mbedtls_ssl_context *ssl,
     return( 0 );
 }
 
-#if defined(MBEDTLS_SSL_SOME_SUITES_USE_CBC) && \
-    ( defined(MBEDTLS_SSL_PROTO_TLS1) ||        \
-      defined(MBEDTLS_SSL_PROTO_TLS1_1) ||      \
-      defined(MBEDTLS_SSL_PROTO_TLS1_2) )
-/*
- * Compute HMAC of variable-length data with constant flow.
- */
-MBEDTLS_STATIC_TESTABLE int mbedtls_ssl_cf_hmac(
-        mbedtls_md_context_t *ctx,
-        const unsigned char *add_data, size_t add_data_len,
-        const unsigned char *data, size_t data_len_secret,
-        size_t min_data_len, size_t max_data_len,
-        unsigned char *output )
-{
-    /* WORK IN PROGRESS - THIS IS ONLY PSEUDO-CONTANT-TIME */
-
-    /*
-     * Process MAC and always update for padlen afterwards to make
-     * total time independent of padlen.
-     *
-     * Known timing attacks:
-     *  - Lucky Thirteen (http://www.isg.rhul.ac.uk/tls/TLStiming.pdf)
-     *
-     * To compensate for different timings for the MAC calculation
-     * depending on how much padding was removed (which is determined
-     * by padlen), process extra_run more blocks through the hash
-     * function.
-     *
-     * The formula in the paper is
-     *   extra_run = ceil( (L1-55) / 64 ) - ceil( (L2-55) / 64 )
-     * where L1 is the size of the header plus the decrypted message
-     * plus CBC padding and L2 is the size of the header plus the
-     * decrypted message. This is for an underlying hash function
-     * with 64-byte blocks.
-     * We use ( (Lx+8) / 64 ) to handle 'negative Lx' values
-     * correctly. We round down instead of up, so -56 is the correct
-     * value for our calculations instead of -55.
-     *
-     * Repeat the formula rather than defining a block_size variable.
-     * This avoids requiring division by a variable at runtime
-     * (which would be marginally less efficient and would require
-     * linking an extra division function in some builds).
-     */
-    size_t j, extra_run = 0;
-    /* This size is enough to server either as input to
-     * md_process() or as output to md_finish() */
-    unsigned char tmp[MBEDTLS_MD_MAX_BLOCK_SIZE];
-
-    memset( tmp, 0, sizeof( tmp ) );
-
-    switch( mbedtls_md_get_type( ctx->md_info ) )
-    {
-#if defined(MBEDTLS_MD5_C) || defined(MBEDTLS_SHA1_C) || \
-defined(MBEDTLS_SHA256_C)
-        case MBEDTLS_MD_MD5:
-        case MBEDTLS_MD_SHA1:
-        case MBEDTLS_MD_SHA256:
-            /* 8 bytes of message size, 64-byte compression blocks */
-            extra_run = ( add_data_len + max_data_len       + 8 ) / 64 -
-                        ( add_data_len + data_len_secret    + 8 ) / 64;
-            break;
-#endif
-#if defined(MBEDTLS_SHA512_C)
-        case MBEDTLS_MD_SHA384:
-            /* 16 bytes of message size, 128-byte compression blocks */
-            extra_run = ( add_data_len + max_data_len       + 16 ) / 128 -
-                        ( add_data_len + data_len_secret    + 16 ) / 128;
-            break;
-#endif
-        default:
-            return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
-    }
-
-    mbedtls_md_hmac_update( ctx, add_data, add_data_len );
-    mbedtls_md_hmac_update( ctx, data, data_len_secret );
-    /* Make sure we access everything even when padlen > 0. This
-     * makes the synchronisation requirements for just-in-time
-     * Prime+Probe attacks much tighter and hopefully impractical. */
-    ssl_read_memory( data + min_data_len, max_data_len - min_data_len );
-    mbedtls_md_hmac_finish( ctx, output );
-
-    /* Dummy calls to compression function.
-     * Call mbedtls_md_process at least once due to cache attacks
-     * that observe whether md_process() was called of not.
-     * Respect the usual start-(process|update)-finish sequence for
-     * the sake of hardware accelerators that might require it. */
-    mbedtls_md_starts( ctx );
-    for( j = 0; j < extra_run + 1; j++ )
-        mbedtls_md_process( ctx, tmp );
-    mbedtls_md_finish( ctx, tmp );
-
-    mbedtls_md_hmac_reset( ctx );
-
-    return( 0 );
-}
-#endif /* MBEDTLS_SSL_SOME_SUITES_USE_CBC && TLS 1.0-1.2 */
-
 int mbedtls_ssl_decrypt_buf( mbedtls_ssl_context const *ssl,
                              mbedtls_ssl_transform *transform,
                              mbedtls_record *rec )
@@ -1646,6 +1551,38 @@ int mbedtls_ssl_decrypt_buf( mbedtls_ssl_context const *ssl,
         if( transform->minor_ver > MBEDTLS_SSL_MINOR_VERSION_0 )
         {
             /*
+             * Process MAC and always update for padlen afterwards to make
+             * total time independent of padlen.
+             *
+             * Known timing attacks:
+             *  - Lucky Thirteen (http://www.isg.rhul.ac.uk/tls/TLStiming.pdf)
+             *
+             * To compensate for different timings for the MAC calculation
+             * depending on how much padding was removed (which is determined
+             * by padlen), process extra_run more blocks through the hash
+             * function.
+             *
+             * The formula in the paper is
+             *   extra_run = ceil( (L1-55) / 64 ) - ceil( (L2-55) / 64 )
+             * where L1 is the size of the header plus the decrypted message
+             * plus CBC padding and L2 is the size of the header plus the
+             * decrypted message. This is for an underlying hash function
+             * with 64-byte blocks.
+             * We use ( (Lx+8) / 64 ) to handle 'negative Lx' values
+             * correctly. We round down instead of up, so -56 is the correct
+             * value for our calculations instead of -55.
+             *
+             * Repeat the formula rather than defining a block_size variable.
+             * This avoids requiring division by a variable at runtime
+             * (which would be marginally less efficient and would require
+             * linking an extra division function in some builds).
+             */
+            size_t j, extra_run = 0;
+            /* This size is enough to server either as input to
+             * md_process() or as output to md_finish() */
+            unsigned char tmp[MBEDTLS_MD_MAX_BLOCK_SIZE];
+
+            /*
              * The next two sizes are the minimum and maximum values of
              * in_msglen over all padlen values.
              *
@@ -1658,15 +1595,57 @@ int mbedtls_ssl_decrypt_buf( mbedtls_ssl_context const *ssl,
             const size_t max_len = rec->data_len + padlen;
             const size_t min_len = ( max_len > 256 ) ? max_len - 256 : 0;
 
-            ret = mbedtls_ssl_cf_hmac( &transform->md_ctx_dec,
-                                       add_data, add_data_len,
-                                       data, rec->data_len, min_len, max_len,
-                                       mac_expect );
-            if( ret != 0 )
+            memset( tmp, 0, sizeof( tmp ) );
+
+            switch( mbedtls_md_get_type( transform->md_ctx_dec.md_info ) )
             {
-                MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_cf_hmac", ret );
-                return( ret );
+#if defined(MBEDTLS_MD5_C) || defined(MBEDTLS_SHA1_C) || \
+    defined(MBEDTLS_SHA256_C)
+                case MBEDTLS_MD_MD5:
+                case MBEDTLS_MD_SHA1:
+                case MBEDTLS_MD_SHA256:
+                    /* 8 bytes of message size, 64-byte compression blocks */
+                    extra_run =
+                        ( add_data_len + rec->data_len + padlen + 8 ) / 64 -
+                        ( add_data_len + rec->data_len          + 8 ) / 64;
+                    break;
+#endif
+#if defined(MBEDTLS_SHA512_C)
+                case MBEDTLS_MD_SHA384:
+                    /* 16 bytes of message size, 128-byte compression blocks */
+                    extra_run =
+                        ( add_data_len + rec->data_len + padlen + 16 ) / 128 -
+                        ( add_data_len + rec->data_len          + 16 ) / 128;
+                    break;
+#endif
+                default:
+                    MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
+                    return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
             }
+
+            extra_run &= correct * 0xFF;
+
+            mbedtls_md_hmac_update( &transform->md_ctx_dec, add_data,
+                                    add_data_len );
+            mbedtls_md_hmac_update( &transform->md_ctx_dec, data,
+                                    rec->data_len );
+            /* Make sure we access everything even when padlen > 0. This
+             * makes the synchronisation requirements for just-in-time
+             * Prime+Probe attacks much tighter and hopefully impractical. */
+            ssl_read_memory( data + rec->data_len, padlen );
+            mbedtls_md_hmac_finish( &transform->md_ctx_dec, mac_expect );
+
+            /* Dummy calls to compression function.
+             * Call mbedtls_md_process at least once due to cache attacks
+             * that observe whether md_process() was called of not.
+             * Respect the usual start-(process|update)-finish sequence for
+             * the sake of hardware accelerators that might require it. */
+            mbedtls_md_starts( &transform->md_ctx_dec );
+            for( j = 0; j < extra_run + 1; j++ )
+                mbedtls_md_process( &transform->md_ctx_dec, tmp );
+            mbedtls_md_finish( &transform->md_ctx_dec, tmp );
+
+            mbedtls_md_hmac_reset( &transform->md_ctx_dec );
 
             /* Make sure we access all the memory that could contain the MAC,
              * before we check it in the next code block. This makes the
@@ -5605,10 +5584,6 @@ int mbedtls_ssl_read( mbedtls_ssl_context *ssl, unsigned char *buf, size_t len )
 
     memcpy( buf, ssl->in_offt, n );
     ssl->in_msglen -= n;
-
-    /* Zeroising the plaintext buffer to erase unused application data
-       from the memory. */
-    mbedtls_platform_zeroize( ssl->in_offt, n );
 
     if( ssl->in_msglen == 0 )
     {

@@ -680,7 +680,7 @@ component_check_doxy_blocks () {
 
 component_check_files () {
     msg "Check: file sanity checks (permissions, encodings)" # < 1s
-    record_status tests/scripts/check_files.py
+    record_status tests/scripts/check-files.py
 }
 
 component_check_changelog () {
@@ -707,7 +707,7 @@ component_check_test_cases () {
     else
         opt=''
     fi
-    record_status tests/scripts/check_test_cases.py $opt
+    record_status tests/scripts/check-test-cases.py $opt
     unset opt
 }
 
@@ -1072,18 +1072,6 @@ component_test_full_cmake_clang () {
 
     msg "test: compat.sh ARIA + ChachaPoly"
     if_build_succeeded env OPENSSL_CMD="$OPENSSL_NEXT" tests/compat.sh -e '^$' -f 'ARIA\|CHACHA'
-}
-
-component_test_memsan_constant_flow () {
-    msg "build: cmake memsan, full config with constant flow testing"
-    scripts/config.py full
-    scripts/config.py set MBEDTLS_TEST_CONSTANT_FLOW_MEMSAN
-    scripts/config.py unset MBEDTLS_AESNI_C # memsan doesn't grok asm
-    CC=clang cmake -D CMAKE_BUILD_TYPE:String=MemSan .
-    make
-
-    msg "test: main suites (memsan constant flow)"
-    make test
 }
 
 component_test_default_no_deprecated () {
