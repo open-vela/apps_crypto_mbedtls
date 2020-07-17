@@ -4,7 +4,7 @@
  * \brief Consistency checks for configuration options
  */
 /*
- *  Copyright (C) 2006-2018, ARM Limited, All Rights Reserved
+ *  Copyright The Mbed TLS Contributors
  *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -18,8 +18,6 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
- *
- *  This file is part of mbed TLS (https://tls.mbed.org)
  */
 
 /*
@@ -103,6 +101,17 @@
 
 #if defined(MBEDTLS_ECDSA_C) &&            \
     ( !defined(MBEDTLS_ECP_C) ||           \
+      !( defined(MBEDTLS_ECP_DP_SECP192R1_ENABLED) || \
+         defined(MBEDTLS_ECP_DP_SECP224R1_ENABLED) || \
+         defined(MBEDTLS_ECP_DP_SECP256R1_ENABLED) || \
+         defined(MBEDTLS_ECP_DP_SECP384R1_ENABLED) || \
+         defined(MBEDTLS_ECP_DP_SECP521R1_ENABLED) || \
+         defined(MBEDTLS_ECP_DP_SECP192K1_ENABLED) || \
+         defined(MBEDTLS_ECP_DP_SECP224K1_ENABLED) || \
+         defined(MBEDTLS_ECP_DP_SECP256K1_ENABLED) || \
+         defined(MBEDTLS_ECP_DP_BP256R1_ENABLED) ||   \
+         defined(MBEDTLS_ECP_DP_BP384R1_ENABLED) ||   \
+         defined(MBEDTLS_ECP_DP_BP512R1_ENABLED) ) || \
       !defined(MBEDTLS_ASN1_PARSE_C) ||    \
       !defined(MBEDTLS_ASN1_WRITE_C) )
 #error "MBEDTLS_ECDSA_C defined, but not all prerequisites"
@@ -156,6 +165,14 @@
 #error "MBEDTLS_ECP_C defined, but not all prerequisites"
 #endif
 
+#if defined(MBEDTLS_ECP_C) && !(            \
+    defined(MBEDTLS_ECP_ALT) ||             \
+    defined(MBEDTLS_CTR_DRBG_C) ||          \
+    defined(MBEDTLS_HMAC_DRBG_C) ||         \
+    defined(MBEDTLS_ECP_NO_INTERNAL_RNG))
+#error "MBEDTLS_ECP_C requires a DRBG module unless MBEDTLS_ECP_NO_INTERNAL_RNG is defined or an alternative implementation is used"
+#endif
+
 #if defined(MBEDTLS_PK_PARSE_C) && !defined(MBEDTLS_ASN1_PARSE_C)
 #error "MBEDTLS_PK_PARSE_C defined, but not all prerequesites"
 #endif
@@ -177,6 +194,16 @@
     defined(MBEDTLS_ENTROPY_FORCE_SHA256) && !defined(MBEDTLS_SHA256_C)
 #error "MBEDTLS_ENTROPY_FORCE_SHA256 defined, but not all prerequisites"
 #endif
+
+#if defined(__has_feature)
+#if __has_feature(memory_sanitizer)
+#define MBEDTLS_HAS_MEMSAN
+#endif
+#endif
+#if defined(MBEDTLS_TEST_CONSTANT_FLOW_MEMSAN) &&  !defined(MBEDTLS_HAS_MEMSAN)
+#error "MBEDTLS_TEST_CONSTANT_FLOW_MEMSAN requires building with MemorySanitizer"
+#endif
+#undef MBEDTLS_HAS_MEMSAN
 
 #if defined(MBEDTLS_TEST_NULL_ENTROPY) && \
     ( !defined(MBEDTLS_ENTROPY_C) || !defined(MBEDTLS_NO_DEFAULT_ENTROPY_SOURCES) )
@@ -238,12 +265,14 @@
 #endif
 
 #if defined(MBEDTLS_KEY_EXCHANGE_ECDH_ECDSA_ENABLED) &&                 \
-    ( !defined(MBEDTLS_ECDH_C) || !defined(MBEDTLS_X509_CRT_PARSE_C) )
+    ( !defined(MBEDTLS_ECDH_C) || !defined(MBEDTLS_ECDSA_C) ||          \
+      !defined(MBEDTLS_X509_CRT_PARSE_C) )
 #error "MBEDTLS_KEY_EXCHANGE_ECDH_ECDSA_ENABLED defined, but not all prerequisites"
 #endif
 
 #if defined(MBEDTLS_KEY_EXCHANGE_ECDH_RSA_ENABLED) &&                 \
-    ( !defined(MBEDTLS_ECDH_C) || !defined(MBEDTLS_X509_CRT_PARSE_C) )
+    ( !defined(MBEDTLS_ECDH_C) || !defined(MBEDTLS_RSA_C) ||          \
+      !defined(MBEDTLS_X509_CRT_PARSE_C) )
 #error "MBEDTLS_KEY_EXCHANGE_ECDH_RSA_ENABLED defined, but not all prerequisites"
 #endif
 
@@ -841,6 +870,10 @@
 #warning "MBEDTLS_SSL_HW_RECORD_ACCEL is deprecated and will be removed in a future version of Mbed TLS"
 #endif /* MBEDTLS_DEPRECATED_REMOVED */
 #endif /* MBEDTLS_SSL_HW_RECORD_ACCEL */
+
+#if defined(MBEDTLS_SSL_DTLS_SRTP) && ( !defined(MBEDTLS_SSL_PROTO_DTLS) )
+#error "MBEDTLS_SSL_DTLS_SRTP defined, but not all prerequisites"
+#endif
 
 /*
  * Avoid warning from -pedantic. This is a convenient place for this

@@ -14,7 +14,7 @@
  * This header file does not declare any function.
  */
 /*
- *  Copyright (C) 2018, ARM Limited, All Rights Reserved
+ *  Copyright The Mbed TLS Contributors
  *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -28,12 +28,12 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
- *
- *  This file is part of mbed TLS (https://tls.mbed.org)
  */
 
 #ifndef PSA_CRYPTO_TYPES_H
 #define PSA_CRYPTO_TYPES_H
+
+#include "crypto_platform.h"
 
 #include <stdint.h>
 
@@ -74,7 +74,7 @@ typedef uint16_t psa_key_type_t;
  * Values defined by this standard will never be in the range 0x80-0xff.
  * Vendors who define additional families must use an encoding in this range.
  */
-typedef uint8_t psa_ecc_curve_t;
+typedef uint8_t psa_ecc_family_t;
 
 /** The type of PSA Diffie-Hellman group family identifiers.
  *
@@ -85,7 +85,7 @@ typedef uint8_t psa_ecc_curve_t;
  * Values defined by this standard will never be in the range 0x80-0xff.
  * Vendors who define additional families must use an encoding in this range.
  */
-typedef uint8_t psa_dh_group_t;
+typedef uint8_t psa_dh_family_t;
 
 /** \brief Encoding of a cryptographic algorithm.
  *
@@ -125,7 +125,7 @@ typedef uint32_t psa_algorithm_t;
  * implementation-specific device management event occurs (for example,
  * a factory reset).
  *
- * Persistent keys have a key identifier of type #psa_key_id_t.
+ * Persistent keys have a key identifier of type #mbedtls_svc_key_id_t.
  * This identifier remains valid throughout the lifetime of the key,
  * even if the application instance that created the key terminates.
  * The application can call psa_open_key() to open a persistent key that
@@ -228,15 +228,24 @@ typedef uint32_t psa_key_location_t;
  * - 0 is reserved as an invalid key identifier.
  * - Key identifiers outside these ranges are reserved for future use.
  */
-/* Implementation-specific quirk: The Mbed Crypto library can be built as
- * part of a multi-client service that exposes the PSA Crypto API in each
- * client and encodes the client identity in the key id argument of functions
- * such as psa_open_key(). In this build configuration, we define
- * psa_key_id_t in crypto_platform.h instead of here. */
-#if !defined(MBEDTLS_PSA_CRYPTO_KEY_FILE_ID_ENCODES_OWNER)
 typedef uint32_t psa_key_id_t;
-#define PSA_KEY_ID_INIT 0
-#endif
+
+#if !defined(MBEDTLS_PSA_CRYPTO_KEY_ID_ENCODES_OWNER)
+typedef psa_key_id_t mbedtls_svc_key_id_t;
+
+#else /* MBEDTLS_PSA_CRYPTO_KEY_ID_ENCODES_OWNER */
+/* Implementation-specific: The Mbed Cryptography library can be built as
+ * part of a multi-client service that exposes the PSA Cryptograpy API in each
+ * client and encodes the client identity in the key identifier argument of
+ * functions such as psa_open_key().
+ */
+typedef struct
+{
+    psa_key_id_t key_id;
+    mbedtls_key_owner_id_t owner;
+} mbedtls_svc_key_id_t;
+
+#endif /* !MBEDTLS_PSA_CRYPTO_KEY_ID_ENCODES_OWNER */
 
 /**@}*/
 
