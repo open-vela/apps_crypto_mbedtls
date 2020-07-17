@@ -1,7 +1,8 @@
 /** \file psa_crypto_its.h
  * \brief Interface of trusted storage that crypto is built on.
  */
-/*  Copyright (C) 2019, ARM Limited, All Rights Reserved
+/*
+ *  Copyright The Mbed TLS Contributors
  *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -140,5 +141,9 @@ psa_status_t psa_its_get_info(psa_storage_uid_t uid,
  * \retval      PSA_ERROR_STORAGE_FAILURE    The operation failed because the physical storage has failed (Fatal error)
  */
 psa_status_t psa_its_remove(psa_storage_uid_t uid);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* PSA_CRYPTO_ITS_H */

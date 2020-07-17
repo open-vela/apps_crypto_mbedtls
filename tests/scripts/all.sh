@@ -2,9 +2,20 @@
 
 # all.sh
 #
-# This file is part of mbed TLS (https://tls.mbed.org)
+# Copyright The Mbed TLS Contributors
+# SPDX-License-Identifier: Apache-2.0
 #
-# Copyright (c) 2014-2017, ARM Limited, All Rights Reserved
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 
 
@@ -120,7 +131,16 @@ pre_initialize_variables () {
     append_outcome=0
     MEMORY=0
     FORCE=0
+    QUIET=0
     KEEP_GOING=0
+
+    # Seed value used with the --release-test option.
+    #
+    # See also RELEASE_SEED in basic-build-test.sh. Debugging is easier if
+    # both values are kept in sync. If you change the value here because it
+    # breaks some tests, you'll definitely want to change it in
+    # basic-build-test.sh as well.
+    RELEASE_SEED=1
 
     : ${MBEDTLS_TEST_OUTCOME_FILE=}
     : ${MBEDTLS_TEST_PLATFORM="$(uname -s | tr -c \\n0-9A-Za-z _)-$(uname -m | tr -c \\n0-9A-Za-z _)"}
@@ -200,6 +220,7 @@ Special options:
   --list-components     List components supported on this platform and exit.
 
 General options:
+  -q|--quiet            Only output component names, and errors if any.
   -f|--force            Force the tests to overwrite any modified files.
   -k|--keep-going       Run all tests and report errors at the end.
   -m|--memory           Additional optional memory tests.
@@ -215,11 +236,12 @@ General options:
      --no-force         Refuse to overwrite modified files (default).
      --no-keep-going    Stop at the first error (default).
      --no-memory        No additional memory tests (default).
+     --no-quiet         Print full ouput from components.
      --out-of-source-dir=<path>  Directory used for CMake out-of-source build tests.
      --outcome-file=<path>  File where test outcomes are written (not done if
                             empty; default: \$MBEDTLS_TEST_OUTCOME_FILE).
      --random-seed      Use a random seed value for randomized tests (default).
-  -r|--release-test     Run this script in release mode. This fixes the seed value to 1.
+  -r|--release-test     Run this script in release mode. This fixes the seed value to ${RELEASE_SEED}.
   -s|--seed             Integer seed value to use for this test run.
 
 Tool path options:
@@ -288,6 +310,11 @@ msg()
     else
         current_section="$1"
     fi
+
+    if [ $QUIET -eq 1 ]; then
+        return
+    fi
+
     echo ""
     echo "******************************************************************"
     echo "* $current_section "
@@ -363,13 +390,15 @@ pre_parse_command_line () {
             --no-force) FORCE=0;;
             --no-keep-going) KEEP_GOING=0;;
             --no-memory) MEMORY=0;;
+            --no-quiet) QUIET=0;;
             --openssl) shift; OPENSSL="$1";;
             --openssl-legacy) shift; OPENSSL_LEGACY="$1";;
             --openssl-next) shift; OPENSSL_NEXT="$1";;
             --outcome-file) shift; MBEDTLS_TEST_OUTCOME_FILE="$1";;
             --out-of-source-dir) shift; OUT_OF_SOURCE_DIR="$1";;
+            --quiet|-q) QUIET=1;;
             --random-seed) unset SEED;;
-            --release-test|-r) SEED=1;;
+            --release-test|-r) SEED=$RELEASE_SEED;;
             --seed|-s) shift; SEED="$1";;
             -*)
                 echo >&2 "Unknown option: $1"
@@ -449,7 +478,7 @@ pre_setup_keep_going () {
             failure_summary="$failure_summary
 $text"
             failure_count=$((failure_count + 1))
-            echo "${start_red}^^^^$text^^^^${end_color}"
+            echo "${start_red}^^^^$text^^^^${end_color}" >&2
         fi
     }
     make () {
@@ -495,6 +524,24 @@ not() {
     ! "$@"
 }
 
+pre_setup_quiet_redirect () {
+    if [ $QUIET -ne 1 ]; then
+        redirect_out () {
+            "$@"
+        }
+        redirect_err () {
+            "$@"
+        }
+    else
+        redirect_out () {
+            "$@" >/dev/null
+        }
+        redirect_err () {
+            "$@" 2>/dev/null
+        }
+    fi
+}
+
 pre_prepare_outcome_file () {
     case "$MBEDTLS_TEST_OUTCOME_FILE" in
       [!/]*) MBEDTLS_TEST_OUTCOME_FILE="$PWD/$MBEDTLS_TEST_OUTCOME_FILE";;
@@ -505,6 +552,10 @@ pre_prepare_outcome_file () {
 }
 
 pre_print_configuration () {
+    if [ $QUIET -eq 1 ]; then
+        return
+    fi
+
     msg "info: $0 configuration"
     echo "MEMORY: $MEMORY"
     echo "FORCE: $FORCE"
@@ -579,6 +630,11 @@ pre_check_tools () {
                         "$ARMC6_CC" "$ARMC6_AR" "$ARMC6_FROMELF";;
     esac
 
+    # past this point, no call to check_tool, only printing output
+    if [ $QUIET -eq 1 ]; then
+        return
+    fi
+
     msg "info: output_env.sh"
     case $RUN_COMPONENTS in
         *_armcc*)
@@ -622,7 +678,7 @@ component_check_doxy_blocks () {
 
 component_check_files () {
     msg "Check: file sanity checks (permissions, encodings)" # < 1s
-    record_status tests/scripts/check-files.py
+    record_status tests/scripts/check_files.py
 }
 
 component_check_changelog () {
@@ -644,7 +700,13 @@ component_check_names () {
 
 component_check_test_cases () {
     msg "Check: test case descriptions" # < 1s
-    record_status tests/scripts/check-test-cases.py
+    if [ $QUIET -eq 1 ]; then
+        opt='--quiet'
+    else
+        opt=''
+    fi
+    record_status tests/scripts/check_test_cases.py $opt
+    unset opt
 }
 
 component_check_doxygen_warnings () {
@@ -865,6 +927,43 @@ component_test_no_hmac_drbg () {
     # so there's little value in running those lengthy tests here.
 }
 
+component_test_ecp_no_internal_rng () {
+    msg "build: Default plus ECP_NO_INTERNAL_RNG minus DRBG modules"
+    scripts/config.py set MBEDTLS_ECP_NO_INTERNAL_RNG
+    scripts/config.py unset MBEDTLS_CTR_DRBG_C
+    scripts/config.py unset MBEDTLS_HMAC_DRBG_C
+    scripts/config.py unset MBEDTLS_ECDSA_DETERMINISTIC # requires HMAC_DRBG
+    scripts/config.py unset MBEDTLS_PSA_CRYPTO_C # requires a DRBG
+    scripts/config.py unset MBEDTLS_PSA_CRYPTO_STORAGE_C # requires PSA Crypto
+
+    CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
+    make
+
+    msg "test: ECP_NO_INTERNAL_RNG, no DRBG module"
+    make test
+
+    # no SSL tests as they all depend on having a DRBG
+}
+
+component_test_ecp_restartable_no_internal_rng () {
+    msg "build: Default plus ECP_RESTARTABLE and ECP_NO_INTERNAL_RNG, no DRBG"
+    scripts/config.py set MBEDTLS_ECP_NO_INTERNAL_RNG
+    scripts/config.py set MBEDTLS_ECP_RESTARTABLE
+    scripts/config.py unset MBEDTLS_CTR_DRBG_C
+    scripts/config.py unset MBEDTLS_HMAC_DRBG_C
+    scripts/config.py unset MBEDTLS_ECDSA_DETERMINISTIC # requires HMAC_DRBG
+    scripts/config.py unset MBEDTLS_PSA_CRYPTO_C # requires CTR_DRBG
+    scripts/config.py unset MBEDTLS_PSA_CRYPTO_STORAGE_C # requires PSA Crypto
+
+    CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
+    make
+
+    msg "test: ECP_RESTARTABLE and ECP_NO_INTERNAL_RNG, no DRBG module"
+    make test
+
+    # no SSL tests as they all depend on having a DRBG
+}
+
 component_test_new_ecdh_context () {
     msg "build: new ECDH context (ASan build)" # ~ 6 min
     scripts/config.py unset MBEDTLS_ECDH_LEGACY_CONTEXT
@@ -898,6 +997,25 @@ component_test_everest () {
     msg "test: Everest ECDH context - compat.sh with some ECDH ciphersuites (ASan build)" # ~ 3 min
     # Exclude some symmetric ciphers that are redundant here to gain time.
     if_build_succeeded tests/compat.sh -f ECDH -V NO -e 'ARCFOUR\|ARIA\|CAMELLIA\|CHACHA\|DES\|RC4'
+}
+
+component_test_everest_curve25519_only () {
+    msg "build: Everest ECDH context, only Curve25519" # ~ 6 min
+    scripts/config.py unset MBEDTLS_ECDH_LEGACY_CONTEXT
+    scripts/config.py set MBEDTLS_ECDH_VARIANT_EVEREST_ENABLED
+    scripts/config.py unset MBEDTLS_ECDSA_C
+    scripts/config.py unset MBEDTLS_KEY_EXCHANGE_ECDH_ECDSA_ENABLED
+    scripts/config.py unset MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED
+    # Disable all curves
+    for c in $(sed -n 's/#define \(MBEDTLS_ECP_DP_[0-9A-Z_a-z]*_ENABLED\).*/\1/p' <"$CONFIG_H"); do
+        scripts/config.py unset "$c"
+    done
+    scripts/config.py set MBEDTLS_ECP_DP_CURVE25519_ENABLED
+
+    make CFLAGS="$ASAN_CFLAGS -O2" LDFLAGS="$ASAN_CFLAGS"
+
+    msg "test: Everest ECDH context, only Curve25519" # ~ 50s
+    make test
 }
 
 component_test_small_ssl_out_content_len () {
@@ -971,6 +1089,46 @@ component_test_full_cmake_clang () {
 
     msg "test: compat.sh ARIA + ChachaPoly"
     if_build_succeeded env OPENSSL_CMD="$OPENSSL_NEXT" tests/compat.sh -e '^$' -f 'ARIA\|CHACHA'
+}
+
+component_test_memsan_constant_flow () {
+    # This tests both (1) accesses to undefined memory, and (2) branches or
+    # memory access depending on secret values. To distinguish between those:
+    # - unset MBEDTLS_TEST_CONSTANT_FLOW_MEMSAN - does the failure persist?
+    # - or alternatively, change the build type to MemSanDbg, which enables
+    # origin tracking and nicer stack traces (which are useful for debugging
+    # anyway), and check if the origin was TEST_CF_SECRET() or something else.
+    msg "build: cmake MSan (clang), full config with constant flow testing"
+    scripts/config.py full
+    scripts/config.py set MBEDTLS_TEST_CONSTANT_FLOW_MEMSAN
+    scripts/config.py unset MBEDTLS_AESNI_C # memsan doesn't grok asm
+    CC=clang cmake -D CMAKE_BUILD_TYPE:String=MemSan .
+    make
+
+    msg "test: main suites (Msan + constant flow)"
+    make test
+}
+
+component_test_valgrind_constant_flow () {
+    # This tests both (1) everything that valgrind's memcheck usually checks
+    # (heap buffer overflows, use of uninitialized memory, use-after-free,
+    # etc.) and (2) branches or memory access depending on secret values,
+    # which will be reported as uninitialized memory. To distinguish between
+    # secret and actually uninitialized:
+    # - unset MBEDTLS_TEST_CONSTANT_FLOW_VALGRIND - does the failure persist?
+    # - or alternatively, build with debug info and manually run the offending
+    # test suite with valgrind --track-origins=yes, then check if the origin
+    # was TEST_CF_SECRET() or something else.
+    msg "build: cmake release GCC, full config with constant flow testing"
+    scripts/config.py full
+    scripts/config.py set MBEDTLS_TEST_CONSTANT_FLOW_VALGRIND
+    cmake -D CMAKE_BUILD_TYPE:String=Release .
+    make
+
+    # this only shows a summary of the results (how many of each type)
+    # details are left in Testing/<date>/DynamicAnalysis.xml
+    msg "test: main suites (valgrind + constant flow)"
+    make memcheck
 }
 
 component_test_default_no_deprecated () {
@@ -1059,13 +1217,31 @@ component_test_depends_curves () {
     record_status tests/scripts/curves.pl
 }
 
+component_test_depends_curves_psa () {
+    msg "test/build: curves.pl with MBEDTLS_USE_PSA_CRYPTO defined (gcc)"
+    scripts/config.py set MBEDTLS_USE_PSA_CRYPTO
+    record_status tests/scripts/curves.pl
+}
+
 component_test_depends_hashes () {
     msg "test/build: depends-hashes.pl (gcc)" # ~ 2 min
     record_status tests/scripts/depends-hashes.pl
 }
 
+component_test_depends_hashes_psa () {
+    msg "test/build: depends-hashes.pl with MBEDTLS_USE_PSA_CRYPTO defined (gcc)"
+    scripts/config.py set MBEDTLS_USE_PSA_CRYPTO
+    record_status tests/scripts/depends-hashes.pl
+}
+
 component_test_depends_pkalgs () {
     msg "test/build: depends-pkalgs.pl (gcc)" # ~ 2 min
+    record_status tests/scripts/depends-pkalgs.pl
+}
+
+component_test_depends_pkalgs_psa () {
+    msg "test/build: depends-pkalgs.pl with MBEDTLS_USE_PSA_CRYPTO defined (gcc)"
+    scripts/config.py set MBEDTLS_USE_PSA_CRYPTO
     record_status tests/scripts/depends-pkalgs.pl
 }
 
@@ -1114,14 +1290,57 @@ component_test_no_use_psa_crypto_full_cmake_asan() {
     if_build_succeeded env OPENSSL_CMD="$OPENSSL_NEXT" tests/compat.sh -e '^$' -f 'ARIA\|CHACHA'
 }
 
+component_test_psa_crypto_config_basic() {
+    # full plus MBEDTLS_PSA_CRYPTO_CONFIG
+    msg "build: full + MBEDTLS_PSA_CRYPTO_CONFIG"
+    scripts/config.py full
+    scripts/config.py set MBEDTLS_PSA_CRYPTO_CONFIG
+    scripts/config.py set MBEDTLS_PSA_CRYPTO_DRIVERS
+    scripts/config.py unset MBEDTLS_USE_PSA_CRYPTO
+    # Need to define the correct symbol and include the test driver header path in order to build with the test driver
+    make CC=gcc CFLAGS="$ASAN_CFLAGS -DPSA_CRYPTO_DRIVER_TEST -I../tests/include -O2" LDFLAGS="$ASAN_CFLAGS"
+
+    msg "test: full + MBEDTLS_PSA_CRYPTO_CONFIG"
+    make test
+}
+
+component_test_psa_crypto_config_no_driver() {
+    # full plus MBEDTLS_PSA_CRYPTO_CONFIG
+    msg "build: full + MBEDTLS_PSA_CRYPTO_CONFIG minus MBEDTLS_PSA_CRYPTO_DRIVERS"
+    scripts/config.py full
+    scripts/config.py set MBEDTLS_PSA_CRYPTO_CONFIG
+    scripts/config.py unset MBEDTLS_PSA_CRYPTO_DRIVERS
+    scripts/config.py unset MBEDTLS_USE_PSA_CRYPTO
+    make CC=gcc CFLAGS="$ASAN_CFLAGS -O2" LDFLAGS="$ASAN_CFLAGS"
+
+    msg "test: full + MBEDTLS_PSA_CRYPTO_CONFIG minus MBEDTLS_PSA_CRYPTO_DRIVERS"
+    make test
+}
+
+# This should be renamed to test and updated once the accelerator ECDSA code is in place and ready to test.
+component_build_psa_want_ecdsa_disabled_software() {
+    # full plus MBEDTLS_PSA_CRYPTO_CONFIG with PSA_WANT_ALG_ECDSA
+    # without MBEDTLS_ECDSA_C
+    # PSA_WANT_ALG_ECDSA and PSA_WANT_ALG_DETERMINISTIC_ECDSA are already
+    # set in include/psa/crypto_config.h
+    msg "build: full + MBEDTLS_PSA_CRYPTO_CONFIG + PSA_WANT_ALG_ECDSA without MBEDTLS_ECDSA_C"
+    scripts/config.py full
+    scripts/config.py set MBEDTLS_PSA_CRYPTO_CONFIG
+    scripts/config.py set MBEDTLS_PSA_CRYPTO_DRIVERS
+    scripts/config.py unset MBEDTLS_USE_PSA_CRYPTO
+    scripts/config.py unset MBEDTLS_ECDSA_C
+    scripts/config.py unset MBEDTLS_KEY_EXCHANGE_ECDH_ECDSA_ENABLED
+    scripts/config.py unset MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED
+    # Need to define the correct symbol and include the test driver header path in order to build with the test driver
+    make CC=gcc CFLAGS="$ASAN_CFLAGS -DPSA_CRYPTO_DRIVER_TEST -DMBEDTLS_PSA_ACCEL_ALG_ECDSA -DMBEDTLS_PSA_ACCEL_ALG_DETERMINISTIC_ECDSA -I../tests/include -O2" LDFLAGS="$ASAN_CFLAGS"
+}
+
 component_test_check_params_functionality () {
     msg "build+test: MBEDTLS_CHECK_PARAMS functionality"
     scripts/config.py full # includes CHECK_PARAMS
     # Make MBEDTLS_PARAM_FAILED call mbedtls_param_failed().
     scripts/config.py unset MBEDTLS_CHECK_PARAMS_ASSERT
-    # Only build and run tests. Do not build sample programs, because
-    # they don't have a mbedtls_param_failed() function.
-    make CC=gcc CFLAGS='-Werror -O1' lib test
+    make CC=gcc CFLAGS='-Werror -O1' all test
 }
 
 component_test_check_params_without_platform () {
@@ -1380,6 +1599,16 @@ component_test_null_entropy () {
     make test
 }
 
+component_test_no_date_time () {
+    msg "build: default config without MBEDTLS_HAVE_TIME_DATE"
+    scripts/config.py unset MBEDTLS_HAVE_TIME_DATE
+    CC=gcc cmake
+    make
+
+    msg "test: !MBEDTLS_HAVE_TIME_DATE - main suites"
+    make test
+}
+
 component_test_platform_calloc_macro () {
     msg "build: MBEDTLS_PLATFORM_{CALLOC/FREE}_MACRO enabled (ASan build)"
     scripts/config.py set MBEDTLS_PLATFORM_MEMORY
@@ -1485,6 +1714,16 @@ component_test_se_default () {
     make CC=clang CFLAGS="$ASAN_CFLAGS -Os" LDFLAGS="$ASAN_CFLAGS"
 
     msg "test: default config + MBEDTLS_PSA_CRYPTO_SE_C"
+    make test
+}
+
+component_test_psa_crypto_drivers () {
+    msg "build: MBEDTLS_PSA_CRYPTO_DRIVERS w/ driver hooks"
+    scripts/config.py set MBEDTLS_PSA_CRYPTO_DRIVERS
+    # Need to define the correct symbol and include the test driver header path in order to build with the test driver
+    make CC=gcc CFLAGS="$ASAN_CFLAGS -DPSA_CRYPTO_DRIVER_TEST -I../tests/include -O2" LDFLAGS="$ASAN_CFLAGS"
+
+    msg "test: MBEDTLS_PSA_CRYPTO_DRIVERS, signature"
     make test
 }
 
@@ -1659,7 +1898,7 @@ component_test_no_64bit_multiplication () {
 component_build_arm_none_eabi_gcc () {
     msg "build: ${ARM_NONE_EABI_GCC_PREFIX}gcc -O1" # ~ 10s
     scripts/config.py baremetal
-    make CC="${ARM_NONE_EABI_GCC_PREFIX}gcc" AR="${ARM_NONE_EABI_GCC_PREFIX}ar" LD="${ARM_NONE_EABI_GCC_PREFIX}ld" CFLAGS='-Werror -Wall -Wextra -O1' lib
+    make CC="${ARM_NONE_EABI_GCC_PREFIX}gcc" AR="${ARM_NONE_EABI_GCC_PREFIX}ar" LD="${ARM_NONE_EABI_GCC_PREFIX}ld" CFLAGS='-std=c99 -Werror -Wall -Wextra -O1' lib
 
     msg "size: ${ARM_NONE_EABI_GCC_PREFIX}gcc -O1"
     ${ARM_NONE_EABI_GCC_PREFIX}size library/*.o
@@ -1673,7 +1912,7 @@ component_build_arm_none_eabi_gcc_arm5vte () {
     # See https://github.com/ARMmbed/mbedtls/pull/2169 and comments.
     # It would be better to build with arm-linux-gnueabi-gcc but
     # we don't have that on our CI at this time.
-    make CC="${ARM_NONE_EABI_GCC_PREFIX}gcc" AR="${ARM_NONE_EABI_GCC_PREFIX}ar" CFLAGS='-Werror -Wall -Wextra -march=armv5te -O1' LDFLAGS='-march=armv5te' SHELL='sh -x' lib
+    make CC="${ARM_NONE_EABI_GCC_PREFIX}gcc" AR="${ARM_NONE_EABI_GCC_PREFIX}ar" CFLAGS='-std=c99 -Werror -Wall -Wextra -march=armv5te -O1' LDFLAGS='-march=armv5te' SHELL='sh -x' lib
 
     msg "size: ${ARM_NONE_EABI_GCC_PREFIX}gcc -march=armv5te -O1"
     ${ARM_NONE_EABI_GCC_PREFIX}size library/*.o
@@ -1682,7 +1921,7 @@ component_build_arm_none_eabi_gcc_arm5vte () {
 component_build_arm_none_eabi_gcc_m0plus () {
     msg "build: ${ARM_NONE_EABI_GCC_PREFIX}gcc -mthumb -mcpu=cortex-m0plus" # ~ 10s
     scripts/config.py baremetal
-    make CC="${ARM_NONE_EABI_GCC_PREFIX}gcc" AR="${ARM_NONE_EABI_GCC_PREFIX}ar" LD="${ARM_NONE_EABI_GCC_PREFIX}ld" CFLAGS='-Werror -Wall -Wextra -mthumb -mcpu=cortex-m0plus -Os' lib
+    make CC="${ARM_NONE_EABI_GCC_PREFIX}gcc" AR="${ARM_NONE_EABI_GCC_PREFIX}ar" LD="${ARM_NONE_EABI_GCC_PREFIX}ld" CFLAGS='-std=c99 -Werror -Wall -Wextra -mthumb -mcpu=cortex-m0plus -Os' lib
 
     msg "size: ${ARM_NONE_EABI_GCC_PREFIX}gcc -mthumb -mcpu=cortex-m0plus -Os"
     ${ARM_NONE_EABI_GCC_PREFIX}size library/*.o
@@ -1692,7 +1931,7 @@ component_build_arm_none_eabi_gcc_no_udbl_division () {
     msg "build: ${ARM_NONE_EABI_GCC_PREFIX}gcc -DMBEDTLS_NO_UDBL_DIVISION, make" # ~ 10s
     scripts/config.py baremetal
     scripts/config.py set MBEDTLS_NO_UDBL_DIVISION
-    make CC="${ARM_NONE_EABI_GCC_PREFIX}gcc" AR="${ARM_NONE_EABI_GCC_PREFIX}ar" LD="${ARM_NONE_EABI_GCC_PREFIX}ld" CFLAGS='-Werror -Wall -Wextra' lib
+    make CC="${ARM_NONE_EABI_GCC_PREFIX}gcc" AR="${ARM_NONE_EABI_GCC_PREFIX}ar" LD="${ARM_NONE_EABI_GCC_PREFIX}ld" CFLAGS='-std=c99 -Werror -Wall -Wextra' lib
     echo "Checking that software 64-bit division is not required"
     if_build_succeeded not grep __aeabi_uldiv library/*.o
 }
@@ -1701,7 +1940,7 @@ component_build_arm_none_eabi_gcc_no_64bit_multiplication () {
     msg "build: ${ARM_NONE_EABI_GCC_PREFIX}gcc MBEDTLS_NO_64BIT_MULTIPLICATION, make" # ~ 10s
     scripts/config.py baremetal
     scripts/config.py set MBEDTLS_NO_64BIT_MULTIPLICATION
-    make CC="${ARM_NONE_EABI_GCC_PREFIX}gcc" AR="${ARM_NONE_EABI_GCC_PREFIX}ar" LD="${ARM_NONE_EABI_GCC_PREFIX}ld" CFLAGS='-Werror -O1 -march=armv6-m -mthumb' lib
+    make CC="${ARM_NONE_EABI_GCC_PREFIX}gcc" AR="${ARM_NONE_EABI_GCC_PREFIX}ar" LD="${ARM_NONE_EABI_GCC_PREFIX}ld" CFLAGS='-std=c99 -Werror -O1 -march=armv6-m -mthumb' lib
     echo "Checking that software 64-bit multiplication is not required"
     if_build_succeeded not grep __aeabi_lmul library/*.o
 }
@@ -1898,7 +2137,10 @@ component_check_python_files () {
 
 component_check_generate_test_code () {
     msg "uint test: generate_test_code.py"
-    record_status ./tests/scripts/test_generate_test_code.py
+    # unittest writes out mundane stuff like number or tests run on stderr.
+    # Our convention is to reserve stderr for actual errors, and write
+    # harmless info on stdout so it can be suppress with --quiet.
+    record_status ./tests/scripts/test_generate_test_code.py 2>&1
 }
 
 ################################################################
@@ -1929,13 +2171,18 @@ run_component () {
     # Unconditionally create a seedfile that's sufficiently long.
     # Do this before each component, because a previous component may
     # have messed it up or shortened it.
-    dd if=/dev/urandom of=./tests/seedfile bs=64 count=1
+    redirect_err dd if=/dev/urandom of=./tests/seedfile bs=64 count=1
 
     # Run the component code.
-    "$@"
+    if [ $QUIET -eq 1 ]; then
+        # msg() is silenced, so just print the component name here
+        echo "${current_component#component_}"
+    fi
+    redirect_out "$@"
 
     # Restore the build tree to a clean state.
     cleanup
+    unset current_component
 }
 
 # Preliminary setup
@@ -1953,6 +2200,7 @@ else
         "$@"
     }
 fi
+pre_setup_quiet_redirect
 pre_prepare_outcome_file
 pre_print_configuration
 pre_check_tools
