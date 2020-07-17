@@ -4,7 +4,7 @@
  * \brief X.509 certificate parsing and writing
  */
 /*
- *  Copyright (C) 2006-2015, ARM Limited, All Rights Reserved
+ *  Copyright The Mbed TLS Contributors
  *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -18,8 +18,6 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
- *
- *  This file is part of mbed TLS (https://tls.mbed.org)
  */
 #ifndef MBEDTLS_X509_CRT_H
 #define MBEDTLS_X509_CRT_H
@@ -308,7 +306,11 @@ int mbedtls_x509_crt_parse_der( mbedtls_x509_crt *chain,
  *
  *                 Callbacks of this type are passed to and used by the
  *                 mbedtls_x509_crt_parse_der_with_ext_cb() routine when
- *                 it encounters an unsupported extension.
+ *                 it encounters either an unsupported extension or a
+ *                 "certificate policies" extension containing any
+ *                 unsupported certificate policies.
+ *                 Future versions of the library may invoke the callback
+ *                 in other cases, if and when the need arises.
  *
  * \param p_ctx    An opaque context passed to the callback.
  * \param crt      The certificate being parsed.
@@ -360,7 +362,9 @@ typedef int (*mbedtls_x509_crt_ext_cb_t)( void *p_ctx,
  *                   mbedtls_x509_crt_parse_der(), and/or
  *                   mbedtls_x509_crt_parse_der_nocopy()
  *                   but it calls the callback with every unsupported
- *                   certificate extension.
+ *                   certificate extension and additionally the
+ *                   "certificate policies" extension if it contains any
+ *                   unsupported certificate policies.
  *                   The callback must return a negative error code if it
  *                   does not know how to handle such an extension.
  *                   When the callback fails to parse a critical extension
@@ -368,6 +372,8 @@ typedef int (*mbedtls_x509_crt_ext_cb_t)( void *p_ctx,
  *                   When the callback fails to parse a non critical extension
  *                   mbedtls_x509_crt_parse_der_with_ext_cb() simply skips
  *                   the extension and continues parsing.
+ *                   Future versions of the library may invoke the callback
+ *                   in other cases, if and when the need arises.
  *
  * \return           \c 0 if successful.
  * \return           A negative error code on failure.
@@ -577,8 +583,11 @@ int mbedtls_x509_crt_verify_info( char *buf, size_t size, const char *prefix,
  * \param crt      The certificate chain to be verified.
  * \param trust_ca The list of trusted CAs.
  * \param ca_crl   The list of CRLs for trusted CAs.
- * \param cn       The expected Common Name. This may be \c NULL if the
- *                 CN need not be verified.
+ * \param cn       The expected Common Name. This will be checked to be
+ *                 present in the certificate's subjectAltNames extension or,
+ *                 if this extension is absent, as a CN component in its
+ *                 Subject name. Currently only DNS names are supported. This
+ *                 may be \c NULL if the CN need not be verified.
  * \param flags    The address at which to store the result of the verification.
  *                 If the verification couldn't be completed, the flag value is
  *                 set to (uint32_t) -1.
