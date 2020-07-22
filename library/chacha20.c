@@ -23,7 +23,11 @@
  *  This file is part of mbed TLS (https://tls.mbed.org)
  */
 
-#include "common.h"
+#if !defined(MBEDTLS_CONFIG_FILE)
+#include "mbedtls/config.h"
+#else
+#include MBEDTLS_CONFIG_FILE
+#endif
 
 #if defined(MBEDTLS_CHACHA20_C)
 
@@ -516,6 +520,7 @@ static const size_t test_lengths[2] =
     375U
 };
 
+#undef ASSERT
 #define ASSERT( cond, args )            \
     do                                  \
     {                                   \
