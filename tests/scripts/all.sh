@@ -2,22 +2,9 @@
 
 # all.sh
 #
+# This file is part of mbed TLS (https://tls.mbed.org)
+#
 # Copyright (c) 2014-2017, ARM Limited, All Rights Reserved
-# SPDX-License-Identifier: Apache-2.0
-#
-# Licensed under the Apache License, Version 2.0 (the "License"); you may
-# not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-# http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-#
-# This file is part of Mbed TLS (https://tls.mbed.org)
 
 
 
@@ -133,16 +120,7 @@ pre_initialize_variables () {
     append_outcome=0
     MEMORY=0
     FORCE=0
-    QUIET=0
     KEEP_GOING=0
-
-    # Seed value used with the --release-test option.
-    #
-    # See also RELEASE_SEED in basic-build-test.sh. Debugging is easier if
-    # both values are kept in sync. If you change the value here because it
-    # breaks some tests, you'll definitely want to change it in
-    # basic-build-test.sh as well.
-    RELEASE_SEED=1
 
     : ${MBEDTLS_TEST_OUTCOME_FILE=}
     : ${MBEDTLS_TEST_PLATFORM="$(uname -s | tr -c \\n0-9A-Za-z _)-$(uname -m | tr -c \\n0-9A-Za-z _)"}
@@ -222,7 +200,6 @@ Special options:
   --list-components     List components supported on this platform and exit.
 
 General options:
-  -q|--quiet            Only output component names, and errors if any.
   -f|--force            Force the tests to overwrite any modified files.
   -k|--keep-going       Run all tests and report errors at the end.
   -m|--memory           Additional optional memory tests.
@@ -238,12 +215,11 @@ General options:
      --no-force         Refuse to overwrite modified files (default).
      --no-keep-going    Stop at the first error (default).
      --no-memory        No additional memory tests (default).
-     --no-quiet         Print full ouput from components.
      --out-of-source-dir=<path>  Directory used for CMake out-of-source build tests.
      --outcome-file=<path>  File where test outcomes are written (not done if
                             empty; default: \$MBEDTLS_TEST_OUTCOME_FILE).
      --random-seed      Use a random seed value for randomized tests (default).
-  -r|--release-test     Run this script in release mode. This fixes the seed value to ${RELEASE_SEED}.
+  -r|--release-test     Run this script in release mode. This fixes the seed value to 1.
   -s|--seed             Integer seed value to use for this test run.
 
 Tool path options:
@@ -312,11 +288,6 @@ msg()
     else
         current_section="$1"
     fi
-
-    if [ $QUIET -eq 1 ]; then
-        return
-    fi
-
     echo ""
     echo "******************************************************************"
     echo "* $current_section "
@@ -392,15 +363,13 @@ pre_parse_command_line () {
             --no-force) FORCE=0;;
             --no-keep-going) KEEP_GOING=0;;
             --no-memory) MEMORY=0;;
-            --no-quiet) QUIET=0;;
             --openssl) shift; OPENSSL="$1";;
             --openssl-legacy) shift; OPENSSL_LEGACY="$1";;
             --openssl-next) shift; OPENSSL_NEXT="$1";;
             --outcome-file) shift; MBEDTLS_TEST_OUTCOME_FILE="$1";;
             --out-of-source-dir) shift; OUT_OF_SOURCE_DIR="$1";;
-            --quiet|-q) QUIET=1;;
             --random-seed) unset SEED;;
-            --release-test|-r) SEED=$RELEASE_SEED;;
+            --release-test|-r) SEED=1;;
             --seed|-s) shift; SEED="$1";;
             -*)
                 echo >&2 "Unknown option: $1"
@@ -480,7 +449,7 @@ pre_setup_keep_going () {
             failure_summary="$failure_summary
 $text"
             failure_count=$((failure_count + 1))
-            echo "${start_red}^^^^$text^^^^${end_color}" >&2
+            echo "${start_red}^^^^$text^^^^${end_color}"
         fi
     }
     make () {
@@ -526,24 +495,6 @@ not() {
     ! "$@"
 }
 
-pre_setup_quiet_redirect () {
-    if [ $QUIET -ne 1 ]; then
-        redirect_out () {
-            "$@"
-        }
-        redirect_err () {
-            "$@"
-        }
-    else
-        redirect_out () {
-            "$@" >/dev/null
-        }
-        redirect_err () {
-            "$@" 2>/dev/null
-        }
-    fi
-}
-
 pre_prepare_outcome_file () {
     case "$MBEDTLS_TEST_OUTCOME_FILE" in
       [!/]*) MBEDTLS_TEST_OUTCOME_FILE="$PWD/$MBEDTLS_TEST_OUTCOME_FILE";;
@@ -554,10 +505,6 @@ pre_prepare_outcome_file () {
 }
 
 pre_print_configuration () {
-    if [ $QUIET -eq 1 ]; then
-        return
-    fi
-
     msg "info: $0 configuration"
     echo "MEMORY: $MEMORY"
     echo "FORCE: $FORCE"
@@ -632,11 +579,6 @@ pre_check_tools () {
                         "$ARMC6_CC" "$ARMC6_AR" "$ARMC6_FROMELF";;
     esac
 
-    # past this point, no call to check_tool, only printing output
-    if [ $QUIET -eq 1 ]; then
-        return
-    fi
-
     msg "info: output_env.sh"
     case $RUN_COMPONENTS in
         *_armcc*)
@@ -702,13 +644,7 @@ component_check_names () {
 
 component_check_test_cases () {
     msg "Check: test case descriptions" # < 1s
-    if [ $QUIET -eq 1 ]; then
-        opt='--quiet'
-    else
-        opt=''
-    fi
-    record_status tests/scripts/check-test-cases.py $opt
-    unset opt
+    record_status tests/scripts/check-test-cases.py
 }
 
 component_check_doxygen_warnings () {
@@ -929,43 +865,6 @@ component_test_no_hmac_drbg () {
     # so there's little value in running those lengthy tests here.
 }
 
-component_test_ecp_no_internal_rng () {
-    msg "build: Default plus ECP_NO_INTERNAL_RNG minus DRBG modules"
-    scripts/config.py set MBEDTLS_ECP_NO_INTERNAL_RNG
-    scripts/config.py unset MBEDTLS_CTR_DRBG_C
-    scripts/config.py unset MBEDTLS_HMAC_DRBG_C
-    scripts/config.py unset MBEDTLS_ECDSA_DETERMINISTIC # requires HMAC_DRBG
-    scripts/config.py unset MBEDTLS_PSA_CRYPTO_C # requires a DRBG
-    scripts/config.py unset MBEDTLS_PSA_CRYPTO_STORAGE_C # requires PSA Crypto
-
-    CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
-    make
-
-    msg "test: ECP_NO_INTERNAL_RNG, no DRBG module"
-    make test
-
-    # no SSL tests as they all depend on having a DRBG
-}
-
-component_test_ecp_restartable_no_internal_rng () {
-    msg "build: Default plus ECP_RESTARTABLE and ECP_NO_INTERNAL_RNG, no DRBG"
-    scripts/config.py set MBEDTLS_ECP_NO_INTERNAL_RNG
-    scripts/config.py set MBEDTLS_ECP_RESTARTABLE
-    scripts/config.py unset MBEDTLS_CTR_DRBG_C
-    scripts/config.py unset MBEDTLS_HMAC_DRBG_C
-    scripts/config.py unset MBEDTLS_ECDSA_DETERMINISTIC # requires HMAC_DRBG
-    scripts/config.py unset MBEDTLS_PSA_CRYPTO_C # requires CTR_DRBG
-    scripts/config.py unset MBEDTLS_PSA_CRYPTO_STORAGE_C # requires PSA Crypto
-
-    CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
-    make
-
-    msg "test: ECP_RESTARTABLE and ECP_NO_INTERNAL_RNG, no DRBG module"
-    make test
-
-    # no SSL tests as they all depend on having a DRBG
-}
-
 component_test_new_ecdh_context () {
     msg "build: new ECDH context (ASan build)" # ~ 6 min
     scripts/config.py unset MBEDTLS_ECDH_LEGACY_CONTEXT
@@ -999,25 +898,6 @@ component_test_everest () {
     msg "test: Everest ECDH context - compat.sh with some ECDH ciphersuites (ASan build)" # ~ 3 min
     # Exclude some symmetric ciphers that are redundant here to gain time.
     if_build_succeeded tests/compat.sh -f ECDH -V NO -e 'ARCFOUR\|ARIA\|CAMELLIA\|CHACHA\|DES\|RC4'
-}
-
-component_test_everest_curve25519_only () {
-    msg "build: Everest ECDH context, only Curve25519" # ~ 6 min
-    scripts/config.py unset MBEDTLS_ECDH_LEGACY_CONTEXT
-    scripts/config.py set MBEDTLS_ECDH_VARIANT_EVEREST_ENABLED
-    scripts/config.py unset MBEDTLS_ECDSA_C
-    scripts/config.py unset MBEDTLS_KEY_EXCHANGE_ECDH_ECDSA_ENABLED
-    scripts/config.py unset MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED
-    # Disable all curves
-    for c in $(sed -n 's/#define \(MBEDTLS_ECP_DP_[0-9A-Z_a-z]*_ENABLED\).*/\1/p' <"$CONFIG_H"); do
-        scripts/config.py unset "$c"
-    done
-    scripts/config.py set MBEDTLS_ECP_DP_CURVE25519_ENABLED
-
-    make CFLAGS="$ASAN_CFLAGS -O2" LDFLAGS="$ASAN_CFLAGS"
-
-    msg "test: Everest ECDH context, only Curve25519" # ~ 50s
-    make test
 }
 
 component_test_small_ssl_out_content_len () {
@@ -2018,10 +1898,7 @@ component_check_python_files () {
 
 component_check_generate_test_code () {
     msg "uint test: generate_test_code.py"
-    # unittest writes out mundane stuff like number or tests run on stderr.
-    # Our convention is to reserve stderr for actual errors, and write
-    # harmless info on stdout so it can be suppress with --quiet.
-    record_status ./tests/scripts/test_generate_test_code.py 2>&1
+    record_status ./tests/scripts/test_generate_test_code.py
 }
 
 ################################################################
@@ -2052,18 +1929,13 @@ run_component () {
     # Unconditionally create a seedfile that's sufficiently long.
     # Do this before each component, because a previous component may
     # have messed it up or shortened it.
-    redirect_err dd if=/dev/urandom of=./tests/seedfile bs=64 count=1
+    dd if=/dev/urandom of=./tests/seedfile bs=64 count=1
 
     # Run the component code.
-    if [ $QUIET -eq 1 ]; then
-        # msg() is silenced, so just print the component name here
-        echo "${current_component#component_}"
-    fi
-    redirect_out "$@"
+    "$@"
 
     # Restore the build tree to a clean state.
     cleanup
-    unset current_component
 }
 
 # Preliminary setup
@@ -2081,7 +1953,6 @@ else
         "$@"
     }
 fi
-pre_setup_quiet_redirect
 pre_prepare_outcome_file
 pre_print_configuration
 pre_check_tools
