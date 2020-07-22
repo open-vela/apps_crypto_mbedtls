@@ -25,7 +25,11 @@
  * [2] https://tools.ietf.org/html/rfc5794
  */
 
-#include "common.h"
+#if !defined(MBEDTLS_CONFIG_FILE)
+#include "mbedtls/config.h"
+#else
+#include MBEDTLS_CONFIG_FILE
+#endif
 
 #if defined(MBEDTLS_ARIA_C)
 
