@@ -5,11 +5,7 @@ CFLAGS	?= -O2
 WARNING_CFLAGS ?=  -Wall -Wextra
 LDFLAGS ?=
 
-# Include ../include for public headers and . for private headers.
-# Note that . needs to be included explicitly for the sake of library
-# files that are not in the /library directory (which currently means
-# under /3rdparty).
-LOCAL_CFLAGS = $(WARNING_CFLAGS) -I. -I../include -D_FILE_OFFSET_BITS=64
+LOCAL_CFLAGS = $(WARNING_CFLAGS) -I../include -D_FILE_OFFSET_BITS=64
 LOCAL_LDFLAGS =
 
 ifdef DEBUG
@@ -41,7 +37,7 @@ endif
 
 SOEXT_TLS=so.13
 SOEXT_X509=so.1
-SOEXT_CRYPTO=so.5
+SOEXT_CRYPTO=so.4
 
 # Set AR_DASH= (empty string) to use an ar implementation that does not accept
 # the - prefix for command line options (e.g. llvm-ar)

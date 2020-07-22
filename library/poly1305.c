@@ -20,7 +20,11 @@
  *
  *  This file is part of mbed TLS (https://tls.mbed.org)
  */
-#include "common.h"
+#if !defined(MBEDTLS_CONFIG_FILE)
+#include "mbedtls/config.h"
+#else
+#include MBEDTLS_CONFIG_FILE
+#endif
 
 #if defined(MBEDTLS_POLY1305_C)
 
@@ -509,6 +513,7 @@ static const unsigned char test_mac[2][16] =
     }
 };
 
+#undef ASSERT
 #define ASSERT( cond, args )            \
     do                                  \
     {                                   \
