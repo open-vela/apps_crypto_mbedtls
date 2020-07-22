@@ -680,7 +680,7 @@ component_check_doxy_blocks () {
 
 component_check_files () {
     msg "Check: file sanity checks (permissions, encodings)" # < 1s
-    record_status tests/scripts/check-files.py
+    record_status tests/scripts/check_files.py
 }
 
 component_check_changelog () {
@@ -707,7 +707,7 @@ component_check_test_cases () {
     else
         opt=''
     fi
-    record_status tests/scripts/check-test-cases.py $opt
+    record_status tests/scripts/check_test_cases.py $opt
     unset opt
 }
 
@@ -999,6 +999,25 @@ component_test_everest () {
     msg "test: Everest ECDH context - compat.sh with some ECDH ciphersuites (ASan build)" # ~ 3 min
     # Exclude some symmetric ciphers that are redundant here to gain time.
     if_build_succeeded tests/compat.sh -f ECDH -V NO -e 'ARCFOUR\|ARIA\|CAMELLIA\|CHACHA\|DES\|RC4'
+}
+
+component_test_everest_curve25519_only () {
+    msg "build: Everest ECDH context, only Curve25519" # ~ 6 min
+    scripts/config.py unset MBEDTLS_ECDH_LEGACY_CONTEXT
+    scripts/config.py set MBEDTLS_ECDH_VARIANT_EVEREST_ENABLED
+    scripts/config.py unset MBEDTLS_ECDSA_C
+    scripts/config.py unset MBEDTLS_KEY_EXCHANGE_ECDH_ECDSA_ENABLED
+    scripts/config.py unset MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED
+    # Disable all curves
+    for c in $(sed -n 's/#define \(MBEDTLS_ECP_DP_[0-9A-Z_a-z]*_ENABLED\).*/\1/p' <"$CONFIG_H"); do
+        scripts/config.py unset "$c"
+    done
+    scripts/config.py set MBEDTLS_ECP_DP_CURVE25519_ENABLED
+
+    make CFLAGS="$ASAN_CFLAGS -O2" LDFLAGS="$ASAN_CFLAGS"
+
+    msg "test: Everest ECDH context, only Curve25519" # ~ 50s
+    make test
 }
 
 component_test_small_ssl_out_content_len () {
