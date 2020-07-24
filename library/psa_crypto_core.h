@@ -32,7 +32,6 @@
 #include "psa/crypto_se_driver.h"
 
 #include "mbedtls/ecp.h"
-#include "mbedtls/rsa.h"
 
 /** The data structure representing a key slot, containing key material
  * and metadata for one key.
@@ -49,10 +48,6 @@ typedef struct
             uint8_t *data;
             size_t bytes;
         } key;
-#if defined(MBEDTLS_RSA_C)
-        /* RSA public key or key pair */
-        mbedtls_rsa_context *rsa;
-#endif /* MBEDTLS_RSA_C */
 #if defined(MBEDTLS_ECP_C)
         /* EC public key or key pair */
         mbedtls_ecp_keypair *ecp;
