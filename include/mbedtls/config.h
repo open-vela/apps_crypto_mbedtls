@@ -782,28 +782,6 @@
 #define MBEDTLS_ECP_NIST_OPTIM
 
 /**
- * \def MBEDTLS_ECP_NO_INTERNAL_RNG
- *
- * When this option is disabled, mbedtls_ecp_mul() will make use of an
- * internal RNG when called with a NULL \c f_rng argument, in order to protect
- * against some side-channel attacks.
- *
- * This protection introduces a dependency of the ECP module on one of the
- * DRBG modules. For very constrained implementations that don't require this
- * protection (for example, because you're only doing signature verification,
- * so not manipulating any secret, or because local/physical side-channel
- * attacks are outside your threat model), it might be desirable to get rid of
- * that dependency.
- *
- * \warning Enabling this option makes some uses of ECP vulnerable to some
- * side-channel attacks. Only enable it if you know that's not a problem for
- * your use case.
- *
- * Uncomment this macro to disable some counter-measures in ECP.
- */
-//#define MBEDTLS_ECP_NO_INTERNAL_RNG
-
-/**
  * \def MBEDTLS_ECP_RESTARTABLE
  *
  * Enable "non-blocking" ECC operations that can return early and be resumed.
@@ -1905,19 +1883,6 @@
  * Enable modifying the maximum I/O buffer size.
  */
 //#define MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH
-
-/**
- * \def MBEDTLS_TEST_CONSTANT_FLOW_MEMSAN
- *
- * Enable testing of the constant-flow nature of some sensitive functions with
- * clang's MemorySanitizer. This causes some existing tests to also test
- * non-functional properties of the code under test.
- *
- * This setting requires compiling with clang -fsanitize=memory.
- *
- * Uncomment to enable testing of the constant-flow nature of selected code.
- */
-//#define MBEDTLS_TEST_CONSTANT_FLOW_MEMSAN
 
 /**
  * \def MBEDTLS_TEST_HOOKS

@@ -156,14 +156,6 @@
 #error "MBEDTLS_ECP_C defined, but not all prerequisites"
 #endif
 
-#if defined(MBEDTLS_ECP_C) && !(            \
-    defined(MBEDTLS_ECP_ALT) ||             \
-    defined(MBEDTLS_CTR_DRBG_C) ||          \
-    defined(MBEDTLS_HMAC_DRBG_C) ||         \
-    defined(MBEDTLS_ECP_NO_INTERNAL_RNG))
-#error "MBEDTLS_ECP_C requires a DRBG module unless MBEDTLS_ECP_NO_INTERNAL_RNG is defined or an alternative implementation is used"
-#endif
-
 #if defined(MBEDTLS_PK_PARSE_C) && !defined(MBEDTLS_ASN1_PARSE_C)
 #error "MBEDTLS_PK_PARSE_C defined, but not all prerequesites"
 #endif
@@ -185,16 +177,6 @@
     defined(MBEDTLS_ENTROPY_FORCE_SHA256) && !defined(MBEDTLS_SHA256_C)
 #error "MBEDTLS_ENTROPY_FORCE_SHA256 defined, but not all prerequisites"
 #endif
-
-#if defined(__has_feature)
-#if __has_feature(memory_sanitizer)
-#define MBEDTLS_HAS_MEMSAN
-#endif
-#endif
-#if defined(MBEDTLS_TEST_CONSTANT_FLOW_MEMSAN) &&  !defined(MBEDTLS_HAS_MEMSAN)
-#error "MBEDTLS_TEST_CONSTANT_FLOW_MEMSAN requires building with MemorySanitizer"
-#endif
-#undef MBEDTLS_HAS_MEMSAN
 
 #if defined(MBEDTLS_TEST_NULL_ENTROPY) && \
     ( !defined(MBEDTLS_ENTROPY_C) || !defined(MBEDTLS_NO_DEFAULT_ENTROPY_SOURCES) )
