@@ -19,7 +19,11 @@
  *  This file is part of mbed TLS (https://tls.mbed.org)
  */
 
-#include "common.h"
+#if !defined(MBEDTLS_CONFIG_FILE)
+#include "mbedtls/config.h"
+#else
+#include MBEDTLS_CONFIG_FILE
+#endif
 
 #if defined(MBEDTLS_VERSION_C)
 
@@ -350,9 +354,6 @@ static const char * const features[] = {
 #if defined(MBEDTLS_ECP_NIST_OPTIM)
     "MBEDTLS_ECP_NIST_OPTIM",
 #endif /* MBEDTLS_ECP_NIST_OPTIM */
-#if defined(MBEDTLS_ECP_NO_INTERNAL_RNG)
-    "MBEDTLS_ECP_NO_INTERNAL_RNG",
-#endif /* MBEDTLS_ECP_NO_INTERNAL_RNG */
 #if defined(MBEDTLS_ECP_RESTARTABLE)
     "MBEDTLS_ECP_RESTARTABLE",
 #endif /* MBEDTLS_ECP_RESTARTABLE */
@@ -557,9 +558,6 @@ static const char * const features[] = {
 #if defined(MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH)
     "MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH",
 #endif /* MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH */
-#if defined(MBEDTLS_TEST_CONSTANT_FLOW_MEMSAN)
-    "MBEDTLS_TEST_CONSTANT_FLOW_MEMSAN",
-#endif /* MBEDTLS_TEST_CONSTANT_FLOW_MEMSAN */
 #if defined(MBEDTLS_TEST_HOOKS)
     "MBEDTLS_TEST_HOOKS",
 #endif /* MBEDTLS_TEST_HOOKS */

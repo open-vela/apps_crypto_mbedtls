@@ -23,7 +23,11 @@
  * to store and retrieve the session information.
  */
 
-#include "common.h"
+#if !defined(MBEDTLS_CONFIG_FILE)
+#include "mbedtls/config.h"
+#else
+#include MBEDTLS_CONFIG_FILE
+#endif
 
 #if defined(MBEDTLS_SSL_COOKIE_C)
 
@@ -130,7 +134,8 @@ static int ssl_cookie_hmac( mbedtls_md_context_t *hmac_ctx,
 {
     unsigned char hmac_out[COOKIE_MD_OUTLEN];
 
-    MBEDTLS_SSL_CHK_BUF_PTR( *p, end, COOKIE_HMAC_LEN );
+    if( (size_t)( end - *p ) < COOKIE_HMAC_LEN )
+        return( MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL );
 
     if( mbedtls_md_hmac_reset(  hmac_ctx ) != 0 ||
         mbedtls_md_hmac_update( hmac_ctx, time, 4 ) != 0 ||
@@ -160,7 +165,8 @@ int mbedtls_ssl_cookie_write( void *p_ctx,
     if( ctx == NULL || cli_id == NULL )
         return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
 
-    MBEDTLS_SSL_CHK_BUF_PTR( *p, end, COOKIE_LEN );
+    if( (size_t)( end - *p ) < COOKIE_LEN )
+        return( MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL );
 
 #if defined(MBEDTLS_HAVE_TIME)
     t = (unsigned long) mbedtls_time( NULL );
