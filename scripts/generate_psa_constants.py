@@ -11,6 +11,23 @@ file is written:
 * OUTPUT_FILE_DIR passed: writes to OUTPUT_FILE_DIR/
 """
 
+# Copyright (C) 2018-2020, Arm Limited, All Rights Reserved
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# This file is part of Mbed TLS (https://tls.mbed.org)
+
 import os
 import re
 import sys
@@ -26,7 +43,7 @@ static const char *psa_strerror(psa_status_t status)
     }
 }
 
-static const char *psa_ecc_curve_name(psa_ecc_curve_t curve)
+static const char *psa_ecc_family_name(psa_ecc_family_t curve)
 {
     switch (curve) {
     %(ecc_curve_cases)s
@@ -34,7 +51,7 @@ static const char *psa_ecc_curve_name(psa_ecc_curve_t curve)
     }
 }
 
-static const char *psa_dh_group_name(psa_dh_group_t group)
+static const char *psa_dh_family_name(psa_dh_family_t group)
 {
     switch (group) {
     %(dh_group_cases)s
@@ -162,13 +179,13 @@ static int psa_snprint_key_usage(char *buffer, size_t buffer_size,
 KEY_TYPE_FROM_CURVE_TEMPLATE = '''if (%(tester)s(type)) {
             append_with_curve(&buffer, buffer_size, &required_size,
                               "%(builder)s", %(builder_length)s,
-                              PSA_KEY_TYPE_GET_CURVE(type));
+                              PSA_KEY_TYPE_ECC_GET_FAMILY(type));
         } else '''
 
 KEY_TYPE_FROM_GROUP_TEMPLATE = '''if (%(tester)s(type)) {
             append_with_group(&buffer, buffer_size, &required_size,
                               "%(builder)s", %(builder_length)s,
-                              PSA_KEY_TYPE_GET_GROUP(type));
+                              PSA_KEY_TYPE_DH_GET_FAMILY(type));
         } else '''
 
 ALGORITHM_FROM_HASH_TEMPLATE = '''if (%(tester)s(core_alg)) {
@@ -247,9 +264,9 @@ class MacroCollector:
             self.key_types_from_curve[name] = name[:13] + 'IS_' + name[13:]
         elif name.startswith('PSA_KEY_TYPE_') and parameter == 'group':
             self.key_types_from_group[name] = name[:13] + 'IS_' + name[13:]
-        elif name.startswith('PSA_ECC_CURVE_') and not parameter:
+        elif name.startswith('PSA_ECC_FAMILY_') and not parameter:
             self.ecc_curves.add(name)
-        elif name.startswith('PSA_DH_GROUP_') and not parameter:
+        elif name.startswith('PSA_DH_FAMILY_') and not parameter:
             self.dh_groups.add(name)
         elif name.startswith('PSA_ALG_') and not parameter:
             if name in ['PSA_ALG_ECDSA_BASE',
