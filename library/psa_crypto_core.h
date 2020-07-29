@@ -32,6 +32,9 @@
 #include "psa/crypto.h"
 #include "psa/crypto_se_driver.h"
 
+#include "mbedtls/ecp.h"
+#include "mbedtls/rsa.h"
+
 /** The data structure representing a key slot, containing key material
  * and metadata for one key.
  */
@@ -40,13 +43,20 @@ typedef struct
     psa_core_key_attributes_t attr;
     union
     {
-        /* Dynamically allocated key data buffer.
-         * Format as specified in psa_export_key(). */
-        struct key_data
+        /* Raw-data key (key_type_is_raw_bytes() in psa_crypto.c) */
+        struct raw_data
         {
             uint8_t *data;
             size_t bytes;
-        } key;
+        } raw;
+#if defined(MBEDTLS_RSA_C)
+        /* RSA public key or key pair */
+        mbedtls_rsa_context *rsa;
+#endif /* MBEDTLS_RSA_C */
+#if defined(MBEDTLS_ECP_C)
+        /* EC public key or key pair */
+        mbedtls_ecp_keypair *ecp;
+#endif /* MBEDTLS_ECP_C */
 #if defined(MBEDTLS_PSA_CRYPTO_SE_C)
         /* Any key type in a secure element */
         struct se
