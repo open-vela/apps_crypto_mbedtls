@@ -51,32 +51,53 @@ typedef struct
 
 static psa_global_data_t global_data;
 
-/* Access a key slot at the given handle. The handle of a key slot is
- * the index of the slot in the global slot array, plus one so that handles
- * start at 1 and not 0. */
-psa_status_t psa_get_key_slot( psa_key_handle_t handle,
-                               psa_key_slot_t **p_slot )
+psa_status_t psa_validate_key_id( mbedtls_svc_key_id_t key, int vendor_ok )
 {
-    psa_key_slot_t *slot = NULL;
+    psa_key_id_t key_id = MBEDTLS_SVC_KEY_ID_GET_KEY_ID( key );
 
-    if( ! global_data.key_slots_initialized )
-        return( PSA_ERROR_BAD_STATE );
+    if( ( PSA_KEY_ID_USER_MIN <= key_id ) &&
+        ( key_id <= PSA_KEY_ID_USER_MAX ) )
+        return( PSA_SUCCESS );
 
-    /* 0 is not a valid handle under any circumstance. This
-     * implementation provides slots number 1 to N where N is the
-     * number of available slots. */
-    if( psa_key_handle_is_null( handle ) || 
-        ( handle > ARRAY_LENGTH( global_data.key_slots ) ) )
-        return( PSA_ERROR_INVALID_HANDLE );
-    slot = &global_data.key_slots[handle - 1];
+    if( vendor_ok &&
+        ( PSA_KEY_ID_VENDOR_MIN <= key_id ) &&
+        ( key_id <= PSA_KEY_ID_VENDOR_MAX ) )
+        return( PSA_SUCCESS );
 
-    /* If the slot isn't occupied, the handle is invalid. */
-    if( ! psa_is_key_slot_occupied( slot ) )
-        return( PSA_ERROR_INVALID_HANDLE );
-
-    *p_slot = slot;
-    return( PSA_SUCCESS );
+    return( PSA_ERROR_INVALID_HANDLE );
 }
+
+static psa_key_slot_t* psa_get_slot_from_volatile_key_id(
+    mbedtls_svc_key_id_t key )
+{
+    psa_key_slot_t *slot;
+    psa_key_id_t key_id = MBEDTLS_SVC_KEY_ID_GET_KEY_ID( key );
+
+    if( ( key_id < PSA_KEY_ID_VOLATILE_MIN ) ||
+        ( key_id > PSA_KEY_ID_VOLATILE_MAX ) )
+        return( NULL );
+
+    slot = &global_data.key_slots[ key_id - PSA_KEY_ID_VOLATILE_MIN ];
+
+    return( mbedtls_svc_key_id_equal( key, slot->attr.id ) ? slot : NULL );
+}
+
+#if defined(MBEDTLS_PSA_CRYPTO_STORAGE_C)
+static psa_key_slot_t* psa_get_slot_from_key_id(
+    mbedtls_svc_key_id_t key )
+{
+    psa_key_slot_t *slot = &global_data.key_slots[ PSA_KEY_SLOT_COUNT ];
+
+    while( slot > &global_data.key_slots[ 0 ] )
+    {
+        slot--;
+        if( mbedtls_svc_key_id_equal( key, slot->attr.id ) )
+            return( slot );
+    }
+
+    return( NULL );
+}
+#endif /* defined(MBEDTLS_PSA_CRYPTO_STORAGE_C) */
 
 psa_status_t psa_initialize_key_slots( void )
 {
@@ -99,8 +120,7 @@ void psa_wipe_all_key_slots( void )
     global_data.key_slots_initialized = 0;
 }
 
-psa_status_t psa_get_empty_key_slot( psa_key_handle_t *handle,
-                                     psa_key_id_t *volatile_key_id,
+psa_status_t psa_get_empty_key_slot( psa_key_id_t *volatile_key_id,
                                      psa_key_slot_t **p_slot )
 {
     size_t slot_idx;
@@ -113,7 +133,6 @@ psa_status_t psa_get_empty_key_slot( psa_key_handle_t *handle,
         *p_slot = &global_data.key_slots[ slot_idx - 1 ];
         if( ! psa_is_key_slot_occupied( *p_slot ) )
         {
-            *handle = (psa_key_handle_t)slot_idx;
             *volatile_key_id = PSA_KEY_ID_VOLATILE_MIN +
                                ( (psa_key_id_t)slot_idx ) - 1;
 
@@ -161,32 +180,49 @@ exit:
     psa_free_persistent_key_data( key_data, key_data_length );
     return( status );
 }
+#endif /* MBEDTLS_PSA_CRYPTO_STORAGE_C */
 
-/** Check whether a key identifier is acceptable.
- *
- * For backward compatibility, key identifiers that were valid in a
- * past released version must remain valid, unless a migration path
- * is provided.
- *
- * \param key        The key identifier to check.
- * \param vendor_ok  Nonzero to allow key ids in the vendor range.
- *                   0 to allow only key ids in the application range.
- *
- * \return           1 if \p key is acceptable, otherwise 0.
- */
-static int psa_is_key_id_valid( mbedtls_svc_key_id_t key, int vendor_ok )
+psa_status_t psa_get_key_slot( mbedtls_svc_key_id_t key,
+                               psa_key_slot_t **p_slot )
 {
-    psa_key_id_t key_id = MBEDTLS_SVC_KEY_ID_GET_KEY_ID( key );
-    if( PSA_KEY_ID_USER_MIN <= key_id && key_id <= PSA_KEY_ID_USER_MAX )
-        return( 1 );
-    else if( vendor_ok &&
-             PSA_KEY_ID_VENDOR_MIN <= key_id &&
-             key_id <= PSA_KEY_ID_VENDOR_MAX )
-        return( 1 );
-    else
-        return( 0 );
-}
+    psa_status_t status = PSA_ERROR_GENERIC_ERROR;
+
+    *p_slot = NULL;
+    if( ! global_data.key_slots_initialized )
+        return( PSA_ERROR_BAD_STATE );
+
+    status = psa_validate_key_id( key, 1 );
+    if( status != PSA_SUCCESS )
+        return( status );
+
+    *p_slot = psa_get_slot_from_volatile_key_id( key );
+    if( *p_slot != NULL )
+        return( PSA_SUCCESS );
+
+#if defined(MBEDTLS_PSA_CRYPTO_STORAGE_C)
+    psa_key_id_t volatile_key_id;
+
+    *p_slot = psa_get_slot_from_key_id( key );
+    if( *p_slot != NULL )
+        return( PSA_SUCCESS );
+
+    status = psa_get_empty_key_slot( &volatile_key_id, p_slot );
+    if( status != PSA_SUCCESS )
+        return( status );
+
+    (*p_slot)->attr.lifetime = PSA_KEY_LIFETIME_PERSISTENT;
+    (*p_slot)->attr.id = key;
+
+    status = psa_load_persistent_key_into_slot( *p_slot );
+    if( status != PSA_SUCCESS )
+        psa_wipe_key_slot( *p_slot );
+
+    return( status );
+#else
+    return( PSA_ERROR_DOES_NOT_EXIST );
 #endif /* defined(MBEDTLS_PSA_CRYPTO_STORAGE_C) */
+
+}
 
 psa_status_t psa_validate_key_location( psa_key_lifetime_t lifetime,
                                         psa_se_drv_table_entry_t **p_drv )
@@ -213,8 +249,7 @@ psa_status_t psa_validate_key_location( psa_key_lifetime_t lifetime,
         return( PSA_SUCCESS );
 }
 
-psa_status_t psa_validate_key_persistence( psa_key_lifetime_t lifetime,
-                                           mbedtls_svc_key_id_t key )
+psa_status_t psa_validate_key_persistence( psa_key_lifetime_t lifetime )
 {
     if ( PSA_KEY_LIFETIME_IS_VOLATILE( lifetime ) )
     {
@@ -225,13 +260,8 @@ psa_status_t psa_validate_key_persistence( psa_key_lifetime_t lifetime,
     {
         /* Persistent keys require storage support */
 #if defined(MBEDTLS_PSA_CRYPTO_STORAGE_C)
-        if( psa_is_key_id_valid( key,
-                                 psa_key_lifetime_is_external( lifetime ) ) )
-            return( PSA_SUCCESS );
-        else
-            return( PSA_ERROR_INVALID_ARGUMENT );
+        return( PSA_SUCCESS );
 #else /* MBEDTLS_PSA_CRYPTO_STORAGE_C */
-        (void) key;
         return( PSA_ERROR_NOT_SUPPORTED );
 #endif /* !MBEDTLS_PSA_CRYPTO_STORAGE_C */
     }
@@ -241,28 +271,18 @@ psa_status_t psa_open_key( mbedtls_svc_key_id_t key, psa_key_handle_t *handle )
 {
 #if defined(MBEDTLS_PSA_CRYPTO_STORAGE_C)
     psa_status_t status;
-    psa_key_id_t volatile_key_id;
     psa_key_slot_t *slot;
 
-    *handle = 0;
-
-    if( ! psa_is_key_id_valid( key, 1 ) )
-        return( PSA_ERROR_INVALID_ARGUMENT );
-
-    status = psa_get_empty_key_slot( handle, &volatile_key_id, &slot );
-    if( status != PSA_SUCCESS )
-        return( status );
-
-    slot->attr.lifetime = PSA_KEY_LIFETIME_PERSISTENT;
-    slot->attr.id = key;
-
-    status = psa_load_persistent_key_into_slot( slot );
+    status = psa_get_key_slot( key, &slot );
     if( status != PSA_SUCCESS )
     {
-        psa_wipe_key_slot( slot );
         *handle = PSA_KEY_HANDLE_INIT;
+        return( status );
     }
-    return( status );
+
+    *handle = key;
+
+    return( PSA_SUCCESS );
 
 #else /* defined(MBEDTLS_PSA_CRYPTO_STORAGE_C) */
     (void) key;
