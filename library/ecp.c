@@ -41,11 +41,7 @@
  *     <http://eprint.iacr.org/2004/342.pdf>
  */
 
-#if !defined(MBEDTLS_CONFIG_FILE)
-#include "mbedtls/config.h"
-#else
-#include MBEDTLS_CONFIG_FILE
-#endif
+#include "common.h"
 
 /**
  * \brief Function level alternative implementation.
@@ -3227,6 +3223,45 @@ cleanup:
 
     return( ret );
 }
+
+/*
+ * Write a private key.
+ */
+int mbedtls_ecp_write_key( mbedtls_ecp_keypair *key,
+                           unsigned char *buf, size_t buflen )
+{
+    int ret = MBEDTLS_ERR_ECP_FEATURE_UNAVAILABLE;
+
+    ECP_VALIDATE_RET( key != NULL );
+    ECP_VALIDATE_RET( buf != NULL );
+
+#if defined(ECP_MONTGOMERY)
+    if( mbedtls_ecp_get_type( &key->grp ) == MBEDTLS_ECP_TYPE_MONTGOMERY )
+    {
+        if( key->grp.id == MBEDTLS_ECP_DP_CURVE25519 )
+        {
+            if( buflen < ECP_CURVE25519_KEY_SIZE )
+                return MBEDTLS_ERR_ECP_BUFFER_TOO_SMALL;
+
+            MBEDTLS_MPI_CHK( mbedtls_mpi_write_binary_le( &key->d, buf, buflen ) );
+        }
+        else
+            ret = MBEDTLS_ERR_ECP_FEATURE_UNAVAILABLE;
+    }
+
+#endif
+#if defined(ECP_SHORTWEIERSTRASS)
+    if( mbedtls_ecp_get_type( &key->grp ) == MBEDTLS_ECP_TYPE_SHORT_WEIERSTRASS )
+    {
+        MBEDTLS_MPI_CHK( mbedtls_mpi_write_binary( &key->d, buf, buflen ) );
+    }
+
+#endif
+cleanup:
+
+    return( ret );
+}
+
 
 /*
  * Check a public-private key pair
