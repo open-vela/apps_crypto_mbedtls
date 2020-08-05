@@ -37,7 +37,11 @@
  *
  */
 
-#include "common.h"
+#if !defined(MBEDTLS_CONFIG_FILE)
+#include "mbedtls/config.h"
+#else
+#include MBEDTLS_CONFIG_FILE
+#endif
 
 #if defined(MBEDTLS_RSA_C)
 
@@ -53,7 +57,7 @@
 #include "mbedtls/md.h"
 #endif
 
-#if defined(MBEDTLS_PKCS1_V15) && !defined(__OpenBSD__) && !defined(__NetBSD__)
+#if defined(MBEDTLS_PKCS1_V15) && !defined(__OpenBSD__)
 #include <stdlib.h>
 #endif
 
@@ -2569,7 +2573,7 @@ void mbedtls_rsa_free( mbedtls_rsa_context *ctx )
 #if defined(MBEDTLS_PKCS1_V15)
 static int myrand( void *rng_state, unsigned char *output, size_t len )
 {
-#if !defined(__OpenBSD__) && !defined(__NetBSD__)
+#if !defined(__OpenBSD__)
     size_t i;
 
     if( rng_state != NULL )
@@ -2582,7 +2586,7 @@ static int myrand( void *rng_state, unsigned char *output, size_t len )
         rng_state = NULL;
 
     arc4random_buf( output, len );
-#endif /* !OpenBSD && !NetBSD */
+#endif /* !OpenBSD */
 
     return( 0 );
 }

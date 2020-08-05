@@ -41,49 +41,38 @@ void mbedtls_test_platform_teardown( void )
 #endif /* MBEDTLS_PLATFORM_C */
 }
 
-static int ascii2uc(const char c, unsigned char *uc)
+int mbedtls_test_unhexify( unsigned char *obuf, const char *ibuf )
 {
-    if( ( c >= '0' ) && ( c <= '9' ) )
-        *uc = c - '0';
-    else if( ( c >= 'a' ) && ( c <= 'f' ) )
-        *uc = c - 'a' + 10;
-    else if( ( c >= 'A' ) && ( c <= 'F' ) )
-        *uc = c - 'A' + 10;
-    else
-        return( -1 );
-
-    return( 0 );
-}
-
-int mbedtls_test_unhexify( unsigned char *obuf,
-                           size_t obufmax,
-                           const char *ibuf,
-                           size_t *len )
-{
-    unsigned char uc, uc2;
-
-    *len = strlen( ibuf );
-
-    /* Must be even number of bytes. */
-    if ( ( *len ) & 1 )
-        return( -1 );
-    *len /= 2;
-
-    if ( (*len) > obufmax )
-        return( -1 );
+    unsigned char c, c2;
+    int len = strlen( ibuf ) / 2;
+    TEST_HELPER_ASSERT( strlen( ibuf ) % 2 == 0 ); /* must be even number of bytes */
 
     while( *ibuf != 0 )
     {
-        if ( ascii2uc( *(ibuf++), &uc ) != 0 )
-            return( -1 );
+        c = *ibuf++;
+        if( c >= '0' && c <= '9' )
+            c -= '0';
+        else if( c >= 'a' && c <= 'f' )
+            c -= 'a' - 10;
+        else if( c >= 'A' && c <= 'F' )
+            c -= 'A' - 10;
+        else
+            TEST_HELPER_ASSERT( 0 );
 
-        if ( ascii2uc( *(ibuf++), &uc2 ) != 0 )
-            return( -1 );
+        c2 = *ibuf++;
+        if( c2 >= '0' && c2 <= '9' )
+            c2 -= '0';
+        else if( c2 >= 'a' && c2 <= 'f' )
+            c2 -= 'a' - 10;
+        else if( c2 >= 'A' && c2 <= 'F' )
+            c2 -= 'A' - 10;
+        else
+            TEST_HELPER_ASSERT( 0 );
 
-        *(obuf++) = ( uc << 4 ) | uc2;
+        *obuf++ = ( c << 4 ) | c2;
     }
 
-    return( 0 );
+    return len;
 }
 
 void mbedtls_test_hexify( unsigned char *obuf,
@@ -128,7 +117,6 @@ unsigned char *mbedtls_test_zero_alloc( size_t len )
 unsigned char *mbedtls_test_unhexify_alloc( const char *ibuf, size_t *olen )
 {
     unsigned char *obuf;
-    size_t len;
 
     *olen = strlen( ibuf ) / 2;
 
@@ -137,7 +125,8 @@ unsigned char *mbedtls_test_unhexify_alloc( const char *ibuf, size_t *olen )
 
     obuf = mbedtls_calloc( 1, *olen );
     TEST_HELPER_ASSERT( obuf != NULL );
-    TEST_HELPER_ASSERT( mbedtls_test_unhexify( obuf, *olen, ibuf, &len ) == 0 );
+
+    (void) mbedtls_test_unhexify( obuf, ibuf );
 
     return( obuf );
 }
