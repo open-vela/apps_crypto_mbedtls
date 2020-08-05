@@ -27,7 +27,11 @@
  *  http://www.ietf.org/rfc/rfc4346.txt
  */
 
-#include "common.h"
+#if !defined(MBEDTLS_CONFIG_FILE)
+#include "mbedtls/config.h"
+#else
+#include MBEDTLS_CONFIG_FILE
+#endif
 
 #if defined(MBEDTLS_SSL_TLS_C)
 
