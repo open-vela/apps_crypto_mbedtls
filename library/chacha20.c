@@ -516,9 +516,6 @@ static const size_t test_lengths[2] =
     375U
 };
 
-/* Make sure no other definition is already present. */
-#undef ASSERT
-
 #define ASSERT( cond, args )            \
     do                                  \
     {                                   \
