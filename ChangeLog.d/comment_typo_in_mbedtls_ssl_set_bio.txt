@@ -1,3 +1,0 @@
-Changes
-   * Fix comment typo in mbedtls_ssl_set_bio_description.
-

@@ -5740,12 +5740,12 @@ run_test    "PSK callback: wrong key" \
 
 # Tests for EC J-PAKE
 
-requires_config_enabled MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED
+requires_config_enabled MBEDTLS_KEY_EXCHANGE_ECJPAKE
 run_test    "ECJPAKE: client not configured" \
             "$P_SRV debug_level=3" \
             "$P_CLI debug_level=3" \
             0 \
-            -C "add ciphersuite: 0xc0ff" \
+            -C "add ciphersuite: c0ff" \
             -C "adding ecjpake_kkpp extension" \
             -S "found ecjpake kkpp extension" \
             -S "skip ecjpake kkpp extension" \
@@ -5754,13 +5754,13 @@ run_test    "ECJPAKE: client not configured" \
             -C "found ecjpake_kkpp extension" \
             -S "None of the common ciphersuites is usable"
 
-requires_config_enabled MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED
+requires_config_enabled MBEDTLS_KEY_EXCHANGE_ECJPAKE
 run_test    "ECJPAKE: server not configured" \
             "$P_SRV debug_level=3" \
             "$P_CLI debug_level=3 ecjpake_pw=bla \
              force_ciphersuite=TLS-ECJPAKE-WITH-AES-128-CCM-8" \
             1 \
-            -c "add ciphersuite: 0xc0ff" \
+            -c "add ciphersuite: c0ff" \
             -c "adding ecjpake_kkpp extension" \
             -s "found ecjpake kkpp extension" \
             -s "skip ecjpake kkpp extension" \
@@ -5769,13 +5769,13 @@ run_test    "ECJPAKE: server not configured" \
             -C "found ecjpake_kkpp extension" \
             -s "None of the common ciphersuites is usable"
 
-requires_config_enabled MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED
+requires_config_enabled MBEDTLS_KEY_EXCHANGE_ECJPAKE
 run_test    "ECJPAKE: working, TLS" \
             "$P_SRV debug_level=3 ecjpake_pw=bla" \
             "$P_CLI debug_level=3 ecjpake_pw=bla \
              force_ciphersuite=TLS-ECJPAKE-WITH-AES-128-CCM-8" \
             0 \
-            -c "add ciphersuite: 0xc0ff" \
+            -c "add ciphersuite: c0ff" \
             -c "adding ecjpake_kkpp extension" \
             -C "re-using cached ecjpake parameters" \
             -s "found ecjpake kkpp extension" \
