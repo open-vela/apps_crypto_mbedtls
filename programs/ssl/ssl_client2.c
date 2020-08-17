@@ -175,9 +175,7 @@ int main( void )
     "                        use \"none\" to skip loading any top-level CAs.\n" \
     "    crt_file=%%s         Your own cert and chain (in bottom to top order, top may be omitted)\n" \
     "                        default: \"\" (pre-loaded)\n" \
-    "    key_file=%%s         default: \"\" (pre-loaded)\n"\
-    "    key_pwd=%%s          Password for key specified by key_file argument\n"\
-    "                        default: none\n"
+    "    key_file=%%s         default: \"\" (pre-loaded)\n"
 #else
 #define USAGE_IO \
     "    No file operations available (MBEDTLS_FS_IO not defined)\n"
@@ -1372,8 +1370,6 @@ int main( int argc, char *argv[] )
             opt.crt_file = q;
         else if( strcmp( p, "key_file" ) == 0 )
             opt.key_file = q;
-        else if( strcmp( p, "key_pwd" ) == 0 )
-            opt.key_pwd = q;
 #if defined(MBEDTLS_USE_PSA_CRYPTO) && defined(MBEDTLS_X509_CRT_PARSE_C)
         else if( strcmp( p, "key_opaque" ) == 0 )
             opt.key_opaque = atoi( q );
