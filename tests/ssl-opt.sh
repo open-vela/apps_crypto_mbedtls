@@ -2,7 +2,7 @@
 
 # ssl-opt.sh
 #
-# Copyright The Mbed TLS Contributors
+# Copyright (c) 2016, ARM Limited, All Rights Reserved
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -16,6 +16,8 @@
 # WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
+# This file is part of Mbed TLS (https://tls.mbed.org)
 #
 # Purpose
 #
@@ -443,7 +445,7 @@ fail() {
     fi
     echo "  ! outputs saved to o-XXX-${TESTS}.log"
 
-    if [ "${LOG_FAILURE_ON_STDOUT:-0}" != 0 ]; then
+    if [ "X${USER:-}" = Xbuildbot -o "X${LOGNAME:-}" = Xbuildbot -o "${LOG_FAILURE_ON_STDOUT:-0}" != 0 ]; then
         echo "  ! server output:"
         cat o-srv-${TESTS}.log
         echo "  ! ========================================================"
@@ -695,25 +697,15 @@ run_test() {
         return
     fi
 
-    # update DTLS variable
-    detect_dtls "$SRV_CMD"
-
-    # if the test uses DTLS but no custom proxy, add a simple proxy
-    # as it provides timing info that's useful to debug failures
-    if [ -z "$PXY_CMD" ] && [ "$DTLS" -eq 1 ]; then
-        PXY_CMD="$P_PXY"
-        case " $SRV_CMD " in
-            *' server_addr=::1 '*)
-                PXY_CMD="$PXY_CMD server_addr=::1 listen_addr=::1";;
-        esac
-    fi
-
     # fix client port
     if [ -n "$PXY_CMD" ]; then
         CLI_CMD=$( echo "$CLI_CMD" | sed s/+SRV_PORT/$PXY_PORT/g )
     else
         CLI_CMD=$( echo "$CLI_CMD" | sed s/+SRV_PORT/$SRV_PORT/g )
     fi
+
+    # update DTLS variable
+    detect_dtls "$SRV_CMD"
 
     # prepend valgrind to our commands if active
     if [ "$MEMCHECK" -gt 0 ]; then
@@ -731,19 +723,19 @@ run_test() {
 
         # run the commands
         if [ -n "$PXY_CMD" ]; then
-            printf "# %s\n%s\n" "$NAME" "$PXY_CMD" > $PXY_OUT
+            echo "$PXY_CMD" > $PXY_OUT
             $PXY_CMD >> $PXY_OUT 2>&1 &
             PXY_PID=$!
             wait_proxy_start "$PXY_PORT" "$PXY_PID"
         fi
 
         check_osrv_dtls
-        printf "# $NAME\n$SRV_CMD\n" > $SRV_OUT
+        echo "$SRV_CMD" > $SRV_OUT
         provide_input | $SRV_CMD >> $SRV_OUT 2>&1 &
         SRV_PID=$!
         wait_server_start "$SRV_PORT" "$SRV_PID"
 
-        printf "# $NAME\n$CLI_CMD\n" > $CLI_OUT
+        echo "$CLI_CMD" > $CLI_OUT
         eval "$CLI_CMD" >> $CLI_OUT 2>&1 &
         wait_client_done
 
@@ -1128,39 +1120,6 @@ run_test    "Default, DTLS" \
             0 \
             -s "Protocol is DTLSv1.2" \
             -s "Ciphersuite is TLS-ECDHE-RSA-WITH-CHACHA20-POLY1305-SHA256"
-
-run_test    "TLS client auth: required" \
-            "$P_SRV auth_mode=required" \
-            "$P_CLI" \
-            0 \
-            -s "Verifying peer X.509 certificate... ok"
-
-requires_config_enabled MBEDTLS_X509_CRT_PARSE_C
-requires_config_enabled MBEDTLS_ECDSA_C
-requires_config_enabled MBEDTLS_SHA256_C
-run_test    "TLS: password protected client key" \
-            "$P_SRV auth_mode=required" \
-            "$P_CLI crt_file=data_files/server5.crt key_file=data_files/server5.key.enc key_pwd=PolarSSLTest" \
-            0
-
-requires_config_enabled MBEDTLS_X509_CRT_PARSE_C
-requires_config_enabled MBEDTLS_ECDSA_C
-requires_config_enabled MBEDTLS_SHA256_C
-run_test    "TLS: password protected server key" \
-            "$P_SRV crt_file=data_files/server5.crt key_file=data_files/server5.key.enc key_pwd=PolarSSLTest" \
-            "$P_CLI" \
-            0
-
-requires_config_enabled MBEDTLS_X509_CRT_PARSE_C
-requires_config_enabled MBEDTLS_ECDSA_C
-requires_config_enabled MBEDTLS_RSA_C
-requires_config_enabled MBEDTLS_SHA256_C
-run_test    "TLS: password protected server key, two certificates" \
-            "$P_SRV \
-              key_file=data_files/server5.key.enc key_pwd=PolarSSLTest crt_file=data_files/server5.crt \
-              key_file2=data_files/server2.key.enc key_pwd2=PolarSSLTest crt_file2=data_files/server2.crt" \
-            "$P_CLI" \
-            0
 
 requires_config_enabled MBEDTLS_ZLIB_SUPPORT
 run_test    "Default (compression enabled)" \
