@@ -2,7 +2,7 @@
 
 # all.sh
 #
-# Copyright The Mbed TLS Contributors
+# Copyright (c) 2014-2017, ARM Limited, All Rights Reserved
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -16,6 +16,8 @@
 # WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
+# This file is part of Mbed TLS (https://tls.mbed.org)
 
 
 
@@ -1091,6 +1093,24 @@ component_test_full_cmake_clang () {
     if_build_succeeded env OPENSSL_CMD="$OPENSSL_NEXT" tests/compat.sh -e '^$' -f 'ARIA\|CHACHA'
 }
 
+component_test_memsan_constant_flow () {
+    # This tests both (1) accesses to undefined memory, and (2) branches or
+    # memory access depending on secret values. To distinguish between those:
+    # - unset MBEDTLS_TEST_CONSTANT_FLOW_MEMSAN - does the failure persist?
+    # - or alternatively, change the build type to MemSanDbg, which enables
+    # origin tracking and nicer stack traces (which are useful for debugging
+    # anyway), and check if the origin was TEST_CF_SECRET() or something else.
+    msg "build: cmake MSan (clang), full config with constant flow testing"
+    scripts/config.py full
+    scripts/config.py set MBEDTLS_TEST_CONSTANT_FLOW_MEMSAN
+    scripts/config.py unset MBEDTLS_AESNI_C # memsan doesn't grok asm
+    CC=clang cmake -D CMAKE_BUILD_TYPE:String=MemSan .
+    make
+
+    msg "test: main suites (Msan + constant flow)"
+    make test
+}
+
 component_test_default_no_deprecated () {
     # Test that removing the deprecated features from the default
     # configuration leaves something consistent.
@@ -1495,16 +1515,6 @@ component_test_null_entropy () {
     make
 
     msg "test: MBEDTLS_TEST_NULL_ENTROPY - main suites (inc. selftests) (ASan build)"
-    make test
-}
-
-component_test_no_date_time () {
-    msg "build: default config without MBEDTLS_HAVE_TIME_DATE"
-    scripts/config.py unset MBEDTLS_HAVE_TIME_DATE
-    CC=gcc cmake
-    make
-
-    msg "test: !MBEDTLS_HAVE_TIME_DATE - main suites"
     make test
 }
 

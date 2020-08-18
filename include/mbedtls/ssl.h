@@ -4,7 +4,7 @@
  * \brief SSL/TLS functions.
  */
 /*
- *  Copyright The Mbed TLS Contributors
+ *  Copyright (C) 2006-2015, ARM Limited, All Rights Reserved
  *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -18,6 +18,8 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
+ *
+ *  This file is part of mbed TLS (https://tls.mbed.org)
  */
 #ifndef MBEDTLS_SSL_H
 #define MBEDTLS_SSL_H
@@ -1559,7 +1561,7 @@ void mbedtls_ssl_conf_dbg( mbedtls_ssl_config *conf,
  * \note           For DTLS, you need to provide either a non-NULL
  *                 f_recv_timeout callback, or a f_recv that doesn't block.
  *
- * \note           See the documentations of \c mbedtls_ssl_send_t,
+ * \note           See the documentations of \c mbedtls_ssl_sent_t,
  *                 \c mbedtls_ssl_recv_t and \c mbedtls_ssl_recv_timeout_t for
  *                 the conventions those callbacks must follow.
  *
