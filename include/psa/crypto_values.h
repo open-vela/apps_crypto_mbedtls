@@ -15,7 +15,7 @@
  * This header file only defines preprocessor macros.
  */
 /*
- *  Copyright The Mbed TLS Contributors
+ *  Copyright (C) 2018, ARM Limited, All Rights Reserved
  *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -29,6 +29,8 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
+ *
+ *  This file is part of mbed TLS (https://tls.mbed.org)
  */
 
 #ifndef PSA_CRYPTO_VALUES_H
@@ -1556,12 +1558,13 @@
  *
  * A persistent key remains in storage until it is explicitly destroyed or
  * until the corresponding storage area is wiped. This specification does
- * not define any mechanism to wipe a storage area, but integrations may
+ * not define any mechanism to wipe a storage area, but implementations may
  * provide their own mechanism (for example to perform a factory reset,
  * to prepare for device refurbishment, or to uninstall an application).
  *
  * This lifetime value is the default storage area for the calling
- * application. Integrations of Mbed TLS may support other persistent lifetimes.
+ * application. Implementations may offer other storage areas designated
+ * by other lifetime values as implementation-specific extensions.
  * See ::psa_key_lifetime_t for more information.
  */
 #define PSA_KEY_LIFETIME_PERSISTENT             ((psa_key_lifetime_t)0x00000001)
