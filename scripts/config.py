@@ -7,7 +7,7 @@ Basic usage, to read the Mbed TLS or Mbed Crypto configuration:
     if 'MBEDTLS_RSA_C' in config: print('RSA is enabled')
 """
 
-## Copyright The Mbed TLS Contributors
+## Copyright (C) 2019, ARM Limited, All Rights Reserved
 ## SPDX-License-Identifier: Apache-2.0
 ##
 ## Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -21,6 +21,8 @@ Basic usage, to read the Mbed TLS or Mbed Crypto configuration:
 ## WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 ## See the License for the specific language governing permissions and
 ## limitations under the License.
+##
+## This file is part of Mbed TLS (https://tls.mbed.org)
 
 import os
 import re
