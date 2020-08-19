@@ -1,6 +1,8 @@
 #!/bin/sh
+
+# pre-commit.sh
 #
-# Copyright (C) 2015-2019, Arm Limited, All Rights Reserved
+# Copyright (c) 2017, ARM Limited, All Rights Reserved
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -17,19 +19,18 @@
 #
 # This file is part of Mbed TLS (https://tls.mbed.org)
 
+# Purpose
+#
+# This script does quick sanity checks before commiting:
+#   - check that generated files are up-to-date.
+#
+# It is meant to be called as a git pre-commit hook, see README.md.
+#
+# From the git sample pre-commit hook:
+#   Called by "git commit" with no arguments.  The hook should
+#   exit with non-zero status after issuing an appropriate message if
+#   it wants to stop the commit.
+
 set -eu
 
-if [ -d include/mbedtls ]; then :; else
-    echo "$0: must be run from root" >&2
-    exit 1
-fi
-
-HEADERS=$( ls include/mbedtls/*.h include/psa/*.h | egrep -v 'compat-1\.3\.h' )
-HEADERS="$HEADERS library/*.h"
-HEADERS="$HEADERS 3rdparty/everest/include/everest/everest.h 3rdparty/everest/include/everest/x25519.h"
-
-sed -n -e 's/.*#define \([a-zA-Z0-9_]*\).*/\1/p' $HEADERS \
-    | egrep -v '^(asm|inline|EMIT|_CRT_SECURE_NO_DEPRECATE)$|^MULADDC_' \
-    | sort -u > macros
-
-wc -l macros
+tests/scripts/check-generated-files.sh
