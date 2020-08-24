@@ -13,10 +13,8 @@
 ## Tools
 OPENSSL ?= openssl
 FAKETIME ?= faketime
-
-TOP_DIR = $(dir $(firstword $(MAKEFILE_LIST)))/../..
-MBEDTLS_CERT_WRITE ?= $(TOP_DIR)/programs/x509/cert_write
-MBEDTLS_CERT_REQ ?= $(TOP_DIR)/programs/x509/cert_req
+MBEDTLS_CERT_WRITE ?= $(PWD)/../../programs/x509/cert_write
+MBEDTLS_CERT_REQ ?= $(PWD)/../../programs/x509/cert_req
 
 
 ## Build the generated test data. Note that since the final outputs
@@ -246,8 +244,6 @@ cli2.key.der: cli2.key
 	$(OPENSSL) pkey -in $< -out $@ -inform PEM -outform DER
 all_final += cli2.key.der
 
-server5_pwd_ec = PolarSSLTest
-
 server5.crt.der: server5.crt
 	$(OPENSSL) x509 -in $< -out $@ -inform PEM -outform DER
 all_final += server5.crt.der
@@ -255,10 +251,6 @@ all_final += server5.crt.der
 server5.key.der: server5.key
 	$(OPENSSL) pkey -in $< -out $@ -inform PEM -outform DER
 all_final += server5.key.der
-
-server5.key.enc: server5.key
-	$(OPENSSL) ec -aes256 -in $< -out $@ -passout "pass:$(server5_pwd_ec)"
-all_final += server5.key.enc
 
 server5-ss-expired.crt: server5.key
 	$(FAKETIME) -f -3653d $(OPENSSL) req -x509 -new -subj "/C=UK/O=mbed TLS/OU=testsuite/CN=localhost" -days 3653 -sha256 -key $< -out $@
@@ -277,10 +269,6 @@ server5-unsupported_othername.crt: server5.key
 
 server5-fan.crt: server5.key
 	$(OPENSSL) req -x509 -new -subj "/C=UK/O=Mbed TLS/CN=Mbed TLS FAN" -set_serial 77 -config $(test_ca_config_file) -extensions fan_cert -days 3650 -sha256 -key server5.key -out $@
-
-server5-tricky-ip-san.crt: server5.key
-	$(OPENSSL) req -x509 -new -subj "/C=UK/O=Mbed TLS/CN=Mbed TLS Tricky IP SAN" -set_serial 77 -config $(test_ca_config_file) -extensions tricky_ip_san -days 3650 -sha256 -key server5.key -out $@
-all_final += server5-tricky-ip-san.crt
 
 server10-badsign.crt: server10.crt
 	{ head -n-2 $<; tail -n-2 $< | sed -e '1s/0\(=*\)$$/_\1/' -e '1s/[^_=]\(=*\)$$/0\1/' -e '1s/_/1/'; } > $@
@@ -935,8 +923,6 @@ all_final += server1.req.cert_type_empty
 
 # server2*
 
-server2_pwd_ec = PolarSSLTest
-
 server2.req.sha256: server2.key
 	$(MBEDTLS_CERT_REQ) output_file=$@ filename=$< subject_name="C=NL,O=PolarSSL,CN=localhost" md=SHA256
 all_intermediate += server2.req.sha256
@@ -952,10 +938,6 @@ all_final += server2-sha256.crt.der
 server2.key.der: server2.key
 	$(OPENSSL) pkey -in $< -out $@ -inform PEM -outform DER
 all_final += server2.key.der
-
-server2.key.enc: server2.key
-	$(OPENSSL) rsa -aes256 -in $< -out $@ -passout "pass:$(server2_pwd_ec)"
-all_final += server2.key.enc
 
 # server5*
 

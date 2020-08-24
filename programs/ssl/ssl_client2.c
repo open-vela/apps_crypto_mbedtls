@@ -103,7 +103,6 @@ int main( void )
 #define DFL_CRT_FILE            ""
 #define DFL_KEY_FILE            ""
 #define DFL_KEY_OPAQUE          0
-#define DFL_KEY_PWD             ""
 #define DFL_PSK                 ""
 #define DFL_PSK_OPAQUE          0
 #define DFL_PSK_IDENTITY        "Client_identity"
@@ -176,9 +175,7 @@ int main( void )
     "                        use \"none\" to skip loading any top-level CAs.\n" \
     "    crt_file=%%s         Your own cert and chain (in bottom to top order, top may be omitted)\n" \
     "                        default: \"\" (pre-loaded)\n" \
-    "    key_file=%%s         default: \"\" (pre-loaded)\n"\
-    "    key_pwd=%%s          Password for key specified by key_file argument\n"\
-    "                        default: none\n"
+    "    key_file=%%s         default: \"\" (pre-loaded)\n"
 #else
 #define USAGE_IO \
     "    No file operations available (MBEDTLS_FS_IO not defined)\n"
@@ -490,7 +487,6 @@ struct options
 #if defined(MBEDTLS_X509_TRUSTED_CERTIFICATE_CALLBACK)
     int ca_callback;            /* Use callback for trusted certificate list */
 #endif
-    const char *key_pwd;        /* the password for the client key          */
     const char *psk;            /* the pre-shared key                       */
     const char *psk_identity;   /* the pre-shared key identity              */
     const char *ecjpake_pw;     /* the EC J-PAKE password                   */
@@ -1255,7 +1251,6 @@ int main( int argc, char *argv[] )
     opt.crt_file            = DFL_CRT_FILE;
     opt.key_file            = DFL_KEY_FILE;
     opt.key_opaque          = DFL_KEY_OPAQUE;
-    opt.key_pwd             = DFL_KEY_PWD;
     opt.psk                 = DFL_PSK;
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
     opt.psk_opaque          = DFL_PSK_OPAQUE;
@@ -1375,8 +1370,6 @@ int main( int argc, char *argv[] )
             opt.crt_file = q;
         else if( strcmp( p, "key_file" ) == 0 )
             opt.key_file = q;
-        else if( strcmp( p, "key_pwd" ) == 0 )
-            opt.key_pwd = q;
 #if defined(MBEDTLS_USE_PSA_CRYPTO) && defined(MBEDTLS_X509_CRT_PARSE_C)
         else if( strcmp( p, "key_opaque" ) == 0 )
             opt.key_opaque = atoi( q );
@@ -2086,7 +2079,7 @@ int main( int argc, char *argv[] )
     else
 #if defined(MBEDTLS_FS_IO)
     if( strlen( opt.key_file ) )
-        ret = mbedtls_pk_parse_keyfile( &pkey, opt.key_file, opt.key_pwd );
+        ret = mbedtls_pk_parse_keyfile( &pkey, opt.key_file, "" );
     else
 #endif
 #if defined(MBEDTLS_CERTS_C)
