@@ -912,8 +912,6 @@ static int pk_opaque_can_do( mbedtls_pk_type_t type )
             type == MBEDTLS_PK_ECDSA );
 }
 
-#if defined(MBEDTLS_ECDSA_C)
-
 /*
  * Simultaneously convert and move raw MPI from the beginning of a buffer
  * to an ASN.1 MPI at the end of the buffer.
@@ -996,24 +994,11 @@ static int pk_ecdsa_sig_asn1_from_psa( unsigned char *sig, size_t *sig_len,
     return( 0 );
 }
 
-#endif /* MBEDTLS_ECDSA_C */
-
 static int pk_opaque_sign_wrap( void *ctx, mbedtls_md_type_t md_alg,
                    const unsigned char *hash, size_t hash_len,
                    unsigned char *sig, size_t *sig_len,
                    int (*f_rng)(void *, unsigned char *, size_t), void *p_rng )
 {
-#if !defined(MBEDTLS_ECDSA_C)
-    ((void) ctx);
-    ((void) md_alg);
-    ((void) hash);
-    ((void) hash_len);
-    ((void) sig);
-    ((void) sig_len);
-    ((void) f_rng);
-    ((void) p_rng);
-    return( MBEDTLS_ERR_PK_FEATURE_UNAVAILABLE );
-#else /* !MBEDTLS_ECDSA_C */
     const psa_key_handle_t *key = (const psa_key_handle_t *) ctx;
     psa_key_attributes_t attributes = PSA_KEY_ATTRIBUTES_INIT;
     psa_algorithm_t alg = PSA_ALG_ECDSA( mbedtls_psa_translate_md( md_alg ) );
@@ -1044,7 +1029,6 @@ static int pk_opaque_sign_wrap( void *ctx, mbedtls_md_type_t md_alg,
 
     /* transcode it to ASN.1 sequence */
     return( pk_ecdsa_sig_asn1_from_psa( sig, sig_len, buf_len ) );
-#endif /* !MBEDTLS_ECDSA_C */
 }
 
 const mbedtls_pk_info_t mbedtls_pk_opaque_info = {
