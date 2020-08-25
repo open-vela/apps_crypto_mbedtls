@@ -85,6 +85,8 @@ static inline psa_algorithm_t mbedtls_psa_translate_cipher_mode(
 {
     switch( mode )
     {
+        case MBEDTLS_MODE_ECB:
+            return( PSA_ALG_ECB_NO_PADDING );
         case MBEDTLS_MODE_GCM:
             return( PSA_ALG_AEAD_WITH_TAG_LENGTH( PSA_ALG_GCM, taglen ) );
         case MBEDTLS_MODE_CCM:
@@ -160,12 +162,12 @@ static inline psa_algorithm_t mbedtls_psa_translate_md( mbedtls_md_type_t md_alg
 /* Translations for ECC. */
 
 static inline int mbedtls_psa_get_ecc_oid_from_id(
-    psa_ecc_family_t curve, size_t bits,
+    psa_ecc_curve_t curve, size_t bits,
     char const **oid, size_t *oid_len )
 {
     switch( curve )
     {
-        case PSA_ECC_FAMILY_SECP_R1:
+        case PSA_ECC_CURVE_SECP_R1:
             switch( bits )
             {
 #if defined(MBEDTLS_ECP_DP_SECP192R1_ENABLED)
@@ -200,7 +202,7 @@ static inline int mbedtls_psa_get_ecc_oid_from_id(
 #endif /* MBEDTLS_ECP_DP_SECP521R1_ENABLED */
             }
             break;
-        case PSA_ECC_FAMILY_SECP_K1:
+        case PSA_ECC_CURVE_SECP_K1:
             switch( bits )
             {
 #if defined(MBEDTLS_ECP_DP_SECP192K1_ENABLED)
@@ -223,7 +225,7 @@ static inline int mbedtls_psa_get_ecc_oid_from_id(
 #endif /* MBEDTLS_ECP_DP_SECP256K1_ENABLED */
             }
             break;
-        case PSA_ECC_FAMILY_BRAINPOOL_P_R1:
+        case PSA_ECC_CURVE_BRAINPOOL_P_R1:
             switch( bits )
             {
 #if defined(MBEDTLS_ECP_DP_BP256R1_ENABLED)

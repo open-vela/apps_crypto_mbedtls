@@ -91,7 +91,7 @@ int main( int argc, char **argv )
     {
     usage:
         mbedtls_printf( USAGE );
-        goto exit;
+        mbedtls_exit( exit_code );
     }
 
     for( i = 1; i < argc; i++ )
