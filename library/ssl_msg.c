@@ -2,7 +2,7 @@
  *  Generic SSL/TLS messaging layer functions
  *  (record layer + retransmission state machine)
  *
- *  Copyright The Mbed TLS Contributors
+ *  Copyright (C) 2006-2020, ARM Limited, All Rights Reserved
  *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -16,6 +16,8 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
+ *
+ *  This file is part of mbed TLS (https://tls.mbed.org)
  */
 /*
  *  The SSL 3.0 specification was drafted by Netscape in 1996,
@@ -2046,7 +2048,7 @@ int mbedtls_ssl_fetch_input( mbedtls_ssl_context *ssl, size_t nb_want )
             if( ret < 0 )
                 return( ret );
 
-            if ( (size_t)ret > len || ( INT_MAX > SIZE_MAX && ret > (int)SIZE_MAX ) )
+            if ( (size_t)ret > len || ( INT_MAX > SIZE_MAX && ret > SIZE_MAX ) )
             {
                 MBEDTLS_SSL_DEBUG_MSG( 1,
                     ( "f_recv returned %d bytes but only %lu were requested",
@@ -2100,7 +2102,7 @@ int mbedtls_ssl_flush_output( mbedtls_ssl_context *ssl )
         if( ret <= 0 )
             return( ret );
 
-        if( (size_t)ret > ssl->out_left || ( INT_MAX > SIZE_MAX && ret > (int)SIZE_MAX ) )
+        if( (size_t)ret > ssl->out_left || ( INT_MAX > SIZE_MAX && ret > SIZE_MAX ) )
         {
             MBEDTLS_SSL_DEBUG_MSG( 1,
                 ( "f_send returned %d bytes but only %lu bytes were sent",
