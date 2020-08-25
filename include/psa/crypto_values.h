@@ -15,7 +15,7 @@
  * This header file only defines preprocessor macros.
  */
 /*
- *  Copyright The Mbed TLS Contributors
+ *  Copyright (C) 2018, ARM Limited, All Rights Reserved
  *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -29,6 +29,8 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
+ *
+ *  This file is part of mbed TLS (https://tls.mbed.org)
  */
 
 #ifndef PSA_CRYPTO_VALUES_H
@@ -424,15 +426,15 @@
 #define PSA_KEY_TYPE_ECC_CURVE_MASK                 ((psa_key_type_t)0x00ff)
 /** Elliptic curve key pair.
  *
- * \param curve     A value of type ::psa_ecc_family_t that
- *                  identifies the ECC curve to be used.
+ * \param curve     A value of type ::psa_ecc_curve_t that identifies the
+ *                  ECC curve to be used.
  */
 #define PSA_KEY_TYPE_ECC_KEY_PAIR(curve)         \
     (PSA_KEY_TYPE_ECC_KEY_PAIR_BASE | (curve))
 /** Elliptic curve public key.
  *
- * \param curve     A value of type ::psa_ecc_family_t that
- *                  identifies the ECC curve to be used.
+ * \param curve     A value of type ::psa_ecc_curve_t that identifies the
+ *                  ECC curve to be used.
  */
 #define PSA_KEY_TYPE_ECC_PUBLIC_KEY(curve)              \
     (PSA_KEY_TYPE_ECC_PUBLIC_KEY_BASE | (curve))
@@ -451,8 +453,8 @@
      PSA_KEY_TYPE_ECC_PUBLIC_KEY_BASE)
 
 /** Extract the curve from an elliptic curve key type. */
-#define PSA_KEY_TYPE_ECC_GET_FAMILY(type)                        \
-    ((psa_ecc_family_t) (PSA_KEY_TYPE_IS_ECC(type) ?             \
+#define PSA_KEY_TYPE_GET_CURVE(type)                             \
+    ((psa_ecc_curve_t) (PSA_KEY_TYPE_IS_ECC(type) ?              \
                         ((type) & PSA_KEY_TYPE_ECC_CURVE_MASK) : \
                         0))
 
@@ -464,7 +466,7 @@
  * _SEC 2: Recommended Elliptic Curve Domain Parameters_.
  * https://www.secg.org/sec2-v2.pdf
  */
-#define PSA_ECC_FAMILY_SECP_K1           ((psa_ecc_family_t) 0x17)
+#define PSA_ECC_CURVE_SECP_K1           ((psa_ecc_curve_t) 0x17)
 
 /** SEC random curves over prime fields.
  *
@@ -474,9 +476,9 @@
  * _SEC 2: Recommended Elliptic Curve Domain Parameters_.
  * https://www.secg.org/sec2-v2.pdf
  */
-#define PSA_ECC_FAMILY_SECP_R1           ((psa_ecc_family_t) 0x12)
+#define PSA_ECC_CURVE_SECP_R1           ((psa_ecc_curve_t) 0x12)
 /* SECP160R2 (SEC2 v1, obsolete) */
-#define PSA_ECC_FAMILY_SECP_R2           ((psa_ecc_family_t) 0x1b)
+#define PSA_ECC_CURVE_SECP_R2           ((psa_ecc_curve_t) 0x1b)
 
 /** SEC Koblitz curves over binary fields.
  *
@@ -486,7 +488,7 @@
  * _SEC 2: Recommended Elliptic Curve Domain Parameters_.
  * https://www.secg.org/sec2-v2.pdf
  */
-#define PSA_ECC_FAMILY_SECT_K1           ((psa_ecc_family_t) 0x27)
+#define PSA_ECC_CURVE_SECT_K1           ((psa_ecc_curve_t) 0x27)
 
 /** SEC random curves over binary fields.
  *
@@ -496,7 +498,7 @@
  * _SEC 2: Recommended Elliptic Curve Domain Parameters_.
  * https://www.secg.org/sec2-v2.pdf
  */
-#define PSA_ECC_FAMILY_SECT_R1           ((psa_ecc_family_t) 0x22)
+#define PSA_ECC_CURVE_SECT_R1           ((psa_ecc_curve_t) 0x22)
 
 /** SEC additional random curves over binary fields.
  *
@@ -506,7 +508,7 @@
  * _SEC 2: Recommended Elliptic Curve Domain Parameters_.
  * https://www.secg.org/sec2-v2.pdf
  */
-#define PSA_ECC_FAMILY_SECT_R2           ((psa_ecc_family_t) 0x2b)
+#define PSA_ECC_CURVE_SECT_R2           ((psa_ecc_curve_t) 0x2b)
 
 /** Brainpool P random curves.
  *
@@ -515,7 +517,7 @@
  * brainpoolP320r1, brainpoolP384r1, brainpoolP512r1.
  * It is defined in RFC 5639.
  */
-#define PSA_ECC_FAMILY_BRAINPOOL_P_R1    ((psa_ecc_family_t) 0x30)
+#define PSA_ECC_CURVE_BRAINPOOL_P_R1    ((psa_ecc_curve_t) 0x30)
 
 /** Curve25519 and Curve448.
  *
@@ -527,21 +529,21 @@
  *   _Ed448-Goldilocks, a new elliptic curve_, NIST ECC Workshop, 2015.
  *   The algorithm #PSA_ALG_ECDH performs X448 when used with this curve.
  */
-#define PSA_ECC_FAMILY_MONTGOMERY        ((psa_ecc_family_t) 0x41)
+#define PSA_ECC_CURVE_MONTGOMERY        ((psa_ecc_curve_t) 0x41)
 
 #define PSA_KEY_TYPE_DH_PUBLIC_KEY_BASE             ((psa_key_type_t)0x4200)
 #define PSA_KEY_TYPE_DH_KEY_PAIR_BASE               ((psa_key_type_t)0x7200)
 #define PSA_KEY_TYPE_DH_GROUP_MASK                  ((psa_key_type_t)0x00ff)
 /** Diffie-Hellman key pair.
  *
- * \param group     A value of type ::psa_dh_family_t that identifies the
+ * \param group     A value of type ::psa_dh_group_t that identifies the
  *                  Diffie-Hellman group to be used.
  */
 #define PSA_KEY_TYPE_DH_KEY_PAIR(group)          \
     (PSA_KEY_TYPE_DH_KEY_PAIR_BASE | (group))
 /** Diffie-Hellman public key.
  *
- * \param group     A value of type ::psa_dh_family_t that identifies the
+ * \param group     A value of type ::psa_dh_group_t that identifies the
  *                  Diffie-Hellman group to be used.
  */
 #define PSA_KEY_TYPE_DH_PUBLIC_KEY(group)               \
@@ -561,8 +563,8 @@
      PSA_KEY_TYPE_DH_PUBLIC_KEY_BASE)
 
 /** Extract the group from a Diffie-Hellman key type. */
-#define PSA_KEY_TYPE_DH_GET_FAMILY(type)                        \
-    ((psa_dh_family_t) (PSA_KEY_TYPE_IS_DH(type) ?              \
+#define PSA_KEY_TYPE_GET_GROUP(type)                            \
+    ((psa_dh_group_t) (PSA_KEY_TYPE_IS_DH(type) ?               \
                        ((type) & PSA_KEY_TYPE_DH_GROUP_MASK) :  \
                        0))
 
@@ -572,7 +574,7 @@
  * 2048, 3072, 4096, 6144, 8192. A given implementation may support
  * all of these sizes or only a subset.
  */
-#define PSA_DH_FAMILY_RFC7919            ((psa_dh_family_t) 0x03)
+#define PSA_DH_GROUP_RFC7919            ((psa_dh_group_t) 0x03)
 
 #define PSA_GET_KEY_TYPE_BLOCK_SIZE_EXPONENT(type)      \
     (((type) >> 8) & 7)
@@ -977,6 +979,26 @@
  * does not need to be a whole number of blocks.
  */
 #define PSA_ALG_XTS                             ((psa_algorithm_t)0x044000ff)
+
+/** The Electronic Code Book (ECB) mode of a block cipher, with no padding.
+ *
+ * \warning ECB mode does not protect the confidentiality of the encrypted data
+ * except in extremely narrow circumstances. It is recommended that applications
+ * only use ECB if they need to construct an operating mode that the
+ * implementation does not provide. Implementations are encouraged to provide
+ * the modes that applications need in preference to supporting direct access
+ * to ECB.
+ *
+ * The underlying block cipher is determined by the key type.
+ *
+ * This symmetric cipher mode can only be used with messages whose lengths are a
+ * multiple of the block size of the chosen block cipher.
+ *
+ * ECB mode does not accept an initialization vector (IV). When using a
+ * multi-part cipher operation with this algorithm, psa_cipher_generate_iv()
+ * and psa_cipher_set_iv() must not be called.
+ */
+#define PSA_ALG_ECB_NO_PADDING                  ((psa_algorithm_t)0x04404400)
 
 /** The CBC block cipher chaining mode, with no padding.
  *
@@ -1481,17 +1503,17 @@
  * is padded with zero bits. The byte order is either little-endian
  * or big-endian depending on the curve type.
  *
- * - For Montgomery curves (curve types `PSA_ECC_FAMILY_CURVEXXX`),
+ * - For Montgomery curves (curve types `PSA_ECC_CURVE_CURVEXXX`),
  *   the shared secret is the x-coordinate of `d_A Q_B = d_B Q_A`
  *   in little-endian byte order.
  *   The bit size is 448 for Curve448 and 255 for Curve25519.
  * - For Weierstrass curves over prime fields (curve types
- *   `PSA_ECC_FAMILY_SECPXXX` and `PSA_ECC_FAMILY_BRAINPOOL_PXXX`),
+ *   `PSA_ECC_CURVE_SECPXXX` and `PSA_ECC_CURVE_BRAINPOOL_PXXX`),
  *   the shared secret is the x-coordinate of `d_A Q_B = d_B Q_A`
  *   in big-endian byte order.
  *   The bit size is `m = ceiling(log_2(p))` for the field `F_p`.
  * - For Weierstrass curves over binary fields (curve types
- *   `PSA_ECC_FAMILY_SECTXXX`),
+ *   `PSA_ECC_CURVE_SECTXXX`),
  *   the shared secret is the x-coordinate of `d_A Q_B = d_B Q_A`
  *   in big-endian byte order.
  *   The bit size is `m` for the field `F_{2^m}`.
