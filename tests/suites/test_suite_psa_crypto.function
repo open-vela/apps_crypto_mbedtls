@@ -3028,21 +3028,17 @@ void mac_sign( int key_type_arg,
     psa_algorithm_t alg = alg_arg;
     psa_mac_operation_t operation = PSA_MAC_OPERATION_INIT;
     psa_key_attributes_t attributes = PSA_KEY_ATTRIBUTES_INIT;
-    uint8_t *actual_mac = NULL;
+    /* Leave a little extra room in the output buffer. At the end of the
+     * test, we'll check that the implementation didn't overwrite onto
+     * this extra room. */
+    uint8_t actual_mac[PSA_MAC_MAX_SIZE + 10];
     size_t mac_buffer_size =
         PSA_MAC_FINAL_SIZE( key_type, PSA_BYTES_TO_BITS( key->len ), alg );
     size_t mac_length = 0;
-    const size_t output_sizes_to_test[] = {
-        0,
-        1,
-        expected_mac->len - 1,
-        expected_mac->len,
-        expected_mac->len + 1,
-    };
 
+    memset( actual_mac, '+', sizeof( actual_mac ) );
     TEST_ASSERT( mac_buffer_size <= PSA_MAC_MAX_SIZE );
-    /* We expect PSA_MAC_FINAL_SIZE to be exact. */
-    TEST_ASSERT( expected_mac->len == mac_buffer_size );
+    TEST_ASSERT( expected_mac->len <= mac_buffer_size );
 
     PSA_ASSERT( psa_crypto_init( ) );
 
@@ -3052,41 +3048,26 @@ void mac_sign( int key_type_arg,
 
     PSA_ASSERT( psa_import_key( &attributes, key->x, key->len, &handle ) );
 
-    for( size_t i = 0; i < ARRAY_LENGTH( output_sizes_to_test ); i++ )
-    {
-        const size_t output_size = output_sizes_to_test[i];
-        psa_status_t expected_status =
-            ( output_size >= expected_mac->len ? PSA_SUCCESS :
-              PSA_ERROR_BUFFER_TOO_SMALL );
+    /* Calculate the MAC. */
+    PSA_ASSERT( psa_mac_sign_setup( &operation,
+                                    handle, alg ) );
+    PSA_ASSERT( psa_mac_update( &operation,
+                                input->x, input->len ) );
+    PSA_ASSERT( psa_mac_sign_finish( &operation,
+                                     actual_mac, mac_buffer_size,
+                                     &mac_length ) );
 
-        test_set_step( output_size );
-        ASSERT_ALLOC( actual_mac, output_size );
+    /* Compare with the expected value. */
+    ASSERT_COMPARE( expected_mac->x, expected_mac->len,
+                    actual_mac, mac_length );
 
-        /* Calculate the MAC. */
-        PSA_ASSERT( psa_mac_sign_setup( &operation,
-                                        handle, alg ) );
-        PSA_ASSERT( psa_mac_update( &operation,
-                                    input->x, input->len ) );
-        TEST_EQUAL( psa_mac_sign_finish( &operation,
-                                         actual_mac, output_size,
-                                         &mac_length ),
-                    expected_status );
-        PSA_ASSERT( psa_mac_abort( &operation ) );
-
-        if( expected_status == PSA_SUCCESS )
-        {
-            ASSERT_COMPARE( expected_mac->x, expected_mac->len,
-                            actual_mac, mac_length );
-        }
-        mbedtls_free( actual_mac );
-        actual_mac = NULL;
-    }
+    /* Verify that the end of the buffer is untouched. */
+    TEST_ASSERT( mem_is_char( actual_mac + mac_length, '+',
+                              sizeof( actual_mac ) - mac_length ) );
 
 exit:
-    psa_mac_abort( &operation );
     psa_destroy_key( handle );
     PSA_DONE( );
-    mbedtls_free( actual_mac );
 }
 /* END_CASE */
 
@@ -3102,7 +3083,6 @@ void mac_verify( int key_type_arg,
     psa_algorithm_t alg = alg_arg;
     psa_mac_operation_t operation = PSA_MAC_OPERATION_INIT;
     psa_key_attributes_t attributes = PSA_KEY_ATTRIBUTES_INIT;
-    uint8_t *perturbed_mac = NULL;
 
     TEST_ASSERT( expected_mac->len <= PSA_MAC_MAX_SIZE );
 
@@ -3114,58 +3094,18 @@ void mac_verify( int key_type_arg,
 
     PSA_ASSERT( psa_import_key( &attributes, key->x, key->len, &handle ) );
 
-    /* Test the correct MAC. */
     PSA_ASSERT( psa_mac_verify_setup( &operation,
                                       handle, alg ) );
+    PSA_ASSERT( psa_destroy_key( handle ) );
     PSA_ASSERT( psa_mac_update( &operation,
                                 input->x, input->len ) );
     PSA_ASSERT( psa_mac_verify_finish( &operation,
                                        expected_mac->x,
                                        expected_mac->len ) );
 
-    /* Test a MAC that's too short. */
-    PSA_ASSERT( psa_mac_verify_setup( &operation,
-                                      handle, alg ) );
-    PSA_ASSERT( psa_mac_update( &operation,
-                                input->x, input->len ) );
-    TEST_EQUAL( psa_mac_verify_finish( &operation,
-                                       expected_mac->x,
-                                       expected_mac->len - 1 ),
-                PSA_ERROR_INVALID_SIGNATURE );
-
-    /* Test a MAC that's too long. */
-    ASSERT_ALLOC( perturbed_mac, expected_mac->len + 1 );
-    memcpy( perturbed_mac, expected_mac->x, expected_mac->len );
-    PSA_ASSERT( psa_mac_verify_setup( &operation,
-                                      handle, alg ) );
-    PSA_ASSERT( psa_mac_update( &operation,
-                                input->x, input->len ) );
-    TEST_EQUAL( psa_mac_verify_finish( &operation,
-                                       perturbed_mac,
-                                       expected_mac->len + 1 ),
-                PSA_ERROR_INVALID_SIGNATURE );
-
-    /* Test changing one byte. */
-    for( size_t i = 0; i < expected_mac->len; i++ )
-    {
-        test_set_step( i );
-        perturbed_mac[i] ^= 1;
-        PSA_ASSERT( psa_mac_verify_setup( &operation,
-                                          handle, alg ) );
-        PSA_ASSERT( psa_mac_update( &operation,
-                                    input->x, input->len ) );
-        TEST_EQUAL( psa_mac_verify_finish( &operation,
-                                           perturbed_mac,
-                                           expected_mac->len ),
-                    PSA_ERROR_INVALID_SIGNATURE );
-        perturbed_mac[i] ^= 1;
-    }
-
 exit:
-    psa_mac_abort( &operation );
     psa_destroy_key( handle );
     PSA_DONE( );
-    mbedtls_free( perturbed_mac );
 }
 /* END_CASE */
 
@@ -3243,7 +3183,6 @@ void cipher_setup( int key_type_arg,
 #endif
 
 exit:
-    psa_cipher_abort( &operation );
     PSA_DONE( );
 }
 /* END_CASE */
@@ -3396,7 +3335,6 @@ void cipher_bad_order( )
     PSA_ASSERT( psa_destroy_key( handle ) );
 
 exit:
-    psa_cipher_abort( &operation );
     PSA_DONE( );
 }
 /* END_CASE */
@@ -3455,7 +3393,6 @@ void cipher_encrypt( int alg_arg, int key_type_arg,
     }
 
 exit:
-    psa_cipher_abort( &operation );
     mbedtls_free( output );
     psa_destroy_key( handle );
     PSA_DONE( );
@@ -3524,7 +3461,6 @@ void cipher_encrypt_multipart( int alg_arg, int key_type_arg,
                     output, total_output_length );
 
 exit:
-    psa_cipher_abort( &operation );
     mbedtls_free( output );
     psa_destroy_key( handle );
     PSA_DONE( );
@@ -3596,7 +3532,6 @@ void cipher_decrypt_multipart( int alg_arg, int key_type_arg,
                     output, total_output_length );
 
 exit:
-    psa_cipher_abort( &operation );
     mbedtls_free( output );
     psa_destroy_key( handle );
     PSA_DONE( );
@@ -3658,7 +3593,6 @@ void cipher_decrypt( int alg_arg, int key_type_arg,
     }
 
 exit:
-    psa_cipher_abort( &operation );
     mbedtls_free( output );
     psa_destroy_key( handle );
     PSA_DONE( );
@@ -3740,8 +3674,6 @@ void cipher_verify_output( int alg_arg, int key_type_arg,
     ASSERT_COMPARE( input->x, input->len, output2, output2_length );
 
 exit:
-    psa_cipher_abort( &operation1 );
-    psa_cipher_abort( &operation2 );
     mbedtls_free( output1 );
     mbedtls_free( output2 );
     psa_destroy_key( handle );
@@ -3845,8 +3777,6 @@ void cipher_verify_output_multipart( int alg_arg,
     ASSERT_COMPARE( input->x, input->len, output2, output2_length );
 
 exit:
-    psa_cipher_abort( &operation1 );
-    psa_cipher_abort( &operation2 );
     mbedtls_free( output1 );
     mbedtls_free( output2 );
     psa_destroy_key( handle );
@@ -5709,7 +5639,7 @@ exit:
         /* In case there was a test failure after creating the persistent key
          * but while it was not open, try to re-open the persistent key
          * to delete it. */
-        (void) psa_open_key( key_id, &handle );
+        psa_open_key( key_id, &handle );
     }
     psa_destroy_key( handle );
     PSA_DONE();
