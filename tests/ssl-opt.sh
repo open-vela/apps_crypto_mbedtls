@@ -2,7 +2,7 @@
 
 # ssl-opt.sh
 #
-# Copyright The Mbed TLS Contributors
+# Copyright (c) 2016, ARM Limited, All Rights Reserved
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -16,6 +16,8 @@
 # WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
+# This file is part of Mbed TLS (https://tls.mbed.org)
 #
 # Purpose
 #
@@ -114,8 +116,8 @@ print_usage() {
     echo "Usage: $0 [options]"
     printf "  -h|--help\tPrint this help.\n"
     printf "  -m|--memcheck\tCheck memory leaks and errors.\n"
-    printf "  -f|--filter\tOnly matching tests are executed (substring or BRE)\n"
-    printf "  -e|--exclude\tMatching tests are excluded (substring or BRE)\n"
+    printf "  -f|--filter\tOnly matching tests are executed (BRE; default: '$FILTER')\n"
+    printf "  -e|--exclude\tMatching tests are excluded (BRE; default: '$EXCLUDE')\n"
     printf "  -n|--number\tExecute only numbered test (comma-separated, e.g. '245,256')\n"
     printf "  -s|--show-numbers\tShow test numbers in front of test names\n"
     printf "  -p|--preserve-logs\tPreserve logs of successful tests as well\n"
@@ -178,14 +180,6 @@ case "$MBEDTLS_TEST_OUTCOME_FILE" in
         ;;
 esac
 
-# Read boolean configuration options from config.h for easy and quick
-# testing. Skip non-boolean options (with something other than spaces
-# and a comment after "#define SYMBOL"). The variable contains a
-# space-separated list of symbols.
-CONFIGS_ENABLED=" $(<"$CONFIG_H" \
-                    sed -n 's!^ *#define  *\([A-Za-z][0-9A-Z_a-z]*\) *\(/*\)*!\1!p' |
-                    tr '\n' ' ')"
-
 # Skip next test; use this macro to skip tests which are legitimate
 # in theory and expected to be re-introduced at some point, but
 # aren't expected to succeed at the moment due to problems outside
@@ -196,17 +190,16 @@ skip_next_test() {
 
 # skip next test if the flag is not enabled in config.h
 requires_config_enabled() {
-    case $CONFIGS_ENABLED in
-        *" $1 "*) :;;
-        *) SKIP_NEXT="YES";;
-    esac
+    if grep "^#define $1" $CONFIG_H > /dev/null; then :; else
+        SKIP_NEXT="YES"
+    fi
 }
 
 # skip next test if the flag is enabled in config.h
 requires_config_disabled() {
-    case $CONFIGS_ENABLED in
-        *" $1 "*) SKIP_NEXT="YES";;
-    esac
+    if grep "^#define $1" $CONFIG_H > /dev/null; then
+        SKIP_NEXT="YES"
+    fi
 }
 
 get_config_value_or_default() {
@@ -242,16 +235,10 @@ requires_config_value_at_most() {
     fi
 }
 
-# Space-separated list of ciphersuites supported by this build of
-# Mbed TLS.
-P_CIPHERSUITES=" $($P_CLI --help 2>/dev/null |
-                   grep TLS- |
-                   tr -s ' \n' ' ')"
 requires_ciphersuite_enabled() {
-    case $P_CIPHERSUITES in
-        *" $1 "*) :;;
-        *) SKIP_NEXT="YES";;
-    esac
+    if [ -z "$($P_CLI --help 2>/dev/null | grep $1)" ]; then
+        SKIP_NEXT="YES"
+    fi
 }
 
 # maybe_requires_ciphersuite_enabled CMD [RUN_TEST_OPTION...]
@@ -426,7 +413,7 @@ print_name() {
     fi
 
     LINE="$LINE$1"
-    printf "%s " "$LINE"
+    printf "$LINE "
     LEN=$(( 72 - `echo "$LINE" | wc -c` ))
     for i in `seq 1 $LEN`; do printf '.'; done
     printf ' '
@@ -458,7 +445,7 @@ fail() {
     fi
     echo "  ! outputs saved to o-XXX-${TESTS}.log"
 
-    if [ "${LOG_FAILURE_ON_STDOUT:-0}" != 0 ]; then
+    if [ "X${USER:-}" = Xbuildbot -o "X${LOGNAME:-}" = Xbuildbot -o "${LOG_FAILURE_ON_STDOUT:-0}" != 0 ]; then
         echo "  ! server output:"
         cat o-srv-${TESTS}.log
         echo "  ! ========================================================"
@@ -477,21 +464,17 @@ fail() {
 
 # is_polar <cmd_line>
 is_polar() {
-    case "$1" in
-        *ssl_client2*) true;;
-        *ssl_server2*) true;;
-        *) false;;
-    esac
+    echo "$1" | grep 'ssl_server2\|ssl_client2' > /dev/null
 }
 
 # openssl s_server doesn't have -www with DTLS
 check_osrv_dtls() {
-    case "$SRV_CMD" in
-        *s_server*-dtls*)
-            NEEDS_INPUT=1
-            SRV_CMD="$( echo $SRV_CMD | sed s/-www// )";;
-        *) NEEDS_INPUT=0;;
-    esac
+    if echo "$SRV_CMD" | grep 's_server.*-dtls' >/dev/null; then
+        NEEDS_INPUT=1
+        SRV_CMD="$( echo $SRV_CMD | sed s/-www// )"
+    else
+        NEEDS_INPUT=0
+    fi
 }
 
 # provide input to commands that need it
@@ -646,10 +629,11 @@ wait_client_done() {
 
 # check if the given command uses dtls and sets global variable DTLS
 detect_dtls() {
-    case "$1" in
-        *dtls=1*|-dtls|-u) DTLS=1;;
-        *) DTLS=0;;
-    esac
+    if echo "$1" | grep 'dtls=1\|-dtls1\|-u' >/dev/null; then
+        DTLS=1
+    else
+        DTLS=0
+    fi
 }
 
 # Usage: run_test name [-p proxy_cmd] srv_cmd cli_cmd cli_exit [option [...]]
@@ -665,7 +649,8 @@ run_test() {
     NAME="$1"
     shift 1
 
-    if is_excluded "$NAME"; then
+    if echo "$NAME" | grep "$FILTER" | grep -v "$EXCLUDE" >/dev/null; then :
+    else
         SKIP_NEXT="NO"
         # There was no request to run the test, so don't record its outcome.
         return
@@ -674,11 +659,10 @@ run_test() {
     print_name "$NAME"
 
     # Do we only run numbered tests?
-    if [ -n "$RUN_TEST_NUMBER" ]; then
-        case ",$RUN_TEST_NUMBER," in
-            *",$TESTS,"*) :;;
-            *) SKIP_NEXT="YES";;
-        esac
+    if [ "X$RUN_TEST_NUMBER" = "X" ]; then :
+    elif echo ",$RUN_TEST_NUMBER," | grep ",$TESTS," >/dev/null; then :
+    else
+        SKIP_NEXT="YES"
     fi
 
     # does this test use a proxy?
@@ -696,10 +680,10 @@ run_test() {
     shift 3
 
     # Check if test uses files
-    case "$SRV_CMD $CLI_CMD" in
-        *data_files/*)
-            requires_config_enabled MBEDTLS_FS_IO;;
-    esac
+    TEST_USES_FILES=$(echo "$SRV_CMD $CLI_CMD" | grep "\.\(key\|crt\|pem\)" )
+    if [ ! -z "$TEST_USES_FILES" ]; then
+       requires_config_enabled MBEDTLS_FS_IO
+    fi
 
     # If the client or serve requires a ciphersuite, check that it's enabled.
     maybe_requires_ciphersuite_enabled "$SRV_CMD" "$@"
@@ -713,25 +697,15 @@ run_test() {
         return
     fi
 
-    # update DTLS variable
-    detect_dtls "$SRV_CMD"
-
-    # if the test uses DTLS but no custom proxy, add a simple proxy
-    # as it provides timing info that's useful to debug failures
-    if [ -z "$PXY_CMD" ] && [ "$DTLS" -eq 1 ]; then
-        PXY_CMD="$P_PXY"
-        case " $SRV_CMD " in
-            *' server_addr=::1 '*)
-                PXY_CMD="$PXY_CMD server_addr=::1 listen_addr=::1";;
-        esac
-    fi
-
     # fix client port
     if [ -n "$PXY_CMD" ]; then
         CLI_CMD=$( echo "$CLI_CMD" | sed s/+SRV_PORT/$PXY_PORT/g )
     else
         CLI_CMD=$( echo "$CLI_CMD" | sed s/+SRV_PORT/$SRV_PORT/g )
     fi
+
+    # update DTLS variable
+    detect_dtls "$SRV_CMD"
 
     # prepend valgrind to our commands if active
     if [ "$MEMCHECK" -gt 0 ]; then
@@ -749,19 +723,19 @@ run_test() {
 
         # run the commands
         if [ -n "$PXY_CMD" ]; then
-            printf "# %s\n%s\n" "$NAME" "$PXY_CMD" > $PXY_OUT
+            echo "$PXY_CMD" > $PXY_OUT
             $PXY_CMD >> $PXY_OUT 2>&1 &
             PXY_PID=$!
             wait_proxy_start "$PXY_PORT" "$PXY_PID"
         fi
 
         check_osrv_dtls
-        printf '# %s\n%s\n' "$NAME" "$SRV_CMD" > $SRV_OUT
+        echo "$SRV_CMD" > $SRV_OUT
         provide_input | $SRV_CMD >> $SRV_OUT 2>&1 &
         SRV_PID=$!
         wait_server_start "$SRV_PORT" "$SRV_PID"
 
-        printf '# %s\n%s\n' "$NAME" "$CLI_CMD" > $CLI_OUT
+        echo "$CLI_CMD" > $CLI_OUT
         eval "$CLI_CMD" >> $CLI_OUT 2>&1 &
         wait_client_done
 
@@ -969,7 +943,7 @@ run_test_psa_force_curve() {
 run_test_memory_after_hanshake_with_mfl()
 {
     # The test passes if the difference is around 2*(16k-MFL)
-    MEMORY_USAGE_LIMIT="$(( $2 - ( 2 * ( 16384 - $1 )) ))"
+    local MEMORY_USAGE_LIMIT="$(( $2 - ( 2 * ( 16384 - $1 )) ))"
 
     # Leave some margin for robustness
     MEMORY_USAGE_LIMIT="$(( ( MEMORY_USAGE_LIMIT * 110 ) / 100 ))"
@@ -1030,46 +1004,6 @@ cleanup() {
 #
 
 get_options "$@"
-
-# Optimize filters: if $FILTER and $EXCLUDE can be expressed as shell
-# patterns rather than regular expressions, use a case statement instead
-# of calling grep. To keep the optimizer simple, it is incomplete and only
-# detects simple cases: plain substring, everything, nothing.
-#
-# As an exception, the character '.' is treated as an ordinary character
-# if it is the only special character in the string. This is because it's
-# rare to need "any one character", but needing a literal '.' is common
-# (e.g. '-f "DTLS 1.2"').
-need_grep=
-case "$FILTER" in
-    '^$') simple_filter=;;
-    '.*') simple_filter='*';;
-    *[][\$^+*?{|}]*) # Regexp special characters (other than .), we need grep
-        need_grep=1;;
-    *) # No regexp or shell-pattern special character
-        simple_filter="*$FILTER*";;
-esac
-case "$EXCLUDE" in
-    '^$') simple_exclude=;;
-    '.*') simple_exclude='*';;
-    *[][\$^+*?{|}]*) # Regexp special characters (other than .), we need grep
-        need_grep=1;;
-    *) # No regexp or shell-pattern special character
-        simple_exclude="*$EXCLUDE*";;
-esac
-if [ -n "$need_grep" ]; then
-    is_excluded () {
-        ! echo "$1" | grep "$FILTER" | grep -q -v "$EXCLUDE"
-    }
-else
-    is_excluded () {
-        case "$1" in
-            $simple_exclude) true;;
-            $simple_filter) false;;
-            *) true;;
-        esac
-    }
-fi
 
 # sanity checks, avoid an avalanche of errors
 P_SRV_BIN="${P_SRV%%[  ]*}"
@@ -1186,39 +1120,6 @@ run_test    "Default, DTLS" \
             0 \
             -s "Protocol is DTLSv1.2" \
             -s "Ciphersuite is TLS-ECDHE-RSA-WITH-CHACHA20-POLY1305-SHA256"
-
-run_test    "TLS client auth: required" \
-            "$P_SRV auth_mode=required" \
-            "$P_CLI" \
-            0 \
-            -s "Verifying peer X.509 certificate... ok"
-
-requires_config_enabled MBEDTLS_X509_CRT_PARSE_C
-requires_config_enabled MBEDTLS_ECDSA_C
-requires_config_enabled MBEDTLS_SHA256_C
-run_test    "TLS: password protected client key" \
-            "$P_SRV auth_mode=required" \
-            "$P_CLI crt_file=data_files/server5.crt key_file=data_files/server5.key.enc key_pwd=PolarSSLTest" \
-            0
-
-requires_config_enabled MBEDTLS_X509_CRT_PARSE_C
-requires_config_enabled MBEDTLS_ECDSA_C
-requires_config_enabled MBEDTLS_SHA256_C
-run_test    "TLS: password protected server key" \
-            "$P_SRV crt_file=data_files/server5.crt key_file=data_files/server5.key.enc key_pwd=PolarSSLTest" \
-            "$P_CLI" \
-            0
-
-requires_config_enabled MBEDTLS_X509_CRT_PARSE_C
-requires_config_enabled MBEDTLS_ECDSA_C
-requires_config_enabled MBEDTLS_RSA_C
-requires_config_enabled MBEDTLS_SHA256_C
-run_test    "TLS: password protected server key, two certificates" \
-            "$P_SRV \
-              key_file=data_files/server5.key.enc key_pwd=PolarSSLTest crt_file=data_files/server5.crt \
-              key_file2=data_files/server2.key.enc key_pwd2=PolarSSLTest crt_file2=data_files/server2.crt" \
-            "$P_CLI" \
-            0
 
 requires_config_enabled MBEDTLS_ZLIB_SUPPORT
 run_test    "Default (compression enabled)" \
@@ -3081,12 +2982,12 @@ run_test    "Session resume using cache, DTLS: openssl server" \
 # Tests for Max Fragment Length extension
 
 if [ "$MAX_CONTENT_LEN" -lt "4096" ]; then
-    printf '%s defines MBEDTLS_SSL_MAX_CONTENT_LEN to be less than 4096. Fragment length tests will fail.\n' "${CONFIG_H}"
+    printf "${CONFIG_H} defines MBEDTLS_SSL_MAX_CONTENT_LEN to be less than 4096. Fragment length tests will fail.\n"
     exit 1
 fi
 
 if [ $MAX_CONTENT_LEN -ne 16384 ]; then
-    echo "Using non-default maximum content length $MAX_CONTENT_LEN"
+    printf "Using non-default maximum content length $MAX_CONTENT_LEN\n"
 fi
 
 requires_config_enabled MBEDTLS_SSL_MAX_FRAGMENT_LENGTH
@@ -4240,14 +4141,14 @@ MAX_IM_CA='8'
 MAX_IM_CA_CONFIG=$( ../scripts/config.py get MBEDTLS_X509_MAX_INTERMEDIATE_CA)
 
 if [ -n "$MAX_IM_CA_CONFIG" ] && [ "$MAX_IM_CA_CONFIG" -ne "$MAX_IM_CA" ]; then
-    cat <<EOF
-${CONFIG_H} contains a value for the configuration of
-MBEDTLS_X509_MAX_INTERMEDIATE_CA that is different from the script's
-test value of ${MAX_IM_CA}.
+    printf "The ${CONFIG_H} file contains a value for the configuration of\n"
+    printf "MBEDTLS_X509_MAX_INTERMEDIATE_CA that is different from the script’s\n"
+    printf "test value of ${MAX_IM_CA}. \n"
+    printf "\n"
+    printf "The tests assume this value and if it changes, the tests in this\n"
+    printf "script should also be adjusted.\n"
+    printf "\n"
 
-The tests assume this value and if it changes, the tests in this
-script should also be adjusted.
-EOF
     exit 1
 fi
 
@@ -5839,12 +5740,12 @@ run_test    "PSK callback: wrong key" \
 
 # Tests for EC J-PAKE
 
-requires_config_enabled MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED
+requires_config_enabled MBEDTLS_KEY_EXCHANGE_ECJPAKE
 run_test    "ECJPAKE: client not configured" \
             "$P_SRV debug_level=3" \
             "$P_CLI debug_level=3" \
             0 \
-            -C "add ciphersuite: 0xc0ff" \
+            -C "add ciphersuite: c0ff" \
             -C "adding ecjpake_kkpp extension" \
             -S "found ecjpake kkpp extension" \
             -S "skip ecjpake kkpp extension" \
@@ -5853,13 +5754,13 @@ run_test    "ECJPAKE: client not configured" \
             -C "found ecjpake_kkpp extension" \
             -S "None of the common ciphersuites is usable"
 
-requires_config_enabled MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED
+requires_config_enabled MBEDTLS_KEY_EXCHANGE_ECJPAKE
 run_test    "ECJPAKE: server not configured" \
             "$P_SRV debug_level=3" \
             "$P_CLI debug_level=3 ecjpake_pw=bla \
              force_ciphersuite=TLS-ECJPAKE-WITH-AES-128-CCM-8" \
             1 \
-            -c "add ciphersuite: 0xc0ff" \
+            -c "add ciphersuite: c0ff" \
             -c "adding ecjpake_kkpp extension" \
             -s "found ecjpake kkpp extension" \
             -s "skip ecjpake kkpp extension" \
@@ -5868,13 +5769,13 @@ run_test    "ECJPAKE: server not configured" \
             -C "found ecjpake_kkpp extension" \
             -s "None of the common ciphersuites is usable"
 
-requires_config_enabled MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED
+requires_config_enabled MBEDTLS_KEY_EXCHANGE_ECJPAKE
 run_test    "ECJPAKE: working, TLS" \
             "$P_SRV debug_level=3 ecjpake_pw=bla" \
             "$P_CLI debug_level=3 ecjpake_pw=bla \
              force_ciphersuite=TLS-ECJPAKE-WITH-AES-128-CCM-8" \
             0 \
-            -c "add ciphersuite: 0xc0ff" \
+            -c "add ciphersuite: c0ff" \
             -c "adding ecjpake_kkpp extension" \
             -C "re-using cached ecjpake parameters" \
             -s "found ecjpake kkpp extension" \

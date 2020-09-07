@@ -2,7 +2,7 @@
  *  PSA crypto layer on top of Mbed TLS crypto
  */
 /*
- *  Copyright The Mbed TLS Contributors
+ *  Copyright (C) 2018, ARM Limited, All Rights Reserved
  *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -16,6 +16,8 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
+ *
+ *  This file is part of mbed TLS (https://tls.mbed.org)
  */
 
 #ifndef PSA_CRYPTO_SLOT_MANAGEMENT_H
@@ -113,13 +115,14 @@ psa_status_t psa_validate_key_location( psa_key_lifetime_t lifetime,
  * This function checks whether a key's declared persistence level and key ID
  * attributes are valid and known to the PSA Core in its actual configuration.
  *
- * \param[in] lifetime  The key lifetime attribute.
- * \param[in] key       The key identifier.
+ * \param[in] lifetime    The key lifetime attribute.
+ * \param[in] key_id      The key ID attribute
  *
  * \retval #PSA_SUCCESS
  * \retval #PSA_ERROR_INVALID_ARGUMENT
  */
 psa_status_t psa_validate_key_persistence( psa_key_lifetime_t lifetime,
-                                           mbedtls_svc_key_id_t key );
+                                           psa_key_id_t key_id );
+
 
 #endif /* PSA_CRYPTO_SLOT_MANAGEMENT_H */

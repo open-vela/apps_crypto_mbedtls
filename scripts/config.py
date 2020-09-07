@@ -7,7 +7,7 @@ Basic usage, to read the Mbed TLS or Mbed Crypto configuration:
     if 'MBEDTLS_RSA_C' in config: print('RSA is enabled')
 """
 
-## Copyright The Mbed TLS Contributors
+## Copyright (C) 2019, ARM Limited, All Rights Reserved
 ## SPDX-License-Identifier: Apache-2.0
 ##
 ## Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -21,6 +21,8 @@ Basic usage, to read the Mbed TLS or Mbed Crypto configuration:
 ## WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 ## See the License for the specific language governing permissions and
 ## limitations under the License.
+##
+## This file is part of Mbed TLS (https://tls.mbed.org)
 
 import os
 import re
@@ -184,6 +186,7 @@ EXCLUDE_FROM_FULL = frozenset([
     'MBEDTLS_NO_UDBL_DIVISION', # influences anything that uses bignum
     'MBEDTLS_PKCS11_C', # build dependency (libpkcs11-helper)
     'MBEDTLS_PLATFORM_NO_STD_FUNCTIONS', # removes a feature
+    'MBEDTLS_PSA_CRYPTO_KEY_FILE_ID_ENCODES_OWNER', # platform dependency (PSA SPM) (at this time)
     'MBEDTLS_PSA_CRYPTO_SPM', # platform dependency (PSA SPM)
     'MBEDTLS_PSA_INJECT_ENTROPY', # build dependency (hook functions)
     'MBEDTLS_REMOVE_3DES_CIPHERSUITES', # removes a feature
@@ -191,8 +194,6 @@ EXCLUDE_FROM_FULL = frozenset([
     'MBEDTLS_RSA_NO_CRT', # influences the use of RSA in X.509 and TLS
     'MBEDTLS_SHA512_NO_SHA384', # removes a feature
     'MBEDTLS_SSL_HW_RECORD_ACCEL', # build dependency (hook functions)
-    'MBEDTLS_TEST_CONSTANT_FLOW_MEMSAN', # build dependency (clang+memsan)
-    'MBEDTLS_TEST_CONSTANT_FLOW_VALGRIND', # build dependency (valgrind headers)
     'MBEDTLS_TEST_NULL_ENTROPY', # removes a feature
     'MBEDTLS_X509_ALLOW_UNSUPPORTED_CRITICAL_EXTENSION', # influences the use of X.509 in TLS
     'MBEDTLS_ZLIB_SUPPORT', # build dependency (libz)
@@ -247,7 +248,6 @@ EXCLUDE_FROM_BAREMETAL = frozenset([
     'MBEDTLS_PLATFORM_TIME_ALT', # requires a clock and HAVE_TIME
     'MBEDTLS_PSA_CRYPTO_SE_C', # requires a filesystem and PSA_CRYPTO_STORAGE_C
     'MBEDTLS_PSA_CRYPTO_STORAGE_C', # requires a filesystem
-    'MBEDTLS_PSA_CRYPTO_KEY_ID_ENCODES_OWNER', # requires a multi-client service
     'MBEDTLS_PSA_ITS_FILE_C', # requires a filesystem
     'MBEDTLS_THREADING_C', # requires a threading interface
     'MBEDTLS_THREADING_PTHREAD', # requires pthread

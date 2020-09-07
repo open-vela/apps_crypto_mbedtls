@@ -233,7 +233,7 @@ int check_key_attributes_sanity( psa_key_handle_t key )
     int ok = 0;
     psa_key_attributes_t attributes = PSA_KEY_ATTRIBUTES_INIT;
     psa_key_lifetime_t lifetime;
-    mbedtls_svc_key_id_t id;
+    psa_key_id_t id;
     psa_key_type_t type;
     psa_key_type_t bits;
 
@@ -245,12 +245,12 @@ int check_key_attributes_sanity( psa_key_handle_t key )
 
     /* Persistence */
     if( lifetime == PSA_KEY_LIFETIME_VOLATILE )
-        TEST_ASSERT( MBEDTLS_SVC_KEY_ID_GET_KEY_ID( id ) == 0 );
+        TEST_ASSERT( id == 0 );
     else
     {
         TEST_ASSERT(
-            ( PSA_KEY_ID_USER_MIN <= MBEDTLS_SVC_KEY_ID_GET_KEY_ID( id ) ) &&
-            ( MBEDTLS_SVC_KEY_ID_GET_KEY_ID( id ) <= PSA_KEY_ID_USER_MAX ) );
+            ( PSA_KEY_ID_USER_MIN <= id && id <= PSA_KEY_ID_USER_MAX ) ||
+            ( PSA_KEY_ID_USER_MIN <= id && id <= PSA_KEY_ID_USER_MAX ) );
     }
 #if defined(MBEDTLS_PSA_CRYPTO_SE_C)
     /* randomly-generated 64-bit constant, should never appear in test data */
@@ -961,23 +961,14 @@ static int exported_key_sanity_check( psa_key_type_t type, size_t bits,
 #if defined(MBEDTLS_ECP_C)
         if( PSA_KEY_TYPE_IS_ECC_PUBLIC_KEY( type ) )
         {
-            if( PSA_KEY_TYPE_ECC_GET_FAMILY( type ) == PSA_ECC_FAMILY_MONTGOMERY )
-            {
-                /* The representation of an ECC Montgomery public key is
-                 * the raw compressed point */
-                 TEST_EQUAL( p + PSA_BITS_TO_BYTES( bits ), end );
-            }
-            else
-            {
-                /* The representation of an ECC Weierstrass public key is:
-                 *      - The byte 0x04;
-                 *      - `x_P` as a `ceiling(m/8)`-byte string, big-endian;
-                 *      - `y_P` as a `ceiling(m/8)`-byte string, big-endian;
-                 *      - where m is the bit size associated with the curve.
-                 */
-                TEST_EQUAL( p + 1 + 2 * PSA_BITS_TO_BYTES( bits ), end );
-                TEST_EQUAL( p[0], 4 );
-            }
+            /* The representation of an ECC public key is:
+             *      - The byte 0x04;
+             *      - `x_P` as a `ceiling(m/8)`-byte string, big-endian;
+             *      - `y_P` as a `ceiling(m/8)`-byte string, big-endian;
+             *      - where m is the bit size associated with the curve.
+             */
+            TEST_EQUAL( p + 1 + 2 * PSA_BITS_TO_BYTES( bits ), end );
+            TEST_EQUAL( p[0], 4 );
         }
         else
 #endif /* MBEDTLS_ECP_C */
@@ -1178,21 +1169,17 @@ static psa_key_usage_t usage_to_exercise( psa_key_type_t type,
 static int test_operations_on_invalid_handle( psa_key_handle_t handle )
 {
     psa_key_attributes_t attributes = PSA_KEY_ATTRIBUTES_INIT;
-    mbedtls_svc_key_id_t key_id = mbedtls_svc_key_id_make( 1, 0x6964 );
     uint8_t buffer[1];
     size_t length;
     int ok = 0;
 
-    psa_set_key_id( &attributes, key_id );
+    psa_set_key_id( &attributes, 0x6964 );
     psa_set_key_usage_flags( &attributes, PSA_KEY_USAGE_ENCRYPT );
     psa_set_key_algorithm( &attributes, PSA_ALG_CTR );
     psa_set_key_type( &attributes, PSA_KEY_TYPE_AES );
     TEST_EQUAL( psa_get_key_attributes( handle, &attributes ),
                 PSA_ERROR_INVALID_HANDLE );
-    TEST_EQUAL(
-        MBEDTLS_SVC_KEY_ID_GET_KEY_ID( psa_get_key_id( &attributes ) ), 0 );
-    TEST_EQUAL(
-        MBEDTLS_SVC_KEY_ID_GET_OWNER_ID( psa_get_key_id( &attributes ) ), 0 );
+    TEST_EQUAL( psa_get_key_id( &attributes ), 0 );
     TEST_EQUAL( psa_get_key_lifetime( &attributes ), 0 );
     TEST_EQUAL( psa_get_key_usage_flags( &attributes ), 0 );
     TEST_EQUAL( psa_get_key_algorithm( &attributes ), 0 );
@@ -1272,75 +1259,60 @@ void static_checks( )
     TEST_EQUAL( PSA_KEY_USAGE_VERIFY, PSA_KEY_USAGE_VERIFY_HASH );
     TEST_EQUAL( PSA_ASYMMETRIC_SIGNATURE_MAX_SIZE, PSA_SIGNATURE_MAX_SIZE );
 
-    TEST_EQUAL( PSA_ECC_CURVE_SECP160K1, PSA_ECC_FAMILY_SECP_K1 );
-    TEST_EQUAL( PSA_ECC_CURVE_SECP192K1, PSA_ECC_FAMILY_SECP_K1 );
-    TEST_EQUAL( PSA_ECC_CURVE_SECP224K1, PSA_ECC_FAMILY_SECP_K1 );
-    TEST_EQUAL( PSA_ECC_CURVE_SECP256K1, PSA_ECC_FAMILY_SECP_K1 );
-    TEST_EQUAL( PSA_ECC_CURVE_SECP160R1, PSA_ECC_FAMILY_SECP_R1 );
-    TEST_EQUAL( PSA_ECC_CURVE_SECP192R1, PSA_ECC_FAMILY_SECP_R1 );
-    TEST_EQUAL( PSA_ECC_CURVE_SECP224R1, PSA_ECC_FAMILY_SECP_R1 );
-    TEST_EQUAL( PSA_ECC_CURVE_SECP256R1, PSA_ECC_FAMILY_SECP_R1 );
-    TEST_EQUAL( PSA_ECC_CURVE_SECP384R1, PSA_ECC_FAMILY_SECP_R1 );
-    TEST_EQUAL( PSA_ECC_CURVE_SECP521R1, PSA_ECC_FAMILY_SECP_R1 );
-    TEST_EQUAL( PSA_ECC_CURVE_SECP160R2, PSA_ECC_FAMILY_SECP_R2 );
-    TEST_EQUAL( PSA_ECC_CURVE_SECT163K1, PSA_ECC_FAMILY_SECT_K1 );
-    TEST_EQUAL( PSA_ECC_CURVE_SECT233K1, PSA_ECC_FAMILY_SECT_K1 );
-    TEST_EQUAL( PSA_ECC_CURVE_SECT239K1, PSA_ECC_FAMILY_SECT_K1 );
-    TEST_EQUAL( PSA_ECC_CURVE_SECT283K1, PSA_ECC_FAMILY_SECT_K1 );
-    TEST_EQUAL( PSA_ECC_CURVE_SECT409K1, PSA_ECC_FAMILY_SECT_K1 );
-    TEST_EQUAL( PSA_ECC_CURVE_SECT571K1, PSA_ECC_FAMILY_SECT_K1 );
-    TEST_EQUAL( PSA_ECC_CURVE_SECT163R1, PSA_ECC_FAMILY_SECT_R1 );
-    TEST_EQUAL( PSA_ECC_CURVE_SECT193R1, PSA_ECC_FAMILY_SECT_R1 );
-    TEST_EQUAL( PSA_ECC_CURVE_SECT233R1, PSA_ECC_FAMILY_SECT_R1 );
-    TEST_EQUAL( PSA_ECC_CURVE_SECT283R1, PSA_ECC_FAMILY_SECT_R1 );
-    TEST_EQUAL( PSA_ECC_CURVE_SECT409R1, PSA_ECC_FAMILY_SECT_R1 );
-    TEST_EQUAL( PSA_ECC_CURVE_SECT571R1, PSA_ECC_FAMILY_SECT_R1 );
-    TEST_EQUAL( PSA_ECC_CURVE_SECT163R2, PSA_ECC_FAMILY_SECT_R2 );
-    TEST_EQUAL( PSA_ECC_CURVE_SECT193R2, PSA_ECC_FAMILY_SECT_R2 );
-    TEST_EQUAL( PSA_ECC_CURVE_BRAINPOOL_P256R1, PSA_ECC_FAMILY_BRAINPOOL_P_R1 );
-    TEST_EQUAL( PSA_ECC_CURVE_BRAINPOOL_P384R1, PSA_ECC_FAMILY_BRAINPOOL_P_R1 );
-    TEST_EQUAL( PSA_ECC_CURVE_BRAINPOOL_P512R1, PSA_ECC_FAMILY_BRAINPOOL_P_R1 );
-    TEST_EQUAL( PSA_ECC_CURVE_CURVE25519, PSA_ECC_FAMILY_MONTGOMERY );
-    TEST_EQUAL( PSA_ECC_CURVE_CURVE448, PSA_ECC_FAMILY_MONTGOMERY );
+    TEST_EQUAL( PSA_ECC_CURVE_SECP160K1, PSA_ECC_CURVE_SECP_K1 );
+    TEST_EQUAL( PSA_ECC_CURVE_SECP192K1, PSA_ECC_CURVE_SECP_K1 );
+    TEST_EQUAL( PSA_ECC_CURVE_SECP224K1, PSA_ECC_CURVE_SECP_K1 );
+    TEST_EQUAL( PSA_ECC_CURVE_SECP256K1, PSA_ECC_CURVE_SECP_K1 );
+    TEST_EQUAL( PSA_ECC_CURVE_SECP160R1, PSA_ECC_CURVE_SECP_R1 );
+    TEST_EQUAL( PSA_ECC_CURVE_SECP192R1, PSA_ECC_CURVE_SECP_R1 );
+    TEST_EQUAL( PSA_ECC_CURVE_SECP224R1, PSA_ECC_CURVE_SECP_R1 );
+    TEST_EQUAL( PSA_ECC_CURVE_SECP256R1, PSA_ECC_CURVE_SECP_R1 );
+    TEST_EQUAL( PSA_ECC_CURVE_SECP384R1, PSA_ECC_CURVE_SECP_R1 );
+    TEST_EQUAL( PSA_ECC_CURVE_SECP521R1, PSA_ECC_CURVE_SECP_R1 );
+    TEST_EQUAL( PSA_ECC_CURVE_SECP160R2, PSA_ECC_CURVE_SECP_R2 );
+    TEST_EQUAL( PSA_ECC_CURVE_SECT163K1, PSA_ECC_CURVE_SECT_K1 );
+    TEST_EQUAL( PSA_ECC_CURVE_SECT233K1, PSA_ECC_CURVE_SECT_K1 );
+    TEST_EQUAL( PSA_ECC_CURVE_SECT239K1, PSA_ECC_CURVE_SECT_K1 );
+    TEST_EQUAL( PSA_ECC_CURVE_SECT283K1, PSA_ECC_CURVE_SECT_K1 );
+    TEST_EQUAL( PSA_ECC_CURVE_SECT409K1, PSA_ECC_CURVE_SECT_K1 );
+    TEST_EQUAL( PSA_ECC_CURVE_SECT571K1, PSA_ECC_CURVE_SECT_K1 );
+    TEST_EQUAL( PSA_ECC_CURVE_SECT163R1, PSA_ECC_CURVE_SECT_R1 );
+    TEST_EQUAL( PSA_ECC_CURVE_SECT193R1, PSA_ECC_CURVE_SECT_R1 );
+    TEST_EQUAL( PSA_ECC_CURVE_SECT233R1, PSA_ECC_CURVE_SECT_R1 );
+    TEST_EQUAL( PSA_ECC_CURVE_SECT283R1, PSA_ECC_CURVE_SECT_R1 );
+    TEST_EQUAL( PSA_ECC_CURVE_SECT409R1, PSA_ECC_CURVE_SECT_R1 );
+    TEST_EQUAL( PSA_ECC_CURVE_SECT571R1, PSA_ECC_CURVE_SECT_R1 );
+    TEST_EQUAL( PSA_ECC_CURVE_SECT163R2, PSA_ECC_CURVE_SECT_R2 );
+    TEST_EQUAL( PSA_ECC_CURVE_SECT193R2, PSA_ECC_CURVE_SECT_R2 );
+    TEST_EQUAL( PSA_ECC_CURVE_BRAINPOOL_P256R1, PSA_ECC_CURVE_BRAINPOOL_P_R1 );
+    TEST_EQUAL( PSA_ECC_CURVE_BRAINPOOL_P384R1, PSA_ECC_CURVE_BRAINPOOL_P_R1 );
+    TEST_EQUAL( PSA_ECC_CURVE_BRAINPOOL_P512R1, PSA_ECC_CURVE_BRAINPOOL_P_R1 );
+    TEST_EQUAL( PSA_ECC_CURVE_CURVE25519, PSA_ECC_CURVE_MONTGOMERY );
+    TEST_EQUAL( PSA_ECC_CURVE_CURVE448, PSA_ECC_CURVE_MONTGOMERY );
 
-    TEST_EQUAL( PSA_ECC_CURVE_SECP_K1, PSA_ECC_FAMILY_SECP_K1 );
-    TEST_EQUAL( PSA_ECC_CURVE_SECP_R1, PSA_ECC_FAMILY_SECP_R1 );
-    TEST_EQUAL( PSA_ECC_CURVE_SECP_R2, PSA_ECC_FAMILY_SECP_R2 );
-    TEST_EQUAL( PSA_ECC_CURVE_SECT_K1, PSA_ECC_FAMILY_SECT_K1 );
-    TEST_EQUAL( PSA_ECC_CURVE_SECT_R1, PSA_ECC_FAMILY_SECT_R1 );
-    TEST_EQUAL( PSA_ECC_CURVE_SECT_R2, PSA_ECC_FAMILY_SECT_R2 );
-    TEST_EQUAL( PSA_ECC_CURVE_BRAINPOOL_P_R1, PSA_ECC_FAMILY_BRAINPOOL_P_R1 );
-    TEST_EQUAL( PSA_ECC_CURVE_MONTGOMERY, PSA_ECC_FAMILY_MONTGOMERY );
-
-    TEST_EQUAL( PSA_DH_GROUP_FFDHE2048, PSA_DH_FAMILY_RFC7919 );
-    TEST_EQUAL( PSA_DH_GROUP_FFDHE3072, PSA_DH_FAMILY_RFC7919 );
-    TEST_EQUAL( PSA_DH_GROUP_FFDHE4096, PSA_DH_FAMILY_RFC7919 );
-    TEST_EQUAL( PSA_DH_GROUP_FFDHE6144, PSA_DH_FAMILY_RFC7919 );
-    TEST_EQUAL( PSA_DH_GROUP_FFDHE8192, PSA_DH_FAMILY_RFC7919 );
-
-    TEST_EQUAL( PSA_DH_GROUP_RFC7919, PSA_DH_FAMILY_RFC7919 );
-    TEST_EQUAL( PSA_DH_GROUP_CUSTOM, PSA_DH_FAMILY_CUSTOM );
+    TEST_EQUAL( PSA_DH_GROUP_FFDHE2048, PSA_DH_GROUP_RFC7919 );
+    TEST_EQUAL( PSA_DH_GROUP_FFDHE3072, PSA_DH_GROUP_RFC7919 );
+    TEST_EQUAL( PSA_DH_GROUP_FFDHE4096, PSA_DH_GROUP_RFC7919 );
+    TEST_EQUAL( PSA_DH_GROUP_FFDHE6144, PSA_DH_GROUP_RFC7919 );
+    TEST_EQUAL( PSA_DH_GROUP_FFDHE8192, PSA_DH_GROUP_RFC7919 );
 #endif
 }
 /* END_CASE */
 
 /* BEGIN_CASE */
-void attributes_set_get( int owner_id_arg, int id_arg, int lifetime_arg,
+void attributes_set_get( int id_arg, int lifetime_arg,
                          int usage_flags_arg, int alg_arg,
                          int type_arg, int bits_arg )
 {
     psa_key_attributes_t attributes = PSA_KEY_ATTRIBUTES_INIT;
-    mbedtls_svc_key_id_t id = mbedtls_svc_key_id_make( owner_id_arg, id_arg );
+    psa_key_id_t id = id_arg;
     psa_key_lifetime_t lifetime = lifetime_arg;
     psa_key_usage_t usage_flags = usage_flags_arg;
     psa_algorithm_t alg = alg_arg;
     psa_key_type_t type = type_arg;
     size_t bits = bits_arg;
 
-    TEST_EQUAL(
-        MBEDTLS_SVC_KEY_ID_GET_KEY_ID( psa_get_key_id( &attributes ) ), 0 );
-    TEST_EQUAL(
-        MBEDTLS_SVC_KEY_ID_GET_OWNER_ID( psa_get_key_id( &attributes ) ), 0 );
+    TEST_EQUAL( psa_get_key_id( &attributes ), 0 );
     TEST_EQUAL( psa_get_key_lifetime( &attributes ), 0 );
     TEST_EQUAL( psa_get_key_usage_flags( &attributes ), 0 );
     TEST_EQUAL( psa_get_key_algorithm( &attributes ), 0 );
@@ -1354,8 +1326,7 @@ void attributes_set_get( int owner_id_arg, int id_arg, int lifetime_arg,
     psa_set_key_type( &attributes, type );
     psa_set_key_bits( &attributes, bits );
 
-    TEST_ASSERT( mbedtls_svc_key_id_equal(
-                     psa_get_key_id( &attributes ), id ) );
+    TEST_EQUAL( psa_get_key_id( &attributes ), id );
     TEST_EQUAL( psa_get_key_lifetime( &attributes ), lifetime );
     TEST_EQUAL( psa_get_key_usage_flags( &attributes ), usage_flags );
     TEST_EQUAL( psa_get_key_algorithm( &attributes ), alg );
@@ -1364,10 +1335,7 @@ void attributes_set_get( int owner_id_arg, int id_arg, int lifetime_arg,
 
     psa_reset_key_attributes( &attributes );
 
-    TEST_EQUAL(
-        MBEDTLS_SVC_KEY_ID_GET_KEY_ID( psa_get_key_id( &attributes ) ), 0 );
-    TEST_EQUAL(
-        MBEDTLS_SVC_KEY_ID_GET_OWNER_ID( psa_get_key_id( &attributes ) ), 0 );
+    TEST_EQUAL( psa_get_key_id( &attributes ), 0 );
     TEST_EQUAL( psa_get_key_lifetime( &attributes ), 0 );
     TEST_EQUAL( psa_get_key_usage_flags( &attributes ), 0 );
     TEST_EQUAL( psa_get_key_algorithm( &attributes ), 0 );
@@ -1377,19 +1345,14 @@ void attributes_set_get( int owner_id_arg, int id_arg, int lifetime_arg,
 /* END_CASE */
 
 /* BEGIN_CASE */
-void persistence_attributes( int id1_arg, int owner_id1_arg, int lifetime_arg,
-                             int id2_arg, int owner_id2_arg,
-                             int expected_id_arg, int expected_owner_id_arg,
-                             int expected_lifetime_arg )
+void persistence_attributes( int id1_arg, int lifetime_arg, int id2_arg,
+                             int expected_id_arg, int expected_lifetime_arg )
 {
     psa_key_attributes_t attributes = PSA_KEY_ATTRIBUTES_INIT;
-    mbedtls_svc_key_id_t id1 =
-        mbedtls_svc_key_id_make( owner_id1_arg, id1_arg );
+    psa_key_id_t id1 = id1_arg;
     psa_key_lifetime_t lifetime = lifetime_arg;
-    mbedtls_svc_key_id_t id2 =
-        mbedtls_svc_key_id_make( owner_id2_arg, id2_arg );
-    mbedtls_svc_key_id_t expected_id =
-        mbedtls_svc_key_id_make( expected_owner_id_arg, expected_id_arg );
+    psa_key_id_t id2 = id2_arg;
+    psa_key_id_t expected_id = expected_id_arg;
     psa_key_lifetime_t expected_lifetime = expected_lifetime_arg;
 
     if( id1_arg != -1 )
@@ -1399,8 +1362,7 @@ void persistence_attributes( int id1_arg, int owner_id1_arg, int lifetime_arg,
     if( id2_arg != -1 )
         psa_set_key_id( &attributes, id2 );
 
-    TEST_ASSERT( mbedtls_svc_key_id_equal(
-                     psa_get_key_id( &attributes ), expected_id ) );
+    TEST_EQUAL( psa_get_key_id( &attributes ), expected_id );
     TEST_EQUAL( psa_get_key_lifetime( &attributes ), expected_lifetime );
 }
 /* END_CASE */
@@ -3045,21 +3007,17 @@ void mac_sign( int key_type_arg,
     psa_algorithm_t alg = alg_arg;
     psa_mac_operation_t operation = PSA_MAC_OPERATION_INIT;
     psa_key_attributes_t attributes = PSA_KEY_ATTRIBUTES_INIT;
-    uint8_t *actual_mac = NULL;
+    /* Leave a little extra room in the output buffer. At the end of the
+     * test, we'll check that the implementation didn't overwrite onto
+     * this extra room. */
+    uint8_t actual_mac[PSA_MAC_MAX_SIZE + 10];
     size_t mac_buffer_size =
         PSA_MAC_FINAL_SIZE( key_type, PSA_BYTES_TO_BITS( key->len ), alg );
     size_t mac_length = 0;
-    const size_t output_sizes_to_test[] = {
-        0,
-        1,
-        expected_mac->len - 1,
-        expected_mac->len,
-        expected_mac->len + 1,
-    };
 
+    memset( actual_mac, '+', sizeof( actual_mac ) );
     TEST_ASSERT( mac_buffer_size <= PSA_MAC_MAX_SIZE );
-    /* We expect PSA_MAC_FINAL_SIZE to be exact. */
-    TEST_ASSERT( expected_mac->len == mac_buffer_size );
+    TEST_ASSERT( expected_mac->len <= mac_buffer_size );
 
     PSA_ASSERT( psa_crypto_init( ) );
 
@@ -3069,41 +3027,26 @@ void mac_sign( int key_type_arg,
 
     PSA_ASSERT( psa_import_key( &attributes, key->x, key->len, &handle ) );
 
-    for( size_t i = 0; i < ARRAY_LENGTH( output_sizes_to_test ); i++ )
-    {
-        const size_t output_size = output_sizes_to_test[i];
-        psa_status_t expected_status =
-            ( output_size >= expected_mac->len ? PSA_SUCCESS :
-              PSA_ERROR_BUFFER_TOO_SMALL );
+    /* Calculate the MAC. */
+    PSA_ASSERT( psa_mac_sign_setup( &operation,
+                                    handle, alg ) );
+    PSA_ASSERT( psa_mac_update( &operation,
+                                input->x, input->len ) );
+    PSA_ASSERT( psa_mac_sign_finish( &operation,
+                                     actual_mac, mac_buffer_size,
+                                     &mac_length ) );
 
-        test_set_step( output_size );
-        ASSERT_ALLOC( actual_mac, output_size );
+    /* Compare with the expected value. */
+    ASSERT_COMPARE( expected_mac->x, expected_mac->len,
+                    actual_mac, mac_length );
 
-        /* Calculate the MAC. */
-        PSA_ASSERT( psa_mac_sign_setup( &operation,
-                                        handle, alg ) );
-        PSA_ASSERT( psa_mac_update( &operation,
-                                    input->x, input->len ) );
-        TEST_EQUAL( psa_mac_sign_finish( &operation,
-                                         actual_mac, output_size,
-                                         &mac_length ),
-                    expected_status );
-        PSA_ASSERT( psa_mac_abort( &operation ) );
-
-        if( expected_status == PSA_SUCCESS )
-        {
-            ASSERT_COMPARE( expected_mac->x, expected_mac->len,
-                            actual_mac, mac_length );
-        }
-        mbedtls_free( actual_mac );
-        actual_mac = NULL;
-    }
+    /* Verify that the end of the buffer is untouched. */
+    TEST_ASSERT( mem_is_char( actual_mac + mac_length, '+',
+                              sizeof( actual_mac ) - mac_length ) );
 
 exit:
-    psa_mac_abort( &operation );
     psa_destroy_key( handle );
     PSA_DONE( );
-    mbedtls_free( actual_mac );
 }
 /* END_CASE */
 
@@ -3119,7 +3062,6 @@ void mac_verify( int key_type_arg,
     psa_algorithm_t alg = alg_arg;
     psa_mac_operation_t operation = PSA_MAC_OPERATION_INIT;
     psa_key_attributes_t attributes = PSA_KEY_ATTRIBUTES_INIT;
-    uint8_t *perturbed_mac = NULL;
 
     TEST_ASSERT( expected_mac->len <= PSA_MAC_MAX_SIZE );
 
@@ -3131,58 +3073,18 @@ void mac_verify( int key_type_arg,
 
     PSA_ASSERT( psa_import_key( &attributes, key->x, key->len, &handle ) );
 
-    /* Test the correct MAC. */
     PSA_ASSERT( psa_mac_verify_setup( &operation,
                                       handle, alg ) );
+    PSA_ASSERT( psa_destroy_key( handle ) );
     PSA_ASSERT( psa_mac_update( &operation,
                                 input->x, input->len ) );
     PSA_ASSERT( psa_mac_verify_finish( &operation,
                                        expected_mac->x,
                                        expected_mac->len ) );
 
-    /* Test a MAC that's too short. */
-    PSA_ASSERT( psa_mac_verify_setup( &operation,
-                                      handle, alg ) );
-    PSA_ASSERT( psa_mac_update( &operation,
-                                input->x, input->len ) );
-    TEST_EQUAL( psa_mac_verify_finish( &operation,
-                                       expected_mac->x,
-                                       expected_mac->len - 1 ),
-                PSA_ERROR_INVALID_SIGNATURE );
-
-    /* Test a MAC that's too long. */
-    ASSERT_ALLOC( perturbed_mac, expected_mac->len + 1 );
-    memcpy( perturbed_mac, expected_mac->x, expected_mac->len );
-    PSA_ASSERT( psa_mac_verify_setup( &operation,
-                                      handle, alg ) );
-    PSA_ASSERT( psa_mac_update( &operation,
-                                input->x, input->len ) );
-    TEST_EQUAL( psa_mac_verify_finish( &operation,
-                                       perturbed_mac,
-                                       expected_mac->len + 1 ),
-                PSA_ERROR_INVALID_SIGNATURE );
-
-    /* Test changing one byte. */
-    for( size_t i = 0; i < expected_mac->len; i++ )
-    {
-        test_set_step( i );
-        perturbed_mac[i] ^= 1;
-        PSA_ASSERT( psa_mac_verify_setup( &operation,
-                                          handle, alg ) );
-        PSA_ASSERT( psa_mac_update( &operation,
-                                    input->x, input->len ) );
-        TEST_EQUAL( psa_mac_verify_finish( &operation,
-                                           perturbed_mac,
-                                           expected_mac->len ),
-                    PSA_ERROR_INVALID_SIGNATURE );
-        perturbed_mac[i] ^= 1;
-    }
-
 exit:
-    psa_mac_abort( &operation );
     psa_destroy_key( handle );
     PSA_DONE( );
-    mbedtls_free( perturbed_mac );
 }
 /* END_CASE */
 
@@ -3260,7 +3162,6 @@ void cipher_setup( int key_type_arg,
 #endif
 
 exit:
-    psa_cipher_abort( &operation );
     PSA_DONE( );
 }
 /* END_CASE */
@@ -3413,7 +3314,6 @@ void cipher_bad_order( )
     PSA_ASSERT( psa_destroy_key( handle ) );
 
 exit:
-    psa_cipher_abort( &operation );
     PSA_DONE( );
 }
 /* END_CASE */
@@ -3447,7 +3347,11 @@ void cipher_encrypt( int alg_arg, int key_type_arg,
     PSA_ASSERT( psa_cipher_encrypt_setup( &operation,
                                           handle, alg ) );
 
-    PSA_ASSERT( psa_cipher_set_iv( &operation, iv->x, iv->len ) );
+    if( iv->len > 0 )
+    {
+        PSA_ASSERT( psa_cipher_set_iv( &operation, iv->x, iv->len ) );
+    }
+
     output_buffer_size = ( (size_t) input->len +
                            PSA_BLOCK_CIPHER_BLOCK_SIZE( key_type ) );
     ASSERT_ALLOC( output, output_buffer_size );
@@ -3472,7 +3376,6 @@ void cipher_encrypt( int alg_arg, int key_type_arg,
     }
 
 exit:
-    psa_cipher_abort( &operation );
     mbedtls_free( output );
     psa_destroy_key( handle );
     PSA_DONE( );
@@ -3511,7 +3414,11 @@ void cipher_encrypt_multipart( int alg_arg, int key_type_arg,
     PSA_ASSERT( psa_cipher_encrypt_setup( &operation,
                                           handle, alg ) );
 
-    PSA_ASSERT( psa_cipher_set_iv( &operation, iv->x, iv->len ) );
+    if( iv->len > 0 )
+    {
+        PSA_ASSERT( psa_cipher_set_iv( &operation, iv->x, iv->len ) );
+    }
+
     output_buffer_size = ( (size_t) input->len +
                            PSA_BLOCK_CIPHER_BLOCK_SIZE( key_type ) );
     ASSERT_ALLOC( output, output_buffer_size );
@@ -3541,7 +3448,6 @@ void cipher_encrypt_multipart( int alg_arg, int key_type_arg,
                     output, total_output_length );
 
 exit:
-    psa_cipher_abort( &operation );
     mbedtls_free( output );
     psa_destroy_key( handle );
     PSA_DONE( );
@@ -3581,7 +3487,10 @@ void cipher_decrypt_multipart( int alg_arg, int key_type_arg,
     PSA_ASSERT( psa_cipher_decrypt_setup( &operation,
                                           handle, alg ) );
 
-    PSA_ASSERT( psa_cipher_set_iv( &operation, iv->x, iv->len ) );
+    if( iv->len > 0 )
+    {
+        PSA_ASSERT( psa_cipher_set_iv( &operation, iv->x, iv->len ) );
+    }
 
     output_buffer_size = ( (size_t) input->len +
                            PSA_BLOCK_CIPHER_BLOCK_SIZE( key_type ) );
@@ -3613,7 +3522,6 @@ void cipher_decrypt_multipart( int alg_arg, int key_type_arg,
                     output, total_output_length );
 
 exit:
-    psa_cipher_abort( &operation );
     mbedtls_free( output );
     psa_destroy_key( handle );
     PSA_DONE( );
@@ -3649,7 +3557,10 @@ void cipher_decrypt( int alg_arg, int key_type_arg,
     PSA_ASSERT( psa_cipher_decrypt_setup( &operation,
                                           handle, alg ) );
 
-    PSA_ASSERT( psa_cipher_set_iv( &operation, iv->x, iv->len ) );
+    if( iv->len > 0 )
+    {
+        PSA_ASSERT( psa_cipher_set_iv( &operation, iv->x, iv->len ) );
+    }
 
     output_buffer_size = ( (size_t) input->len +
                            PSA_BLOCK_CIPHER_BLOCK_SIZE( key_type ) );
@@ -3675,7 +3586,6 @@ void cipher_decrypt( int alg_arg, int key_type_arg,
     }
 
 exit:
-    psa_cipher_abort( &operation );
     mbedtls_free( output );
     psa_destroy_key( handle );
     PSA_DONE( );
@@ -3717,9 +3627,12 @@ void cipher_verify_output( int alg_arg, int key_type_arg,
     PSA_ASSERT( psa_cipher_decrypt_setup( &operation2,
                                           handle, alg ) );
 
-    PSA_ASSERT( psa_cipher_generate_iv( &operation1,
-                                        iv, iv_size,
-                                        &iv_length ) );
+    if( alg != PSA_ALG_ECB_NO_PADDING )
+    {
+        PSA_ASSERT( psa_cipher_generate_iv( &operation1,
+                                            iv, iv_size,
+                                            &iv_length ) );
+    }
     output1_size = ( (size_t) input->len +
                      PSA_BLOCK_CIPHER_BLOCK_SIZE( key_type ) );
     ASSERT_ALLOC( output1, output1_size );
@@ -3739,8 +3652,12 @@ void cipher_verify_output( int alg_arg, int key_type_arg,
     output2_size = output1_length;
     ASSERT_ALLOC( output2, output2_size );
 
-    PSA_ASSERT( psa_cipher_set_iv( &operation2,
-                                   iv, iv_length ) );
+    if( iv_length > 0 )
+    {
+        PSA_ASSERT( psa_cipher_set_iv( &operation2,
+                                       iv, iv_length ) );
+    }
+
     PSA_ASSERT( psa_cipher_update( &operation2, output1, output1_length,
                                    output2, output2_size,
                                    &output2_length ) );
@@ -3757,8 +3674,6 @@ void cipher_verify_output( int alg_arg, int key_type_arg,
     ASSERT_COMPARE( input->x, input->len, output2, output2_length );
 
 exit:
-    psa_cipher_abort( &operation1 );
-    psa_cipher_abort( &operation2 );
     mbedtls_free( output1 );
     mbedtls_free( output2 );
     psa_destroy_key( handle );
@@ -3804,9 +3719,13 @@ void cipher_verify_output_multipart( int alg_arg,
     PSA_ASSERT( psa_cipher_decrypt_setup( &operation2,
                                           handle, alg ) );
 
-    PSA_ASSERT( psa_cipher_generate_iv( &operation1,
-                                        iv, iv_size,
-                                        &iv_length ) );
+    if( alg != PSA_ALG_ECB_NO_PADDING )
+    {
+        PSA_ASSERT( psa_cipher_generate_iv( &operation1,
+                                            iv, iv_size,
+                                            &iv_length ) );
+    }
+
     output1_buffer_size = ( (size_t) input->len +
                             PSA_BLOCK_CIPHER_BLOCK_SIZE( key_type ) );
     ASSERT_ALLOC( output1, output1_buffer_size );
@@ -3836,8 +3755,11 @@ void cipher_verify_output_multipart( int alg_arg,
     output2_buffer_size = output1_length;
     ASSERT_ALLOC( output2, output2_buffer_size );
 
-    PSA_ASSERT( psa_cipher_set_iv( &operation2,
-                                   iv, iv_length ) );
+    if( iv_length > 0 )
+    {
+        PSA_ASSERT( psa_cipher_set_iv( &operation2,
+                                       iv, iv_length ) );
+    }
 
     PSA_ASSERT( psa_cipher_update( &operation2, output1, first_part_size,
                                    output2, output2_buffer_size,
@@ -3862,8 +3784,6 @@ void cipher_verify_output_multipart( int alg_arg,
     ASSERT_COMPARE( input->x, input->len, output2, output2_length );
 
 exit:
-    psa_cipher_abort( &operation1 );
-    psa_cipher_abort( &operation2 );
     mbedtls_free( output1 );
     mbedtls_free( output2 );
     psa_destroy_key( handle );
@@ -5601,7 +5521,7 @@ void persistent_key_load_key_from_storage( data_t *data,
                                            int usage_flags_arg, int alg_arg,
                                            int generation_method )
 {
-    mbedtls_svc_key_id_t key_id = mbedtls_svc_key_id_make( 1, 1 );
+    psa_key_id_t key_id = 1;
     psa_key_attributes_t attributes = PSA_KEY_ATTRIBUTES_INIT;
     psa_key_handle_t handle = 0;
     psa_key_handle_t base_key = 0;
@@ -5693,8 +5613,7 @@ void persistent_key_load_key_from_storage( data_t *data,
     /* Check key slot still contains key data */
     PSA_ASSERT( psa_open_key( key_id, &handle ) );
     PSA_ASSERT( psa_get_key_attributes( handle, &attributes ) );
-    TEST_ASSERT( mbedtls_svc_key_id_equal(
-                     psa_get_key_id( &attributes ), key_id ) );
+    TEST_EQUAL( psa_get_key_id( &attributes ), key_id );
     TEST_EQUAL( psa_get_key_lifetime( &attributes ),
                 PSA_KEY_LIFETIME_PERSISTENT );
     TEST_EQUAL( psa_get_key_type( &attributes ), type );
@@ -5727,7 +5646,7 @@ exit:
         /* In case there was a test failure after creating the persistent key
          * but while it was not open, try to re-open the persistent key
          * to delete it. */
-        (void) psa_open_key( key_id, &handle );
+        psa_open_key( key_id, &handle );
     }
     psa_destroy_key( handle );
     PSA_DONE();

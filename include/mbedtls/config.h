@@ -8,7 +8,7 @@
  *  memory footprint.
  */
 /*
- *  Copyright The Mbed TLS Contributors
+ *  Copyright (C) 2006-2018, ARM Limited, All Rights Reserved
  *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -22,6 +22,8 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
+ *
+ *  This file is part of mbed TLS (https://tls.mbed.org)
  */
 
 #ifndef MBEDTLS_CONFIG_H
@@ -754,7 +756,6 @@
  *
  * Comment macros to disable the curve and functions for it
  */
-/* Short Weierstrass curves (supporting ECP, ECDH, ECDSA) */
 #define MBEDTLS_ECP_DP_SECP192R1_ENABLED
 #define MBEDTLS_ECP_DP_SECP224R1_ENABLED
 #define MBEDTLS_ECP_DP_SECP256R1_ENABLED
@@ -766,7 +767,6 @@
 #define MBEDTLS_ECP_DP_BP256R1_ENABLED
 #define MBEDTLS_ECP_DP_BP384R1_ENABLED
 #define MBEDTLS_ECP_DP_BP512R1_ENABLED
-/* Montgomery curves (supporting ECP) */
 #define MBEDTLS_ECP_DP_CURVE25519_ENABLED
 #define MBEDTLS_ECP_DP_CURVE448_ENABLED
 
@@ -1083,7 +1083,7 @@
  *
  * Enable the ECDH-ECDSA based ciphersuite modes in SSL / TLS.
  *
- * Requires: MBEDTLS_ECDH_C, MBEDTLS_ECDSA_C, MBEDTLS_X509_CRT_PARSE_C
+ * Requires: MBEDTLS_ECDH_C, MBEDTLS_X509_CRT_PARSE_C
  *
  * This enables the following ciphersuites (if other requisites are
  * enabled as well):
@@ -1107,7 +1107,7 @@
  *
  * Enable the ECDH-RSA based ciphersuite modes in SSL / TLS.
  *
- * Requires: MBEDTLS_ECDH_C, MBEDTLS_RSA_C, MBEDTLS_X509_CRT_PARSE_C
+ * Requires: MBEDTLS_ECDH_C, MBEDTLS_X509_CRT_PARSE_C
  *
  * This enables the following ciphersuites (if other requisites are
  * enabled as well):
@@ -1258,20 +1258,20 @@
  */
 //#define MBEDTLS_ENTROPY_NV_SEED
 
-/* MBEDTLS_PSA_CRYPTO_KEY_ID_ENCODES_OWNER
+/* MBEDTLS_PSA_CRYPTO_KEY_FILE_ID_ENCODES_OWNER
  *
- * Enable key identifiers that encode a key owner identifier.
+ * In PSA key storage, encode the owner of the key.
  *
  * This is only meaningful when building the library as part of a
- * multi-client service. When you activate this option, you must provide an
- * implementation of the type mbedtls_key_owner_id_t and a translation from
- * mbedtls_svc_key_id_t to file name in all the storage backends that you
+ * multi-client service. When you activate this option, you must provide
+ * an implementation of the type psa_key_owner_id_t and a translation
+ * from psa_key_file_id_t to file name in all the storage backends that
  * you wish to support.
  *
  * Note that this option is meant for internal use only and may be removed
  * without notice.
  */
-//#define MBEDTLS_PSA_CRYPTO_KEY_ID_ENCODES_OWNER
+//#define MBEDTLS_PSA_CRYPTO_KEY_FILE_ID_ENCODES_OWNER
 
 /**
  * \def MBEDTLS_MEMORY_DEBUG
@@ -1328,17 +1328,6 @@
  * This enables support for RSAES-OAEP and RSASSA-PSS operations.
  */
 #define MBEDTLS_PKCS1_V21
-
-/** \def MBEDTLS_PSA_CRYPTO_DRIVERS
- *
- * Enable support for the experimental PSA crypto driver interface.
- *
- * Requires: MBEDTLS_PSA_CRYPTO_C.
- *
- * \warning This interface is experimental and may change or be removed
- * without notice.
- */
-//#define MBEDTLS_PSA_CRYPTO_DRIVERS
 
 /**
  * \def MBEDTLS_PSA_CRYPTO_SPM
@@ -1916,42 +1905,6 @@
  * Enable modifying the maximum I/O buffer size.
  */
 //#define MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH
-
-/**
- * \def MBEDTLS_TEST_CONSTANT_FLOW_MEMSAN
- *
- * Enable testing of the constant-flow nature of some sensitive functions with
- * clang's MemorySanitizer. This causes some existing tests to also test
- * this non-functional property of the code under test.
- *
- * This setting requires compiling with clang -fsanitize=memory. The test
- * suites can then be run normally.
- *
- * \warning This macro is only used for extended testing; it is not considered
- * part of the library's API, so it may change or disappear at any time.
- *
- * Uncomment to enable testing of the constant-flow nature of selected code.
- */
-//#define MBEDTLS_TEST_CONSTANT_FLOW_MEMSAN
-
-/**
- * \def MBEDTLS_TEST_CONSTANT_FLOW_VALGRIND
- *
- * Enable testing of the constant-flow nature of some sensitive functions with
- * valgrind's memcheck tool. This causes some existing tests to also test
- * this non-functional property of the code under test.
- *
- * This setting requires valgrind headers for building, and is only useful for
- * testing if the tests suites are run with valgrind's memcheck. This can be
- * done for an individual test suite with 'valgrind ./test_suite_xxx', or when
- * using CMake, this can be done for all test suites with 'make memcheck'.
- *
- * \warning This macro is only used for extended testing; it is not considered
- * part of the library's API, so it may change or disappear at any time.
- *
- * Uncomment to enable testing of the constant-flow nature of selected code.
- */
-//#define MBEDTLS_TEST_CONSTANT_FLOW_VALGRIND
 
 /**
  * \def MBEDTLS_TEST_HOOKS
@@ -2618,9 +2571,7 @@
  * This module is used by the following key exchanges:
  *      ECDHE-ECDSA
  *
- * Requires: MBEDTLS_ECP_C, MBEDTLS_ASN1_WRITE_C, MBEDTLS_ASN1_PARSE_C,
- *           and at least one MBEDTLS_ECP_DP_XXX_ENABLED for a
- *           short Weierstrass curve.
+ * Requires: MBEDTLS_ECP_C, MBEDTLS_ASN1_WRITE_C, MBEDTLS_ASN1_PARSE_C
  */
 #define MBEDTLS_ECDSA_C
 
@@ -3461,7 +3412,7 @@
  */
 
 /* MPI / BIGNUM options */
-//#define MBEDTLS_MPI_WINDOW_SIZE            6 /**< Maximum window size used. */
+//#define MBEDTLS_MPI_WINDOW_SIZE            6 /**< Maximum windows size used. */
 //#define MBEDTLS_MPI_MAX_SIZE            1024 /**< Maximum number of bytes for usable MPIs. */
 
 /* CTR_DRBG options */

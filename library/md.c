@@ -5,7 +5,7 @@
  *
  * \author Adriaan de Jong <dejong@fox-it.com>
  *
- *  Copyright The Mbed TLS Contributors
+ *  Copyright (C) 2006-2015, ARM Limited, All Rights Reserved
  *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -19,6 +19,8 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
+ *
+ *  This file is part of mbed TLS (https://tls.mbed.org)
  */
 
 #include "common.h"
@@ -411,10 +413,6 @@ int mbedtls_md_setup( mbedtls_md_context_t *ctx, const mbedtls_md_info_t *md_inf
     if( md_info == NULL || ctx == NULL )
         return( MBEDTLS_ERR_MD_BAD_INPUT_DATA );
 
-    ctx->md_info = md_info;
-    ctx->md_ctx = NULL;
-    ctx->hmac_ctx = NULL;
-
     switch( md_info->type )
     {
 #if defined(MBEDTLS_MD2_C)
@@ -469,6 +467,8 @@ int mbedtls_md_setup( mbedtls_md_context_t *ctx, const mbedtls_md_info_t *md_inf
             return( MBEDTLS_ERR_MD_ALLOC_FAILED );
         }
     }
+
+    ctx->md_info = md_info;
 
     return( 0 );
 }
