@@ -8,7 +8,7 @@
  * \author Adriaan de Jong <dejong@fox-it.com>
  */
 /*
- *  Copyright The Mbed TLS Contributors
+ *  Copyright (C) 2006-2018, Arm Limited (or its affiliates), All Rights Reserved
  *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -22,6 +22,8 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
+ *
+ *  This file is part of Mbed TLS (https://tls.mbed.org)
  */
 
 #ifndef MBEDTLS_CIPHER_H
@@ -227,22 +229,9 @@ enum {
 };
 
 /** Maximum length of any IV, in Bytes. */
-/* This should ideally be derived automatically from list of ciphers. */
 #define MBEDTLS_MAX_IV_LENGTH      16
-
 /** Maximum block size of any cipher, in Bytes. */
-/* This should ideally be derived automatically from list of ciphers. */
 #define MBEDTLS_MAX_BLOCK_LENGTH   16
-
-/** Maximum key length, in Bytes. */
-/* This should ideally be derived automatically from list of ciphers.
- * For now, only check whether XTS is enabled which uses 64 Byte keys,
- * and use 32 Bytes as an upper bound for the maximum key length otherwise. */
-#if defined(MBEDTLS_CIPHER_MODE_XTS)
-#define MBEDTLS_MAX_KEY_LENGTH     64
-#else
-#define MBEDTLS_MAX_KEY_LENGTH     32
-#endif /* MBEDTLS_CIPHER_MODE_XTS */
 
 /**
  * Base cipher information (opaque struct).
