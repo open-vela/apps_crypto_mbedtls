@@ -8,7 +8,7 @@
  *  memory footprint.
  */
 /*
- *  Copyright (C) 2006-2018, ARM Limited, All Rights Reserved
+ *  Copyright The Mbed TLS Contributors
  *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -22,8 +22,6 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
- *
- *  This file is part of mbed TLS (https://tls.mbed.org)
  */
 
 #ifndef MBEDTLS_CONFIG_H
@@ -1909,6 +1907,42 @@
 //#define MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH
 
 /**
+ * \def MBEDTLS_TEST_CONSTANT_FLOW_MEMSAN
+ *
+ * Enable testing of the constant-flow nature of some sensitive functions with
+ * clang's MemorySanitizer. This causes some existing tests to also test
+ * this non-functional property of the code under test.
+ *
+ * This setting requires compiling with clang -fsanitize=memory. The test
+ * suites can then be run normally.
+ *
+ * \warning This macro is only used for extended testing; it is not considered
+ * part of the library's API, so it may change or disappear at any time.
+ *
+ * Uncomment to enable testing of the constant-flow nature of selected code.
+ */
+//#define MBEDTLS_TEST_CONSTANT_FLOW_MEMSAN
+
+/**
+ * \def MBEDTLS_TEST_CONSTANT_FLOW_VALGRIND
+ *
+ * Enable testing of the constant-flow nature of some sensitive functions with
+ * valgrind's memcheck tool. This causes some existing tests to also test
+ * this non-functional property of the code under test.
+ *
+ * This setting requires valgrind headers for building, and is only useful for
+ * testing if the tests suites are run with valgrind's memcheck. This can be
+ * done for an individual test suite with 'valgrind ./test_suite_xxx', or when
+ * using CMake, this can be done for all test suites with 'make memcheck'.
+ *
+ * \warning This macro is only used for extended testing; it is not considered
+ * part of the library's API, so it may change or disappear at any time.
+ *
+ * Uncomment to enable testing of the constant-flow nature of selected code.
+ */
+//#define MBEDTLS_TEST_CONSTANT_FLOW_VALGRIND
+
+/**
  * \def MBEDTLS_TEST_HOOKS
  *
  * Enable features for invasive testing such as introspection functions and
@@ -3416,7 +3450,7 @@
  */
 
 /* MPI / BIGNUM options */
-//#define MBEDTLS_MPI_WINDOW_SIZE            6 /**< Maximum window size used. */
+//#define MBEDTLS_MPI_WINDOW_SIZE            6 /**< Maximum windows size used. */
 //#define MBEDTLS_MPI_MAX_SIZE            1024 /**< Maximum number of bytes for usable MPIs. */
 
 /* CTR_DRBG options */
