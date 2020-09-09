@@ -6,7 +6,7 @@
 # Must be run from mbedTLS root or scripts directory.
 # Takes no argument.
 #
-# Copyright (C) 2013-2020, Arm Limited, All Rights Reserved
+# Copyright The Mbed TLS Contributors
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -20,8 +20,6 @@
 # WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
-# This file is part of Mbed TLS (https://tls.mbed.org)
 
 use warnings;
 use strict;
@@ -41,6 +39,7 @@ my $psa_header_dir = 'include/psa';
 my $source_dir = 'library';
 my $test_source_dir = 'tests/src';
 my $test_header_dir = 'tests/include/test';
+my $test_drivers_header_dir = 'tests/include/test/drivers';
 
 my @thirdparty_header_dirs = qw(
     3rdparty/everest/include/everest
@@ -118,6 +117,7 @@ sub check_dirs {
         && -d $source_dir
         && -d $test_source_dir
         && -d $test_header_dir
+        && -d $test_drivers_header_dir
         && -d $programs_dir;
 }
 
@@ -264,6 +264,7 @@ sub main {
                        $mbedtls_header_dir,
                        $psa_header_dir,
                        $test_header_dir,
+                       $test_drivers_header_dir,
                        $source_dir,
                        @thirdparty_header_dirs,
                       );
