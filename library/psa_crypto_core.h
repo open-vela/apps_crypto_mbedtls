@@ -2,7 +2,7 @@
  *  PSA crypto core internal interfaces
  */
 /*
- *  Copyright (C) 2018, ARM Limited, All Rights Reserved
+ *  Copyright The Mbed TLS Contributors
  *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -16,8 +16,6 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
- *
- *  This file is part of mbed TLS (https://tls.mbed.org)
  */
 
 #ifndef PSA_CRYPTO_CORE_H
@@ -162,5 +160,17 @@ psa_status_t psa_wipe_key_slot( psa_key_slot_t *slot );
 psa_status_t psa_import_key_into_slot( psa_key_slot_t *slot,
                                        const uint8_t *data,
                                        size_t data_length );
+
+
+/** Convert an mbed TLS error code to a PSA error code
+ *
+ * \note This function is provided solely for the convenience of
+ *       Mbed TLS and may be removed at any time without notice.
+ *
+ * \param ret           An mbed TLS-thrown error code
+ *
+ * \return              The corresponding PSA error code
+ */
+psa_status_t mbedtls_to_psa_error( int ret );
 
 #endif /* PSA_CRYPTO_CORE_H */
