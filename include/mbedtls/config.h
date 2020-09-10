@@ -1329,6 +1329,17 @@
  */
 #define MBEDTLS_PKCS1_V21
 
+/** \def MBEDTLS_PSA_CRYPTO_DRIVERS
+ *
+ * Enable support for the experimental PSA crypto driver interface.
+ *
+ * Requires: MBEDTLS_PSA_CRYPTO_C.
+ *
+ * \warning This interface is experimental and may change or be removed
+ * without notice.
+ */
+//#define MBEDTLS_PSA_CRYPTO_DRIVERS
+
 /**
  * \def MBEDTLS_PSA_CRYPTO_SPM
  *
@@ -3450,7 +3461,7 @@
  */
 
 /* MPI / BIGNUM options */
-//#define MBEDTLS_MPI_WINDOW_SIZE            6 /**< Maximum windows size used. */
+//#define MBEDTLS_MPI_WINDOW_SIZE            6 /**< Maximum window size used. */
 //#define MBEDTLS_MPI_MAX_SIZE            1024 /**< Maximum number of bytes for usable MPIs. */
 
 /* CTR_DRBG options */
