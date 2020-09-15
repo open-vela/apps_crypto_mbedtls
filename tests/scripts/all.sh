@@ -1217,13 +1217,31 @@ component_test_depends_curves () {
     record_status tests/scripts/curves.pl
 }
 
+component_test_depends_curves_psa () {
+    msg "test/build: curves.pl with MBEDTLS_USE_PSA_CRYPTO defined (gcc)"
+    scripts/config.py set MBEDTLS_USE_PSA_CRYPTO
+    record_status tests/scripts/curves.pl
+}
+
 component_test_depends_hashes () {
     msg "test/build: depends-hashes.pl (gcc)" # ~ 2 min
     record_status tests/scripts/depends-hashes.pl
 }
 
+component_test_depends_hashes_psa () {
+    msg "test/build: depends-hashes.pl with MBEDTLS_USE_PSA_CRYPTO defined (gcc)"
+    scripts/config.py set MBEDTLS_USE_PSA_CRYPTO
+    record_status tests/scripts/depends-hashes.pl
+}
+
 component_test_depends_pkalgs () {
     msg "test/build: depends-pkalgs.pl (gcc)" # ~ 2 min
+    record_status tests/scripts/depends-pkalgs.pl
+}
+
+component_test_depends_pkalgs_psa () {
+    msg "test/build: depends-pkalgs.pl with MBEDTLS_USE_PSA_CRYPTO defined (gcc)"
+    scripts/config.py set MBEDTLS_USE_PSA_CRYPTO
     record_status tests/scripts/depends-pkalgs.pl
 }
 
@@ -1653,6 +1671,16 @@ component_test_se_default () {
     make CC=clang CFLAGS="$ASAN_CFLAGS -Os" LDFLAGS="$ASAN_CFLAGS"
 
     msg "test: default config + MBEDTLS_PSA_CRYPTO_SE_C"
+    make test
+}
+
+component_test_psa_crypto_drivers () {
+    msg "build: MBEDTLS_PSA_CRYPTO_DRIVERS w/ driver hooks"
+    scripts/config.py set MBEDTLS_PSA_CRYPTO_DRIVERS
+    # Need to define the correct symbol and include the test driver header path in order to build with the test driver
+    make CC=gcc CFLAGS="$ASAN_CFLAGS -DPSA_CRYPTO_DRIVER_TEST -I../tests/include -O2" LDFLAGS="$ASAN_CFLAGS"
+
+    msg "test: MBEDTLS_PSA_CRYPTO_DRIVERS, signature"
     make test
 }
 
