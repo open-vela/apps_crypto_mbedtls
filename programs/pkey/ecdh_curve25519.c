@@ -86,7 +86,7 @@ int main( int argc, char *argv[] )
     mbedtls_printf( " ok\n" );
 
     /*
-     * Client: initialize context and generate keypair
+     * Client: inialize context and generate keypair
      */
     mbedtls_printf( "  . Setting up client context..." );
     fflush( stdout );
