@@ -2101,7 +2101,7 @@ int mbedtls_mpi_exp_mod( mbedtls_mpi *X, const mbedtls_mpi *A,
     size_t i, j, nblimbs;
     size_t bufsize, nbits;
     mbedtls_mpi_uint ei, mm, state;
-    mbedtls_mpi RR, T, W[ 2 << MBEDTLS_MPI_WINDOW_SIZE ], Apos;
+    mbedtls_mpi RR, T, W[ 1 << MBEDTLS_MPI_WINDOW_SIZE ], Apos;
     int neg;
 
     MPI_VALIDATE_RET( X != NULL );
@@ -2114,10 +2114,6 @@ int mbedtls_mpi_exp_mod( mbedtls_mpi *X, const mbedtls_mpi *A,
 
     if( mbedtls_mpi_cmp_int( E, 0 ) < 0 )
         return( MBEDTLS_ERR_MPI_BAD_INPUT_DATA );
-
-    if( mbedtls_mpi_bitlen( E ) > MBEDTLS_MPI_MAX_BITS ||
-        mbedtls_mpi_bitlen( N ) > MBEDTLS_MPI_MAX_BITS )
-        return ( MBEDTLS_ERR_MPI_BAD_INPUT_DATA );
 
     /*
      * Init temps and window size
