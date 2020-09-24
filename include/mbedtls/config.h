@@ -1329,17 +1329,6 @@
  */
 #define MBEDTLS_PKCS1_V21
 
-/** \def MBEDTLS_PSA_CRYPTO_DRIVERS
- *
- * Enable support for the experimental PSA crypto driver interface.
- *
- * Requires: MBEDTLS_PSA_CRYPTO_C or MBEDTLS_PSA_CRYPTO_CONFIG
- *
- * \warning This interface is experimental and may change or be removed
- * without notice.
- */
-//#define MBEDTLS_PSA_CRYPTO_DRIVERS
-
 /**
  * \def MBEDTLS_PSA_CRYPTO_SPM
  *
@@ -1918,42 +1907,6 @@
 //#define MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH
 
 /**
- * \def MBEDTLS_TEST_CONSTANT_FLOW_MEMSAN
- *
- * Enable testing of the constant-flow nature of some sensitive functions with
- * clang's MemorySanitizer. This causes some existing tests to also test
- * this non-functional property of the code under test.
- *
- * This setting requires compiling with clang -fsanitize=memory. The test
- * suites can then be run normally.
- *
- * \warning This macro is only used for extended testing; it is not considered
- * part of the library's API, so it may change or disappear at any time.
- *
- * Uncomment to enable testing of the constant-flow nature of selected code.
- */
-//#define MBEDTLS_TEST_CONSTANT_FLOW_MEMSAN
-
-/**
- * \def MBEDTLS_TEST_CONSTANT_FLOW_VALGRIND
- *
- * Enable testing of the constant-flow nature of some sensitive functions with
- * valgrind's memcheck tool. This causes some existing tests to also test
- * this non-functional property of the code under test.
- *
- * This setting requires valgrind headers for building, and is only useful for
- * testing if the tests suites are run with valgrind's memcheck. This can be
- * done for an individual test suite with 'valgrind ./test_suite_xxx', or when
- * using CMake, this can be done for all test suites with 'make memcheck'.
- *
- * \warning This macro is only used for extended testing; it is not considered
- * part of the library's API, so it may change or disappear at any time.
- *
- * Uncomment to enable testing of the constant-flow nature of selected code.
- */
-//#define MBEDTLS_TEST_CONSTANT_FLOW_VALGRIND
-
-/**
  * \def MBEDTLS_TEST_HOOKS
  *
  * Enable features for invasive testing such as introspection functions and
@@ -2021,15 +1974,6 @@
  * Uncomment this to enable internal use of PSA Crypto and new associated APIs.
  */
 //#define MBEDTLS_USE_PSA_CRYPTO
-
-/**
- * \def MBEDTLS_PSA_CRYPTO_CONFIG
- *
- * This setting should be used to allow for conditional inclusion of PSA features.
- *
- * Uncomment this to enable use of PSA Crypto configuration settings.
- */
-//#define MBEDTLS_PSA_CRYPTO_CONFIG
 
 /**
  * \def MBEDTLS_VERSION_FEATURES
@@ -3470,7 +3414,7 @@
  */
 
 /* MPI / BIGNUM options */
-//#define MBEDTLS_MPI_WINDOW_SIZE            6 /**< Maximum window size used. */
+//#define MBEDTLS_MPI_WINDOW_SIZE            6 /**< Maximum windows size used. */
 //#define MBEDTLS_MPI_MAX_SIZE            1024 /**< Maximum number of bytes for usable MPIs. */
 
 /* CTR_DRBG options */
@@ -3822,12 +3766,6 @@
 #if defined(MBEDTLS_USER_CONFIG_FILE)
 #include MBEDTLS_USER_CONFIG_FILE
 #endif
-
-/**
- * \name SECTION: PSA Crypto settings
- *
- */
-#include "mbedtls/config_psa.h"
 
 #include "mbedtls/check_config.h"
 

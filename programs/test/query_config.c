@@ -1216,14 +1216,6 @@ int query_config( const char *config )
     }
 #endif /* MBEDTLS_PKCS1_V21 */
 
-#if defined(MBEDTLS_PSA_CRYPTO_DRIVERS)
-    if( strcmp( "MBEDTLS_PSA_CRYPTO_DRIVERS", config ) == 0 )
-    {
-        MACRO_EXPANSION_TO_STR( MBEDTLS_PSA_CRYPTO_DRIVERS );
-        return( 0 );
-    }
-#endif /* MBEDTLS_PSA_CRYPTO_DRIVERS */
-
 #if defined(MBEDTLS_PSA_CRYPTO_SPM)
     if( strcmp( "MBEDTLS_PSA_CRYPTO_SPM", config ) == 0 )
     {
@@ -1543,22 +1535,6 @@ int query_config( const char *config )
         return( 0 );
     }
 #endif /* MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH */
-
-#if defined(MBEDTLS_TEST_CONSTANT_FLOW_MEMSAN)
-    if( strcmp( "MBEDTLS_TEST_CONSTANT_FLOW_MEMSAN", config ) == 0 )
-    {
-        MACRO_EXPANSION_TO_STR( MBEDTLS_TEST_CONSTANT_FLOW_MEMSAN );
-        return( 0 );
-    }
-#endif /* MBEDTLS_TEST_CONSTANT_FLOW_MEMSAN */
-
-#if defined(MBEDTLS_TEST_CONSTANT_FLOW_VALGRIND)
-    if( strcmp( "MBEDTLS_TEST_CONSTANT_FLOW_VALGRIND", config ) == 0 )
-    {
-        MACRO_EXPANSION_TO_STR( MBEDTLS_TEST_CONSTANT_FLOW_VALGRIND );
-        return( 0 );
-    }
-#endif /* MBEDTLS_TEST_CONSTANT_FLOW_VALGRIND */
 
 #if defined(MBEDTLS_TEST_HOOKS)
     if( strcmp( "MBEDTLS_TEST_HOOKS", config ) == 0 )

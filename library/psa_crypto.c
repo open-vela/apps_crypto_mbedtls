@@ -27,7 +27,6 @@
 
 #include "psa_crypto_core.h"
 #include "psa_crypto_invasive.h"
-#include "psa_crypto_driver_wrappers.h"
 #if defined(MBEDTLS_PSA_CRYPTO_SE_C)
 #include "psa_crypto_se.h"
 #endif
@@ -125,7 +124,7 @@ static psa_global_data_t global_data;
     if( global_data.initialized == 0 )  \
         return( PSA_ERROR_BAD_STATE );
 
-psa_status_t mbedtls_to_psa_error( int ret )
+static psa_status_t mbedtls_to_psa_error( int ret )
 {
     /* If there's both a high-level code and low-level code, dispatch on
      * the high-level code. */
@@ -2256,7 +2255,7 @@ exit:
 /* Message digests */
 /****************************************************************/
 
-#if defined(MBEDTLS_RSA_C) || defined(PSA_WANT_ALG_ECDSA_DETERMINISTIC)
+#if defined(MBEDTLS_RSA_C) || defined(MBEDTLS_ECDSA_DETERMINISTIC)
 static const mbedtls_md_info_t *mbedtls_md_info_from_psa( psa_algorithm_t alg )
 {
     switch( alg )
@@ -3527,7 +3526,7 @@ static psa_status_t psa_rsa_verify( mbedtls_rsa_context *rsa,
 }
 #endif /* MBEDTLS_RSA_C */
 
-#if defined(PSA_WANT_ALG_ECDSA)
+#if defined(MBEDTLS_ECDSA_C)
 /* `ecp` cannot be const because `ecp->grp` needs to be non-const
  * for mbedtls_ecdsa_sign() and mbedtls_ecdsa_sign_det()
  * (even though these functions don't modify it). */
@@ -3551,7 +3550,7 @@ static psa_status_t psa_ecdsa_sign( mbedtls_ecp_keypair *ecp,
         goto cleanup;
     }
 
-#if defined(PSA_WANT_ALG_ECDSA_DETERMINISTIC)
+#if defined(MBEDTLS_ECDSA_DETERMINISTIC)
     if( PSA_ALG_DSA_IS_DETERMINISTIC( alg ) )
     {
         psa_algorithm_t hash_alg = PSA_ALG_SIGN_GET_HASH( alg );
@@ -3564,7 +3563,7 @@ static psa_status_t psa_ecdsa_sign( mbedtls_ecp_keypair *ecp,
                                                      &global_data.ctr_drbg ) );
     }
     else
-#endif /* PSA_WANT_ALG_ECDSA_DETERMINISTIC */
+#endif /* MBEDTLS_ECDSA_DETERMINISTIC */
     {
         (void) alg;
         MBEDTLS_MPI_CHK( mbedtls_ecdsa_sign( &ecp->grp, &r, &s, &ecp->d,
@@ -3626,7 +3625,7 @@ cleanup:
     mbedtls_mpi_free( &s );
     return( mbedtls_to_psa_error( ret ) );
 }
-#endif /* PSA_WANT_ALG_ECDSA */
+#endif /* MBEDTLS_ECDSA_C */
 
 psa_status_t psa_sign_hash( psa_key_handle_t handle,
                             psa_algorithm_t alg,
@@ -3638,6 +3637,10 @@ psa_status_t psa_sign_hash( psa_key_handle_t handle,
 {
     psa_key_slot_t *slot;
     psa_status_t status;
+#if defined(MBEDTLS_PSA_CRYPTO_SE_C)
+    const psa_drv_se_t *drv;
+    psa_drv_se_context_t *drv_context;
+#endif /* MBEDTLS_PSA_CRYPTO_SE_C */
 
     *signature_length = signature_size;
     /* Immediately reject a zero-length signature buffer. This guarantees
@@ -3656,19 +3659,24 @@ psa_status_t psa_sign_hash( psa_key_handle_t handle,
         goto exit;
     }
 
-    /* Try any of the available accelerators first */
-    status = psa_driver_wrapper_sign_hash( slot,
-                                           alg,
-                                           hash,
-                                           hash_length,
-                                           signature,
-                                           signature_size,
-                                           signature_length );
-    if( status != PSA_ERROR_NOT_SUPPORTED ||
-        psa_key_lifetime_is_external( slot->attr.lifetime ) )
-        goto exit;
-
-    /* If the operation was not supported by any accelerator, try fallback. */
+#if defined(MBEDTLS_PSA_CRYPTO_SE_C)
+    if( psa_get_se_driver( slot->attr.lifetime, &drv, &drv_context ) )
+    {
+        if( drv->asymmetric == NULL ||
+            drv->asymmetric->p_sign == NULL )
+        {
+            status = PSA_ERROR_NOT_SUPPORTED;
+            goto exit;
+        }
+        status = drv->asymmetric->p_sign( drv_context,
+                                          slot->data.se.slot_number,
+                                          alg,
+                                          hash, hash_length,
+                                          signature, signature_size,
+                                          signature_length );
+    }
+    else
+#endif /* MBEDTLS_PSA_CRYPTO_SE_C */
 #if defined(MBEDTLS_RSA_C)
     if( slot->attr.type == PSA_KEY_TYPE_RSA_KEY_PAIR )
     {
@@ -3695,9 +3703,9 @@ psa_status_t psa_sign_hash( psa_key_handle_t handle,
 #if defined(MBEDTLS_ECP_C)
     if( PSA_KEY_TYPE_IS_ECC( slot->attr.type ) )
     {
-#if defined(PSA_WANT_ALG_ECDSA)
+#if defined(MBEDTLS_ECDSA_C)
         if(
-#if defined(PSA_WANT_ALG_ECDSA_DETERMINISTIC)
+#if defined(MBEDTLS_ECDSA_DETERMINISTIC)
             PSA_ALG_IS_ECDSA( alg )
 #else
             PSA_ALG_IS_RANDOMIZED_ECDSA( alg )
@@ -3720,7 +3728,7 @@ psa_status_t psa_sign_hash( psa_key_handle_t handle,
             mbedtls_free( ecp );
         }
         else
-#endif /* defined(PSA_WANT_ALG_ECDSA) */
+#endif /* defined(MBEDTLS_ECDSA_C) */
         {
             status = PSA_ERROR_INVALID_ARGUMENT;
         }
@@ -3755,22 +3763,29 @@ psa_status_t psa_verify_hash( psa_key_handle_t handle,
 {
     psa_key_slot_t *slot;
     psa_status_t status;
+#if defined(MBEDTLS_PSA_CRYPTO_SE_C)
+    const psa_drv_se_t *drv;
+    psa_drv_se_context_t *drv_context;
+#endif /* MBEDTLS_PSA_CRYPTO_SE_C */
 
     status = psa_get_key_from_slot( handle, &slot, PSA_KEY_USAGE_VERIFY_HASH, alg );
     if( status != PSA_SUCCESS )
         return( status );
 
-    /* Try any of the available accelerators first */
-    status = psa_driver_wrapper_verify_hash( slot,
-                                             alg,
-                                             hash,
-                                             hash_length,
-                                             signature,
-                                             signature_length );
-    if( status != PSA_ERROR_NOT_SUPPORTED ||
-        psa_key_lifetime_is_external( slot->attr.lifetime ) )
-        return status;
-
+#if defined(MBEDTLS_PSA_CRYPTO_SE_C)
+    if( psa_get_se_driver( slot->attr.lifetime, &drv, &drv_context ) )
+    {
+        if( drv->asymmetric == NULL ||
+            drv->asymmetric->p_verify == NULL )
+            return( PSA_ERROR_NOT_SUPPORTED );
+        return( drv->asymmetric->p_verify( drv_context,
+                                           slot->data.se.slot_number,
+                                           alg,
+                                           hash, hash_length,
+                                           signature, signature_length ) );
+    }
+    else
+#endif /* MBEDTLS_PSA_CRYPTO_SE_C */
 #if defined(MBEDTLS_RSA_C)
     if( PSA_KEY_TYPE_IS_RSA( slot->attr.type ) )
     {
@@ -3796,7 +3811,7 @@ psa_status_t psa_verify_hash( psa_key_handle_t handle,
 #if defined(MBEDTLS_ECP_C)
     if( PSA_KEY_TYPE_IS_ECC( slot->attr.type ) )
     {
-#if defined(PSA_WANT_ALG_ECDSA)
+#if defined(MBEDTLS_ECDSA_C)
         if( PSA_ALG_IS_ECDSA( alg ) )
         {
             mbedtls_ecp_keypair *ecp = NULL;
@@ -3814,7 +3829,7 @@ psa_status_t psa_verify_hash( psa_key_handle_t handle,
             return( status );
         }
         else
-#endif /* defined(PSA_WANT_ALG_ECDSA) */
+#endif /* defined(MBEDTLS_ECDSA_C) */
         {
             return( PSA_ERROR_INVALID_ARGUMENT );
         }
@@ -5989,15 +6004,29 @@ psa_status_t psa_generate_key( const psa_key_attributes_t *attributes,
     if( status != PSA_SUCCESS )
         goto exit;
 
-    status = psa_driver_wrapper_generate_key( attributes,
-                                              slot );
-    if( status != PSA_ERROR_NOT_SUPPORTED ||
-        psa_key_lifetime_is_external( attributes->core.lifetime ) )
-        goto exit;
-
-    status = psa_generate_key_internal(
-        slot, attributes->core.bits,
-        attributes->domain_parameters, attributes->domain_parameters_size );
+#if defined(MBEDTLS_PSA_CRYPTO_SE_C)
+    if( driver != NULL )
+    {
+        const psa_drv_se_t *drv = psa_get_se_driver_methods( driver );
+        size_t pubkey_length = 0; /* We don't support this feature yet */
+        if( drv->key_management == NULL ||
+            drv->key_management->p_generate == NULL )
+        {
+            status = PSA_ERROR_NOT_SUPPORTED;
+            goto exit;
+        }
+        status = drv->key_management->p_generate(
+            psa_get_se_driver_context( driver ),
+            slot->data.se.slot_number, attributes,
+            NULL, 0, &pubkey_length );
+    }
+    else
+#endif /* MBEDTLS_PSA_CRYPTO_SE_C */
+    {
+        status = psa_generate_key_internal(
+            slot, attributes->core.bits,
+            attributes->domain_parameters, attributes->domain_parameters_size );
+    }
 
 exit:
     if( status == PSA_SUCCESS )
