@@ -157,15 +157,16 @@ exit:
  * past released version must remain valid, unless a migration path
  * is provided.
  *
- * \param key        The key identifier to check.
- * \param vendor_ok  Nonzero to allow key ids in the vendor range.
- *                   0 to allow only key ids in the application range.
+ * \param file_id       The key identifier to check.
+ * \param vendor_ok     Nonzero to allow key ids in the vendor range.
+ *                      0 to allow only key ids in the application range.
  *
- * \return           1 if \p key is acceptable, otherwise 0.
+ * \return              1 if \p file_id is acceptable, otherwise 0.
  */
-static int psa_is_key_id_valid( mbedtls_svc_key_id_t key, int vendor_ok )
+static int psa_is_key_id_valid( psa_key_file_id_t file_id,
+                                int vendor_ok )
 {
-    psa_key_id_t key_id = MBEDTLS_SVC_KEY_ID_GET_KEY_ID( key );
+    psa_app_key_id_t key_id = PSA_KEY_FILE_GET_KEY_ID( file_id );
     if( PSA_KEY_ID_USER_MIN <= key_id && key_id <= PSA_KEY_ID_USER_MAX )
         return( 1 );
     else if( vendor_ok &&
@@ -203,7 +204,7 @@ psa_status_t psa_validate_key_location( psa_key_lifetime_t lifetime,
 }
 
 psa_status_t psa_validate_key_persistence( psa_key_lifetime_t lifetime,
-                                           mbedtls_svc_key_id_t key )
+                                           psa_key_id_t key_id )
 {
     if ( PSA_KEY_LIFETIME_IS_VOLATILE( lifetime ) )
     {
@@ -214,19 +215,19 @@ psa_status_t psa_validate_key_persistence( psa_key_lifetime_t lifetime,
     {
         /* Persistent keys require storage support */
 #if defined(MBEDTLS_PSA_CRYPTO_STORAGE_C)
-        if( psa_is_key_id_valid( key,
+        if( psa_is_key_id_valid( key_id,
                                  psa_key_lifetime_is_external( lifetime ) ) )
             return( PSA_SUCCESS );
         else
             return( PSA_ERROR_INVALID_ARGUMENT );
 #else /* MBEDTLS_PSA_CRYPTO_STORAGE_C */
-        (void) key;
+        (void) key_id;
         return( PSA_ERROR_NOT_SUPPORTED );
 #endif /* !MBEDTLS_PSA_CRYPTO_STORAGE_C */
     }
 }
 
-psa_status_t psa_open_key( mbedtls_svc_key_id_t key, psa_key_handle_t *handle )
+psa_status_t psa_open_key( psa_key_file_id_t id, psa_key_handle_t *handle )
 {
 #if defined(MBEDTLS_PSA_CRYPTO_STORAGE_C)
     psa_status_t status;
@@ -234,7 +235,7 @@ psa_status_t psa_open_key( mbedtls_svc_key_id_t key, psa_key_handle_t *handle )
 
     *handle = 0;
 
-    if( ! psa_is_key_id_valid( key, 1 ) )
+    if( ! psa_is_key_id_valid( id, 1 ) )
         return( PSA_ERROR_INVALID_ARGUMENT );
 
     status = psa_get_empty_key_slot( handle, &slot );
@@ -242,7 +243,7 @@ psa_status_t psa_open_key( mbedtls_svc_key_id_t key, psa_key_handle_t *handle )
         return( status );
 
     slot->attr.lifetime = PSA_KEY_LIFETIME_PERSISTENT;
-    slot->attr.id = key;
+    slot->attr.id = id;
 
     status = psa_load_persistent_key_into_slot( slot );
     if( status != PSA_SUCCESS )
@@ -253,7 +254,7 @@ psa_status_t psa_open_key( mbedtls_svc_key_id_t key, psa_key_handle_t *handle )
     return( status );
 
 #else /* defined(MBEDTLS_PSA_CRYPTO_STORAGE_C) */
-    (void) key;
+    (void) id;
     *handle = 0;
     return( PSA_ERROR_NOT_SUPPORTED );
 #endif /* !defined(MBEDTLS_PSA_CRYPTO_STORAGE_C) */
@@ -290,14 +291,14 @@ void mbedtls_psa_get_stats( mbedtls_psa_stats_t *stats )
             ++stats->volatile_slots;
         else if( slot->attr.lifetime == PSA_KEY_LIFETIME_PERSISTENT )
         {
-            psa_key_id_t id = MBEDTLS_SVC_KEY_ID_GET_KEY_ID( slot->attr.id );
+            psa_app_key_id_t id = PSA_KEY_FILE_GET_KEY_ID(slot->attr.id);
             ++stats->persistent_slots;
             if( id > stats->max_open_internal_key_id )
                 stats->max_open_internal_key_id = id;
         }
         else
         {
-            psa_key_id_t id = MBEDTLS_SVC_KEY_ID_GET_KEY_ID( slot->attr.id );
+            psa_app_key_id_t id = PSA_KEY_FILE_GET_KEY_ID(slot->attr.id);
             ++stats->external_slots;
             if( id > stats->max_open_external_key_id )
                 stats->max_open_external_key_id = id;
