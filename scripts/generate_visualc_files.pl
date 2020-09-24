@@ -6,7 +6,7 @@
 # Must be run from mbedTLS root or scripts directory.
 # Takes no argument.
 #
-# Copyright (C) 2013-2020, Arm Limited, All Rights Reserved
+# Copyright The Mbed TLS Contributors
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -20,8 +20,6 @@
 # WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
-# This file is part of Mbed TLS (https://tls.mbed.org)
 
 use warnings;
 use strict;
@@ -63,6 +61,15 @@ my @include_directories = qw(
     tests/include
 );
 my $include_directories = join(';', map {"../../$_"} @include_directories);
+
+# Directories to add to the include path when building the library, but not
+# when building tests or applications.
+my @library_include_directories = qw(
+    library
+);
+my $library_include_directories =
+  join(';', map {"../../$_"} (@library_include_directories,
+                              @include_directories));
 
 my @excluded_files = qw(
     3rdparty/everest/library/Hacl_Curve25519.c
@@ -202,7 +209,7 @@ sub gen_main_file {
     my $out = slurp_file( $main_tpl );
     $out =~ s/SOURCE_ENTRIES\r\n/$source_entries/m;
     $out =~ s/HEADER_ENTRIES\r\n/$header_entries/m;
-    $out =~ s/INCLUDE_DIRECTORIES\r\n/$include_directories/g;
+    $out =~ s/INCLUDE_DIRECTORIES\r\n/$library_include_directories/g;
 
     content_to_file( $out, $main_out );
 }
