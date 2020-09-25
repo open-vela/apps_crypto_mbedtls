@@ -2,7 +2,7 @@
  *  Generic SSL/TLS messaging layer functions
  *  (record layer + retransmission state machine)
  *
- *  Copyright The Mbed TLS Contributors
+ *  Copyright (C) 2006-2020, ARM Limited, All Rights Reserved
  *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -16,6 +16,8 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
+ *
+ *  This file is part of mbed TLS (https://tls.mbed.org)
  */
 /*
  *  The SSL 3.0 specification was drafted by Netscape in 1996,
@@ -26,7 +28,11 @@
  *  http://www.ietf.org/rfc/rfc4346.txt
  */
 
-#include "common.h"
+#if !defined(MBEDTLS_CONFIG_FILE)
+#include "mbedtls/config.h"
+#else
+#include MBEDTLS_CONFIG_FILE
+#endif
 
 #if defined(MBEDTLS_SSL_TLS_C)
 
@@ -1572,8 +1578,6 @@ int mbedtls_ssl_decrypt_buf( mbedtls_ssl_context const *ssl,
              * linking an extra division function in some builds).
              */
             size_t j, extra_run = 0;
-            /* This size is enough to server either as input to
-             * md_process() or as output to md_finish() */
             unsigned char tmp[MBEDTLS_MD_MAX_BLOCK_SIZE];
 
             /*
@@ -1629,15 +1633,10 @@ int mbedtls_ssl_decrypt_buf( mbedtls_ssl_context const *ssl,
             ssl_read_memory( data + rec->data_len, padlen );
             mbedtls_md_hmac_finish( &transform->md_ctx_dec, mac_expect );
 
-            /* Dummy calls to compression function.
-             * Call mbedtls_md_process at least once due to cache attacks
-             * that observe whether md_process() was called of not.
-             * Respect the usual start-(process|update)-finish sequence for
-             * the sake of hardware accelerators that might require it. */
-            mbedtls_md_starts( &transform->md_ctx_dec );
+            /* Call mbedtls_md_process at least once due to cache attacks
+             * that observe whether md_process() was called of not */
             for( j = 0; j < extra_run + 1; j++ )
                 mbedtls_md_process( &transform->md_ctx_dec, tmp );
-            mbedtls_md_finish( &transform->md_ctx_dec, tmp );
 
             mbedtls_md_hmac_reset( &transform->md_ctx_dec );
 

@@ -1,7 +1,7 @@
 /*
  *  Query Mbed TLS compile time configurations from config.h
  *
- *  Copyright The Mbed TLS Contributors
+ *  Copyright (C) 2018, Arm Limited, All Rights Reserved
  *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -15,6 +15,8 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
+ *
+ *  This file is part of Mbed TLS (https://tls.mbed.org)
  */
 
 #if !defined(MBEDTLS_CONFIG_FILE)
@@ -984,14 +986,6 @@ int query_config( const char *config )
     }
 #endif /* MBEDTLS_ECP_NIST_OPTIM */
 
-#if defined(MBEDTLS_ECP_NO_INTERNAL_RNG)
-    if( strcmp( "MBEDTLS_ECP_NO_INTERNAL_RNG", config ) == 0 )
-    {
-        MACRO_EXPANSION_TO_STR( MBEDTLS_ECP_NO_INTERNAL_RNG );
-        return( 0 );
-    }
-#endif /* MBEDTLS_ECP_NO_INTERNAL_RNG */
-
 #if defined(MBEDTLS_ECP_RESTARTABLE)
     if( strcmp( "MBEDTLS_ECP_RESTARTABLE", config ) == 0 )
     {
@@ -1567,14 +1561,6 @@ int query_config( const char *config )
         return( 0 );
     }
 #endif /* MBEDTLS_USE_PSA_CRYPTO */
-
-#if defined(MBEDTLS_PSA_CRYPTO_CONFIG)
-    if( strcmp( "MBEDTLS_PSA_CRYPTO_CONFIG", config ) == 0 )
-    {
-        MACRO_EXPANSION_TO_STR( MBEDTLS_PSA_CRYPTO_CONFIG );
-        return( 0 );
-    }
-#endif /* MBEDTLS_PSA_CRYPTO_CONFIG */
 
 #if defined(MBEDTLS_VERSION_FEATURES)
     if( strcmp( "MBEDTLS_VERSION_FEATURES", config ) == 0 )
