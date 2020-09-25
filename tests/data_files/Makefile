@@ -13,10 +13,8 @@
 ## Tools
 OPENSSL ?= openssl
 FAKETIME ?= faketime
-
-TOP_DIR = ../..
-MBEDTLS_CERT_WRITE ?= $(TOP_DIR)/programs/x509/cert_write
-MBEDTLS_CERT_REQ ?= $(TOP_DIR)/programs/x509/cert_req
+MBEDTLS_CERT_WRITE ?= $(PWD)/../../programs/x509/cert_write
+MBEDTLS_CERT_REQ ?= $(PWD)/../../programs/x509/cert_req
 
 
 ## Build the generated test data. Note that since the final outputs
@@ -271,10 +269,6 @@ server5-unsupported_othername.crt: server5.key
 
 server5-fan.crt: server5.key
 	$(OPENSSL) req -x509 -new -subj "/C=UK/O=Mbed TLS/CN=Mbed TLS FAN" -set_serial 77 -config $(test_ca_config_file) -extensions fan_cert -days 3650 -sha256 -key server5.key -out $@
-
-server5-tricky-ip-san.crt: server5.key
-	$(OPENSSL) req -x509 -new -subj "/C=UK/O=Mbed TLS/CN=Mbed TLS Tricky IP SAN" -set_serial 77 -config $(test_ca_config_file) -extensions tricky_ip_san -days 3650 -sha256 -key server5.key -out $@
-all_final += server5-tricky-ip-san.crt
 
 server10-badsign.crt: server10.crt
 	{ head -n-2 $<; tail -n-2 $< | sed -e '1s/0\(=*\)$$/_\1/' -e '1s/[^_=]\(=*\)$$/0\1/' -e '1s/_/1/'; } > $@

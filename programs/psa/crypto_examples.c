@@ -1,5 +1,5 @@
 /*
- *  Copyright The Mbed TLS Contributors
+ *  Copyright (C) 2018-2019, ARM Limited, All Rights Reserved
  *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -13,6 +13,8 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
+ *
+ *  This file is part of mbed TLS (https://tls.mbed.org)
  */
 
 #include "psa/crypto.h"
@@ -316,18 +318,6 @@ static void cipher_examples( void )
     if( status == PSA_SUCCESS )
         printf( "\tsuccess!\r\n" );
 }
-
-#if defined(MBEDTLS_CHECK_PARAMS)
-#include "mbedtls/platform_util.h"
-void mbedtls_param_failed( const char *failure_condition,
-                           const char *file,
-                           int line )
-{
-    printf( "%s:%i: Input param failed - %s\n",
-                    file, line, failure_condition );
-    exit( EXIT_FAILURE );
-}
-#endif
 
 int main( void )
 {
