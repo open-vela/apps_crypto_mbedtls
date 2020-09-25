@@ -84,7 +84,7 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>_USRDLL;MBEDTLS_EXPORTS;KRML_VERIFIED_UINT128;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>
-../../library;../../include;../../3rdparty/everest/include/;../../3rdparty/everest/include/everest;../../3rdparty/everest/include/everest/vs2010;../../3rdparty/everest/include/everest/kremlib;../../tests/include      </AdditionalIncludeDirectories>
+../../include;../../3rdparty/everest/include/;../../3rdparty/everest/include/everest;../../3rdparty/everest/include/everest/vs2010;../../3rdparty/everest/include/everest/kremlib;../../tests/include      </AdditionalIncludeDirectories>
       <CompileAs>CompileAsC</CompileAs>
     </ClCompile>
     <Link>
@@ -98,7 +98,7 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>_USRDLL;MBEDTLS_EXPORTS;KRML_VERIFIED_UINT128;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>
-../../library;../../include;../../3rdparty/everest/include/;../../3rdparty/everest/include/everest;../../3rdparty/everest/include/everest/vs2010;../../3rdparty/everest/include/everest/kremlib;../../tests/include      </AdditionalIncludeDirectories>
+../../include;../../3rdparty/everest/include/;../../3rdparty/everest/include/everest;../../3rdparty/everest/include/everest/vs2010;../../3rdparty/everest/include/everest/kremlib;../../tests/include      </AdditionalIncludeDirectories>
       <CompileAs>CompileAsC</CompileAs>
     </ClCompile>
     <Link>
@@ -114,7 +114,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>NDEBUG;_USRDLL;MBEDTLS_EXPORTS;KRML_VERIFIED_UINT128;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>
-../../library;../../include;../../3rdparty/everest/include/;../../3rdparty/everest/include/everest;../../3rdparty/everest/include/everest/vs2010;../../3rdparty/everest/include/everest/kremlib;../../tests/include      </AdditionalIncludeDirectories>
+../../include;../../3rdparty/everest/include/;../../3rdparty/everest/include/everest;../../3rdparty/everest/include/everest/vs2010;../../3rdparty/everest/include/everest/kremlib;../../tests/include      </AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -131,7 +131,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN64;NDEBUG;_WINDOWS;_USRDLL;MBEDTLS_EXPORTS;KRML_VERIFIED_UINT128;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>
-../../library;../../include;../../3rdparty/everest/include/;../../3rdparty/everest/include/everest;../../3rdparty/everest/include/everest/vs2010;../../3rdparty/everest/include/everest/kremlib;../../tests/include      </AdditionalIncludeDirectories>
+../../include;../../3rdparty/everest/include/;../../3rdparty/everest/include/everest;../../3rdparty/everest/include/everest/vs2010;../../3rdparty/everest/include/everest/kremlib;../../tests/include      </AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -162,7 +162,6 @@
     <ClInclude Include="..\..\include\mbedtls\cmac.h" />
     <ClInclude Include="..\..\include\mbedtls\compat-1.3.h" />
     <ClInclude Include="..\..\include\mbedtls\config.h" />
-    <ClInclude Include="..\..\include\mbedtls\config_psa.h" />
     <ClInclude Include="..\..\include\mbedtls\ctr_drbg.h" />
     <ClInclude Include="..\..\include\mbedtls\debug.h" />
     <ClInclude Include="..\..\include\mbedtls\des.h" />
@@ -224,7 +223,6 @@
     <ClInclude Include="..\..\include\psa\crypto.h" />
     <ClInclude Include="..\..\include\psa\crypto_accel_driver.h" />
     <ClInclude Include="..\..\include\psa\crypto_compat.h" />
-    <ClInclude Include="..\..\include\psa\crypto_config.h" />
     <ClInclude Include="..\..\include\psa\crypto_driver_common.h" />
     <ClInclude Include="..\..\include\psa\crypto_entropy_driver.h" />
     <ClInclude Include="..\..\include\psa\crypto_extra.h" />
