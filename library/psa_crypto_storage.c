@@ -55,27 +55,27 @@
 /* Key storage */
 /****************************************************************/
 
-/* Determine a file name (ITS file identifier) for the given key identifier.
- * The file name must be distinct from any file that is used for a purpose
- * other than storing a key. Currently, the only such file is the random seed
- * file whose name is PSA_CRYPTO_ITS_RANDOM_SEED_UID and whose value is
- * 0xFFFFFF52. */
-static psa_storage_uid_t psa_its_identifier_of_slot( mbedtls_svc_key_id_t key )
+/* Determine a file name (ITS file identifier) for the given key file
+ * identifier. The file name must be distinct from any file that is used
+ * for a purpose other than storing a key. Currently, the only such file
+ * is the random seed file whose name is PSA_CRYPTO_ITS_RANDOM_SEED_UID
+ * and whose value is 0xFFFFFF52. */
+static psa_storage_uid_t psa_its_identifier_of_slot( psa_key_file_id_t file_id )
 {
-#if defined(MBEDTLS_PSA_CRYPTO_KEY_ID_ENCODES_OWNER)
+#if defined(MBEDTLS_PSA_CRYPTO_KEY_FILE_ID_ENCODES_OWNER) && \
+    defined(PSA_CRYPTO_SECURE)
     /* Encode the owner in the upper 32 bits. This means that if
      * owner values are nonzero (as they are on a PSA platform),
      * no key file will ever have a value less than 0x100000000, so
      * the whole range 0..0xffffffff is available for non-key files. */
-    uint32_t unsigned_owner_id = MBEDTLS_SVC_KEY_ID_GET_OWNER_ID( key );
-    return(  ( (uint64_t) unsigned_owner_id << 32 ) |
-             MBEDTLS_SVC_KEY_ID_GET_KEY_ID( key ) );
+    uint32_t unsigned_owner = (uint32_t) file_id.owner;
+    return( (uint64_t) unsigned_owner << 32 | file_id.key_id );
 #else
     /* Use the key id directly as a file name.
-     * psa_is_key_id_valid() in psa_crypto_slot_management.c
+     * psa_is_key_file_id_valid() in psa_crypto_slot_management.c
      * is responsible for ensuring that key identifiers do not have a
      * value that is reserved for non-key files. */
-    return( key );
+    return( file_id );
 #endif
 }
 
@@ -94,8 +94,9 @@ static psa_storage_uid_t psa_its_identifier_of_slot( mbedtls_svc_key_id_t key )
  * \retval PSA_ERROR_STORAGE_FAILURE
  * \retval PSA_ERROR_DOES_NOT_EXIST
  */
-static psa_status_t psa_crypto_storage_load(
-    const mbedtls_svc_key_id_t key, uint8_t *data, size_t data_size )
+static psa_status_t psa_crypto_storage_load( const psa_key_file_id_t key,
+                                             uint8_t *data,
+                                             size_t data_size )
 {
     psa_status_t status;
     psa_storage_uid_t data_identifier = psa_its_identifier_of_slot( key );
@@ -113,7 +114,7 @@ static psa_status_t psa_crypto_storage_load(
     return( status );
 }
 
-int psa_is_key_present_in_storage( const mbedtls_svc_key_id_t key )
+int psa_is_key_present_in_storage( const psa_key_file_id_t key )
 {
     psa_status_t ret;
     psa_storage_uid_t data_identifier = psa_its_identifier_of_slot( key );
@@ -142,7 +143,7 @@ int psa_is_key_present_in_storage( const mbedtls_svc_key_id_t key )
  * \retval PSA_ERROR_STORAGE_FAILURE
  * \retval PSA_ERROR_ALREADY_EXISTS
  */
-static psa_status_t psa_crypto_storage_store( const mbedtls_svc_key_id_t key,
+static psa_status_t psa_crypto_storage_store( const psa_key_file_id_t key,
                                               const uint8_t *data,
                                               size_t data_length )
 {
@@ -183,7 +184,7 @@ exit:
     return( status );
 }
 
-psa_status_t psa_destroy_persistent_key( const mbedtls_svc_key_id_t key )
+psa_status_t psa_destroy_persistent_key( const psa_key_file_id_t key )
 {
     psa_status_t ret;
     psa_storage_uid_t data_identifier = psa_its_identifier_of_slot( key );
@@ -214,7 +215,7 @@ psa_status_t psa_destroy_persistent_key( const mbedtls_svc_key_id_t key )
  * \retval PSA_ERROR_STORAGE_FAILURE
  */
 static psa_status_t psa_crypto_storage_get_data_length(
-    const mbedtls_svc_key_id_t key,
+    const psa_key_file_id_t key,
     size_t *data_length )
 {
     psa_status_t status;
@@ -393,7 +394,7 @@ psa_status_t psa_load_persistent_key( psa_core_key_attributes_t *attr,
     psa_status_t status = PSA_SUCCESS;
     uint8_t *loaded_data;
     size_t storage_data_length = 0;
-    mbedtls_svc_key_id_t key = attr->id;
+    psa_key_id_t key = attr->id;
 
     status = psa_crypto_storage_get_data_length( key, &storage_data_length );
     if( status != PSA_SUCCESS )
