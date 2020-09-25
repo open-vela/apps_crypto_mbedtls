@@ -4,7 +4,7 @@
  * \brief PSA cryptography module: Mbed TLS key storage
  */
 /*
- *  Copyright (C) 2018, ARM Limited, All Rights Reserved
+ *  Copyright The Mbed TLS Contributors
  *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -18,8 +18,6 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
- *
- *  This file is part of mbed TLS (https://tls.mbed.org)
  */
 
 #ifndef PSA_CRYPTO_STORAGE_H
@@ -74,7 +72,7 @@ extern "C" {
  * \retval 1
  *         Persistent data present for slot number
  */
-int psa_is_key_present_in_storage( const psa_key_file_id_t key );
+int psa_is_key_present_in_storage( const mbedtls_svc_key_id_t key );
 
 /**
  * \brief Format key data and metadata and save to a location for given key
@@ -143,7 +141,7 @@ psa_status_t psa_load_persistent_key( psa_core_key_attributes_t *attr,
  *         or the key did not exist.
  * \retval PSA_ERROR_STORAGE_FAILURE
  */
-psa_status_t psa_destroy_persistent_key( const psa_key_file_id_t key );
+psa_status_t psa_destroy_persistent_key( const mbedtls_svc_key_id_t key );
 
 /**
  * \brief Free the temporary buffer allocated by psa_load_persistent_key().
@@ -294,7 +292,7 @@ typedef union
         uint16_t unused1;
         psa_key_lifetime_t lifetime;
         psa_key_slot_number_t slot;
-        psa_key_id_t id;
+        mbedtls_svc_key_id_t id;
     } key;
 } psa_crypto_transaction_t;
 
