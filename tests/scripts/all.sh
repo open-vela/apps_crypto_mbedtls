@@ -2,7 +2,7 @@
 
 # all.sh
 #
-# Copyright The Mbed TLS Contributors
+# Copyright (c) 2014-2017, ARM Limited, All Rights Reserved
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -16,6 +16,8 @@
 # WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
+# This file is part of Mbed TLS (https://tls.mbed.org)
 
 
 
@@ -678,7 +680,7 @@ component_check_doxy_blocks () {
 
 component_check_files () {
     msg "Check: file sanity checks (permissions, encodings)" # < 1s
-    record_status tests/scripts/check_files.py
+    record_status tests/scripts/check-files.py
 }
 
 component_check_changelog () {
@@ -705,7 +707,7 @@ component_check_test_cases () {
     else
         opt=''
     fi
-    record_status tests/scripts/check_test_cases.py $opt
+    record_status tests/scripts/check-test-cases.py $opt
     unset opt
 }
 
@@ -927,43 +929,6 @@ component_test_no_hmac_drbg () {
     # so there's little value in running those lengthy tests here.
 }
 
-component_test_ecp_no_internal_rng () {
-    msg "build: Default plus ECP_NO_INTERNAL_RNG minus DRBG modules"
-    scripts/config.py set MBEDTLS_ECP_NO_INTERNAL_RNG
-    scripts/config.py unset MBEDTLS_CTR_DRBG_C
-    scripts/config.py unset MBEDTLS_HMAC_DRBG_C
-    scripts/config.py unset MBEDTLS_ECDSA_DETERMINISTIC # requires HMAC_DRBG
-    scripts/config.py unset MBEDTLS_PSA_CRYPTO_C # requires a DRBG
-    scripts/config.py unset MBEDTLS_PSA_CRYPTO_STORAGE_C # requires PSA Crypto
-
-    CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
-    make
-
-    msg "test: ECP_NO_INTERNAL_RNG, no DRBG module"
-    make test
-
-    # no SSL tests as they all depend on having a DRBG
-}
-
-component_test_ecp_restartable_no_internal_rng () {
-    msg "build: Default plus ECP_RESTARTABLE and ECP_NO_INTERNAL_RNG, no DRBG"
-    scripts/config.py set MBEDTLS_ECP_NO_INTERNAL_RNG
-    scripts/config.py set MBEDTLS_ECP_RESTARTABLE
-    scripts/config.py unset MBEDTLS_CTR_DRBG_C
-    scripts/config.py unset MBEDTLS_HMAC_DRBG_C
-    scripts/config.py unset MBEDTLS_ECDSA_DETERMINISTIC # requires HMAC_DRBG
-    scripts/config.py unset MBEDTLS_PSA_CRYPTO_C # requires CTR_DRBG
-    scripts/config.py unset MBEDTLS_PSA_CRYPTO_STORAGE_C # requires PSA Crypto
-
-    CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
-    make
-
-    msg "test: ECP_RESTARTABLE and ECP_NO_INTERNAL_RNG, no DRBG module"
-    make test
-
-    # no SSL tests as they all depend on having a DRBG
-}
-
 component_test_new_ecdh_context () {
     msg "build: new ECDH context (ASan build)" # ~ 6 min
     scripts/config.py unset MBEDTLS_ECDH_LEGACY_CONTEXT
@@ -997,25 +962,6 @@ component_test_everest () {
     msg "test: Everest ECDH context - compat.sh with some ECDH ciphersuites (ASan build)" # ~ 3 min
     # Exclude some symmetric ciphers that are redundant here to gain time.
     if_build_succeeded tests/compat.sh -f ECDH -V NO -e 'ARCFOUR\|ARIA\|CAMELLIA\|CHACHA\|DES\|RC4'
-}
-
-component_test_everest_curve25519_only () {
-    msg "build: Everest ECDH context, only Curve25519" # ~ 6 min
-    scripts/config.py unset MBEDTLS_ECDH_LEGACY_CONTEXT
-    scripts/config.py set MBEDTLS_ECDH_VARIANT_EVEREST_ENABLED
-    scripts/config.py unset MBEDTLS_ECDSA_C
-    scripts/config.py unset MBEDTLS_KEY_EXCHANGE_ECDH_ECDSA_ENABLED
-    scripts/config.py unset MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED
-    # Disable all curves
-    for c in $(sed -n 's/#define \(MBEDTLS_ECP_DP_[0-9A-Z_a-z]*_ENABLED\).*/\1/p' <"$CONFIG_H"); do
-        scripts/config.py unset "$c"
-    done
-    scripts/config.py set MBEDTLS_ECP_DP_CURVE25519_ENABLED
-
-    make CFLAGS="$ASAN_CFLAGS -O2" LDFLAGS="$ASAN_CFLAGS"
-
-    msg "test: Everest ECDH context, only Curve25519" # ~ 50s
-    make test
 }
 
 component_test_small_ssl_out_content_len () {
@@ -1237,9 +1183,7 @@ component_test_check_params_functionality () {
     scripts/config.py full # includes CHECK_PARAMS
     # Make MBEDTLS_PARAM_FAILED call mbedtls_param_failed().
     scripts/config.py unset MBEDTLS_CHECK_PARAMS_ASSERT
-    # Only build and run tests. Do not build sample programs, because
-    # they don't have a mbedtls_param_failed() function.
-    make CC=gcc CFLAGS='-Werror -O1' lib test
+    make CC=gcc CFLAGS='-Werror -O1' all test
 }
 
 component_test_check_params_without_platform () {
