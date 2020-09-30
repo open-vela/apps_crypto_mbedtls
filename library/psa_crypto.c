@@ -6110,6 +6110,8 @@ static psa_status_t psa_generate_key_internal(
             return( PSA_ERROR_NOT_SUPPORTED );
         if( grp_id == MBEDTLS_ECP_DP_NONE || curve_info == NULL )
             return( PSA_ERROR_NOT_SUPPORTED );
+        if( curve_info->bit_size != bits )
+            return( PSA_ERROR_INVALID_ARGUMENT );
         mbedtls_ecp_keypair_init( &ecp );
         ret = mbedtls_ecp_gen_key( grp_id, &ecp,
                                    mbedtls_ctr_drbg_random,
