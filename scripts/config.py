@@ -184,7 +184,7 @@ EXCLUDE_FROM_FULL = frozenset([
     'MBEDTLS_NO_UDBL_DIVISION', # influences anything that uses bignum
     'MBEDTLS_PKCS11_C', # build dependency (libpkcs11-helper)
     'MBEDTLS_PLATFORM_NO_STD_FUNCTIONS', # removes a feature
-    'MBEDTLS_PSA_CRYPTO_KEY_FILE_ID_ENCODES_OWNER', # platform dependency (PSA SPM) (at this time)
+    'MBEDTLS_PSA_CRYPTO_CONFIG', # used to switch between old/new style config
     'MBEDTLS_PSA_CRYPTO_SPM', # platform dependency (PSA SPM)
     'MBEDTLS_PSA_INJECT_ENTROPY', # build dependency (hook functions)
     'MBEDTLS_REMOVE_3DES_CIPHERSUITES', # removes a feature
@@ -192,6 +192,8 @@ EXCLUDE_FROM_FULL = frozenset([
     'MBEDTLS_RSA_NO_CRT', # influences the use of RSA in X.509 and TLS
     'MBEDTLS_SHA512_NO_SHA384', # removes a feature
     'MBEDTLS_SSL_HW_RECORD_ACCEL', # build dependency (hook functions)
+    'MBEDTLS_TEST_CONSTANT_FLOW_MEMSAN', # build dependency (clang+memsan)
+    'MBEDTLS_TEST_CONSTANT_FLOW_VALGRIND', # build dependency (valgrind headers)
     'MBEDTLS_TEST_NULL_ENTROPY', # removes a feature
     'MBEDTLS_X509_ALLOW_UNSUPPORTED_CRITICAL_EXTENSION', # influences the use of X.509 in TLS
     'MBEDTLS_ZLIB_SUPPORT', # build dependency (libz)
