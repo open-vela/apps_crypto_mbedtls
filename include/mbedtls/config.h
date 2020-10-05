@@ -1330,7 +1330,7 @@
  *
  * Enable support for the experimental PSA crypto driver interface.
  *
- * Requires: MBEDTLS_PSA_CRYPTO_C.
+ * Requires: MBEDTLS_PSA_CRYPTO_C or MBEDTLS_PSA_CRYPTO_CONFIG
  *
  * \warning This interface is experimental and may change or be removed
  * without notice.
@@ -2018,6 +2018,15 @@
  * Uncomment this to enable internal use of PSA Crypto and new associated APIs.
  */
 //#define MBEDTLS_USE_PSA_CRYPTO
+
+/**
+ * \def MBEDTLS_PSA_CRYPTO_CONFIG
+ *
+ * This setting should be used to allow for conditional inclusion of PSA features.
+ *
+ * Uncomment this to enable use of PSA Crypto configuration settings.
+ */
+//#define MBEDTLS_PSA_CRYPTO_CONFIG
 
 /**
  * \def MBEDTLS_VERSION_FEATURES
@@ -3810,6 +3819,12 @@
 #if defined(MBEDTLS_USER_CONFIG_FILE)
 #include MBEDTLS_USER_CONFIG_FILE
 #endif
+
+/**
+ * \name SECTION: PSA Crypto settings
+ *
+ */
+#include "mbedtls/config_psa.h"
 
 #include "mbedtls/check_config.h"
 
