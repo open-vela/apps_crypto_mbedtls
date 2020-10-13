@@ -163,7 +163,6 @@ OBJS_TLS= \
 	  ssl_srv.o \
 	  ssl_ticket.o \
 	  ssl_tls.o \
-	  ssl_tls13_keys.o \
 	  # This line is intentionally left blank
 
 .SILENT:
