@@ -2256,7 +2256,7 @@ exit:
 /* Message digests */
 /****************************************************************/
 
-#if defined(MBEDTLS_RSA_C) || defined(MBEDTLS_ECDSA_DETERMINISTIC)
+#if defined(MBEDTLS_RSA_C) || defined(MBEDTLS_PSA_BUILTIN_ALG_DETERMINISTIC_ECDSA)
 static const mbedtls_md_info_t *mbedtls_md_info_from_psa( psa_algorithm_t alg )
 {
     switch( alg )
@@ -2299,7 +2299,7 @@ static const mbedtls_md_info_t *mbedtls_md_info_from_psa( psa_algorithm_t alg )
             return( NULL );
     }
 }
-#endif
+#endif /* defined(MBEDTLS_RSA_C) || defined(MBEDTLS_PSA_BUILTIN_ALG_DETERMINISTIC_ECDSA) */
 
 psa_status_t psa_hash_abort( psa_hash_operation_t *operation )
 {
@@ -2751,6 +2751,9 @@ static const mbedtls_cipher_info_t *mbedtls_cipher_info_from_psa(
                 break;
             case PSA_ALG_OFB:
                 mode = MBEDTLS_MODE_OFB;
+                break;
+            case PSA_ALG_ECB_NO_PADDING:
+                mode = MBEDTLS_MODE_ECB;
                 break;
             case PSA_ALG_CBC_NO_PADDING:
                 mode = MBEDTLS_MODE_CBC;
@@ -3527,7 +3530,7 @@ static psa_status_t psa_rsa_verify( mbedtls_rsa_context *rsa,
 }
 #endif /* MBEDTLS_RSA_C */
 
-#if defined(MBEDTLS_ECDSA_C)
+#if defined(MBEDTLS_PSA_BUILTIN_ALG_ECDSA)
 /* `ecp` cannot be const because `ecp->grp` needs to be non-const
  * for mbedtls_ecdsa_sign() and mbedtls_ecdsa_sign_det()
  * (even though these functions don't modify it). */
@@ -3551,7 +3554,7 @@ static psa_status_t psa_ecdsa_sign( mbedtls_ecp_keypair *ecp,
         goto cleanup;
     }
 
-#if defined(MBEDTLS_ECDSA_DETERMINISTIC)
+#if defined(MBEDTLS_PSA_BUILTIN_ALG_DETERMINISTIC_ECDSA)
     if( PSA_ALG_DSA_IS_DETERMINISTIC( alg ) )
     {
         psa_algorithm_t hash_alg = PSA_ALG_SIGN_GET_HASH( alg );
@@ -3564,7 +3567,7 @@ static psa_status_t psa_ecdsa_sign( mbedtls_ecp_keypair *ecp,
                                                      &global_data.ctr_drbg ) );
     }
     else
-#endif /* MBEDTLS_ECDSA_DETERMINISTIC */
+#endif /* defined(MBEDTLS_PSA_BUILTIN_ALG_DETERMINISTIC_ECDSA) */
     {
         (void) alg;
         MBEDTLS_MPI_CHK( mbedtls_ecdsa_sign( &ecp->grp, &r, &s, &ecp->d,
@@ -3626,7 +3629,7 @@ cleanup:
     mbedtls_mpi_free( &s );
     return( mbedtls_to_psa_error( ret ) );
 }
-#endif /* MBEDTLS_ECDSA_C */
+#endif /* defined(MBEDTLS_PSA_BUILTIN_ALG_ECDSA) */
 
 psa_status_t psa_sign_hash( psa_key_handle_t handle,
                             psa_algorithm_t alg,
@@ -3695,9 +3698,9 @@ psa_status_t psa_sign_hash( psa_key_handle_t handle,
 #if defined(MBEDTLS_ECP_C)
     if( PSA_KEY_TYPE_IS_ECC( slot->attr.type ) )
     {
-#if defined(MBEDTLS_ECDSA_C)
+#if defined(MBEDTLS_PSA_BUILTIN_ALG_ECDSA)
         if(
-#if defined(MBEDTLS_ECDSA_DETERMINISTIC)
+#if defined(MBEDTLS_PSA_BUILTIN_ALG_DETERMINISTIC_ECDSA)
             PSA_ALG_IS_ECDSA( alg )
 #else
             PSA_ALG_IS_RANDOMIZED_ECDSA( alg )
@@ -3720,7 +3723,7 @@ psa_status_t psa_sign_hash( psa_key_handle_t handle,
             mbedtls_free( ecp );
         }
         else
-#endif /* defined(MBEDTLS_ECDSA_C) */
+#endif /* defined(MBEDTLS_PSA_BUILTIN_ALG_ECDSA) */
         {
             status = PSA_ERROR_INVALID_ARGUMENT;
         }
@@ -3796,7 +3799,7 @@ psa_status_t psa_verify_hash( psa_key_handle_t handle,
 #if defined(MBEDTLS_ECP_C)
     if( PSA_KEY_TYPE_IS_ECC( slot->attr.type ) )
     {
-#if defined(MBEDTLS_ECDSA_C)
+#if defined(MBEDTLS_PSA_BUILTIN_ALG_ECDSA)
         if( PSA_ALG_IS_ECDSA( alg ) )
         {
             mbedtls_ecp_keypair *ecp = NULL;
@@ -3814,7 +3817,7 @@ psa_status_t psa_verify_hash( psa_key_handle_t handle,
             return( status );
         }
         else
-#endif /* defined(MBEDTLS_ECDSA_C) */
+#endif /* defined(MBEDTLS_PSA_BUILTIN_ALG_ECDSA) */
         {
             return( PSA_ERROR_INVALID_ARGUMENT );
         }
@@ -4034,27 +4037,6 @@ rsa_exit:
 /* Symmetric cryptography */
 /****************************************************************/
 
-/* Initialize the cipher operation structure. Once this function has been
- * called, psa_cipher_abort can run and will do the right thing. */
-static psa_status_t psa_cipher_init( psa_cipher_operation_t *operation,
-                                     psa_algorithm_t alg )
-{
-    if( ! PSA_ALG_IS_CIPHER( alg ) )
-    {
-        memset( operation, 0, sizeof( *operation ) );
-        return( PSA_ERROR_INVALID_ARGUMENT );
-    }
-
-    operation->alg = alg;
-    operation->key_set = 0;
-    operation->iv_set = 0;
-    operation->iv_required = 1;
-    operation->iv_size = 0;
-    operation->block_size = 0;
-    mbedtls_cipher_init( &operation->ctx.cipher );
-    return( PSA_SUCCESS );
-}
-
 static psa_status_t psa_cipher_setup( psa_cipher_operation_t *operation,
                                       psa_key_handle_t handle,
                                       psa_algorithm_t alg,
@@ -4071,19 +4053,63 @@ static psa_status_t psa_cipher_setup( psa_cipher_operation_t *operation,
 
     /* A context must be freshly initialized before it can be set up. */
     if( operation->alg != 0 )
-    {
         return( PSA_ERROR_BAD_STATE );
-    }
 
-    status = psa_cipher_init( operation, alg );
-    if( status != PSA_SUCCESS )
-        return( status );
+    /* The requested algorithm must be one that can be processed by cipher. */
+    if( ! PSA_ALG_IS_CIPHER( alg ) )
+        return( PSA_ERROR_INVALID_ARGUMENT );
 
-    status = psa_get_transparent_key( handle, &slot, usage, alg);
+    /* Fetch key material from key storage. */
+    status = psa_get_key_from_slot( handle, &slot, usage, alg );
     if( status != PSA_SUCCESS )
         goto exit;
-    key_bits = psa_get_key_slot_bits( slot );
 
+    /* Initialize the operation struct members, except for alg. The alg member
+     * is used to indicate to psa_cipher_abort that there are resources to free,
+     * so we only set it after resources have been allocated/initialized. */
+    operation->key_set = 0;
+    operation->iv_set = 0;
+    operation->mbedtls_in_use = 0;
+    operation->iv_size = 0;
+    operation->block_size = 0;
+    if( alg == PSA_ALG_ECB_NO_PADDING )
+        operation->iv_required = 0;
+    else
+        operation->iv_required = 1;
+
+    /* Try doing the operation through a driver before using software fallback. */
+    if( cipher_operation == MBEDTLS_ENCRYPT )
+        status = psa_driver_wrapper_cipher_encrypt_setup( &operation->ctx.driver,
+                                                          slot,
+                                                          alg );
+    else
+        status = psa_driver_wrapper_cipher_decrypt_setup( &operation->ctx.driver,
+                                                          slot,
+                                                          alg );
+
+    if( status == PSA_SUCCESS )
+    {
+        /* Once the driver context is initialised, it needs to be freed using
+        * psa_cipher_abort. Indicate this through setting alg. */
+        operation->alg = alg;
+    }
+
+    if( status != PSA_ERROR_NOT_SUPPORTED ||
+        psa_key_lifetime_is_external( slot->attr.lifetime ) )
+        goto exit;
+
+    /* Proceed with initializing an mbed TLS cipher context if no driver is
+     * available for the given algorithm & key. */
+    mbedtls_cipher_init( &operation->ctx.cipher );
+
+    /* Once the cipher context is initialised, it needs to be freed using
+     * psa_cipher_abort. Indicate there is something to be freed through setting
+     * alg, and indicate the operation is being done using mbedtls crypto through
+     * setting mbedtls_in_use. */
+    operation->alg = alg;
+    operation->mbedtls_in_use = 1;
+
+    key_bits = psa_get_key_slot_bits( slot );
     cipher_info = mbedtls_cipher_info_from_psa( alg, slot->attr.type, key_bits, NULL );
     if( cipher_info == NULL )
     {
@@ -4136,10 +4162,10 @@ static psa_status_t psa_cipher_setup( psa_cipher_operation_t *operation,
         goto exit;
 #endif //MBEDTLS_CIPHER_MODE_WITH_PADDING
 
-    operation->key_set = 1;
     operation->block_size = ( PSA_ALG_IS_STREAM_CIPHER( alg ) ? 1 :
                               PSA_BLOCK_CIPHER_BLOCK_SIZE( slot->attr.type ) );
-    if( alg & PSA_ALG_CIPHER_FROM_BLOCK_FLAG )
+    if( ( alg & PSA_ALG_CIPHER_FROM_BLOCK_FLAG ) != 0 &&
+        alg != PSA_ALG_ECB_NO_PADDING )
     {
         operation->iv_size = PSA_BLOCK_CIPHER_BLOCK_SIZE( slot->attr.type );
     }
@@ -4149,10 +4175,17 @@ static psa_status_t psa_cipher_setup( psa_cipher_operation_t *operation,
         operation->iv_size = 12;
 #endif
 
+    status = PSA_SUCCESS;
+
 exit:
-    if( status == 0 )
+    if( ret != 0 )
         status = mbedtls_to_psa_error( ret );
-    if( status != 0 )
+    if( status == PSA_SUCCESS )
+    {
+        /* Update operation flags for both driver and software implementations */
+        operation->key_set = 1;
+    }
+    else
         psa_cipher_abort( operation );
     return( status );
 }
@@ -4182,6 +4215,16 @@ psa_status_t psa_cipher_generate_iv( psa_cipher_operation_t *operation,
     {
         return( PSA_ERROR_BAD_STATE );
     }
+
+    if( operation->mbedtls_in_use == 0 )
+    {
+        status = psa_driver_wrapper_cipher_generate_iv( &operation->ctx.driver,
+                                                        iv,
+                                                        iv_size,
+                                                        iv_length );
+        goto exit;
+    }
+
     if( iv_size < operation->iv_size )
     {
         status = PSA_ERROR_BUFFER_TOO_SMALL;
@@ -4199,7 +4242,9 @@ psa_status_t psa_cipher_generate_iv( psa_cipher_operation_t *operation,
     status = psa_cipher_set_iv( operation, iv, *iv_length );
 
 exit:
-    if( status != PSA_SUCCESS )
+    if( status == PSA_SUCCESS )
+        operation->iv_set = 1;
+    else
         psa_cipher_abort( operation );
     return( status );
 }
@@ -4214,6 +4259,15 @@ psa_status_t psa_cipher_set_iv( psa_cipher_operation_t *operation,
     {
         return( PSA_ERROR_BAD_STATE );
     }
+
+    if( operation->mbedtls_in_use == 0 )
+    {
+        status = psa_driver_wrapper_cipher_set_iv( &operation->ctx.driver,
+                                                   iv,
+                                                   iv_length );
+        goto exit;
+    }
+
     if( iv_length != operation->iv_size )
     {
         status = PSA_ERROR_INVALID_ARGUMENT;
@@ -4229,6 +4283,94 @@ exit:
     return( status );
 }
 
+/* Process input for which the algorithm is set to ECB mode. This requires
+ * manual processing, since the PSA API is defined as being able to process
+ * arbitrary-length calls to psa_cipher_update() with ECB mode, but the
+ * underlying mbedtls_cipher_update only takes full blocks. */
+static psa_status_t psa_cipher_update_ecb_internal(
+    mbedtls_cipher_context_t *ctx,
+    const uint8_t *input,
+    size_t input_length,
+    uint8_t *output,
+    size_t output_size,
+    size_t *output_length )
+{
+    psa_status_t status = PSA_ERROR_CORRUPTION_DETECTED;
+    size_t block_size = ctx->cipher_info->block_size;
+    size_t internal_output_length = 0;
+    *output_length = 0;
+
+    if( input_length == 0 )
+    {
+        status = PSA_SUCCESS;
+        goto exit;
+    }
+
+    if( ctx->unprocessed_len > 0 )
+    {
+        /* Fill up to block size, and run the block if there's a full one. */
+        size_t bytes_to_copy = block_size - ctx->unprocessed_len;
+
+        if( input_length < bytes_to_copy )
+            bytes_to_copy = input_length;
+
+        memcpy( &( ctx->unprocessed_data[ctx->unprocessed_len] ),
+                input, bytes_to_copy );
+        input_length -= bytes_to_copy;
+        input += bytes_to_copy;
+        ctx->unprocessed_len += bytes_to_copy;
+
+        if( ctx->unprocessed_len == block_size )
+        {
+            status = mbedtls_to_psa_error(
+                mbedtls_cipher_update( ctx,
+                                       ctx->unprocessed_data,
+                                       block_size,
+                                       output, &internal_output_length ) );
+
+            if( status != PSA_SUCCESS )
+                goto exit;
+
+            output += internal_output_length;
+            output_size -= internal_output_length;
+            *output_length += internal_output_length;
+            ctx->unprocessed_len = 0;
+        }
+    }
+
+    while( input_length >= block_size )
+    {
+        /* Run all full blocks we have, one by one */
+        status = mbedtls_to_psa_error(
+            mbedtls_cipher_update( ctx, input,
+                                   block_size,
+                                   output, &internal_output_length ) );
+
+        if( status != PSA_SUCCESS )
+            goto exit;
+
+        input_length -= block_size;
+        input += block_size;
+
+        output += internal_output_length;
+        output_size -= internal_output_length;
+        *output_length += internal_output_length;
+    }
+
+    if( input_length > 0 )
+    {
+        /* Save unprocessed bytes for later processing */
+        memcpy( &( ctx->unprocessed_data[ctx->unprocessed_len] ),
+                input, input_length );
+        ctx->unprocessed_len += input_length;
+    }
+
+    status = PSA_SUCCESS;
+
+exit:
+    return( status );
+}
+
 psa_status_t psa_cipher_update( psa_cipher_operation_t *operation,
                                 const uint8_t *input,
                                 size_t input_length,
@@ -4236,13 +4378,26 @@ psa_status_t psa_cipher_update( psa_cipher_operation_t *operation,
                                 size_t output_size,
                                 size_t *output_length )
 {
-    psa_status_t status;
-    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+    psa_status_t status = PSA_ERROR_CORRUPTION_DETECTED;
     size_t expected_output_size;
-
     if( operation->alg == 0 )
     {
         return( PSA_ERROR_BAD_STATE );
+    }
+    if( operation->iv_required && ! operation->iv_set )
+    {
+        return( PSA_ERROR_BAD_STATE );
+    }
+
+    if( operation->mbedtls_in_use == 0 )
+    {
+        status = psa_driver_wrapper_cipher_update( &operation->ctx.driver,
+                                                   input,
+                                                   input_length,
+                                                   output,
+                                                   output_size,
+                                                   output_length );
+        goto exit;
     }
 
     if( ! PSA_ALG_IS_STREAM_CIPHER( operation->alg ) )
@@ -4266,9 +4421,24 @@ psa_status_t psa_cipher_update( psa_cipher_operation_t *operation,
         goto exit;
     }
 
-    ret = mbedtls_cipher_update( &operation->ctx.cipher, input,
-                                 input_length, output, output_length );
-    status = mbedtls_to_psa_error( ret );
+    if( operation->alg == PSA_ALG_ECB_NO_PADDING )
+    {
+        /* mbedtls_cipher_update has an API inconsistency: it will only
+        * process a single block at a time in ECB mode. Abstract away that
+        * inconsistency here to match the PSA API behaviour. */
+        status = psa_cipher_update_ecb_internal( &operation->ctx.cipher,
+                                                 input,
+                                                 input_length,
+                                                 output,
+                                                 output_size,
+                                                 output_length );
+    }
+    else
+    {
+        status = mbedtls_to_psa_error(
+            mbedtls_cipher_update( &operation->ctx.cipher, input,
+                                   input_length, output, output_length ) );
+    }
 exit:
     if( status != PSA_SUCCESS )
         psa_cipher_abort( operation );
@@ -4281,10 +4451,8 @@ psa_status_t psa_cipher_finish( psa_cipher_operation_t *operation,
                                 size_t *output_length )
 {
     psa_status_t status = PSA_ERROR_GENERIC_ERROR;
-    int cipher_ret = MBEDTLS_ERR_CIPHER_FEATURE_UNAVAILABLE;
     uint8_t temp_output_buffer[MBEDTLS_MAX_BLOCK_LENGTH];
-
-    if( ! operation->key_set )
+    if( operation->alg == 0 )
     {
         return( PSA_ERROR_BAD_STATE );
     }
@@ -4293,53 +4461,60 @@ psa_status_t psa_cipher_finish( psa_cipher_operation_t *operation,
         return( PSA_ERROR_BAD_STATE );
     }
 
-    if( operation->ctx.cipher.operation == MBEDTLS_ENCRYPT &&
-        operation->alg == PSA_ALG_CBC_NO_PADDING &&
-        operation->ctx.cipher.unprocessed_len != 0 )
+    if( operation->mbedtls_in_use == 0 )
     {
-            status = PSA_ERROR_INVALID_ARGUMENT;
-            goto error;
+        status = psa_driver_wrapper_cipher_finish( &operation->ctx.driver,
+                                                   output,
+                                                   output_size,
+                                                   output_length );
+        goto exit;
     }
 
-    cipher_ret = mbedtls_cipher_finish( &operation->ctx.cipher,
-                                        temp_output_buffer,
-                                        output_length );
-    if( cipher_ret != 0 )
+    if( operation->ctx.cipher.unprocessed_len != 0 )
     {
-        status = mbedtls_to_psa_error( cipher_ret );
-        goto error;
+        if( operation->alg == PSA_ALG_ECB_NO_PADDING ||
+            ( operation->alg == PSA_ALG_CBC_NO_PADDING &&
+              operation->ctx.cipher.operation == MBEDTLS_ENCRYPT ) )
+        {
+            status = PSA_ERROR_INVALID_ARGUMENT;
+            goto exit;
+        }
     }
+
+    status = mbedtls_to_psa_error(
+        mbedtls_cipher_finish( &operation->ctx.cipher,
+                               temp_output_buffer,
+                               output_length ) );
+    if( status != PSA_SUCCESS )
+        goto exit;
 
     if( *output_length == 0 )
         ; /* Nothing to copy. Note that output may be NULL in this case. */
     else if( output_size >= *output_length )
         memcpy( output, temp_output_buffer, *output_length );
     else
-    {
         status = PSA_ERROR_BUFFER_TOO_SMALL;
-        goto error;
+
+exit:
+    if( operation->mbedtls_in_use == 1 )
+        mbedtls_platform_zeroize( temp_output_buffer, sizeof( temp_output_buffer ) );
+
+    if( status == PSA_SUCCESS )
+        return( psa_cipher_abort( operation ) );
+    else
+    {
+        *output_length = 0;
+        (void) psa_cipher_abort( operation );
+
+        return( status );
     }
-
-    mbedtls_platform_zeroize( temp_output_buffer, sizeof( temp_output_buffer ) );
-    status = psa_cipher_abort( operation );
-
-    return( status );
-
-error:
-
-    *output_length = 0;
-
-    mbedtls_platform_zeroize( temp_output_buffer, sizeof( temp_output_buffer ) );
-    (void) psa_cipher_abort( operation );
-
-    return( status );
 }
 
 psa_status_t psa_cipher_abort( psa_cipher_operation_t *operation )
 {
     if( operation->alg == 0 )
     {
-        /* The object has (apparently) been initialized but it is not
+        /* The object has (apparently) been initialized but it is not (yet)
          * in use. It's ok to call abort on such an object, and there's
          * nothing to do. */
         return( PSA_SUCCESS );
@@ -4350,11 +4525,15 @@ psa_status_t psa_cipher_abort( psa_cipher_operation_t *operation )
     if( ! PSA_ALG_IS_CIPHER( operation->alg ) )
         return( PSA_ERROR_BAD_STATE );
 
-    mbedtls_cipher_free( &operation->ctx.cipher );
+    if( operation->mbedtls_in_use == 0 )
+        psa_driver_wrapper_cipher_abort( &operation->ctx.driver );
+    else
+        mbedtls_cipher_free( &operation->ctx.cipher );
 
     operation->alg = 0;
     operation->key_set = 0;
     operation->iv_set = 0;
+    operation->mbedtls_in_use = 0;
     operation->iv_size = 0;
     operation->block_size = 0;
     operation->iv_required = 0;
