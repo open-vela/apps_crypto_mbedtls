@@ -1290,38 +1290,6 @@ component_test_no_use_psa_crypto_full_cmake_asan() {
     if_build_succeeded env OPENSSL_CMD="$OPENSSL_NEXT" tests/compat.sh -e '^$' -f 'ARIA\|CHACHA'
 }
 
-component_test_psa_crypto_config_basic() {
-    # full plus MBEDTLS_PSA_CRYPTO_CONFIG
-    msg "build: full + MBEDTLS_PSA_CRYPTO_CONFIG"
-    scripts/config.py full
-    scripts/config.py set MBEDTLS_PSA_CRYPTO_CONFIG
-    scripts/config.py set MBEDTLS_PSA_CRYPTO_DRIVERS
-    scripts/config.py unset MBEDTLS_USE_PSA_CRYPTO
-    # Need to define the correct symbol and include the test driver header path in order to build with the test driver
-    make CC=gcc CFLAGS="$ASAN_CFLAGS -DPSA_CRYPTO_DRIVER_TEST -I../tests/include -O2" LDFLAGS="$ASAN_CFLAGS"
-
-    msg "test: psa crypto config basic"
-    make test
-}
-
-component_test_psa_want_ecdsa_disabled_software() {
-    # full plus MBEDTLS_PSA_CRYPTO_CONFIG with PSA_WANT_ALG_ECDSA
-    # without MBEDTLS_ECDSA_C
-    msg "build: full + MBEDTLS_PSA_CRYPTO_CONFIG + PSA_WANT_ALG_ECDSA without MBEDTLS_ECDSA_C"
-    scripts/config.py full
-    scripts/config.py set MBEDTLS_PSA_CRYPTO_CONFIG
-    scripts/config.py set MBEDTLS_PSA_CRYPTO_DRIVERS
-    scripts/config.py unset MBEDTLS_USE_PSA_CRYPTO
-    scripts/config.py unset MBEDTLS_ECDSA_C
-    scripts/config.py -f include/psa/crypto_config.h set PSA_WANT_ALG_ECDSA
-    scripts/config.py -f include/psa/crypto_config.h set PSA_WANT_ALG_DETERMINISTIC_ECDSA
-    # Need to define the correct symbol and include the test driver header path in order to build with the test driver
-    make CC=gcc CFLAGS="$ASAN_CFLAGS -DPSA_CRYPTO_DRIVER_TEST -I../tests/include -O2" LDFLAGS="$ASAN_CFLAGS"
-
-    msg "test: psa crypto config want ECDSA"
-    make test
-}
-
 component_test_check_params_functionality () {
     msg "build+test: MBEDTLS_CHECK_PARAMS functionality"
     scripts/config.py full # includes CHECK_PARAMS
