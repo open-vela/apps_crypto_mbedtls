@@ -1084,15 +1084,6 @@ static int psa_key_algorithm_permits( psa_algorithm_t policy_alg,
         return( ( policy_alg & ~PSA_ALG_HASH_MASK ) ==
                 ( requested_alg & ~PSA_ALG_HASH_MASK ) );
     }
-    /* If policy_alg is a generic key agreement operation, then using it for
-     * a key derivation with that key agreement should also be allowed. This
-     * behaviour is expected to be defined in a future specification version. */
-    if( PSA_ALG_IS_RAW_KEY_AGREEMENT( policy_alg ) &&
-        PSA_ALG_IS_KEY_AGREEMENT( requested_alg ) )
-    {
-        return( PSA_ALG_KEY_AGREEMENT_GET_BASE( requested_alg ) ==
-                policy_alg );
-    }
     /* If it isn't permitted, it's forbidden. */
     return( 0 );
 }
@@ -1906,13 +1897,9 @@ static psa_status_t psa_finish_key_creation(
             static_assert( sizeof( slot->data.se.slot_number ) ==
                            sizeof( data.slot_number ),
                            "Slot number size does not match psa_se_key_data_storage_t" );
-            static_assert( sizeof( slot->attr.bits ) == sizeof( data.bits ),
-                           "Bit-size size does not match psa_se_key_data_storage_t" );
 #endif
             memcpy( &data.slot_number, &slot->data.se.slot_number,
                     sizeof( slot->data.se.slot_number ) );
-            memcpy( &data.bits, &slot->attr.bits,
-                    sizeof( slot->attr.bits ) );
             status = psa_save_persistent_key( &slot->attr,
                                               (uint8_t*) &data,
                                               sizeof( data ) );
@@ -5877,6 +5864,7 @@ static psa_status_t psa_key_agreement_internal( psa_key_derivation_operation_t *
                                                 PSA_KEY_TYPE_DERIVE,
                                                 shared_secret,
                                                 shared_secret_length );
+
 exit:
     mbedtls_platform_zeroize( shared_secret, shared_secret_length );
     return( status );
@@ -5901,13 +5889,6 @@ psa_status_t psa_key_derivation_key_agreement( psa_key_derivation_operation_t *o
                                          peer_key, peer_key_length );
     if( status != PSA_SUCCESS )
         psa_key_derivation_abort( operation );
-    else
-    {
-        /* If a private key has been added as SECRET, we allow the derived
-         * key material to be used as a key in PSA Crypto. */
-        if( step == PSA_KEY_DERIVATION_INPUT_SECRET )
-            operation->can_output_key = 1;
-    }
     return( status );
 }
 
@@ -6125,6 +6106,8 @@ static psa_status_t psa_generate_key_internal(
             return( PSA_ERROR_NOT_SUPPORTED );
         if( grp_id == MBEDTLS_ECP_DP_NONE || curve_info == NULL )
             return( PSA_ERROR_NOT_SUPPORTED );
+        if( curve_info->bit_size != bits )
+            return( PSA_ERROR_INVALID_ARGUMENT );
         mbedtls_ecp_keypair_init( &ecp );
         ret = mbedtls_ecp_gen_key( grp_id, &ecp,
                                    mbedtls_ctr_drbg_random,
