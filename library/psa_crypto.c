@@ -199,7 +199,7 @@ psa_status_t mbedtls_to_psa_error( int ret )
         case MBEDTLS_ERR_CIPHER_INVALID_PADDING:
             return( PSA_ERROR_INVALID_PADDING );
         case MBEDTLS_ERR_CIPHER_FULL_BLOCK_EXPECTED:
-            return( PSA_ERROR_INVALID_ARGUMENT );
+            return( PSA_ERROR_BAD_STATE );
         case MBEDTLS_ERR_CIPHER_AUTH_FAILED:
             return( PSA_ERROR_INVALID_SIGNATURE );
         case MBEDTLS_ERR_CIPHER_INVALID_CONTEXT:
@@ -1897,13 +1897,9 @@ static psa_status_t psa_finish_key_creation(
             static_assert( sizeof( slot->data.se.slot_number ) ==
                            sizeof( data.slot_number ),
                            "Slot number size does not match psa_se_key_data_storage_t" );
-            static_assert( sizeof( slot->attr.bits ) == sizeof( data.bits ),
-                           "Bit-size size does not match psa_se_key_data_storage_t" );
 #endif
             memcpy( &data.slot_number, &slot->data.se.slot_number,
                     sizeof( slot->data.se.slot_number ) );
-            memcpy( &data.bits, &slot->attr.bits,
-                    sizeof( slot->attr.bits ) );
             status = psa_save_persistent_key( &slot->attr,
                                               (uint8_t*) &data,
                                               sizeof( data ) );
@@ -4473,7 +4469,8 @@ psa_status_t psa_cipher_finish( psa_cipher_operation_t *operation,
     if( operation->ctx.cipher.unprocessed_len != 0 )
     {
         if( operation->alg == PSA_ALG_ECB_NO_PADDING ||
-            operation->alg == PSA_ALG_CBC_NO_PADDING )
+            ( operation->alg == PSA_ALG_CBC_NO_PADDING &&
+              operation->ctx.cipher.operation == MBEDTLS_ENCRYPT ) )
         {
             status = PSA_ERROR_INVALID_ARGUMENT;
             goto exit;
@@ -6109,6 +6106,8 @@ static psa_status_t psa_generate_key_internal(
             return( PSA_ERROR_NOT_SUPPORTED );
         if( grp_id == MBEDTLS_ECP_DP_NONE || curve_info == NULL )
             return( PSA_ERROR_NOT_SUPPORTED );
+        if( curve_info->bit_size != bits )
+            return( PSA_ERROR_INVALID_ARGUMENT );
         mbedtls_ecp_keypair_init( &ecp );
         ret = mbedtls_ecp_gen_key( grp_id, &ecp,
                                    mbedtls_ctr_drbg_random,
