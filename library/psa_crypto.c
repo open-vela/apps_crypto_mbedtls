@@ -1897,13 +1897,9 @@ static psa_status_t psa_finish_key_creation(
             static_assert( sizeof( slot->data.se.slot_number ) ==
                            sizeof( data.slot_number ),
                            "Slot number size does not match psa_se_key_data_storage_t" );
-            static_assert( sizeof( slot->attr.bits ) == sizeof( data.bits ),
-                           "Bit-size size does not match psa_se_key_data_storage_t" );
 #endif
             memcpy( &data.slot_number, &slot->data.se.slot_number,
                     sizeof( slot->data.se.slot_number ) );
-            memcpy( &data.bits, &slot->attr.bits,
-                    sizeof( slot->attr.bits ) );
             status = psa_save_persistent_key( &slot->attr,
                                               (uint8_t*) &data,
                                               sizeof( data ) );
@@ -2256,7 +2252,7 @@ exit:
 /* Message digests */
 /****************************************************************/
 
-#if defined(MBEDTLS_RSA_C) || defined(MBEDTLS_PSA_BUILTIN_ALG_DETERMINISTIC_ECDSA)
+#if defined(MBEDTLS_RSA_C) || defined(MBEDTLS_ECDSA_DETERMINISTIC)
 static const mbedtls_md_info_t *mbedtls_md_info_from_psa( psa_algorithm_t alg )
 {
     switch( alg )
@@ -2299,7 +2295,7 @@ static const mbedtls_md_info_t *mbedtls_md_info_from_psa( psa_algorithm_t alg )
             return( NULL );
     }
 }
-#endif /* defined(MBEDTLS_RSA_C) || defined(MBEDTLS_PSA_BUILTIN_ALG_DETERMINISTIC_ECDSA) */
+#endif
 
 psa_status_t psa_hash_abort( psa_hash_operation_t *operation )
 {
@@ -3530,7 +3526,7 @@ static psa_status_t psa_rsa_verify( mbedtls_rsa_context *rsa,
 }
 #endif /* MBEDTLS_RSA_C */
 
-#if defined(MBEDTLS_PSA_BUILTIN_ALG_ECDSA)
+#if defined(MBEDTLS_ECDSA_C)
 /* `ecp` cannot be const because `ecp->grp` needs to be non-const
  * for mbedtls_ecdsa_sign() and mbedtls_ecdsa_sign_det()
  * (even though these functions don't modify it). */
@@ -3554,7 +3550,7 @@ static psa_status_t psa_ecdsa_sign( mbedtls_ecp_keypair *ecp,
         goto cleanup;
     }
 
-#if defined(MBEDTLS_PSA_BUILTIN_ALG_DETERMINISTIC_ECDSA)
+#if defined(MBEDTLS_ECDSA_DETERMINISTIC)
     if( PSA_ALG_DSA_IS_DETERMINISTIC( alg ) )
     {
         psa_algorithm_t hash_alg = PSA_ALG_SIGN_GET_HASH( alg );
@@ -3567,7 +3563,7 @@ static psa_status_t psa_ecdsa_sign( mbedtls_ecp_keypair *ecp,
                                                      &global_data.ctr_drbg ) );
     }
     else
-#endif /* defined(MBEDTLS_PSA_BUILTIN_ALG_DETERMINISTIC_ECDSA) */
+#endif /* MBEDTLS_ECDSA_DETERMINISTIC */
     {
         (void) alg;
         MBEDTLS_MPI_CHK( mbedtls_ecdsa_sign( &ecp->grp, &r, &s, &ecp->d,
@@ -3629,7 +3625,7 @@ cleanup:
     mbedtls_mpi_free( &s );
     return( mbedtls_to_psa_error( ret ) );
 }
-#endif /* defined(MBEDTLS_PSA_BUILTIN_ALG_ECDSA) */
+#endif /* MBEDTLS_ECDSA_C */
 
 psa_status_t psa_sign_hash( psa_key_handle_t handle,
                             psa_algorithm_t alg,
@@ -3698,9 +3694,9 @@ psa_status_t psa_sign_hash( psa_key_handle_t handle,
 #if defined(MBEDTLS_ECP_C)
     if( PSA_KEY_TYPE_IS_ECC( slot->attr.type ) )
     {
-#if defined(MBEDTLS_PSA_BUILTIN_ALG_ECDSA)
+#if defined(MBEDTLS_ECDSA_C)
         if(
-#if defined(MBEDTLS_PSA_BUILTIN_ALG_DETERMINISTIC_ECDSA)
+#if defined(MBEDTLS_ECDSA_DETERMINISTIC)
             PSA_ALG_IS_ECDSA( alg )
 #else
             PSA_ALG_IS_RANDOMIZED_ECDSA( alg )
@@ -3723,7 +3719,7 @@ psa_status_t psa_sign_hash( psa_key_handle_t handle,
             mbedtls_free( ecp );
         }
         else
-#endif /* defined(MBEDTLS_PSA_BUILTIN_ALG_ECDSA) */
+#endif /* defined(MBEDTLS_ECDSA_C) */
         {
             status = PSA_ERROR_INVALID_ARGUMENT;
         }
@@ -3799,7 +3795,7 @@ psa_status_t psa_verify_hash( psa_key_handle_t handle,
 #if defined(MBEDTLS_ECP_C)
     if( PSA_KEY_TYPE_IS_ECC( slot->attr.type ) )
     {
-#if defined(MBEDTLS_PSA_BUILTIN_ALG_ECDSA)
+#if defined(MBEDTLS_ECDSA_C)
         if( PSA_ALG_IS_ECDSA( alg ) )
         {
             mbedtls_ecp_keypair *ecp = NULL;
@@ -3817,7 +3813,7 @@ psa_status_t psa_verify_hash( psa_key_handle_t handle,
             return( status );
         }
         else
-#endif /* defined(MBEDTLS_PSA_BUILTIN_ALG_ECDSA) */
+#endif /* defined(MBEDTLS_ECDSA_C) */
         {
             return( PSA_ERROR_INVALID_ARGUMENT );
         }
