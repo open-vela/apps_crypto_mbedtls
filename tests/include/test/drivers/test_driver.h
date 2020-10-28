@@ -25,5 +25,6 @@
 #include "test/drivers/signature.h"
 #include "test/drivers/keygen.h"
 #include "test/drivers/cipher.h"
+#include "test/drivers/size.h"
 
 #endif /* PSA_CRYPTO_TEST_DRIVER_H */
