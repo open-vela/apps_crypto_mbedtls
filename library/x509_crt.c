@@ -1,7 +1,7 @@
 /*
  *  X.509 certificate parsing and verification
  *
- *  Copyright (C) 2006-2015, ARM Limited, All Rights Reserved
+ *  Copyright The Mbed TLS Contributors
  *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -15,8 +15,6 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
- *
- *  This file is part of mbed TLS (https://tls.mbed.org)
  */
 /*
  *  The ITU-T X.509 standard defines a certificate format for PKI.
@@ -31,11 +29,7 @@
  *  [SIRO] https://cabforum.org/wp-content/uploads/Chunghwatelecom201503cabforumV4.pdf
  */
 
-#if !defined(MBEDTLS_CONFIG_FILE)
-#include "mbedtls/config.h"
-#else
-#include MBEDTLS_CONFIG_FILE
-#endif
+#include "common.h"
 
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
 
@@ -894,7 +888,7 @@ static int x509_get_crt_ext( unsigned char **p,
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     size_t len;
-    unsigned char *end_ext_data, *end_ext_octet;
+    unsigned char *end_ext_data, *start_ext_octet, *end_ext_octet;
 
     if( *p == end )
         return( 0 );
@@ -940,6 +934,7 @@ static int x509_get_crt_ext( unsigned char **p,
                 MBEDTLS_ASN1_OCTET_STRING ) ) != 0 )
             return( MBEDTLS_ERR_X509_INVALID_EXTENSIONS + ret );
 
+        start_ext_octet = *p;
         end_ext_octet = *p + len;
 
         if( end_ext_octet != end_ext_data )
@@ -1025,6 +1020,13 @@ static int x509_get_crt_ext( unsigned char **p,
             if( ( ret = x509_get_certificate_policies( p, end_ext_octet,
                     &crt->certificate_policies ) ) != 0 )
             {
+                /* Give the callback (if any) a chance to handle the extension
+                 * if it contains unsupported policies */
+                if( ret == MBEDTLS_ERR_X509_FEATURE_UNAVAILABLE && cb != NULL &&
+                    cb( p_ctx, crt, &extn_oid, is_critical,
+                        start_ext_octet, end_ext_octet ) == 0 )
+                    break;
+
 #if !defined(MBEDTLS_X509_ALLOW_UNSUPPORTED_CRITICAL_EXTENSION)
                 if( is_critical )
                     return( ret );
@@ -2320,8 +2322,7 @@ int mbedtls_x509_crt_is_revoked( const mbedtls_x509_crt *crt, const mbedtls_x509
         if( crt->serial.len == cur->serial.len &&
             memcmp( crt->serial.p, cur->serial.p, crt->serial.len ) == 0 )
         {
-            if( mbedtls_x509_time_is_past( &cur->revocation_date ) )
-                return( 1 );
+            return( 1 );
         }
 
         cur = cur->next;
@@ -3004,6 +3005,25 @@ static int x509_crt_check_cn( const mbedtls_x509_buf *name,
 }
 
 /*
+ * Check for SAN match, see RFC 5280 Section 4.2.1.6
+ */
+static int x509_crt_check_san( const mbedtls_x509_buf *name,
+                               const char *cn, size_t cn_len )
+{
+    const unsigned char san_type = (unsigned char) name->tag &
+                                   MBEDTLS_ASN1_TAG_VALUE_MASK;
+
+    /* dNSName */
+    if( san_type == MBEDTLS_X509_SAN_DNS_NAME )
+        return( x509_crt_check_cn( name, cn, cn_len ) );
+
+    /* (We may handle other types here later.) */
+
+    /* Unrecognized type */
+    return( -1 );
+}
+
+/*
  * Verify the requested CN - only call this if cn is not NULL!
  */
 static void x509_crt_verify_name( const mbedtls_x509_crt *crt,
@@ -3018,7 +3038,7 @@ static void x509_crt_verify_name( const mbedtls_x509_crt *crt,
     {
         for( cur = &crt->subject_alt_names; cur != NULL; cur = cur->next )
         {
-            if( x509_crt_check_cn( &cur->buf, cn, cn_len ) == 0 )
+            if( x509_crt_check_san( &cur->buf, cn, cn_len ) == 0 )
                 break;
         }
 
