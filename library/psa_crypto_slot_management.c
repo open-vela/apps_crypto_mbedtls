@@ -141,9 +141,7 @@ static psa_status_t psa_load_persistent_key_into_slot( psa_key_slot_t *slot )
     else
 #endif /* MBEDTLS_PSA_CRYPTO_SE_C */
     {
-        status = psa_copy_key_material_into_slot( slot, key_data, key_data_length );
-        if( status != PSA_SUCCESS )
-            goto exit;
+        status = psa_import_key_into_slot( slot, key_data, key_data_length );
     }
 
 exit:
