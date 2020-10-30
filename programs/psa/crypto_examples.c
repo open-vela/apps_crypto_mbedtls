@@ -1,3 +1,20 @@
+/*
+ *  Copyright The Mbed TLS Contributors
+ *  SPDX-License-Identifier: Apache-2.0
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License"); you may
+ *  not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *  http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+
 #include "psa/crypto.h"
 #include <string.h>
 #include <stdio.h>
@@ -299,18 +316,6 @@ static void cipher_examples( void )
     if( status == PSA_SUCCESS )
         printf( "\tsuccess!\r\n" );
 }
-
-#if defined(MBEDTLS_CHECK_PARAMS)
-#include "mbedtls/platform_util.h"
-void mbedtls_param_failed( const char *failure_condition,
-                           const char *file,
-                           int line )
-{
-    printf( "%s:%i: Input param failed - %s\n",
-                    file, line, failure_condition );
-    exit( EXIT_FAILURE );
-}
-#endif
 
 int main( void )
 {
