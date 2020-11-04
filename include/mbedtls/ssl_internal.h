@@ -378,49 +378,6 @@ typedef int  mbedtls_ssl_tls_prf_cb( const unsigned char *secret, size_t slen,
                                      const char *label,
                                      const unsigned char *random, size_t rlen,
                                      unsigned char *dstbuf, size_t dlen );
-
-/* cipher.h exports the maximum IV, key and block length from
- * all ciphers enabled in the config, regardless of whether those
- * ciphers are actually usable in SSL/TLS. Notably, XTS is enabled
- * in the default configuration and uses 64 Byte keys, but it is
- * not used for record protection in SSL/TLS.
- *
- * In order to prevent unnecessary inflation of key structures,
- * we introduce SSL-specific variants of the max-{key,block,IV}
- * macros here which are meant to only take those ciphers into
- * account which can be negotiated in SSL/TLS.
- *
- * Since the current definitions of MBEDTLS_MAX_{KEY|BLOCK|IV}_LENGTH
- * in cipher.h are rough overapproximations of the real maxima, here
- * we content ourselves with replicating those overapproximations
- * for the maximum block and IV length, and excluding XTS from the
- * computation of the maximum key length. */
-#define MBEDTLS_SSL_MAX_BLOCK_LENGTH 16
-#define MBEDTLS_SSL_MAX_IV_LENGTH    16
-#define MBEDTLS_SSL_MAX_KEY_LENGTH   32
-
-/**
- * \brief   The data structure holding the cryptographic material (key and IV)
- *          used for record protection in TLS 1.3.
- */
-struct mbedtls_ssl_key_set
-{
-    /*! The key for client->server records. */
-    unsigned char client_write_key[ MBEDTLS_SSL_MAX_KEY_LENGTH ];
-    /*! The key for server->client records. */
-    unsigned char server_write_key[ MBEDTLS_SSL_MAX_KEY_LENGTH ];
-    /*! The IV  for client->server records. */
-    unsigned char client_write_iv[ MBEDTLS_SSL_MAX_IV_LENGTH ];
-    /*! The IV  for server->client records. */
-    unsigned char server_write_iv[ MBEDTLS_SSL_MAX_IV_LENGTH ];
-
-    size_t key_len; /*!< The length of client_write_key and
-                     *   server_write_key, in Bytes. */
-    size_t iv_len;  /*!< The length of client_write_iv and
-                     *   server_write_iv, in Bytes. */
-};
-typedef struct mbedtls_ssl_key_set mbedtls_ssl_key_set;
-
 /*
  * This structure contains the parameters only needed during handshake.
  */
@@ -1093,23 +1050,6 @@ int mbedtls_ssl_check_curve( const mbedtls_ssl_context *ssl, mbedtls_ecp_group_i
 #if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
 int mbedtls_ssl_check_sig_hash( const mbedtls_ssl_context *ssl,
                                 mbedtls_md_type_t md );
-#endif
-
-#if defined(MBEDTLS_SSL_DTLS_SRTP)
-static inline mbedtls_ssl_srtp_profile mbedtls_ssl_check_srtp_profile_value
-                                                    ( const uint16_t srtp_profile_value )
-{
-    switch( srtp_profile_value )
-    {
-        case MBEDTLS_TLS_SRTP_AES128_CM_HMAC_SHA1_80:
-        case MBEDTLS_TLS_SRTP_AES128_CM_HMAC_SHA1_32:
-        case MBEDTLS_TLS_SRTP_NULL_HMAC_SHA1_80:
-        case MBEDTLS_TLS_SRTP_NULL_HMAC_SHA1_32:
-            return srtp_profile_value;
-        default: break;
-    }
-    return( MBEDTLS_TLS_SRTP_UNSET );
-}
 #endif
 
 #if defined(MBEDTLS_X509_CRT_PARSE_C)

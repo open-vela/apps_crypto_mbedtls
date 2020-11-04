@@ -1258,17 +1258,20 @@
  */
 //#define MBEDTLS_ENTROPY_NV_SEED
 
-/* MBEDTLS_PSA_CRYPTO_KEY_ID_ENCODES_OWNER
+/* MBEDTLS_PSA_CRYPTO_KEY_FILE_ID_ENCODES_OWNER
  *
- * Enable key identifiers that encode a key owner identifier.
+ * In PSA key storage, encode the owner of the key.
  *
- * The owner of a key is identified by a value of type ::mbedtls_key_owner_id_t
- * which is currently hard-coded to be int32_t.
+ * This is only meaningful when building the library as part of a
+ * multi-client service. When you activate this option, you must provide
+ * an implementation of the type psa_key_owner_id_t and a translation
+ * from psa_key_file_id_t to file name in all the storage backends that
+ * you wish to support.
  *
  * Note that this option is meant for internal use only and may be removed
  * without notice.
  */
-//#define MBEDTLS_PSA_CRYPTO_KEY_ID_ENCODES_OWNER
+//#define MBEDTLS_PSA_CRYPTO_KEY_FILE_ID_ENCODES_OWNER
 
 /**
  * \def MBEDTLS_MEMORY_DEBUG
@@ -1811,37 +1814,6 @@
  * Comment this to disable support for HelloVerifyRequest.
  */
 #define MBEDTLS_SSL_DTLS_HELLO_VERIFY
-
-/**
- * \def MBEDTLS_SSL_DTLS_SRTP
- *
- * Enable support for negotation of DTLS-SRTP (RFC 5764)
- * through the use_srtp extension.
- *
- * \note This feature provides the minimum functionality required
- * to negotiate the use of DTLS-SRTP and to allow the derivation of
- * the associated SRTP packet protection key material.
- * In particular, the SRTP packet protection itself, as well as the
- * demultiplexing of RTP and DTLS packets at the datagram layer
- * (see Section 5 of RFC 5764), are not handled by this feature.
- * Instead, after successful completion of a handshake negotiating
- * the use of DTLS-SRTP, the extended key exporter API
- * mbedtls_ssl_conf_export_keys_ext_cb() should be used to implement
- * the key exporter described in Section 4.2 of RFC 5764 and RFC 5705
- * (this is implemented in the SSL example programs).
- * The resulting key should then be passed to an SRTP stack.
- *
- * Setting this option enables the runtime API
- * mbedtls_ssl_conf_dtls_srtp_protection_profiles()
- * through which the supported DTLS-SRTP protection
- * profiles can be configured. You must call this API at
- * runtime if you wish to negotiate the use of DTLS-SRTP.
- *
- * Requires: MBEDTLS_SSL_PROTO_DTLS
- *
- * Uncomment this to enable support for use_srtp extension.
- */
-//#define MBEDTLS_SSL_DTLS_SRTP
 
 /**
  * \def MBEDTLS_SSL_DTLS_CLIENT_PORT_REUSE
