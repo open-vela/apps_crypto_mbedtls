@@ -1,7 +1,7 @@
 /*
  *  SSLv3/TLSv1 shared functions
  *
- *  Copyright The Mbed TLS Contributors
+ *  Copyright (C) 2006-2015, ARM Limited, All Rights Reserved
  *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -15,6 +15,8 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
+ *
+ *  This file is part of mbed TLS (https://tls.mbed.org)
  */
 /*
  *  The SSL 3.0 specification was drafted by Netscape in 1996,
@@ -25,7 +27,11 @@
  *  http://www.ietf.org/rfc/rfc4346.txt
  */
 
-#include "common.h"
+#if !defined(MBEDTLS_CONFIG_FILE)
+#include "mbedtls/config.h"
+#else
+#include MBEDTLS_CONFIG_FILE
+#endif
 
 #if defined(MBEDTLS_SSL_TLS_C)
 
@@ -3680,13 +3686,11 @@ static int ssl_handshake_init( mbedtls_ssl_context *ssl )
     /* If the buffers are too small - reallocate */
     {
         int modified = 0;
-        size_t written_in = 0, iv_offset_in = 0, len_offset_in = 0;
-        size_t written_out = 0, iv_offset_out = 0, len_offset_out = 0;
+        size_t written_in = 0;
+        size_t written_out = 0;
         if( ssl->in_buf != NULL )
         {
             written_in = ssl->in_msg - ssl->in_buf;
-            iv_offset_in = ssl->in_iv - ssl->in_buf;
-            len_offset_in = ssl->in_len - ssl->in_buf;
             if( ssl->in_buf_len < MBEDTLS_SSL_IN_BUFFER_LEN )
             {
                 if( resize_buffer( &ssl->in_buf, MBEDTLS_SSL_IN_BUFFER_LEN,
@@ -3705,8 +3709,6 @@ static int ssl_handshake_init( mbedtls_ssl_context *ssl )
         if( ssl->out_buf != NULL )
         {
             written_out = ssl->out_msg - ssl->out_buf;
-            iv_offset_out = ssl->out_iv - ssl->out_buf;
-            len_offset_out = ssl->out_len - ssl->out_buf;
             if( ssl->out_buf_len < MBEDTLS_SSL_OUT_BUFFER_LEN )
             {
                 if( resize_buffer( &ssl->out_buf, MBEDTLS_SSL_OUT_BUFFER_LEN,
@@ -3726,14 +3728,9 @@ static int ssl_handshake_init( mbedtls_ssl_context *ssl )
             /* Update pointers here to avoid doing it twice. */
             mbedtls_ssl_reset_in_out_pointers( ssl );
             /* Fields below might not be properly updated with record
-             * splitting or with CID, so they are manually updated here. */
+            * splitting, so they are manually updated here. */
             ssl->out_msg = ssl->out_buf + written_out;
-            ssl->out_len = ssl->out_buf + len_offset_out;
-            ssl->out_iv = ssl->out_buf + iv_offset_out;
-
             ssl->in_msg = ssl->in_buf + written_in;
-            ssl->in_len = ssl->in_buf + len_offset_in;
-            ssl->in_iv = ssl->in_buf + iv_offset_in;
         }
     }
 #endif
@@ -4668,9 +4665,7 @@ int mbedtls_ssl_conf_alpn_protocols( mbedtls_ssl_config *conf, const char **prot
         cur_len = strlen( *p );
         tot_len += cur_len;
 
-        if( ( cur_len == 0 ) ||
-            ( cur_len > MBEDTLS_SSL_MAX_ALPN_NAME_LEN ) ||
-            ( tot_len > MBEDTLS_SSL_MAX_ALPN_LIST_LEN ) )
+        if( cur_len == 0 || cur_len > 255 || tot_len > 65535 )
             return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
     }
 
@@ -5965,15 +5960,14 @@ void mbedtls_ssl_handshake_free( mbedtls_ssl_context *ssl )
     {
         int modified = 0;
         uint32_t buf_len = mbedtls_ssl_get_input_buflen( ssl );
-        size_t written_in = 0, iv_offset_in = 0, len_offset_in = 0;
-        size_t written_out = 0, iv_offset_out = 0, len_offset_out = 0;
+        size_t written_in = 0;
+        size_t written_out = 0;
         if( ssl->in_buf != NULL )
         {
             written_in = ssl->in_msg - ssl->in_buf;
-            iv_offset_in = ssl->in_iv - ssl->in_buf;
-            len_offset_in = ssl->in_len - ssl->in_buf;
             if( ssl->in_buf_len > buf_len && ssl->in_left < buf_len )
             {
+                written_in = ssl->in_msg - ssl->in_buf;
                 if( resize_buffer( &ssl->in_buf, buf_len, &ssl->in_buf_len ) != 0 )
                 {
                     MBEDTLS_SSL_DEBUG_MSG( 1, ( "input buffer resizing failed - out of memory" ) );
@@ -5991,8 +5985,6 @@ void mbedtls_ssl_handshake_free( mbedtls_ssl_context *ssl )
         if(ssl->out_buf != NULL )
         {
             written_out = ssl->out_msg - ssl->out_buf;
-            iv_offset_out = ssl->out_iv - ssl->out_buf;
-            len_offset_out = ssl->out_len - ssl->out_buf;
             if( ssl->out_buf_len > mbedtls_ssl_get_output_buflen( ssl ) &&
                 ssl->out_left < buf_len )
             {
@@ -6012,14 +6004,9 @@ void mbedtls_ssl_handshake_free( mbedtls_ssl_context *ssl )
             /* Update pointers here to avoid doing it twice. */
             mbedtls_ssl_reset_in_out_pointers( ssl );
             /* Fields below might not be properly updated with record
-             * splitting or with CID, so they are manually updated here. */
+             * splitting, so they are manually updated here. */
             ssl->out_msg = ssl->out_buf + written_out;
-            ssl->out_len = ssl->out_buf + len_offset_out;
-            ssl->out_iv = ssl->out_buf + iv_offset_out;
-
             ssl->in_msg = ssl->in_buf + written_in;
-            ssl->in_len = ssl->in_buf + len_offset_in;
-            ssl->in_iv = ssl->in_buf + iv_offset_in;
         }
     }
 #endif

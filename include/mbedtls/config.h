@@ -8,7 +8,7 @@
  *  memory footprint.
  */
 /*
- *  Copyright The Mbed TLS Contributors
+ *  Copyright (C) 2006-2018, ARM Limited, All Rights Reserved
  *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -22,10 +22,14 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
+ *
+ *  This file is part of mbed TLS (https://tls.mbed.org)
  */
 
 #ifndef MBEDTLS_CONFIG_H
 #define MBEDTLS_CONFIG_H
+
+#include <nuttx/config.h>
 
 #if defined(_MSC_VER) && !defined(_CRT_SECURE_NO_DEPRECATE)
 #define _CRT_SECURE_NO_DEPRECATE 1
@@ -175,7 +179,9 @@
  *
  * Enable this layer to allow use of alternative memory allocators.
  */
-//#define MBEDTLS_PLATFORM_MEMORY
+#ifdef CONFIG_MBEDTLS_PLATFORM_MEMORY
+#define MBEDTLS_PLATFORM_MEMORY
+#endif
 
 /**
  * \def MBEDTLS_PLATFORM_NO_STD_FUNCTIONS
@@ -551,7 +557,9 @@
  *
  * Uncomment to use your own hardware entropy collector.
  */
-//#define MBEDTLS_ENTROPY_HARDWARE_ALT
+#ifdef CONFIG_MBEDTLS_ENTROPY_HARDWARE_ALT
+#define MBEDTLS_ENTROPY_HARDWARE_ALT
+#endif
 
 /**
  * \def MBEDTLS_AES_ROM_TABLES
@@ -571,7 +579,9 @@
  * This option is independent of \c MBEDTLS_AES_FEWER_TABLES.
  *
  */
-//#define MBEDTLS_AES_ROM_TABLES
+#ifdef CONFIG_MBEDTLS_AES_ROM_TABLES
+#define MBEDTLS_AES_ROM_TABLES
+#endif
 
 /**
  * \def MBEDTLS_AES_FEWER_TABLES
@@ -724,7 +734,9 @@
  *
  * Uncomment this macro to remove RC4 ciphersuites by default.
  */
+#ifdef CONFIG_MBEDTLS_REMOVE_ARC4_CIPHERSUITES
 #define MBEDTLS_REMOVE_ARC4_CIPHERSUITES
+#endif
 
 /**
  * \def MBEDTLS_REMOVE_3DES_CIPHERSUITES
@@ -754,7 +766,6 @@
  *
  * Comment macros to disable the curve and functions for it
  */
-/* Short Weierstrass curves (supporting ECP, ECDH, ECDSA) */
 #define MBEDTLS_ECP_DP_SECP192R1_ENABLED
 #define MBEDTLS_ECP_DP_SECP224R1_ENABLED
 #define MBEDTLS_ECP_DP_SECP256R1_ENABLED
@@ -766,7 +777,6 @@
 #define MBEDTLS_ECP_DP_BP256R1_ENABLED
 #define MBEDTLS_ECP_DP_BP384R1_ENABLED
 #define MBEDTLS_ECP_DP_BP512R1_ENABLED
-/* Montgomery curves (supporting ECP) */
 #define MBEDTLS_ECP_DP_CURVE25519_ENABLED
 #define MBEDTLS_ECP_DP_CURVE448_ENABLED
 
@@ -780,28 +790,6 @@
  * Comment this macro to disable NIST curves optimisation.
  */
 #define MBEDTLS_ECP_NIST_OPTIM
-
-/**
- * \def MBEDTLS_ECP_NO_INTERNAL_RNG
- *
- * When this option is disabled, mbedtls_ecp_mul() will make use of an
- * internal RNG when called with a NULL \c f_rng argument, in order to protect
- * against some side-channel attacks.
- *
- * This protection introduces a dependency of the ECP module on one of the
- * DRBG modules. For very constrained implementations that don't require this
- * protection (for example, because you're only doing signature verification,
- * so not manipulating any secret, or because local/physical side-channel
- * attacks are outside your threat model), it might be desirable to get rid of
- * that dependency.
- *
- * \warning Enabling this option makes some uses of ECP vulnerable to some
- * side-channel attacks. Only enable it if you know that's not a problem for
- * your use case.
- *
- * Uncomment this macro to disable some counter-measures in ECP.
- */
-//#define MBEDTLS_ECP_NO_INTERNAL_RNG
 
 /**
  * \def MBEDTLS_ECP_RESTARTABLE
@@ -1083,7 +1071,7 @@
  *
  * Enable the ECDH-ECDSA based ciphersuite modes in SSL / TLS.
  *
- * Requires: MBEDTLS_ECDH_C, MBEDTLS_ECDSA_C, MBEDTLS_X509_CRT_PARSE_C
+ * Requires: MBEDTLS_ECDH_C, MBEDTLS_X509_CRT_PARSE_C
  *
  * This enables the following ciphersuites (if other requisites are
  * enabled as well):
@@ -1107,7 +1095,7 @@
  *
  * Enable the ECDH-RSA based ciphersuite modes in SSL / TLS.
  *
- * Requires: MBEDTLS_ECDH_C, MBEDTLS_RSA_C, MBEDTLS_X509_CRT_PARSE_C
+ * Requires: MBEDTLS_ECDH_C, MBEDTLS_X509_CRT_PARSE_C
  *
  * This enables the following ciphersuites (if other requisites are
  * enabled as well):
@@ -1212,7 +1200,9 @@
  *
  * Uncomment this macro to disable the built-in platform entropy functions.
  */
-//#define MBEDTLS_NO_PLATFORM_ENTROPY
+#ifdef CONFIG_MBEDTLS_NO_PLATFORM_ENTROPY
+#define MBEDTLS_NO_PLATFORM_ENTROPY
+#endif
 
 /**
  * \def MBEDTLS_ENTROPY_FORCE_SHA256
@@ -1329,17 +1319,6 @@
  */
 #define MBEDTLS_PKCS1_V21
 
-/** \def MBEDTLS_PSA_CRYPTO_DRIVERS
- *
- * Enable support for the experimental PSA crypto driver interface.
- *
- * Requires: MBEDTLS_PSA_CRYPTO_C.
- *
- * \warning This interface is experimental and may change or be removed
- * without notice.
- */
-//#define MBEDTLS_PSA_CRYPTO_DRIVERS
-
 /**
  * \def MBEDTLS_PSA_CRYPTO_SPM
  *
@@ -1383,7 +1362,9 @@
  *
  * Enable the checkup functions (*_self_test).
  */
+#ifdef CONFIG_MBEDTLS_SELF_TEST
 #define MBEDTLS_SELF_TEST
+#endif
 
 /**
  * \def MBEDTLS_SHA256_SMALLER
@@ -1829,7 +1810,9 @@
  *
  * Comment this to disable support for clients reusing the source port.
  */
+#ifdef CONFIG_MBEDTLS_SSL_DTLS_CLIENT_PORT_REUSE
 #define MBEDTLS_SSL_DTLS_CLIENT_PORT_REUSE
+#endif
 
 /**
  * \def MBEDTLS_SSL_DTLS_BADMAC_LIMIT
@@ -1916,42 +1899,6 @@
  * Enable modifying the maximum I/O buffer size.
  */
 //#define MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH
-
-/**
- * \def MBEDTLS_TEST_CONSTANT_FLOW_MEMSAN
- *
- * Enable testing of the constant-flow nature of some sensitive functions with
- * clang's MemorySanitizer. This causes some existing tests to also test
- * this non-functional property of the code under test.
- *
- * This setting requires compiling with clang -fsanitize=memory. The test
- * suites can then be run normally.
- *
- * \warning This macro is only used for extended testing; it is not considered
- * part of the library's API, so it may change or disappear at any time.
- *
- * Uncomment to enable testing of the constant-flow nature of selected code.
- */
-//#define MBEDTLS_TEST_CONSTANT_FLOW_MEMSAN
-
-/**
- * \def MBEDTLS_TEST_CONSTANT_FLOW_VALGRIND
- *
- * Enable testing of the constant-flow nature of some sensitive functions with
- * valgrind's memcheck tool. This causes some existing tests to also test
- * this non-functional property of the code under test.
- *
- * This setting requires valgrind headers for building, and is only useful for
- * testing if the tests suites are run with valgrind's memcheck. This can be
- * done for an individual test suite with 'valgrind ./test_suite_xxx', or when
- * using CMake, this can be done for all test suites with 'make memcheck'.
- *
- * \warning This macro is only used for extended testing; it is not considered
- * part of the library's API, so it may change or disappear at any time.
- *
- * Uncomment to enable testing of the constant-flow nature of selected code.
- */
-//#define MBEDTLS_TEST_CONSTANT_FLOW_VALGRIND
 
 /**
  * \def MBEDTLS_TEST_HOOKS
@@ -2327,7 +2274,9 @@
  *
  * Module:  library/blowfish.c
  */
+#ifdef CONFIG_MBEDTLS_BLOWFISH_C
 #define MBEDTLS_BLOWFISH_C
+#endif
 
 /**
  * \def MBEDTLS_CAMELLIA_C
@@ -2382,7 +2331,9 @@
  *      MBEDTLS_TLS_PSK_WITH_CAMELLIA_128_GCM_SHA256
  *      MBEDTLS_TLS_PSK_WITH_CAMELLIA_128_CBC_SHA256
  */
+#ifdef CONFIG_MBEDTLS_CAMELLIA_C
 #define MBEDTLS_CAMELLIA_C
+#endif
 
 /**
  * \def MBEDTLS_ARIA_C
@@ -2460,7 +2411,9 @@
  *
  * This module is used for testing (ssl_client/server).
  */
+#ifdef CONFIG_MBEDTLS_CERTS_C
 #define MBEDTLS_CERTS_C
+#endif
 
 /**
  * \def MBEDTLS_CHACHA20_C
@@ -2539,7 +2492,9 @@
  *
  * This module provides debugging functions.
  */
+#ifdef CONFIG_MBEDTLS_DEBUG_C
 #define MBEDTLS_DEBUG_C
+#endif
 
 /**
  * \def MBEDTLS_DES_C
@@ -2618,9 +2573,7 @@
  * This module is used by the following key exchanges:
  *      ECDHE-ECDSA
  *
- * Requires: MBEDTLS_ECP_C, MBEDTLS_ASN1_WRITE_C, MBEDTLS_ASN1_PARSE_C,
- *           and at least one MBEDTLS_ECP_DP_XXX_ENABLED for a
- *           short Weierstrass curve.
+ * Requires: MBEDTLS_ECP_C, MBEDTLS_ASN1_WRITE_C, MBEDTLS_ASN1_PARSE_C
  */
 #define MBEDTLS_ECDSA_C
 
@@ -2900,7 +2853,9 @@
  *
  * This modules adds support for the VIA PadLock on x86.
  */
+#ifdef CONFIG_MBEDTLS_PADLOCK_C
 #define MBEDTLS_PADLOCK_C
+#endif
 
 /**
  * \def MBEDTLS_PEM_PARSE_C
@@ -3259,7 +3214,9 @@
  *
  * This module is required for SSL/TLS server support.
  */
+#ifdef CONFIG_MBEDTLS_SSL_SRV_C
 #define MBEDTLS_SSL_SRV_C
+#endif
 
 /**
  * \def MBEDTLS_SSL_TLS_C
@@ -3320,7 +3277,9 @@
  *
  * This module is used by the HAVEGE random number generator.
  */
+#ifdef CONFIG_MBEDTLS_TIMING_C
 #define MBEDTLS_TIMING_C
+#endif
 
 /**
  * \def MBEDTLS_VERSION_C
@@ -3461,7 +3420,7 @@
  */
 
 /* MPI / BIGNUM options */
-//#define MBEDTLS_MPI_WINDOW_SIZE            6 /**< Maximum window size used. */
+//#define MBEDTLS_MPI_WINDOW_SIZE            6 /**< Maximum windows size used. */
 //#define MBEDTLS_MPI_MAX_SIZE            1024 /**< Maximum number of bytes for usable MPIs. */
 
 /* CTR_DRBG options */
@@ -3587,7 +3546,9 @@
  * Uncomment to set the maximum plaintext size of both
  * incoming and outgoing I/O buffers.
  */
-//#define MBEDTLS_SSL_MAX_CONTENT_LEN             16384
+#ifdef CONFIG_MBEDTLS_SSL_MAX_CONTENT_LEN
+#define MBEDTLS_SSL_MAX_CONTENT_LEN             CONFIG_MBEDTLS_SSL_MAX_CONTENT_LEN
+#endif
 
 /** \def MBEDTLS_SSL_IN_CONTENT_LEN
  *

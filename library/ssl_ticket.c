@@ -1,7 +1,7 @@
 /*
  *  TLS server tickets callbacks implementation
  *
- *  Copyright The Mbed TLS Contributors
+ *  Copyright (C) 2006-2015, ARM Limited, All Rights Reserved
  *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -15,9 +15,15 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
+ *
+ *  This file is part of mbed TLS (https://tls.mbed.org)
  */
 
-#include "common.h"
+#if !defined(MBEDTLS_CONFIG_FILE)
+#include "mbedtls/config.h"
+#else
+#include MBEDTLS_CONFIG_FILE
+#endif
 
 #if defined(MBEDTLS_SSL_TICKET_C)
 
@@ -29,7 +35,6 @@
 #define mbedtls_free      free
 #endif
 
-#include "mbedtls/ssl_internal.h"
 #include "mbedtls/ssl_ticket.h"
 #include "mbedtls/error.h"
 #include "mbedtls/platform_util.h"
@@ -219,7 +224,8 @@ int mbedtls_ssl_ticket_write( void *p_ticket,
 
     /* We need at least 4 bytes for key_name, 12 for IV, 2 for len 16 for tag,
      * in addition to session itself, that will be checked when writing it. */
-    MBEDTLS_SSL_CHK_BUF_PTR( start, end, TICKET_MIN_LEN );
+    if( end - start < TICKET_MIN_LEN )
+        return( MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL );
 
 #if defined(MBEDTLS_THREADING_C)
     if( ( ret = mbedtls_mutex_lock( &ctx->mutex ) ) != 0 )

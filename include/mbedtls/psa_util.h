@@ -7,7 +7,7 @@
  *          change at any time.
  */
 /*
- *  Copyright The Mbed TLS Contributors
+ *  Copyright (C) 2006-2018, ARM Limited, All Rights Reserved
  *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -21,6 +21,8 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
+ *
+ *  This file is part of mbed TLS (https://tls.mbed.org)
  */
 
 #ifndef MBEDTLS_PSA_UTIL_H
@@ -158,12 +160,12 @@ static inline psa_algorithm_t mbedtls_psa_translate_md( mbedtls_md_type_t md_alg
 /* Translations for ECC. */
 
 static inline int mbedtls_psa_get_ecc_oid_from_id(
-    psa_ecc_family_t curve, size_t bits,
+    psa_ecc_curve_t curve, size_t bits,
     char const **oid, size_t *oid_len )
 {
     switch( curve )
     {
-        case PSA_ECC_FAMILY_SECP_R1:
+        case PSA_ECC_CURVE_SECP_R1:
             switch( bits )
             {
 #if defined(MBEDTLS_ECP_DP_SECP192R1_ENABLED)
@@ -198,7 +200,7 @@ static inline int mbedtls_psa_get_ecc_oid_from_id(
 #endif /* MBEDTLS_ECP_DP_SECP521R1_ENABLED */
             }
             break;
-        case PSA_ECC_FAMILY_SECP_K1:
+        case PSA_ECC_CURVE_SECP_K1:
             switch( bits )
             {
 #if defined(MBEDTLS_ECP_DP_SECP192K1_ENABLED)
@@ -221,7 +223,7 @@ static inline int mbedtls_psa_get_ecc_oid_from_id(
 #endif /* MBEDTLS_ECP_DP_SECP256K1_ENABLED */
             }
             break;
-        case PSA_ECC_FAMILY_BRAINPOOL_P_R1:
+        case PSA_ECC_CURVE_BRAINPOOL_P_R1:
             switch( bits )
             {
 #if defined(MBEDTLS_ECP_DP_BP256R1_ENABLED)
