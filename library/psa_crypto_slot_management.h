@@ -22,87 +22,32 @@
 #define PSA_CRYPTO_SLOT_MANAGEMENT_H
 
 #include "psa/crypto.h"
-#include "psa_crypto_core.h"
 #include "psa_crypto_se.h"
 
 /* Number of key slots (plus one because 0 is not used).
  * The value is a compile-time constant for now, for simplicity. */
 #define PSA_KEY_SLOT_COUNT 32
 
-/** Range of volatile key identifiers.
+/** Access a key slot at the given handle.
  *
- *  The last PSA_KEY_SLOT_COUNT identifiers of the implementation range
- *  of key identifiers are reserved for volatile key identifiers.
- *  A volatile key identifier is equal to #PSA_KEY_ID_VOLATILE_MIN plus the
- *  index of the key slot containing the volatile key definition.
- */
-
-/** The minimum value for a volatile key identifier.
- */
-#define PSA_KEY_ID_VOLATILE_MIN  ( PSA_KEY_ID_VENDOR_MAX - \
-                                   PSA_KEY_SLOT_COUNT + 1 )
-
-/** The maximum value for a volatile key identifier.
- */
-#define PSA_KEY_ID_VOLATILE_MAX  PSA_KEY_ID_VENDOR_MAX
-
-/** Test whether a key identifier is a volatile key identifier.
- *
- * \param key_id  Key identifier to test.
- *
- * \retval 1
- *         The key identifier is a volatile key identifier.
- * \retval 0
- *         The key identifier is not a volatile key identifier.
- */
-static inline int psa_key_id_is_volatile( psa_key_id_t key_id )
-{
-    return( ( key_id >= PSA_KEY_ID_VOLATILE_MIN ) &&
-            ( key_id <= PSA_KEY_ID_VOLATILE_MAX ) );
-}
-
-/** Retrieve the description of a key given its identifier.
- *
- *  The descriptions of volatile keys and loaded persistent keys are
- *  stored in key slots. This function returns a pointer to the key slot
- *  containing the description of a key given its identifier.
- *
- *  In case of a persistent key, the function loads the description of the key
- *  into a key slot if not already done.
- *
- *  On success, the access counter of the returned key slot is incremented by
- *  one. It is the responsibility of the caller to call
- *  psa_decrement_key_slot_access_count() when it does not access the slot
- *  anymore.
- *
- * \param key           Key identifier to query.
+ * \param handle        Key handle to query.
  * \param[out] p_slot   On success, `*p_slot` contains a pointer to the
- *                      key slot containing the description of the key
- *                      identified by \p key.
+ *                      key slot in memory designated by \p handle.
  *
- * \retval #PSA_SUCCESS
- *         The pointer to the key slot containing the description of the key
- *         identified by \p key was returned.
- * \retval #PSA_ERROR_BAD_STATE
+ * \retval PSA_SUCCESS
+ *         Success: \p handle is a handle to `*p_slot`. Note that `*p_slot`
+ *         may be empty or occupied.
+ * \retval PSA_ERROR_INVALID_HANDLE
+ *         \p handle is out of range or is not in use.
+ * \retval PSA_ERROR_BAD_STATE
  *         The library has not been initialized.
- * \retval #PSA_ERROR_INVALID_HANDLE
- *         \p key is not a valid key identifier.
- * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
- *         \p key is a persistent key identifier. The implementation does not
- *         have sufficient resources to load the persistent key. This can be
- *         due to a lack of empty key slot, or available memory.
- * \retval #PSA_ERROR_DOES_NOT_EXIST
- *         There is no key with key identifier \p key.
- * \retval #PSA_ERROR_CORRUPTION_DETECTED
- * \retval #PSA_ERROR_STORAGE_FAILURE
- * \retval #PSA_ERROR_DATA_CORRUPT
  */
-psa_status_t psa_get_key_slot( mbedtls_svc_key_id_t key,
+psa_status_t psa_get_key_slot( psa_key_handle_t handle,
                                psa_key_slot_t **p_slot );
 
 /** Initialize the key slot structures.
  *
- * \retval #PSA_SUCCESS
+ * \retval PSA_SUCCESS
  *         Currently this function always succeeds.
  */
 psa_status_t psa_initialize_key_slots( void );
@@ -115,50 +60,18 @@ void psa_wipe_all_key_slots( void );
 /** Find a free key slot.
  *
  * This function returns a key slot that is available for use and is in its
- * ground state (all-bits-zero). On success, the access counter of the
- * returned key slot is incremented by one. It is the responsibility of the
- * caller to call psa_decrement_key_slot_access_count() when it does not access
- * the key slot anymore.
+ * ground state (all-bits-zero).
  *
- * \param[out] volatile_key_id   On success, volatile key identifier
- *                               associated to the returned slot.
- * \param[out] p_slot            On success, a pointer to the slot.
+ * \param[out] handle   On success, a slot number that can be used as a
+ *                      handle to the slot.
+ * \param[out] p_slot   On success, a pointer to the slot.
  *
  * \retval #PSA_SUCCESS
  * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
  * \retval #PSA_ERROR_BAD_STATE
  */
-psa_status_t psa_get_empty_key_slot( psa_key_id_t *volatile_key_id,
+psa_status_t psa_get_empty_key_slot( psa_key_handle_t *handle,
                                      psa_key_slot_t **p_slot );
-
-/** Increment slot access counter.
- *
- * This function increments the slot access counter by one.
- *
- * \param[in] slot  The key slot.
- */
-static inline void psa_increment_key_slot_access_count( psa_key_slot_t *slot )
-{
-    slot->access_count++;
-}
-
-/** Decrement slot access counter.
- *
- * This function decrements the slot access counter by one.
- *
- * \note To ease the handling of errors in retrieving a key slot
- *       a NULL input pointer is valid, and the function returns
- *       successfully without doing anything in that case.
- *
- * \param[in] slot  The key slot.
- * \retval #PSA_SUCCESS
- *             \p slot is NULL or the key slot access pointer has been
- *             decremented successfully.
- * \retval #PSA_ERROR_CORRUPTION_DETECTED
- *             The access counter was equal to 0.
- *
- */
-psa_status_t psa_decrement_key_slot_access_count( psa_key_slot_t *slot );
 
 /** Test whether a lifetime designates a key in an external cryptoprocessor.
  *
@@ -195,29 +108,18 @@ static inline int psa_key_lifetime_is_external( psa_key_lifetime_t lifetime )
 psa_status_t psa_validate_key_location( psa_key_lifetime_t lifetime,
                                         psa_se_drv_table_entry_t **p_drv );
 
-/** Validate the persistence of a key.
+/** Validate that a key's persistence attributes are valid.
+ *
+ * This function checks whether a key's declared persistence level and key ID
+ * attributes are valid and known to the PSA Core in its actual configuration.
  *
  * \param[in] lifetime  The key lifetime attribute.
+ * \param[in] key       The key identifier.
  *
  * \retval #PSA_SUCCESS
- * \retval #PSA_ERROR_INVALID_ARGUMENT The key is persistent but persistent
- *         keys are not supported.
+ * \retval #PSA_ERROR_INVALID_ARGUMENT
  */
-psa_status_t psa_validate_key_persistence( psa_key_lifetime_t lifetime );
-
-/** Validate a key identifier.
- *
- * \param[in] key           The key identifier.
- * \param[in] vendor_ok     Non-zero to indicate that key identifiers in the
- *                          vendor range are allowed, volatile key identifiers
- *                          excepted \c 0 otherwise.
- * \param[in] volatile_ok   Non-zero to indicate that volatile key identifiers
- *                          are allowed \c 0 otherwise.
- *
- * \retval #PSA_SUCCESS The identifier is valid.
- * \retval #PSA_ERROR_INVALID_ARGUMENT The key identifier is not valid.
- */
-psa_status_t psa_validate_key_id(
-    mbedtls_svc_key_id_t key, int vendor_ok, int volatile_ok );
+psa_status_t psa_validate_key_persistence( psa_key_lifetime_t lifetime,
+                                           mbedtls_svc_key_id_t key );
 
 #endif /* PSA_CRYPTO_SLOT_MANAGEMENT_H */
