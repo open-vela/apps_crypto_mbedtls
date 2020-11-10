@@ -4,7 +4,7 @@
  * \brief SSL/TLS functions.
  */
 /*
- *  Copyright The Mbed TLS Contributors
+ *  Copyright (C) 2006-2015, ARM Limited, All Rights Reserved
  *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -18,6 +18,8 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
+ *
+ *  This file is part of mbed TLS (https://tls.mbed.org)
  */
 #ifndef MBEDTLS_SSL_H
 #define MBEDTLS_SSL_H
@@ -127,7 +129,6 @@
 #define MBEDTLS_ERR_SSL_UNEXPECTED_CID                    -0x6000  /**< An encrypted DTLS-frame with an unexpected CID was received. */
 #define MBEDTLS_ERR_SSL_VERSION_MISMATCH                  -0x5F00  /**< An operation failed due to an unexpected version or configuration. */
 #define MBEDTLS_ERR_SSL_CRYPTO_IN_PROGRESS                -0x7000  /**< A cryptographic operation is in progress. Try again later. */
-#define MBEDTLS_ERR_SSL_BAD_CONFIG                        -0x5E80  /**< Invalid value in SSL config */
 
 /*
  * Various constants
@@ -143,9 +144,6 @@
 #define MBEDTLS_SSL_TRANSPORT_DATAGRAM          1   /*!< DTLS     */
 
 #define MBEDTLS_SSL_MAX_HOST_NAME_LEN           255 /*!< Maximum host name defined in RFC 1035 */
-#define MBEDTLS_SSL_MAX_ALPN_NAME_LEN           255 /*!< Maximum size in bytes of a protocol name in alpn ext., RFC 7301 */
-
-#define MBEDTLS_SSL_MAX_ALPN_LIST_LEN           65535 /*!< Maximum size in bytes of list in alpn ext., RFC 7301          */
 
 /* RFC 6066 section 4, see also mfl_code_to_length in ssl_tls.c
  * NONE must be zero so that memset()ing structure to zero works */
@@ -213,9 +211,6 @@
 
 #define MBEDTLS_SSL_CERT_REQ_CA_LIST_ENABLED       1
 #define MBEDTLS_SSL_CERT_REQ_CA_LIST_DISABLED      0
-
-#define MBEDTLS_SSL_DTLS_SRTP_MKI_UNSUPPORTED    0
-#define MBEDTLS_SSL_DTLS_SRTP_MKI_SUPPORTED      1
 
 /*
  * Default range for DTLS retransmission timer value, in milliseconds.
@@ -395,8 +390,6 @@
 #define MBEDTLS_TLS_EXT_SUPPORTED_POINT_FORMATS     11
 
 #define MBEDTLS_TLS_EXT_SIG_ALG                     13
-
-#define MBEDTLS_TLS_EXT_USE_SRTP                    14
 
 #define MBEDTLS_TLS_EXT_ALPN                        16
 
@@ -856,41 +849,6 @@ typedef void mbedtls_ssl_async_cancel_t( mbedtls_ssl_context *ssl );
 #endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED &&
           !MBEDTLS_SSL_KEEP_PEER_CERTIFICATE */
 
-#if defined(MBEDTLS_SSL_DTLS_SRTP)
-
-#define MBEDTLS_TLS_SRTP_MAX_MKI_LENGTH             255
-#define MBEDTLS_TLS_SRTP_MAX_PROFILE_LIST_LENGTH    4
-/*
- * For code readability use a typedef for DTLS-SRTP profiles
- *
- * Use_srtp extension protection profiles values as defined in
- * http://www.iana.org/assignments/srtp-protection/srtp-protection.xhtml
- *
- * Reminder: if this list is expanded mbedtls_ssl_check_srtp_profile_value
- * must be updated too.
- */
-#define MBEDTLS_TLS_SRTP_AES128_CM_HMAC_SHA1_80     ( (uint16_t) 0x0001)
-#define MBEDTLS_TLS_SRTP_AES128_CM_HMAC_SHA1_32     ( (uint16_t) 0x0002)
-#define MBEDTLS_TLS_SRTP_NULL_HMAC_SHA1_80          ( (uint16_t) 0x0005)
-#define MBEDTLS_TLS_SRTP_NULL_HMAC_SHA1_32          ( (uint16_t) 0x0006)
-/* This one is not iana defined, but for code readability. */
-#define MBEDTLS_TLS_SRTP_UNSET                      ( (uint16_t) 0x0000)
-
-typedef uint16_t mbedtls_ssl_srtp_profile;
-
-typedef struct mbedtls_dtls_srtp_info_t
-{
-    /*! The SRTP profile that was negotiated. */
-    mbedtls_ssl_srtp_profile chosen_dtls_srtp_profile;
-    /*! The length of mki_value. */
-    uint16_t mki_len;
-    /*! The mki_value used, with max size of 256 bytes. */
-    unsigned char mki_value[MBEDTLS_TLS_SRTP_MAX_MKI_LENGTH];
-}
-mbedtls_dtls_srtp_info;
-
-#endif /* MBEDTLS_SSL_DTLS_SRTP */
-
 /*
  * This structure is used for storing current session data.
  *
@@ -1097,13 +1055,6 @@ struct mbedtls_ssl_config
     const char **alpn_list;         /*!< ordered list of protocols          */
 #endif
 
-#if defined(MBEDTLS_SSL_DTLS_SRTP)
-    /*! ordered list of supported srtp profile */
-    const mbedtls_ssl_srtp_profile *dtls_srtp_profile_list;
-    /*! number of supported profiles */
-    size_t dtls_srtp_profile_list_len;
-#endif /* MBEDTLS_SSL_DTLS_SRTP */
-
     /*
      * Numerical settings (int then char)
      */
@@ -1184,11 +1135,8 @@ struct mbedtls_ssl_config
                                              *   record with unexpected CID
                                              *   should lead to failure.    */
 #endif /* MBEDTLS_SSL_DTLS_CONNECTION_ID */
-#if defined(MBEDTLS_SSL_DTLS_SRTP)
-    unsigned int dtls_srtp_mki_support : 1; /* support having mki_value
-                                               in the use_srtp extension     */
-#endif
 };
+
 
 struct mbedtls_ssl_context
 {
@@ -1347,13 +1295,6 @@ struct mbedtls_ssl_context
 #if defined(MBEDTLS_SSL_ALPN)
     const char *alpn_chosen;    /*!<  negotiated protocol                   */
 #endif /* MBEDTLS_SSL_ALPN */
-
-#if defined(MBEDTLS_SSL_DTLS_SRTP)
-    /*
-     * use_srtp extension
-     */
-    mbedtls_dtls_srtp_info dtls_srtp_info;
-#endif /* MBEDTLS_SSL_DTLS_SRTP */
 
     /*
      * Information for DTLS hello verify
@@ -1616,7 +1557,7 @@ void mbedtls_ssl_conf_dbg( mbedtls_ssl_config *conf,
  * \note           For DTLS, you need to provide either a non-NULL
  *                 f_recv_timeout callback, or a f_recv that doesn't block.
  *
- * \note           See the documentations of \c mbedtls_ssl_send_t,
+ * \note           See the documentations of \c mbedtls_ssl_sent_t,
  *                 \c mbedtls_ssl_recv_t and \c mbedtls_ssl_recv_timeout_t for
  *                 the conventions those callbacks must follow.
  *
@@ -2089,8 +2030,6 @@ void mbedtls_ssl_conf_export_keys_cb( mbedtls_ssl_config *conf,
  *                  (Default: none.)
  *
  * \note            See \c mbedtls_ssl_export_keys_ext_t.
- * \warning         Exported key material must not be used for any purpose
- *                  before the (D)TLS handshake is completed
  *
  * \param conf      SSL configuration context
  * \param f_export_keys_ext Callback for exporting keys
@@ -3178,105 +3117,6 @@ int mbedtls_ssl_conf_alpn_protocols( mbedtls_ssl_config *conf, const char **prot
  */
 const char *mbedtls_ssl_get_alpn_protocol( const mbedtls_ssl_context *ssl );
 #endif /* MBEDTLS_SSL_ALPN */
-
-#if defined(MBEDTLS_SSL_DTLS_SRTP)
-#if defined(MBEDTLS_DEBUG_C)
-static inline const char *mbedtls_ssl_get_srtp_profile_as_string( mbedtls_ssl_srtp_profile profile )
-{
-    switch( profile )
-    {
-        case MBEDTLS_TLS_SRTP_AES128_CM_HMAC_SHA1_80:
-            return( "MBEDTLS_TLS_SRTP_AES128_CM_HMAC_SHA1_80" );
-        case MBEDTLS_TLS_SRTP_AES128_CM_HMAC_SHA1_32:
-            return( "MBEDTLS_TLS_SRTP_AES128_CM_HMAC_SHA1_32" );
-        case MBEDTLS_TLS_SRTP_NULL_HMAC_SHA1_80:
-            return( "MBEDTLS_TLS_SRTP_NULL_HMAC_SHA1_80" );
-        case MBEDTLS_TLS_SRTP_NULL_HMAC_SHA1_32:
-            return( "MBEDTLS_TLS_SRTP_NULL_HMAC_SHA1_32" );
-        default: break;
-    }
-    return( "" );
-}
-#endif /* MBEDTLS_DEBUG_C */
-/**
- * \brief                   Manage support for mki(master key id) value
- *                          in use_srtp extension.
- *                          MKI is an optional part of SRTP used for key management
- *                          and re-keying. See RFC3711 section 3.1 for details.
- *                          The default value is
- *                          #MBEDTLS_SSL_DTLS_SRTP_MKI_UNSUPPORTED.
- *
- * \param conf              The SSL configuration to manage mki support.
- * \param support_mki_value Enable or disable mki usage. Values are
- *                          #MBEDTLS_SSL_DTLS_SRTP_MKI_UNSUPPORTED
- *                          or #MBEDTLS_SSL_DTLS_SRTP_MKI_SUPPORTED.
- */
-void mbedtls_ssl_conf_srtp_mki_value_supported( mbedtls_ssl_config *conf,
-                                                int support_mki_value );
-
-/**
- * \brief                   Set the supported DTLS-SRTP protection profiles.
- *
- * \param conf              SSL configuration
- * \param profiles          Pointer to a List of MBEDTLS_TLS_SRTP_UNSET terminated
- *                          supported protection profiles
- *                          in decreasing preference order.
- *                          The pointer to the list is recorded by the library
- *                          for later reference as required, so the lifetime
- *                          of the table must be at least as long as the lifetime
- *                          of the SSL configuration structure.
- *                          The list must not hold more than
- *                          MBEDTLS_TLS_SRTP_MAX_PROFILE_LIST_LENGTH elements
- *                          (excluding the terminating MBEDTLS_TLS_SRTP_UNSET).
- *
- * \return                  0 on success
- * \return                  #MBEDTLS_ERR_SSL_BAD_INPUT_DATA when the list of
- *                          protection profiles is incorrect.
- */
-int mbedtls_ssl_conf_dtls_srtp_protection_profiles
-                               ( mbedtls_ssl_config *conf,
-                                 const mbedtls_ssl_srtp_profile *profiles );
-
-/**
- * \brief                  Set the mki_value for the current DTLS-SRTP session.
- *
- * \param ssl              SSL context to use.
- * \param mki_value        The MKI value to set.
- * \param mki_len          The length of the MKI value.
- *
- * \note                   This function is relevant on client side only.
- *                         The server discovers the mki value during handshake.
- *                         A mki value set on server side using this function
- *                         is ignored.
- *
- * \return                 0 on success
- * \return                 #MBEDTLS_ERR_SSL_BAD_INPUT_DATA
- * \return                 #MBEDTLS_ERR_SSL_FEATURE_UNAVAILABLE
- */
-int mbedtls_ssl_dtls_srtp_set_mki_value( mbedtls_ssl_context *ssl,
-                                         unsigned char *mki_value,
-                                         uint16_t mki_len );
-/**
- * \brief                  Get the negotiated DTLS-SRTP informations:
- *                         Protection profile and MKI value.
- *
- * \warning                This function must be called after the handshake is
- *                         completed. The value returned by this function must
- *                         not be trusted or acted upon before the handshake completes.
- *
- * \param ssl              The SSL context to query.
- * \param dtls_srtp_info   The negotiated DTLS-SRTP informations:
- *                         - Protection profile in use.
- *                         A direct mapping of the iana defined value for protection
- *                         profile on an uint16_t.
-                   http://www.iana.org/assignments/srtp-protection/srtp-protection.xhtml
- *                         #MBEDTLS_TLS_SRTP_UNSET if the use of SRTP was not negotiated
- *                         or peer's Hello packet was not parsed yet.
- *                         - mki size and value( if size is > 0 ).
- */
-void mbedtls_ssl_get_dtls_srtp_negotiation_result( const mbedtls_ssl_context *ssl,
-                                                   mbedtls_dtls_srtp_info *dtls_srtp_info );
-#endif /* MBEDTLS_SSL_DTLS_SRTP */
 
 /**
  * \brief          Set the maximum supported version sent from the client side
