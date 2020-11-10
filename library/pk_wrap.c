@@ -1,7 +1,7 @@
 /*
  *  Public Key abstraction layer: wrapper functions
  *
- *  Copyright The Mbed TLS Contributors
+ *  Copyright (C) 2006-2015, ARM Limited, All Rights Reserved
  *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -15,9 +15,15 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
+ *
+ *  This file is part of mbed TLS (https://tls.mbed.org)
  */
 
-#include "common.h"
+#if !defined(MBEDTLS_CONFIG_FILE)
+#include "mbedtls/config.h"
+#else
+#include MBEDTLS_CONFIG_FILE
+#endif
 
 #if defined(MBEDTLS_PK_C)
 #include "mbedtls/pk_internal.h"
@@ -551,12 +557,11 @@ static int ecdsa_verify_wrap( void *ctx_arg, mbedtls_md_type_t md_alg,
     unsigned char buf[30 + 2 * MBEDTLS_ECP_MAX_BYTES];
     unsigned char *p;
     mbedtls_pk_info_t pk_info = mbedtls_eckey_info;
-    psa_algorithm_t psa_sig_md = PSA_ALG_ECDSA_ANY;
+    psa_algorithm_t psa_sig_md, psa_md;
     size_t curve_bits;
-    psa_ecc_family_t curve =
+    psa_ecc_curve_t curve =
         mbedtls_ecc_group_to_psa( ctx->grp.id, &curve_bits );
     const size_t signature_part_size = ( ctx->grp.nbits + 7 ) / 8;
-    ((void) md_alg);
 
     if( curve == 0 )
         return( MBEDTLS_ERR_PK_BAD_INPUT_DATA );
@@ -569,6 +574,11 @@ static int ecdsa_verify_wrap( void *ctx_arg, mbedtls_md_type_t md_alg,
     key_len = mbedtls_pk_write_pubkey( &p, buf, &key );
     if( key_len <= 0 )
         return( MBEDTLS_ERR_PK_BAD_INPUT_DATA );
+
+    psa_md = mbedtls_psa_translate_md( md_alg );
+    if( psa_md == 0 )
+        return( MBEDTLS_ERR_PK_BAD_INPUT_DATA );
+    psa_sig_md = PSA_ALG_ECDSA( psa_md );
 
     psa_set_key_type( &attributes, PSA_KEY_TYPE_ECC_PUBLIC_KEY( curve ) );
     psa_set_key_usage_flags( &attributes, PSA_KEY_USAGE_VERIFY_HASH );
@@ -906,8 +916,6 @@ static int pk_opaque_can_do( mbedtls_pk_type_t type )
             type == MBEDTLS_PK_ECDSA );
 }
 
-#if defined(MBEDTLS_ECDSA_C)
-
 /*
  * Simultaneously convert and move raw MPI from the beginning of a buffer
  * to an ASN.1 MPI at the end of the buffer.
@@ -990,24 +998,11 @@ static int pk_ecdsa_sig_asn1_from_psa( unsigned char *sig, size_t *sig_len,
     return( 0 );
 }
 
-#endif /* MBEDTLS_ECDSA_C */
-
 static int pk_opaque_sign_wrap( void *ctx, mbedtls_md_type_t md_alg,
                    const unsigned char *hash, size_t hash_len,
                    unsigned char *sig, size_t *sig_len,
                    int (*f_rng)(void *, unsigned char *, size_t), void *p_rng )
 {
-#if !defined(MBEDTLS_ECDSA_C)
-    ((void) ctx);
-    ((void) md_alg);
-    ((void) hash);
-    ((void) hash_len);
-    ((void) sig);
-    ((void) sig_len);
-    ((void) f_rng);
-    ((void) p_rng);
-    return( MBEDTLS_ERR_PK_FEATURE_UNAVAILABLE );
-#else /* !MBEDTLS_ECDSA_C */
     const psa_key_handle_t *key = (const psa_key_handle_t *) ctx;
     psa_key_attributes_t attributes = PSA_KEY_ATTRIBUTES_INIT;
     psa_algorithm_t alg = PSA_ALG_ECDSA( mbedtls_psa_translate_md( md_alg ) );
@@ -1038,7 +1033,6 @@ static int pk_opaque_sign_wrap( void *ctx, mbedtls_md_type_t md_alg,
 
     /* transcode it to ASN.1 sequence */
     return( pk_ecdsa_sig_asn1_from_psa( sig, sig_len, buf_len ) );
-#endif /* !MBEDTLS_ECDSA_C */
 }
 
 const mbedtls_pk_info_t mbedtls_pk_opaque_info = {

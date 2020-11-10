@@ -30,8 +30,7 @@
  * `key_ladder_demo.sh` for an example run.
  */
 
-/*
- *  Copyright The Mbed TLS Contributors
+/*  Copyright (C) 2018, ARM Limited, All Rights Reserved
  *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -45,6 +44,8 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
+ *
+ *  This file is part of mbed TLS (https://tls.mbed.org)
  */
 
 /* First include Mbed TLS headers to get the Mbed TLS configuration and
@@ -602,6 +603,18 @@ static void usage( void )
     printf( "                    To get the same key, you must use the same master key\n" );
     printf( "                    and the same sequence of labels.\n" );
 }
+
+#if defined(MBEDTLS_CHECK_PARAMS)
+#include "mbedtls/platform_util.h"
+void mbedtls_param_failed( const char *failure_condition,
+                           const char *file,
+                           int line )
+{
+    printf( "%s:%i: Input param failed - %s\n",
+                    file, line, failure_condition );
+    exit( EXIT_FAILURE );
+}
+#endif
 
 int main( int argc, char *argv[] )
 {
