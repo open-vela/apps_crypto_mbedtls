@@ -157,7 +157,7 @@ static int ssl_conf_has_psk_or_cb( mbedtls_ssl_config const *conf )
         return( 1 );
 
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
-    if( conf->psk_opaque != 0 )
+    if( ! mbedtls_svc_key_id_is_null( conf->psk_opaque ) )
         return( 1 );
 #endif /* MBEDTLS_USE_PSA_CRYPTO */
 
@@ -172,13 +172,13 @@ static int ssl_use_opaque_psk( mbedtls_ssl_context const *ssl )
         /* If we've used a callback to select the PSK,
          * the static configuration is irrelevant. */
 
-        if( ssl->handshake->psk_opaque != 0 )
+        if( ! mbedtls_svc_key_id_is_null( ssl->handshake->psk_opaque ) )
             return( 1 );
 
         return( 0 );
     }
 
-    if( ssl->conf->psk_opaque != 0 )
+    if( ! mbedtls_svc_key_id_is_null( ssl->conf->psk_opaque ) )
         return( 1 );
 
     return( 0 );
@@ -3929,12 +3929,11 @@ static int ssl_parse_encrypted_pms( mbedtls_ssl_context *ssl,
     /* In case of a failure in decryption, the decryption may write less than
      * 2 bytes of output, but we always read the first two bytes. It doesn't
      * matter in the end because diff will be nonzero in that case due to
-     * ret being nonzero, and we only care whether diff is 0.
-     * But do initialize peer_pms and peer_pmslen for robustness anyway. This
-     * also makes memory analyzers happy (don't access uninitialized memory,
-     * even if it's an unsigned char). */
+     * peer_pmslen being less than 48, and we only care whether diff is 0.
+     * But do initialize peer_pms for robustness anyway. This also makes
+     * memory analyzers happy (don't access uninitialized memory, even
+     * if it's an unsigned char). */
     peer_pms[0] = peer_pms[1] = ~0;
-    peer_pmslen = 0;
 
     ret = ssl_decrypt_encrypted_pms( ssl, p, end,
                                      peer_pms,
