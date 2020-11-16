@@ -1,5 +1,5 @@
 set(libs
-    ${mbedtls_target}
+    mbedtls
 )
 
 if(USE_PKCS11_HELPER_LIBRARY)
@@ -33,7 +33,7 @@ foreach(exe IN LISTS executables_libs executables_mbedcrypto)
     if (${exe_index} GREATER -1)
         target_link_libraries(${exe} ${libs})
     else()
-        target_link_libraries(${exe} ${mbedcrypto_target})
+        target_link_libraries(${exe} mbedcrypto)
     endif()
 endforeach()
 
