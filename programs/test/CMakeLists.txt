@@ -1,5 +1,5 @@
 set(libs
-    ${mbedtls_target}
+    mbedtls
 )
 
 if(USE_PKCS11_HELPER_LIBRARY)
@@ -26,22 +26,18 @@ if(TEST_CPP)
 endif()
 
 foreach(exe IN LISTS executables_libs executables_mbedcrypto)
-    set(extra_sources "")
-    if(exe STREQUAL "query_compile_time_config")
-        list(APPEND extra_sources
-            ${CMAKE_CURRENT_SOURCE_DIR}/query_config.c)
-    endif()
-    add_executable(${exe} ${exe}.c $<TARGET_OBJECTS:mbedtls_test>
-        ${extra_sources})
+    add_executable(${exe} ${exe}.c $<TARGET_OBJECTS:mbedtls_test>)
 
     # This emulates "if ( ... IN_LIST ... )" which becomes available in CMake 3.3
     list(FIND executables_libs ${exe} exe_index)
     if (${exe_index} GREATER -1)
         target_link_libraries(${exe} ${libs})
     else()
-        target_link_libraries(${exe} ${mbedcrypto_target})
+        target_link_libraries(${exe} mbedcrypto)
     endif()
 endforeach()
+
+target_sources(query_compile_time_config PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/query_config.c)
 
 install(TARGETS ${executables_libs} ${executables_mbedcrypto}
         DESTINATION "bin"
