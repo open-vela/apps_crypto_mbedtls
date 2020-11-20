@@ -446,7 +446,7 @@ exit:
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
 
 static psa_status_t setup_psa_key_derivation( psa_key_derivation_operation_t* derivation,
-                                              psa_key_id_t key,
+                                              psa_key_handle_t slot,
                                               psa_algorithm_t alg,
                                               const unsigned char* seed, size_t seed_length,
                                               const unsigned char* label, size_t label_length,
@@ -466,7 +466,7 @@ static psa_status_t setup_psa_key_derivation( psa_key_derivation_operation_t* de
         if( status != PSA_SUCCESS )
             return( status );
 
-        if( mbedtls_svc_key_id_is_null( key ) )
+        if( slot == 0 )
         {
             status = psa_key_derivation_input_bytes(
                 derivation, PSA_KEY_DERIVATION_INPUT_SECRET,
@@ -475,7 +475,8 @@ static psa_status_t setup_psa_key_derivation( psa_key_derivation_operation_t* de
         else
         {
             status = psa_key_derivation_input_key(
-                derivation, PSA_KEY_DERIVATION_INPUT_SECRET, key );
+                derivation, PSA_KEY_DERIVATION_INPUT_SECRET,
+                slot );
         }
         if( status != PSA_SUCCESS )
             return( status );
@@ -506,7 +507,7 @@ static int tls_prf_generic( mbedtls_md_type_t md_type,
 {
     psa_status_t status;
     psa_algorithm_t alg;
-    psa_key_id_t master_key = MBEDTLS_SVC_KEY_ID_INIT;
+    psa_key_handle_t master_slot = 0;
     psa_key_derivation_operation_t derivation =
         PSA_KEY_DERIVATION_OPERATION_INIT;
 
@@ -520,7 +521,7 @@ static int tls_prf_generic( mbedtls_md_type_t md_type,
      * this PRF is also used to derive an IV, in particular in EAP-TLS,
      * and for this use case it makes sense to have a 0-length "secret".
      * Since the key API doesn't allow importing a key of length 0,
-     * keep master_key=0, which setup_psa_key_derivation() understands
+     * keep master_slot=0, which setup_psa_key_derivation() understands
      * to mean a 0-length "secret" input. */
     if( slen != 0 )
     {
@@ -529,13 +530,13 @@ static int tls_prf_generic( mbedtls_md_type_t md_type,
         psa_set_key_algorithm( &key_attributes, alg );
         psa_set_key_type( &key_attributes, PSA_KEY_TYPE_DERIVE );
 
-        status = psa_import_key( &key_attributes, secret, slen, &master_key );
+        status = psa_import_key( &key_attributes, secret, slen, &master_slot );
         if( status != PSA_SUCCESS )
             return( MBEDTLS_ERR_SSL_HW_ACCEL_FAILED );
     }
 
     status = setup_psa_key_derivation( &derivation,
-                                       master_key, alg,
+                                       master_slot, alg,
                                        random, rlen,
                                        (unsigned char const *) label,
                                        (size_t) strlen( label ),
@@ -543,7 +544,7 @@ static int tls_prf_generic( mbedtls_md_type_t md_type,
     if( status != PSA_SUCCESS )
     {
         psa_key_derivation_abort( &derivation );
-        psa_destroy_key( master_key );
+        psa_destroy_key( master_slot );
         return( MBEDTLS_ERR_SSL_HW_ACCEL_FAILED );
     }
 
@@ -551,19 +552,19 @@ static int tls_prf_generic( mbedtls_md_type_t md_type,
     if( status != PSA_SUCCESS )
     {
         psa_key_derivation_abort( &derivation );
-        psa_destroy_key( master_key );
+        psa_destroy_key( master_slot );
         return( MBEDTLS_ERR_SSL_HW_ACCEL_FAILED );
     }
 
     status = psa_key_derivation_abort( &derivation );
     if( status != PSA_SUCCESS )
     {
-        psa_destroy_key( master_key );
+        psa_destroy_key( master_slot );
         return( MBEDTLS_ERR_SSL_HW_ACCEL_FAILED );
     }
 
-    if( ! mbedtls_svc_key_id_is_null( master_key ) )
-        status = psa_destroy_key( master_key );
+    if( master_slot != 0 )
+        status = psa_destroy_key( master_slot );
     if( status != PSA_SUCCESS )
         return( MBEDTLS_ERR_SSL_HW_ACCEL_FAILED );
 
@@ -706,13 +707,13 @@ static int ssl_use_opaque_psk( mbedtls_ssl_context const *ssl )
     {
         /* If we've used a callback to select the PSK,
          * the static configuration is irrelevant. */
-        if( ! mbedtls_svc_key_id_is_null( ssl->handshake->psk_opaque ) )
+        if( ssl->handshake->psk_opaque != 0 )
             return( 1 );
 
         return( 0 );
     }
 
-    if( ! mbedtls_svc_key_id_is_null( ssl->conf->psk_opaque ) )
+    if( ssl->conf->psk_opaque != 0 )
         return( 1 );
 
     return( 0 );
@@ -1513,7 +1514,7 @@ static int ssl_compute_master( mbedtls_ssl_handshake_params *handshake,
         /* Perform PSK-to-MS expansion in a single step. */
         psa_status_t status;
         psa_algorithm_t alg;
-        psa_key_id_t psk;
+        psa_key_handle_t psk;
         psa_key_derivation_operation_t derivation =
             PSA_KEY_DERIVATION_OPERATION_INIT;
         mbedtls_md_type_t hash_alg = handshake->ciphersuite_info->mac;
@@ -4343,11 +4344,11 @@ static void ssl_conf_remove_psk( mbedtls_ssl_config *conf )
 {
     /* Remove reference to existing PSK, if any. */
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
-    if( ! mbedtls_svc_key_id_is_null( conf->psk_opaque ) )
+    if( conf->psk_opaque != 0 )
     {
         /* The maintenance of the PSK key slot is the
          * user's responsibility. */
-        conf->psk_opaque = MBEDTLS_SVC_KEY_ID_INIT;
+        conf->psk_opaque = 0;
     }
     /* This and the following branch should never
      * be taken simultaenously as we maintain the
@@ -4431,9 +4432,9 @@ int mbedtls_ssl_conf_psk( mbedtls_ssl_config *conf,
 static void ssl_remove_psk( mbedtls_ssl_context *ssl )
 {
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
-    if( ! mbedtls_svc_key_id_is_null( ssl->handshake->psk_opaque ) )
+    if( ssl->handshake->psk_opaque != 0 )
     {
-        ssl->handshake->psk_opaque = MBEDTLS_SVC_KEY_ID_INIT;
+        ssl->handshake->psk_opaque = 0;
     }
     else
 #endif /* MBEDTLS_USE_PSA_CRYPTO */
@@ -4468,7 +4469,7 @@ int mbedtls_ssl_set_hs_psk( mbedtls_ssl_context *ssl,
 
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
 int mbedtls_ssl_conf_psk_opaque( mbedtls_ssl_config *conf,
-                                 psa_key_id_t psk,
+                                 psa_key_handle_t psk_slot,
                                  const unsigned char *psk_identity,
                                  size_t psk_identity_len )
 {
@@ -4477,9 +4478,9 @@ int mbedtls_ssl_conf_psk_opaque( mbedtls_ssl_config *conf,
     ssl_conf_remove_psk( conf );
 
     /* Check and set opaque PSK */
-    if( mbedtls_svc_key_id_is_null( psk ) )
+    if( psk_slot == 0 )
         return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
-    conf->psk_opaque = psk;
+    conf->psk_opaque = psk_slot;
 
     /* Check and set PSK Identity */
     ret = ssl_conf_set_psk_identity( conf, psk_identity,
@@ -4491,14 +4492,13 @@ int mbedtls_ssl_conf_psk_opaque( mbedtls_ssl_config *conf,
 }
 
 int mbedtls_ssl_set_hs_psk_opaque( mbedtls_ssl_context *ssl,
-                                   psa_key_id_t psk )
+                                   psa_key_handle_t psk_slot )
 {
-    if( ( mbedtls_svc_key_id_is_null( psk ) ) ||
-        ( ssl->handshake == NULL ) )
+    if( psk_slot == 0 || ssl->handshake == NULL )
         return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
 
     ssl_remove_psk( ssl );
-    ssl->handshake->psk_opaque = psk;
+    ssl->handshake->psk_opaque = psk_slot;
     return( 0 );
 }
 #endif /* MBEDTLS_USE_PSA_CRYPTO */
