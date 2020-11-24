@@ -5,7 +5,7 @@ This document describes an interface for cryptoprocessor drivers in the PSA cryp
 
 This specification is work in progress and should be considered to be in a beta stage. There is ongoing work to implement this interface in Mbed TLS, which is the reference implementation of the PSA Cryptography API. At this stage, Arm does not expect major changes, but minor changes are expected based on experience from the first implementation and on external feedback.
 
-Time-stamp: "2020/08/19 19:47:39 GMT"
+Time-stamp: "2020/10/27 17:31:13 GMT"
 
 ## Introduction
 
@@ -189,6 +189,11 @@ The signature of a driver entry point generally looks like the signature of the 
 
 * For entry points that involve a multi-part operation, the operation state type (`psa_XXX_operation_t`) is replaced by a driver-specific operation state type (*prefix*`_XXX_operation_t`).
 
+* For entry points that are involved in key creation, the `psa_key_id_t *` output parameter is replaced by a sequence of parameters that convey the key context:
+    1. `uint8_t *key_buffer`: a buffer for the key material or key context.
+    2. `size_t key_buffer_size`: the size of the key buffer in bytes.
+    2. `size_t *key_buffer_length`: the length of the data written to the key buffer in bytes.
+
 Some entry points are grouped in families that must be implemented as a whole. If a driver supports an entry point family, it must provide all the entry points in the family.
 
 #### General considerations on driver entry point parameters
@@ -311,7 +316,63 @@ TODO
 
 ### Driver entry points for key management
 
-The driver entry points for key management differs significantly between [transparent drivers](#key-management-with-transparent-drivers) and [opaque drivers](#key-management-with-transparent-drivers). Refer to the applicable section for each driver type.
+The driver entry points for key management differ significantly between [transparent drivers](#key-management-with-transparent-drivers) and [opaque drivers](#key-management-with-opaque-drivers). This section describes common elements. Refer to the applicable section for each driver type for more information.
+
+The entry points that create or format key data have the following prototypes for a driver with the prefix `"acme"`:
+
+```
+psa_status_t acme_import_key(const psa_key_attributes_t *attributes,
+                             const uint8_t *data,
+                             size_t data_length,
+                             uint8_t *key_buffer,
+                             size_t key_buffer_size,
+                             size_t *key_buffer_length,
+                             size_t *bits);
+psa_status_t acme_generate_key(const psa_key_attributes_t *attributes,
+                               uint8_t *key_buffer,
+                               size_t key_buffer_size,
+                               size_t *key_buffer_length);
+```
+
+TODO: derivation, copy
+
+* The key attributes (`attributes`) have the same semantics as in the PSA Cryptography application interface.
+* For the `"import_key"` entry point, the input in the `data` buffer is either the export format or an implementation-specific format that the core documents as an acceptable input format for `psa_import_key()`.
+* The size of the key data buffer is sufficient for the internal representation of the key. For a transparent driver, this is the key's [export format](#key-format-for-transparent-drivers). For an opaque driver, this is the size determined from the driver description and the key attributes, as specified in the section [“Key format for opaque drivers”](#key-format-for-opaque-drivers).
+* For an opaque driver with an `"allocate_key"` entry point, the content of the key data buffer on entry is the output of that entry point.
+* The `"import_key"` entry point must determine or validate the key size and set `*bits` as described in the section [“Key size determination on import”](#key-size-determination-on-import) below.
+
+All key creation entry points must ensure that the resulting key is valid as specified in the section [“Key validation”](#key-validation) below. This is primarily important for import entry points since the key data comes from the application.
+
+#### Key size determination on import
+
+The `"import_key"` entry point may need to determine the key size.
+The PSA Cryptography API exposes the key size as part of the key attributes.
+When importing a key, the key size recorded in the key attributes may be `0`, which indicates that the size must be calculated from the data.
+In this case, the core will call the `"import_key"` entry point with an `attributes` structure such that `psa_get_key_bits(attributes)` returns 0, and the `"import_key"` entry point must return the actual key size in the `bits` output parameter. The semantics of `bits` is as follows:
+
+* The core sets `*bits` to `psa_get_key_bits(attributes)` before calling the `"import_key"` entry point.
+* If `*bits == 0`, the driver must determine the key size from the data and set `*bits` to this size. If the key size cannot be determined from the data, the driver must return `PSA_ERROR_INVALID_ARGUMENT` (as of version 1.0 of the PSA Cryptography API specification, it is possible to determine the key size for all standard key types).
+* If `*bits != 0`, the driver must check the value of `*bits` against the data and return an error if it does not match. If the driver entry point changes `*bits` to a different value but returns `PSA_SUCCESS`, the core will consider the key as invalid and the import will fail.
+
+#### Key validation
+
+Key creation entry points must produce valid key data. Key data is _valid_ if operations involving the key are guaranteed to work functionally and not to cause indirect security loss. Operation functions are supposed to receive valid keys, and should not have to check and report invalid keys. For example:
+
+* If a cryptographic mechanism is defined as having keying material of a certain size, or if the keying material involves integers that have to be in a certain range, key creation must ensure that the keying material has an appropriate size and falls within an appropriate range.
+* If a cryptographic operation involves a division by an integer which is provided as part of a key, key creation must ensure that this integer is nonzero.
+* If a cryptographic operation involves two keys A and B (or more), then the creation of A must ensure that using it does not risk compromising B. This applies even if A's policy does not explicitly allow a problematic operation, but A is exportable. In particular, public keys that can potentially be used for key agreement are considered invalid and must not be created if they risk compromising the private key..
+* On the other hand, it is acceptable for import to accept a key that cannot be verified as valid if using this key would at most compromise the key itself and material that is secured with this key. For example, RSA key import does not need to verify that the primes are actually prime. Key import may accept an insecure key if the consequences of the insecurity are no worse than a leak of the key prior to its import.
+
+With opaque drivers, the key context can only be used by code from the same driver, so key validity is primarily intended to report key creation errors at creation time rather than during an operation. With transparent drivers, the key context can potentially be used by code from a different provider, so key validity is critical for interoperability.
+
+This section describes some minimal validity requirements for standard key types.
+
+* For symmetric key types, check that the key size is suitable for the type.
+* For DES (`PSA_KEY_TYPE_DES`), additionally verify the parity bits.
+* For RSA (`PSA_KEY_TYPE_RSA_PUBLIC_KEY`, `PSA_KEY_TYPE_RSA_KEY_PAIR`), check the syntax of the key and make sanity checks on its components. TODO: what sanity checks? Value ranges (e.g. p < n), sanity checks such as parity, minimum and maximum size, what else?
+* For elliptic curve private keys (`PSA_KEY_TYPE_ECC_KEY_PAIR`), check the size and range. TODO: what else?
+* For elliptic curve public keys (`PSA_KEY_TYPE_ECC_PUBLIC_KEY`), check the size and range, and that the point is on the curve. TODO: what else?
 
 ### Miscellaneous driver entry points
 
@@ -339,11 +400,32 @@ The format of a key for transparent drivers is the same as in applications. Refe
 
 Transparent drivers may provide the following key management entry points:
 
-* `"generate_key"`: called by `psa_generate_key()`, only when generating a key pair (key such that `PSA_KEY_TYPE_IS_ASYMMETRIC` is true).
-* `"key_derivation_output_key"`: called by `psa_key_derivation_output_key()`, only when deriving a key pair (key such that `PSA_KEY_TYPE_IS_ASYMMETRIC` is true).
+* [`"import_key"`](#key-import-with-transparent-drivers): called by `psa_import_key()`, only when importing a key pair or a public key (key such that `PSA_KEY_TYPE_IS_ASYMMETRIC` is true).
+* `"generate_key"`: called by `psa_generate_key()`, only when generating a key pair (key such that `PSA_KEY_TYPE_IS_KEY_PAIR` is true).
+* `"key_derivation_output_key"`: called by `psa_key_derivation_output_key()`, only when deriving a key pair (key such that `PSA_KEY_TYPE_IS_KEY_PAIR` is true).
 * `"export_public_key"`: called by the core to obtain the public key of a key pair. The core may call this function at any time to obtain the public key, which can be for `psa_export_public_key()` but also at other times, including during a cryptographic operation that requires the public key such as a call to `psa_verify_message()` on a key pair object.
 
-Transparent drivers are not involved when importing, exporting, copying or destroying keys, or when generating or deriving symmetric keys.
+Transparent drivers are not involved when exporting, copying or destroying keys, or when importing, generating or deriving symmetric keys.
+
+#### Key import with transparent drivers
+
+The key import entry points has the following prototype for a driver with the prefix `"acme"`:
+```
+psa_status_t acme_import_key(const psa_key_attributes_t *attributes,
+                             const uint8_t *data,
+                             size_t data_length,
+                             uint8_t *key_buffer,
+                             size_t key_buffer_size,
+                             size_t *key_buffer_length,
+                             size_t *bits);
+```
+
+This entry point has several roles:
+
+1. Parse the key data in the input buffer `data`. The driver must support the export format for the key types that the entry point is declared for. It may support additional formats as specified in the description of [`psa_import_key()`](https://armmbed.github.io/mbed-crypto/html/api/keys/management.html#c.psa_export_key) in the PSA Cryptography API specification.
+2. Validate the key data. The necessary validation is described in the section [“Key validation with transparent drivers”](#key-validation-with-transparent-drivers) below.
+3. [Determine the key size](#key-size-determination-on-import) and output it through `*bits`.
+4. Copy the validated key data from `data` to `key_buffer`. The output must be in the canonical format documented for [`psa_export_key()`](https://armmbed.github.io/mbed-crypto/html/api/keys/management.html#c.psa_export_key) or [`psa_export_public_key()`](https://armmbed.github.io/mbed-crypto/html/api/keys/management.html#c.psa_export_public_key), so if the input is not in this format, the entry point must convert it.
 
 ### Fallback
 
@@ -503,10 +585,13 @@ psa_status_t acme_import_key(const psa_key_attributes_t *attributes,
                              const uint8_t *data,
                              size_t data_length,
                              uint8_t *key_buffer,
-                             size_t key_buffer_size);
+                             size_t key_buffer_size,
+                             size_t *key_buffer_length,
+                             size_t *bits);
 psa_status_t acme_generate_key(const psa_key_attributes_t *attributes,
                                uint8_t *key_buffer,
-                               size_t key_buffer_size);
+                               size_t key_buffer_size,
+                               size_t *key_buffer_length);
 ```
 
 If the driver has an [`"allocate_key"` entry point](#key-management-in-a-secure-element-with-storage), the core calls the `"allocate_key"` entry point with the same attributes on the same key buffer before calling the key creation entry point.
@@ -520,13 +605,13 @@ The key export entry points have the following prototypes for a driver with the 
 ```
 psa_status_t acme_export_key(const psa_key_attributes_t *attributes,
                              const uint8_t *key_buffer,
-                             size_t key_buffer_size);
+                             size_t key_buffer_size,
                              uint8_t *data,
                              size_t data_size,
                              size_t *data_length);
 psa_status_t acme_export_public_key(const psa_key_attributes_t *attributes,
                                     const uint8_t *key_buffer,
-                                    size_t key_buffer_size);
+                                    size_t key_buffer_size,
                                     uint8_t *data,
                                     size_t data_size,
                                     size_t *data_length);
@@ -580,8 +665,8 @@ psa_set_key_type(&attributes, PSA_KEY_TYPE_AES);
 psa_set_key_size(&attributes, 128);
 psa_set_key_algorithm(&attributes, PSA_ALG_GCM);
 psa_set_key_usage_flags(&attributes, PSA_KEY_USAGE_ENCRYPT | PSA_KEY_USAGE_DECRYPT);
-psa_key_id_t key;
-psa_generate_key(&attributes, &key);
+psa_key_handle_t handle = 0;
+psa_generate_key(&attributes, &handle);
 ```
 
 ## Using opaque drivers from an application
@@ -672,6 +757,10 @@ How does `psa_key_derivation_output_key` work when the extraction part and the e
 ECC key pairs are represented as the private key value only. The public key needs to be calculated from that. Both transparent drivers and opaque drivers provide a function to calculate the public key (`"export_public_key"`).
 
 The specification doesn't mention when the public key might be calculated. The core may calculate it on creation, on demand, or anything in between. Opaque drivers have a choice of storing the public key in the key context or calculating it on demand and can convey whether the core should store the public key with the `"store_public_key"` property. Is this good enough or should the specification include non-functional requirements?
+
+#### Symmetric key validation with transparent drivers
+
+Should the entry point be called for symmetric keys as well?
 
 ### Opaque drivers
 

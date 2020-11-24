@@ -41,10 +41,6 @@
 #include MBEDTLS_CONFIG_FILE
 #endif
 
-/* Translate between classic MBEDTLS_xxx feature symbols and PSA_xxx
- * feature symbols. */
-#include "mbedtls/config_psa.h"
-
 /* PSA requires several types which C99 provides in stdint.h. */
 #include <stdint.h>
 
@@ -52,6 +48,9 @@
     !defined(inline) && !defined(__cplusplus)
 #define inline __inline
 #endif
+
+/* Integral type representing a key handle. */
+typedef uint16_t psa_key_handle_t;
 
 #if defined(MBEDTLS_PSA_CRYPTO_KEY_ID_ENCODES_OWNER)
 
