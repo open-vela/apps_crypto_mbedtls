@@ -2322,7 +2322,8 @@ int mbedtls_x509_crt_is_revoked( const mbedtls_x509_crt *crt, const mbedtls_x509
         if( crt->serial.len == cur->serial.len &&
             memcmp( crt->serial.p, cur->serial.p, crt->serial.len ) == 0 )
         {
-            return( 1 );
+            if( mbedtls_x509_time_is_past( &cur->revocation_date ) )
+                return( 1 );
         }
 
         cur = cur->next;
