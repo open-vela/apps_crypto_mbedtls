@@ -94,15 +94,11 @@ class Inputs:
         self.dh_groups = set(['0xff'])
         self.key_types = set(['0xffff'])
         self.key_usage_flags = set(['0x80000000'])
-        # Hard-coded values for unknown algorithms
-        #
-        # These have to have values that are correct for their respective
-        # PSA_ALG_IS_xxx macros, but are also not currently assigned and are
-        # not likely to be assigned in the near future.
-        self.hash_algorithms = set(['0x020000fe']) # 0x020000ff is PSA_ALG_ANY_HASH
-        self.mac_algorithms = set(['0x0300ffff'])
-        self.ka_algorithms = set(['0x09fc0000'])
-        self.kdf_algorithms = set(['0x080000ff'])
+        # Hard-coded value for unknown algorithms
+        self.hash_algorithms = set(['0x010000fe'])
+        self.mac_algorithms = set(['0x02ff00ff'])
+        self.ka_algorithms = set(['0x30fc0000'])
+        self.kdf_algorithms = set(['0x200000ff'])
         # For AEAD algorithms, the only variability is over the tag length,
         # and this only applies to known algorithms, so don't test an
         # unknown algorithm.
