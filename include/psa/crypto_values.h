@@ -15,7 +15,7 @@
  * This header file only defines preprocessor macros.
  */
 /*
- *  Copyright (C) 2018, ARM Limited, All Rights Reserved
+ *  Copyright The Mbed TLS Contributors
  *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -29,8 +29,6 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
- *
- *  This file is part of mbed TLS (https://tls.mbed.org)
  */
 
 #ifndef PSA_CRYPTO_VALUES_H
@@ -110,7 +108,7 @@
  * as applicable.
  *
  * Implementations shall not return this error code to indicate that a
- * key handle is invalid, but shall return #PSA_ERROR_INVALID_HANDLE
+ * key identifier is invalid, but shall return #PSA_ERROR_INVALID_HANDLE
  * instead. */
 #define PSA_ERROR_BAD_STATE             ((psa_status_t)-137)
 
@@ -120,7 +118,7 @@
  * combination of parameters are recognized as invalid.
  *
  * Implementations shall not return this error code to indicate that a
- * key handle is invalid, but shall return #PSA_ERROR_INVALID_HANDLE
+ * key identifier is invalid, but shall return #PSA_ERROR_INVALID_HANDLE
  * instead.
  */
 #define PSA_ERROR_INVALID_ARGUMENT      ((psa_status_t)-135)
@@ -268,7 +266,7 @@
  * to read from a resource. */
 #define PSA_ERROR_INSUFFICIENT_DATA     ((psa_status_t)-143)
 
-/** The key handle is not valid. See also :ref:\`key-handles\`.
+/** The key identifier is not valid. See also :ref:\`key-handles\`.
  */
 #define PSA_ERROR_INVALID_HANDLE        ((psa_status_t)-136)
 
@@ -426,15 +424,15 @@
 #define PSA_KEY_TYPE_ECC_CURVE_MASK                 ((psa_key_type_t)0x00ff)
 /** Elliptic curve key pair.
  *
- * \param curve     A value of type ::psa_ecc_curve_t that identifies the
- *                  ECC curve to be used.
+ * \param curve     A value of type ::psa_ecc_family_t that
+ *                  identifies the ECC curve to be used.
  */
 #define PSA_KEY_TYPE_ECC_KEY_PAIR(curve)         \
     (PSA_KEY_TYPE_ECC_KEY_PAIR_BASE | (curve))
 /** Elliptic curve public key.
  *
- * \param curve     A value of type ::psa_ecc_curve_t that identifies the
- *                  ECC curve to be used.
+ * \param curve     A value of type ::psa_ecc_family_t that
+ *                  identifies the ECC curve to be used.
  */
 #define PSA_KEY_TYPE_ECC_PUBLIC_KEY(curve)              \
     (PSA_KEY_TYPE_ECC_PUBLIC_KEY_BASE | (curve))
@@ -453,8 +451,8 @@
      PSA_KEY_TYPE_ECC_PUBLIC_KEY_BASE)
 
 /** Extract the curve from an elliptic curve key type. */
-#define PSA_KEY_TYPE_GET_CURVE(type)                             \
-    ((psa_ecc_curve_t) (PSA_KEY_TYPE_IS_ECC(type) ?              \
+#define PSA_KEY_TYPE_ECC_GET_FAMILY(type)                        \
+    ((psa_ecc_family_t) (PSA_KEY_TYPE_IS_ECC(type) ?             \
                         ((type) & PSA_KEY_TYPE_ECC_CURVE_MASK) : \
                         0))
 
@@ -466,7 +464,7 @@
  * _SEC 2: Recommended Elliptic Curve Domain Parameters_.
  * https://www.secg.org/sec2-v2.pdf
  */
-#define PSA_ECC_CURVE_SECP_K1           ((psa_ecc_curve_t) 0x17)
+#define PSA_ECC_FAMILY_SECP_K1           ((psa_ecc_family_t) 0x17)
 
 /** SEC random curves over prime fields.
  *
@@ -476,9 +474,9 @@
  * _SEC 2: Recommended Elliptic Curve Domain Parameters_.
  * https://www.secg.org/sec2-v2.pdf
  */
-#define PSA_ECC_CURVE_SECP_R1           ((psa_ecc_curve_t) 0x12)
+#define PSA_ECC_FAMILY_SECP_R1           ((psa_ecc_family_t) 0x12)
 /* SECP160R2 (SEC2 v1, obsolete) */
-#define PSA_ECC_CURVE_SECP_R2           ((psa_ecc_curve_t) 0x1b)
+#define PSA_ECC_FAMILY_SECP_R2           ((psa_ecc_family_t) 0x1b)
 
 /** SEC Koblitz curves over binary fields.
  *
@@ -488,7 +486,7 @@
  * _SEC 2: Recommended Elliptic Curve Domain Parameters_.
  * https://www.secg.org/sec2-v2.pdf
  */
-#define PSA_ECC_CURVE_SECT_K1           ((psa_ecc_curve_t) 0x27)
+#define PSA_ECC_FAMILY_SECT_K1           ((psa_ecc_family_t) 0x27)
 
 /** SEC random curves over binary fields.
  *
@@ -498,7 +496,7 @@
  * _SEC 2: Recommended Elliptic Curve Domain Parameters_.
  * https://www.secg.org/sec2-v2.pdf
  */
-#define PSA_ECC_CURVE_SECT_R1           ((psa_ecc_curve_t) 0x22)
+#define PSA_ECC_FAMILY_SECT_R1           ((psa_ecc_family_t) 0x22)
 
 /** SEC additional random curves over binary fields.
  *
@@ -508,7 +506,7 @@
  * _SEC 2: Recommended Elliptic Curve Domain Parameters_.
  * https://www.secg.org/sec2-v2.pdf
  */
-#define PSA_ECC_CURVE_SECT_R2           ((psa_ecc_curve_t) 0x2b)
+#define PSA_ECC_FAMILY_SECT_R2           ((psa_ecc_family_t) 0x2b)
 
 /** Brainpool P random curves.
  *
@@ -517,7 +515,7 @@
  * brainpoolP320r1, brainpoolP384r1, brainpoolP512r1.
  * It is defined in RFC 5639.
  */
-#define PSA_ECC_CURVE_BRAINPOOL_P_R1    ((psa_ecc_curve_t) 0x30)
+#define PSA_ECC_FAMILY_BRAINPOOL_P_R1    ((psa_ecc_family_t) 0x30)
 
 /** Curve25519 and Curve448.
  *
@@ -529,21 +527,21 @@
  *   _Ed448-Goldilocks, a new elliptic curve_, NIST ECC Workshop, 2015.
  *   The algorithm #PSA_ALG_ECDH performs X448 when used with this curve.
  */
-#define PSA_ECC_CURVE_MONTGOMERY        ((psa_ecc_curve_t) 0x41)
+#define PSA_ECC_FAMILY_MONTGOMERY        ((psa_ecc_family_t) 0x41)
 
 #define PSA_KEY_TYPE_DH_PUBLIC_KEY_BASE             ((psa_key_type_t)0x4200)
 #define PSA_KEY_TYPE_DH_KEY_PAIR_BASE               ((psa_key_type_t)0x7200)
 #define PSA_KEY_TYPE_DH_GROUP_MASK                  ((psa_key_type_t)0x00ff)
 /** Diffie-Hellman key pair.
  *
- * \param group     A value of type ::psa_dh_group_t that identifies the
+ * \param group     A value of type ::psa_dh_family_t that identifies the
  *                  Diffie-Hellman group to be used.
  */
 #define PSA_KEY_TYPE_DH_KEY_PAIR(group)          \
     (PSA_KEY_TYPE_DH_KEY_PAIR_BASE | (group))
 /** Diffie-Hellman public key.
  *
- * \param group     A value of type ::psa_dh_group_t that identifies the
+ * \param group     A value of type ::psa_dh_family_t that identifies the
  *                  Diffie-Hellman group to be used.
  */
 #define PSA_KEY_TYPE_DH_PUBLIC_KEY(group)               \
@@ -563,8 +561,8 @@
      PSA_KEY_TYPE_DH_PUBLIC_KEY_BASE)
 
 /** Extract the group from a Diffie-Hellman key type. */
-#define PSA_KEY_TYPE_GET_GROUP(type)                            \
-    ((psa_dh_group_t) (PSA_KEY_TYPE_IS_DH(type) ?               \
+#define PSA_KEY_TYPE_DH_GET_FAMILY(type)                        \
+    ((psa_dh_family_t) (PSA_KEY_TYPE_IS_DH(type) ?              \
                        ((type) & PSA_KEY_TYPE_DH_GROUP_MASK) :  \
                        0))
 
@@ -574,7 +572,7 @@
  * 2048, 3072, 4096, 6144, 8192. A given implementation may support
  * all of these sizes or only a subset.
  */
-#define PSA_DH_GROUP_RFC7919            ((psa_dh_group_t) 0x03)
+#define PSA_DH_FAMILY_RFC7919            ((psa_dh_family_t) 0x03)
 
 #define PSA_GET_KEY_TYPE_BLOCK_SIZE_EXPONENT(type)      \
     (((type) >> 8) & 7)
@@ -771,9 +769,9 @@
  *   an algorithm built from `PSA_xxx_SIGNATURE` and a specific hash. Each
  *   call to sign or verify a message may use a different hash.
  *   ```
- *   psa_sign_hash(handle, PSA_xxx_SIGNATURE(PSA_ALG_SHA_256), ...);
- *   psa_sign_hash(handle, PSA_xxx_SIGNATURE(PSA_ALG_SHA_512), ...);
- *   psa_sign_hash(handle, PSA_xxx_SIGNATURE(PSA_ALG_SHA3_256), ...);
+ *   psa_sign_hash(key, PSA_xxx_SIGNATURE(PSA_ALG_SHA_256), ...);
+ *   psa_sign_hash(key, PSA_xxx_SIGNATURE(PSA_ALG_SHA_512), ...);
+ *   psa_sign_hash(key, PSA_xxx_SIGNATURE(PSA_ALG_SHA3_256), ...);
  *   ```
  *
  * This value may not be used to build other algorithms that are
@@ -979,6 +977,26 @@
  * does not need to be a whole number of blocks.
  */
 #define PSA_ALG_XTS                             ((psa_algorithm_t)0x044000ff)
+
+/** The Electronic Code Book (ECB) mode of a block cipher, with no padding.
+ *
+ * \warning ECB mode does not protect the confidentiality of the encrypted data
+ * except in extremely narrow circumstances. It is recommended that applications
+ * only use ECB if they need to construct an operating mode that the
+ * implementation does not provide. Implementations are encouraged to provide
+ * the modes that applications need in preference to supporting direct access
+ * to ECB.
+ *
+ * The underlying block cipher is determined by the key type.
+ *
+ * This symmetric cipher mode can only be used with messages whose lengths are a
+ * multiple of the block size of the chosen block cipher.
+ *
+ * ECB mode does not accept an initialization vector (IV). When using a
+ * multi-part cipher operation with this algorithm, psa_cipher_generate_iv()
+ * and psa_cipher_set_iv() must not be called.
+ */
+#define PSA_ALG_ECB_NO_PADDING                  ((psa_algorithm_t)0x04404400)
 
 /** The CBC block cipher chaining mode, with no padding.
  *
@@ -1434,7 +1452,7 @@
  * a key derivation function.
  * Usually, raw key agreement algorithms are constructed directly with
  * a \c PSA_ALG_xxx macro while non-raw key agreement algorithms are
- * constructed with PSA_ALG_KEY_AGREEMENT().
+ * constructed with #PSA_ALG_KEY_AGREEMENT().
  *
  * \param alg An algorithm identifier (value of type #psa_algorithm_t).
  *
@@ -1483,17 +1501,17 @@
  * is padded with zero bits. The byte order is either little-endian
  * or big-endian depending on the curve type.
  *
- * - For Montgomery curves (curve types `PSA_ECC_CURVE_CURVEXXX`),
+ * - For Montgomery curves (curve types `PSA_ECC_FAMILY_CURVEXXX`),
  *   the shared secret is the x-coordinate of `d_A Q_B = d_B Q_A`
  *   in little-endian byte order.
  *   The bit size is 448 for Curve448 and 255 for Curve25519.
  * - For Weierstrass curves over prime fields (curve types
- *   `PSA_ECC_CURVE_SECPXXX` and `PSA_ECC_CURVE_BRAINPOOL_PXXX`),
+ *   `PSA_ECC_FAMILY_SECPXXX` and `PSA_ECC_FAMILY_BRAINPOOL_PXXX`),
  *   the shared secret is the x-coordinate of `d_A Q_B = d_B Q_A`
  *   in big-endian byte order.
  *   The bit size is `m = ceiling(log_2(p))` for the field `F_p`.
  * - For Weierstrass curves over binary fields (curve types
- *   `PSA_ECC_CURVE_SECTXXX`),
+ *   `PSA_ECC_FAMILY_SECTXXX`),
  *   the shared secret is the x-coordinate of `d_A Q_B = d_B Q_A`
  *   in big-endian byte order.
  *   The bit size is `m` for the field `F_{2^m}`.
@@ -1543,7 +1561,7 @@
 
 /** The default lifetime for volatile keys.
  *
- * A volatile key only exists as long as the handle to it is not closed.
+ * A volatile key only exists as long as the identifier to it is not destroyed.
  * The key material is guaranteed to be erased on a power reset.
  *
  * A key with this lifetime is typically stored in the RAM area of the
@@ -1611,7 +1629,7 @@
  */
 #define PSA_KEY_LIFETIME_IS_VOLATILE(lifetime)  \
     (PSA_KEY_LIFETIME_GET_PERSISTENCE(lifetime) == \
-     PSA_KEY_LIFETIME_PERSISTENCE_VOLATILE)
+     PSA_KEY_PERSISTENCE_VOLATILE)
 
 /** Construct a lifetime from a persistence level and a location.
  *
@@ -1638,16 +1656,105 @@
 
 /** The minimum value for a key identifier chosen by the application.
  */
-#define PSA_KEY_ID_USER_MIN                     ((psa_app_key_id_t)0x00000001)
+#define PSA_KEY_ID_USER_MIN                     ((psa_key_id_t)0x00000001)
 /** The maximum value for a key identifier chosen by the application.
  */
-#define PSA_KEY_ID_USER_MAX                     ((psa_app_key_id_t)0x3fffffff)
+#define PSA_KEY_ID_USER_MAX                     ((psa_key_id_t)0x3fffffff)
 /** The minimum value for a key identifier chosen by the implementation.
  */
-#define PSA_KEY_ID_VENDOR_MIN                   ((psa_app_key_id_t)0x40000000)
+#define PSA_KEY_ID_VENDOR_MIN                   ((psa_key_id_t)0x40000000)
 /** The maximum value for a key identifier chosen by the implementation.
  */
-#define PSA_KEY_ID_VENDOR_MAX                   ((psa_app_key_id_t)0x7fffffff)
+#define PSA_KEY_ID_VENDOR_MAX                   ((psa_key_id_t)0x7fffffff)
+
+
+#if !defined(MBEDTLS_PSA_CRYPTO_KEY_ID_ENCODES_OWNER)
+
+#define MBEDTLS_SVC_KEY_ID_INIT ( (psa_key_id_t)0 )
+#define MBEDTLS_SVC_KEY_ID_GET_KEY_ID( id ) ( id )
+#define MBEDTLS_SVC_KEY_ID_GET_OWNER_ID( id ) ( 0 )
+
+/** Utility to initialize a key identifier at runtime.
+ *
+ * \param unused  Unused parameter.
+ * \param key_id  Identifier of the key.
+ */
+static inline mbedtls_svc_key_id_t mbedtls_svc_key_id_make(
+    unsigned int unused, psa_key_id_t key_id )
+{
+    (void)unused;
+
+    return( key_id );
+}
+
+/** Compare two key identifiers.
+ *
+ * \param id1 First key identifier.
+ * \param id2 Second key identifier.
+ *
+ * \return Non-zero if the two key identifier are equal, zero otherwise.
+ */
+static inline int mbedtls_svc_key_id_equal( mbedtls_svc_key_id_t id1,
+                                            mbedtls_svc_key_id_t id2 )
+{
+    return( id1 == id2 );
+}
+
+/** Check whether a key identifier is null.
+ *
+ * \param key Key identifier.
+ *
+ * \return Non-zero if the key identifier is null, zero otherwise.
+ */
+static inline int mbedtls_svc_key_id_is_null( mbedtls_svc_key_id_t key )
+{
+    return( key == 0 );
+}
+
+#else /* MBEDTLS_PSA_CRYPTO_KEY_ID_ENCODES_OWNER */
+
+#define MBEDTLS_SVC_KEY_ID_INIT ( (mbedtls_svc_key_id_t){ 0, 0 } )
+#define MBEDTLS_SVC_KEY_ID_GET_KEY_ID( id ) ( ( id ).key_id )
+#define MBEDTLS_SVC_KEY_ID_GET_OWNER_ID( id ) ( ( id ).owner )
+
+/** Utility to initialize a key identifier at runtime.
+ *
+ * \param owner_id Identifier of the key owner.
+ * \param key_id   Identifier of the key.
+ */
+static inline mbedtls_svc_key_id_t mbedtls_svc_key_id_make(
+    mbedtls_key_owner_id_t owner_id, psa_key_id_t key_id )
+{
+    return( (mbedtls_svc_key_id_t){ .key_id = key_id,
+                                    .owner = owner_id } );
+}
+
+/** Compare two key identifiers.
+ *
+ * \param id1 First key identifier.
+ * \param id2 Second key identifier.
+ *
+ * \return Non-zero if the two key identifier are equal, zero otherwise.
+ */
+static inline int mbedtls_svc_key_id_equal( mbedtls_svc_key_id_t id1,
+                                            mbedtls_svc_key_id_t id2 )
+{
+    return( ( id1.key_id == id2.key_id ) &&
+            mbedtls_key_owner_id_equal( id1.owner, id2.owner ) );
+}
+
+/** Check whether a key identifier is null.
+ *
+ * \param key Key identifier.
+ *
+ * \return Non-zero if the key identifier is null, zero otherwise.
+ */
+static inline int mbedtls_svc_key_id_is_null( mbedtls_svc_key_id_t key )
+{
+    return( ( key.key_id == 0 ) && ( key.owner == 0 ) );
+}
+
+#endif /* !MBEDTLS_PSA_CRYPTO_KEY_ID_ENCODES_OWNER */
 
 /**@}*/
 
