@@ -7,13 +7,9 @@ WARNING_CFLAGS ?= -Wall -Wextra
 WARNING_CXXFLAGS ?= -Wall -Wextra
 LDFLAGS ?=
 
-MBEDTLS_TEST_PATH:=../tests/src
-MBEDTLS_TEST_OBJS:=$(patsubst %.c,%.o,$(wildcard ${MBEDTLS_TEST_PATH}/*.c ${MBEDTLS_TEST_PATH}/drivers/*.c))
-
-LOCAL_CFLAGS = $(WARNING_CFLAGS) -I../tests/include -I../include -D_FILE_OFFSET_BITS=64
+LOCAL_CFLAGS = $(WARNING_CFLAGS) -I../include -D_FILE_OFFSET_BITS=64
 LOCAL_CXXFLAGS = $(WARNING_CXXFLAGS) -I../include -D_FILE_OFFSET_BITS=64
-LOCAL_LDFLAGS = ${MBEDTLS_TEST_OBJS} 		\
-		-L../library 			\
+LOCAL_LDFLAGS = -L../library 			\
 		-lmbedtls$(SHARED_SUFFIX)	\
 		-lmbedx509$(SHARED_SUFFIX)	\
 		-lmbedcrypto$(SHARED_SUFFIX)
@@ -22,11 +18,10 @@ include ../3rdparty/Makefile.inc
 LOCAL_CFLAGS+=$(THIRDPARTY_INCLUDES)
 
 ifndef SHARED
-MBEDLIBS=../library/libmbedcrypto.a ../library/libmbedx509.a ../library/libmbedtls.a
+DEP=../library/libmbedcrypto.a ../library/libmbedx509.a ../library/libmbedtls.a
 else
-MBEDLIBS=../library/libmbedcrypto.$(DLEXT) ../library/libmbedx509.$(DLEXT) ../library/libmbedtls.$(DLEXT)
+DEP=../library/libmbedcrypto.$(DLEXT) ../library/libmbedx509.$(DLEXT) ../library/libmbedtls.$(DLEXT)
 endif
-DEP=${MBEDLIBS} ${MBEDTLS_TEST_OBJS}
 
 ifdef DEBUG
 LOCAL_CFLAGS += -g3
@@ -118,6 +113,8 @@ ifdef TEST_CPP
 APPS += test/cpp_dummy_build$(EXEXT)
 endif
 
+EXTRA_GENERATED =
+
 .SILENT:
 
 .PHONY: all clean list fuzz
@@ -130,14 +127,21 @@ ifndef WINDOWS
 all: fuzz
 endif
 
-fuzz: ${MBEDTLS_TEST_OBJS}
+fuzz:
 	$(MAKE) -C fuzz THIRDPARTY_INCLUDES=$(THIRDPARTY_INCLUDES)
 
-$(MBEDLIBS):
+$(DEP):
 	$(MAKE) -C ../library
 
-${MBEDTLS_TEST_OBJS}:
-	$(MAKE) -C ../tests mbedtls_test
+ifdef WINDOWS
+EXTRA_GENERATED += psa\psa_constant_names_generated.c
+else
+EXTRA_GENERATED += psa/psa_constant_names_generated.c
+endif
+
+psa/psa_constant_names$(EXEXT): psa/psa_constant_names_generated.c
+psa/psa_constant_names_generated.c: ../scripts/generate_psa_constants.py ../include/psa/crypto_values.h ../include/psa/crypto_extra.h
+	../scripts/generate_psa_constants.py
 
 aes/aescrypt2$(EXEXT): aes/aescrypt2.c $(DEP)
 	echo "  CC    aes/aescrypt2.c"
@@ -359,10 +363,12 @@ clean:
 ifndef WINDOWS
 	rm -f $(APPS)
 	-rm -f ssl/ssl_pthread_server$(EXEXT)
+	rm -f $(EXTRA_GENERATED)
 	-rm -f test/cpp_dummy_build$(EXEXT)
 else
 	if exist *.o del /Q /F *.o
 	if exist *.exe del /Q /F *.exe
+	del /S /Q /F $(EXTRA_GENERATED)
 endif
 	$(MAKE) -C fuzz clean
 
