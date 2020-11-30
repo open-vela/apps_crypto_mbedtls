@@ -134,6 +134,10 @@ MBEDTLS_PSA_DEPRECATED static inline psa_status_t psa_asymmetric_verify( psa_key
     return psa_verify_hash( key, alg, hash, hash_length, signature, signature_length );
 }
 
+
+
+#endif /* MBEDTLS_DEPRECATED_REMOVED */
+
 /*
  * Size-specific elliptic curve families.
  */
@@ -240,8 +244,6 @@ MBEDTLS_PSA_DEPRECATED static inline psa_status_t psa_asymmetric_verify( psa_key
 #define PSA_DH_GROUP_CUSTOM \
     MBEDTLS_DEPRECATED_CONSTANT( psa_dh_family_t, PSA_DH_FAMILY_CUSTOM )
 
-#endif /* MBEDTLS_DEPRECATED_REMOVED */
-
 /** Open a handle to an existing persistent key.
  *
  * Open a handle to a persistent key. A key is persistent if it was created
@@ -294,8 +296,7 @@ MBEDTLS_PSA_DEPRECATED static inline psa_status_t psa_asymmetric_verify( psa_key
  *         through implementation-specific means.
  * \retval #PSA_ERROR_COMMUNICATION_FAILURE
  * \retval #PSA_ERROR_CORRUPTION_DETECTED
- * \retval #PSA_ERROR_DATA_INVALID
- * \retval #PSA_ERROR_DATA_CORRUPT
+ * \retval #PSA_ERROR_STORAGE_FAILURE
  * \retval #PSA_ERROR_BAD_STATE
  *         The library has not been previously initialized by psa_crypto_init().
  *         It is implementation-dependent whether a failure to initialize
