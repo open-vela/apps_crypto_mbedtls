@@ -210,11 +210,6 @@ mbedtls_ctr_drbg_context;
  *                      and prepares it for mbedtls_ctr_drbg_seed()
  *                      or mbedtls_ctr_drbg_free().
  *
- * \note                The reseed interval is
- *                      #MBEDTLS_CTR_DRBG_RESEED_INTERVAL by default.
- *                      You can override it by calling
- *                      mbedtls_ctr_drbg_set_reseed_interval().
- *
  * \param ctx           The CTR_DRBG context to initialize.
  */
 void mbedtls_ctr_drbg_init( mbedtls_ctr_drbg_context *ctx );
@@ -314,8 +309,7 @@ int mbedtls_ctr_drbg_seed( mbedtls_ctr_drbg_context *ctx,
                    size_t len );
 
 /**
- * \brief               This function resets CTR_DRBG context to the state immediately
- *                      after initial call of mbedtls_ctr_drbg_init().
+ * \brief               This function clears CTR_CRBG context data.
  *
  * \param ctx           The CTR_DRBG context to clear.
  */
