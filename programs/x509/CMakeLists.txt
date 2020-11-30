@@ -1,5 +1,5 @@
 set(libs
-    ${mbedx509_target}
+    mbedx509
 )
 
 if(USE_PKCS11_HELPER_LIBRARY)
@@ -23,7 +23,7 @@ foreach(exe IN LISTS executables)
     target_link_libraries(${exe} ${libs})
 endforeach()
 
-target_link_libraries(cert_app ${mbedtls_target})
+target_link_libraries(cert_app mbedtls)
 
 install(TARGETS ${executables}
         DESTINATION "bin"
