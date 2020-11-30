@@ -114,14 +114,20 @@ We should have at least one driver that covers the whole interface:
 
 A PKCS#11 driver would be a good candidate. It would be useful as part of our product offering.
 
-## Accelerator driver interface
+## Transparent driver interface testing
 
-The accelerator driver interface is defined by [`psa/crypto_accel_driver.h`](../../../include/psa/crypto_accel_driver.h).
+The [unified driver interface](../../proposed/psa-driver-interface.md) defines interfaces for accelerators.
 
-TODO
+### Test requirements
 
-## Entropy driver interface
+#### Requirements for transparent driver testing
 
-The entropy driver interface is defined by [`psa/crypto_entropy_driver.h`](../../../include/psa/crypto_entropy_driver.h).
+Every cryptographic mechanism for which a transparent driver interface exists (key creation, cryptographic operations, …) must be exercised in at least one build. The test must verify that the driver code is called.
+
+#### Requirements for fallback
+
+The driver interface includes a fallback mechanism so that a driver can reject a request at runtime and let another driver handle the request. For each entry point, there must be at least three test runs with two or more drivers available with driver A configured to fall back to driver B, with one run where A returns `PSA_SUCCESS`, one where A returns `PSA_ERROR_NOT_SUPPORTED` and B is invoked, and one where A returns a different error and B is not invoked.
+
+## Entropy and randomness interface testing
 
 TODO
