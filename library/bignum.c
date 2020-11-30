@@ -2101,7 +2101,7 @@ int mbedtls_mpi_exp_mod( mbedtls_mpi *X, const mbedtls_mpi *A,
     size_t i, j, nblimbs;
     size_t bufsize, nbits;
     mbedtls_mpi_uint ei, mm, state;
-    mbedtls_mpi RR, T, W[ 2 << MBEDTLS_MPI_WINDOW_SIZE ], Apos;
+    mbedtls_mpi RR, T, W[ 1 << MBEDTLS_MPI_WINDOW_SIZE ], Apos;
     int neg;
 
     MPI_VALIDATE_RET( X != NULL );
@@ -2391,7 +2391,7 @@ int mbedtls_mpi_fill_random( mbedtls_mpi *X, size_t size,
     MBEDTLS_MPI_CHK( mbedtls_mpi_lset( X, 0 ) );
 
     Xp = (unsigned char*) X->p;
-    MBEDTLS_MPI_CHK( f_rng( p_rng, Xp + overhead, size ) );
+    f_rng( p_rng, Xp + overhead, size );
 
     mpi_bigendian_to_host( X->p, limbs );
 
