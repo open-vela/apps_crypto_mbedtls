@@ -331,13 +331,12 @@ int mbedtls_pk_setup( mbedtls_pk_context *ctx, const mbedtls_pk_info_t *info );
  *
  * \return          \c 0 on success.
  * \return          #MBEDTLS_ERR_PK_BAD_INPUT_DATA on invalid input
- *                  (context already used, invalid key identifier).
+ *                  (context already used, invalid key handle).
  * \return          #MBEDTLS_ERR_PK_FEATURE_UNAVAILABLE if the key is not an
  *                  ECC key pair.
  * \return          #MBEDTLS_ERR_PK_ALLOC_FAILED on allocation failure.
  */
-int mbedtls_pk_setup_opaque( mbedtls_pk_context *ctx,
-                             const psa_key_id_t key );
+int mbedtls_pk_setup_opaque( mbedtls_pk_context *ctx, const psa_key_handle_t key );
 #endif /* MBEDTLS_USE_PSA_CRYPTO */
 
 #if defined(MBEDTLS_PK_RSA_ALT_SUPPORT)
@@ -859,9 +858,9 @@ int mbedtls_pk_load_file( const char *path, unsigned char **buf, size_t *n );
  *
  * \param pk        Input: the EC key to import to a PSA key.
  *                  Output: a PK context wrapping that PSA key.
- * \param key       Output: a PSA key identifier.
+ * \param handle    Output: a PSA key handle.
  *                  It's the caller's responsibility to call
- *                  psa_destroy_key() on that key identifier after calling
+ *                  psa_destroy_key() on that handle after calling
  *                  mbedtls_pk_free() on the PK context.
  * \param hash_alg  The hash algorithm to allow for use with that key.
  *
@@ -869,7 +868,7 @@ int mbedtls_pk_load_file( const char *path, unsigned char **buf, size_t *n );
  * \return          An Mbed TLS error code otherwise.
  */
 int mbedtls_pk_wrap_as_opaque( mbedtls_pk_context *pk,
-                               psa_key_id_t *key,
+                               psa_key_handle_t *handle,
                                psa_algorithm_t hash_alg );
 #endif /* MBEDTLS_USE_PSA_CRYPTO */
 
