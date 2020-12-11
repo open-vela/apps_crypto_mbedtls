@@ -1,7 +1,7 @@
 /*
  *  Elliptic curves over GF(p): generic functions
  *
- *  Copyright The Mbed TLS Contributors
+ *  Copyright (C) 2006-2015, ARM Limited, All Rights Reserved
  *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -15,6 +15,8 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
+ *
+ *  This file is part of mbed TLS (https://tls.mbed.org)
  */
 
 /*
@@ -546,11 +548,8 @@ static const mbedtls_ecp_curve_info ecp_supported_curves[] =
 #if defined(MBEDTLS_ECP_DP_SECP192K1_ENABLED)
     { MBEDTLS_ECP_DP_SECP192K1,    18,     192,    "secp192k1"         },
 #endif
-#if defined(MBEDTLS_ECP_DP_CURVE25519_ENABLED)
+#if defined(MBEDTLS_ECP_DP_CURVE25519_ENABLED) && defined(MBEDTLS_ECDH_VARIANT_EVEREST_ENABLED)
     { MBEDTLS_ECP_DP_CURVE25519,   29,     256,    "x25519"            },
-#endif
-#if defined(MBEDTLS_ECP_DP_CURVE448_ENABLED)
-    { MBEDTLS_ECP_DP_CURVE448,     30,     448,    "x448"              },
 #endif
     { MBEDTLS_ECP_DP_NONE,          0,     0,      NULL                },
 };
