@@ -5,7 +5,7 @@
  *
  * \author Mathias Olsson <mathias@kompetensum.com>
  *
- *  Copyright The Mbed TLS Contributors
+ *  Copyright (C) 2006-2015, ARM Limited, All Rights Reserved
  *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -19,6 +19,8 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
+ *
+ *  This file is part of mbed TLS (https://tls.mbed.org)
  */
 /*
  * PKCS#5 includes PBKDF2 and more
@@ -221,8 +223,7 @@ int mbedtls_pkcs5_pbkdf2_hmac( mbedtls_md_context_t *ctx,
                        unsigned int iteration_count,
                        uint32_t key_length, unsigned char *output )
 {
-    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
-    int j;
+    int ret, j;
     unsigned int i;
     unsigned char md1[MBEDTLS_MD_MAX_SIZE];
     unsigned char work[MBEDTLS_MD_MAX_SIZE];
@@ -246,16 +247,16 @@ int mbedtls_pkcs5_pbkdf2_hmac( mbedtls_md_context_t *ctx,
         // U1 ends up in work
         //
         if( ( ret = mbedtls_md_hmac_update( ctx, salt, slen ) ) != 0 )
-            goto cleanup;
+            return( ret );
 
         if( ( ret = mbedtls_md_hmac_update( ctx, counter, 4 ) ) != 0 )
-            goto cleanup;
+            return( ret );
 
         if( ( ret = mbedtls_md_hmac_finish( ctx, work ) ) != 0 )
-            goto cleanup;
+            return( ret );
 
         if( ( ret = mbedtls_md_hmac_reset( ctx ) ) != 0 )
-            goto cleanup;
+           return( ret );
 
         memcpy( md1, work, md_size );
 
@@ -264,13 +265,13 @@ int mbedtls_pkcs5_pbkdf2_hmac( mbedtls_md_context_t *ctx,
             // U2 ends up in md1
             //
             if( ( ret = mbedtls_md_hmac_update( ctx, md1, md_size ) ) != 0 )
-                goto cleanup;
+                return( ret );
 
             if( ( ret = mbedtls_md_hmac_finish( ctx, md1 ) ) != 0 )
-                goto cleanup;
+                return( ret );
 
             if( ( ret = mbedtls_md_hmac_reset( ctx ) ) != 0 )
-                goto cleanup;
+                return( ret );
 
             // U1 xor U2
             //
@@ -289,12 +290,7 @@ int mbedtls_pkcs5_pbkdf2_hmac( mbedtls_md_context_t *ctx,
                 break;
     }
 
-cleanup:
-    /* Zeroise buffers to clear sensitive data from memory. */
-    mbedtls_platform_zeroize( work, MBEDTLS_MD_MAX_SIZE );
-    mbedtls_platform_zeroize( md1, MBEDTLS_MD_MAX_SIZE );
-
-    return( ret );
+    return( 0 );
 }
 
 #if defined(MBEDTLS_SELF_TEST)
