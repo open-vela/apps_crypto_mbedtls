@@ -1,7 +1,7 @@
 /*
  *  Threading abstraction layer
  *
- *  Copyright The Mbed TLS Contributors
+ *  Copyright (C) 2006-2015, ARM Limited, All Rights Reserved
  *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -15,6 +15,8 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
+ *
+ *  This file is part of mbed TLS (https://tls.mbed.org)
  */
 
 /*
@@ -42,7 +44,7 @@
 
 #if !( ( defined(_POSIX_VERSION) && _POSIX_VERSION >= 200809L ) ||     \
        ( defined(_POSIX_THREAD_SAFE_FUNCTIONS ) &&                     \
-         _POSIX_THREAD_SAFE_FUNCTIONS >= 200112L ) )
+         _POSIX_THREAD_SAFE_FUNCTIONS >= 20112L ) )
 /*
  * This is a convenience shorthand macro to avoid checking the long
  * preprocessor conditions above. Ideally, we could expose this macro in
@@ -57,7 +59,7 @@
 
 #endif /* !( ( defined(_POSIX_VERSION) && _POSIX_VERSION >= 200809L ) ||     \
              ( defined(_POSIX_THREAD_SAFE_FUNCTIONS ) &&                     \
-                _POSIX_THREAD_SAFE_FUNCTIONS >= 200112L ) ) */
+                _POSIX_THREAD_SAFE_FUNCTIONS >= 20112L ) ) */
 
 #endif /* MBEDTLS_HAVE_TIME_DATE && !MBEDTLS_PLATFORM_GMTIME_R_ALT */
 
