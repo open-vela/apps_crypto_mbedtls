@@ -6,7 +6,7 @@
  */
 
 /*
- *  Copyright The Mbed TLS Contributors
+ *  Copyright (C) 2020, ARM Limited, All Rights Reserved
  *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -20,16 +20,9 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
+ *
+ *  This file is part of mbed TLS (https://tls.mbed.org)
  */
-
-/*
- * for arc4random_buf() from <stdlib.h>
- */
-#if defined(__NetBSD__)
-#define _NETBSD_SOURCE 1
-#elif defined(__OpenBSD__)
-#define _BSD_SOURCE 1
-#endif
 
 #include <test/macros.h>
 #include <test/random.h>
@@ -39,7 +32,7 @@ int mbedtls_test_rnd_std_rand( void *rng_state,
                                unsigned char *output,
                                size_t len )
 {
-#if !defined(__OpenBSD__) && !defined(__NetBSD__)
+#if !defined(__OpenBSD__)
     size_t i;
 
     if( rng_state != NULL )
@@ -52,7 +45,7 @@ int mbedtls_test_rnd_std_rand( void *rng_state,
         rng_state = NULL;
 
     arc4random_buf( output, len );
-#endif /* !OpenBSD && !NetBSD */
+#endif /* !OpenBSD */
 
     return( 0 );
 }

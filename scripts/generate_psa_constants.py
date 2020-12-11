@@ -11,7 +11,7 @@ file is written:
 * OUTPUT_FILE_DIR passed: writes to OUTPUT_FILE_DIR/
 """
 
-# Copyright The Mbed TLS Contributors
+# Copyright (C) 2018-2020, Arm Limited, All Rights Reserved
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -25,6 +25,8 @@ file is written:
 # WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
+# This file is part of Mbed TLS (https://tls.mbed.org)
 
 import os
 import re
@@ -273,10 +275,10 @@ class MacroCollector:
                 return
             self.algorithms.add(name)
             # Ad hoc detection of hash algorithms
-            if re.search(r'0x020000[0-9A-Fa-f]{2}', expansion):
+            if re.search(r'0x010000[0-9A-Fa-f]{2}', expansion):
                 self.hash_algorithms.add(name)
             # Ad hoc detection of key agreement algorithms
-            if re.search(r'0x09[0-9A-Fa-f]{2}0000', expansion):
+            if re.search(r'0x30[0-9A-Fa-f]{2}0000', expansion):
                 self.ka_algorithms.add(name)
         elif name.startswith('PSA_ALG_') and parameter == 'hash_alg':
             if name in ['PSA_ALG_DSA', 'PSA_ALG_ECDSA']:
@@ -411,7 +413,7 @@ def generate_psa_constants(header_file_names, output_file_name):
     temp_file_name = output_file_name + '.tmp'
     with open(temp_file_name, 'w') as output_file:
         collector.write_file(output_file)
-    os.replace(temp_file_name, output_file_name)
+    os.rename(temp_file_name, output_file_name)
 
 if __name__ == '__main__':
     if not os.path.isdir('programs') and os.path.isdir('../programs'):

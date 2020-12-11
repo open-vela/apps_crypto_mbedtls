@@ -2,7 +2,7 @@
  * Helper functions for tests that use the PSA Crypto API.
  */
 /*
- *  Copyright The Mbed TLS Contributors
+ *  Copyright (C) 2019, ARM Limited, All Rights Reserved
  *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -16,6 +16,8 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
+ *
+ *  This file is part of mbed TLS (https://tls.mbed.org)
  */
 
 #ifndef PSA_CRYPTO_HELPERS_H
@@ -24,7 +26,6 @@
 #include "test/psa_helpers.h"
 
 #include <psa/crypto.h>
-#include <psa_crypto_slot_management.h>
 
 static int test_helper_is_psa_pristine( int line, const char *file )
 {
@@ -41,10 +42,6 @@ static int test_helper_is_psa_pristine( int line, const char *file )
         msg = "An external slot has not been closed properly.";
     else if( stats.half_filled_slots != 0 )
         msg = "A half-filled slot has not been cleared properly.";
-    else if( stats.locked_slots != 0 )
-    {
-        msg = "Some slots are still marked as locked.";
-    }
 
     /* If the test has already failed, don't overwrite the failure
      * information. Do keep the stats lookup above, because it can be
