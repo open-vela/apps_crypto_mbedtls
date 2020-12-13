@@ -5867,7 +5867,7 @@ static psa_status_t psa_tls12_prf_set_seed( psa_tls12_prf_key_derivation_t *prf,
                                             const uint8_t *data,
                                             size_t data_length )
 {
-    if( prf->state != TLS12_PRF_STATE_INIT )
+    if( prf->state != PSA_TLS12_PRF_STATE_INIT )
         return( PSA_ERROR_BAD_STATE );
 
     if( data_length != 0 )
@@ -5880,7 +5880,7 @@ static psa_status_t psa_tls12_prf_set_seed( psa_tls12_prf_key_derivation_t *prf,
         prf->seed_length = data_length;
     }
 
-    prf->state = TLS12_PRF_STATE_SEED_SET;
+    prf->state = PSA_TLS12_PRF_STATE_SEED_SET;
 
     return( PSA_SUCCESS );
 }
@@ -5891,14 +5891,14 @@ static psa_status_t psa_tls12_prf_set_key( psa_tls12_prf_key_derivation_t *prf,
                                            size_t data_length )
 {
     psa_status_t status;
-    if( prf->state != TLS12_PRF_STATE_SEED_SET )
+    if( prf->state != PSA_TLS12_PRF_STATE_SEED_SET )
         return( PSA_ERROR_BAD_STATE );
 
     status = psa_hmac_setup_internal( &prf->hmac, data, data_length, hash_alg );
     if( status != PSA_SUCCESS )
         return( status );
 
-    prf->state = TLS12_PRF_STATE_KEY_SET;
+    prf->state = PSA_TLS12_PRF_STATE_KEY_SET;
 
     return( PSA_SUCCESS );
 }
@@ -5907,7 +5907,7 @@ static psa_status_t psa_tls12_prf_set_label( psa_tls12_prf_key_derivation_t *prf
                                              const uint8_t *data,
                                              size_t data_length )
 {
-    if( prf->state != TLS12_PRF_STATE_KEY_SET )
+    if( prf->state != PSA_TLS12_PRF_STATE_KEY_SET )
         return( PSA_ERROR_BAD_STATE );
 
     if( data_length != 0 )
@@ -5920,7 +5920,7 @@ static psa_status_t psa_tls12_prf_set_label( psa_tls12_prf_key_derivation_t *prf
         prf->label_length = data_length;
     }
 
-    prf->state = TLS12_PRF_STATE_LABEL_SET;
+    prf->state = PSA_TLS12_PRF_STATE_LABEL_SET;
 
     return( PSA_SUCCESS );
 }
