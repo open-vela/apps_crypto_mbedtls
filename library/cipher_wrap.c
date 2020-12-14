@@ -5,7 +5,7 @@
  *
  * \author Adriaan de Jong <dejong@fox-it.com>
  *
- *  Copyright The Mbed TLS Contributors
+ *  Copyright (C) 2006-2015, ARM Limited, All Rights Reserved
  *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -19,6 +19,8 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
+ *
+ *  This file is part of mbed TLS (https://tls.mbed.org)
  */
 
 #include "common.h"
@@ -753,7 +755,7 @@ static const mbedtls_cipher_info_t camellia_128_ecb_info = {
     MBEDTLS_MODE_ECB,
     128,
     "CAMELLIA-128-ECB",
-    0,
+    16,
     0,
     16,
     &camellia_info
@@ -764,7 +766,7 @@ static const mbedtls_cipher_info_t camellia_192_ecb_info = {
     MBEDTLS_MODE_ECB,
     192,
     "CAMELLIA-192-ECB",
-    0,
+    16,
     0,
     16,
     &camellia_info
@@ -775,7 +777,7 @@ static const mbedtls_cipher_info_t camellia_256_ecb_info = {
     MBEDTLS_MODE_ECB,
     256,
     "CAMELLIA-256-ECB",
-    0,
+    16,
     0,
     16,
     &camellia_info
@@ -1129,7 +1131,7 @@ static const mbedtls_cipher_info_t aria_128_ecb_info = {
     MBEDTLS_MODE_ECB,
     128,
     "ARIA-128-ECB",
-    0,
+    16,
     0,
     16,
     &aria_info
@@ -1140,7 +1142,7 @@ static const mbedtls_cipher_info_t aria_192_ecb_info = {
     MBEDTLS_MODE_ECB,
     192,
     "ARIA-192-ECB",
-    0,
+    16,
     0,
     16,
     &aria_info
@@ -1151,7 +1153,7 @@ static const mbedtls_cipher_info_t aria_256_ecb_info = {
     MBEDTLS_MODE_ECB,
     256,
     "ARIA-256-ECB",
-    0,
+    16,
     0,
     16,
     &aria_info
@@ -1553,7 +1555,7 @@ static const mbedtls_cipher_info_t des_ecb_info = {
     MBEDTLS_MODE_ECB,
     MBEDTLS_KEY_LENGTH_DES,
     "DES-ECB",
-    0,
+    8,
     0,
     8,
     &des_info
@@ -1604,7 +1606,7 @@ static const mbedtls_cipher_info_t des_ede_ecb_info = {
     MBEDTLS_MODE_ECB,
     MBEDTLS_KEY_LENGTH_DES_EDE,
     "DES-EDE-ECB",
-    0,
+    8,
     0,
     8,
     &des_ede_info
@@ -1655,7 +1657,7 @@ static const mbedtls_cipher_info_t des_ede3_ecb_info = {
     MBEDTLS_MODE_ECB,
     MBEDTLS_KEY_LENGTH_DES_EDE3,
     "DES-EDE3-ECB",
-    0,
+    8,
     0,
     8,
     &des_ede3_info
@@ -1770,7 +1772,7 @@ static const mbedtls_cipher_info_t blowfish_ecb_info = {
     MBEDTLS_MODE_ECB,
     128,
     "BLOWFISH-ECB",
-    0,
+    8,
     MBEDTLS_CIPHER_VARIABLE_KEY_LEN,
     8,
     &blowfish_info
