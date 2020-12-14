@@ -1,5 +1,5 @@
 set(libs
-    ${mbedtls_target}
+    mbedtls
 )
 
 if(USE_PKCS11_HELPER_LIBRARY)
@@ -36,7 +36,7 @@ foreach(exe IN LISTS executables_no_common_c executables_with_common_c)
 
     if (NOT FUZZINGENGINE_LIB)
         target_link_libraries(${exe} ${libs})
-        set_property(TARGET ${exe} APPEND PROPERTY SOURCES onefile.c)
+        target_sources(${exe} PRIVATE onefile.c)
     else()
         target_link_libraries(${exe} ${libs} FuzzingEngine)
         SET_TARGET_PROPERTIES(${exe} PROPERTIES LINKER_LANGUAGE CXX)
@@ -45,7 +45,7 @@ foreach(exe IN LISTS executables_no_common_c executables_with_common_c)
     # This emulates "if ( ... IN_LIST ... )" which becomes available in CMake 3.3
     list(FIND executables_with_common_c ${exe} exe_index)
     if (${exe_index} GREATER -1)
-        set_property(TARGET ${exe} APPEND PROPERTY SOURCES common.c)
+        target_sources(${exe} PRIVATE common.c)
     endif()
 
 endforeach()
