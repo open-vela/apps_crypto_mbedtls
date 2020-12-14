@@ -1,7 +1,7 @@
 /*
  *  X.509 common functions for parsing and verification
  *
- *  Copyright (C) 2006-2015, ARM Limited, All Rights Reserved
+ *  Copyright The Mbed TLS Contributors
  *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -15,8 +15,6 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
- *
- *  This file is part of mbed TLS (https://tls.mbed.org)
  */
 /*
  *  The ITU-T X.509 standard defines a certificate format for PKI.
@@ -156,7 +154,7 @@ static int x509_get_hash_alg( const mbedtls_x509_buf *alg, mbedtls_md_type_t *md
         return( MBEDTLS_ERR_X509_INVALID_ALG +
                 MBEDTLS_ERR_ASN1_UNEXPECTED_TAG );
 
-    p = (unsigned char *) alg->p;
+    p = alg->p;
     end = p + alg->len;
 
     if( p >= end )

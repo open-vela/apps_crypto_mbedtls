@@ -2,7 +2,7 @@
 
 # context-info.sh
 #
-# Copyright (c) 2012-2020, ARM Limited, All Rights Reserved
+# Copyright The Mbed TLS Contributors
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -16,8 +16,6 @@
 # WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
-# This file is part of Mbed TLS (https://tls.mbed.org)
 #
 # This program is intended for testing the ssl_context_info program
 #
@@ -432,13 +430,19 @@ run_test "Binary file instead of text file" \
          -u "Too many bad symbols detected. File check aborted" \
          -n "Deserializing"
 
+run_test "Decoder continues past 0xff character" \
+         "def_b64_ff.bin" \
+         -n "No valid base64" \
+         -u "ciphersuite.* TLS-"
+
 
 # End of tests
 
+echo
 if [ $T_FAILED -eq 0 ]; then
-    printf "\nPASSED ( $T_COUNT tests )\n"
+    echo "PASSED ( $T_COUNT tests )"
 else
-    printf "\nFAILED ( $T_FAILED / $T_COUNT tests )\n"
+    echo "FAILED ( $T_FAILED / $T_COUNT tests )"
 fi
 
 exit $T_FAILED
