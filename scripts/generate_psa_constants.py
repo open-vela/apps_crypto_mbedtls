@@ -11,7 +11,7 @@ file is written:
 * OUTPUT_FILE_DIR passed: writes to OUTPUT_FILE_DIR/
 """
 
-# Copyright (C) 2018-2020, Arm Limited, All Rights Reserved
+# Copyright The Mbed TLS Contributors
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -25,8 +25,6 @@ file is written:
 # WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
-# This file is part of Mbed TLS (https://tls.mbed.org)
 
 import os
 import re
@@ -413,7 +411,7 @@ def generate_psa_constants(header_file_names, output_file_name):
     temp_file_name = output_file_name + '.tmp'
     with open(temp_file_name, 'w') as output_file:
         collector.write_file(output_file)
-    os.rename(temp_file_name, output_file_name)
+    os.replace(temp_file_name, output_file_name)
 
 if __name__ == '__main__':
     if not os.path.isdir('programs') and os.path.isdir('../programs'):
