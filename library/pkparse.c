@@ -1,7 +1,7 @@
 /*
  *  Public Key layer for parsing key files and structures
  *
- *  Copyright (C) 2006-2015, ARM Limited, All Rights Reserved
+ *  Copyright The Mbed TLS Contributors
  *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -15,8 +15,6 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
- *
- *  This file is part of mbed TLS (https://tls.mbed.org)
  */
 
 #include "common.h"
@@ -664,7 +662,7 @@ int mbedtls_pk_parse_subpubkey( unsigned char **p, const unsigned char *end,
         ret = MBEDTLS_ERR_PK_UNKNOWN_PK_ALG;
 
     if( ret == 0 && *p != end )
-        ret = MBEDTLS_ERR_PK_INVALID_PUBKEY
+        ret = MBEDTLS_ERR_PK_INVALID_PUBKEY +
               MBEDTLS_ERR_ASN1_LENGTH_MISMATCH;
 
     if( ret != 0 )
