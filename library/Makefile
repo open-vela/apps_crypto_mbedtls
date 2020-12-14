@@ -118,7 +118,6 @@ OBJS_CRYPTO= \
 	     platform_util.o \
 	     poly1305.o \
 	     psa_crypto.o \
-	     psa_crypto_driver_wrappers.o \
 	     psa_crypto_se.o \
 	     psa_crypto_slot_management.o \
 	     psa_crypto_storage.o \
@@ -163,7 +162,6 @@ OBJS_TLS= \
 	  ssl_srv.o \
 	  ssl_ticket.o \
 	  ssl_tls.o \
-	  ssl_tls13_keys.o \
 	  # This line is intentionally left blank
 
 .SILENT:

@@ -2,7 +2,7 @@
 
 # test-ref-configs.pl
 #
-# Copyright The Mbed TLS Contributors
+# Copyright (c) 2013-2016, ARM Limited, All Rights Reserved
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -17,6 +17,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+# This file is part of Mbed TLS (https://tls.mbed.org)
+#
 # Purpose
 #
 # For each reference configuration file in the configs directory, build the
@@ -28,20 +30,16 @@ use warnings;
 use strict;
 
 my %configs = (
-    'config-ccm-psk-tls1_2.h' => {
-        'compat' => '-m tls1_2 -f \'^TLS-PSK-WITH-AES-...-CCM-8\'',
-    },
     'config-mini-tls1_1.h' => {
         'compat' => '-m tls1_1 -f \'^DES-CBC3-SHA$\|^TLS-RSA-WITH-3DES-EDE-CBC-SHA$\'', #'
-    },
-    'config-no-entropy.h' => {
-    },
-    'config-psa-crypto.h' => {
     },
     'config-suite-b.h' => {
         'compat' => "-m tls1_2 -f 'ECDHE-ECDSA.*AES.*GCM' -p mbedTLS",
     },
     'config-symmetric-only.h' => {
+    },
+    'config-ccm-psk-tls1_2.h' => {
+        'compat' => '-m tls1_2 -f \'^TLS-PSK-WITH-AES-...-CCM-8\'',
     },
     'config-thread.h' => {
         'opt' => '-f ECJPAKE.*nolog',

@@ -80,16 +80,12 @@ all: $(BINARIES)
 $(MBEDLIBS):
 	$(MAKE) -C ../library
 
-MBEDTLS_TEST_OBJS=$(patsubst %.c,%.o,$(wildcard src/*.c src/drivers/*.c))
+MBEDTLS_TEST_OBJS=$(patsubst %.c,%.o,$(wildcard src/*.c))
 
 mbedtls_test: $(MBEDTLS_TEST_OBJS)
 
 # Rule to compile common test C files in src folder
 src/%.o : src/%.c
-	echo "  CC    $<"
-	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) -o $@ -c $<
-
-src/drivers/%.o : src/drivers/%.c
 	echo "  CC    $<"
 	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) -o $@ -c $<
 
@@ -134,13 +130,12 @@ $(addprefix embedded_,$(filter test_suite_psa_%, $(APPS))): embedded_%: TESTS/mb
 clean:
 ifndef WINDOWS
 	rm -rf $(BINARIES) *.c *.datax TESTS
-	rm -f src/*.o src/drivers/*.o src/libmbed*
+	rm -f src/*.o src/libmbed*
 else
 	if exist *.c del /Q /F *.c
 	if exist *.exe del /Q /F *.exe
 	if exist *.datax del /Q /F *.datax
 	if exist src/*.o del /Q /F src/*.o
-	if exist src/drivers/*.o del /Q /F src/drivers/*.o
 	if exist src/libmbed* del /Q /F src/libmed*
 ifneq ($(wildcard TESTS/.*),)
 	rmdir /Q /S TESTS

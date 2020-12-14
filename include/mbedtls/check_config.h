@@ -4,7 +4,7 @@
  * \brief Consistency checks for configuration options
  */
 /*
- *  Copyright The Mbed TLS Contributors
+ *  Copyright (C) 2006-2018, ARM Limited, All Rights Reserved
  *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -18,6 +18,8 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
+ *
+ *  This file is part of mbed TLS (https://tls.mbed.org)
  */
 
 /*
@@ -194,16 +196,6 @@
     defined(MBEDTLS_ENTROPY_FORCE_SHA256) && !defined(MBEDTLS_SHA256_C)
 #error "MBEDTLS_ENTROPY_FORCE_SHA256 defined, but not all prerequisites"
 #endif
-
-#if defined(__has_feature)
-#if __has_feature(memory_sanitizer)
-#define MBEDTLS_HAS_MEMSAN
-#endif
-#endif
-#if defined(MBEDTLS_TEST_CONSTANT_FLOW_MEMSAN) &&  !defined(MBEDTLS_HAS_MEMSAN)
-#error "MBEDTLS_TEST_CONSTANT_FLOW_MEMSAN requires building with MemorySanitizer"
-#endif
-#undef MBEDTLS_HAS_MEMSAN
 
 #if defined(MBEDTLS_TEST_NULL_ENTROPY) && \
     ( !defined(MBEDTLS_ENTROPY_C) || !defined(MBEDTLS_NO_DEFAULT_ENTROPY_SOURCES) )
@@ -572,11 +564,10 @@
 #error "MBEDTLS_PLATFORM_NV_SEED_WRITE_MACRO and MBEDTLS_PLATFORM_STD_NV_SEED_WRITE cannot be defined simultaneously"
 #endif
 
-#if defined(MBEDTLS_PSA_CRYPTO_C) &&                                    \
-    !( ( ( defined(MBEDTLS_CTR_DRBG_C) || defined(MBEDTLS_HMAC_DRBG_C) ) && \
-         defined(MBEDTLS_ENTROPY_C) ) ||                                \
-       defined(MBEDTLS_PSA_CRYPTO_EXTERNAL_RNG) )
-#error "MBEDTLS_PSA_CRYPTO_C defined, but not all prerequisites (missing RNG)"
+#if defined(MBEDTLS_PSA_CRYPTO_C) &&            \
+    !( defined(MBEDTLS_CTR_DRBG_C) &&           \
+       defined(MBEDTLS_ENTROPY_C) )
+#error "MBEDTLS_PSA_CRYPTO_C defined, but not all prerequisites"
 #endif
 
 #if defined(MBEDTLS_PSA_CRYPTO_SPM) && !defined(MBEDTLS_PSA_CRYPTO_C)
@@ -605,19 +596,9 @@
 #error "MBEDTLS_PSA_INJECT_ENTROPY is not compatible with actual entropy sources"
 #endif
 
-#if defined(MBEDTLS_PSA_INJECT_ENTROPY) &&              \
-    defined(MBEDTLS_PSA_CRYPTO_EXTERNAL_RNG)
-#error "MBEDTLS_PSA_INJECT_ENTROPY is not compatible with MBEDTLS_PSA_CRYPTO_EXTERNAL_RNG"
-#endif
-
 #if defined(MBEDTLS_PSA_ITS_FILE_C) && \
     !defined(MBEDTLS_FS_IO)
 #error "MBEDTLS_PSA_ITS_FILE_C defined, but not all prerequisites"
-#endif
-
-#if defined(MBEDTLS_PSA_CRYPTO_KEY_ID_ENCODES_OWNER) && \
-    defined(MBEDTLS_USE_PSA_CRYPTO)
-#error "MBEDTLS_PSA_CRYPTO_KEY_ID_ENCODES_OWNER defined, but it cannot coexist with MBEDTLS_USE_PSA_CRYPTO."
 #endif
 
 #if defined(MBEDTLS_RSA_C) && ( !defined(MBEDTLS_BIGNUM_C) ||         \
@@ -881,10 +862,6 @@
 #warning "MBEDTLS_SSL_HW_RECORD_ACCEL is deprecated and will be removed in a future version of Mbed TLS"
 #endif /* MBEDTLS_DEPRECATED_REMOVED */
 #endif /* MBEDTLS_SSL_HW_RECORD_ACCEL */
-
-#if defined(MBEDTLS_SSL_DTLS_SRTP) && ( !defined(MBEDTLS_SSL_PROTO_DTLS) )
-#error "MBEDTLS_SSL_DTLS_SRTP defined, but not all prerequisites"
-#endif
 
 /*
  * Avoid warning from -pedantic. This is a convenient place for this
