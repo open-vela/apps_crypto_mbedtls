@@ -9,7 +9,7 @@
  * This file is reserved for vendor-specific definitions.
  */
 /*
- *  Copyright (C) 2018, ARM Limited, All Rights Reserved
+ *  Copyright The Mbed TLS Contributors
  *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -23,8 +23,6 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
- *
- *  This file is part of mbed TLS (https://tls.mbed.org)
  */
 
 #ifndef PSA_CRYPTO_EXTRA_H
@@ -233,10 +231,12 @@ typedef struct mbedtls_psa_stats_s
     size_t cache_slots;
     /** Number of slots that are not used for anything. */
     size_t empty_slots;
+    /** Number of slots that are locked. */
+    size_t locked_slots;
     /** Largest key id value among open keys in internal persistent storage. */
-    psa_app_key_id_t max_open_internal_key_id;
+    psa_key_id_t max_open_internal_key_id;
     /** Largest key id value among open keys in secure elements. */
-    psa_app_key_id_t max_open_external_key_id;
+    psa_key_id_t max_open_external_key_id;
 } mbedtls_psa_stats_t;
 
 /** \brief Get statistics about
@@ -646,6 +646,57 @@ static inline psa_ecc_family_t mbedtls_ecc_group_to_psa( mbedtls_ecp_group_id gr
 mbedtls_ecp_group_id mbedtls_ecc_group_of_psa( psa_ecc_family_t curve,
                                                size_t byte_length );
 #endif /* MBEDTLS_ECP_C */
+
+/**@}*/
+
+/** \defgroup psa_external_rng External random generator
+ * @{
+ */
+
+#if defined(MBEDTLS_PSA_CRYPTO_EXTERNAL_RNG)
+/** External random generator function, implemented by the platform.
+ *
+ * When the compile-time option #MBEDTLS_PSA_CRYPTO_EXTERNAL_RNG is enabled,
+ * this function replaces Mbed TLS's entropy and DRBG modules for all
+ * random generation triggered via PSA crypto interfaces.
+ *
+ * \note This random generator must deliver random numbers with cryptographic
+ *       quality and high performance. It must supply unpredictable numbers
+ *       with a uniform distribution. The implementation of this function
+ *       is responsible for ensuring that the random generator is seeded
+ *       with sufficient entropy. If you have a hardware TRNG which is slow
+ *       or delivers non-uniform output, declare it as an entropy source
+ *       with mbedtls_entropy_add_source() instead of enabling this option.
+ *
+ * \param[in,out] context       Pointer to the random generator context.
+ *                              This is all-bits-zero on the first call
+ *                              and preserved between successive calls.
+ * \param[out] output           Output buffer. On success, this buffer
+ *                              contains random data with a uniform
+ *                              distribution.
+ * \param output_size           The size of the \p output buffer in bytes.
+ * \param[out] output_length    On success, set this value to \p output_size.
+ *
+ * \retval #PSA_SUCCESS
+ *         Success. The output buffer contains \p output_size bytes of
+ *         cryptographic-quality random data, and \c *output_length is
+ *         set to \p output_size.
+ * \retval #PSA_ERROR_INSUFFICIENT_ENTROPY
+ *         The random generator requires extra entropy and there is no
+ *         way to obtain entropy under current environment conditions.
+ *         This error should not happen under normal circumstances since
+ *         this function is responsible for obtaining as much entropy as
+ *         it needs. However implementations of this function may return
+ *         #PSA_ERROR_INSUFFICIENT_ENTROPY if there is no way to obtain
+ *         entropy without blocking indefinitely.
+ * \retval #PSA_ERROR_HARDWARE_FAILURE
+ *         A failure of the random generator hardware that isn't covered
+ *         by #PSA_ERROR_INSUFFICIENT_ENTROPY.
+ */
+psa_status_t mbedtls_psa_external_get_random(
+    mbedtls_psa_external_random_context_t *context,
+    uint8_t *output, size_t output_size, size_t *output_length );
+#endif /* MBEDTLS_PSA_CRYPTO_EXTERNAL_RNG */
 
 /**@}*/
 
