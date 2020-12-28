@@ -1,7 +1,7 @@
 /*
  *  TLS server tickets callbacks implementation
  *
- *  Copyright The Mbed TLS Contributors
+ *  Copyright (C) 2006-2015, ARM Limited, All Rights Reserved
  *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -15,9 +15,15 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
+ *
+ *  This file is part of mbed TLS (https://tls.mbed.org)
  */
 
-#include "common.h"
+#if !defined(MBEDTLS_CONFIG_FILE)
+#include "mbedtls/config.h"
+#else
+#include MBEDTLS_CONFIG_FILE
+#endif
 
 #if defined(MBEDTLS_SSL_TICKET_C)
 
@@ -29,7 +35,6 @@
 #define mbedtls_free      free
 #endif
 
-#include "mbedtls/ssl_internal.h"
 #include "mbedtls/ssl_ticket.h"
 #include "mbedtls/error.h"
 #include "mbedtls/platform_util.h"
@@ -209,6 +214,7 @@ int mbedtls_ssl_ticket_write( void *p_ticket,
     unsigned char *iv = start + TICKET_KEY_NAME_BYTES;
     unsigned char *state_len_bytes = iv + TICKET_IV_BYTES;
     unsigned char *state = state_len_bytes + TICKET_CRYPT_LEN_BYTES;
+    unsigned char *tag;
     size_t clear_len, ciph_len;
 
     *tlen = 0;
@@ -218,7 +224,8 @@ int mbedtls_ssl_ticket_write( void *p_ticket,
 
     /* We need at least 4 bytes for key_name, 12 for IV, 2 for len 16 for tag,
      * in addition to session itself, that will be checked when writing it. */
-    MBEDTLS_SSL_CHK_BUF_PTR( start, end, TICKET_MIN_LEN );
+    if( end - start < TICKET_MIN_LEN )
+        return( MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL );
 
 #if defined(MBEDTLS_THREADING_C)
     if( ( ret = mbedtls_mutex_lock( &ctx->mutex ) ) != 0 )
@@ -249,23 +256,23 @@ int mbedtls_ssl_ticket_write( void *p_ticket,
     state_len_bytes[1] = ( clear_len      ) & 0xff;
 
     /* Encrypt and authenticate */
-    if( ( ret = mbedtls_cipher_auth_encrypt_ext( &key->ctx,
+    tag = state + clear_len;
+    if( ( ret = mbedtls_cipher_auth_encrypt( &key->ctx,
                     iv, TICKET_IV_BYTES,
                     /* Additional data: key name, IV and length */
                     key_name, TICKET_ADD_DATA_LEN,
-                    state, clear_len,
-                    state, end - state, &ciph_len,
-                    TICKET_AUTH_TAG_BYTES ) ) != 0 )
+                    state, clear_len, state, &ciph_len,
+                    tag, TICKET_AUTH_TAG_BYTES ) ) != 0 )
     {
         goto cleanup;
     }
-    if( ciph_len != clear_len + TICKET_AUTH_TAG_BYTES )
+    if( ciph_len != clear_len )
     {
         ret = MBEDTLS_ERR_SSL_INTERNAL_ERROR;
         goto cleanup;
     }
 
-    *tlen = TICKET_MIN_LEN + ciph_len - TICKET_AUTH_TAG_BYTES;
+    *tlen = TICKET_MIN_LEN + ciph_len;
 
 cleanup:
 #if defined(MBEDTLS_THREADING_C)
@@ -307,6 +314,7 @@ int mbedtls_ssl_ticket_parse( void *p_ticket,
     unsigned char *iv = buf + TICKET_KEY_NAME_BYTES;
     unsigned char *enc_len_p = iv + TICKET_IV_BYTES;
     unsigned char *ticket = enc_len_p + TICKET_CRYPT_LEN_BYTES;
+    unsigned char *tag;
     size_t enc_len, clear_len;
 
     if( ctx == NULL || ctx->f_rng == NULL )
@@ -324,6 +332,7 @@ int mbedtls_ssl_ticket_parse( void *p_ticket,
         goto cleanup;
 
     enc_len = ( enc_len_p[0] << 8 ) | enc_len_p[1];
+    tag = ticket + enc_len;
 
     if( len != TICKET_MIN_LEN + enc_len )
     {
@@ -341,13 +350,13 @@ int mbedtls_ssl_ticket_parse( void *p_ticket,
     }
 
     /* Decrypt and authenticate */
-    if( ( ret = mbedtls_cipher_auth_decrypt_ext( &key->ctx,
+    if( ( ret = mbedtls_cipher_auth_decrypt( &key->ctx,
                     iv, TICKET_IV_BYTES,
                     /* Additional data: key name, IV and length */
                     key_name, TICKET_ADD_DATA_LEN,
-                    ticket, enc_len + TICKET_AUTH_TAG_BYTES,
-                    ticket, enc_len, &clear_len,
-                    TICKET_AUTH_TAG_BYTES ) ) != 0 )
+                    ticket, enc_len,
+                    ticket, &clear_len,
+                    tag, TICKET_AUTH_TAG_BYTES ) ) != 0 )
     {
         if( ret == MBEDTLS_ERR_CIPHER_AUTH_FAILED )
             ret = MBEDTLS_ERR_SSL_INVALID_MAC;
