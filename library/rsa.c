@@ -1,7 +1,7 @@
 /*
  *  The RSA public-key cryptosystem
  *
- *  Copyright The Mbed TLS Contributors
+ *  Copyright (C) 2006-2015, ARM Limited, All Rights Reserved
  *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -15,6 +15,8 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
+ *
+ *  This file is part of mbed TLS (https://tls.mbed.org)
  */
 
 /*
@@ -35,7 +37,11 @@
  *
  */
 
-#include "common.h"
+#if !defined(MBEDTLS_CONFIG_FILE)
+#include "mbedtls/config.h"
+#else
+#include MBEDTLS_CONFIG_FILE
+#endif
 
 #if defined(MBEDTLS_RSA_C)
 
@@ -51,7 +57,7 @@
 #include "mbedtls/md.h"
 #endif
 
-#if defined(MBEDTLS_PKCS1_V15) && !defined(__OpenBSD__) && !defined(__NetBSD__)
+#if defined(MBEDTLS_PKCS1_V15) && !defined(__OpenBSD__)
 #include <stdlib.h>
 #endif
 
@@ -776,9 +782,6 @@ static int rsa_prepare_blinding( mbedtls_rsa_context *ctx,
                  int (*f_rng)(void *, unsigned char *, size_t), void *p_rng )
 {
     int ret, count = 0;
-    mbedtls_mpi R;
-
-    mbedtls_mpi_init( &R );
 
     if( ctx->Vf.p != NULL )
     {
@@ -794,40 +797,18 @@ static int rsa_prepare_blinding( mbedtls_rsa_context *ctx,
     /* Unblinding value: Vf = random number, invertible mod N */
     do {
         if( count++ > 10 )
-        {
-            ret = MBEDTLS_ERR_RSA_RNG_FAILED;
-            goto cleanup;
-        }
+            return( MBEDTLS_ERR_RSA_RNG_FAILED );
 
         MBEDTLS_MPI_CHK( mbedtls_mpi_fill_random( &ctx->Vf, ctx->len - 1, f_rng, p_rng ) );
+        MBEDTLS_MPI_CHK( mbedtls_mpi_gcd( &ctx->Vi, &ctx->Vf, &ctx->N ) );
+    } while( mbedtls_mpi_cmp_int( &ctx->Vi, 1 ) != 0 );
 
-        /* Compute Vf^-1 as R * (R Vf)^-1 to avoid leaks from inv_mod. */
-        MBEDTLS_MPI_CHK( mbedtls_mpi_fill_random( &R, ctx->len - 1, f_rng, p_rng ) );
-        MBEDTLS_MPI_CHK( mbedtls_mpi_mul_mpi( &ctx->Vi, &ctx->Vf, &R ) );
-        MBEDTLS_MPI_CHK( mbedtls_mpi_mod_mpi( &ctx->Vi, &ctx->Vi, &ctx->N ) );
-
-        /* At this point, Vi is invertible mod N if and only if both Vf and R
-         * are invertible mod N. If one of them isn't, we don't need to know
-         * which one, we just loop and choose new values for both of them.
-         * (Each iteration succeeds with overwhelming probability.) */
-        ret = mbedtls_mpi_inv_mod( &ctx->Vi, &ctx->Vi, &ctx->N );
-        if( ret != 0 && ret != MBEDTLS_ERR_MPI_NOT_ACCEPTABLE )
-            goto cleanup;
-
-    } while( ret == MBEDTLS_ERR_MPI_NOT_ACCEPTABLE );
-
-    /* Finish the computation of Vf^-1 = R * (R Vf)^-1 */
-    MBEDTLS_MPI_CHK( mbedtls_mpi_mul_mpi( &ctx->Vi, &ctx->Vi, &R ) );
-    MBEDTLS_MPI_CHK( mbedtls_mpi_mod_mpi( &ctx->Vi, &ctx->Vi, &ctx->N ) );
-
-    /* Blinding value: Vi = Vf^(-e) mod N
-     * (Vi already contains Vf^-1 at this point) */
+    /* Blinding value: Vi =  Vf^(-e) mod N */
+    MBEDTLS_MPI_CHK( mbedtls_mpi_inv_mod( &ctx->Vi, &ctx->Vf, &ctx->N ) );
     MBEDTLS_MPI_CHK( mbedtls_mpi_exp_mod( &ctx->Vi, &ctx->Vi, &ctx->E, &ctx->N, &ctx->RN ) );
 
 
 cleanup:
-    mbedtls_mpi_free( &R );
-
     return( ret );
 }
 
@@ -1787,19 +1768,21 @@ int mbedtls_rsa_pkcs1_decrypt( mbedtls_rsa_context *ctx,
 }
 
 #if defined(MBEDTLS_PKCS1_V21)
-static int rsa_rsassa_pss_sign( mbedtls_rsa_context *ctx,
+/*
+ * Implementation of the PKCS#1 v2.1 RSASSA-PSS-SIGN function
+ */
+int mbedtls_rsa_rsassa_pss_sign( mbedtls_rsa_context *ctx,
                          int (*f_rng)(void *, unsigned char *, size_t),
                          void *p_rng,
                          int mode,
                          mbedtls_md_type_t md_alg,
                          unsigned int hashlen,
                          const unsigned char *hash,
-                         int saltlen,
                          unsigned char *sig )
 {
     size_t olen;
     unsigned char *p = sig;
-    unsigned char *salt = NULL;
+    unsigned char salt[MBEDTLS_MD_MAX_SIZE];
     size_t slen, min_slen, hlen, offset = 0;
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     size_t msb;
@@ -1812,8 +1795,6 @@ static int rsa_rsassa_pss_sign( mbedtls_rsa_context *ctx,
                         hashlen == 0 ) ||
                       hash != NULL );
     RSA_VALIDATE_RET( sig != NULL );
-    RSA_VALIDATE_RET( saltlen == MBEDTLS_RSA_SALT_LEN_ANY ||
-                      saltlen > 0 );
 
     if( mode == MBEDTLS_RSA_PRIVATE && ctx->padding != MBEDTLS_RSA_PKCS_V21 )
         return( MBEDTLS_ERR_RSA_BAD_INPUT_DATA );
@@ -1839,44 +1820,31 @@ static int rsa_rsassa_pss_sign( mbedtls_rsa_context *ctx,
 
     hlen = mbedtls_md_get_size( md_info );
 
-    if (saltlen == MBEDTLS_RSA_SALT_LEN_ANY)
-    {
-       /* Calculate the largest possible salt length, up to the hash size.
-        * Normally this is the hash length, which is the maximum salt length
-        * according to FIPS 185-4 §5.5 (e) and common practice. If there is not
-        * enough room, use the maximum salt length that fits. The constraint is
-        * that the hash length plus the salt length plus 2 bytes must be at most
-        * the key length. This complies with FIPS 186-4 §5.5 (e) and RFC 8017
-        * (PKCS#1 v2.2) §9.1.1 step 3. */
-        min_slen = hlen - 2;
-        if( olen < hlen + min_slen + 2 )
-            return( MBEDTLS_ERR_RSA_BAD_INPUT_DATA );
-        else if( olen >= hlen + hlen + 2 )
-            slen = hlen;
-        else
-            slen = olen - hlen - 2;
-    }
-    else if ( ( (size_t) saltlen ) > olen - hlen - 2 )
-    {
+    /* Calculate the largest possible salt length. Normally this is the hash
+     * length, which is the maximum length the salt can have. If there is not
+     * enough room, use the maximum salt length that fits. The constraint is
+     * that the hash length plus the salt length plus 2 bytes must be at most
+     * the key length. This complies with FIPS 186-4 §5.5 (e) and RFC 8017
+     * (PKCS#1 v2.2) §9.1.1 step 3. */
+    min_slen = hlen - 2;
+    if( olen < hlen + min_slen + 2 )
         return( MBEDTLS_ERR_RSA_BAD_INPUT_DATA );
-    }
+    else if( olen >= hlen + hlen + 2 )
+        slen = hlen;
     else
-    {
-        slen = (size_t) saltlen;
-    }
+        slen = olen - hlen - 2;
 
     memset( sig, 0, olen );
+
+    /* Generate salt of length slen */
+    if( ( ret = f_rng( p_rng, salt, slen ) ) != 0 )
+        return( MBEDTLS_ERR_RSA_RNG_FAILED + ret );
 
     /* Note: EMSA-PSS encoding is over the length of N - 1 bits */
     msb = mbedtls_mpi_bitlen( &ctx->N ) - 1;
     p += olen - hlen - slen - 2;
     *p++ = 0x01;
-
-    /* Generate salt of length slen in place in the encoded message */
-    salt = p;
-    if( ( ret = f_rng( p_rng, salt, slen ) ) != 0 )
-        return( MBEDTLS_ERR_RSA_RNG_FAILED + ret );
-
+    memcpy( p, salt, slen );
     p += slen;
 
     mbedtls_md_init( &md_ctx );
@@ -1910,6 +1878,8 @@ static int rsa_rsassa_pss_sign( mbedtls_rsa_context *ctx,
     p += hlen;
     *p++ = 0xBC;
 
+    mbedtls_platform_zeroize( salt, sizeof( salt ) );
+
 exit:
     mbedtls_md_free( &md_ctx );
 
@@ -1919,40 +1889,6 @@ exit:
     return( ( mode == MBEDTLS_RSA_PUBLIC )
             ? mbedtls_rsa_public(  ctx, sig, sig )
             : mbedtls_rsa_private( ctx, f_rng, p_rng, sig, sig ) );
-}
-
-/*
- * Implementation of the PKCS#1 v2.1 RSASSA-PSS-SIGN function with
- * the option to pass in the salt length.
- */
-int mbedtls_rsa_rsassa_pss_sign_ext( mbedtls_rsa_context *ctx,
-                         int (*f_rng)(void *, unsigned char *, size_t),
-                         void *p_rng,
-                         mbedtls_md_type_t md_alg,
-                         unsigned int hashlen,
-                         const unsigned char *hash,
-                         int saltlen,
-                         unsigned char *sig )
-{
-    return rsa_rsassa_pss_sign( ctx, f_rng, p_rng, MBEDTLS_RSA_PRIVATE, md_alg,
-                                hashlen, hash, saltlen, sig );
-}
-
-
-/*
- * Implementation of the PKCS#1 v2.1 RSASSA-PSS-SIGN function
- */
-int mbedtls_rsa_rsassa_pss_sign( mbedtls_rsa_context *ctx,
-                         int (*f_rng)(void *, unsigned char *, size_t),
-                         void *p_rng,
-                         int mode,
-                         mbedtls_md_type_t md_alg,
-                         unsigned int hashlen,
-                         const unsigned char *hash,
-                         unsigned char *sig )
-{
-    return rsa_rsassa_pss_sign( ctx, f_rng, p_rng, mode, md_alg,
-                                hashlen, hash, MBEDTLS_RSA_SALT_LEN_ANY, sig );
 }
 #endif /* MBEDTLS_PKCS1_V21 */
 
@@ -2637,7 +2573,7 @@ void mbedtls_rsa_free( mbedtls_rsa_context *ctx )
 #if defined(MBEDTLS_PKCS1_V15)
 static int myrand( void *rng_state, unsigned char *output, size_t len )
 {
-#if !defined(__OpenBSD__) && !defined(__NetBSD__)
+#if !defined(__OpenBSD__)
     size_t i;
 
     if( rng_state != NULL )
@@ -2650,7 +2586,7 @@ static int myrand( void *rng_state, unsigned char *output, size_t len )
         rng_state = NULL;
 
     arc4random_buf( output, len );
-#endif /* !OpenBSD && !NetBSD */
+#endif /* !OpenBSD */
 
     return( 0 );
 }

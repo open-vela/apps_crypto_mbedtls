@@ -6,7 +6,7 @@
  * hash functions are defined in <em>FIPS 180-4: Secure Hash Standard (SHS)</em>.
  */
 /*
- *  Copyright The Mbed TLS Contributors
+ *  Copyright (C) 2006-2018, Arm Limited (or its affiliates), All Rights Reserved
  *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -20,6 +20,8 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
+ *
+ *  This file is part of Mbed TLS (https://tls.mbed.org)
  */
 #ifndef MBEDTLS_SHA512_H
 #define MBEDTLS_SHA512_H
@@ -131,7 +133,8 @@ int mbedtls_sha512_update_ret( mbedtls_sha512_context *ctx,
 
 /**
  * \brief          This function finishes the SHA-512 operation, and writes
- *                 the result to the output buffer.
+ *                 the result to the output buffer. This function is for
+ *                 internal use only.
  *
  * \param ctx      The SHA-512 context. This must be initialized
  *                 and have a hash operation started.
@@ -147,7 +150,6 @@ int mbedtls_sha512_finish_ret( mbedtls_sha512_context *ctx,
 /**
  * \brief          This function processes a single data block within
  *                 the ongoing SHA-512 computation.
- *                 This function is for internal use only.
  *
  * \param ctx      The SHA-512 context. This must be initialized.
  * \param data     The buffer holding one block of data. This
