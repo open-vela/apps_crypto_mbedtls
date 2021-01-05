@@ -92,8 +92,6 @@
 #define MBEDTLS_VERSION_C
 #define MBEDTLS_XTEA_C
 
-#include "mbedtls/config_psa.h"
-
 #include "check_config.h"
 
 #endif /* MBEDTLS_CONFIG_H */

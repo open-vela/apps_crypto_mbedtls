@@ -1,5 +1,5 @@
 set(libs
-    ${mbedtls_target}
+    mbedtls
 )
 
 if(USE_PKCS11_HELPER_LIBRARY)
@@ -33,12 +33,11 @@ foreach(exe IN LISTS executables_libs executables_mbedcrypto)
     if (${exe_index} GREATER -1)
         target_link_libraries(${exe} ${libs})
     else()
-        target_link_libraries(${exe} ${mbedcrypto_target})
+        target_link_libraries(${exe} mbedcrypto)
     endif()
 endforeach()
 
-set_property(TARGET query_compile_time_config APPEND PROPERTY SOURCES
-             ${CMAKE_CURRENT_SOURCE_DIR}/query_config.c)
+target_sources(query_compile_time_config PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/query_config.c)
 
 install(TARGETS ${executables_libs} ${executables_mbedcrypto}
         DESTINATION "bin"
