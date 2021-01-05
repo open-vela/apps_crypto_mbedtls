@@ -38,7 +38,6 @@
 
 #include "mbedtls/entropy.h"
 
-#if !defined(MBEDTLS_PSA_CRYPTO_EXTERNAL_RNG)
 /** \brief Configure entropy sources.
  *
  * This function may only be called before a call to psa_crypto_init(),
@@ -74,6 +73,5 @@
 psa_status_t mbedtls_psa_crypto_configure_entropy_sources(
     void (* entropy_init )( mbedtls_entropy_context *ctx ),
     void (* entropy_free )( mbedtls_entropy_context *ctx ) );
-#endif /* !defined(MBEDTLS_PSA_CRYPTO_EXTERNAL_RNG) */
 
 #endif /* PSA_CRYPTO_INVASIVE_H */
