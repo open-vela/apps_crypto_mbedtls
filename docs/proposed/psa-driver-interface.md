@@ -5,6 +5,8 @@ This document describes an interface for cryptoprocessor drivers in the PSA cryp
 
 This specification is work in progress and should be considered to be in a beta stage. There is ongoing work to implement this interface in Mbed TLS, which is the reference implementation of the PSA Cryptography API. At this stage, Arm does not expect major changes, but minor changes are expected based on experience from the first implementation and on external feedback.
 
+Time-stamp: "2020/08/19 19:47:39 GMT"
+
 ## Introduction
 
 ### Purpose of the driver interface
@@ -187,14 +189,7 @@ The signature of a driver entry point generally looks like the signature of the 
 
 * For entry points that involve a multi-part operation, the operation state type (`psa_XXX_operation_t`) is replaced by a driver-specific operation state type (*prefix*`_XXX_operation_t`).
 
-* For entry points that are involved in key creation, the `psa_key_id_t *` output parameter is replaced by a sequence of parameters that convey the key context:
-    1. `uint8_t *key_buffer`: a buffer for the key material or key context.
-    2. `size_t key_buffer_size`: the size of the key buffer in bytes.
-    2. `size_t *key_buffer_length`: the length of the data written to the key buffer in bytes.
-
 Some entry points are grouped in families that must be implemented as a whole. If a driver supports an entry point family, it must provide all the entry points in the family.
-
-Drivers can also have entry points related to random generation. A transparent driver can provide a [random generation interface](#random-generation-entry-points). Separately, transparent and opaque drivers can have [entropy collection entry points](#entropy-collection-entry-point).
 
 #### General considerations on driver entry point parameters
 
@@ -316,107 +311,7 @@ TODO
 
 ### Driver entry points for key management
 
-The driver entry points for key management differ significantly between [transparent drivers](#key-management-with-transparent-drivers) and [opaque drivers](#key-management-with-opaque-drivers). This section describes common elements. Refer to the applicable section for each driver type for more information.
-
-The entry points that create or format key data have the following prototypes for a driver with the prefix `"acme"`:
-
-```
-psa_status_t acme_import_key(const psa_key_attributes_t *attributes,
-                             const uint8_t *data,
-                             size_t data_length,
-                             uint8_t *key_buffer,
-                             size_t key_buffer_size,
-                             size_t *key_buffer_length,
-                             size_t *bits); // additional parameter, see below
-psa_status_t acme_generate_key(const psa_key_attributes_t *attributes,
-                               uint8_t *key_buffer,
-                               size_t key_buffer_size,
-                               size_t *key_buffer_length);
-```
-
-TODO: derivation, copy
-
-* The key attributes (`attributes`) have the same semantics as in the PSA Cryptography application interface.
-* For the `"import_key"` entry point, the input in the `data` buffer is either the export format or an implementation-specific format that the core documents as an acceptable input format for `psa_import_key()`.
-* The size of the key data buffer `key_buffer` is sufficient for the internal representation of the key. For a transparent driver, this is the key's [export format](#key-format-for-transparent-drivers). For an opaque driver, this is the size determined from the driver description and the key attributes, as specified in the section [“Key format for opaque drivers”](#key-format-for-opaque-drivers).
-* For an opaque driver with an `"allocate_key"` entry point, the content of the key data buffer on entry is the output of that entry point.
-* The `"import_key"` entry point must determine or validate the key size and set `*bits` as described in the section [“Key size determination on import”](#key-size-determination-on-import) below.
-
-All key creation entry points must ensure that the resulting key is valid as specified in the section [“Key validation”](#key-validation) below. This is primarily important for import entry points since the key data comes from the application.
-
-#### Key size determination on import
-
-The `"import_key"` entry point must determine or validate the key size.
-The PSA Cryptography API exposes the key size as part of the key attributes.
-When importing a key, the key size recorded in the key attributes can be either a size specified by the caller of the API (who may not be trusted), or `0` which indicates that the size must be calculated from the data.
-
-When the core calls the `"import_key"` entry point to process a call to `psa_import_key`, it passes an `attributes` structure such that `psa_get_key_bits(attributes)` is the size passed by the caller of `psa_import_key`. If this size is `0`, the `"import_key"` entry point must set the `bits` input-output parameter to the correct key size. The semantics of `bits` is as follows:
-
-* The core sets `*bits` to `psa_get_key_bits(attributes)` before calling the `"import_key"` entry point.
-* If `*bits == 0`, the driver must determine the key size from the data and set `*bits` to this size. If the key size cannot be determined from the data, the driver must return `PSA_ERROR_INVALID_ARGUMENT` (as of version 1.0 of the PSA Cryptography API specification, it is possible to determine the key size for all standard key types).
-* If `*bits != 0`, the driver must check the value of `*bits` against the data and return `PSA_ERROR_INVALID_ARGUMENT` if it does not match. If the driver entry point changes `*bits` to a different value but returns `PSA_SUCCESS`, the core will consider the key as invalid and the import will fail.
-
-#### Key validation
-
-Key creation entry points must produce valid key data. Key data is _valid_ if operations involving the key are guaranteed to work functionally and not to cause indirect security loss. Operation functions are supposed to receive valid keys, and should not have to check and report invalid keys. For example:
-
-* If a cryptographic mechanism is defined as having keying material of a certain size, or if the keying material involves integers that have to be in a certain range, key creation must ensure that the keying material has an appropriate size and falls within an appropriate range.
-* If a cryptographic operation involves a division by an integer which is provided as part of a key, key creation must ensure that this integer is nonzero.
-* If a cryptographic operation involves two keys A and B (or more), then the creation of A must ensure that using it does not risk compromising B. This applies even if A's policy does not explicitly allow a problematic operation, but A is exportable. In particular, public keys that can potentially be used for key agreement are considered invalid and must not be created if they risk compromising the private key.
-* On the other hand, it is acceptable for import to accept a key that cannot be verified as valid if using this key would at most compromise the key itself and material that is secured with this key. For example, RSA key import does not need to verify that the primes are actually prime. Key import may accept an insecure key if the consequences of the insecurity are no worse than a leak of the key prior to its import.
-
-With opaque drivers, the key context can only be used by code from the same driver, so key validity is primarily intended to report key creation errors at creation time rather than during an operation. With transparent drivers, the key context can potentially be used by code from a different provider, so key validity is critical for interoperability.
-
-This section describes some minimal validity requirements for standard key types.
-
-* For symmetric key types, check that the key size is suitable for the type.
-* For DES (`PSA_KEY_TYPE_DES`), additionally verify the parity bits.
-* For RSA (`PSA_KEY_TYPE_RSA_PUBLIC_KEY`, `PSA_KEY_TYPE_RSA_KEY_PAIR`), check the syntax of the key and make sanity checks on its components. TODO: what sanity checks? Value ranges (e.g. p < n), sanity checks such as parity, minimum and maximum size, what else?
-* For elliptic curve private keys (`PSA_KEY_TYPE_ECC_KEY_PAIR`), check the size and range. TODO: what else?
-* For elliptic curve public keys (`PSA_KEY_TYPE_ECC_PUBLIC_KEY`), check the size and range, and that the point is on the curve. TODO: what else?
-
-### Entropy collection entry point
-
-A driver can declare an entropy source by providing a `"get_entropy"` entry point. This entry point has the following prototype for a driver with the prefix `"acme"`:
-
-```
-psa_status_t acme_get_entropy(uint32_t flags,
-                              size_t *estimate_bits,
-                              uint8_t *output,
-                              size_t output_size);
-```
-
-The semantics of the parameters is as follows:
-
-* `flags`: a bit-mask of [entropy collection flags](#entropy-collection-flags).
-* `estimate_bits`: on success, an estimate of the amount of entropy that is present in the `output` buffer, in bits. This must be at least `1` on success. The value is ignored on failure. Drivers should return a conservative estimate, even in circumstances where the quality of the entropy source is degraded due to environmental conditions (e.g. undervolting, low temperature, etc.).
-* `output`: on success, this buffer contains non-deterministic data with an estimated entropy of at least `*estimate_bits` bits. When the entropy is coming from a hardware peripheral, this should preferably be raw or lightly conditioned measurements from a physical process, such that statistical tests run over a sufficiently large amount of output can confirm the entropy estimates. But this specification also permits entropy sources that are fully conditioned, for example when the PSA Cryptography system is running as an application in an operating system and `"get_entropy"` returns data from the random generator in the operating system's kernel.
-* `output_size`: the size of the `output` buffer in bytes. This size should be large enough to allow a driver to pass unconditioned data with a low density of entropy; for example a peripheral that returns eight bytes of data with an estimated one bit of entropy cannot provide meaningful output in less than 8 bytes.
-
-Note that there is no output parameter indicating how many bytes the driver wrote to the buffer. Such an output length indication is not necessary because the entropy may be located anywhere in the buffer, so the driver may write less than `output_size` bytes but the core does not need to know this. The output parameter `estimate_bits` contains the amount of entropy, expressed in bits, which may be significantly less than `output_size * 8`.
-
-The entry point may return the following statuses:
-
-* `PSA_SUCCESS`: success. The output buffer contains some entropy.
-* `PSA_ERROR_INSUFFICIENT_ENTROPY`: no entropy is available without blocking. This is only permitted if the `PSA_DRIVER_GET_ENTROPY_BLOCK` flag is clear. The core may call `get_entropy` again later, giving time for entropy to be gathered or for adverse environmental conditions to be rectified.
-* Other error codes indicate a transient or permanent failure of the entropy source.
-
-Unlike most other entry points, if multiple transparent drivers include a `"get_entropy"` point, the core will call all of them (as well as the entry points from opaque drivers). Fallback is not applicable to `"get_entropy"`.
-
-#### Entropy collection flags
-
-* `PSA_DRIVER_GET_ENTROPY_BLOCK`: If this flag is set, the driver should block until it has at least one bit of entropy. If this flag is clear, the driver should avoid blocking if no entropy is readily available.
-* `PSA_DRIVER_GET_ENTROPY_KEEPALIVE`: This flag is intended to help with energy management for entropy-generating peripherals. If this flag is set, the driver should expect another call to `acme_get_entropy` after a short time. If this flag is clear, the core is not expecting to call the `"get_entropy"` entry point again within a short amount of time (but it may do so nonetheless).
-
-#### Entropy collection and blocking
-
-The intent of the `BLOCK` and `KEEPALIVE` [flags](#entropy-collection-flags) is to support drivers for TRNG (True Random Number Generator, i.e. an entropy source peripheral) that have a long ramp-up time, especially on platforms with multiple entropy sources.
-
-Here is a suggested call sequence for entropy collection that leverages these flags:
-
-1. The core makes a first round of calls to `"get_entropy"` on every source with the `BLOCK` flag clear and the `KEEPALIVE` flag set, so that drivers can prepare the TRNG peripheral.
-2. The core makes a second round of calls with the `BLOCK` flag set and the `KEEPALIVE` flag clear to gather needed entropy.
-3. If the second round does not collect enough entropy, the core makes more similar rounds, until the total amount of collected entropy is sufficient.
+The driver entry points for key management differs significantly between [transparent drivers](#key-management-with-transparent-drivers) and [opaque drivers](#key-management-with-transparent-drivers). Refer to the applicable section for each driver type.
 
 ### Miscellaneous driver entry points
 
@@ -444,135 +339,11 @@ The format of a key for transparent drivers is the same as in applications. Refe
 
 Transparent drivers may provide the following key management entry points:
 
-* [`"import_key"`](#key-import-with-transparent-drivers): called by `psa_import_key()`, only when importing a key pair or a public key (key such that `PSA_KEY_TYPE_IS_ASYMMETRIC` is true).
-* `"generate_key"`: called by `psa_generate_key()`, only when generating a key pair (key such that `PSA_KEY_TYPE_IS_KEY_PAIR` is true).
-* `"key_derivation_output_key"`: called by `psa_key_derivation_output_key()`, only when deriving a key pair (key such that `PSA_KEY_TYPE_IS_KEY_PAIR` is true).
+* `"generate_key"`: called by `psa_generate_key()`, only when generating a key pair (key such that `PSA_KEY_TYPE_IS_ASYMMETRIC` is true).
+* `"key_derivation_output_key"`: called by `psa_key_derivation_output_key()`, only when deriving a key pair (key such that `PSA_KEY_TYPE_IS_ASYMMETRIC` is true).
 * `"export_public_key"`: called by the core to obtain the public key of a key pair. The core may call this function at any time to obtain the public key, which can be for `psa_export_public_key()` but also at other times, including during a cryptographic operation that requires the public key such as a call to `psa_verify_message()` on a key pair object.
 
-Transparent drivers are not involved when exporting, copying or destroying keys, or when importing, generating or deriving symmetric keys.
-
-#### Key import with transparent drivers
-
-As discussed in [the general section about key management entry points](#driver-entry-points-for-key-management), the key import entry points has the following prototype for a driver with the prefix `"acme"`:
-```
-psa_status_t acme_import_key(const psa_key_attributes_t *attributes,
-                             const uint8_t *data,
-                             size_t data_length,
-                             uint8_t *key_buffer,
-                             size_t key_buffer_size,
-                             size_t *key_buffer_length,
-                             size_t *bits);
-```
-
-This entry point has several roles:
-
-1. Parse the key data in the input buffer `data`. The driver must support the export format for the key types that the entry point is declared for. It may support additional formats as specified in the description of [`psa_import_key()`](https://armmbed.github.io/mbed-crypto/html/api/keys/management.html#c.psa_export_key) in the PSA Cryptography API specification.
-2. Validate the key data. The necessary validation is described in the section [“Key validation with transparent drivers”](#key-validation-with-transparent-drivers) above.
-3. [Determine the key size](#key-size-determination-on-import) and output it through `*bits`.
-4. Copy the validated key data from `data` to `key_buffer`. The output must be in the canonical format documented for [`psa_export_key()`](https://armmbed.github.io/mbed-crypto/html/api/keys/management.html#c.psa_export_key) or [`psa_export_public_key()`](https://armmbed.github.io/mbed-crypto/html/api/keys/management.html#c.psa_export_public_key), so if the input is not in this format, the entry point must convert it.
-
-### Random generation entry points
-
-A transparent driver may provide an operation family that can be used as a cryptographic random number generator. The random generation mechanism must obey the following requirements:
-
-* The random output must be of cryptographic quality, with a uniform distribution. Therefore, if the random generator includes an entropy source, this entropy source must be fed through a CSPRNG (cryptographically secure pseudo-random number generator).
-* Random generation is expected to be fast. (If a device can provide entropy but is slow at generating random data, declare it as an [entropy driver](#entropy-collection-entry-point) instead.)
-* The random generator should be able to incorporate entropy provided by an outside source. If it isn't, the random generator can only be used if it's the only entropy source on the platform. (A random generator peripheral can be declared as an [entropy source](#entropy-collection-entry-point) instead of a random generator; this way the core will combine it with other entropy sources.)
-* The random generator may either be deterministic (in the sense that it always returns the same data when given the same entropy inputs) or non-deterministic (including its own entropy source). In other words, this interface is suitable both for PRNG (pseudo-random number generator, also known as DRBG (deterministic random bit generator)) and for NRBG (non-deterministic random bit generator).
-
-If no driver implements the random generation entry point family, the core provides an unspecified random generation mechanism.
-
-This operation family requires the following type, entry points and parameters (TODO: where exactly are the parameters in the JSON structure?):
-
-* Type `"random_context_t"`: the type of a random generation context.
-* `"init_random"` (entry point, optional): if this function is present, [the core calls it once](#random-generator-initialization) after allocating a `"random_context_t"` object.
-* `"add_entropy"` (entry point, optional): the core calls this function to [inject entropy](#entropy-injection). This entry point is optional if the driver is for a peripheral that includes an entropy source of its own, however [random generator drivers without entropy injection](#random-generator-drivers-without-entropy-injection) have limited portability since they can only be used on platforms with no other entropy source. This entry point is mandatory if `"initial_entropy_size"` is nonzero.
-* `"get_random"` (entry point, mandatory): the core calls this function whenever it needs to [obtain random data](#the-get_random-entry-point).
-* `"initial_entropy_size"` (integer, mandatory): the minimum number of bytes of entropy that the core must supply before the driver can output random data. This can be `0` if the driver is for a peripheral that includes an entropy source of its own.
-* `"reseed_entropy_size"` (integer, optional): the minimum number of bytes of entropy that the core should supply via [`"add_entropy"`](#entropy-injection) when the driver runs out of entropy. This value is also a hint for the size to supply if the core makes additional calls to `"add_entropy"`, for example to enforce prediction resistance. If omitted, the core should pass an amount of entropy corresponding to the expected security strength of the device (for example, pass 32 bytes of entropy when reseeding to achieve a security strength of 256 bits). If specified, the core should pass the larger of `"reseed_entropy_size"` and the amount corresponding to the security strength.
-
-Random generation is not parametrized by an algorithm. The choice of algorithm is up to the driver.
-
-#### Random generator initialization
-
-The `"init_random"` entry point has the following prototype for a driver with the prefix `"acme"`:
-
-```
-psa_status_t acme_init_random(acme_random_context_t *context);
-```
-
-The core calls this entry point once after allocating a random generation context. Initially, the context object is all-bits-zero.
-
-If a driver does not have an `"init_random"` entry point, the context object passed to the first call to `"add_entropy"` or `"get_random"` will be all-bits-zero.
-
-#### Entropy injection
-
-The `"add_entropy"` entry point has the following prototype for a driver with the prefix `"acme"`:
-
-```
-psa_status_t acme_add_entropy(acme_random_context_t *context,
-                              const uint8_t *entropy,
-                              size_t entropy_size);
-```
-
-The semantics of the parameters is as follows:
-
-* `context`: a random generation context. On the first call to `"add_entropy"`, this object has been initialized by a call to the driver's `"init_random"` entry point if one is present, and to all-bits-zero otherwise.
-* `entropy`: a buffer containing full-entropy data to seed the random generator. “Full-entropy” means that the data is uniformly distributed and independent of any other observable quantity.
-* `entropy_size`: the size of the `entropy` buffer in bytes. It is guaranteed to be at least `1`, but it may be smaller than the amount of entropy that the driver needs to deliver random data, in which case the core will call the `"add_entropy"` entry point again to supply more entropy.
-
-The core calls this function to supply entropy to the driver. The driver must mix this entropy into its internal state. The driver must mix the whole supplied entropy, even if there is more than what the driver requires, to ensure that all entropy sources are mixed into the random generator state. The driver may mix additional entropy of its own.
-
-The core may call this function at any time. For example, to enforce prediction resistance, the core can call `"add_entropy"` immediately after each call to `"get_random"`. The core must call this function in two circumstances:
-
-* Before the first call to the `"get_random"` entry point, to supply `"initial_entropy_size"` bytes of entropy.
-* After a call to the `"get_random"` entry point returns less than the required amount of random data, to supply at least `"reseed_entropy_size"` bytes of entropy.
-
-When the driver requires entropy, the core can supply it with one or more successive calls to the `"add_entropy"` entry point. If the required entropy size is zero, the core does not need to call `"add_entropy"`.
-
-#### Combining entropy sources with a random generation driver
-
-This section provides guidance on combining one or more [entropy sources](#entropy-collection-entry-point) (each having a `"get_entropy"` entry point) with a random generation driver (with an `"add_entropy"` entry point).
-
-Note that `"get_entropy"` returns data with an estimated amount of entropy that is in general less than the buffer size. The core must apply a mixing algorithm to the output of `"get_entropy"` to obtain full-entropy data.
-
-For example, the core may use a simple mixing scheme based on a pseudorandom function family $(F_k)$ with an $E$-bit output where $E = 8 \cdot \mathtt{entropy_size}$ and $\mathtt{entropy_size}$ is the desired amount of entropy in bytes (typically the random driver's `"initial_entropy_size"` property for the initial seeding and the `"reseed_entropy_size"` property for subsequent reseeding). The core calls the `"get_entropy"` points of the available entropy drivers, outputting a string $s_i$ and an entropy estimate $e_i$ on the $i$th call. It does so until the total entropy estimate $e_1 + e_2 + \ldots + e_n$ is at least $E$. The core then calculates $F_k(0)$ where $k = s_1 || s_2 || \ldots || s_n$. This value is a string of $\mathtt{entropy_size}$, and since $(F_k)$ is a pseudorandom function family, $F_k(0)$ is uniformly distributed over strings of $\mathtt{entropy_size}$ bytes. Therefore $F_k(0)$ is a suitable value to pass to `"add_entropy"`.
-
-Note that the mechanism above is only given as an example. Implementations may choose a different mechanism, for example involving multiple pools or intermediate compression functions.
-
-#### Random generator drivers without entropy injection
-
-Random generator drivers should have the capability to inject additional entropy through the `"add_entropy"` entry point. This ensures that the random generator depends on all the entropy sources that are available on the platform. A driver where a call to `"add_entropy"` does not affect the state of the random generator is not compliant with this specification.
-
-However, a driver may omit the `"add_entropy"` entry point. This limits the driver's portability: implementations of the PSA Cryptography specification may reject drivers without an `"add_entropy"` entry point, or only accept such drivers in certain configurations. In particular, the `"add_entropy"` entry point is required if:
-
-* the integration of PSA Cryptography includes an entropy source that is outside the driver; or
-* the core saves random data in persistent storage to be preserved across platform resets.
-
-#### The `"get_random"` entry point
-
-The `"get_random"` entry point has the following prototype for a driver with the prefix `"acme"`:
-
-```
-psa_status_t acme_get_random(acme_random_context_t *context,
-                             uint8_t *output,
-                             size_t output_size,
-                             size_t *output_length);
-```
-
-The semantics of the parameters is as follows:
-
-* `context`: a random generation context. If the driver's `"initial_entropy_size"` property is nonzero, the core must have called `"add_entropy"` at least once with a total of at least `"initial_entropy_size"` bytes of entropy before it calls `"get_random"`. Alternatively, if the driver's `"initial_entropy_size"` property is zero and the core did not call `"add_entropy"`, or if the driver has no `"add_entropy"` entry point, the core must have called `"init_random"` if present, and otherwise the context is all-bits zero.
-* `output`: on success (including partial success), the first `*output_length` bytes of this buffer contain cryptographic-quality random data. The output is not used on error.
-* `output_size`: the size of the `output` buffer in bytes.
-* `*output_length`: on success (including partial success), the number of bytes of random data that the driver has written to the `output` buffer. This is preferably `output_size`, but the driver is allowed to return less data if it runs out of entropy as described below. The core sets this value to 0 on entry. The value is not used on error.
-
-The driver may return the following status codes:
-
-* `PSA_SUCCESS`: the `output` buffer contains `*output_length` bytes of cryptographic-quality random data. Note that this may be less than `output_size`; in this case the core should call the driver's `"add_entropy"` method to supply at least `"reseed_entropy_size"` bytes of entropy before calling `"get_random"` again.
-* `PSA_ERROR_INSUFFICIENT_ENTROPY`: the core must supply additional entropy by calling the `"add_entropy"` entry point with at least `"reseed_entropy_size"` bytes.
-* `PSA_ERROR_NOT_SUPPORTED`: the random generator is not available. This is only permitted if the driver specification for random generation has the [fallback property](#fallback) enabled.
-* Other error codes such as `PSA_ERROR_COMMUNICATION_FAILURE` or `PSA_ERROR_HARDWARE_FAILURE` indicate a transient or permanent error.
+Transparent drivers are not involved when importing, exporting, copying or destroying keys, or when generating or deriving symmetric keys.
 
 ### Fallback
 
@@ -732,13 +503,10 @@ psa_status_t acme_import_key(const psa_key_attributes_t *attributes,
                              const uint8_t *data,
                              size_t data_length,
                              uint8_t *key_buffer,
-                             size_t key_buffer_size,
-                             size_t *key_buffer_length,
-                             size_t *bits);
+                             size_t key_buffer_size);
 psa_status_t acme_generate_key(const psa_key_attributes_t *attributes,
                                uint8_t *key_buffer,
-                               size_t key_buffer_size,
-                               size_t *key_buffer_length);
+                               size_t key_buffer_size);
 ```
 
 If the driver has an [`"allocate_key"` entry point](#key-management-in-a-secure-element-with-storage), the core calls the `"allocate_key"` entry point with the same attributes on the same key buffer before calling the key creation entry point.
@@ -752,13 +520,13 @@ The key export entry points have the following prototypes for a driver with the 
 ```
 psa_status_t acme_export_key(const psa_key_attributes_t *attributes,
                              const uint8_t *key_buffer,
-                             size_t key_buffer_size,
+                             size_t key_buffer_size);
                              uint8_t *data,
                              size_t data_size,
                              size_t *data_length);
 psa_status_t acme_export_public_key(const psa_key_attributes_t *attributes,
                                     const uint8_t *key_buffer,
-                                    size_t key_buffer_size,
+                                    size_t key_buffer_size);
                                     uint8_t *data,
                                     size_t data_size,
                                     size_t *data_length);
@@ -812,8 +580,8 @@ psa_set_key_type(&attributes, PSA_KEY_TYPE_AES);
 psa_set_key_size(&attributes, 128);
 psa_set_key_algorithm(&attributes, PSA_ALG_GCM);
 psa_set_key_usage_flags(&attributes, PSA_KEY_USAGE_ENCRYPT | PSA_KEY_USAGE_DECRYPT);
-psa_key_id_t key;
-psa_generate_key(&attributes, &key);
+psa_key_handle_t handle = 0;
+psa_generate_key(&attributes, &handle);
 ```
 
 ## Using opaque drivers from an application
@@ -849,19 +617,6 @@ psa_set_key_lifetime(&attributes, PSA_KEY_LIFETIME_FROM_PERSISTENCE_AND_LOCATION
 ```
 
 ## Open questions
-
-### Value representation
-
-#### Integers
-
-It would be better if there was a uniform requirement on integer values. Do they have to be JSON integers? C preprocessor integers (which could be e.g. a macro defined in some header file)? C compile-time constants (allowing `sizeof`)?
-
-This choice is partly driven by the use of the values, so they might not be uniform. Note that if the value can be zero and it's plausible that the core would want to statically allocate an array of the given size, the core needs to know whether the value is 0 so that it could use code like
-```
-#if ACME_FOO_SIZE != 0
-    uint8_t foo[ACME_FOO_SIZE];
-#endif
-```
 
 ### Driver declarations
 
@@ -918,16 +673,6 @@ ECC key pairs are represented as the private key value only. The public key need
 
 The specification doesn't mention when the public key might be calculated. The core may calculate it on creation, on demand, or anything in between. Opaque drivers have a choice of storing the public key in the key context or calculating it on demand and can convey whether the core should store the public key with the `"store_public_key"` property. Is this good enough or should the specification include non-functional requirements?
 
-#### Symmetric key validation with transparent drivers
-
-Should the entry point be called for symmetric keys as well?
-
-#### Support for custom import formats
-
-[“Driver entry points for key management”](#driver-entry-points-for-key-management) states that the input to `"import_key"` can be an implementation-defined format. Is this a good idea? It reduces driver portability, since a core that accepts a custom format would not work with a driver that doesn't accept this format. On the other hand, if a driver accepts a custom format, the core should let it through because the driver presumably handles it more efficiently (in terms of speed and code size) than the core could.
-
-Allowing custom formats also causes a problem with import: the core can't know the size of the key representation until it knows the bit-size of the key, but determining the bit-size of the key is part of the job of the `"import_key"` entry point. For standard key types, this could plausibly be an issue for RSA private keys, where an implementation might accept a custom format that omits the CRT parameters (or that omits *d*).
-
 ### Opaque drivers
 
 #### Opaque driver persistent state
@@ -937,26 +682,6 @@ The driver is allowed to update the state at any time. Is this ok?
 An example use case for updating the persistent state at arbitrary times is to renew a key that is used to encrypt communications between the application processor and the secure element.
 
 `psa_crypto_driver_get_persistent_state` does not identify the calling driver, so the driver needs to remember which driver it's calling. This may require a thread-local variable in a multithreaded core. Is this ok?
-
-### Randomness
-
-#### Input to `"add_entropy"`
-
-Should the input to the [`"add_entropy"` entry point](#entropy-injection) be a full-entropy buffer (with data from all entropy sources already mixed), raw entropy direct from the entropy sources, or give the core a choice?
-
-* Raw data: drivers must implement entropy mixing. `"add_entropy"` needs an extra parameter to indicate the amount of entropy in the data. The core must not do any conditioning.
-* Choice: drivers must implement entropy mixing. `"add_entropy"` needs an extra parameter to indicate the amount of entropy in the data. The core may do conditioning if it wants, but doesn't have to.
-* Full entropy: drivers don't need to do entropy mixing.
-
-#### Flags for `"get_entropy"`
-
-Are the [entropy collection flags](#entropy-collection-flags) well-chosen?
-
-#### Random generator instantiations
-
-May the core instantiate a random generation context more than once? In other words, can there be multiple objects of type `acme_random_context_t`?
-
-Functionally, one RNG is as good as any. If the core wants some parts of the system to use a deterministic generator for reproducibility, it can't use this interface anyway, since the RNG is not necessarily deterministic. However, for performance on multiprocessor systems, a multithreaded core could prefer to use one RNG instance per thread.
 
 <!--
 Local Variables:
