@@ -73,6 +73,7 @@ typedef MBEDTLS_PSA_DEPRECATED psa_ecc_family_t mbedtls_deprecated_psa_ecc_famil
 typedef MBEDTLS_PSA_DEPRECATED psa_dh_family_t mbedtls_deprecated_psa_dh_family_t;
 typedef MBEDTLS_PSA_DEPRECATED psa_ecc_family_t psa_ecc_curve_t;
 typedef MBEDTLS_PSA_DEPRECATED psa_dh_family_t psa_dh_group_t;
+typedef MBEDTLS_PSA_DEPRECATED psa_algorithm_t mbedtls_deprecated_psa_algorithm_t;
 
 #define PSA_KEY_TYPE_GET_CURVE PSA_KEY_TYPE_ECC_GET_FAMILY
 #define PSA_KEY_TYPE_GET_GROUP PSA_KEY_TYPE_DH_GET_FAMILY
@@ -133,10 +134,6 @@ MBEDTLS_PSA_DEPRECATED static inline psa_status_t psa_asymmetric_verify( psa_key
 {
     return psa_verify_hash( key, alg, hash, hash_length, signature, signature_length );
 }
-
-
-
-#endif /* MBEDTLS_DEPRECATED_REMOVED */
 
 /*
  * Size-specific elliptic curve families.
@@ -243,6 +240,16 @@ MBEDTLS_PSA_DEPRECATED static inline psa_status_t psa_asymmetric_verify( psa_key
     MBEDTLS_DEPRECATED_CONSTANT( psa_dh_family_t, PSA_DH_FAMILY_RFC7919 )
 #define PSA_DH_GROUP_CUSTOM \
     MBEDTLS_DEPRECATED_CONSTANT( psa_dh_family_t, PSA_DH_FAMILY_CUSTOM )
+
+/*
+ * Deprecated PSA Crypto stream cipher algorithms (PSA Crypto API  <= 1.0 beta3)
+ */
+#define PSA_ALG_ARC4 \
+    MBEDTLS_DEPRECATED_CONSTANT( psa_algorithm_t, PSA_ALG_STREAM_CIPHER )
+#define PSA_ALG_CHACHA20 \
+    MBEDTLS_DEPRECATED_CONSTANT( psa_algorithm_t, PSA_ALG_STREAM_CIPHER )
+
+#endif /* MBEDTLS_DEPRECATED_REMOVED */
 
 /** Open a handle to an existing persistent key.
  *
