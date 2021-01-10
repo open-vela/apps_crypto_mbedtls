@@ -52,7 +52,7 @@ int main( void )
            " and/or MBEDTLS_PSA_CRYPTO_KEY_ID_ENCODES_OWNER defined.\n" );
     mbedtls_exit( 0 );
 }
-#else /* !MBEDTLS_SSL_TEST_IMPOSSIBLE && MBEDTLS_SSL_SRV_C */
+#else
 
 #include "mbedtls/net_sockets.h"
 #include "mbedtls/ssl.h"
@@ -3151,11 +3151,11 @@ int main( int argc, char *argv[] )
 #endif /* MBEDTLS_SSL_DTLS_CONNECTION_ID */
 
 #if defined(MBEDTLS_SSL_DTLS_SRTP)
-    const mbedtls_ssl_srtp_profile forced_profile[] = { opt.force_srtp_profile, MBEDTLS_TLS_SRTP_UNSET };
     if( opt.use_srtp == 1 )
     {
         if( opt.force_srtp_profile != 0 )
         {
+            const mbedtls_ssl_srtp_profile forced_profile[] = { opt.force_srtp_profile, MBEDTLS_TLS_SRTP_UNSET };
             ret = mbedtls_ssl_conf_dtls_srtp_protection_profiles( &conf, forced_profile );
         }
         else
@@ -4576,4 +4576,6 @@ exit:
     else
         mbedtls_exit( query_config_ret );
 }
-#endif /* !MBEDTLS_SSL_TEST_IMPOSSIBLE && MBEDTLS_SSL_SRV_C */
+#endif /* MBEDTLS_BIGNUM_C && MBEDTLS_ENTROPY_C && MBEDTLS_SSL_TLS_C &&
+          MBEDTLS_SSL_SRV_C && MBEDTLS_NET_C && MBEDTLS_RSA_C &&
+          MBEDTLS_CTR_DRBG_C */
