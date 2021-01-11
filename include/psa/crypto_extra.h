@@ -179,6 +179,9 @@ static inline void psa_clear_key_slot_number(
  *         The secure element driver for the specified lifetime does not
  *         support registering a key.
  * \retval #PSA_ERROR_INVALID_ARGUMENT
+ *         The identifier in \p attributes is invalid, namely the identifier is
+ *         not in the user range.
+ * \retval #PSA_ERROR_INVALID_ARGUMENT
  *         \p attributes specifies a lifetime which is not located
  *         in a secure element.
  * \retval #PSA_ERROR_INVALID_ARGUMENT
@@ -407,10 +410,9 @@ psa_status_t mbedtls_psa_inject_entropy(const uint8_t *seed,
 
 /* We need to expand the sample definition of this macro from
  * the API definition. */
-#undef PSA_ALG_IS_HASH_AND_SIGN
-#define PSA_ALG_IS_HASH_AND_SIGN(alg)                                   \
-    (PSA_ALG_IS_RSA_PSS(alg) || PSA_ALG_IS_RSA_PKCS1V15_SIGN(alg) ||    \
-     PSA_ALG_IS_DSA(alg) || PSA_ALG_IS_ECDSA(alg))
+#undef PSA_ALG_IS_VENDOR_HASH_AND_SIGN
+#define PSA_ALG_IS_VENDOR_HASH_AND_SIGN(alg)    \
+    PSA_ALG_IS_DSA(alg)
 
 /**@}*/
 
