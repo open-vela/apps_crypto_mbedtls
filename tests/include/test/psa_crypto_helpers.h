@@ -24,76 +24,76 @@
 #include "test/psa_helpers.h"
 
 #include <psa/crypto.h>
-#include <psa_crypto_slot_management.h>
 
-/** Check for things that have not been cleaned up properly in the
- * PSA subsystem.
- *
- * \return NULL if nothing has leaked.
- * \return A string literal explaining what has not been cleaned up
- *         if applicable.
- */
-const char *mbedtls_test_helper_is_psa_leaking( void );
+static int test_helper_is_psa_pristine( int line, const char *file )
+{
+    mbedtls_psa_stats_t stats;
+    const char *msg = NULL;
+
+    mbedtls_psa_get_stats( &stats );
+
+    if( stats.volatile_slots != 0 )
+        msg = "A volatile slot has not been closed properly.";
+    else if( stats.persistent_slots != 0 )
+        msg = "A persistent slot has not been closed properly.";
+    else if( stats.external_slots != 0 )
+        msg = "An external slot has not been closed properly.";
+    else if( stats.half_filled_slots != 0 )
+        msg = "A half-filled slot has not been cleared properly.";
+
+    /* If the test has already failed, don't overwrite the failure
+     * information. Do keep the stats lookup above, because it can be
+     * convenient to break on it when debugging a failure. */
+    if( msg != NULL && test_info.result == TEST_RESULT_SUCCESS )
+        test_fail( msg, line, file );
+
+    return( msg == NULL );
+}
 
 /** Check that no PSA Crypto key slots are in use.
- *
- * If any slots are in use, mark the current test as failed and jump to
- * the exit label. This is equivalent to
- * `TEST_ASSERT( ! mbedtls_test_helper_is_psa_leaking( ) )`
- * but with a more informative message.
  */
-#define ASSERT_PSA_PRISTINE( )                                          \
-    do                                                                  \
-    {                                                                   \
-        if( test_fail_if_psa_leaking( __LINE__, __FILE__ ) )            \
-            goto exit;                                                  \
-    }                                                                   \
+#define ASSERT_PSA_PRISTINE( )                                    \
+    do                                                            \
+    {                                                             \
+        if( ! test_helper_is_psa_pristine( __LINE__, __FILE__ ) ) \
+            goto exit;                                            \
+    }                                                             \
     while( 0 )
+
+static void test_helper_psa_done( int line, const char *file )
+{
+    (void) test_helper_is_psa_pristine( line, file );
+    mbedtls_psa_crypto_free( );
+}
 
 /** Shut down the PSA Crypto subsystem. Expect a clean shutdown, with no slots
  * in use.
  */
-#define PSA_DONE( )                                                     \
-    do                                                                  \
-    {                                                                   \
-        test_fail_if_psa_leaking( __LINE__, __FILE__ );                 \
-        mbedtls_psa_crypto_free( );                                     \
-    }                                                                   \
-    while( 0 )
+#define PSA_DONE( ) test_helper_psa_done( __LINE__, __FILE__ )
 
-
-
-#if defined(MBEDTLS_PSA_CRYPTO_EXTERNAL_RNG)
-/** Enable the insecure implementation of mbedtls_psa_external_get_random().
- *
- * The insecure implementation of mbedtls_psa_external_get_random() is
- * disabled by default.
- *
- * When MBEDTLS_PSA_CRYPTO_EXTERNAL_RNG is enabled and the test
- * helpers are linked into a program, you must enable this before running any
- * code that uses the PSA subsystem to generate random data (including internal
- * random generation for purposes such as blinding when the random generation
- * is routed through PSA).
- *
- * You can enable and disable it at any time, regardless of the state
- * of the PSA subsystem. You may disable it temporarily to simulate a
- * depleted entropy source.
- */
-void mbedtls_test_enable_insecure_external_rng( void );
-
-/** Disable the insecure implementation of mbedtls_psa_external_get_random().
- *
- * See mbedtls_test_enable_insecure_external_rng().
- */
-void mbedtls_test_disable_insecure_external_rng( void );
-#endif /* MBEDTLS_PSA_CRYPTO_EXTERNAL_RNG */
 
 
 #if defined(RECORD_PSA_STATUS_COVERAGE_LOG)
-psa_status_t mbedtls_test_record_status( psa_status_t status,
-                                         const char *func,
-                                         const char *file, int line,
-                                         const char *expr );
+#include <psa/crypto.h>
+
+/** Name of the file where return statuses are logged by #RECORD_STATUS. */
+#define STATUS_LOG_FILE_NAME "statuses.log"
+
+static psa_status_t record_status( psa_status_t status,
+                                   const char *func,
+                                   const char *file, int line,
+                                   const char *expr )
+{
+    /* We open the log file on first use.
+     * We never close the log file, so the record_status feature is not
+     * compatible with resource leak detectors such as Asan.
+     */
+    static FILE *log;
+    if( log == NULL )
+        log = fopen( STATUS_LOG_FILE_NAME, "a" );
+    fprintf( log, "%d:%s:%s:%d:%s\n", (int) status, func, file, line, expr );
+    return( status );
+}
 
 /** Return value logging wrapper macro.
  *
@@ -120,7 +120,7 @@ psa_status_t mbedtls_test_record_status( psa_status_t status,
  * \return          The value of \p expr.
  */
 #define RECORD_STATUS( string, expr )                                   \
-    mbedtls_test_record_status( ( expr ), string, __FILE__, __LINE__, #expr )
+    record_status( ( expr ), string, __FILE__, __LINE__, #expr )
 
 #include "instrument_record_status.h"
 
