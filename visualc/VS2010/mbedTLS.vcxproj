@@ -162,6 +162,7 @@
     <ClInclude Include="..\..\include\mbedtls\cmac.h" />
     <ClInclude Include="..\..\include\mbedtls\compat-1.3.h" />
     <ClInclude Include="..\..\include\mbedtls\config.h" />
+    <ClInclude Include="..\..\include\mbedtls\config_psa.h" />
     <ClInclude Include="..\..\include\mbedtls\ctr_drbg.h" />
     <ClInclude Include="..\..\include\mbedtls\debug.h" />
     <ClInclude Include="..\..\include\mbedtls\des.h" />
@@ -221,10 +222,9 @@
     <ClInclude Include="..\..\include\mbedtls\x509_csr.h" />
     <ClInclude Include="..\..\include\mbedtls\xtea.h" />
     <ClInclude Include="..\..\include\psa\crypto.h" />
-    <ClInclude Include="..\..\include\psa\crypto_accel_driver.h" />
     <ClInclude Include="..\..\include\psa\crypto_compat.h" />
+    <ClInclude Include="..\..\include\psa\crypto_config.h" />
     <ClInclude Include="..\..\include\psa\crypto_driver_common.h" />
-    <ClInclude Include="..\..\include\psa\crypto_entropy_driver.h" />
     <ClInclude Include="..\..\include\psa\crypto_extra.h" />
     <ClInclude Include="..\..\include\psa\crypto_platform.h" />
     <ClInclude Include="..\..\include\psa\crypto_se_driver.h" />
@@ -239,14 +239,17 @@
     <ClInclude Include="..\..\tests\include\test\psa_helpers.h" />
     <ClInclude Include="..\..\tests\include\test\random.h" />
     <ClInclude Include="..\..\tests\include\test\drivers\cipher.h" />
-    <ClInclude Include="..\..\tests\include\test\drivers\keygen.h" />
+    <ClInclude Include="..\..\tests\include\test\drivers\key_management.h" />
     <ClInclude Include="..\..\tests\include\test\drivers\signature.h" />
+    <ClInclude Include="..\..\tests\include\test\drivers\size.h" />
     <ClInclude Include="..\..\tests\include\test\drivers\test_driver.h" />
+    <ClInclude Include="..\..\library\check_crypto_config.h" />
     <ClInclude Include="..\..\library\common.h" />
     <ClInclude Include="..\..\library\psa_crypto_core.h" />
     <ClInclude Include="..\..\library\psa_crypto_driver_wrappers.h" />
     <ClInclude Include="..\..\library\psa_crypto_invasive.h" />
     <ClInclude Include="..\..\library\psa_crypto_its.h" />
+    <ClInclude Include="..\..\library\psa_crypto_random_impl.h" />
     <ClInclude Include="..\..\library\psa_crypto_se.h" />
     <ClInclude Include="..\..\library\psa_crypto_service_integration.h" />
     <ClInclude Include="..\..\library\psa_crypto_slot_management.h" />
@@ -346,6 +349,7 @@
     <ClCompile Include="..\..\library\x509write_csr.c" />
     <ClCompile Include="..\..\library\xtea.c" />
     <ClCompile Include="..\..\tests\src\helpers.c" />
+    <ClCompile Include="..\..\tests\src\psa_crypto_helpers.c" />
     <ClCompile Include="..\..\tests\src\random.c" />
     <ClCompile Include="..\..\3rdparty\everest\library\everest.c" />
     <ClCompile Include="..\..\3rdparty\everest\library\Hacl_Curve25519_joined.c" />
