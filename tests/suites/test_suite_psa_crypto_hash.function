@@ -2,6 +2,8 @@
 
 #include <stdint.h>
 
+#include "test/psa_crypto_helpers.h"
+
 /* END_HEADER */
 
 /* BEGIN_DEPENDENCIES
