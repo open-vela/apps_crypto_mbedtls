@@ -1411,10 +1411,7 @@ int mbedtls_mpi_sub_abs( mbedtls_mpi *X, const mbedtls_mpi *A, const mbedtls_mpi
         /* If we ran out of space for the carry, it means that the result
          * is negative. */
         if( n == X->n )
-        {
-            ret = MBEDTLS_ERR_MPI_NEGATIVE_VALUE;
-            goto cleanup;
-        }
+            return( MBEDTLS_ERR_MPI_NEGATIVE_VALUE );
         --X->p[n];
     }
 
@@ -2118,10 +2115,6 @@ int mbedtls_mpi_exp_mod( mbedtls_mpi *X, const mbedtls_mpi *A,
     if( mbedtls_mpi_cmp_int( E, 0 ) < 0 )
         return( MBEDTLS_ERR_MPI_BAD_INPUT_DATA );
 
-    if( mbedtls_mpi_bitlen( E ) > MBEDTLS_MPI_MAX_BITS ||
-        mbedtls_mpi_bitlen( N ) > MBEDTLS_MPI_MAX_BITS )
-        return ( MBEDTLS_ERR_MPI_BAD_INPUT_DATA );
-
     /*
      * Init temps and window size
      */
@@ -2398,7 +2391,7 @@ int mbedtls_mpi_fill_random( mbedtls_mpi *X, size_t size,
     MBEDTLS_MPI_CHK( mbedtls_mpi_lset( X, 0 ) );
 
     Xp = (unsigned char*) X->p;
-    MBEDTLS_MPI_CHK( f_rng( p_rng, Xp + overhead, size ) );
+    f_rng( p_rng, Xp + overhead, size );
 
     mpi_bigendian_to_host( X->p, limbs );
 
