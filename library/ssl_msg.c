@@ -850,21 +850,20 @@ int mbedtls_ssl_encrypt_buf( mbedtls_ssl_context *ssl,
          * Encrypt and authenticate
          */
 
-        if( ( ret = mbedtls_cipher_auth_encrypt_ext( &transform->cipher_ctx_enc,
+        if( ( ret = mbedtls_cipher_auth_encrypt( &transform->cipher_ctx_enc,
                    iv, transform->ivlen,
-                   add_data, add_data_len,
-                   data, rec->data_len,                     /* src */
-                   data, rec->buf_len - (data - rec->buf),  /* dst */
-                   &rec->data_len,
-                   transform->taglen ) ) != 0 )
+                   add_data, add_data_len,       /* add data     */
+                   data, rec->data_len,          /* source       */
+                   data, &rec->data_len,         /* destination  */
+                   data + rec->data_len, transform->taglen ) ) != 0 )
         {
             MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_cipher_auth_encrypt", ret );
             return( ret );
         }
         MBEDTLS_SSL_DEBUG_BUF( 4, "after encrypt: tag",
-                               data + rec->data_len - transform->taglen,
-                               transform->taglen );
+                               data + rec->data_len, transform->taglen );
         /* Account for authentication tag. */
+        rec->data_len += transform->taglen;
         post_avail -= transform->taglen;
 
         /*
@@ -1385,9 +1384,7 @@ int mbedtls_ssl_decrypt_buf( mbedtls_ssl_context const *ssl,
         /* Check that there's space for the authentication tag. */
         if( rec->data_len < transform->taglen )
         {
-            MBEDTLS_SSL_DEBUG_MSG( 1, ( "msglen (%d) < taglen (%d) ",
-                                        rec->data_len,
-                                        transform->taglen ) );
+            MBEDTLS_SSL_DEBUG_MSG( 1, ( "msglen (%d) < taglen (%d) " ) );
             return( MBEDTLS_ERR_SSL_INVALID_MAC );
         }
         rec->data_len -= transform->taglen;
@@ -1423,11 +1420,12 @@ int mbedtls_ssl_decrypt_buf( mbedtls_ssl_context const *ssl,
         /*
          * Decrypt and authenticate
          */
-        if( ( ret = mbedtls_cipher_auth_decrypt_ext( &transform->cipher_ctx_dec,
+        if( ( ret = mbedtls_cipher_auth_decrypt( &transform->cipher_ctx_dec,
                   iv, transform->ivlen,
                   add_data, add_data_len,
-                  data, rec->data_len + transform->taglen,          /* src */
-                  data, rec->buf_len - (data - rec->buf), &olen,    /* dst */
+                  data, rec->data_len,
+                  data, &olen,
+                  data + rec->data_len,
                   transform->taglen ) ) != 0 )
         {
             MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_cipher_auth_decrypt", ret );
