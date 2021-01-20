@@ -5,6 +5,9 @@
 #include <test/macros.h>
 #include <test/helpers.h>
 #include <test/random.h>
+#if defined(MBEDTLS_PSA_CRYPTO_C)
+#include <test/psa_crypto_helpers.h>
+#endif
 
 #include <stdlib.h>
 
@@ -105,7 +108,7 @@ typedef struct data_tag
     do {                                                    \
        if( ! (TEST) )                                       \
        {                                                    \
-          test_fail( #TEST, __LINE__, __FILE__ );           \
+          mbedtls_test_fail( #TEST, __LINE__, __FILE__ );   \
           goto exit;                                        \
        }                                                    \
     } while( 0 )
@@ -198,13 +201,13 @@ typedef struct data_tag
  *
  * \param   TEST    The test expression to be tested.
  */
-#define TEST_ASSUME( TEST )                         \
-    do {                                            \
-        if( ! (TEST) )                              \
-        {                                           \
-            test_skip( #TEST, __LINE__, __FILE__ ); \
-            goto exit;                              \
-        }                                           \
+#define TEST_ASSUME( TEST )                                 \
+    do {                                                    \
+        if( ! (TEST) )                                      \
+        {                                                   \
+            mbedtls_test_skip( #TEST, __LINE__, __FILE__ ); \
+            goto exit;                                      \
+        }                                                   \
     } while( 0 )
 
 #if defined(MBEDTLS_CHECK_PARAMS) && !defined(MBEDTLS_PARAM_FAILED_ALT)
@@ -234,7 +237,7 @@ typedef struct data_tag
         if( ( ( TEST ) != ( PARAM_ERR_VALUE ) ) ||                      \
             ( mbedtls_test_param_failed_check_expected_call( ) != 0 ) ) \
         {                                                               \
-            test_fail( #TEST, __LINE__, __FILE__ );                     \
+            mbedtls_test_fail( #TEST, __LINE__, __FILE__ );             \
             goto exit;                                                  \
         }                                                               \
         mbedtls_test_param_failed_check_expected_call( );               \
@@ -267,7 +270,7 @@ typedef struct data_tag
         if( setjmp(  mbedtls_test_param_failed_get_state_buf( ) ) == 0 ) \
         {                                                                \
             TEST;                                                        \
-            test_fail( #TEST, __LINE__, __FILE__ );                      \
+            mbedtls_test_fail( #TEST, __LINE__, __FILE__ );              \
             goto exit;                                                   \
         }                                                                \
         mbedtls_test_param_failed_reset_state( );                        \
@@ -343,24 +346,6 @@ typedef struct data_tag
 /*----------------------------------------------------------------------------*/
 /* Global variables */
 
-typedef enum
-{
-    TEST_RESULT_SUCCESS = 0,
-    TEST_RESULT_FAILED,
-    TEST_RESULT_SKIPPED
-} test_result_t;
-
-typedef struct
-{
-    test_result_t result;
-    const char *test;
-    const char *filename;
-    int line_no;
-    unsigned long step;
-}
-test_info_t;
-static test_info_t test_info;
-
 #if defined(MBEDTLS_CHECK_PARAMS)
 jmp_buf jmp_tmp;
 #endif
@@ -383,40 +368,25 @@ jmp_buf jmp_tmp;
 /*----------------------------------------------------------------------------*/
 /* Helper Functions */
 
-/** Set the test step number for failure reports.
+#if defined(MBEDTLS_PSA_CRYPTO_C)
+/** Check that no PSA Crypto key slots are in use.
  *
- * Call this function to display "step NNN" in addition to the line number
- * and file name if a test fails. Typically the "step number" is the index
- * of a for loop but it can be whatever you want.
+ * If any slots are in use, mark the current test as failed.
  *
- * \param step  The step number to report.
+ * \return 0 if the key store is empty, 1 otherwise.
  */
-void test_set_step( unsigned long step )
+int test_fail_if_psa_leaking( int line_no, const char *filename )
 {
-    test_info.step = step;
-}
-
-void test_fail( const char *test, int line_no, const char* filename )
-{
-    if( test_info.result == TEST_RESULT_FAILED )
+    const char *msg = mbedtls_test_helper_is_psa_leaking( );
+    if( msg == NULL )
+        return 0;
+    else
     {
-        /* We've already recorded the test as having failed. Don't
-         * overwrite any previous information about the failure. */
-        return;
+        mbedtls_test_fail( msg, line_no, filename );
+        return 1;
     }
-    test_info.result = TEST_RESULT_FAILED;
-    test_info.test = test;
-    test_info.line_no = line_no;
-    test_info.filename = filename;
 }
-
-void test_skip( const char *test, int line_no, const char* filename )
-{
-    test_info.result = TEST_RESULT_SKIPPED;
-    test_info.test = test;
-    test_info.line_no = line_no;
-    test_info.filename = filename;
-}
+#endif /* defined(MBEDTLS_PSA_CRYPTO_C) */
 
 #if defined(__unix__) || (defined(__APPLE__) && defined(__MACH__))
 static int redirect_output( FILE* out_stream, const char* path )
