@@ -86,6 +86,9 @@ int psa_is_key_present_in_storage( const mbedtls_svc_key_id_t key );
  * already occupied non-persistent key, as well as ensuring the key data is
  * validated.
  *
+ * Note: This function will only succeed for key buffers which are not
+ * empty. If passed a NULL pointer or zero-length, the function will fail
+ * with #PSA_ERROR_INVALID_ARGUMENT.
  *
  * \param[in] attr          The attributes of the key to save.
  *                          The key identifier field in the attributes
@@ -94,12 +97,11 @@ int psa_is_key_present_in_storage( const mbedtls_svc_key_id_t key );
  * \param data_length       The number of bytes that make up the key data.
  *
  * \retval #PSA_SUCCESS
+ * \retval #PSA_ERROR_INVALID_ARGUMENT
  * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
  * \retval #PSA_ERROR_INSUFFICIENT_STORAGE
  * \retval #PSA_ERROR_STORAGE_FAILURE
  * \retval #PSA_ERROR_ALREADY_EXISTS
- * \retval #PSA_ERROR_DATA_INVALID
- * \retval #PSA_ERROR_DATA_CORRUPT
  */
 psa_status_t psa_save_persistent_key( const psa_core_key_attributes_t *attr,
                                       const uint8_t *data,
@@ -113,9 +115,10 @@ psa_status_t psa_save_persistent_key( const psa_core_key_attributes_t *attr,
  * metadata and writes them to the appropriate output parameters.
  *
  * Note: This function allocates a buffer and returns a pointer to it through
- * the data parameter. psa_free_persistent_key_data() must be called after
- * this function to zeroize and free this buffer, regardless of whether this
- * function succeeds or fails.
+ * the data parameter. On succesful return, the pointer is guaranteed to be
+ * valid and contain at least one byte of data.
+ * psa_free_persistent_key_data() must be called on the data buffer
+ * afterwards to zeroize and free this buffer.
  *
  * \param[in,out] attr      On input, the key identifier field identifies
  *                          the key to load. Other fields are ignored.
@@ -126,8 +129,7 @@ psa_status_t psa_save_persistent_key( const psa_core_key_attributes_t *attr,
  *
  * \retval #PSA_SUCCESS
  * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
- * \retval #PSA_ERROR_DATA_INVALID
- * \retval #PSA_ERROR_DATA_CORRUPT
+ * \retval #PSA_ERROR_STORAGE_FAILURE
  * \retval #PSA_ERROR_DOES_NOT_EXIST
  */
 psa_status_t psa_load_persistent_key( psa_core_key_attributes_t *attr,
@@ -143,7 +145,7 @@ psa_status_t psa_load_persistent_key( psa_core_key_attributes_t *attr,
  * \retval #PSA_SUCCESS
  *         The key was successfully removed,
  *         or the key did not exist.
- * \retval #PSA_ERROR_DATA_INVALID
+ * \retval #PSA_ERROR_STORAGE_FAILURE
  */
 psa_status_t psa_destroy_persistent_key( const mbedtls_svc_key_id_t key );
 
@@ -186,8 +188,9 @@ void psa_format_key_data_for_storage( const uint8_t *data,
  *                             with the loaded key metadata.
  *
  * \retval #PSA_SUCCESS
+ * \retval #PSA_ERROR_INSUFFICIENT_STORAGE
  * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
- * \retval #PSA_ERROR_DATA_INVALID
+ * \retval #PSA_ERROR_STORAGE_FAILURE
  */
 psa_status_t psa_parse_key_data_from_storage( const uint8_t *storage_data,
                                               size_t storage_data_length,
@@ -321,7 +324,6 @@ static inline void psa_crypto_prepare_transaction(
  * atomically update the transaction state.
  *
  * \retval #PSA_SUCCESS
- * \retval #PSA_ERROR_DATA_CORRUPT
  * \retval #PSA_ERROR_INSUFFICIENT_STORAGE
  * \retval #PSA_ERROR_STORAGE_FAILURE
  */
@@ -338,8 +340,6 @@ psa_status_t psa_crypto_save_transaction( void );
  * \retval #PSA_ERROR_DOES_NOT_EXIST
  *         There is no ongoing transaction.
  * \retval #PSA_ERROR_STORAGE_FAILURE
- * \retval #PSA_ERROR_DATA_INVALID
- * \retval #PSA_ERROR_DATA_CORRUPT
  */
 psa_status_t psa_crypto_load_transaction( void );
 
