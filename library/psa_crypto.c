@@ -40,8 +40,6 @@
  * stored keys. */
 #include "psa_crypto_storage.h"
 
-#include "psa_crypto_random_impl.h"
-
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
@@ -51,7 +49,6 @@
 #define mbedtls_free   free
 #endif
 
-#include "mbedtls/aes.h"
 #include "mbedtls/arc4.h"
 #include "mbedtls/asn1.h"
 #include "mbedtls/asn1write.h"
@@ -63,6 +60,7 @@
 #include "mbedtls/cipher.h"
 #include "mbedtls/ccm.h"
 #include "mbedtls/cmac.h"
+#include "mbedtls/ctr_drbg.h"
 #include "mbedtls/des.h"
 #include "mbedtls/ecdh.h"
 #include "mbedtls/ecp.h"
@@ -117,17 +115,15 @@ static int key_type_is_raw_bytes( psa_key_type_t type )
 
 typedef struct
 {
-    mbedtls_psa_random_context_t rng;
+    void (* entropy_init )( mbedtls_entropy_context *ctx );
+    void (* entropy_free )( mbedtls_entropy_context *ctx );
+    mbedtls_entropy_context entropy;
+    mbedtls_ctr_drbg_context ctr_drbg;
     unsigned initialized : 1;
     unsigned rng_state : 2;
 } psa_global_data_t;
 
 static psa_global_data_t global_data;
-
-#if !defined(MBEDTLS_PSA_CRYPTO_EXTERNAL_RNG)
-mbedtls_psa_drbg_context_t *const mbedtls_psa_random_state =
-    &global_data.rng.drbg;
-#endif
 
 #define GUARD_MODULE_INITIALIZED        \
     if( global_data.initialized == 0 )  \
@@ -218,10 +214,6 @@ psa_status_t mbedtls_to_psa_error( int ret )
         case MBEDTLS_ERR_CMAC_HW_ACCEL_FAILED:
             return( PSA_ERROR_HARDWARE_FAILURE );
 
-#if !( defined(MBEDTLS_PSA_CRYPTO_EXTERNAL_RNG) ||      \
-       defined(MBEDTLS_PSA_HMAC_DRBG_MD_TYPE) )
-        /* Only check CTR_DRBG error codes if underlying mbedtls_xxx
-         * functions are passed a CTR_DRBG instance. */
         case MBEDTLS_ERR_CTR_DRBG_ENTROPY_SOURCE_FAILED:
             return( PSA_ERROR_INSUFFICIENT_ENTROPY );
         case MBEDTLS_ERR_CTR_DRBG_REQUEST_TOO_BIG:
@@ -229,7 +221,6 @@ psa_status_t mbedtls_to_psa_error( int ret )
             return( PSA_ERROR_NOT_SUPPORTED );
         case MBEDTLS_ERR_CTR_DRBG_FILE_IO_ERROR:
             return( PSA_ERROR_INSUFFICIENT_ENTROPY );
-#endif
 
         case MBEDTLS_ERR_DES_INVALID_INPUT_LENGTH:
             return( PSA_ERROR_NOT_SUPPORTED );
@@ -247,19 +238,6 @@ psa_status_t mbedtls_to_psa_error( int ret )
             return( PSA_ERROR_INVALID_ARGUMENT );
         case MBEDTLS_ERR_GCM_HW_ACCEL_FAILED:
             return( PSA_ERROR_HARDWARE_FAILURE );
-
-#if !defined(MBEDTLS_PSA_CRYPTO_EXTERNAL_RNG) &&        \
-    defined(MBEDTLS_PSA_HMAC_DRBG_MD_TYPE)
-        /* Only check HMAC_DRBG error codes if underlying mbedtls_xxx
-         * functions are passed a HMAC_DRBG instance. */
-        case MBEDTLS_ERR_HMAC_DRBG_ENTROPY_SOURCE_FAILED:
-            return( PSA_ERROR_INSUFFICIENT_ENTROPY );
-        case MBEDTLS_ERR_HMAC_DRBG_REQUEST_TOO_BIG:
-        case MBEDTLS_ERR_HMAC_DRBG_INPUT_TOO_BIG:
-            return( PSA_ERROR_NOT_SUPPORTED );
-        case MBEDTLS_ERR_HMAC_DRBG_FILE_IO_ERROR:
-            return( PSA_ERROR_INSUFFICIENT_ENTROPY );
-#endif
 
         case MBEDTLS_ERR_MD2_HW_ACCEL_FAILED:
         case MBEDTLS_ERR_MD4_HW_ACCEL_FAILED:
@@ -889,7 +867,7 @@ static psa_status_t psa_export_ecp_key( psa_key_type_t type,
             /* Calculate the public key */
             status = mbedtls_to_psa_error(
                 mbedtls_ecp_mul( &ecp->grp, &ecp->Q, &ecp->d, &ecp->grp.G,
-                                 mbedtls_psa_get_random, MBEDTLS_PSA_RANDOM_STATE ) );
+                                 mbedtls_ctr_drbg_random, &global_data.ctr_drbg ) );
             if( status != PSA_SUCCESS )
                 return( status );
         }
@@ -1338,8 +1316,7 @@ static psa_status_t psa_get_and_lock_transparent_key_slot_with_policy(
 static psa_status_t psa_remove_key_data_from_memory( psa_key_slot_t *slot )
 {
 #if defined(MBEDTLS_PSA_CRYPTO_SE_C)
-    if( psa_get_se_driver( slot->attr.lifetime, NULL, NULL ) &&
-        psa_key_slot_is_external( slot ) )
+    if( psa_key_slot_is_external( slot ) )
     {
         /* No key material to clean. */
     }
@@ -2353,15 +2330,6 @@ psa_status_t psa_import_key( const psa_key_attributes_t *attributes,
     }
     else
 #endif /* MBEDTLS_PSA_CRYPTO_SE_C */
-    if( psa_key_lifetime_is_external( psa_get_key_lifetime( attributes ) ) )
-    {
-        /* Importing a key with external lifetime through the driver wrapper
-         * interface is not yet supported. Return as if this was an invalid
-         * lifetime. */
-        status = PSA_ERROR_INVALID_ARGUMENT;
-        goto exit;
-    }
-    else
     {
         status = psa_import_key_into_slot( slot, data, data_length );
         if( status != PSA_SUCCESS )
@@ -2768,7 +2736,7 @@ psa_status_t psa_hash_finish( psa_hash_operation_t *operation,
 {
     psa_status_t status;
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
-    size_t actual_hash_length = PSA_HASH_SIZE( operation->alg );
+    size_t actual_hash_length = PSA_HASH_LENGTH( operation->alg );
 
     /* Fill the output buffer with something that isn't a valid hash
      * (barring an attack on the hash and deliberately-crafted input),
@@ -3245,7 +3213,7 @@ static psa_status_t psa_hmac_setup_internal( psa_hmac_internal_data *hmac,
 {
     uint8_t ipad[PSA_HMAC_MAX_HASH_BLOCK_SIZE];
     size_t i;
-    size_t hash_size = PSA_HASH_SIZE( hash_alg );
+    size_t hash_size = PSA_HASH_LENGTH( hash_alg );
     size_t block_size = psa_get_hash_block_size( hash_alg );
     psa_status_t status;
 
@@ -3361,7 +3329,7 @@ static psa_status_t psa_mac_setup( psa_mac_operation_t *operation,
             goto exit;
         }
 
-        operation->mac_size = PSA_HASH_SIZE( hash_alg );
+        operation->mac_size = PSA_HASH_LENGTH( hash_alg );
         /* Sanity check. This shouldn't fail on a valid configuration. */
         if( operation->mac_size == 0 ||
             operation->mac_size > sizeof( operation->ctx.hmac.opad ) )
@@ -3531,7 +3499,7 @@ static psa_status_t psa_mac_finish_internal( psa_mac_operation_t *operation,
 #if defined(MBEDTLS_CMAC_C)
     if( operation->alg == PSA_ALG_CMAC )
     {
-        uint8_t tmp[PSA_MAX_BLOCK_CIPHER_BLOCK_SIZE];
+        uint8_t tmp[PSA_BLOCK_CIPHER_BLOCK_MAX_SIZE];
         int ret = mbedtls_cipher_cmac_finish( &operation->ctx.cmac, tmp );
         if( ret == 0 )
             memcpy( mac, tmp, operation->mac_size );
@@ -3713,8 +3681,8 @@ static psa_status_t psa_rsa_sign( mbedtls_rsa_context *rsa,
         mbedtls_rsa_set_padding( rsa, MBEDTLS_RSA_PKCS_V15,
                                  MBEDTLS_MD_NONE );
         ret = mbedtls_rsa_pkcs1_sign( rsa,
-                                      mbedtls_psa_get_random,
-                                      MBEDTLS_PSA_RANDOM_STATE,
+                                      mbedtls_ctr_drbg_random,
+                                      &global_data.ctr_drbg,
                                       MBEDTLS_RSA_PRIVATE,
                                       md_alg,
                                       (unsigned int) hash_length,
@@ -3728,8 +3696,8 @@ static psa_status_t psa_rsa_sign( mbedtls_rsa_context *rsa,
     {
         mbedtls_rsa_set_padding( rsa, MBEDTLS_RSA_PKCS_V21, md_alg );
         ret = mbedtls_rsa_rsassa_pss_sign( rsa,
-                                           mbedtls_psa_get_random,
-                                           MBEDTLS_PSA_RANDOM_STATE,
+                                           mbedtls_ctr_drbg_random,
+                                           &global_data.ctr_drbg,
                                            MBEDTLS_RSA_PRIVATE,
                                            MBEDTLS_MD_NONE,
                                            (unsigned int) hash_length,
@@ -3771,8 +3739,8 @@ static psa_status_t psa_rsa_verify( mbedtls_rsa_context *rsa,
         mbedtls_rsa_set_padding( rsa, MBEDTLS_RSA_PKCS_V15,
                                  MBEDTLS_MD_NONE );
         ret = mbedtls_rsa_pkcs1_verify( rsa,
-                                        mbedtls_psa_get_random,
-                                        MBEDTLS_PSA_RANDOM_STATE,
+                                        mbedtls_ctr_drbg_random,
+                                        &global_data.ctr_drbg,
                                         MBEDTLS_RSA_PUBLIC,
                                         md_alg,
                                         (unsigned int) hash_length,
@@ -3786,8 +3754,8 @@ static psa_status_t psa_rsa_verify( mbedtls_rsa_context *rsa,
     {
         mbedtls_rsa_set_padding( rsa, MBEDTLS_RSA_PKCS_V21, md_alg );
         ret = mbedtls_rsa_rsassa_pss_verify( rsa,
-                                             mbedtls_psa_get_random,
-                                             MBEDTLS_PSA_RANDOM_STATE,
+                                             mbedtls_ctr_drbg_random,
+                                             &global_data.ctr_drbg,
                                              MBEDTLS_RSA_PUBLIC,
                                              MBEDTLS_MD_NONE,
                                              (unsigned int) hash_length,
@@ -3844,8 +3812,8 @@ static psa_status_t psa_ecdsa_sign( mbedtls_ecp_keypair *ecp,
         MBEDTLS_MPI_CHK( mbedtls_ecdsa_sign_det_ext( &ecp->grp, &r, &s,
                                                      &ecp->d, hash,
                                                      hash_length, md_alg,
-                                                     mbedtls_psa_get_random,
-                                                     MBEDTLS_PSA_RANDOM_STATE ) );
+                                                     mbedtls_ctr_drbg_random,
+                                                     &global_data.ctr_drbg ) );
     }
     else
 #endif /* defined(MBEDTLS_PSA_BUILTIN_ALG_DETERMINISTIC_ECDSA) */
@@ -3853,8 +3821,8 @@ static psa_status_t psa_ecdsa_sign( mbedtls_ecp_keypair *ecp,
         (void) alg;
         MBEDTLS_MPI_CHK( mbedtls_ecdsa_sign( &ecp->grp, &r, &s, &ecp->d,
                                              hash, hash_length,
-                                             mbedtls_psa_get_random,
-                                             MBEDTLS_PSA_RANDOM_STATE ) );
+                                             mbedtls_ctr_drbg_random,
+                                             &global_data.ctr_drbg ) );
     }
 
     MBEDTLS_MPI_CHK( mbedtls_mpi_write_binary( &r,
@@ -3899,7 +3867,7 @@ static psa_status_t psa_ecdsa_verify( mbedtls_ecp_keypair *ecp,
     {
         MBEDTLS_MPI_CHK(
             mbedtls_ecp_mul( &ecp->grp, &ecp->Q, &ecp->d, &ecp->grp.G,
-                             mbedtls_psa_get_random, MBEDTLS_PSA_RANDOM_STATE ) );
+                             mbedtls_ctr_drbg_random, &global_data.ctr_drbg ) );
     }
 
     ret = mbedtls_ecdsa_verify( &ecp->grp, hash, hash_length,
@@ -4199,8 +4167,8 @@ psa_status_t psa_asymmetric_encrypt( mbedtls_svc_key_id_t key,
         {
             status = mbedtls_to_psa_error(
                     mbedtls_rsa_pkcs1_encrypt( rsa,
-                                               mbedtls_psa_get_random,
-                                               MBEDTLS_PSA_RANDOM_STATE,
+                                               mbedtls_ctr_drbg_random,
+                                               &global_data.ctr_drbg,
                                                MBEDTLS_RSA_PUBLIC,
                                                input_length,
                                                input,
@@ -4214,8 +4182,8 @@ psa_status_t psa_asymmetric_encrypt( mbedtls_svc_key_id_t key,
             psa_rsa_oaep_set_padding_mode( alg, rsa );
             status = mbedtls_to_psa_error(
                 mbedtls_rsa_rsaes_oaep_encrypt( rsa,
-                                                mbedtls_psa_get_random,
-                                                MBEDTLS_PSA_RANDOM_STATE,
+                                                mbedtls_ctr_drbg_random,
+                                                &global_data.ctr_drbg,
                                                 MBEDTLS_RSA_PUBLIC,
                                                 salt, salt_length,
                                                 input_length,
@@ -4306,8 +4274,8 @@ psa_status_t psa_asymmetric_decrypt( mbedtls_svc_key_id_t key,
         {
             status = mbedtls_to_psa_error(
                 mbedtls_rsa_pkcs1_decrypt( rsa,
-                                           mbedtls_psa_get_random,
-                                           MBEDTLS_PSA_RANDOM_STATE,
+                                           mbedtls_ctr_drbg_random,
+                                           &global_data.ctr_drbg,
                                            MBEDTLS_RSA_PRIVATE,
                                            output_length,
                                            input,
@@ -4322,8 +4290,8 @@ psa_status_t psa_asymmetric_decrypt( mbedtls_svc_key_id_t key,
             psa_rsa_oaep_set_padding_mode( alg, rsa );
             status = mbedtls_to_psa_error(
                 mbedtls_rsa_rsaes_oaep_decrypt( rsa,
-                                                mbedtls_psa_get_random,
-                                                MBEDTLS_PSA_RANDOM_STATE,
+                                                mbedtls_ctr_drbg_random,
+                                                &global_data.ctr_drbg,
                                                 MBEDTLS_RSA_PRIVATE,
                                                 salt, salt_length,
                                                 output_length,
@@ -4487,11 +4455,11 @@ static psa_status_t psa_cipher_setup( psa_cipher_operation_t *operation,
 #endif //MBEDTLS_CIPHER_MODE_WITH_PADDING
 
     operation->block_size = ( PSA_ALG_IS_STREAM_CIPHER( alg ) ? 1 :
-                              PSA_BLOCK_CIPHER_BLOCK_SIZE( slot->attr.type ) );
+                              PSA_BLOCK_CIPHER_BLOCK_LENGTH( slot->attr.type ) );
     if( ( alg & PSA_ALG_CIPHER_FROM_BLOCK_FLAG ) != 0 &&
         alg != PSA_ALG_ECB_NO_PADDING )
     {
-        operation->iv_size = PSA_BLOCK_CIPHER_BLOCK_SIZE( slot->attr.type );
+        operation->iv_size = PSA_BLOCK_CIPHER_BLOCK_LENGTH( slot->attr.type );
     }
 #if defined(MBEDTLS_CHACHA20_C)
     else
@@ -4557,8 +4525,8 @@ psa_status_t psa_cipher_generate_iv( psa_cipher_operation_t *operation,
         status = PSA_ERROR_BUFFER_TOO_SMALL;
         goto exit;
     }
-    ret = mbedtls_psa_get_random( MBEDTLS_PSA_RANDOM_STATE,
-                                  iv, operation->iv_size );
+    ret = mbedtls_ctr_drbg_random( &global_data.ctr_drbg,
+                                   iv, operation->iv_size );
     if( ret != 0 )
     {
         status = mbedtls_to_psa_error( ret );
@@ -4951,7 +4919,7 @@ static psa_status_t psa_aead_setup( aead_operation_t *operation,
             /* CCM allows the following tag lengths: 4, 6, 8, 10, 12, 14, 16.
              * The call to mbedtls_ccm_encrypt_and_tag or
              * mbedtls_ccm_auth_decrypt will validate the tag length. */
-            if( PSA_BLOCK_CIPHER_BLOCK_SIZE( operation->slot->attr.type ) != 16 )
+            if( PSA_BLOCK_CIPHER_BLOCK_LENGTH( operation->slot->attr.type ) != 16 )
             {
                 status = PSA_ERROR_INVALID_ARGUMENT;
                 goto cleanup;
@@ -4973,7 +4941,7 @@ static psa_status_t psa_aead_setup( aead_operation_t *operation,
             /* GCM allows the following tag lengths: 4, 8, 12, 13, 14, 15, 16.
              * The call to mbedtls_gcm_crypt_and_tag or
              * mbedtls_gcm_auth_decrypt will validate the tag length. */
-            if( PSA_BLOCK_CIPHER_BLOCK_SIZE( operation->slot->attr.type ) != 16 )
+            if( PSA_BLOCK_CIPHER_BLOCK_LENGTH( operation->slot->attr.type ) != 16 )
             {
                 status = PSA_ERROR_INVALID_ARGUMENT;
                 goto cleanup;
@@ -5342,7 +5310,7 @@ static psa_status_t psa_key_derivation_hkdf_read( psa_hkdf_key_derivation_t *hkd
                                              uint8_t *output,
                                              size_t output_length )
 {
-    uint8_t hash_length = PSA_HASH_SIZE( hash_alg );
+    uint8_t hash_length = PSA_HASH_LENGTH( hash_alg );
     psa_status_t status;
 
     if( hkdf->state < HKDF_STATE_KEYED || ! hkdf->info_set )
@@ -5412,7 +5380,7 @@ static psa_status_t psa_key_derivation_tls12_prf_generate_next_block(
     psa_algorithm_t alg )
 {
     psa_algorithm_t hash_alg = PSA_ALG_HKDF_GET_HASH( alg );
-    uint8_t hash_length = PSA_HASH_SIZE( hash_alg );
+    uint8_t hash_length = PSA_HASH_LENGTH( hash_alg );
     psa_hash_operation_t backup = PSA_HASH_OPERATION_INIT;
     psa_status_t status, cleanup_status;
 
@@ -5522,7 +5490,7 @@ static psa_status_t psa_key_derivation_tls12_prf_read(
     size_t output_length )
 {
     psa_algorithm_t hash_alg = PSA_ALG_TLS12_PRF_GET_HASH( alg );
-    uint8_t hash_length = PSA_HASH_SIZE( hash_alg );
+    uint8_t hash_length = PSA_HASH_LENGTH( hash_alg );
     psa_status_t status;
     uint8_t offset, length;
 
@@ -5752,7 +5720,7 @@ static psa_status_t psa_key_derivation_setup_kdf(
     if( is_kdf_alg_supported )
     {
         psa_algorithm_t hash_alg = PSA_ALG_HKDF_GET_HASH( kdf_alg );
-        size_t hash_size = PSA_HASH_SIZE( hash_alg );
+        size_t hash_size = PSA_HASH_LENGTH( hash_alg );
         if( hash_size == 0 )
             return( PSA_ERROR_NOT_SUPPORTED );
         if( ( PSA_ALG_IS_TLS12_PRF( kdf_alg ) ||
@@ -5840,7 +5808,7 @@ static psa_status_t psa_hkdf_input( psa_hkdf_key_derivation_t *hkdf,
                                                sizeof( hkdf->prk ) );
             if( status != PSA_SUCCESS )
                 return( status );
-            hkdf->offset_in_block = PSA_HASH_SIZE( hash_alg );
+            hkdf->offset_in_block = PSA_HASH_LENGTH( hash_alg );
             hkdf->block_number = 0;
             hkdf->state = HKDF_STATE_KEYED;
             return( PSA_SUCCESS );
@@ -5958,10 +5926,10 @@ static psa_status_t psa_tls12_prf_psk_to_ms_set_key(
     size_t data_length )
 {
     psa_status_t status;
-    uint8_t pms[ 4 + 2 * PSA_ALG_TLS12_PSK_TO_MS_MAX_PSK_LEN ];
+    uint8_t pms[ 4 + 2 * PSA_TLS12_PSK_TO_MS_PSK_MAX_SIZE ];
     uint8_t *cur = pms;
 
-    if( data_length > PSA_ALG_TLS12_PSK_TO_MS_MAX_PSK_LEN )
+    if( data_length > PSA_TLS12_PSK_TO_MS_PSK_MAX_SIZE )
         return( PSA_ERROR_INVALID_ARGUMENT );
 
     /* Quoting RFC 4279, Section 2:
@@ -6173,8 +6141,8 @@ static psa_status_t psa_key_agreement_ecdh( const uint8_t *peer_key,
         mbedtls_ecdh_calc_secret( &ecdh,
                                   shared_secret_length,
                                   shared_secret, shared_secret_size,
-                                  mbedtls_psa_get_random,
-                                  MBEDTLS_PSA_RANDOM_STATE ) );
+                                  mbedtls_ctr_drbg_random,
+                                  &global_data.ctr_drbg ) );
     if( status != PSA_SUCCESS )
         goto exit;
     if( PSA_BITS_TO_BYTES( bits ) != *shared_secret_length )
@@ -6352,138 +6320,30 @@ exit:
 }
 
 
-
 /****************************************************************/
 /* Random generation */
 /****************************************************************/
 
-/** Initialize the PSA random generator.
- */
-static void mbedtls_psa_random_init( mbedtls_psa_random_context_t *rng )
-{
-#if defined(MBEDTLS_PSA_CRYPTO_EXTERNAL_RNG)
-    memset( rng, 0, sizeof( *rng ) );
-#else /* MBEDTLS_PSA_CRYPTO_EXTERNAL_RNG */
-
-    /* Set default configuration if
-     * mbedtls_psa_crypto_configure_entropy_sources() hasn't been called. */
-    if( rng->entropy_init == NULL )
-        rng->entropy_init = mbedtls_entropy_init;
-    if( rng->entropy_free == NULL )
-        rng->entropy_free = mbedtls_entropy_free;
-
-    rng->entropy_init( &rng->entropy );
-#if defined(MBEDTLS_PSA_INJECT_ENTROPY) && \
-    defined(MBEDTLS_NO_DEFAULT_ENTROPY_SOURCES)
-    /* The PSA entropy injection feature depends on using NV seed as an entropy
-     * source. Add NV seed as an entropy source for PSA entropy injection. */
-    mbedtls_entropy_add_source( &rng->entropy,
-                                mbedtls_nv_seed_poll, NULL,
-                                MBEDTLS_ENTROPY_BLOCK_SIZE,
-                                MBEDTLS_ENTROPY_SOURCE_STRONG );
-#endif
-
-    mbedtls_psa_drbg_init( MBEDTLS_PSA_RANDOM_STATE );
-#endif /* MBEDTLS_PSA_CRYPTO_EXTERNAL_RNG */
-}
-
-/** Deinitialize the PSA random generator.
- */
-static void mbedtls_psa_random_free( mbedtls_psa_random_context_t *rng )
-{
-#if defined(MBEDTLS_PSA_CRYPTO_EXTERNAL_RNG)
-    memset( rng, 0, sizeof( *rng ) );
-#else /* MBEDTLS_PSA_CRYPTO_EXTERNAL_RNG */
-    mbedtls_psa_drbg_free( MBEDTLS_PSA_RANDOM_STATE );
-    rng->entropy_free( &rng->entropy );
-#endif /* MBEDTLS_PSA_CRYPTO_EXTERNAL_RNG */
-}
-
-/** Seed the PSA random generator.
- */
-static psa_status_t mbedtls_psa_random_seed( mbedtls_psa_random_context_t *rng )
-{
-#if defined(MBEDTLS_PSA_CRYPTO_EXTERNAL_RNG)
-    /* Do nothing: the external RNG seeds itself. */
-    (void) rng;
-    return( PSA_SUCCESS );
-#else /* MBEDTLS_PSA_CRYPTO_EXTERNAL_RNG */
-    const unsigned char drbg_seed[] = "PSA";
-    int ret = mbedtls_psa_drbg_seed( &rng->entropy,
-                                     drbg_seed, sizeof( drbg_seed ) - 1 );
-    return mbedtls_to_psa_error( ret );
-#endif /* MBEDTLS_PSA_CRYPTO_EXTERNAL_RNG */
-}
-
 psa_status_t psa_generate_random( uint8_t *output,
                                   size_t output_size )
 {
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     GUARD_MODULE_INITIALIZED;
 
-#if defined(MBEDTLS_PSA_CRYPTO_EXTERNAL_RNG)
-
-    size_t output_length = 0;
-    psa_status_t status = mbedtls_psa_external_get_random( &global_data.rng,
-                                                           output, output_size,
-                                                           &output_length );
-    if( status != PSA_SUCCESS )
-        return( status );
-    /* Breaking up a request into smaller chunks is currently not supported
-     * for the extrernal RNG interface. */
-    if( output_length != output_size )
-        return( PSA_ERROR_INSUFFICIENT_ENTROPY );
-    return( PSA_SUCCESS );
-
-#else /* MBEDTLS_PSA_CRYPTO_EXTERNAL_RNG */
-
-    while( output_size > 0 )
+    while( output_size > MBEDTLS_CTR_DRBG_MAX_REQUEST )
     {
-        size_t request_size =
-            ( output_size > MBEDTLS_PSA_RANDOM_MAX_REQUEST ?
-              MBEDTLS_PSA_RANDOM_MAX_REQUEST :
-              output_size );
-        int ret = mbedtls_psa_get_random( MBEDTLS_PSA_RANDOM_STATE,
-                                          output, request_size );
+        ret = mbedtls_ctr_drbg_random( &global_data.ctr_drbg,
+                                       output,
+                                       MBEDTLS_CTR_DRBG_MAX_REQUEST );
         if( ret != 0 )
             return( mbedtls_to_psa_error( ret ) );
-        output_size -= request_size;
-        output += request_size;
+        output += MBEDTLS_CTR_DRBG_MAX_REQUEST;
+        output_size -= MBEDTLS_CTR_DRBG_MAX_REQUEST;
     }
-    return( PSA_SUCCESS );
-#endif /* MBEDTLS_PSA_CRYPTO_EXTERNAL_RNG */
-}
 
-/* Wrapper function allowing the classic API to use the PSA RNG.
- *
- * `mbedtls_psa_get_random(MBEDTLS_PSA_RANDOM_STATE, ...)` calls
- * `psa_generate_random(...)`. The state parameter is ignored since the
- * PSA API doesn't support passing an explicit state.
- *
- * In the non-external case, psa_generate_random() calls an
- * `mbedtls_xxx_drbg_random` function which has exactly the same signature
- * and semantics as mbedtls_psa_get_random(). As an optimization,
- * instead of doing this back-and-forth between the PSA API and the
- * classic API, psa_crypto_random_impl.h defines `mbedtls_psa_get_random`
- * as a constant function pointer to `mbedtls_xxx_drbg_random`.
- */
-#if defined (MBEDTLS_PSA_CRYPTO_EXTERNAL_RNG)
-int mbedtls_psa_get_random( void *p_rng,
-                            unsigned char *output,
-                            size_t output_size )
-{
-    /* This function takes a pointer to the RNG state because that's what
-     * classic mbedtls functions using an RNG expect. The PSA RNG manages
-     * its own state internally and doesn't let the caller access that state.
-     * So we just ignore the state parameter, and in practice we'll pass
-     * NULL. */
-    (void) p_rng;
-    psa_status_t status = psa_generate_random( output, output_size );
-    if( status == PSA_SUCCESS )
-        return( 0 );
-    else
-        return( MBEDTLS_ERR_ENTROPY_SOURCE_FAILED );
+    ret = mbedtls_ctr_drbg_random( &global_data.ctr_drbg, output, output_size );
+    return( mbedtls_to_psa_error( ret ) );
 }
-#endif /* MBEDTLS_PSA_CRYPTO_EXTERNAL_RNG */
 
 #if defined(MBEDTLS_PSA_INJECT_ENTROPY)
 #include "mbedtls/entropy_poll.h"
@@ -6587,8 +6447,8 @@ static psa_status_t psa_generate_key_internal(
             return( status );
         mbedtls_rsa_init( &rsa, MBEDTLS_RSA_PKCS_V15, MBEDTLS_MD_NONE );
         ret = mbedtls_rsa_gen_key( &rsa,
-                                   mbedtls_psa_get_random,
-                                   MBEDTLS_PSA_RANDOM_STATE,
+                                   mbedtls_ctr_drbg_random,
+                                   &global_data.ctr_drbg,
                                    (unsigned int) bits,
                                    exponent );
         if( ret != 0 )
@@ -6633,8 +6493,8 @@ static psa_status_t psa_generate_key_internal(
             return( PSA_ERROR_NOT_SUPPORTED );
         mbedtls_ecp_keypair_init( &ecp );
         ret = mbedtls_ecp_gen_key( grp_id, &ecp,
-                                   mbedtls_psa_get_random,
-                                   MBEDTLS_PSA_RANDOM_STATE );
+                                   mbedtls_ctr_drbg_random,
+                                   &global_data.ctr_drbg );
         if( ret != 0 )
         {
             mbedtls_ecp_keypair_free( &ecp );
@@ -6714,25 +6574,24 @@ exit:
 /* Module setup */
 /****************************************************************/
 
-#if !defined(MBEDTLS_PSA_CRYPTO_EXTERNAL_RNG)
 psa_status_t mbedtls_psa_crypto_configure_entropy_sources(
     void (* entropy_init )( mbedtls_entropy_context *ctx ),
     void (* entropy_free )( mbedtls_entropy_context *ctx ) )
 {
     if( global_data.rng_state != RNG_NOT_INITIALIZED )
         return( PSA_ERROR_BAD_STATE );
-    global_data.rng.entropy_init = entropy_init;
-    global_data.rng.entropy_free = entropy_free;
+    global_data.entropy_init = entropy_init;
+    global_data.entropy_free = entropy_free;
     return( PSA_SUCCESS );
 }
-#endif /* !defined(MBEDTLS_PSA_CRYPTO_EXTERNAL_RNG) */
 
 void mbedtls_psa_crypto_free( void )
 {
     psa_wipe_all_key_slots( );
     if( global_data.rng_state != RNG_NOT_INITIALIZED )
     {
-        mbedtls_psa_random_free( &global_data.rng );
+        mbedtls_ctr_drbg_free( &global_data.ctr_drbg );
+        global_data.entropy_free( &global_data.entropy );
     }
     /* Wipe all remaining data, including configuration.
      * In particular, this sets all state indicator to the value
@@ -6774,15 +6633,37 @@ static psa_status_t psa_crypto_recover_transaction(
 psa_status_t psa_crypto_init( void )
 {
     psa_status_t status;
+    const unsigned char drbg_seed[] = "PSA";
 
     /* Double initialization is explicitly allowed. */
     if( global_data.initialized != 0 )
         return( PSA_SUCCESS );
 
-    /* Initialize and seed the random generator. */
-    mbedtls_psa_random_init( &global_data.rng );
+    /* Set default configuration if
+     * mbedtls_psa_crypto_configure_entropy_sources() hasn't been called. */
+    if( global_data.entropy_init == NULL )
+        global_data.entropy_init = mbedtls_entropy_init;
+    if( global_data.entropy_free == NULL )
+        global_data.entropy_free = mbedtls_entropy_free;
+
+    /* Initialize the random generator. */
+    global_data.entropy_init( &global_data.entropy );
+#if defined(MBEDTLS_PSA_INJECT_ENTROPY) && \
+    defined(MBEDTLS_NO_DEFAULT_ENTROPY_SOURCES)
+    /* The PSA entropy injection feature depends on using NV seed as an entropy
+     * source. Add NV seed as an entropy source for PSA entropy injection. */
+    mbedtls_entropy_add_source( &global_data.entropy,
+                                mbedtls_nv_seed_poll, NULL,
+                                MBEDTLS_ENTROPY_BLOCK_SIZE,
+                                MBEDTLS_ENTROPY_SOURCE_STRONG );
+#endif
+    mbedtls_ctr_drbg_init( &global_data.ctr_drbg );
     global_data.rng_state = RNG_INITIALIZED;
-    status = mbedtls_psa_random_seed( &global_data.rng );
+    status = mbedtls_to_psa_error(
+        mbedtls_ctr_drbg_seed( &global_data.ctr_drbg,
+                               mbedtls_entropy_func,
+                               &global_data.entropy,
+                               drbg_seed, sizeof( drbg_seed ) - 1 ) );
     if( status != PSA_SUCCESS )
         goto exit;
     global_data.rng_state = RNG_SEEDED;
