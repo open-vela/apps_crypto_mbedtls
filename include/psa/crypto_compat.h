@@ -110,18 +110,6 @@ typedef MBEDTLS_PSA_DEPRECATED psa_algorithm_t mbedtls_deprecated_psa_algorithm_
     MBEDTLS_DEPRECATED_CONSTANT( size_t, PSA_SIGNATURE_MAX_SIZE )
 #define PSA_ASYMMETRIC_SIGN_OUTPUT_SIZE( key_type, key_bits, alg ) \
     MBEDTLS_DEPRECATED_CONSTANT( size_t, PSA_SIGN_OUTPUT_SIZE( key_type, key_bits, alg ) )
-#define PSA_KEY_EXPORT_MAX_SIZE( key_type, key_bits ) \
-    MBEDTLS_DEPRECATED_CONSTANT( size_t, PSA_EXPORT_KEY_OUTPUT_SIZE( key_type, key_bits ) )
-#define PSA_BLOCK_CIPHER_BLOCK_SIZE( type ) \
-    MBEDTLS_DEPRECATED_CONSTANT( size_t, PSA_BLOCK_CIPHER_BLOCK_LENGTH( type ) )
-#define PSA_MAX_BLOCK_CIPHER_BLOCK_SIZE \
-    MBEDTLS_DEPRECATED_CONSTANT( size_t, PSA_BLOCK_CIPHER_BLOCK_MAX_SIZE )
-#define PSA_HASH_SIZE( alg ) \
-    MBEDTLS_DEPRECATED_CONSTANT( size_t, PSA_HASH_LENGTH( alg ) )
-#define PSA_MAC_FINAL_SIZE( key_type, key_bits, alg ) \
-    MBEDTLS_DEPRECATED_CONSTANT( size_t, PSA_MAC_LENGTH( key_type, key_bits, alg ) )
-#define PSA_ALG_TLS12_PSK_TO_MS_MAX_PSK_LEN \
-    MBEDTLS_DEPRECATED_CONSTANT( size_t, PSA_TLS12_PSK_TO_MS_PSK_MAX_SIZE )
 
 /*
  * Deprecated PSA Crypto function names (PSA Crypto API  <= 1.0 beta3)
@@ -260,14 +248,6 @@ MBEDTLS_PSA_DEPRECATED static inline psa_status_t psa_asymmetric_verify( psa_key
     MBEDTLS_DEPRECATED_CONSTANT( psa_algorithm_t, PSA_ALG_STREAM_CIPHER )
 #define PSA_ALG_CHACHA20 \
     MBEDTLS_DEPRECATED_CONSTANT( psa_algorithm_t, PSA_ALG_STREAM_CIPHER )
-
-/*
- * Renamed AEAD tag length macros (PSA Crypto API  <= 1.0 beta3)
- */
-#define PSA_ALG_AEAD_WITH_DEFAULT_TAG_LENGTH( aead_alg ) \
-    MBEDTLS_DEPRECATED_CONSTANT( psa_algorithm_t, PSA_ALG_AEAD_WITH_DEFAULT_LENGTH_TAG( aead_alg ) )
-#define PSA_ALG_AEAD_WITH_TAG_LENGTH( aead_alg, tag_length ) \
-    MBEDTLS_DEPRECATED_CONSTANT( psa_algorithm_t, PSA_ALG_AEAD_WITH_SHORTENED_TAG( aead_alg, tag_length ) )
 
 #endif /* MBEDTLS_DEPRECATED_REMOVED */
 

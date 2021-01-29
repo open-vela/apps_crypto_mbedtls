@@ -770,7 +770,6 @@ run_test() {
         # terminate the server (and the proxy)
         kill $SRV_PID
         wait $SRV_PID
-        SRV_RET=$?
 
         if [ -n "$PXY_CMD" ]; then
             kill $PXY_PID >/dev/null 2>&1
@@ -804,11 +803,9 @@ run_test() {
         fi
     fi
 
-    # Check server exit code (only for Mbed TLS: GnuTLS and OpenSSL don't
-    # exit with status 0 when interrupted by a signal, and we don't really
-    # care anyway), in case e.g. the server reports a memory leak.
-    if [ $SRV_RET != 0 ] && is_polar "$SRV_CMD"; then
-        fail "Server exited with status $SRV_RET"
+    # check server exit code
+    if [ $? != 0 ]; then
+        fail "server fail"
         return
     fi
 

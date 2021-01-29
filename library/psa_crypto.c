@@ -2358,15 +2358,6 @@ psa_status_t psa_import_key( const psa_key_attributes_t *attributes,
     }
     else
 #endif /* MBEDTLS_PSA_CRYPTO_SE_C */
-    if( psa_key_lifetime_is_external( psa_get_key_lifetime( attributes ) ) )
-    {
-        /* Importing a key with external lifetime through the driver wrapper
-         * interface is not yet supported. Return as if this was an invalid
-         * lifetime. */
-        status = PSA_ERROR_INVALID_ARGUMENT;
-        goto exit;
-    }
-    else
     {
         status = psa_import_key_into_slot( slot, data, data_length );
         if( status != PSA_SUCCESS )
@@ -2773,7 +2764,7 @@ psa_status_t psa_hash_finish( psa_hash_operation_t *operation,
 {
     psa_status_t status;
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
-    size_t actual_hash_length = PSA_HASH_LENGTH( operation->alg );
+    size_t actual_hash_length = PSA_HASH_SIZE( operation->alg );
 
     /* Fill the output buffer with something that isn't a valid hash
      * (barring an attack on the hash and deliberately-crafted input),
@@ -3012,7 +3003,7 @@ static const mbedtls_cipher_info_t *mbedtls_cipher_info_from_psa(
     mbedtls_cipher_id_t cipher_id_tmp;
 
     if( PSA_ALG_IS_AEAD( alg ) )
-        alg = PSA_ALG_AEAD_WITH_SHORTENED_TAG( alg, 0 );
+        alg = PSA_ALG_AEAD_WITH_TAG_LENGTH( alg, 0 );
 
     if( PSA_ALG_IS_CIPHER( alg ) || PSA_ALG_IS_AEAD( alg ) )
     {
@@ -3039,13 +3030,13 @@ static const mbedtls_cipher_info_t *mbedtls_cipher_info_from_psa(
             case PSA_ALG_CBC_PKCS7:
                 mode = MBEDTLS_MODE_CBC;
                 break;
-            case PSA_ALG_AEAD_WITH_SHORTENED_TAG( PSA_ALG_CCM, 0 ):
+            case PSA_ALG_AEAD_WITH_TAG_LENGTH( PSA_ALG_CCM, 0 ):
                 mode = MBEDTLS_MODE_CCM;
                 break;
-            case PSA_ALG_AEAD_WITH_SHORTENED_TAG( PSA_ALG_GCM, 0 ):
+            case PSA_ALG_AEAD_WITH_TAG_LENGTH( PSA_ALG_GCM, 0 ):
                 mode = MBEDTLS_MODE_GCM;
                 break;
-            case PSA_ALG_AEAD_WITH_SHORTENED_TAG( PSA_ALG_CHACHA20_POLY1305, 0 ):
+            case PSA_ALG_AEAD_WITH_TAG_LENGTH( PSA_ALG_CHACHA20_POLY1305, 0 ):
                 mode = MBEDTLS_MODE_CHACHAPOLY;
                 break;
             default:
@@ -3250,7 +3241,7 @@ static psa_status_t psa_hmac_setup_internal( psa_hmac_internal_data *hmac,
 {
     uint8_t ipad[PSA_HMAC_MAX_HASH_BLOCK_SIZE];
     size_t i;
-    size_t hash_size = PSA_HASH_LENGTH( hash_alg );
+    size_t hash_size = PSA_HASH_SIZE( hash_alg );
     size_t block_size = psa_get_hash_block_size( hash_alg );
     psa_status_t status;
 
@@ -3366,7 +3357,7 @@ static psa_status_t psa_mac_setup( psa_mac_operation_t *operation,
             goto exit;
         }
 
-        operation->mac_size = PSA_HASH_LENGTH( hash_alg );
+        operation->mac_size = PSA_HASH_SIZE( hash_alg );
         /* Sanity check. This shouldn't fail on a valid configuration. */
         if( operation->mac_size == 0 ||
             operation->mac_size > sizeof( operation->ctx.hmac.opad ) )
@@ -3536,7 +3527,7 @@ static psa_status_t psa_mac_finish_internal( psa_mac_operation_t *operation,
 #if defined(MBEDTLS_CMAC_C)
     if( operation->alg == PSA_ALG_CMAC )
     {
-        uint8_t tmp[PSA_BLOCK_CIPHER_BLOCK_MAX_SIZE];
+        uint8_t tmp[PSA_MAX_BLOCK_CIPHER_BLOCK_SIZE];
         int ret = mbedtls_cipher_cmac_finish( &operation->ctx.cmac, tmp );
         if( ret == 0 )
             memcpy( mac, tmp, operation->mac_size );
@@ -4492,11 +4483,11 @@ static psa_status_t psa_cipher_setup( psa_cipher_operation_t *operation,
 #endif //MBEDTLS_CIPHER_MODE_WITH_PADDING
 
     operation->block_size = ( PSA_ALG_IS_STREAM_CIPHER( alg ) ? 1 :
-                              PSA_BLOCK_CIPHER_BLOCK_LENGTH( slot->attr.type ) );
+                              PSA_BLOCK_CIPHER_BLOCK_SIZE( slot->attr.type ) );
     if( ( alg & PSA_ALG_CIPHER_FROM_BLOCK_FLAG ) != 0 &&
         alg != PSA_ALG_ECB_NO_PADDING )
     {
-        operation->iv_size = PSA_BLOCK_CIPHER_BLOCK_LENGTH( slot->attr.type );
+        operation->iv_size = PSA_BLOCK_CIPHER_BLOCK_SIZE( slot->attr.type );
     }
 #if defined(MBEDTLS_CHACHA20_C)
     else
@@ -4947,16 +4938,16 @@ static psa_status_t psa_aead_setup( aead_operation_t *operation,
         goto cleanup;
     }
 
-    switch( PSA_ALG_AEAD_WITH_SHORTENED_TAG( alg, 0 ) )
+    switch( PSA_ALG_AEAD_WITH_TAG_LENGTH( alg, 0 ) )
     {
 #if defined(MBEDTLS_CCM_C)
-        case PSA_ALG_AEAD_WITH_SHORTENED_TAG( PSA_ALG_CCM, 0 ):
+        case PSA_ALG_AEAD_WITH_TAG_LENGTH( PSA_ALG_CCM, 0 ):
             operation->core_alg = PSA_ALG_CCM;
             operation->full_tag_length = 16;
             /* CCM allows the following tag lengths: 4, 6, 8, 10, 12, 14, 16.
              * The call to mbedtls_ccm_encrypt_and_tag or
              * mbedtls_ccm_auth_decrypt will validate the tag length. */
-            if( PSA_BLOCK_CIPHER_BLOCK_LENGTH( operation->slot->attr.type ) != 16 )
+            if( PSA_BLOCK_CIPHER_BLOCK_SIZE( operation->slot->attr.type ) != 16 )
             {
                 status = PSA_ERROR_INVALID_ARGUMENT;
                 goto cleanup;
@@ -4972,13 +4963,13 @@ static psa_status_t psa_aead_setup( aead_operation_t *operation,
 #endif /* MBEDTLS_CCM_C */
 
 #if defined(MBEDTLS_GCM_C)
-        case PSA_ALG_AEAD_WITH_SHORTENED_TAG( PSA_ALG_GCM, 0 ):
+        case PSA_ALG_AEAD_WITH_TAG_LENGTH( PSA_ALG_GCM, 0 ):
             operation->core_alg = PSA_ALG_GCM;
             operation->full_tag_length = 16;
             /* GCM allows the following tag lengths: 4, 8, 12, 13, 14, 15, 16.
              * The call to mbedtls_gcm_crypt_and_tag or
              * mbedtls_gcm_auth_decrypt will validate the tag length. */
-            if( PSA_BLOCK_CIPHER_BLOCK_LENGTH( operation->slot->attr.type ) != 16 )
+            if( PSA_BLOCK_CIPHER_BLOCK_SIZE( operation->slot->attr.type ) != 16 )
             {
                 status = PSA_ERROR_INVALID_ARGUMENT;
                 goto cleanup;
@@ -4994,7 +4985,7 @@ static psa_status_t psa_aead_setup( aead_operation_t *operation,
 #endif /* MBEDTLS_GCM_C */
 
 #if defined(MBEDTLS_CHACHAPOLY_C)
-        case PSA_ALG_AEAD_WITH_SHORTENED_TAG( PSA_ALG_CHACHA20_POLY1305, 0 ):
+        case PSA_ALG_AEAD_WITH_TAG_LENGTH( PSA_ALG_CHACHA20_POLY1305, 0 ):
             operation->core_alg = PSA_ALG_CHACHA20_POLY1305;
             operation->full_tag_length = 16;
             /* We only support the default tag length. */
@@ -5111,7 +5102,6 @@ psa_status_t psa_aead_encrypt( mbedtls_svc_key_id_t key,
     else
 #endif /* MBEDTLS_CHACHAPOLY_C */
     {
-        (void) tag;
         return( PSA_ERROR_NOT_SUPPORTED );
     }
 
@@ -5348,7 +5338,7 @@ static psa_status_t psa_key_derivation_hkdf_read( psa_hkdf_key_derivation_t *hkd
                                              uint8_t *output,
                                              size_t output_length )
 {
-    uint8_t hash_length = PSA_HASH_LENGTH( hash_alg );
+    uint8_t hash_length = PSA_HASH_SIZE( hash_alg );
     psa_status_t status;
 
     if( hkdf->state < HKDF_STATE_KEYED || ! hkdf->info_set )
@@ -5418,7 +5408,7 @@ static psa_status_t psa_key_derivation_tls12_prf_generate_next_block(
     psa_algorithm_t alg )
 {
     psa_algorithm_t hash_alg = PSA_ALG_HKDF_GET_HASH( alg );
-    uint8_t hash_length = PSA_HASH_LENGTH( hash_alg );
+    uint8_t hash_length = PSA_HASH_SIZE( hash_alg );
     psa_hash_operation_t backup = PSA_HASH_OPERATION_INIT;
     psa_status_t status, cleanup_status;
 
@@ -5528,7 +5518,7 @@ static psa_status_t psa_key_derivation_tls12_prf_read(
     size_t output_length )
 {
     psa_algorithm_t hash_alg = PSA_ALG_TLS12_PRF_GET_HASH( alg );
-    uint8_t hash_length = PSA_HASH_LENGTH( hash_alg );
+    uint8_t hash_length = PSA_HASH_SIZE( hash_alg );
     psa_status_t status;
     uint8_t offset, length;
 
@@ -5618,7 +5608,6 @@ psa_status_t psa_key_derivation_output_bytes(
 #endif /* MBEDTLS_PSA_BUILTIN_ALG_TLS12_PRF ||
         * MBEDTLS_PSA_BUILTIN_ALG_TLS12_PSK_TO_MS */
     {
-        (void) kdf_alg;
         return( PSA_ERROR_BAD_STATE );
     }
 
@@ -5759,7 +5748,7 @@ static psa_status_t psa_key_derivation_setup_kdf(
     if( is_kdf_alg_supported )
     {
         psa_algorithm_t hash_alg = PSA_ALG_HKDF_GET_HASH( kdf_alg );
-        size_t hash_size = PSA_HASH_LENGTH( hash_alg );
+        size_t hash_size = PSA_HASH_SIZE( hash_alg );
         if( hash_size == 0 )
             return( PSA_ERROR_NOT_SUPPORTED );
         if( ( PSA_ALG_IS_TLS12_PRF( kdf_alg ) ||
@@ -5847,7 +5836,7 @@ static psa_status_t psa_hkdf_input( psa_hkdf_key_derivation_t *hkdf,
                                                sizeof( hkdf->prk ) );
             if( status != PSA_SUCCESS )
                 return( status );
-            hkdf->offset_in_block = PSA_HASH_LENGTH( hash_alg );
+            hkdf->offset_in_block = PSA_HASH_SIZE( hash_alg );
             hkdf->block_number = 0;
             hkdf->state = HKDF_STATE_KEYED;
             return( PSA_SUCCESS );
@@ -5965,10 +5954,10 @@ static psa_status_t psa_tls12_prf_psk_to_ms_set_key(
     size_t data_length )
 {
     psa_status_t status;
-    uint8_t pms[ 4 + 2 * PSA_TLS12_PSK_TO_MS_PSK_MAX_SIZE ];
+    uint8_t pms[ 4 + 2 * PSA_ALG_TLS12_PSK_TO_MS_MAX_PSK_LEN ];
     uint8_t *cur = pms;
 
-    if( data_length > PSA_TLS12_PSK_TO_MS_PSK_MAX_SIZE )
+    if( data_length > PSA_ALG_TLS12_PSK_TO_MS_MAX_PSK_LEN )
         return( PSA_ERROR_INVALID_ARGUMENT );
 
     /* Quoting RFC 4279, Section 2:
@@ -6087,9 +6076,6 @@ static psa_status_t psa_key_derivation_input_internal(
 #endif /* MBEDTLS_PSA_BUILTIN_ALG_TLS12_PSK_TO_MS */
     {
         /* This can't happen unless the operation object was not initialized */
-        (void) data;
-        (void) data_length;
-        (void) kdf_alg;
         return( PSA_ERROR_BAD_STATE );
     }
 
