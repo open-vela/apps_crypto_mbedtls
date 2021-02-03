@@ -261,14 +261,6 @@ MBEDTLS_PSA_DEPRECATED static inline psa_status_t psa_asymmetric_verify( psa_key
 #define PSA_ALG_CHACHA20 \
     MBEDTLS_DEPRECATED_CONSTANT( psa_algorithm_t, PSA_ALG_STREAM_CIPHER )
 
-/*
- * Renamed AEAD tag length macros (PSA Crypto API  <= 1.0 beta3)
- */
-#define PSA_ALG_AEAD_WITH_DEFAULT_TAG_LENGTH( aead_alg ) \
-    MBEDTLS_DEPRECATED_CONSTANT( psa_algorithm_t, PSA_ALG_AEAD_WITH_DEFAULT_LENGTH_TAG( aead_alg ) )
-#define PSA_ALG_AEAD_WITH_TAG_LENGTH( aead_alg, tag_length ) \
-    MBEDTLS_DEPRECATED_CONSTANT( psa_algorithm_t, PSA_ALG_AEAD_WITH_SHORTENED_TAG( aead_alg, tag_length ) )
-
 #endif /* MBEDTLS_DEPRECATED_REMOVED */
 
 /** Open a handle to an existing persistent key.
@@ -324,8 +316,6 @@ MBEDTLS_PSA_DEPRECATED static inline psa_status_t psa_asymmetric_verify( psa_key
  * \retval #PSA_ERROR_COMMUNICATION_FAILURE
  * \retval #PSA_ERROR_CORRUPTION_DETECTED
  * \retval #PSA_ERROR_STORAGE_FAILURE
- * \retval #PSA_ERROR_DATA_INVALID
- * \retval #PSA_ERROR_DATA_CORRUPT
  * \retval #PSA_ERROR_BAD_STATE
  *         The library has not been previously initialized by psa_crypto_init().
  *         It is implementation-dependent whether a failure to initialize
