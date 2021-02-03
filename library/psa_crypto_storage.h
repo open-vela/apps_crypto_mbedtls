@@ -49,7 +49,7 @@ extern "C" {
  * - Using the ITS backend, all key ids are ok except 0xFFFFFF52
  *   (#PSA_CRYPTO_ITS_RANDOM_SEED_UID) for which the file contains the
  *   device's random seed (if this feature is enabled).
- * - Only key ids from 1 to #MBEDTLS_PSA_KEY_SLOT_COUNT are actually used.
+ * - Only key ids from 1 to #PSA_KEY_SLOT_COUNT are actually used.
  *
  * Since we need to preserve the random seed, avoid using that key slot.
  * Reserve a whole range of key slots just in case something else comes up.
@@ -102,8 +102,6 @@ int psa_is_key_present_in_storage( const mbedtls_svc_key_id_t key );
  * \retval #PSA_ERROR_INSUFFICIENT_STORAGE
  * \retval #PSA_ERROR_STORAGE_FAILURE
  * \retval #PSA_ERROR_ALREADY_EXISTS
- * \retval #PSA_ERROR_DATA_INVALID
- * \retval #PSA_ERROR_DATA_CORRUPT
  */
 psa_status_t psa_save_persistent_key( const psa_core_key_attributes_t *attr,
                                       const uint8_t *data,
@@ -131,8 +129,7 @@ psa_status_t psa_save_persistent_key( const psa_core_key_attributes_t *attr,
  *
  * \retval #PSA_SUCCESS
  * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
- * \retval #PSA_ERROR_DATA_INVALID
- * \retval #PSA_ERROR_DATA_CORRUPT
+ * \retval #PSA_ERROR_STORAGE_FAILURE
  * \retval #PSA_ERROR_DOES_NOT_EXIST
  */
 psa_status_t psa_load_persistent_key( psa_core_key_attributes_t *attr,
@@ -148,7 +145,7 @@ psa_status_t psa_load_persistent_key( psa_core_key_attributes_t *attr,
  * \retval #PSA_SUCCESS
  *         The key was successfully removed,
  *         or the key did not exist.
- * \retval #PSA_ERROR_DATA_INVALID
+ * \retval #PSA_ERROR_STORAGE_FAILURE
  */
 psa_status_t psa_destroy_persistent_key( const mbedtls_svc_key_id_t key );
 
@@ -191,8 +188,9 @@ void psa_format_key_data_for_storage( const uint8_t *data,
  *                             with the loaded key metadata.
  *
  * \retval #PSA_SUCCESS
+ * \retval #PSA_ERROR_INSUFFICIENT_STORAGE
  * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
- * \retval #PSA_ERROR_DATA_INVALID
+ * \retval #PSA_ERROR_STORAGE_FAILURE
  */
 psa_status_t psa_parse_key_data_from_storage( const uint8_t *storage_data,
                                               size_t storage_data_length,
@@ -326,7 +324,6 @@ static inline void psa_crypto_prepare_transaction(
  * atomically update the transaction state.
  *
  * \retval #PSA_SUCCESS
- * \retval #PSA_ERROR_DATA_CORRUPT
  * \retval #PSA_ERROR_INSUFFICIENT_STORAGE
  * \retval #PSA_ERROR_STORAGE_FAILURE
  */
@@ -343,8 +340,6 @@ psa_status_t psa_crypto_save_transaction( void );
  * \retval #PSA_ERROR_DOES_NOT_EXIST
  *         There is no ongoing transaction.
  * \retval #PSA_ERROR_STORAGE_FAILURE
- * \retval #PSA_ERROR_DATA_INVALID
- * \retval #PSA_ERROR_DATA_CORRUPT
  */
 psa_status_t psa_crypto_load_transaction( void );
 
