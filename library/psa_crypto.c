@@ -5102,6 +5102,7 @@ psa_status_t psa_aead_encrypt( mbedtls_svc_key_id_t key,
     else
 #endif /* MBEDTLS_CHACHAPOLY_C */
     {
+        (void) tag;
         return( PSA_ERROR_NOT_SUPPORTED );
     }
 
