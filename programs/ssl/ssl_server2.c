@@ -1282,7 +1282,8 @@ int main( int argc, char *argv[] )
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
     mbedtls_x509_crt_profile crt_profile_for_test = mbedtls_x509_crt_profile_default;
 #endif
-    rng_context_t rng;
+    mbedtls_entropy_context entropy;
+    mbedtls_ctr_drbg_context ctr_drbg;
     mbedtls_ssl_context ssl;
     mbedtls_ssl_config conf;
 #if defined(MBEDTLS_TIMING_C)
@@ -1376,7 +1377,7 @@ int main( int argc, char *argv[] )
     mbedtls_net_init( &listen_fd );
     mbedtls_ssl_init( &ssl );
     mbedtls_ssl_config_init( &conf );
-    rng_init( &rng );
+    mbedtls_ctr_drbg_init( &ctr_drbg );
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
     mbedtls_x509_crt_init( &cacert );
     mbedtls_x509_crt_init( &srvcert );
@@ -1412,10 +1413,7 @@ int main( int argc, char *argv[] )
         ret = MBEDTLS_ERR_SSL_HW_ACCEL_FAILED;
         goto exit;
     }
-#if defined(MBEDTLS_PSA_CRYPTO_EXTERNAL_RNG)
-    mbedtls_test_enable_insecure_external_rng( );
-#endif  /* MBEDTLS_PSA_CRYPTO_EXTERNAL_RNG */
-#endif  /* MBEDTLS_USE_PSA_CRYPTO */
+#endif
 
 #if !defined(_WIN32)
     /* Abort cleanly on SIGTERM and SIGINT */
@@ -2295,8 +2293,31 @@ int main( int argc, char *argv[] )
     mbedtls_printf( "\n  . Seeding the random number generator..." );
     fflush( stdout );
 
-    if( rng_seed( &rng, opt.reproducible, pers ) != 0 )
-        goto exit;
+    mbedtls_entropy_init( &entropy );
+    if (opt.reproducible)
+    {
+        srand( 1 );
+        if( ( ret = mbedtls_ctr_drbg_seed( &ctr_drbg, dummy_entropy,
+                                           &entropy, (const unsigned char *) pers,
+                                           strlen( pers ) ) ) != 0 )
+        {
+            mbedtls_printf( " failed\n  ! mbedtls_ctr_drbg_seed returned -0x%x\n",
+                            (unsigned int) -ret );
+            goto exit;
+        }
+    }
+    else
+    {
+        if( ( ret = mbedtls_ctr_drbg_seed( &ctr_drbg, mbedtls_entropy_func,
+                                           &entropy, (const unsigned char *) pers,
+                                           strlen( pers ) ) ) != 0 )
+        {
+            mbedtls_printf( " failed\n  ! mbedtls_ctr_drbg_seed returned -0x%x\n",
+                            (unsigned int) -ret );
+            goto exit;
+        }
+    }
+
     mbedtls_printf( " ok\n" );
 
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
@@ -2685,7 +2706,7 @@ int main( int argc, char *argv[] )
 #endif
 #endif
     }
-    mbedtls_ssl_conf_rng( &conf, rng_get, &rng );
+    mbedtls_ssl_conf_rng( &conf, mbedtls_ctr_drbg_random, &ctr_drbg );
     mbedtls_ssl_conf_dbg( &conf, my_debug, stdout );
 
 #if defined(MBEDTLS_SSL_CACHE_C)
@@ -2704,7 +2725,7 @@ int main( int argc, char *argv[] )
     if( opt.tickets == MBEDTLS_SSL_SESSION_TICKETS_ENABLED )
     {
         if( ( ret = mbedtls_ssl_ticket_setup( &ticket_ctx,
-                        rng_get, &rng,
+                        mbedtls_ctr_drbg_random, &ctr_drbg,
                         MBEDTLS_CIPHER_AES_256_GCM,
                         opt.ticket_timeout ) ) != 0 )
         {
@@ -2726,7 +2747,7 @@ int main( int argc, char *argv[] )
         if( opt.cookies > 0 )
         {
             if( ( ret = mbedtls_ssl_cookie_setup( &cookie_ctx,
-                                                  rng_get, &rng ) ) != 0 )
+                                          mbedtls_ctr_drbg_random, &ctr_drbg ) ) != 0 )
             {
                 mbedtls_printf( " failed\n  ! mbedtls_ssl_cookie_setup returned %d\n\n", ret );
                 goto exit;
@@ -2878,8 +2899,8 @@ int main( int argc, char *argv[] )
         ssl_async_keys.inject_error = ( opt.async_private_error < 0 ?
                                         - opt.async_private_error :
                                         opt.async_private_error );
-        ssl_async_keys.f_rng = rng_get;
-        ssl_async_keys.p_rng = &rng;
+        ssl_async_keys.f_rng = mbedtls_ctr_drbg_random;
+        ssl_async_keys.p_rng = &ctr_drbg;
         mbedtls_ssl_conf_async_private_cb( &conf,
                                            sign,
                                            decrypt,
@@ -3977,7 +3998,8 @@ exit:
 
     mbedtls_ssl_free( &ssl );
     mbedtls_ssl_config_free( &conf );
-    rng_free( &rng );
+    mbedtls_ctr_drbg_free( &ctr_drbg );
+    mbedtls_entropy_free( &entropy );
 
 #if defined(MBEDTLS_SSL_CACHE_C)
     mbedtls_ssl_cache_free( &cache );
