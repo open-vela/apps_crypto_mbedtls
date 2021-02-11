@@ -110,6 +110,18 @@ typedef MBEDTLS_PSA_DEPRECATED psa_algorithm_t mbedtls_deprecated_psa_algorithm_
     MBEDTLS_DEPRECATED_CONSTANT( size_t, PSA_SIGNATURE_MAX_SIZE )
 #define PSA_ASYMMETRIC_SIGN_OUTPUT_SIZE( key_type, key_bits, alg ) \
     MBEDTLS_DEPRECATED_CONSTANT( size_t, PSA_SIGN_OUTPUT_SIZE( key_type, key_bits, alg ) )
+#define PSA_KEY_EXPORT_MAX_SIZE( key_type, key_bits ) \
+    MBEDTLS_DEPRECATED_CONSTANT( size_t, PSA_EXPORT_KEY_OUTPUT_SIZE( key_type, key_bits ) )
+#define PSA_BLOCK_CIPHER_BLOCK_SIZE( type ) \
+    MBEDTLS_DEPRECATED_CONSTANT( size_t, PSA_BLOCK_CIPHER_BLOCK_LENGTH( type ) )
+#define PSA_MAX_BLOCK_CIPHER_BLOCK_SIZE \
+    MBEDTLS_DEPRECATED_CONSTANT( size_t, PSA_BLOCK_CIPHER_BLOCK_MAX_SIZE )
+#define PSA_HASH_SIZE( alg ) \
+    MBEDTLS_DEPRECATED_CONSTANT( size_t, PSA_HASH_LENGTH( alg ) )
+#define PSA_MAC_FINAL_SIZE( key_type, key_bits, alg ) \
+    MBEDTLS_DEPRECATED_CONSTANT( size_t, PSA_MAC_LENGTH( key_type, key_bits, alg ) )
+#define PSA_ALG_TLS12_PSK_TO_MS_MAX_PSK_LEN \
+    MBEDTLS_DEPRECATED_CONSTANT( size_t, PSA_TLS12_PSK_TO_MS_PSK_MAX_SIZE )
 
 /*
  * Deprecated PSA Crypto function names (PSA Crypto API  <= 1.0 beta3)
@@ -304,6 +316,8 @@ MBEDTLS_PSA_DEPRECATED static inline psa_status_t psa_asymmetric_verify( psa_key
  * \retval #PSA_ERROR_COMMUNICATION_FAILURE
  * \retval #PSA_ERROR_CORRUPTION_DETECTED
  * \retval #PSA_ERROR_STORAGE_FAILURE
+ * \retval #PSA_ERROR_DATA_INVALID
+ * \retval #PSA_ERROR_DATA_CORRUPT
  * \retval #PSA_ERROR_BAD_STATE
  *         The library has not been previously initialized by psa_crypto_init().
  *         It is implementation-dependent whether a failure to initialize
