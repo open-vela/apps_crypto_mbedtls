@@ -270,6 +270,46 @@
  */
 #define PSA_ERROR_INVALID_HANDLE        ((psa_status_t)-136)
 
+/** Stored data has been corrupted.
+ *
+ * This error indicates that some persistent storage has suffered corruption.
+ * It does not indicate the following situations, which have specific error
+ * codes:
+ *
+ * - A corruption of volatile memory - use #PSA_ERROR_CORRUPTION_DETECTED.
+ * - A communication error between the cryptoprocessor and its external
+ *   storage - use #PSA_ERROR_COMMUNICATION_FAILURE.
+ * - When the storage is in a valid state but is full - use
+ *   #PSA_ERROR_INSUFFICIENT_STORAGE.
+ * - When the storage fails for other reasons - use
+ *   #PSA_ERROR_STORAGE_FAILURE.
+ * - When the stored data is not valid - use #PSA_ERROR_DATA_INVALID.
+ *
+ * \note A storage corruption does not indicate that any data that was
+ * previously read is invalid. However this previously read data might no
+ * longer be readable from storage.
+ *
+ * When a storage failure occurs, it is no longer possible to ensure the
+ * global integrity of the keystore.
+ */
+#define PSA_ERROR_DATA_CORRUPT          ((psa_status_t)-152)
+
+/** Data read from storage is not valid for the implementation.
+ *
+ * This error indicates that some data read from storage does not have a valid
+ * format. It does not indicate the following situations, which have specific
+ * error codes:
+ *
+ * - When the storage or stored data is corrupted - use #PSA_ERROR_DATA_CORRUPT
+ * - When the storage fails for other reasons - use #PSA_ERROR_STORAGE_FAILURE
+ * - An invalid argument to the API - use #PSA_ERROR_INVALID_ARGUMENT
+ *
+ * This error is typically a result of either storage corruption on a
+ * cleartext storage backend, or an attempt to read data that was
+ * written by an incompatible version of the library.
+ */
+#define PSA_ERROR_DATA_INVALID          ((psa_status_t)-153)
+
 /**@}*/
 
 /** \defgroup crypto_types Key and algorithm types
@@ -363,7 +403,7 @@
  * used for.
  *
  * HMAC keys should generally have the same size as the underlying hash.
- * This size can be calculated with #PSA_HASH_SIZE(\c alg) where
+ * This size can be calculated with #PSA_HASH_LENGTH(\c alg) where
  * \c alg is the HMAC algorithm or the underlying hash algorithm. */
 #define PSA_KEY_TYPE_HMAC                           ((psa_key_type_t)0x1100)
 
@@ -594,9 +634,9 @@
  *
  * \warning This macro may evaluate its argument multiple times.
  */
-#define PSA_BLOCK_CIPHER_BLOCK_SIZE(type)            \
+#define PSA_BLOCK_CIPHER_BLOCK_LENGTH(type)                                     \
     (((type) & PSA_KEY_TYPE_CATEGORY_MASK) == PSA_KEY_TYPE_CATEGORY_SYMMETRIC ? \
-     1u << PSA_GET_KEY_TYPE_BLOCK_SIZE_EXPONENT(type) :                 \
+     1u << PSA_GET_KEY_TYPE_BLOCK_SIZE_EXPONENT(type) :                         \
      0u)
 
 /** Vendor-defined algorithm flag.
