@@ -8,8 +8,6 @@ static const char *psa_strerror(psa_status_t status)
     case PSA_ERROR_BUFFER_TOO_SMALL: return "PSA_ERROR_BUFFER_TOO_SMALL";
     case PSA_ERROR_COMMUNICATION_FAILURE: return "PSA_ERROR_COMMUNICATION_FAILURE";
     case PSA_ERROR_CORRUPTION_DETECTED: return "PSA_ERROR_CORRUPTION_DETECTED";
-    case PSA_ERROR_DATA_CORRUPT: return "PSA_ERROR_DATA_CORRUPT";
-    case PSA_ERROR_DATA_INVALID: return "PSA_ERROR_DATA_INVALID";
     case PSA_ERROR_DOES_NOT_EXIST: return "PSA_ERROR_DOES_NOT_EXIST";
     case PSA_ERROR_GENERIC_ERROR: return "PSA_ERROR_GENERIC_ERROR";
     case PSA_ERROR_HARDWARE_FAILURE: return "PSA_ERROR_HARDWARE_FAILURE";
@@ -156,13 +154,13 @@ static int psa_snprint_algorithm(char *buffer, size_t buffer_size,
             length_modifier = PSA_MAC_TRUNCATED_LENGTH(alg);
         }
     } else if (PSA_ALG_IS_AEAD(alg)) {
-        core_alg = PSA_ALG_AEAD_WITH_DEFAULT_LENGTH_TAG(alg);
+        core_alg = PSA_ALG_AEAD_WITH_DEFAULT_TAG_LENGTH(alg);
         if (core_alg == 0) {
             /* For unknown AEAD algorithms, there is no "default tag length". */
             core_alg = alg;
         } else if (core_alg != alg) {
             append(&buffer, buffer_size, &required_size,
-                   "PSA_ALG_AEAD_WITH_SHORTENED_TAG(", 32);
+                   "PSA_ALG_AEAD_WITH_TAG_LENGTH(", 29);
             length_modifier = PSA_AEAD_TAG_LENGTH(alg);
         }
     } else if (PSA_ALG_IS_KEY_AGREEMENT(alg) &&
