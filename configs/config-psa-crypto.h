@@ -1079,8 +1079,8 @@
 /**
  * \def MBEDTLS_NO_DEFAULT_ENTROPY_SOURCES
  *
- * Do not add default entropy sources. These are the platform specific,
- * mbedtls_timing_hardclock and HAVEGE based poll functions.
+ * Do not add default entropy sources. These are the platform specific
+ * or mbedtls_timing_hardclock poll function.
  *
  * This is useful to have more control over the added entropy sources in an
  * application.
@@ -1383,7 +1383,7 @@
 /**
  * \def MBEDTLS_SSL_CBC_RECORD_SPLITTING
  *
- * Enable 1/n-1 record splitting for CBC mode in SSLv3 and TLS 1.0.
+ * Enable 1/n-1 record splitting for CBC mode in TLS 1.0.
  *
  * This is a countermeasure to the BEAST attack, which also minimizes the risk
  * of interoperability issues compared to sending 0-length records.
@@ -1415,16 +1415,6 @@
 #define MBEDTLS_SSL_RENEGOTIATION
 
 /**
- * \def MBEDTLS_SSL_SRV_SUPPORT_SSLV2_CLIENT_HELLO
- *
- * Enable support for receiving and parsing SSLv2 Client Hello messages for the
- * SSL Server module (MBEDTLS_SSL_SRV_C).
- *
- * Uncomment this macro to enable support for SSLv2 Client Hello messages.
- */
-//#define MBEDTLS_SSL_SRV_SUPPORT_SSLV2_CLIENT_HELLO
-
-/**
  * \def MBEDTLS_SSL_SRV_RESPECT_CLIENT_PREFERENCE
  *
  * Pick the ciphersuite according to the client's preferences rather than ours
@@ -1442,18 +1432,6 @@
  * Comment this macro to disable support for the max_fragment_length extension
  */
 #define MBEDTLS_SSL_MAX_FRAGMENT_LENGTH
-
-/**
- * \def MBEDTLS_SSL_PROTO_SSL3
- *
- * Enable support for SSL 3.0.
- *
- * Requires: MBEDTLS_MD5_C
- *           MBEDTLS_SHA1_C
- *
- * Comment this macro to disable support for SSL 3.0
- */
-//#define MBEDTLS_SSL_PROTO_SSL3
 
 /**
  * \def MBEDTLS_SSL_PROTO_TLS1
@@ -2334,29 +2312,6 @@
 #define MBEDTLS_GCM_C
 
 /**
- * \def MBEDTLS_HAVEGE_C
- *
- * Enable the HAVEGE random generator.
- *
- * Warning: the HAVEGE random generator is not suitable for virtualized
- *          environments
- *
- * Warning: the HAVEGE random generator is dependent on timing and specific
- *          processor traits. It is therefore not advised to use HAVEGE as
- *          your applications primary random generator or primary entropy pool
- *          input. As a secondary input to your entropy pool, it IS able add
- *          the (limited) extra entropy it provides.
- *
- * Module:  library/havege.c
- * Caller:
- *
- * Requires: MBEDTLS_TIMING_C
- *
- * Uncomment to enable the HAVEGE random generator.
- */
-//#define MBEDTLS_HAVEGE_C
-
-/**
  * \def MBEDTLS_HKDF_C
  *
  * Enable the HKDF algorithm (RFC 5869).
@@ -2929,9 +2884,6 @@
  * https://tls.mbed.org/kb/how-to/how-do-i-port-mbed-tls-to-a-new-environment-OS
  *
  * Module:  library/timing.c
- * Caller:  library/havege.c
- *
- * This module is used by the HAVEGE random number generator.
  */
 #define MBEDTLS_TIMING_C
 
