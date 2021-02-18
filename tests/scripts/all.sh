@@ -254,7 +254,7 @@ Tool path options:
      --gnutls-legacy-cli=<GnuTLS_cli_path>      GnuTLS client executable to use for legacy tests.
      --gnutls-legacy-serv=<GnuTLS_serv_path>    GnuTLS server executable to use for legacy tests.
      --openssl=<OpenSSL_path>                   OpenSSL executable to use for most tests.
-     --openssl-legacy=<OpenSSL_path>            OpenSSL executable to use for legacy tests e.g. SSLv3.
+     --openssl-legacy=<OpenSSL_path>            OpenSSL executable to use for legacy tests..
      --openssl-next=<OpenSSL_path>              OpenSSL executable to use for recent things like ARIA
 EOF
 }
@@ -798,17 +798,6 @@ component_test_psa_crypto_key_id_encodes_owner () {
     make test
 }
 
-component_test_psa_crypto_client () {
-    msg "build: default config - PSA_CRYPTO_C + PSA_CRYPTO_CLIENT, make"
-    scripts/config.py unset MBEDTLS_PSA_CRYPTO_C
-    scripts/config.py unset MBEDTLS_PSA_CRYPTO_STORAGE_C
-    scripts/config.py set MBEDTLS_PSA_CRYPTO_CLIENT
-    make
-
-    msg "test: default config - PSA_CRYPTO_C + PSA_CRYPTO_CLIENT, make"
-    make test
-}
-
 component_test_zlib_make() {
     msg "build: zlib enabled, make"
     scripts/config.py set MBEDTLS_ZLIB_SUPPORT
@@ -852,26 +841,6 @@ component_test_ref_configs () {
     msg "test/build: ref-configs (ASan build)" # ~ 6 min 20s
     CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
     record_status tests/scripts/test-ref-configs.pl
-}
-
-component_test_sslv3 () {
-    msg "build: Default + SSLv3 (ASan build)" # ~ 6 min
-    scripts/config.py set MBEDTLS_SSL_PROTO_SSL3
-    CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
-    make
-
-    msg "test: SSLv3 - main suites (inc. selftests) (ASan build)" # ~ 50s
-    make test
-
-    msg "build: SSLv3 - compat.sh (ASan build)" # ~ 6 min
-    if_build_succeeded tests/compat.sh -m 'tls1 tls1_1 tls1_2 dtls1 dtls1_2'
-    if_build_succeeded env OPENSSL_CMD="$OPENSSL_LEGACY" tests/compat.sh -m 'ssl3'
-
-    msg "build: SSLv3 - ssl-opt.sh (ASan build)" # ~ 6 min
-    if_build_succeeded tests/ssl-opt.sh
-
-    msg "build: SSLv3 - context-info.sh (ASan build)" # ~ 15 sec
-    if_build_succeeded tests/context-info.sh
 }
 
 component_test_no_renegotiation () {
@@ -922,146 +891,50 @@ component_test_rsa_no_crt () {
     if_build_succeeded tests/context-info.sh
 }
 
-component_test_no_ctr_drbg_classic () {
-    msg "build: Full minus CTR_DRBG, classic crypto in TLS"
+component_test_no_ctr_drbg () {
+    msg "build: Full minus CTR_DRBG"
     scripts/config.py full
     scripts/config.py unset MBEDTLS_CTR_DRBG_C
-    scripts/config.py unset MBEDTLS_USE_PSA_CRYPTO
 
     CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
     make
 
-    msg "test: Full minus CTR_DRBG, classic crypto - main suites"
+    msg "test: no CTR_DRBG"
     make test
 
-    # In this configuration, the TLS test programs use HMAC_DRBG.
-    # The SSL tests are slow, so run a small subset, just enough to get
-    # confidence that the SSL code copes with HMAC_DRBG.
-    msg "test: Full minus CTR_DRBG, classic crypto - ssl-opt.sh (subset)"
-    if_build_succeeded tests/ssl-opt.sh -f 'Default\|SSL async private.*delay=\|tickets enabled on server'
-
-    msg "test: Full minus CTR_DRBG, classic crypto - compat.sh (subset)"
-    if_build_succeeded tests/compat.sh -m tls1_2 -t 'ECDSA PSK' -V NO -p OpenSSL
+    # no ssl-opt.sh/compat.sh as they all depend on CTR_DRBG so far
 }
 
-component_test_no_ctr_drbg_use_psa () {
-    msg "build: Full minus CTR_DRBG, PSA crypto in TLS"
-    scripts/config.py full
-    scripts/config.py unset MBEDTLS_CTR_DRBG_C
-    scripts/config.py set MBEDTLS_USE_PSA_CRYPTO
-
-    CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
-    make
-
-    msg "test: Full minus CTR_DRBG, USE_PSA_CRYPTO - main suites"
-    make test
-
-    # In this configuration, the TLS test programs use HMAC_DRBG.
-    # The SSL tests are slow, so run a small subset, just enough to get
-    # confidence that the SSL code copes with HMAC_DRBG.
-    msg "test: Full minus CTR_DRBG, USE_PSA_CRYPTO - ssl-opt.sh (subset)"
-    if_build_succeeded tests/ssl-opt.sh -f 'Default\|SSL async private.*delay=\|tickets enabled on server'
-
-    msg "test: Full minus CTR_DRBG, USE_PSA_CRYPTO - compat.sh (subset)"
-    if_build_succeeded tests/compat.sh -m tls1_2 -t 'ECDSA PSK' -V NO -p OpenSSL
-}
-
-component_test_no_hmac_drbg_classic () {
-    msg "build: Full minus HMAC_DRBG, classic crypto in TLS"
+component_test_no_hmac_drbg () {
+    msg "build: Full minus HMAC_DRBG"
     scripts/config.py full
     scripts/config.py unset MBEDTLS_HMAC_DRBG_C
     scripts/config.py unset MBEDTLS_ECDSA_DETERMINISTIC # requires HMAC_DRBG
-    scripts/config.py unset MBEDTLS_USE_PSA_CRYPTO
 
     CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
     make
 
-    msg "test: Full minus HMAC_DRBG, classic crypto - main suites"
+    msg "test: no HMAC_DRBG"
     make test
 
-    # Normally our ECDSA implementation uses deterministic ECDSA. But since
-    # HMAC_DRBG is disabled in this configuration, randomized ECDSA is used
-    # instead.
-    # Test SSL with non-deterministic ECDSA. Only test features that
-    # might be affected by how ECDSA signature is performed.
-    msg "test: Full minus HMAC_DRBG, classic crypto - ssl-opt.sh (subset)"
-    if_build_succeeded tests/ssl-opt.sh -f 'Default\|SSL async private: sign'
-
-    # To save time, only test one protocol version, since this part of
-    # the protocol is identical in (D)TLS up to 1.2.
-    msg "test: Full minus HMAC_DRBG, classic crypto - compat.sh (ECDSA)"
-    if_build_succeeded tests/compat.sh -m tls1_2 -t 'ECDSA'
+    # No ssl-opt.sh/compat.sh as they never use HMAC_DRBG so far,
+    # so there's little value in running those lengthy tests here.
 }
 
-component_test_no_hmac_drbg_use_psa () {
-    msg "build: Full minus HMAC_DRBG, PSA crypto in TLS"
-    scripts/config.py full
-    scripts/config.py unset MBEDTLS_HMAC_DRBG_C
-    scripts/config.py unset MBEDTLS_ECDSA_DETERMINISTIC # requires HMAC_DRBG
-    scripts/config.py set MBEDTLS_USE_PSA_CRYPTO
-
-    CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
-    make
-
-    msg "test: Full minus HMAC_DRBG, USE_PSA_CRYPTO - main suites"
-    make test
-
-    # Normally our ECDSA implementation uses deterministic ECDSA. But since
-    # HMAC_DRBG is disabled in this configuration, randomized ECDSA is used
-    # instead.
-    # Test SSL with non-deterministic ECDSA. Only test features that
-    # might be affected by how ECDSA signature is performed.
-    msg "test: Full minus HMAC_DRBG, USE_PSA_CRYPTO - ssl-opt.sh (subset)"
-    if_build_succeeded tests/ssl-opt.sh -f 'Default\|SSL async private: sign'
-
-    # To save time, only test one protocol version, since this part of
-    # the protocol is identical in (D)TLS up to 1.2.
-    msg "test: Full minus HMAC_DRBG, USE_PSA_CRYPTO - compat.sh (ECDSA)"
-    if_build_succeeded tests/compat.sh -m tls1_2 -t 'ECDSA'
-}
-
-component_test_psa_external_rng_no_drbg_classic () {
-    msg "build: PSA_CRYPTO_EXTERNAL_RNG minus *_DRBG, classic crypto in TLS"
-    scripts/config.py full
-    scripts/config.py unset MBEDTLS_USE_PSA_CRYPTO
-    scripts/config.py set MBEDTLS_PSA_CRYPTO_EXTERNAL_RNG
-    scripts/config.py unset MBEDTLS_ENTROPY_C
-    scripts/config.py unset MBEDTLS_ENTROPY_NV_SEED
-    scripts/config.py unset MBEDTLS_PLATFORM_NV_SEED_ALT
-    scripts/config.py unset MBEDTLS_CTR_DRBG_C
-    scripts/config.py unset MBEDTLS_HMAC_DRBG_C
-    scripts/config.py unset MBEDTLS_ECDSA_DETERMINISTIC # requires HMAC_DRBG
-    scripts/config.py set MBEDTLS_ECP_NO_INTERNAL_RNG
-    # When MBEDTLS_USE_PSA_CRYPTO is disabled and there is no DRBG,
-    # the SSL test programs don't have an RNG and can't work. Explicitly
-    # make them use the PSA RNG with -DMBEDTLS_TEST_USE_PSA_CRYPTO_RNG.
-    make CFLAGS="$ASAN_CFLAGS -O2 -DMBEDTLS_TEST_USE_PSA_CRYPTO_RNG" LDFLAGS="$ASAN_CFLAGS"
-
-    msg "test: PSA_CRYPTO_EXTERNAL_RNG minus *_DRBG, classic crypto - main suites"
-    make test
-
-    msg "test: PSA_CRYPTO_EXTERNAL_RNG minus *_DRBG, classic crypto - ssl-opt.sh (subset)"
-    if_build_succeeded tests/ssl-opt.sh -f 'Default'
-}
-
-component_test_psa_external_rng_no_drbg_use_psa () {
-    msg "build: PSA_CRYPTO_EXTERNAL_RNG minus *_DRBG, PSA crypto in TLS"
+component_test_psa_external_rng_no_drbg () {
+    msg "build: PSA_CRYPTO_EXTERNAL_RNG minus *_DRBG"
     scripts/config.py full
     scripts/config.py set MBEDTLS_PSA_CRYPTO_EXTERNAL_RNG
-    scripts/config.py unset MBEDTLS_ENTROPY_C
-    scripts/config.py unset MBEDTLS_ENTROPY_NV_SEED
-    scripts/config.py unset MBEDTLS_PLATFORM_NV_SEED_ALT
     scripts/config.py unset MBEDTLS_CTR_DRBG_C
     scripts/config.py unset MBEDTLS_HMAC_DRBG_C
     scripts/config.py unset MBEDTLS_ECDSA_DETERMINISTIC # requires HMAC_DRBG
     scripts/config.py set MBEDTLS_ECP_NO_INTERNAL_RNG
     make CFLAGS="$ASAN_CFLAGS -O2" LDFLAGS="$ASAN_CFLAGS"
 
-    msg "test: PSA_CRYPTO_EXTERNAL_RNG minus *_DRBG, PSA crypto - main suites"
+    msg "test: PSA_CRYPTO_EXTERNAL_RNG minus *_DRBG"
     make test
 
-    msg "test: PSA_CRYPTO_EXTERNAL_RNG minus *_DRBG, PSA crypto - ssl-opt.sh (subset)"
-    if_build_succeeded tests/ssl-opt.sh -f 'Default\|opaque'
+    # No ssl-opt.sh/compat.sh because they require CTR_DRBG.
 }
 
 component_test_psa_external_rng_use_psa_crypto () {
@@ -1075,8 +948,7 @@ component_test_psa_external_rng_use_psa_crypto () {
     msg "test: full + PSA_CRYPTO_EXTERNAL_RNG + USE_PSA_CRYPTO minus CTR_DRBG"
     make test
 
-    msg "test: full + PSA_CRYPTO_EXTERNAL_RNG + USE_PSA_CRYPTO minus CTR_DRBG"
-    if_build_succeeded tests/ssl-opt.sh -f 'Default\|opaque'
+    # No ssl-opt.sh/compat.sh because they require CTR_DRBG.
 }
 
 component_test_ecp_no_internal_rng () {
@@ -1450,7 +1322,7 @@ component_test_psa_crypto_config_basic() {
     scripts/config.py set MBEDTLS_PSA_CRYPTO_DRIVERS
     scripts/config.py unset MBEDTLS_USE_PSA_CRYPTO
     # Need to define the correct symbol and include the test driver header path in order to build with the test driver
-    make CC=gcc CFLAGS="$ASAN_CFLAGS -DPSA_CRYPTO_DRIVER_TEST -DMBEDTLS_PSA_ACCEL_KEY_TYPE_ECC_KEY_PAIR -DMBEDTLS_PSA_ACCEL_KEY_TYPE_RSA_KEY_PAIR -I../tests/include -O2" LDFLAGS="$ASAN_CFLAGS"
+    make CC=gcc CFLAGS="$ASAN_CFLAGS -DPSA_CRYPTO_DRIVER_TEST -I../tests/include -O2" LDFLAGS="$ASAN_CFLAGS"
 
     msg "test: full + MBEDTLS_PSA_CRYPTO_CONFIG"
     make test
@@ -2088,7 +1960,6 @@ component_test_null_entropy () {
     scripts/config.py unset MBEDTLS_ENTROPY_NV_SEED
     scripts/config.py unset MBEDTLS_PLATFORM_NV_SEED_ALT
     scripts/config.py unset MBEDTLS_ENTROPY_HARDWARE_ALT
-    scripts/config.py unset MBEDTLS_HAVEGE_C
     CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan -D UNSAFE_BUILD=ON .
     make
 
@@ -2218,7 +2089,7 @@ component_test_psa_crypto_drivers () {
     msg "build: MBEDTLS_PSA_CRYPTO_DRIVERS w/ driver hooks"
     scripts/config.py set MBEDTLS_PSA_CRYPTO_DRIVERS
     # Need to define the correct symbol and include the test driver header path in order to build with the test driver
-    make CC=gcc CFLAGS="$ASAN_CFLAGS -DPSA_CRYPTO_DRIVER_TEST -DMBEDTLS_PSA_ACCEL_KEY_TYPE_RSA_KEY_PAIR -DMBEDTLS_PSA_ACCEL_KEY_TYPE_ECC_KEY_PAIR -I../tests/include -O2" LDFLAGS="$ASAN_CFLAGS"
+    make CC=gcc CFLAGS="$ASAN_CFLAGS -DPSA_CRYPTO_DRIVER_TEST -I../tests/include -O2" LDFLAGS="$ASAN_CFLAGS"
 
     msg "test: MBEDTLS_PSA_CRYPTO_DRIVERS, signature"
     make test
