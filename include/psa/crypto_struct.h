@@ -68,9 +68,14 @@ extern "C" {
 #include "mbedtls/cipher.h"
 #include "mbedtls/cmac.h"
 #include "mbedtls/gcm.h"
-
-/* Include the context definition for the compiled-in drivers */
-#include "../../library/psa_crypto_driver_wrappers_contexts.h"
+#include "mbedtls/md.h"
+#include "mbedtls/md2.h"
+#include "mbedtls/md4.h"
+#include "mbedtls/md5.h"
+#include "mbedtls/ripemd160.h"
+#include "mbedtls/sha1.h"
+#include "mbedtls/sha256.h"
+#include "mbedtls/sha512.h"
 
 typedef struct {
     /** Unique ID indicating which driver got assigned to do the
@@ -84,14 +89,32 @@ typedef struct {
 
 struct psa_hash_operation_s
 {
-    /** Unique ID indicating which driver got assigned to do the
-     * operation. Since driver contexts are driver-specific, swapping
-     * drivers halfway through the operation is not supported.
-     * ID values are auto-generated in psa_driver_wrappers.h
-     * ID value zero means the context is not valid or not assigned to
-     * any driver (i.e. none of the driver contexts are active). */
-    unsigned int id;
-    psa_driver_hash_context_t ctx;
+    psa_algorithm_t alg;
+    union
+    {
+        unsigned dummy; /* Make the union non-empty even with no supported algorithms. */
+#if defined(MBEDTLS_MD2_C)
+        mbedtls_md2_context md2;
+#endif
+#if defined(MBEDTLS_MD4_C)
+        mbedtls_md4_context md4;
+#endif
+#if defined(MBEDTLS_MD5_C)
+        mbedtls_md5_context md5;
+#endif
+#if defined(MBEDTLS_RIPEMD160_C)
+        mbedtls_ripemd160_context ripemd160;
+#endif
+#if defined(MBEDTLS_SHA1_C)
+        mbedtls_sha1_context sha1;
+#endif
+#if defined(MBEDTLS_SHA256_C)
+        mbedtls_sha256_context sha256;
+#endif
+#if defined(MBEDTLS_SHA512_C)
+        mbedtls_sha512_context sha512;
+#endif
+    } ctx;
 };
 
 #define PSA_HASH_OPERATION_INIT {0, {0}}
@@ -104,8 +127,6 @@ static inline struct psa_hash_operation_s psa_hash_operation_init( void )
 #if defined(MBEDTLS_MD_C)
 typedef struct
 {
-        /** The HMAC algorithm in use */
-        psa_algorithm_t alg;
         /** The hash context. */
         struct psa_hash_operation_s hash_ctx;
         /** The HMAC part of the context. */
@@ -207,11 +228,11 @@ typedef struct
 #if defined(MBEDTLS_MD_C)
 typedef enum
 {
-    PSA_TLS12_PRF_STATE_INIT,       /* no input provided */
-    PSA_TLS12_PRF_STATE_SEED_SET,   /* seed has been set */
-    PSA_TLS12_PRF_STATE_KEY_SET,    /* key has been set */
-    PSA_TLS12_PRF_STATE_LABEL_SET,  /* label has been set */
-    PSA_TLS12_PRF_STATE_OUTPUT      /* output has been started */
+    TLS12_PRF_STATE_INIT,       /* no input provided */
+    TLS12_PRF_STATE_SEED_SET,   /* seed has been set */
+    TLS12_PRF_STATE_KEY_SET,    /* key has been set */
+    TLS12_PRF_STATE_LABEL_SET,  /* label has been set */
+    TLS12_PRF_STATE_OUTPUT      /* output has been started */
 } psa_tls12_prf_key_derivation_state_t;
 
 typedef struct psa_tls12_prf_key_derivation_s
