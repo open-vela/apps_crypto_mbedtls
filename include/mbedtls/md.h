@@ -79,15 +79,8 @@ typedef enum {
 #endif
 
 /**
- * Opaque struct.
- *
- * Constructed using either #mbedtls_md_info_from_string or
- * #mbedtls_md_info_from_type.
- *
- * Fields can be accessed with #mbedtls_md_get_size,
- * #mbedtls_md_get_type and #mbedtls_md_get_name.
+ * Opaque struct defined in md_internal.h.
  */
-/* Defined internally in library/md_wrap.h. */
 typedef struct mbedtls_md_info_t mbedtls_md_info_t;
 
 /**
