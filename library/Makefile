@@ -2,7 +2,7 @@
 # Also see "include/mbedtls/config.h"
 
 CFLAGS	?= -O2
-WARNING_CFLAGS ?=  -Wall -Wextra -Wformat=2 -Wno-format-nonliteral
+WARNING_CFLAGS ?=  -Wall -Wextra
 LDFLAGS ?=
 
 # Include ../include for public headers and . for private headers.
