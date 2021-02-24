@@ -1,7 +1,7 @@
 #include "mbedtls/ssl.h"
 #include "mbedtls/entropy.h"
 #include "mbedtls/ctr_drbg.h"
-#include "test/certs.h"
+#include "mbedtls/certs.h"
 #include "common.h"
 #include <string.h>
 #include <stdlib.h>

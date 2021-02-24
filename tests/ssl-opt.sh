@@ -634,6 +634,21 @@ detect_dtls() {
     fi
 }
 
+# check if the given command uses gnutls and sets global variable CMD_IS_GNUTLS
+is_gnutls() {
+    case "$1" in
+    *gnutls-cli*)
+        CMD_IS_GNUTLS=1
+        ;;
+    *gnutls-serv*)
+        CMD_IS_GNUTLS=1
+        ;;
+    *)
+        CMD_IS_GNUTLS=0
+        ;;
+    esac
+}
+
 # Compare file content
 # Usage: find_in_both pattern file1 file2
 # extract from file1 the first line matching the pattern
@@ -726,6 +741,30 @@ run_test() {
         esac
     fi
 
+    # update CMD_IS_GNUTLS variable
+    is_gnutls "$SRV_CMD"
+
+    # if the server uses gnutls but doesn't set priority, explicitly
+    # set the default priority
+    if [ "$CMD_IS_GNUTLS" -eq 1 ]; then
+        case "$SRV_CMD" in
+              *--priority*) :;;
+              *) SRV_CMD="$SRV_CMD --priority=NORMAL";;
+        esac
+    fi
+
+    # update CMD_IS_GNUTLS variable
+    is_gnutls "$CLI_CMD"
+
+    # if the client uses gnutls but doesn't set priority, explicitly
+    # set the default priority
+    if [ "$CMD_IS_GNUTLS" -eq 1 ]; then
+        case "$CLI_CMD" in
+              *--priority*) :;;
+              *) CLI_CMD="$CLI_CMD --priority=NORMAL";;
+        esac
+    fi
+
     # fix client port
     if [ -n "$PXY_CMD" ]; then
         CLI_CMD=$( echo "$CLI_CMD" | sed s/+SRV_PORT/$PXY_PORT/g )
@@ -770,6 +809,7 @@ run_test() {
         # terminate the server (and the proxy)
         kill $SRV_PID
         wait $SRV_PID
+        SRV_RET=$?
 
         if [ -n "$PXY_CMD" ]; then
             kill $PXY_PID >/dev/null 2>&1
@@ -803,9 +843,11 @@ run_test() {
         fi
     fi
 
-    # check server exit code
-    if [ $? != 0 ]; then
-        fail "server fail"
+    # Check server exit code (only for Mbed TLS: GnuTLS and OpenSSL don't
+    # exit with status 0 when interrupted by a signal, and we don't really
+    # care anyway), in case e.g. the server reports a memory leak.
+    if [ $SRV_RET != 0 ] && is_polar "$SRV_CMD"; then
+        fail "Server exited with status $SRV_RET"
         return
     fi
 
@@ -1264,8 +1306,13 @@ requires_config_enabled MBEDTLS_ECP_DP_BP256R1_ENABLED
 run_test_psa_force_curve "brainpoolP256r1"
 requires_config_enabled MBEDTLS_ECP_DP_SECP224R1_ENABLED
 run_test_psa_force_curve "secp224r1"
-requires_config_enabled MBEDTLS_ECP_DP_SECP224K1_ENABLED
-run_test_psa_force_curve "secp224k1"
+## SECP224K1 is buggy via the PSA API
+## (https://github.com/ARMmbed/mbedtls/issues/3541),
+## so it is disabled in PSA even when it's enabled in Mbed TLS.
+## The proper dependency would be on PSA_WANT_ECC_SECP_K1_224 but
+## dependencies on PSA symbols in ssl-opt.sh are not implemented yet.
+#requires_config_enabled MBEDTLS_ECP_DP_SECP224K1_ENABLED
+#run_test_psa_force_curve "secp224k1"
 requires_config_enabled MBEDTLS_ECP_DP_SECP192R1_ENABLED
 run_test_psa_force_curve "secp192r1"
 requires_config_enabled MBEDTLS_ECP_DP_SECP192K1_ENABLED
