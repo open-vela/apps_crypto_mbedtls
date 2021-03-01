@@ -1,5 +1,5 @@
 /**
- * \file md.c
+ * \file mbedtls_md.c
  *
  * \brief Generic message digest wrapper for mbed TLS
  *
