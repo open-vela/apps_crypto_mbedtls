@@ -1401,12 +1401,6 @@ int mbedtls_mpi_sub_abs( mbedtls_mpi *X, const mbedtls_mpi *A, const mbedtls_mpi
     for( n = B->n; n > 0; n-- )
         if( B->p[n - 1] != 0 )
             break;
-    if( n > A->n )
-    {
-        /* B >= (2^ciL)^n > A */
-        ret = MBEDTLS_ERR_MPI_NEGATIVE_VALUE;
-        goto cleanup;
-    }
 
     carry = mpi_sub_hlp( n, X->p, B->p );
     if( carry != 0 )
@@ -1417,10 +1411,7 @@ int mbedtls_mpi_sub_abs( mbedtls_mpi *X, const mbedtls_mpi *A, const mbedtls_mpi
         /* If we ran out of space for the carry, it means that the result
          * is negative. */
         if( n == X->n )
-        {
-            ret = MBEDTLS_ERR_MPI_NEGATIVE_VALUE;
-            goto cleanup;
-        }
+            return( MBEDTLS_ERR_MPI_NEGATIVE_VALUE );
         --X->p[n];
     }
 
