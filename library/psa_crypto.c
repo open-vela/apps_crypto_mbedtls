@@ -674,6 +674,69 @@ static psa_algorithm_t psa_key_policy_algorithm_intersection(
         if( PSA_ALG_SIGN_GET_HASH( alg2 ) == PSA_ALG_ANY_HASH )
             return( alg1 );
     }
+    /* If the policies are from the same AEAD family, check whether
+     * one of them is a minimum-tag-length wildcard. Calculate the most
+     * restrictive tag length. */
+    if( PSA_ALG_IS_AEAD( alg1 ) && PSA_ALG_IS_AEAD( alg2 ) &&
+        ( PSA_ALG_AEAD_WITH_SHORTENED_TAG( alg1, 0 ) ==
+          PSA_ALG_AEAD_WITH_SHORTENED_TAG( alg2, 0 ) ) )
+    {
+        size_t alg1_len = PSA_ALG_AEAD_GET_TAG_LENGTH( alg1 );
+        size_t alg2_len = PSA_ALG_AEAD_GET_TAG_LENGTH( alg2 );
+        size_t max_len = alg1_len > alg2_len ? alg1_len : alg2_len;
+
+        /* If both are wildcards, return most restrictive wildcard */
+        if( ( ( alg1 & PSA_ALG_AEAD_AT_LEAST_THIS_LENGTH_FLAG ) != 0 ) &&
+            ( ( alg2 & PSA_ALG_AEAD_AT_LEAST_THIS_LENGTH_FLAG ) != 0 ) )
+        {
+            return( PSA_ALG_AEAD_WITH_AT_LEAST_THIS_LENGTH_TAG( alg1, max_len ) );
+        }
+        /* If only one is a wildcard, return specific algorithm if compatible. */
+        if( ( ( alg1 & PSA_ALG_AEAD_AT_LEAST_THIS_LENGTH_FLAG ) != 0 ) &&
+            ( alg1_len <= alg2_len ) )
+        {
+            return( alg2 );
+        }
+        if( ( ( alg2 & PSA_ALG_AEAD_AT_LEAST_THIS_LENGTH_FLAG ) != 0 ) &&
+            ( alg2_len <= alg1_len ) )
+        {
+            return( alg1 );
+        }
+    }
+    /* If the policies are from the same MAC family, check whether one
+     * of them is a minimum-MAC-length policy. Calculate the most
+     * restrictive tag length. */
+    if( PSA_ALG_IS_MAC( alg1 ) && PSA_ALG_IS_MAC( alg2 ) &&
+        ( PSA_ALG_FULL_LENGTH_MAC( alg1 ) ==
+          PSA_ALG_FULL_LENGTH_MAC( alg2 ) ) )
+    {
+        size_t alg1_len = PSA_MAC_TRUNCATED_LENGTH( alg1 );
+        size_t alg2_len = PSA_MAC_TRUNCATED_LENGTH( alg2 );
+        size_t max_len = alg1_len > alg2_len ? alg1_len : alg2_len;
+
+        /* If both are wildcards, return most restrictive wildcard */
+        if( ( ( alg1 & PSA_ALG_MAC_AT_LEAST_THIS_LENGTH_FLAG ) != 0 ) &&
+            ( ( alg2 & PSA_ALG_MAC_AT_LEAST_THIS_LENGTH_FLAG ) != 0 ) )
+        {
+            return( PSA_ALG_AT_LEAST_THIS_LENGTH_MAC( alg1, max_len ) );
+        }
+        /* If only one is a wildcard, return specific algorithm if compatible.
+         * Special case: specific MAC algorithm with '0' as length means full-
+         * length MAC, which is always allowed by a wildcard with the same
+         * base algorithm. */
+        if( ( ( alg1 & PSA_ALG_MAC_AT_LEAST_THIS_LENGTH_FLAG ) != 0 ) &&
+            ( ( alg1_len <= alg2_len ) ||
+              ( alg2 == PSA_ALG_FULL_LENGTH_MAC( alg1 ) ) ) )
+        {
+            return( alg2 );
+        }
+        if( ( ( alg2 & PSA_ALG_MAC_AT_LEAST_THIS_LENGTH_FLAG ) != 0 ) &&
+            ( ( alg2_len <= alg1_len ) ||
+              ( alg1 == PSA_ALG_FULL_LENGTH_MAC( alg2 ) ) ) )
+        {
+            return( alg1 );
+        }
+    }
     /* If the policies are incompatible, allow nothing. */
     return( 0 );
 }
@@ -693,6 +756,35 @@ static int psa_key_algorithm_permits( psa_algorithm_t policy_alg,
         return( ( policy_alg & ~PSA_ALG_HASH_MASK ) ==
                 ( requested_alg & ~PSA_ALG_HASH_MASK ) );
     }
+    /* If policy_alg is a wildcard AEAD algorithm of the same base as
+     * the requested algorithm, check the requested tag length to be
+     * equal-length or longer than the wildcard-specified length. */
+    if( PSA_ALG_IS_AEAD( policy_alg ) &&
+        PSA_ALG_IS_AEAD( requested_alg ) &&
+        ( PSA_ALG_AEAD_WITH_SHORTENED_TAG( policy_alg, 0 ) ==
+          PSA_ALG_AEAD_WITH_SHORTENED_TAG( requested_alg, 0 ) ) &&
+        ( ( policy_alg & PSA_ALG_AEAD_AT_LEAST_THIS_LENGTH_FLAG ) != 0 ) )
+    {
+        return( PSA_ALG_AEAD_GET_TAG_LENGTH( policy_alg ) <=
+                PSA_ALG_AEAD_GET_TAG_LENGTH( requested_alg ) );
+    }
+    /* If policy_alg is a wildcard MAC algorithm of the same base as
+     * the requested algorithm, check the requested tag length to be
+     * equal-length or longer than the wildcard-specified length. */
+    if( PSA_ALG_IS_MAC( policy_alg ) &&
+        PSA_ALG_IS_MAC( requested_alg ) &&
+        ( PSA_ALG_FULL_LENGTH_MAC( policy_alg ) ==
+          PSA_ALG_FULL_LENGTH_MAC( requested_alg ) ) &&
+        ( ( policy_alg & PSA_ALG_MAC_AT_LEAST_THIS_LENGTH_FLAG ) != 0 ) )
+    {
+        /* Special case: full-length MAC is encoded with 0-length.
+         * A minimum-length policy will always allow a full-length MAC. */
+        if( PSA_ALG_FULL_LENGTH_MAC( requested_alg ) == requested_alg )
+            return( 1 );
+
+        return( PSA_MAC_TRUNCATED_LENGTH( policy_alg ) <=
+                PSA_MAC_TRUNCATED_LENGTH( requested_alg ) );
+    }
     /* If policy_alg is a generic key agreement operation, then using it for
      * a key derivation with that key agreement should also be allowed. This
      * behaviour is expected to be defined in a future specification version. */
@@ -702,19 +794,36 @@ static int psa_key_algorithm_permits( psa_algorithm_t policy_alg,
         return( PSA_ALG_KEY_AGREEMENT_GET_BASE( requested_alg ) ==
                 policy_alg );
     }
-    /* If it isn't permitted, it's forbidden. */
+    /* If it isn't explicitly permitted, it's forbidden. */
     return( 0 );
 }
 
 /** Test whether a policy permits an algorithm.
  *
  * The caller must test usage flags separately.
+ *
+ * \retval PSA_SUCCESS                  When \p alg is a specific algorithm
+ *                                      allowed by the \p policy.
+ * \retval PSA_ERROR_INVALID_ARGUMENT   When \p alg is not a specific algorithm
+ * \retval PSA_ERROR_NOT_PERMITTED      When \p alg is a specific algorithm, but
+ *                                      the \p policy does not allow it.
  */
-static int psa_key_policy_permits( const psa_key_policy_t *policy,
-                                   psa_algorithm_t alg )
+static psa_status_t psa_key_policy_permits( const psa_key_policy_t *policy,
+                                            psa_algorithm_t alg )
 {
-    return( psa_key_algorithm_permits( policy->alg, alg ) ||
-            psa_key_algorithm_permits( policy->alg2, alg ) );
+    /* '0' is not a valid algorithm */
+    if( alg == 0 )
+        return( PSA_ERROR_INVALID_ARGUMENT );
+
+    /* A requested algorithm cannot be a wildcard. */
+    if( PSA_ALG_IS_WILDCARD( alg ) )
+        return( PSA_ERROR_INVALID_ARGUMENT );
+
+    if( psa_key_algorithm_permits( policy->alg, alg ) ||
+        psa_key_algorithm_permits( policy->alg2, alg ) )
+        return( PSA_SUCCESS );
+    else
+        return( PSA_ERROR_NOT_PERMITTED );
 }
 
 /** Restrict a key policy based on a constraint.
@@ -751,7 +860,8 @@ static psa_status_t psa_restrict_key_policy(
  *  and lock it.
  *
  * The key must have allow all the usage flags set in \p usage. If \p alg is
- * nonzero, the key must allow operations with this algorithm.
+ * nonzero, the key must allow operations with this algorithm. If \p alg is
+ * zero, the algorithm is not checked.
  *
  * In case of a persistent key, the function loads the description of the key
  * into a key slot if not already done.
@@ -780,13 +890,19 @@ static psa_status_t psa_get_and_lock_key_slot_with_policy(
     if( PSA_KEY_TYPE_IS_PUBLIC_KEY( slot->attr.type ) )
         usage &= ~PSA_KEY_USAGE_EXPORT;
 
-    status = PSA_ERROR_NOT_PERMITTED;
     if( ( slot->attr.policy.usage & usage ) != usage )
+    {
+        status = PSA_ERROR_NOT_PERMITTED;
         goto error;
+    }
 
     /* Enforce that the usage policy permits the requested algortihm. */
-    if( alg != 0 && ! psa_key_policy_permits( &slot->attr.policy, alg ) )
-        goto error;
+    if( alg != 0 )
+    {
+        status = psa_key_policy_permits( &slot->attr.policy, alg );
+        if( status != PSA_SUCCESS )
+            goto error;
+    }
 
     return( PSA_SUCCESS );
 
@@ -2818,7 +2934,36 @@ static psa_status_t psa_mac_setup( psa_mac_operation_t *operation,
 
     if( truncated == 0 )
     {
-        /* The "normal" case: untruncated algorithm. Nothing to do. */
+        /* The "normal" case: untruncated algorithm. Re-validate the
+         * key policy with explicit MAC length set in the algorithm
+         * when the algorithm policy is at-least-this-length to catch
+         * a corner case due to the default MAC length being unknown
+         * at key loading time. */
+        if( PSA_ALG_IS_MAC( slot->attr.policy.alg ) &&
+            ( PSA_ALG_FULL_LENGTH_MAC( slot->attr.policy.alg ) ==
+                full_length_alg ) &&
+            ( slot->attr.policy.alg & PSA_ALG_MAC_AT_LEAST_THIS_LENGTH_FLAG ) )
+        {
+            /* validate policy length */
+            if( PSA_MAC_TRUNCATED_LENGTH( slot->attr.policy.alg ) >
+                    operation->mac_size )
+            {
+                status = PSA_ERROR_NOT_PERMITTED;
+            }
+        }
+
+        if( PSA_ALG_IS_MAC( slot->attr.policy.alg2 ) &&
+            ( PSA_ALG_FULL_LENGTH_MAC( slot->attr.policy.alg2 ) ==
+                full_length_alg ) &&
+            ( slot->attr.policy.alg2 & PSA_ALG_MAC_AT_LEAST_THIS_LENGTH_FLAG ) )
+        {
+            /* validate policy length */
+            if( PSA_MAC_TRUNCATED_LENGTH( slot->attr.policy.alg2 ) >
+                    operation->mac_size )
+            {
+                status = PSA_ERROR_NOT_PERMITTED;
+            }
+        }
     }
     else if( truncated < 4 )
     {
