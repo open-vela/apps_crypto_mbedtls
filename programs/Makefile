@@ -85,6 +85,7 @@ APPS = \
 	psa/psa_constant_names$(EXEXT) \
 	random/gen_entropy$(EXEXT) \
 	random/gen_random_ctr_drbg$(EXEXT) \
+	random/gen_random_havege$(EXEXT) \
 	ssl/dtls_client$(EXEXT) \
 	ssl/dtls_server$(EXEXT) \
 	ssl/mini_client$(EXEXT) \
@@ -245,6 +246,10 @@ psa/psa_constant_names$(EXEXT): psa/psa_constant_names.c $(DEP)
 random/gen_entropy$(EXEXT): random/gen_entropy.c $(DEP)
 	echo "  CC    random/gen_entropy.c"
 	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) random/gen_entropy.c $(LOCAL_LDFLAGS) $(LDFLAGS) -o $@
+
+random/gen_random_havege$(EXEXT): random/gen_random_havege.c $(DEP)
+	echo "  CC    random/gen_random_havege.c"
+	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) random/gen_random_havege.c $(LOCAL_LDFLAGS) $(LDFLAGS) -o $@
 
 random/gen_random_ctr_drbg$(EXEXT): random/gen_random_ctr_drbg.c $(DEP)
 	echo "  CC    random/gen_random_ctr_drbg.c"
