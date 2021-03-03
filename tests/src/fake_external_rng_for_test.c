@@ -1,4 +1,4 @@
-/** \file fake_external_rng_for_test.c
+/** \file psa_crypto_helpers.c
  *
  * \brief Helper functions to test PSA crypto functionality.
  */

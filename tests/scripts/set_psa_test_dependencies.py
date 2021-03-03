@@ -112,11 +112,9 @@ WITHOUT_SYSTEMATIC_DEPENDENCIES = frozenset([
     'PSA_ALG_ANY_HASH', # only meaningful in policies
     'PSA_ALG_KEY_AGREEMENT', # only a way to combine algorithms
     'PSA_ALG_TRUNCATED_MAC', # only a modifier
-    'PSA_KEY_TYPE_NONE', # not a real key type
-    'PSA_KEY_TYPE_DERIVE', # always supported, don't list it to reduce noise
-    'PSA_KEY_TYPE_RAW_DATA', # always supported, don't list it to reduce noise
-    'PSA_ALG_AT_LEAST_THIS_LENGTH_MAC', #only a modifier
-    'PSA_ALG_AEAD_WITH_AT_LEAST_THIS_LENGTH_TAG', #only a modifier
+    'PSA_KEY_TYPE_NONE', # always supported
+    'PSA_KEY_TYPE_DERIVE', # always supported
+    'PSA_KEY_TYPE_RAW_DATA', # always supported
 
     # Not implemented yet: cipher-related key types and algorithms.
     # Manually extracted from crypto_values.h.
