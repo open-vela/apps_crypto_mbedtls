@@ -120,15 +120,13 @@ mbedtls_entropy_source_state;
  */
 typedef struct mbedtls_entropy_context
 {
-    int accumulator_started; /* 0 after init.
-                              * 1 after the first update.
-                              * -1 after free. */
+    int accumulator_started;
 #if defined(MBEDTLS_ENTROPY_SHA512_ACCUMULATOR)
     mbedtls_sha512_context  accumulator;
 #else
     mbedtls_sha256_context  accumulator;
 #endif
-    int             source_count; /* Number of entries used in source. */
+    int             source_count;
     mbedtls_entropy_source_state    source[MBEDTLS_ENTROPY_MAX_SOURCES];
 #if defined(MBEDTLS_HAVEGE_C)
     mbedtls_havege_state    havege_data;
