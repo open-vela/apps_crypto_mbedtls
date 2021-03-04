@@ -105,13 +105,13 @@ static int psa_snprint_algorithm(char *buffer, size_t buffer_size,
             length_modifier = PSA_MAC_TRUNCATED_LENGTH(alg);
         }
     } else if (PSA_ALG_IS_AEAD(alg)) {
-        core_alg = PSA_ALG_AEAD_WITH_DEFAULT_TAG_LENGTH(alg);
+        core_alg = PSA_ALG_AEAD_WITH_DEFAULT_LENGTH_TAG(alg);
         if (core_alg == 0) {
             /* For unknown AEAD algorithms, there is no "default tag length". */
             core_alg = alg;
         } else if (core_alg != alg) {
             append(&buffer, buffer_size, &required_size,
-                   "PSA_ALG_AEAD_WITH_TAG_LENGTH(", 29);
+                   "PSA_ALG_AEAD_WITH_SHORTENED_TAG(", 32);
             length_modifier = PSA_AEAD_TAG_LENGTH(alg);
         }
     } else if (PSA_ALG_IS_KEY_AGREEMENT(alg) &&
@@ -273,10 +273,10 @@ class MacroCollector:
                 return
             self.algorithms.add(name)
             # Ad hoc detection of hash algorithms
-            if re.search(r'0x010000[0-9A-Fa-f]{2}', expansion):
+            if re.search(r'0x020000[0-9A-Fa-f]{2}', expansion):
                 self.hash_algorithms.add(name)
             # Ad hoc detection of key agreement algorithms
-            if re.search(r'0x30[0-9A-Fa-f]{2}0000', expansion):
+            if re.search(r'0x09[0-9A-Fa-f]{2}0000', expansion):
                 self.ka_algorithms.add(name)
         elif name.startswith('PSA_ALG_') and parameter == 'hash_alg':
             if name in ['PSA_ALG_DSA', 'PSA_ALG_ECDSA']:
