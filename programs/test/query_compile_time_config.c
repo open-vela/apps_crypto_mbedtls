@@ -40,7 +40,7 @@
     "Mbed TLS build and the macro expansion of that configuration will be\n" \
     "printed (if any). Otherwise, 1 will be returned.\n"
 
-#include "query_config.h"
+int query_config( const char *config );
 
 int main( int argc, char *argv[] )
 {
