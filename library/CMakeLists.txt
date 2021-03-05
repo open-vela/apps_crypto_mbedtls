@@ -39,7 +39,6 @@ set(src_crypto
     entropy_poll.c
     error.c
     gcm.c
-    havege.c
     hkdf.c
     hmac_drbg.c
     md.c
@@ -61,10 +60,7 @@ set(src_crypto
     platform_util.c
     poly1305.c
     psa_crypto.c
-    psa_crypto_client.c
     psa_crypto_driver_wrappers.c
-    psa_crypto_ecp.c
-    psa_crypto_rsa.c
     psa_crypto_se.c
     psa_crypto_slot_management.c
     psa_crypto_storage.c
