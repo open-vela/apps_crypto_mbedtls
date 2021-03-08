@@ -38,13 +38,16 @@
 
 /* Repeat above block for each JSON-declared driver during autogeneration */
 
-/* Auto-generated values depending on which drivers are registered. ID 0 is
- * reserved for unallocated operations. */
+/* Auto-generated values depending on which drivers are registered.
+ * ID 0 is reserved for unallocated operations.
+ * ID 1 is reserved for the Mbed TLS software driver. */
 #if defined(PSA_CRYPTO_DRIVER_TEST)
-#define PSA_CRYPTO_TRANSPARENT_TEST_DRIVER_ID (1)
-#define PSA_CRYPTO_OPAQUE_TEST_DRIVER_ID (2)
+#define PSA_CRYPTO_TRANSPARENT_TEST_DRIVER_ID (2)
+#define PSA_CRYPTO_OPAQUE_TEST_DRIVER_ID (3)
 #endif /* PSA_CRYPTO_DRIVER_TEST */
 #endif /* MBEDTLS_PSA_CRYPTO_DRIVERS */
+
+#define PSA_CRYPTO_MBED_TLS_DRIVER_ID (1)
 
 /* Support the 'old' SE interface when asked to */
 #if defined(MBEDTLS_PSA_CRYPTO_SE_C)
@@ -1064,6 +1067,173 @@ psa_status_t psa_driver_wrapper_cipher_abort(
 
     return( PSA_ERROR_NOT_SUPPORTED );
 #endif /* PSA_CRYPTO_DRIVER_PRESENT */
+}
+
+/*
+ * Hashing functions
+ */
+psa_status_t psa_driver_wrapper_hash_compute(
+    psa_algorithm_t alg,
+    const uint8_t *input,
+    size_t input_length,
+    uint8_t *hash,
+    size_t hash_size,
+    size_t *hash_length)
+{
+    psa_status_t status = PSA_ERROR_CORRUPTION_DETECTED;
+
+    /* Try accelerators first */
+#if defined(PSA_CRYPTO_DRIVER_TEST)
+    status = mbedtls_transparent_test_driver_hash_compute( alg, input, input_length,
+                                            hash, hash_size, hash_length );
+    if( status != PSA_ERROR_NOT_SUPPORTED )
+        return( status );
+#endif
+
+    /* If software fallback is compiled in, try fallback */
+#if defined(MBEDTLS_PSA_BUILTIN_HASH)
+    status = mbedtls_psa_hash_compute( alg, input, input_length,
+                                       hash, hash_size, hash_length );
+    if( status != PSA_ERROR_NOT_SUPPORTED )
+        return( status );
+#endif
+    (void) status;
+    (void) alg;
+    (void) input;
+    (void) input_length;
+    (void) hash;
+    (void) hash_size;
+    (void) hash_length;
+
+    return( PSA_ERROR_NOT_SUPPORTED );
+}
+
+psa_status_t psa_driver_wrapper_hash_setup(
+    psa_hash_operation_t *operation,
+    psa_algorithm_t alg )
+{
+    psa_status_t status = PSA_ERROR_CORRUPTION_DETECTED;
+
+    /* Try setup on accelerators first */
+#if defined(PSA_CRYPTO_DRIVER_TEST)
+    status = mbedtls_transparent_test_driver_hash_setup( &operation->ctx.test_ctx, alg );
+    if( status == PSA_SUCCESS )
+        operation->id = PSA_CRYPTO_TRANSPARENT_TEST_DRIVER_ID;
+
+    if( status != PSA_ERROR_NOT_SUPPORTED )
+        return( status );
+#endif
+
+    /* If software fallback is compiled in, try fallback */
+#if defined(MBEDTLS_PSA_BUILTIN_HASH)
+    status = mbedtls_psa_hash_setup( &operation->ctx.mbedtls_ctx, alg );
+    if( status == PSA_SUCCESS )
+        operation->id = PSA_CRYPTO_MBED_TLS_DRIVER_ID;
+
+    if( status != PSA_ERROR_NOT_SUPPORTED )
+        return( status );
+#endif
+    /* Nothing left to try if we fall through here */
+    (void) status;
+    (void) operation;
+    (void) alg;
+    return( PSA_ERROR_NOT_SUPPORTED );
+}
+
+psa_status_t psa_driver_wrapper_hash_clone(
+    const psa_hash_operation_t *source_operation,
+    psa_hash_operation_t *target_operation )
+{
+    switch( source_operation->id )
+    {
+#if defined(PSA_CRYPTO_DRIVER_TEST)
+        case PSA_CRYPTO_TRANSPARENT_TEST_DRIVER_ID:
+            target_operation->id = PSA_CRYPTO_TRANSPARENT_TEST_DRIVER_ID;
+            return( mbedtls_transparent_test_driver_hash_clone( &source_operation->ctx.test_ctx,
+                                                 &target_operation->ctx.test_ctx ) );
+#endif
+#if defined(MBEDTLS_PSA_BUILTIN_HASH)
+        case PSA_CRYPTO_MBED_TLS_DRIVER_ID:
+            target_operation->id = PSA_CRYPTO_MBED_TLS_DRIVER_ID;
+            return( mbedtls_psa_hash_clone( &source_operation->ctx.mbedtls_ctx,
+                                            &target_operation->ctx.mbedtls_ctx ) );
+#endif
+        default:
+            (void) source_operation;
+            (void) target_operation;
+            return( PSA_ERROR_BAD_STATE );
+    }
+}
+
+psa_status_t psa_driver_wrapper_hash_update(
+    psa_hash_operation_t *operation,
+    const uint8_t *input,
+    size_t input_length )
+{
+    switch( operation->id )
+    {
+#if defined(PSA_CRYPTO_DRIVER_TEST)
+        case PSA_CRYPTO_TRANSPARENT_TEST_DRIVER_ID:
+            return( mbedtls_transparent_test_driver_hash_update( &operation->ctx.test_ctx,
+                                                  input, input_length ) );
+#endif
+#if defined(MBEDTLS_PSA_BUILTIN_HASH)
+        case PSA_CRYPTO_MBED_TLS_DRIVER_ID:
+            return( mbedtls_psa_hash_update( &operation->ctx.mbedtls_ctx,
+                                             input, input_length ) );
+#endif
+        default:
+            (void) operation;
+            (void) input;
+            (void) input_length;
+            return( PSA_ERROR_BAD_STATE );
+    }
+}
+
+psa_status_t psa_driver_wrapper_hash_finish(
+    psa_hash_operation_t *operation,
+    uint8_t *hash,
+    size_t hash_size,
+    size_t *hash_length )
+{
+    switch( operation->id )
+    {
+#if defined(PSA_CRYPTO_DRIVER_TEST)
+        case PSA_CRYPTO_TRANSPARENT_TEST_DRIVER_ID:
+            return( mbedtls_transparent_test_driver_hash_finish( &operation->ctx.test_ctx,
+                                                  hash, hash_size, hash_length ) );
+#endif
+#if defined(MBEDTLS_PSA_BUILTIN_HASH)
+        case PSA_CRYPTO_MBED_TLS_DRIVER_ID:
+            return( mbedtls_psa_hash_finish( &operation->ctx.mbedtls_ctx,
+                                             hash, hash_size, hash_length ) );
+            break;
+#endif
+        default:
+            (void) operation;
+            (void) hash;
+            (void) hash_size;
+            (void) hash_length;
+            return( PSA_ERROR_BAD_STATE );
+    }
+}
+
+psa_status_t psa_driver_wrapper_hash_abort(
+    psa_hash_operation_t *operation )
+{
+    switch( operation->id )
+    {
+#if defined(PSA_CRYPTO_DRIVER_TEST)
+        case PSA_CRYPTO_TRANSPARENT_TEST_DRIVER_ID:
+            return( mbedtls_transparent_test_driver_hash_abort( &operation->ctx.test_ctx ) );
+#endif
+#if defined(MBEDTLS_PSA_BUILTIN_HASH)
+        case PSA_CRYPTO_MBED_TLS_DRIVER_ID:
+            return( mbedtls_psa_hash_abort( &operation->ctx.mbedtls_ctx ) );
+#endif
+        default:
+            return( PSA_ERROR_BAD_STATE );
+    }
 }
 
 /* End of automatically generated file. */
