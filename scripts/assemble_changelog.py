@@ -74,9 +74,6 @@ STANDARD_CATEGORIES = (
     b'Changes',
 )
 
-# The maximum line length for an entry
-MAX_LINE_LENGTH = 80
-
 CategoryContent = namedtuple('CategoryContent', [
     'name', 'title_line', # Title text and line number of the title
     'body', 'body_line', # Body text and starting line number of the body
@@ -217,17 +214,6 @@ class ChangeLog:
                                        line_offset + category.title_line,
                                        'Unknown category: "{}"',
                                        category.name.decode('utf8'))
-
-            body_split = category.body.splitlines()
-            line_number = 1
-            for line in body_split:
-                if len(line) > MAX_LINE_LENGTH:
-                    raise InputFormatError(filename,
-                                           line_offset + category.title_line + line_number,
-                                           'Line is longer than allowed: Length {} (Max {})',
-                                           len(line), MAX_LINE_LENGTH)
-                line_number += 1
-
             self.categories[category.name] += category.body
 
     def __init__(self, input_stream, changelog_format):
