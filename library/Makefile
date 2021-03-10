@@ -96,6 +96,7 @@ OBJS_CRYPTO= \
 	     entropy_poll.o \
 	     error.o \
 	     gcm.o \
+	     havege.o \
 	     hkdf.o \
 	     hmac_drbg.o \
 	     md.o \
@@ -117,14 +118,17 @@ OBJS_CRYPTO= \
 	     platform_util.o \
 	     poly1305.o \
 	     psa_crypto.o \
+	     psa_crypto_client.o \
 	     psa_crypto_driver_wrappers.o \
+	     psa_crypto_ecp.o \
+	     psa_crypto_rsa.o \
 	     psa_crypto_se.o \
 	     psa_crypto_slot_management.o \
 	     psa_crypto_storage.o \
 	     psa_its_file.o \
 	     ripemd160.o \
 	     rsa.o \
-	     rsa_alt_helpers.o \
+	     rsa_internal.o \
 	     sha1.o \
 	     sha256.o \
 	     sha512.o \

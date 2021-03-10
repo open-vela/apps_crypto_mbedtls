@@ -24,6 +24,7 @@
 #endif
 
 #include "mbedtls/entropy.h"
+#include "mbedtls/entropy_poll.h"
 #include "mbedtls/hmac_drbg.h"
 #include "mbedtls/ctr_drbg.h"
 #include "mbedtls/dhm.h"
@@ -55,7 +56,6 @@
 #include "mbedtls/ecjpake.h"
 #include "mbedtls/timing.h"
 #include "mbedtls/nist_kw.h"
-#include "../library/entropy_poll.h"
 
 #include <string.h>
 
