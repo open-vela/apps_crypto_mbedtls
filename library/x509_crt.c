@@ -1629,8 +1629,6 @@ cleanup:
     }
 #endif /* MBEDTLS_THREADING_C */
 
-    memset( &sb, 0, sizeof( sb ) );
-
     while( ( entry = readdir( dir ) ) != NULL )
     {
         snp_ret = mbedtls_snprintf( entry_name, sizeof entry_name,
