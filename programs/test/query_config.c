@@ -37,6 +37,7 @@
  * default value when that configuration is not set in the config.h.
  */
 #include "mbedtls/aes.h"
+#include "mbedtls/aesni.h"
 #include "mbedtls/arc4.h"
 #include "mbedtls/aria.h"
 #include "mbedtls/asn1.h"
@@ -60,8 +61,10 @@
 #include "mbedtls/ecjpake.h"
 #include "mbedtls/ecp.h"
 #include "mbedtls/entropy.h"
+#include "mbedtls/entropy_poll.h"
 #include "mbedtls/error.h"
 #include "mbedtls/gcm.h"
+#include "mbedtls/havege.h"
 #include "mbedtls/hkdf.h"
 #include "mbedtls/hmac_drbg.h"
 #include "mbedtls/md.h"
@@ -72,6 +75,7 @@
 #include "mbedtls/net_sockets.h"
 #include "mbedtls/nist_kw.h"
 #include "mbedtls/oid.h"
+#include "mbedtls/padlock.h"
 #include "mbedtls/pem.h"
 #include "mbedtls/pk.h"
 #include "mbedtls/pkcs11.h"
@@ -89,6 +93,7 @@
 #include "mbedtls/ssl_cache.h"
 #include "mbedtls/ssl_ciphersuites.h"
 #include "mbedtls/ssl_cookie.h"
+#include "mbedtls/ssl_internal.h"
 #include "mbedtls/ssl_ticket.h"
 #include "mbedtls/threading.h"
 #include "mbedtls/timing.h"
@@ -653,6 +658,14 @@ int query_config( const char *config )
     }
 #endif /* MBEDTLS_ECP_INTERNAL_ALT */
 
+#if defined(MBEDTLS_ECP_NO_FALLBACK)
+    if( strcmp( "MBEDTLS_ECP_NO_FALLBACK", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( MBEDTLS_ECP_NO_FALLBACK );
+        return( 0 );
+    }
+#endif /* MBEDTLS_ECP_NO_FALLBACK */
+
 #if defined(MBEDTLS_ECP_RANDOMIZE_JAC_ALT)
     if( strcmp( "MBEDTLS_ECP_RANDOMIZE_JAC_ALT", config ) == 0 )
     {
@@ -1212,6 +1225,14 @@ int query_config( const char *config )
         return( 0 );
     }
 #endif /* MBEDTLS_PKCS1_V21 */
+
+#if defined(MBEDTLS_PSA_CRYPTO_CLIENT)
+    if( strcmp( "MBEDTLS_PSA_CRYPTO_CLIENT", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( MBEDTLS_PSA_CRYPTO_CLIENT );
+        return( 0 );
+    }
+#endif /* MBEDTLS_PSA_CRYPTO_CLIENT */
 
 #if defined(MBEDTLS_PSA_CRYPTO_DRIVERS)
     if( strcmp( "MBEDTLS_PSA_CRYPTO_DRIVERS", config ) == 0 )
@@ -1892,6 +1913,14 @@ int query_config( const char *config )
         return( 0 );
     }
 #endif /* MBEDTLS_GCM_C */
+
+#if defined(MBEDTLS_HAVEGE_C)
+    if( strcmp( "MBEDTLS_HAVEGE_C", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( MBEDTLS_HAVEGE_C );
+        return( 0 );
+    }
+#endif /* MBEDTLS_HAVEGE_C */
 
 #if defined(MBEDTLS_HKDF_C)
     if( strcmp( "MBEDTLS_HKDF_C", config ) == 0 )
@@ -2612,6 +2641,14 @@ int query_config( const char *config )
         return( 0 );
     }
 #endif /* MBEDTLS_PSA_HMAC_DRBG_MD_TYPE */
+
+#if defined(MBEDTLS_PSA_KEY_SLOT_COUNT)
+    if( strcmp( "MBEDTLS_PSA_KEY_SLOT_COUNT", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( MBEDTLS_PSA_KEY_SLOT_COUNT );
+        return( 0 );
+    }
+#endif /* MBEDTLS_PSA_KEY_SLOT_COUNT */
 
 #if defined(MBEDTLS_SSL_CACHE_DEFAULT_TIMEOUT)
     if( strcmp( "MBEDTLS_SSL_CACHE_DEFAULT_TIMEOUT", config ) == 0 )
