@@ -303,6 +303,7 @@ def crypto_adapter(adapter):
 
 DEPRECATED = frozenset([
     'MBEDTLS_SSL_PROTO_SSL3',
+    'MBEDTLS_SSL_SRV_SUPPORT_SSLV2_CLIENT_HELLO',
 ])
 
 def no_deprecated_adapter(adapter):
