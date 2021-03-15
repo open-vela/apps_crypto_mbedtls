@@ -1,2 +1,0 @@
-API changes
-   * Drop support for parsing SSLv2 ClientHello (MBEDTLS_SSL_SRV_SUPPORT_SSLV2_CLIENT_HELLO).
