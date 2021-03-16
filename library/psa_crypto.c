@@ -3569,8 +3569,6 @@ static void psa_aead_abort_internal( aead_operation_t *operation )
             break;
 #endif /* MBEDTLS_PSA_BUILTIN_ALG_GCM */
     }
-
-    psa_unlock_key_slot( operation->slot );
 }
 
 static psa_status_t psa_aead_setup( aead_operation_t *operation,
@@ -3586,10 +3584,7 @@ static psa_status_t psa_aead_setup( aead_operation_t *operation,
         mbedtls_cipher_info_from_psa( alg, operation->slot->attr.type, key_bits,
                                       &cipher_id );
     if( operation->cipher_info == NULL )
-    {
-        status = PSA_ERROR_NOT_SUPPORTED;
-        goto cleanup;
-    }
+        return( PSA_ERROR_NOT_SUPPORTED );
 
     switch( PSA_ALG_AEAD_WITH_SHORTENED_TAG( alg, 0 ) )
     {
@@ -3601,17 +3596,15 @@ static psa_status_t psa_aead_setup( aead_operation_t *operation,
              * The call to mbedtls_ccm_encrypt_and_tag or
              * mbedtls_ccm_auth_decrypt will validate the tag length. */
             if( PSA_BLOCK_CIPHER_BLOCK_LENGTH( operation->slot->attr.type ) != 16 )
-            {
-                status = PSA_ERROR_INVALID_ARGUMENT;
-                goto cleanup;
-            }
+                return( PSA_ERROR_INVALID_ARGUMENT );
+
             mbedtls_ccm_init( &operation->ctx.ccm );
             status = mbedtls_to_psa_error(
                 mbedtls_ccm_setkey( &operation->ctx.ccm, cipher_id,
                                     operation->slot->key.data,
                                     (unsigned int) key_bits ) );
-            if( status != 0 )
-                goto cleanup;
+            if( status != PSA_SUCCESS )
+                return( status );
             break;
 #endif /* MBEDTLS_PSA_BUILTIN_ALG_CCM */
 
@@ -3623,17 +3616,15 @@ static psa_status_t psa_aead_setup( aead_operation_t *operation,
              * The call to mbedtls_gcm_crypt_and_tag or
              * mbedtls_gcm_auth_decrypt will validate the tag length. */
             if( PSA_BLOCK_CIPHER_BLOCK_LENGTH( operation->slot->attr.type ) != 16 )
-            {
-                status = PSA_ERROR_INVALID_ARGUMENT;
-                goto cleanup;
-            }
+                return( PSA_ERROR_INVALID_ARGUMENT );
+
             mbedtls_gcm_init( &operation->ctx.gcm );
             status = mbedtls_to_psa_error(
                 mbedtls_gcm_setkey( &operation->ctx.gcm, cipher_id,
                                     operation->slot->key.data,
                                     (unsigned int) key_bits ) );
-            if( status != 0 )
-                goto cleanup;
+            if( status != PSA_SUCCESS )
+                return( status );
             break;
 #endif /* MBEDTLS_PSA_BUILTIN_ALG_GCM */
 
@@ -3643,36 +3634,27 @@ static psa_status_t psa_aead_setup( aead_operation_t *operation,
             operation->full_tag_length = 16;
             /* We only support the default tag length. */
             if( alg != PSA_ALG_CHACHA20_POLY1305 )
-            {
-                status = PSA_ERROR_NOT_SUPPORTED;
-                goto cleanup;
-            }
+                return( PSA_ERROR_NOT_SUPPORTED );
+
             mbedtls_chachapoly_init( &operation->ctx.chachapoly );
             status = mbedtls_to_psa_error(
                 mbedtls_chachapoly_setkey( &operation->ctx.chachapoly,
                                            operation->slot->key.data ) );
-            if( status != 0 )
-                goto cleanup;
+            if( status != PSA_SUCCESS )
+                return( status );
             break;
 #endif /* MBEDTLS_PSA_BUILTIN_ALG_CHACHA20_POLY1305 */
 
         default:
-            status = PSA_ERROR_NOT_SUPPORTED;
-            goto cleanup;
+            return( PSA_ERROR_NOT_SUPPORTED );
     }
 
     if( PSA_AEAD_TAG_LENGTH( alg ) > operation->full_tag_length )
-    {
-        status = PSA_ERROR_INVALID_ARGUMENT;
-        goto cleanup;
-    }
+        return( PSA_ERROR_INVALID_ARGUMENT );
+
     operation->tag_length = PSA_AEAD_TAG_LENGTH( alg );
 
     return( PSA_SUCCESS );
-
-cleanup:
-    psa_aead_abort_internal( operation );
-    return( status );
 }
 
 psa_status_t psa_aead_encrypt( mbedtls_svc_key_id_t key,
@@ -3700,7 +3682,7 @@ psa_status_t psa_aead_encrypt( mbedtls_svc_key_id_t key,
 
     status = psa_aead_setup( &operation, alg );
     if( status != PSA_SUCCESS )
-        return( status );
+        goto exit;
 
     /* For all currently supported modes, the tag is at the end of the
      * ciphertext. */
@@ -3768,7 +3750,10 @@ psa_status_t psa_aead_encrypt( mbedtls_svc_key_id_t key,
         memset( ciphertext, 0, ciphertext_size );
 
 exit:
+    psa_unlock_key_slot( operation.slot );
     psa_aead_abort_internal( &operation );
+    
+
     if( status == PSA_SUCCESS )
         *ciphertext_length = plaintext_length + operation.tag_length;
     return( status );
@@ -3820,7 +3805,7 @@ psa_status_t psa_aead_decrypt( mbedtls_svc_key_id_t key,
 
     status = psa_aead_setup( &operation, alg );
     if( status != PSA_SUCCESS )
-        return( status );
+        goto exit;
 
     status = psa_aead_unpadded_locate_tag( operation.tag_length,
                                            ciphertext, ciphertext_length,
@@ -3884,7 +3869,9 @@ psa_status_t psa_aead_decrypt( mbedtls_svc_key_id_t key,
         memset( plaintext, 0, plaintext_size );
 
 exit:
+    psa_unlock_key_slot( operation.slot );
     psa_aead_abort_internal( &operation );
+    
     if( status == PSA_SUCCESS )
         *plaintext_length = ciphertext_length - operation.tag_length;
     return( status );
