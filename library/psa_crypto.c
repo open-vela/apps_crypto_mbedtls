@@ -563,17 +563,6 @@ static psa_status_t validate_unstructured_key_bit_size( psa_key_type_t type,
     return( PSA_SUCCESS );
 }
 
-/** Return the size of the key in the given slot, in bits.
- *
- * \param[in] slot      A key slot.
- *
- * \return The key size in bits, read from the metadata in the slot.
- */
-static inline size_t psa_get_key_slot_bits( const psa_key_slot_t *slot )
-{
-    return( slot->attr.bits );
-}
-
 /** Check whether a given key type is valid for use with a given MAC algorithm
  *
  * Upon successful return of this function, the behavior of #PSA_MAC_LENGTH
@@ -1624,8 +1613,9 @@ static psa_status_t psa_validate_key_attributes(
     }
     else
     {
-        if( !psa_is_valid_key_id( psa_get_key_id( attributes ), 0 ) )
-            return( PSA_ERROR_INVALID_ARGUMENT );
+        status = psa_validate_key_id( psa_get_key_id( attributes ), 0 );
+        if( status != PSA_SUCCESS )
+            return( status );
     }
 
     status = psa_validate_key_policy( &attributes->core.policy );
@@ -2148,17 +2138,6 @@ psa_status_t psa_copy_key( mbedtls_svc_key_id_t source_key,
         goto exit;
     }
 #endif /* MBEDTLS_PSA_CRYPTO_SE_C */
-
-    if( psa_key_lifetime_is_external( actual_attributes.core.lifetime ) )
-    {
-        /*
-         * Copying through an opaque driver is not implemented yet, consider
-         * a lifetime with an external location as an invalid parameter for
-         * now.
-         */
-        status = PSA_ERROR_INVALID_ARGUMENT;
-        goto exit;
-    }
 
     status = psa_copy_key_material( source_slot, target_slot );
     if( status != PSA_SUCCESS )
@@ -3532,7 +3511,6 @@ psa_status_t psa_cipher_abort( psa_cipher_operation_t *operation )
 
 typedef struct
 {
-    psa_key_slot_t *slot;
     const mbedtls_cipher_info_t *cipher_info;
     union
     {
@@ -3552,7 +3530,7 @@ typedef struct
     uint8_t tag_length;
 } aead_operation_t;
 
-#define AEAD_OPERATION_INIT {0, 0, {0}, 0, 0, 0}
+#define AEAD_OPERATION_INIT {0, {0}, 0, 0, 0}
 
 static void psa_aead_abort_internal( aead_operation_t *operation )
 {
@@ -3569,34 +3547,25 @@ static void psa_aead_abort_internal( aead_operation_t *operation )
             break;
 #endif /* MBEDTLS_PSA_BUILTIN_ALG_GCM */
     }
-
-    psa_unlock_key_slot( operation->slot );
 }
 
-static psa_status_t psa_aead_setup( aead_operation_t *operation,
-                                    mbedtls_svc_key_id_t key,
-                                    psa_key_usage_t usage,
-                                    psa_algorithm_t alg )
+static psa_status_t psa_aead_setup(
+    aead_operation_t *operation,
+    const psa_key_attributes_t *attributes,
+    const uint8_t *key_buffer,
+    psa_algorithm_t alg )
 {
-    psa_status_t status;
+    psa_status_t status = PSA_ERROR_CORRUPTION_DETECTED;
     size_t key_bits;
     mbedtls_cipher_id_t cipher_id;
 
-    status = psa_get_and_lock_transparent_key_slot_with_policy(
-                 key, &operation->slot, usage, alg );
-    if( status != PSA_SUCCESS )
-        return( status );
-
-    key_bits = psa_get_key_slot_bits( operation->slot );
+    key_bits = attributes->core.bits;
 
     operation->cipher_info =
-        mbedtls_cipher_info_from_psa( alg, operation->slot->attr.type, key_bits,
+        mbedtls_cipher_info_from_psa( alg, attributes->core.type, key_bits,
                                       &cipher_id );
     if( operation->cipher_info == NULL )
-    {
-        status = PSA_ERROR_NOT_SUPPORTED;
-        goto cleanup;
-    }
+        return( PSA_ERROR_NOT_SUPPORTED );
 
     switch( PSA_ALG_AEAD_WITH_SHORTENED_TAG( alg, 0 ) )
     {
@@ -3607,18 +3576,15 @@ static psa_status_t psa_aead_setup( aead_operation_t *operation,
             /* CCM allows the following tag lengths: 4, 6, 8, 10, 12, 14, 16.
              * The call to mbedtls_ccm_encrypt_and_tag or
              * mbedtls_ccm_auth_decrypt will validate the tag length. */
-            if( PSA_BLOCK_CIPHER_BLOCK_LENGTH( operation->slot->attr.type ) != 16 )
-            {
-                status = PSA_ERROR_INVALID_ARGUMENT;
-                goto cleanup;
-            }
+            if( PSA_BLOCK_CIPHER_BLOCK_LENGTH( attributes->core.type ) != 16 )
+                return( PSA_ERROR_INVALID_ARGUMENT );
+
             mbedtls_ccm_init( &operation->ctx.ccm );
             status = mbedtls_to_psa_error(
                 mbedtls_ccm_setkey( &operation->ctx.ccm, cipher_id,
-                                    operation->slot->key.data,
-                                    (unsigned int) key_bits ) );
-            if( status != 0 )
-                goto cleanup;
+                                    key_buffer, (unsigned int) key_bits ) );
+            if( status != PSA_SUCCESS )
+                return( status );
             break;
 #endif /* MBEDTLS_PSA_BUILTIN_ALG_CCM */
 
@@ -3629,18 +3595,15 @@ static psa_status_t psa_aead_setup( aead_operation_t *operation,
             /* GCM allows the following tag lengths: 4, 8, 12, 13, 14, 15, 16.
              * The call to mbedtls_gcm_crypt_and_tag or
              * mbedtls_gcm_auth_decrypt will validate the tag length. */
-            if( PSA_BLOCK_CIPHER_BLOCK_LENGTH( operation->slot->attr.type ) != 16 )
-            {
-                status = PSA_ERROR_INVALID_ARGUMENT;
-                goto cleanup;
-            }
+            if( PSA_BLOCK_CIPHER_BLOCK_LENGTH( attributes->core.type ) != 16 )
+                return( PSA_ERROR_INVALID_ARGUMENT );
+
             mbedtls_gcm_init( &operation->ctx.gcm );
             status = mbedtls_to_psa_error(
                 mbedtls_gcm_setkey( &operation->ctx.gcm, cipher_id,
-                                    operation->slot->key.data,
-                                    (unsigned int) key_bits ) );
-            if( status != 0 )
-                goto cleanup;
+                                    key_buffer, (unsigned int) key_bits ) );
+            if( status != PSA_SUCCESS )
+                return( status );
             break;
 #endif /* MBEDTLS_PSA_BUILTIN_ALG_GCM */
 
@@ -3650,36 +3613,27 @@ static psa_status_t psa_aead_setup( aead_operation_t *operation,
             operation->full_tag_length = 16;
             /* We only support the default tag length. */
             if( alg != PSA_ALG_CHACHA20_POLY1305 )
-            {
-                status = PSA_ERROR_NOT_SUPPORTED;
-                goto cleanup;
-            }
+                return( PSA_ERROR_NOT_SUPPORTED );
+
             mbedtls_chachapoly_init( &operation->ctx.chachapoly );
             status = mbedtls_to_psa_error(
                 mbedtls_chachapoly_setkey( &operation->ctx.chachapoly,
-                                           operation->slot->key.data ) );
-            if( status != 0 )
-                goto cleanup;
+                                           key_buffer ) );
+            if( status != PSA_SUCCESS )
+                return( status );
             break;
 #endif /* MBEDTLS_PSA_BUILTIN_ALG_CHACHA20_POLY1305 */
 
         default:
-            status = PSA_ERROR_NOT_SUPPORTED;
-            goto cleanup;
+            return( PSA_ERROR_NOT_SUPPORTED );
     }
 
     if( PSA_AEAD_TAG_LENGTH( alg ) > operation->full_tag_length )
-    {
-        status = PSA_ERROR_INVALID_ARGUMENT;
-        goto cleanup;
-    }
+        return( PSA_ERROR_INVALID_ARGUMENT );
+
     operation->tag_length = PSA_AEAD_TAG_LENGTH( alg );
 
     return( PSA_SUCCESS );
-
-cleanup:
-    psa_aead_abort_internal( operation );
-    return( status );
 }
 
 psa_status_t psa_aead_encrypt( mbedtls_svc_key_id_t key,
@@ -3694,15 +3648,25 @@ psa_status_t psa_aead_encrypt( mbedtls_svc_key_id_t key,
                                size_t ciphertext_size,
                                size_t *ciphertext_length )
 {
-    psa_status_t status;
+    psa_status_t status = PSA_ERROR_CORRUPTION_DETECTED;
+    psa_key_slot_t *slot;
     aead_operation_t operation = AEAD_OPERATION_INIT;
     uint8_t *tag;
 
     *ciphertext_length = 0;
 
-    status = psa_aead_setup( &operation, key, PSA_KEY_USAGE_ENCRYPT, alg );
+    status = psa_get_and_lock_transparent_key_slot_with_policy(
+                 key, &slot, PSA_KEY_USAGE_ENCRYPT, alg );
     if( status != PSA_SUCCESS )
         return( status );
+
+    psa_key_attributes_t attributes = {
+      .core = slot->attr
+    };
+
+    status = psa_aead_setup( &operation, &attributes, slot->key.data, alg );
+    if( status != PSA_SUCCESS )
+        goto exit;
 
     /* For all currently supported modes, the tag is at the end of the
      * ciphertext. */
@@ -3771,6 +3735,8 @@ psa_status_t psa_aead_encrypt( mbedtls_svc_key_id_t key,
 
 exit:
     psa_aead_abort_internal( &operation );
+    psa_unlock_key_slot( slot );
+
     if( status == PSA_SUCCESS )
         *ciphertext_length = plaintext_length + operation.tag_length;
     return( status );
@@ -3809,15 +3775,25 @@ psa_status_t psa_aead_decrypt( mbedtls_svc_key_id_t key,
                                size_t plaintext_size,
                                size_t *plaintext_length )
 {
-    psa_status_t status;
+    psa_status_t status = PSA_ERROR_CORRUPTION_DETECTED;
+    psa_key_slot_t *slot;
     aead_operation_t operation = AEAD_OPERATION_INIT;
     const uint8_t *tag = NULL;
 
     *plaintext_length = 0;
 
-    status = psa_aead_setup( &operation, key, PSA_KEY_USAGE_DECRYPT, alg );
+    status = psa_get_and_lock_transparent_key_slot_with_policy(
+                 key, &slot, PSA_KEY_USAGE_DECRYPT, alg );
     if( status != PSA_SUCCESS )
         return( status );
+
+    psa_key_attributes_t attributes = {
+      .core = slot->attr
+    };
+
+    status = psa_aead_setup( &operation, &attributes, slot->key.data, alg );
+    if( status != PSA_SUCCESS )
+        goto exit;
 
     status = psa_aead_unpadded_locate_tag( operation.tag_length,
                                            ciphertext, ciphertext_length,
@@ -3882,6 +3858,8 @@ psa_status_t psa_aead_decrypt( mbedtls_svc_key_id_t key,
 
 exit:
     psa_aead_abort_internal( &operation );
+    psa_unlock_key_slot( slot );
+
     if( status == PSA_SUCCESS )
         *plaintext_length = ciphertext_length - operation.tag_length;
     return( status );
