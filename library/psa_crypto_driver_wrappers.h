@@ -28,17 +28,20 @@
 /*
  * Signature functions
  */
-psa_status_t psa_driver_wrapper_sign_hash(
-    const psa_key_attributes_t *attributes,
-    const uint8_t *key_buffer, size_t key_buffer_size,
-    psa_algorithm_t alg, const uint8_t *hash, size_t hash_length,
-    uint8_t *signature, size_t signature_size, size_t *signature_length );
+psa_status_t psa_driver_wrapper_sign_hash( psa_key_slot_t *slot,
+                                           psa_algorithm_t alg,
+                                           const uint8_t *hash,
+                                           size_t hash_length,
+                                           uint8_t *signature,
+                                           size_t signature_size,
+                                           size_t *signature_length );
 
-psa_status_t psa_driver_wrapper_verify_hash(
-    const psa_key_attributes_t *attributes,
-    const uint8_t *key_buffer, size_t key_buffer_size,
-    psa_algorithm_t alg, const uint8_t *hash, size_t hash_length,
-    const uint8_t *signature, size_t signature_length );
+psa_status_t psa_driver_wrapper_verify_hash( psa_key_slot_t *slot,
+                                             psa_algorithm_t alg,
+                                             const uint8_t *hash,
+                                             size_t hash_length,
+                                             const uint8_t *signature,
+                                             size_t signature_length );
 
 /*
  * Key handling functions
@@ -126,39 +129,6 @@ psa_status_t psa_driver_wrapper_cipher_finish(
 
 psa_status_t psa_driver_wrapper_cipher_abort(
     psa_operation_driver_context_t *operation );
-
-/*
- * Hashing functions
- */
-psa_status_t psa_driver_wrapper_hash_compute(
-    psa_algorithm_t alg,
-    const uint8_t *input,
-    size_t input_length,
-    uint8_t *hash,
-    size_t hash_size,
-    size_t *hash_length);
-
-psa_status_t psa_driver_wrapper_hash_setup(
-    psa_hash_operation_t *operation,
-    psa_algorithm_t alg );
-
-psa_status_t psa_driver_wrapper_hash_clone(
-    const psa_hash_operation_t *source_operation,
-    psa_hash_operation_t *target_operation );
-
-psa_status_t psa_driver_wrapper_hash_update(
-    psa_hash_operation_t *operation,
-    const uint8_t *input,
-    size_t input_length );
-
-psa_status_t psa_driver_wrapper_hash_finish(
-    psa_hash_operation_t *operation,
-    uint8_t *hash,
-    size_t hash_size,
-    size_t *hash_length );
-
-psa_status_t psa_driver_wrapper_hash_abort(
-    psa_hash_operation_t *operation );
 
 #endif /* PSA_CRYPTO_DRIVER_WRAPPERS_H */
 
