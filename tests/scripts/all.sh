@@ -1450,26 +1450,7 @@ component_test_psa_crypto_config_basic() {
     scripts/config.py set MBEDTLS_PSA_CRYPTO_DRIVERS
     scripts/config.py unset MBEDTLS_USE_PSA_CRYPTO
     # Need to define the correct symbol and include the test driver header path in order to build with the test driver
-    loc_cflags="$ASAN_CFLAGS -DPSA_CRYPTO_DRIVER_TEST"
-    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_KEY_TYPE_RSA_KEY_PAIR"
-    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_KEY_TYPE_ECC_KEY_PAIR"
-    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_RSA_PKCS1V15_SIGN"
-    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_RSA_PSS"
-    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_ECDSA"
-    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_DETERMINISTIC_ECDSA"
-    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_MD2"
-    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_MD4"
-    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_MD5"
-    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_RIPEMD160"
-    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_SHA_1"
-    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_SHA_224"
-    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_SHA_256"
-    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_SHA_384"
-    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_SHA_512"
-    loc_cflags="${loc_cflags} -I../tests/include -O2"
-
-    make CC=gcc CFLAGS="$loc_cflags" LDFLAGS="$ASAN_CFLAGS"
-    unset loc_cflags
+    make CC=gcc CFLAGS="$ASAN_CFLAGS -DPSA_CRYPTO_DRIVER_TEST -DMBEDTLS_PSA_ACCEL_KEY_TYPE_ECC_KEY_PAIR -DMBEDTLS_PSA_ACCEL_KEY_TYPE_RSA_KEY_PAIR -I../tests/include -O2" LDFLAGS="$ASAN_CFLAGS"
 
     msg "test: full + MBEDTLS_PSA_CRYPTO_CONFIG"
     make test
@@ -2235,31 +2216,11 @@ component_test_se_default () {
 
 component_test_psa_crypto_drivers () {
     msg "build: MBEDTLS_PSA_CRYPTO_DRIVERS w/ driver hooks"
-    scripts/config.py full
     scripts/config.py set MBEDTLS_PSA_CRYPTO_DRIVERS
     # Need to define the correct symbol and include the test driver header path in order to build with the test driver
-    loc_cflags="$ASAN_CFLAGS -DPSA_CRYPTO_DRIVER_TEST"
-    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_KEY_TYPE_RSA_KEY_PAIR"
-    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_KEY_TYPE_ECC_KEY_PAIR"
-    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_RSA_PKCS1V15_SIGN"
-    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_RSA_PSS"
-    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_ECDSA"
-    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_DETERMINISTIC_ECDSA"
-    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_MD2"
-    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_MD4"
-    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_MD5"
-    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_RIPEMD160"
-    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_SHA_1"
-    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_SHA_224"
-    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_SHA_256"
-    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_SHA_384"
-    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_SHA_512"
-    loc_cflags="${loc_cflags} -I../tests/include -O2"
+    make CC=gcc CFLAGS="$ASAN_CFLAGS -DPSA_CRYPTO_DRIVER_TEST -DMBEDTLS_PSA_ACCEL_KEY_TYPE_RSA_KEY_PAIR -DMBEDTLS_PSA_ACCEL_KEY_TYPE_ECC_KEY_PAIR -I../tests/include -O2" LDFLAGS="$ASAN_CFLAGS"
 
-    make CC=gcc CFLAGS="${loc_cflags}" LDFLAGS="$ASAN_CFLAGS"
-    unset loc_cflags
-
-    msg "test: full + MBEDTLS_PSA_CRYPTO_DRIVERS"
+    msg "test: MBEDTLS_PSA_CRYPTO_DRIVERS, signature"
     make test
 }
 
