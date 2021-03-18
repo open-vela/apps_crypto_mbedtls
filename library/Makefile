@@ -2,7 +2,7 @@
 # Also see "include/mbedtls/config.h"
 
 CFLAGS	?= -O2
-WARNING_CFLAGS ?=  -Wall -Wextra -Wformat=2 -Wno-format-nonliteral
+WARNING_CFLAGS ?=  -Wall -Wextra
 LDFLAGS ?=
 
 # Include ../include for public headers and . for private headers.
@@ -121,7 +121,6 @@ OBJS_CRYPTO= \
 	     psa_crypto_client.o \
 	     psa_crypto_driver_wrappers.o \
 	     psa_crypto_ecp.o \
-	     psa_crypto_hash.o \
 	     psa_crypto_rsa.o \
 	     psa_crypto_se.o \
 	     psa_crypto_slot_management.o \
