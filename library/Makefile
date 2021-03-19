@@ -124,7 +124,7 @@ OBJS_CRYPTO= \
 	     psa_its_file.o \
 	     ripemd160.o \
 	     rsa.o \
-	     rsa_internal.o \
+	     rsa_alt_helpers.o \
 	     sha1.o \
 	     sha256.o \
 	     sha512.o \
@@ -140,6 +140,7 @@ LOCAL_CFLAGS+=$(THIRDPARTY_INCLUDES)
 OBJS_CRYPTO+=$(THIRDPARTY_CRYPTO_OBJECTS)
 
 OBJS_X509= \
+	   certs.o \
 	   pkcs11.o \
 	   x509.o \
 	   x509_create.o \
