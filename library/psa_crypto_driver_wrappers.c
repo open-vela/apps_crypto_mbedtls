@@ -1374,7 +1374,7 @@ psa_status_t psa_driver_wrapper_mac_sign_setup(
 #if defined(PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT)
 #if defined(PSA_CRYPTO_DRIVER_TEST)
             status = mbedtls_transparent_test_driver_mac_sign_setup(
-                &operation->ctx.driver.transparent_test_driver_ctx,
+                &operation->ctx.transparent_test_driver_ctx,
                 attributes,
                 key_buffer, key_buffer_size,
                 alg );
@@ -1388,7 +1388,7 @@ psa_status_t psa_driver_wrapper_mac_sign_setup(
 #endif /* PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT */
 #if defined(MBEDTLS_PSA_BUILTIN_MAC)
             /* Fell through, meaning no accelerator supports this operation */
-            status = mbedtls_psa_mac_sign_setup( &operation->ctx.driver.mbedtls_ctx,
+            status = mbedtls_psa_mac_sign_setup( &operation->ctx.mbedtls_ctx,
                                                  attributes,
                                                  key_buffer, key_buffer_size,
                                                  alg );
@@ -1405,7 +1405,7 @@ psa_status_t psa_driver_wrapper_mac_sign_setup(
 #if defined(PSA_CRYPTO_DRIVER_TEST)
         case PSA_CRYPTO_TEST_DRIVER_LOCATION:
             status = mbedtls_opaque_test_driver_mac_sign_setup(
-                &operation->ctx.driver.opaque_test_driver_ctx,
+                &operation->ctx.opaque_test_driver_ctx,
                 attributes,
                 key_buffer, key_buffer_size,
                 alg );
@@ -1445,7 +1445,7 @@ psa_status_t psa_driver_wrapper_mac_verify_setup(
 #if defined(PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT)
 #if defined(PSA_CRYPTO_DRIVER_TEST)
             status = mbedtls_transparent_test_driver_mac_verify_setup(
-                &operation->ctx.driver.transparent_test_driver_ctx,
+                &operation->ctx.transparent_test_driver_ctx,
                 attributes,
                 key_buffer, key_buffer_size,
                 alg );
@@ -1459,7 +1459,7 @@ psa_status_t psa_driver_wrapper_mac_verify_setup(
 #endif /* PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT */
 #if defined(MBEDTLS_PSA_BUILTIN_MAC)
             /* Fell through, meaning no accelerator supports this operation */
-            status = mbedtls_psa_mac_verify_setup( &operation->ctx.driver.mbedtls_ctx,
+            status = mbedtls_psa_mac_verify_setup( &operation->ctx.mbedtls_ctx,
                                                    attributes,
                                                    key_buffer, key_buffer_size,
                                                    alg );
@@ -1476,7 +1476,7 @@ psa_status_t psa_driver_wrapper_mac_verify_setup(
 #if defined(PSA_CRYPTO_DRIVER_TEST)
         case PSA_CRYPTO_TEST_DRIVER_LOCATION:
             status = mbedtls_opaque_test_driver_mac_sign_setup(
-                &operation->ctx.driver.opaque_test_driver_ctx,
+                &operation->ctx.opaque_test_driver_ctx,
                 attributes,
                 key_buffer, key_buffer_size,
                 alg );
@@ -1506,7 +1506,7 @@ psa_status_t psa_driver_wrapper_mac_update(
     {
 #if defined(MBEDTLS_PSA_BUILTIN_MAC)
         case PSA_CRYPTO_MBED_TLS_DRIVER_ID:
-            return( mbedtls_psa_mac_update( &operation->ctx.driver.mbedtls_ctx,
+            return( mbedtls_psa_mac_update( &operation->ctx.mbedtls_ctx,
                                             input, input_length ) );
 #endif /* MBEDTLS_PSA_BUILTIN_MAC */
 
@@ -1514,12 +1514,12 @@ psa_status_t psa_driver_wrapper_mac_update(
 #if defined(PSA_CRYPTO_DRIVER_TEST)
         case PSA_CRYPTO_TRANSPARENT_TEST_DRIVER_ID:
             return( mbedtls_transparent_test_driver_mac_update(
-                        &operation->ctx.driver.transparent_test_driver_ctx,
+                        &operation->ctx.transparent_test_driver_ctx,
                         input, input_length ) );
 
         case PSA_CRYPTO_OPAQUE_TEST_DRIVER_ID:
             return( mbedtls_opaque_test_driver_mac_update(
-                        &operation->ctx.driver.opaque_test_driver_ctx,
+                        &operation->ctx.opaque_test_driver_ctx,
                         input, input_length ) );
 #endif /* PSA_CRYPTO_DRIVER_TEST */
 #endif /* PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT */
@@ -1540,7 +1540,7 @@ psa_status_t psa_driver_wrapper_mac_sign_finish(
     {
 #if defined(MBEDTLS_PSA_BUILTIN_MAC)
         case PSA_CRYPTO_MBED_TLS_DRIVER_ID:
-            return( mbedtls_psa_mac_sign_finish( &operation->ctx.driver.mbedtls_ctx,
+            return( mbedtls_psa_mac_sign_finish( &operation->ctx.mbedtls_ctx,
                                                  mac, mac_size, mac_length ) );
 #endif /* MBEDTLS_PSA_BUILTIN_MAC */
 
@@ -1548,12 +1548,12 @@ psa_status_t psa_driver_wrapper_mac_sign_finish(
 #if defined(PSA_CRYPTO_DRIVER_TEST)
         case PSA_CRYPTO_TRANSPARENT_TEST_DRIVER_ID:
             return( mbedtls_transparent_test_driver_mac_sign_finish(
-                        &operation->ctx.driver.transparent_test_driver_ctx,
+                        &operation->ctx.transparent_test_driver_ctx,
                         mac, mac_size, mac_length ) );
 
         case PSA_CRYPTO_OPAQUE_TEST_DRIVER_ID:
             return( mbedtls_opaque_test_driver_mac_sign_finish(
-                        &operation->ctx.driver.opaque_test_driver_ctx,
+                        &operation->ctx.opaque_test_driver_ctx,
                         mac, mac_size, mac_length ) );
 #endif /* PSA_CRYPTO_DRIVER_TEST */
 #endif /* PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT */
@@ -1574,7 +1574,7 @@ psa_status_t psa_driver_wrapper_mac_verify_finish(
     {
 #if defined(MBEDTLS_PSA_BUILTIN_MAC)
         case PSA_CRYPTO_MBED_TLS_DRIVER_ID:
-            return( mbedtls_psa_mac_verify_finish( &operation->ctx.driver.mbedtls_ctx,
+            return( mbedtls_psa_mac_verify_finish( &operation->ctx.mbedtls_ctx,
                                                    mac, mac_length ) );
 #endif /* MBEDTLS_PSA_BUILTIN_MAC */
 
@@ -1582,12 +1582,12 @@ psa_status_t psa_driver_wrapper_mac_verify_finish(
 #if defined(PSA_CRYPTO_DRIVER_TEST)
         case PSA_CRYPTO_TRANSPARENT_TEST_DRIVER_ID:
             return( mbedtls_transparent_test_driver_mac_verify_finish(
-                        &operation->ctx.driver.transparent_test_driver_ctx,
+                        &operation->ctx.transparent_test_driver_ctx,
                         mac, mac_length ) );
 
         case PSA_CRYPTO_OPAQUE_TEST_DRIVER_ID:
             return( mbedtls_opaque_test_driver_mac_verify_finish(
-                        &operation->ctx.driver.opaque_test_driver_ctx,
+                        &operation->ctx.opaque_test_driver_ctx,
                         mac, mac_length ) );
 #endif /* PSA_CRYPTO_DRIVER_TEST */
 #endif /* PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT */
@@ -1606,7 +1606,7 @@ psa_status_t psa_driver_wrapper_mac_abort(
     {
 #if defined(MBEDTLS_PSA_BUILTIN_MAC)
         case PSA_CRYPTO_MBED_TLS_DRIVER_ID:
-            status = mbedtls_psa_mac_abort( &operation->ctx.driver.mbedtls_ctx );
+            status = mbedtls_psa_mac_abort( &operation->ctx.mbedtls_ctx );
             break;
 #endif /* MBEDTLS_PSA_BUILTIN_MAC */
 
@@ -1614,11 +1614,11 @@ psa_status_t psa_driver_wrapper_mac_abort(
 #if defined(PSA_CRYPTO_DRIVER_TEST)
         case PSA_CRYPTO_TRANSPARENT_TEST_DRIVER_ID:
             status = mbedtls_transparent_test_driver_mac_abort(
-                        &operation->ctx.driver.transparent_test_driver_ctx );
+                        &operation->ctx.transparent_test_driver_ctx );
             break;
         case PSA_CRYPTO_OPAQUE_TEST_DRIVER_ID:
             status = mbedtls_opaque_test_driver_mac_abort(
-                        &operation->ctx.driver.opaque_test_driver_ctx );
+                        &operation->ctx.opaque_test_driver_ctx );
             break;
 #endif /* PSA_CRYPTO_DRIVER_TEST */
 #endif /* PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT */
