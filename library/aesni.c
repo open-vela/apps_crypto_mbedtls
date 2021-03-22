@@ -32,7 +32,7 @@
 #endif
 #endif
 
-#include "aesni.h"
+#include "mbedtls/aesni.h"
 
 #include <string.h>
 
