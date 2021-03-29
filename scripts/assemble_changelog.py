@@ -74,9 +74,6 @@ STANDARD_CATEGORIES = (
     b'Changes',
 )
 
-# The maximum line length for an entry
-MAX_LINE_LENGTH = 80
-
 CategoryContent = namedtuple('CategoryContent', [
     'name', 'title_line', # Title text and line number of the title
     'body', 'body_line', # Body text and starting line number of the body
@@ -217,23 +214,6 @@ class ChangeLog:
                                        line_offset + category.title_line,
                                        'Unknown category: "{}"',
                                        category.name.decode('utf8'))
-
-            body_split = category.body.splitlines()
-            _only_url_re = re.compile(br'^\s*\w+://\S+\s*$')
-            _has_url_re = re.compile(br'.*://.*')
-            for line_number, line in enumerate(body_split, 1):
-                if not _only_url_re.match(line) and \
-                   len(line) > MAX_LINE_LENGTH:
-                    long_url_msg = '. URL exceeding length limit must be ' \
-                        'alone in it\'s line.' if _has_url_re.match(line)  \
-                        else ""
-                    raise InputFormatError(filename,
-                                           category.body_line + line_number,
-                                           'Line is longer than allowed: '
-                                           'Length {} (Max {}){}',
-                                           len(line), MAX_LINE_LENGTH,
-                                           long_url_msg)
-
             self.categories[category.name] += category.body
 
     def __init__(self, input_stream, changelog_format):
