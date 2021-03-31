@@ -47,6 +47,8 @@ set(src_crypto
     md4.c
     md5.c
     memory_buffer_alloc.c
+    mps_reader.c
+    mps_trace.c
     nist_kw.c
     oid.c
     padlock.c
@@ -61,6 +63,7 @@ set(src_crypto
     platform_util.c
     poly1305.c
     psa_crypto.c
+    psa_crypto_cipher.c
     psa_crypto_client.c
     psa_crypto_driver_wrappers.c
     psa_crypto_ecp.c
