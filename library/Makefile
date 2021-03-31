@@ -104,8 +104,6 @@ OBJS_CRYPTO= \
 	     md4.o \
 	     md5.o \
 	     memory_buffer_alloc.o \
-	     mps_reader.o \
-	     mps_trace.o \
 	     nist_kw.o \
 	     oid.o \
 	     padlock.o \
@@ -120,7 +118,6 @@ OBJS_CRYPTO= \
 	     platform_util.o \
 	     poly1305.o \
 	     psa_crypto.o \
-	     psa_crypto_cipher.o \
 	     psa_crypto_client.o \
 	     psa_crypto_driver_wrappers.o \
 	     psa_crypto_ecp.o \
