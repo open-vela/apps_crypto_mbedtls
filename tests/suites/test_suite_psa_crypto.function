@@ -1699,7 +1699,7 @@ exit:
 }
 /* END_CASE */
 
-/* BEGIN_CASE depends_on:PSA_WANT_ALG_SHA_256 */
+/* BEGIN_CASE depends_on:MBEDTLS_SHA256_C */
 void hash_finish_bad_args( )
 {
     psa_algorithm_t alg = PSA_ALG_SHA_256;
@@ -1721,7 +1721,7 @@ exit:
 }
 /* END_CASE */
 
-/* BEGIN_CASE depends_on:PSA_WANT_ALG_SHA_256 */
+/* BEGIN_CASE depends_on:MBEDTLS_SHA256_C */
 void hash_clone_source_state( )
 {
     psa_algorithm_t alg = PSA_ALG_SHA_256;
@@ -1766,7 +1766,7 @@ exit:
 }
 /* END_CASE */
 
-/* BEGIN_CASE depends_on:PSA_WANT_ALG_SHA_256 */
+/* BEGIN_CASE depends_on:MBEDTLS_SHA256_C */
 void hash_clone_target_state( )
 {
     psa_algorithm_t alg = PSA_ALG_SHA_256;
@@ -2223,7 +2223,7 @@ exit:
 }
 /* END_CASE */
 
-/* BEGIN_CASE depends_on:PSA_WANT_KEY_TYPE_AES:PSA_WANT_ALG_CBC_PKCS7 */
+/* BEGIN_CASE depends_on:MBEDTLS_AES_C:MBEDTLS_CIPHER_MODE_CBC:MBEDTLS_CIPHER_PADDING_PKCS7 */
 void cipher_bad_order( )
 {
     mbedtls_svc_key_id_t key = MBEDTLS_SVC_KEY_ID_INIT;
@@ -2426,8 +2426,7 @@ void cipher_encrypt( int alg_arg, int key_type_arg,
     total_output_length += function_output_length;
 
     status = psa_cipher_finish( &operation,
-                                ( output_buffer_size == 0 ? NULL :
-                                  output + total_output_length ),
+                                output + total_output_length,
                                 output_buffer_size - total_output_length,
                                 &function_output_length );
     TEST_ASSERT( function_output_length <=
@@ -2508,8 +2507,7 @@ void cipher_encrypt_multipart( int alg_arg, int key_type_arg,
     PSA_ASSERT( psa_cipher_update( &operation,
                                    input->x + first_part_size,
                                    input->len - first_part_size,
-                                   ( output_buffer_size == 0 ? NULL :
-                                     output + total_output_length ),
+                                   output + total_output_length,
                                    output_buffer_size - total_output_length,
                                    &function_output_length ) );
     TEST_ASSERT( function_output_length == output2_length );
@@ -2522,8 +2520,7 @@ void cipher_encrypt_multipart( int alg_arg, int key_type_arg,
     total_output_length += function_output_length;
 
     PSA_ASSERT( psa_cipher_finish( &operation,
-                                   ( output_buffer_size == 0 ? NULL :
-                                     output + total_output_length ),
+                                   output + total_output_length,
                                    output_buffer_size - total_output_length,
                                    &function_output_length ) );
     TEST_ASSERT( function_output_length <=
@@ -2601,8 +2598,7 @@ void cipher_decrypt_multipart( int alg_arg, int key_type_arg,
     PSA_ASSERT( psa_cipher_update( &operation,
                                    input->x + first_part_size,
                                    input->len - first_part_size,
-                                   ( output_buffer_size == 0 ? NULL :
-                                     output + total_output_length ),
+                                   output + total_output_length,
                                    output_buffer_size - total_output_length,
                                    &function_output_length ) );
     TEST_ASSERT( function_output_length == output2_length );
@@ -2615,8 +2611,7 @@ void cipher_decrypt_multipart( int alg_arg, int key_type_arg,
     total_output_length += function_output_length;
 
     PSA_ASSERT( psa_cipher_finish( &operation,
-                                   ( output_buffer_size == 0 ? NULL :
-                                     output + total_output_length ),
+                                   output + total_output_length,
                                    output_buffer_size - total_output_length,
                                    &function_output_length ) );
     TEST_ASSERT( function_output_length <=
@@ -2687,8 +2682,7 @@ void cipher_decrypt( int alg_arg, int key_type_arg,
     total_output_length += function_output_length;
 
     status = psa_cipher_finish( &operation,
-                                ( output_buffer_size == 0 ? NULL :
-                                  output + total_output_length ),
+                                output + total_output_length,
                                 output_buffer_size - total_output_length,
                                 &function_output_length );
     TEST_ASSERT( function_output_length <=
@@ -4718,7 +4712,7 @@ exit:
 }
 /* END_CASE */
 
-/* BEGIN_CASE depends_on:PSA_WANT_KEY_TYPE_RSA_KEY_PAIR:PSA_WANT_ALG_RSA_PKCS1V15_CRYPT:PSA_WANT_ALG_RSA_PKCS1V15_SIGN:MBEDTLS_GENPRIME */
+/* BEGIN_CASE depends_on:MBEDTLS_RSA_C:MBEDTLS_GENPRIME:MBEDTLS_PKCS1_V15 */
 void generate_key_rsa( int bits_arg,
                        data_t *e_arg,
                        int expected_status_arg )
