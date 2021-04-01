@@ -1624,8 +1624,9 @@ static psa_status_t psa_validate_key_attributes(
     }
     else
     {
-        if( !psa_is_valid_key_id( psa_get_key_id( attributes ), 0 ) )
-            return( PSA_ERROR_INVALID_ARGUMENT );
+        status = psa_validate_key_id( psa_get_key_id( attributes ), 0 );
+        if( status != PSA_SUCCESS )
+            return( status );
     }
 
     status = psa_validate_key_policy( &attributes->core.policy );
