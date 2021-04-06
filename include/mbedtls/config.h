@@ -1465,16 +1465,15 @@
 //#define MBEDTLS_SHA512_SMALLER
 
 /**
- * \def MBEDTLS_SHA512_NO_SHA384
+ * \def MBEDTLS_SHA384_C
  *
- * Disable the SHA-384 option of the SHA-512 module. Use this to save some
- * code size on devices that don't use SHA-384.
+ * Enable the SHA-384 option of the SHA-512 module.
  *
  * Requires: MBEDTLS_SHA512_C
  *
- * Uncomment to disable SHA-384
+ * Comment to disable SHA-384
  */
-//#define MBEDTLS_SHA512_NO_SHA384
+#define MBEDTLS_SHA384_C
 
 /**
  * \def MBEDTLS_SSL_ALL_ALERT_MESSAGES
@@ -3141,7 +3140,7 @@
 /**
  * \def MBEDTLS_SHA512_C
  *
- * Enable the SHA-384 and SHA-512 cryptographic hash algorithms.
+ * Enable SHA-512 cryptographic hash algorithms.
  *
  * Module:  library/sha512.c
  * Caller:  library/entropy.c
@@ -3149,7 +3148,8 @@
  *          library/ssl_cli.c
  *          library/ssl_srv.c
  *
- * This module adds support for SHA-384 and SHA-512.
+ * This module adds support for SHA-512.
+ * This module is required for SHA-384.
  */
 #define MBEDTLS_SHA512_C
 
