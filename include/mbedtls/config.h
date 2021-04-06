@@ -1312,22 +1312,6 @@
  */
 #define MBEDTLS_PKCS1_V21
 
-/** \def MBEDTLS_PSA_CRYPTO_BUILTIN_KEYS
- *
- * Enable support for platform built-in keys. If you enable this feature,
- * you must implement the function mbedtls_psa_platform_get_builtin_key().
- * See the documentation of that function for more information.
- *
- * Built-in keys are typically derived from a hardware unique key or
- * stored in a secure element.
- *
- * Requires: MBEDTLS_PSA_CRYPTO_C.
- *
- * \warning This interface is experimental and may change or be removed
- * without notice.
- */
-//#define MBEDTLS_PSA_CRYPTO_BUILTIN_KEYS
-
 /** \def MBEDTLS_PSA_CRYPTO_CLIENT
  *
  * Enable support for PSA crypto client.
@@ -1465,16 +1449,15 @@
 //#define MBEDTLS_SHA512_SMALLER
 
 /**
- * \def MBEDTLS_SHA512_NO_SHA384
+ * \def MBEDTLS_SHA384_C
  *
- * Disable the SHA-384 option of the SHA-512 module. Use this to save some
- * code size on devices that don't use SHA-384.
+ * Enable the SHA-384 option of the SHA-512 module.
  *
  * Requires: MBEDTLS_SHA512_C
  *
- * Uncomment to disable SHA-384
+ * Comment to disable SHA-384
  */
-//#define MBEDTLS_SHA512_NO_SHA384
+#define MBEDTLS_SHA384_C
 
 /**
  * \def MBEDTLS_SSL_ALL_ALERT_MESSAGES
@@ -2142,17 +2125,6 @@
  * Comment to skip extendedKeyUsage checking for certificates.
  */
 #define MBEDTLS_X509_CHECK_EXTENDED_KEY_USAGE
-
-/**
- * \def MBEDTLS_X509_REMOVE_INFO
- *
- * Disable mbedtls_x509_*_info() and related APIs.
- *
- * Uncomment to omit mbedtls_x509_*_info(), as well as mbedtls_debug_print_crt()
- * and other functions/constants only used by these functions, thus reducing
- * the code footprint by several KB.
- */
-//#define MBEDTLS_X509_REMOVE_INFO
 
 /**
  * \def MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -3152,7 +3124,7 @@
 /**
  * \def MBEDTLS_SHA512_C
  *
- * Enable the SHA-384 and SHA-512 cryptographic hash algorithms.
+ * Enable SHA-512 cryptographic hash algorithms.
  *
  * Module:  library/sha512.c
  * Caller:  library/entropy.c
@@ -3160,7 +3132,8 @@
  *          library/ssl_cli.c
  *          library/ssl_srv.c
  *
- * This module adds support for SHA-384 and SHA-512.
+ * This module adds support for SHA-512.
+ * This module is required for SHA-384.
  */
 #define MBEDTLS_SHA512_C
 
