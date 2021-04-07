@@ -100,11 +100,7 @@ static int psa_snprint_algorithm(char *buffer, size_t buffer_size,
     unsigned long length_modifier = NO_LENGTH_MODIFIER;
     if (PSA_ALG_IS_MAC(alg)) {
         core_alg = PSA_ALG_TRUNCATED_MAC(alg, 0);
-        if (alg & PSA_ALG_MAC_AT_LEAST_THIS_LENGTH_FLAG) {
-            append(&buffer, buffer_size, &required_size,
-                   "PSA_ALG_AT_LEAST_THIS_LENGTH_MAC(", 33);
-            length_modifier = PSA_MAC_TRUNCATED_LENGTH(alg);
-        } else if (core_alg != alg) {
+        if (core_alg != alg) {
             append(&buffer, buffer_size, &required_size,
                    "PSA_ALG_TRUNCATED_MAC(", 22);
             length_modifier = PSA_MAC_TRUNCATED_LENGTH(alg);
@@ -114,10 +110,6 @@ static int psa_snprint_algorithm(char *buffer, size_t buffer_size,
         if (core_alg == 0) {
             /* For unknown AEAD algorithms, there is no "default tag length". */
             core_alg = alg;
-        } else if (alg & PSA_ALG_AEAD_AT_LEAST_THIS_LENGTH_FLAG) {
-            append(&buffer, buffer_size, &required_size,
-                   "PSA_ALG_AEAD_WITH_AT_LEAST_THIS_LENGTH_TAG(", 43);
-            length_modifier = PSA_AEAD_TAG_LENGTH(alg);
         } else if (core_alg != alg) {
             append(&buffer, buffer_size, &required_size,
                    "PSA_ALG_AEAD_WITH_SHORTENED_TAG(", 32);
@@ -304,7 +296,7 @@ class CaseBuilder(macro_collector.PSAMacroCollector):
 
     def _make_key_usage_code(self):
         return '\n'.join([self._make_bit_test('usage', bit)
-                          for bit in sorted(self.key_usage_flags)])
+                          for bit in sorted(self.key_usages)])
 
     def write_file(self, output_file):
         """Generate the pretty-printer function code from the gathered

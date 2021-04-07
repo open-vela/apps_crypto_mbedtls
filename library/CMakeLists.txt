@@ -39,6 +39,7 @@ set(src_crypto
     entropy_poll.c
     error.c
     gcm.c
+    havege.c
     hkdf.c
     hmac_drbg.c
     md.c
@@ -46,8 +47,6 @@ set(src_crypto
     md4.c
     md5.c
     memory_buffer_alloc.c
-    mps_reader.c
-    mps_trace.c
     nist_kw.c
     oid.c
     padlock.c
@@ -62,11 +61,9 @@ set(src_crypto
     platform_util.c
     poly1305.c
     psa_crypto.c
-    psa_crypto_cipher.c
     psa_crypto_client.c
     psa_crypto_driver_wrappers.c
     psa_crypto_ecp.c
-    psa_crypto_hash.c
     psa_crypto_rsa.c
     psa_crypto_se.c
     psa_crypto_slot_management.c
@@ -74,7 +71,7 @@ set(src_crypto
     psa_its_file.c
     ripemd160.c
     rsa.c
-    rsa_alt_helpers.c
+    rsa_internal.c
     sha1.c
     sha256.c
     sha512.c
@@ -88,6 +85,7 @@ set(src_crypto
 list(APPEND src_crypto ${thirdparty_src})
 
 set(src_x509
+    certs.c
     pkcs11.c
     x509.c
     x509_create.c
@@ -198,15 +196,15 @@ endif(USE_STATIC_MBEDTLS_LIBRARY)
 
 if(USE_SHARED_MBEDTLS_LIBRARY)
     add_library(${mbedcrypto_target} SHARED ${src_crypto})
-    set_target_properties(${mbedcrypto_target} PROPERTIES VERSION 2.26.0 SOVERSION 6)
+    set_target_properties(${mbedcrypto_target} PROPERTIES VERSION 2.25.0 SOVERSION 6)
     target_link_libraries(${mbedcrypto_target} PUBLIC ${libs})
 
     add_library(${mbedx509_target} SHARED ${src_x509})
-    set_target_properties(${mbedx509_target} PROPERTIES VERSION 2.26.0 SOVERSION 1)
+    set_target_properties(${mbedx509_target} PROPERTIES VERSION 2.25.0 SOVERSION 1)
     target_link_libraries(${mbedx509_target} PUBLIC ${libs} ${mbedcrypto_target})
 
     add_library(${mbedtls_target} SHARED ${src_tls})
-    set_target_properties(${mbedtls_target} PROPERTIES VERSION 2.26.0 SOVERSION 13)
+    set_target_properties(${mbedtls_target} PROPERTIES VERSION 2.25.0 SOVERSION 13)
     target_link_libraries(${mbedtls_target} PUBLIC ${libs} ${mbedx509_target})
 endif(USE_SHARED_MBEDTLS_LIBRARY)
 
