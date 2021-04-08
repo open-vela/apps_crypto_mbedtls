@@ -78,9 +78,9 @@
 #include "mbedtls/md4.h"
 #include "mbedtls/md5.h"
 #include "mbedtls/md.h"
-#include "md_wrap.h"
+#include "mbedtls/md_internal.h"
 #include "mbedtls/pk.h"
-#include "pk_wrap.h"
+#include "mbedtls/pk_internal.h"
 #include "mbedtls/platform_util.h"
 #include "mbedtls/error.h"
 #include "mbedtls/ripemd160.h"
@@ -563,17 +563,6 @@ static psa_status_t validate_unstructured_key_bit_size( psa_key_type_t type,
     return( PSA_SUCCESS );
 }
 
-/** Return the size of the key in the given slot, in bits.
- *
- * \param[in] slot      A key slot.
- *
- * \return The key size in bits, read from the metadata in the slot.
- */
-static inline size_t psa_get_key_slot_bits( const psa_key_slot_t *slot )
-{
-    return( slot->attr.bits );
-}
-
 /** Check whether a given key type is valid for use with a given MAC algorithm
  *
  * Upon successful return of this function, the behavior of #PSA_MAC_LENGTH
@@ -615,20 +604,8 @@ MBEDTLS_STATIC_TESTABLE psa_status_t psa_mac_key_can_do(
     return( PSA_ERROR_INVALID_ARGUMENT );
 }
 
-/** Try to allocate a buffer to an empty key slot.
- *
- * \param[in,out] slot          Key slot to attach buffer to.
- * \param[in] buffer_length     Requested size of the buffer.
- *
- * \retval #PSA_SUCCESS
- *         The buffer has been successfully allocated.
- * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
- *         Not enough memory was available for allocation.
- * \retval #PSA_ERROR_ALREADY_EXISTS
- *         Trying to allocate a buffer to a non-empty key slot.
- */
-static psa_status_t psa_allocate_buffer_to_slot( psa_key_slot_t *slot,
-                                                 size_t buffer_length )
+psa_status_t psa_allocate_buffer_to_slot( psa_key_slot_t *slot,
+                                          size_t buffer_length )
 {
     if( slot->key.data != NULL )
         return( PSA_ERROR_ALREADY_EXISTS );
@@ -1086,8 +1063,7 @@ static psa_status_t psa_get_and_lock_transparent_key_slot_with_policy(
     psa_get_and_lock_key_slot_with_policy( key, p_slot, usage, alg )
 #endif /* MBEDTLS_PSA_CRYPTO_SE_C */
 
-/** Wipe key data from a slot. Preserve metadata such as the policy. */
-static psa_status_t psa_remove_key_data_from_memory( psa_key_slot_t *slot )
+psa_status_t psa_remove_key_data_from_memory( psa_key_slot_t *slot )
 {
     /* Data pointer will always be either a valid pointer or NULL in an
      * initialized slot, so we can just free it. */
@@ -3530,158 +3506,6 @@ psa_status_t psa_cipher_abort( psa_cipher_operation_t *operation )
 /* AEAD */
 /****************************************************************/
 
-typedef struct
-{
-    psa_key_slot_t *slot;
-    const mbedtls_cipher_info_t *cipher_info;
-    union
-    {
-        unsigned dummy; /* Make the union non-empty even with no supported algorithms. */
-#if defined(MBEDTLS_PSA_BUILTIN_ALG_CCM)
-        mbedtls_ccm_context ccm;
-#endif /* MBEDTLS_PSA_BUILTIN_ALG_CCM */
-#if defined(MBEDTLS_PSA_BUILTIN_ALG_GCM)
-        mbedtls_gcm_context gcm;
-#endif /* MBEDTLS_PSA_BUILTIN_ALG_GCM */
-#if defined(MBEDTLS_PSA_BUILTIN_ALG_CHACHA20_POLY1305)
-        mbedtls_chachapoly_context chachapoly;
-#endif /* MBEDTLS_PSA_BUILTIN_ALG_CHACHA20_POLY1305 */
-    } ctx;
-    psa_algorithm_t core_alg;
-    uint8_t full_tag_length;
-    uint8_t tag_length;
-} aead_operation_t;
-
-#define AEAD_OPERATION_INIT {0, 0, {0}, 0, 0, 0}
-
-static void psa_aead_abort_internal( aead_operation_t *operation )
-{
-    switch( operation->core_alg )
-    {
-#if defined(MBEDTLS_PSA_BUILTIN_ALG_CCM)
-        case PSA_ALG_CCM:
-            mbedtls_ccm_free( &operation->ctx.ccm );
-            break;
-#endif /* MBEDTLS_PSA_BUILTIN_ALG_CCM */
-#if defined(MBEDTLS_PSA_BUILTIN_ALG_GCM)
-        case PSA_ALG_GCM:
-            mbedtls_gcm_free( &operation->ctx.gcm );
-            break;
-#endif /* MBEDTLS_PSA_BUILTIN_ALG_GCM */
-    }
-
-    psa_unlock_key_slot( operation->slot );
-}
-
-static psa_status_t psa_aead_setup( aead_operation_t *operation,
-                                    mbedtls_svc_key_id_t key,
-                                    psa_key_usage_t usage,
-                                    psa_algorithm_t alg )
-{
-    psa_status_t status;
-    size_t key_bits;
-    mbedtls_cipher_id_t cipher_id;
-
-    status = psa_get_and_lock_transparent_key_slot_with_policy(
-                 key, &operation->slot, usage, alg );
-    if( status != PSA_SUCCESS )
-        return( status );
-
-    key_bits = psa_get_key_slot_bits( operation->slot );
-
-    operation->cipher_info =
-        mbedtls_cipher_info_from_psa( alg, operation->slot->attr.type, key_bits,
-                                      &cipher_id );
-    if( operation->cipher_info == NULL )
-    {
-        status = PSA_ERROR_NOT_SUPPORTED;
-        goto cleanup;
-    }
-
-    switch( PSA_ALG_AEAD_WITH_SHORTENED_TAG( alg, 0 ) )
-    {
-#if defined(MBEDTLS_PSA_BUILTIN_ALG_CCM)
-        case PSA_ALG_AEAD_WITH_SHORTENED_TAG( PSA_ALG_CCM, 0 ):
-            operation->core_alg = PSA_ALG_CCM;
-            operation->full_tag_length = 16;
-            /* CCM allows the following tag lengths: 4, 6, 8, 10, 12, 14, 16.
-             * The call to mbedtls_ccm_encrypt_and_tag or
-             * mbedtls_ccm_auth_decrypt will validate the tag length. */
-            if( PSA_BLOCK_CIPHER_BLOCK_LENGTH( operation->slot->attr.type ) != 16 )
-            {
-                status = PSA_ERROR_INVALID_ARGUMENT;
-                goto cleanup;
-            }
-            mbedtls_ccm_init( &operation->ctx.ccm );
-            status = mbedtls_to_psa_error(
-                mbedtls_ccm_setkey( &operation->ctx.ccm, cipher_id,
-                                    operation->slot->key.data,
-                                    (unsigned int) key_bits ) );
-            if( status != 0 )
-                goto cleanup;
-            break;
-#endif /* MBEDTLS_PSA_BUILTIN_ALG_CCM */
-
-#if defined(MBEDTLS_PSA_BUILTIN_ALG_GCM)
-        case PSA_ALG_AEAD_WITH_SHORTENED_TAG( PSA_ALG_GCM, 0 ):
-            operation->core_alg = PSA_ALG_GCM;
-            operation->full_tag_length = 16;
-            /* GCM allows the following tag lengths: 4, 8, 12, 13, 14, 15, 16.
-             * The call to mbedtls_gcm_crypt_and_tag or
-             * mbedtls_gcm_auth_decrypt will validate the tag length. */
-            if( PSA_BLOCK_CIPHER_BLOCK_LENGTH( operation->slot->attr.type ) != 16 )
-            {
-                status = PSA_ERROR_INVALID_ARGUMENT;
-                goto cleanup;
-            }
-            mbedtls_gcm_init( &operation->ctx.gcm );
-            status = mbedtls_to_psa_error(
-                mbedtls_gcm_setkey( &operation->ctx.gcm, cipher_id,
-                                    operation->slot->key.data,
-                                    (unsigned int) key_bits ) );
-            if( status != 0 )
-                goto cleanup;
-            break;
-#endif /* MBEDTLS_PSA_BUILTIN_ALG_GCM */
-
-#if defined(MBEDTLS_PSA_BUILTIN_ALG_CHACHA20_POLY1305)
-        case PSA_ALG_AEAD_WITH_SHORTENED_TAG( PSA_ALG_CHACHA20_POLY1305, 0 ):
-            operation->core_alg = PSA_ALG_CHACHA20_POLY1305;
-            operation->full_tag_length = 16;
-            /* We only support the default tag length. */
-            if( alg != PSA_ALG_CHACHA20_POLY1305 )
-            {
-                status = PSA_ERROR_NOT_SUPPORTED;
-                goto cleanup;
-            }
-            mbedtls_chachapoly_init( &operation->ctx.chachapoly );
-            status = mbedtls_to_psa_error(
-                mbedtls_chachapoly_setkey( &operation->ctx.chachapoly,
-                                           operation->slot->key.data ) );
-            if( status != 0 )
-                goto cleanup;
-            break;
-#endif /* MBEDTLS_PSA_BUILTIN_ALG_CHACHA20_POLY1305 */
-
-        default:
-            status = PSA_ERROR_NOT_SUPPORTED;
-            goto cleanup;
-    }
-
-    if( PSA_AEAD_TAG_LENGTH( alg ) > operation->full_tag_length )
-    {
-        status = PSA_ERROR_INVALID_ARGUMENT;
-        goto cleanup;
-    }
-    operation->tag_length = PSA_AEAD_TAG_LENGTH( alg );
-
-    return( PSA_SUCCESS );
-
-cleanup:
-    psa_aead_abort_internal( operation );
-    return( status );
-}
-
 psa_status_t psa_aead_encrypt( mbedtls_svc_key_id_t key,
                                psa_algorithm_t alg,
                                const uint8_t *nonce,
@@ -3694,107 +3518,37 @@ psa_status_t psa_aead_encrypt( mbedtls_svc_key_id_t key,
                                size_t ciphertext_size,
                                size_t *ciphertext_length )
 {
-    psa_status_t status;
-    aead_operation_t operation = AEAD_OPERATION_INIT;
-    uint8_t *tag;
+    psa_status_t status = PSA_ERROR_CORRUPTION_DETECTED;
+    psa_key_slot_t *slot;
 
     *ciphertext_length = 0;
 
-    status = psa_aead_setup( &operation, key, PSA_KEY_USAGE_ENCRYPT, alg );
+    if( !PSA_ALG_IS_AEAD( alg ) || PSA_ALG_IS_WILDCARD( alg ) )
+        return( PSA_ERROR_NOT_SUPPORTED );
+
+    status = psa_get_and_lock_key_slot_with_policy(
+                 key, &slot, PSA_KEY_USAGE_ENCRYPT, alg );
     if( status != PSA_SUCCESS )
         return( status );
 
-    /* For all currently supported modes, the tag is at the end of the
-     * ciphertext. */
-    if( ciphertext_size < ( plaintext_length + operation.tag_length ) )
-    {
-        status = PSA_ERROR_BUFFER_TOO_SMALL;
-        goto exit;
-    }
-    tag = ciphertext + plaintext_length;
+    psa_key_attributes_t attributes = {
+      .core = slot->attr
+    };
 
-#if defined(MBEDTLS_PSA_BUILTIN_ALG_GCM)
-    if( operation.core_alg == PSA_ALG_GCM )
-    {
-        status = mbedtls_to_psa_error(
-            mbedtls_gcm_crypt_and_tag( &operation.ctx.gcm,
-                                       MBEDTLS_GCM_ENCRYPT,
-                                       plaintext_length,
-                                       nonce, nonce_length,
-                                       additional_data, additional_data_length,
-                                       plaintext, ciphertext,
-                                       operation.tag_length, tag ) );
-    }
-    else
-#endif /* MBEDTLS_PSA_BUILTIN_ALG_GCM */
-#if defined(MBEDTLS_PSA_BUILTIN_ALG_CCM)
-    if( operation.core_alg == PSA_ALG_CCM )
-    {
-        status = mbedtls_to_psa_error(
-            mbedtls_ccm_encrypt_and_tag( &operation.ctx.ccm,
-                                         plaintext_length,
-                                         nonce, nonce_length,
-                                         additional_data,
-                                         additional_data_length,
-                                         plaintext, ciphertext,
-                                         tag, operation.tag_length ) );
-    }
-    else
-#endif /* MBEDTLS_PSA_BUILTIN_ALG_CCM */
-#if defined(MBEDTLS_PSA_BUILTIN_ALG_CHACHA20_POLY1305)
-    if( operation.core_alg == PSA_ALG_CHACHA20_POLY1305 )
-    {
-        if( nonce_length != 12 || operation.tag_length != 16 )
-        {
-            status = PSA_ERROR_NOT_SUPPORTED;
-            goto exit;
-        }
-        status = mbedtls_to_psa_error(
-            mbedtls_chachapoly_encrypt_and_tag( &operation.ctx.chachapoly,
-                                                plaintext_length,
-                                                nonce,
-                                                additional_data,
-                                                additional_data_length,
-                                                plaintext,
-                                                ciphertext,
-                                                tag ) );
-    }
-    else
-#endif /* MBEDTLS_PSA_BUILTIN_ALG_CHACHA20_POLY1305 */
-    {
-        (void) tag;
-        return( PSA_ERROR_NOT_SUPPORTED );
-    }
+    status = psa_driver_wrapper_aead_encrypt(
+        &attributes, slot->key.data, slot->key.bytes,
+        alg,
+        nonce, nonce_length,
+        additional_data, additional_data_length,
+        plaintext, plaintext_length,
+        ciphertext, ciphertext_size, ciphertext_length );
 
     if( status != PSA_SUCCESS && ciphertext_size != 0 )
         memset( ciphertext, 0, ciphertext_size );
 
-exit:
-    psa_aead_abort_internal( &operation );
-    if( status == PSA_SUCCESS )
-        *ciphertext_length = plaintext_length + operation.tag_length;
-    return( status );
-}
+    psa_unlock_key_slot( slot );
 
-/* Locate the tag in a ciphertext buffer containing the encrypted data
- * followed by the tag. Return the length of the part preceding the tag in
- * *plaintext_length. This is the size of the plaintext in modes where
- * the encrypted data has the same size as the plaintext, such as
- * CCM and GCM. */
-static psa_status_t psa_aead_unpadded_locate_tag( size_t tag_length,
-                                                  const uint8_t *ciphertext,
-                                                  size_t ciphertext_length,
-                                                  size_t plaintext_size,
-                                                  const uint8_t **p_tag )
-{
-    size_t payload_length;
-    if( tag_length > ciphertext_length )
-        return( PSA_ERROR_INVALID_ARGUMENT );
-    payload_length = ciphertext_length - tag_length;
-    if( payload_length > plaintext_size )
-        return( PSA_ERROR_BUFFER_TOO_SMALL );
-    *p_tag = ciphertext + payload_length;
-    return( PSA_SUCCESS );
+    return( status );
 }
 
 psa_status_t psa_aead_decrypt( mbedtls_svc_key_id_t key,
@@ -3809,85 +3563,38 @@ psa_status_t psa_aead_decrypt( mbedtls_svc_key_id_t key,
                                size_t plaintext_size,
                                size_t *plaintext_length )
 {
-    psa_status_t status;
-    aead_operation_t operation = AEAD_OPERATION_INIT;
-    const uint8_t *tag = NULL;
+    psa_status_t status = PSA_ERROR_CORRUPTION_DETECTED;
+    psa_key_slot_t *slot;
 
     *plaintext_length = 0;
 
-    status = psa_aead_setup( &operation, key, PSA_KEY_USAGE_DECRYPT, alg );
+    if( !PSA_ALG_IS_AEAD( alg ) || PSA_ALG_IS_WILDCARD( alg ) )
+        return( PSA_ERROR_NOT_SUPPORTED );
+
+    status = psa_get_and_lock_key_slot_with_policy(
+                 key, &slot, PSA_KEY_USAGE_DECRYPT, alg );
     if( status != PSA_SUCCESS )
         return( status );
 
-    status = psa_aead_unpadded_locate_tag( operation.tag_length,
-                                           ciphertext, ciphertext_length,
-                                           plaintext_size, &tag );
-    if( status != PSA_SUCCESS )
-        goto exit;
+    psa_key_attributes_t attributes = {
+      .core = slot->attr
+    };
 
-#if defined(MBEDTLS_PSA_BUILTIN_ALG_GCM)
-    if( operation.core_alg == PSA_ALG_GCM )
-    {
-        status = mbedtls_to_psa_error(
-            mbedtls_gcm_auth_decrypt( &operation.ctx.gcm,
-                                      ciphertext_length - operation.tag_length,
-                                      nonce, nonce_length,
-                                      additional_data,
-                                      additional_data_length,
-                                      tag, operation.tag_length,
-                                      ciphertext, plaintext ) );
-    }
-    else
-#endif /* MBEDTLS_PSA_BUILTIN_ALG_GCM */
-#if defined(MBEDTLS_PSA_BUILTIN_ALG_CCM)
-    if( operation.core_alg == PSA_ALG_CCM )
-    {
-        status = mbedtls_to_psa_error(
-            mbedtls_ccm_auth_decrypt( &operation.ctx.ccm,
-                                      ciphertext_length - operation.tag_length,
-                                      nonce, nonce_length,
-                                      additional_data,
-                                      additional_data_length,
-                                      ciphertext, plaintext,
-                                      tag, operation.tag_length ) );
-    }
-    else
-#endif /* MBEDTLS_PSA_BUILTIN_ALG_CCM */
-#if defined(MBEDTLS_PSA_BUILTIN_ALG_CHACHA20_POLY1305)
-    if( operation.core_alg == PSA_ALG_CHACHA20_POLY1305 )
-    {
-        if( nonce_length != 12 || operation.tag_length != 16 )
-        {
-            status = PSA_ERROR_NOT_SUPPORTED;
-            goto exit;
-        }
-        status = mbedtls_to_psa_error(
-            mbedtls_chachapoly_auth_decrypt( &operation.ctx.chachapoly,
-                                             ciphertext_length - operation.tag_length,
-                                             nonce,
-                                             additional_data,
-                                             additional_data_length,
-                                             tag,
-                                             ciphertext,
-                                             plaintext ) );
-    }
-    else
-#endif /* MBEDTLS_PSA_BUILTIN_ALG_CHACHA20_POLY1305 */
-    {
-        return( PSA_ERROR_NOT_SUPPORTED );
-    }
+    status = psa_driver_wrapper_aead_decrypt(
+        &attributes, slot->key.data, slot->key.bytes,
+        alg,
+        nonce, nonce_length,
+        additional_data, additional_data_length,
+        ciphertext, ciphertext_length,
+        plaintext, plaintext_size, plaintext_length );
 
     if( status != PSA_SUCCESS && plaintext_size != 0 )
         memset( plaintext, 0, plaintext_size );
 
-exit:
-    psa_aead_abort_internal( &operation );
-    if( status == PSA_SUCCESS )
-        *plaintext_length = ciphertext_length - operation.tag_length;
+    psa_unlock_key_slot( slot );
+
     return( status );
 }
-
-
 
 /****************************************************************/
 /* Generators */
@@ -5172,7 +4879,7 @@ int mbedtls_psa_get_random( void *p_rng,
 #endif /* MBEDTLS_PSA_CRYPTO_EXTERNAL_RNG */
 
 #if defined(MBEDTLS_PSA_INJECT_ENTROPY)
-#include "entropy_poll.h"
+#include "mbedtls/entropy_poll.h"
 
 psa_status_t mbedtls_psa_inject_entropy( const uint8_t *seed,
                                          size_t seed_size )
