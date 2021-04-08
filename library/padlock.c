@@ -27,7 +27,7 @@
 
 #if defined(MBEDTLS_PADLOCK_C)
 
-#include "padlock.h"
+#include "mbedtls/padlock.h"
 
 #include <string.h>
 
