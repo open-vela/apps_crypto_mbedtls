@@ -242,7 +242,6 @@ EXCLUDE_FROM_BAREMETAL = frozenset([
     #pylint: disable=line-too-long
     'MBEDTLS_ENTROPY_NV_SEED', # requires a filesystem and FS_IO or alternate NV seed hooks
     'MBEDTLS_FS_IO', # requires a filesystem
-    'MBEDTLS_HAVEGE_C', # requires a clock
     'MBEDTLS_HAVE_TIME', # requires a clock
     'MBEDTLS_HAVE_TIME_DATE', # requires a clock
     'MBEDTLS_NET_C', # requires POSIX-like networking
@@ -279,7 +278,6 @@ def include_in_crypto(name):
        name.startswith('MBEDTLS_KEY_EXCHANGE_'):
         return False
     if name in [
-            'MBEDTLS_CERTS_C', # part of libmbedx509
             'MBEDTLS_DEBUG_C', # part of libmbedtls
             'MBEDTLS_NET_C', # part of libmbedtls
             'MBEDTLS_PKCS11_C', # part of libmbedx509
