@@ -77,6 +77,8 @@
 #include "mbedtls/platform_util.h"
 #include "mbedtls/error.h"
 
+#include "ecp_invasive.h"
+
 #include <string.h>
 
 #if !defined(MBEDTLS_ECP_ALT)
@@ -97,7 +99,7 @@
 #define mbedtls_free       free
 #endif
 
-#include "ecp_alt.h"
+#include "mbedtls/ecp_internal.h"
 
 #if !defined(MBEDTLS_ECP_NO_INTERNAL_RNG)
 #if defined(MBEDTLS_HMAC_DRBG_C)
