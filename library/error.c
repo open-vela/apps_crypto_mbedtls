@@ -38,10 +38,6 @@
 #include "mbedtls/aes.h"
 #endif
 
-#if defined(MBEDTLS_ARC4_C)
-#include "mbedtls/arc4.h"
-#endif
-
 #if defined(MBEDTLS_ARIA_C)
 #include "mbedtls/aria.h"
 #endif
@@ -80,10 +76,6 @@
 
 #if defined(MBEDTLS_CIPHER_C)
 #include "mbedtls/cipher.h"
-#endif
-
-#if defined(MBEDTLS_CMAC_C)
-#include "mbedtls/cmac.h"
 #endif
 
 #if defined(MBEDTLS_CTR_DRBG_C)
@@ -246,8 +238,6 @@ const char * mbedtls_high_level_strerr( int error_code )
             return( "DHM - Allocation of memory failed" );
         case -(MBEDTLS_ERR_DHM_FILE_IO_ERROR):
             return( "DHM - Read or write of file failed" );
-        case -(MBEDTLS_ERR_DHM_HW_ACCEL_FAILED):
-            return( "DHM - DHM hardware accelerator failed" );
         case -(MBEDTLS_ERR_DHM_SET_GROUP_FAILED):
             return( "DHM - Setting the modulus and generator failed" );
 #endif /* MBEDTLS_DHM_C */
@@ -269,8 +259,6 @@ const char * mbedtls_high_level_strerr( int error_code )
             return( "ECP - Invalid private or public key" );
         case -(MBEDTLS_ERR_ECP_SIG_LEN_MISMATCH):
             return( "ECP - The buffer contains a valid signature followed by more data" );
-        case -(MBEDTLS_ERR_ECP_HW_ACCEL_FAILED):
-            return( "ECP - The ECP hardware accelerator failed" );
         case -(MBEDTLS_ERR_ECP_IN_PROGRESS):
             return( "ECP - Operation in progress, call again with the same parameters to continue" );
 #endif /* MBEDTLS_ECP_C */
@@ -385,8 +373,6 @@ const char * mbedtls_high_level_strerr( int error_code )
             return( "RSA - The random generator failed to generate non-zeros" );
         case -(MBEDTLS_ERR_RSA_UNSUPPORTED_OPERATION):
             return( "RSA - The implementation does not offer the requested operation, for example, because of security violations or lack of functionality" );
-        case -(MBEDTLS_ERR_RSA_HW_ACCEL_FAILED):
-            return( "RSA - RSA hardware accelerator failed" );
 #endif /* MBEDTLS_RSA_C */
 
 #if defined(MBEDTLS_SSL_TLS_C)
@@ -579,26 +565,13 @@ const char * mbedtls_low_level_strerr( int error_code )
             return( "AES - Invalid data input length" );
         case -(MBEDTLS_ERR_AES_BAD_INPUT_DATA):
             return( "AES - Invalid input data" );
-        case -(MBEDTLS_ERR_AES_FEATURE_UNAVAILABLE):
-            return( "AES - Feature not available. For example, an unsupported AES key size" );
-        case -(MBEDTLS_ERR_AES_HW_ACCEL_FAILED):
-            return( "AES - AES hardware accelerator failed" );
 #endif /* MBEDTLS_AES_C */
-
-#if defined(MBEDTLS_ARC4_C)
-        case -(MBEDTLS_ERR_ARC4_HW_ACCEL_FAILED):
-            return( "ARC4 - ARC4 hardware accelerator failed" );
-#endif /* MBEDTLS_ARC4_C */
 
 #if defined(MBEDTLS_ARIA_C)
         case -(MBEDTLS_ERR_ARIA_BAD_INPUT_DATA):
             return( "ARIA - Bad input data" );
         case -(MBEDTLS_ERR_ARIA_INVALID_INPUT_LENGTH):
             return( "ARIA - Invalid data input length" );
-        case -(MBEDTLS_ERR_ARIA_FEATURE_UNAVAILABLE):
-            return( "ARIA - Feature not available. For example, an unsupported ARIA key size" );
-        case -(MBEDTLS_ERR_ARIA_HW_ACCEL_FAILED):
-            return( "ARIA - ARIA hardware accelerator failed" );
 #endif /* MBEDTLS_ARIA_C */
 
 #if defined(MBEDTLS_ASN1_PARSE_C)
@@ -649,8 +622,6 @@ const char * mbedtls_low_level_strerr( int error_code )
             return( "BLOWFISH - Bad input data" );
         case -(MBEDTLS_ERR_BLOWFISH_INVALID_INPUT_LENGTH):
             return( "BLOWFISH - Invalid data input length" );
-        case -(MBEDTLS_ERR_BLOWFISH_HW_ACCEL_FAILED):
-            return( "BLOWFISH - Blowfish hardware accelerator failed" );
 #endif /* MBEDTLS_BLOWFISH_C */
 
 #if defined(MBEDTLS_CAMELLIA_C)
@@ -658,8 +629,6 @@ const char * mbedtls_low_level_strerr( int error_code )
             return( "CAMELLIA - Bad input data" );
         case -(MBEDTLS_ERR_CAMELLIA_INVALID_INPUT_LENGTH):
             return( "CAMELLIA - Invalid data input length" );
-        case -(MBEDTLS_ERR_CAMELLIA_HW_ACCEL_FAILED):
-            return( "CAMELLIA - Camellia hardware accelerator failed" );
 #endif /* MBEDTLS_CAMELLIA_C */
 
 #if defined(MBEDTLS_CCM_C)
@@ -667,17 +636,11 @@ const char * mbedtls_low_level_strerr( int error_code )
             return( "CCM - Bad input parameters to the function" );
         case -(MBEDTLS_ERR_CCM_AUTH_FAILED):
             return( "CCM - Authenticated decryption failed" );
-        case -(MBEDTLS_ERR_CCM_HW_ACCEL_FAILED):
-            return( "CCM - CCM hardware accelerator failed" );
 #endif /* MBEDTLS_CCM_C */
 
 #if defined(MBEDTLS_CHACHA20_C)
         case -(MBEDTLS_ERR_CHACHA20_BAD_INPUT_DATA):
             return( "CHACHA20 - Invalid input parameter(s)" );
-        case -(MBEDTLS_ERR_CHACHA20_FEATURE_UNAVAILABLE):
-            return( "CHACHA20 - Feature not available. For example, s part of the API is not implemented" );
-        case -(MBEDTLS_ERR_CHACHA20_HW_ACCEL_FAILED):
-            return( "CHACHA20 - Chacha20 hardware accelerator failed" );
 #endif /* MBEDTLS_CHACHA20_C */
 
 #if defined(MBEDTLS_CHACHAPOLY_C)
@@ -686,11 +649,6 @@ const char * mbedtls_low_level_strerr( int error_code )
         case -(MBEDTLS_ERR_CHACHAPOLY_AUTH_FAILED):
             return( "CHACHAPOLY - Authenticated decryption failed: data was not authentic" );
 #endif /* MBEDTLS_CHACHAPOLY_C */
-
-#if defined(MBEDTLS_CMAC_C)
-        case -(MBEDTLS_ERR_CMAC_HW_ACCEL_FAILED):
-            return( "CMAC - CMAC hardware accelerator failed" );
-#endif /* MBEDTLS_CMAC_C */
 
 #if defined(MBEDTLS_CTR_DRBG_C)
         case -(MBEDTLS_ERR_CTR_DRBG_ENTROPY_SOURCE_FAILED):
@@ -706,8 +664,6 @@ const char * mbedtls_low_level_strerr( int error_code )
 #if defined(MBEDTLS_DES_C)
         case -(MBEDTLS_ERR_DES_INVALID_INPUT_LENGTH):
             return( "DES - The data input has an invalid length" );
-        case -(MBEDTLS_ERR_DES_HW_ACCEL_FAILED):
-            return( "DES - DES hardware accelerator failed" );
 #endif /* MBEDTLS_DES_C */
 
 #if defined(MBEDTLS_ENTROPY_C)
@@ -733,8 +689,6 @@ const char * mbedtls_low_level_strerr( int error_code )
 #if defined(MBEDTLS_GCM_C)
         case -(MBEDTLS_ERR_GCM_AUTH_FAILED):
             return( "GCM - Authenticated decryption failed" );
-        case -(MBEDTLS_ERR_GCM_HW_ACCEL_FAILED):
-            return( "GCM - GCM hardware accelerator failed" );
         case -(MBEDTLS_ERR_GCM_BAD_INPUT):
             return( "GCM - Bad input parameters to function" );
 #endif /* MBEDTLS_GCM_C */
@@ -806,10 +760,6 @@ const char * mbedtls_low_level_strerr( int error_code )
 #if defined(MBEDTLS_POLY1305_C)
         case -(MBEDTLS_ERR_POLY1305_BAD_INPUT_DATA):
             return( "POLY1305 - Invalid input parameter(s)" );
-        case -(MBEDTLS_ERR_POLY1305_FEATURE_UNAVAILABLE):
-            return( "POLY1305 - Feature not available. For example, s part of the API is not implemented" );
-        case -(MBEDTLS_ERR_POLY1305_HW_ACCEL_FAILED):
-            return( "POLY1305 - Poly1305 hardware accelerator failed" );
 #endif /* MBEDTLS_POLY1305_C */
 
 #if defined(MBEDTLS_SHA1_C)
@@ -828,8 +778,6 @@ const char * mbedtls_low_level_strerr( int error_code )
 #endif /* MBEDTLS_SHA512_C */
 
 #if defined(MBEDTLS_THREADING_C)
-        case -(MBEDTLS_ERR_THREADING_FEATURE_UNAVAILABLE):
-            return( "THREADING - The selected feature is not available" );
         case -(MBEDTLS_ERR_THREADING_BAD_INPUT_DATA):
             return( "THREADING - Bad input parameters to function" );
         case -(MBEDTLS_ERR_THREADING_MUTEX_ERROR):
@@ -839,8 +787,6 @@ const char * mbedtls_low_level_strerr( int error_code )
 #if defined(MBEDTLS_XTEA_C)
         case -(MBEDTLS_ERR_XTEA_INVALID_INPUT_LENGTH):
             return( "XTEA - The data input has an invalid length" );
-        case -(MBEDTLS_ERR_XTEA_HW_ACCEL_FAILED):
-            return( "XTEA - XTEA hardware accelerator failed" );
 #endif /* MBEDTLS_XTEA_C */
         /* End Auto-Generated Code. */
 
