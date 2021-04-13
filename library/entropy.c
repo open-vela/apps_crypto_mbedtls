@@ -471,21 +471,15 @@ int mbedtls_entropy_update_nv_seed( mbedtls_entropy_context *ctx )
 #if defined(MBEDTLS_FS_IO)
 int mbedtls_entropy_write_seed_file( mbedtls_entropy_context *ctx, const char *path )
 {
-    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
-    FILE *f = NULL;
+    int ret = MBEDTLS_ERR_ENTROPY_FILE_IO_ERROR;
+    FILE *f;
     unsigned char buf[MBEDTLS_ENTROPY_BLOCK_SIZE];
 
-    if( ( ret = mbedtls_entropy_func( ctx, buf, MBEDTLS_ENTROPY_BLOCK_SIZE ) ) != 0 )
-    {
-        ret = MBEDTLS_ERR_ENTROPY_SOURCE_FAILED;
-        goto exit;
-    }
-
     if( ( f = fopen( path, "wb" ) ) == NULL )
-    {
-        ret = MBEDTLS_ERR_ENTROPY_FILE_IO_ERROR;
+        return( MBEDTLS_ERR_ENTROPY_FILE_IO_ERROR );
+
+    if( ( ret = mbedtls_entropy_func( ctx, buf, MBEDTLS_ENTROPY_BLOCK_SIZE ) ) != 0 )
         goto exit;
-    }
 
     if( fwrite( buf, 1, MBEDTLS_ENTROPY_BLOCK_SIZE, f ) != MBEDTLS_ENTROPY_BLOCK_SIZE )
     {
@@ -498,9 +492,7 @@ int mbedtls_entropy_write_seed_file( mbedtls_entropy_context *ctx, const char *p
 exit:
     mbedtls_platform_zeroize( buf, sizeof( buf ) );
 
-    if( f != NULL )
-        fclose( f );
-
+    fclose( f );
     return( ret );
 }
 
