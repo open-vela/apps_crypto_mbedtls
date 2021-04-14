@@ -30,6 +30,26 @@
 #include "psa/crypto.h"
 #include "psa/crypto_se_driver.h"
 
+/** Constant-time buffer comparison
+ *
+ * \param[in]  a    Left-hand buffer for comparison.
+ * \param[in]  b    Right-hand buffer for comparison.
+ * \param n         Amount of bytes to compare.
+ *
+ * \return 0 if the buffer contents are equal, non-zero otherwise
+ */
+static inline int mbedtls_psa_safer_memcmp(
+    const uint8_t *a, const uint8_t *b, size_t n )
+{
+    size_t i;
+    unsigned char diff = 0;
+
+    for( i = 0; i < n; i++ )
+        diff |= a[i] ^ b[i];
+
+    return( diff );
+}
+
 /** The data structure representing a key slot, containing key material
  * and metadata for one key.
  */
@@ -180,6 +200,24 @@ static inline psa_key_slot_number_t psa_key_slot_get_slot_number(
  */
 psa_status_t psa_wipe_key_slot( psa_key_slot_t *slot );
 
+/** Try to allocate a buffer to an empty key slot.
+ *
+ * \param[in,out] slot          Key slot to attach buffer to.
+ * \param[in] buffer_length     Requested size of the buffer.
+ *
+ * \retval #PSA_SUCCESS
+ *         The buffer has been successfully allocated.
+ * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
+ *         Not enough memory was available for allocation.
+ * \retval #PSA_ERROR_ALREADY_EXISTS
+ *         Trying to allocate a buffer to a non-empty key slot.
+ */
+psa_status_t psa_allocate_buffer_to_slot( psa_key_slot_t *slot,
+                                          size_t buffer_length );
+
+/** Wipe key data from a slot. Preserves metadata such as the policy. */
+psa_status_t psa_remove_key_data_from_memory( psa_key_slot_t *slot );
+
 /** Copy key data (in export format) into an empty key slot.
  *
  * This function assumes that the slot does not contain
@@ -211,6 +249,22 @@ psa_status_t psa_copy_key_material_into_slot( psa_key_slot_t *slot,
  * \return              The corresponding PSA error code
  */
 psa_status_t mbedtls_to_psa_error( int ret );
+
+/** Get Mbed TLS cipher information given the cipher algorithm PSA identifier
+ *  as well as the PSA type and size of the key to be used with the cipher
+ *  algorithm.
+ *
+ * \param       alg        PSA cipher algorithm identifier
+ * \param       key_type   PSA key type
+ * \param       key_bits   Size of the key in bits
+ * \param[out]  cipher_id  Mbed TLS cipher algorithm identifier
+ *
+ * \return  The Mbed TLS cipher information of the cipher algorithm.
+ *          \c NULL if the PSA cipher algorithm is not supported.
+ */
+const mbedtls_cipher_info_t *mbedtls_cipher_info_from_psa(
+    psa_algorithm_t alg, psa_key_type_t key_type, size_t key_bits,
+    mbedtls_cipher_id_t *cipher_id );
 
 /** Import a key in binary format.
  *
