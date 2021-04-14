@@ -146,10 +146,6 @@
 #include "mbedtls/oid.h"
 #endif
 
-#if defined(MBEDTLS_PADLOCK_C)
-#include "mbedtls/padlock.h"
-#endif
-
 #if defined(MBEDTLS_PEM_PARSE_C) || defined(MBEDTLS_PEM_WRITE_C)
 #include "mbedtls/pem.h"
 #endif
@@ -822,11 +818,6 @@ const char * mbedtls_low_level_strerr( int error_code )
             return( "OID - output buffer is too small" );
 #endif /* MBEDTLS_OID_C */
 
-#if defined(MBEDTLS_PADLOCK_C)
-        case -(MBEDTLS_ERR_PADLOCK_DATA_MISALIGNED):
-            return( "PADLOCK - Input data should be aligned" );
-#endif /* MBEDTLS_PADLOCK_C */
-
 #if defined(MBEDTLS_PLATFORM_C)
         case -(MBEDTLS_ERR_PLATFORM_HW_ACCEL_FAILED):
             return( "PLATFORM - Hardware accelerator failed" );
@@ -972,9 +963,5 @@ void mbedtls_strerror( int ret, char *buf, size_t buflen )
 }
 
 #endif /* MBEDTLS_ERROR_C */
-
-#if defined(MBEDTLS_TEST_HOOKS)
-void (*mbedtls_test_hook_error_add)( int, int, const char *, int );
-#endif
 
 #endif /* MBEDTLS_ERROR_C || MBEDTLS_ERROR_STRERROR_DUMMY */
