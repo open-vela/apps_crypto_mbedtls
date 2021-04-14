@@ -37,7 +37,6 @@
  * default value when that configuration is not set in the config.h.
  */
 #include "mbedtls/aes.h"
-#include "mbedtls/aesni.h"
 #include "mbedtls/arc4.h"
 #include "mbedtls/aria.h"
 #include "mbedtls/asn1.h"
@@ -47,7 +46,6 @@
 #include "mbedtls/blowfish.h"
 #include "mbedtls/camellia.h"
 #include "mbedtls/ccm.h"
-#include "mbedtls/certs.h"
 #include "mbedtls/chacha20.h"
 #include "mbedtls/chachapoly.h"
 #include "mbedtls/cipher.h"
@@ -61,10 +59,8 @@
 #include "mbedtls/ecjpake.h"
 #include "mbedtls/ecp.h"
 #include "mbedtls/entropy.h"
-#include "mbedtls/entropy_poll.h"
 #include "mbedtls/error.h"
 #include "mbedtls/gcm.h"
-#include "mbedtls/havege.h"
 #include "mbedtls/hkdf.h"
 #include "mbedtls/hmac_drbg.h"
 #include "mbedtls/md.h"
@@ -75,7 +71,6 @@
 #include "mbedtls/net_sockets.h"
 #include "mbedtls/nist_kw.h"
 #include "mbedtls/oid.h"
-#include "mbedtls/padlock.h"
 #include "mbedtls/pem.h"
 #include "mbedtls/pk.h"
 #include "mbedtls/pkcs11.h"
@@ -93,7 +88,6 @@
 #include "mbedtls/ssl_cache.h"
 #include "mbedtls/ssl_ciphersuites.h"
 #include "mbedtls/ssl_cookie.h"
-#include "mbedtls/ssl_internal.h"
 #include "mbedtls/ssl_ticket.h"
 #include "mbedtls/threading.h"
 #include "mbedtls/timing.h"
@@ -1786,14 +1780,6 @@ int query_config( const char *config )
     }
 #endif /* MBEDTLS_CCM_C */
 
-#if defined(MBEDTLS_CERTS_C)
-    if( strcmp( "MBEDTLS_CERTS_C", config ) == 0 )
-    {
-        MACRO_EXPANSION_TO_STR( MBEDTLS_CERTS_C );
-        return( 0 );
-    }
-#endif /* MBEDTLS_CERTS_C */
-
 #if defined(MBEDTLS_CHACHA20_C)
     if( strcmp( "MBEDTLS_CHACHA20_C", config ) == 0 )
     {
@@ -1913,14 +1899,6 @@ int query_config( const char *config )
         return( 0 );
     }
 #endif /* MBEDTLS_GCM_C */
-
-#if defined(MBEDTLS_HAVEGE_C)
-    if( strcmp( "MBEDTLS_HAVEGE_C", config ) == 0 )
-    {
-        MACRO_EXPANSION_TO_STR( MBEDTLS_HAVEGE_C );
-        return( 0 );
-    }
-#endif /* MBEDTLS_HAVEGE_C */
 
 #if defined(MBEDTLS_HKDF_C)
     if( strcmp( "MBEDTLS_HKDF_C", config ) == 0 )
@@ -2729,14 +2707,6 @@ int query_config( const char *config )
         return( 0 );
     }
 #endif /* MBEDTLS_SSL_DTLS_MAX_BUFFERING */
-
-#if defined(MBEDTLS_SSL_DEFAULT_TICKET_LIFETIME)
-    if( strcmp( "MBEDTLS_SSL_DEFAULT_TICKET_LIFETIME", config ) == 0 )
-    {
-        MACRO_EXPANSION_TO_STR( MBEDTLS_SSL_DEFAULT_TICKET_LIFETIME );
-        return( 0 );
-    }
-#endif /* MBEDTLS_SSL_DEFAULT_TICKET_LIFETIME */
 
 #if defined(MBEDTLS_PSK_MAX_LEN)
     if( strcmp( "MBEDTLS_PSK_MAX_LEN", config ) == 0 )

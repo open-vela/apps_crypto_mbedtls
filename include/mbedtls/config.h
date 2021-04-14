@@ -48,7 +48,7 @@
  * Used in:
  *      library/aria.c
  *      library/timing.c
- *      include/mbedtls/bn_mul.h
+ *      library/bn_mul.h
  *
  * Required by:
  *      MBEDTLS_AESNI_C
@@ -559,7 +559,8 @@
  * hardware entropy collector.
  *
  * Your function must be called \c mbedtls_hardware_poll(), have the same
- * prototype as declared in entropy_poll.h, and accept NULL as first argument.
+ * prototype as declared in library/entropy_poll.h, and accept NULL as first
+ * argument.
  *
  * Uncomment to use your own hardware entropy collector.
  */
@@ -1205,8 +1206,8 @@
 /**
  * \def MBEDTLS_NO_DEFAULT_ENTROPY_SOURCES
  *
- * Do not add default entropy sources. These are the platform specific,
- * mbedtls_timing_hardclock and HAVEGE based poll functions.
+ * Do not add default entropy sources. These are the platform specific
+ * or mbedtls_timing_hardclock poll function.
  *
  * This is useful to have more control over the added entropy sources in an
  * application.
@@ -2428,7 +2429,7 @@
  *          library/ecp.c
  *          library/ecdsa.c
  *          library/rsa.c
- *          library/rsa_internal.c
+ *          library/rsa_alt_helpers.c
  *          library/ssl_tls.c
  *
  * This module is required for RSA, DHM and ECC (ECDH, ECDSA) support.
@@ -2564,18 +2565,6 @@
  * enabled as well.
  */
 #define MBEDTLS_CCM_C
-
-/**
- * \def MBEDTLS_CERTS_C
- *
- * Enable the test certificates.
- *
- * Module:  library/certs.c
- * Caller:
- *
- * This module is used for testing (ssl_client/server).
- */
-#define MBEDTLS_CERTS_C
 
 /**
  * \def MBEDTLS_CHACHA20_C
@@ -2811,29 +2800,6 @@
  * requisites are enabled as well.
  */
 #define MBEDTLS_GCM_C
-
-/**
- * \def MBEDTLS_HAVEGE_C
- *
- * Enable the HAVEGE random generator.
- *
- * Warning: the HAVEGE random generator is not suitable for virtualized
- *          environments
- *
- * Warning: the HAVEGE random generator is dependent on timing and specific
- *          processor traits. It is therefore not advised to use HAVEGE as
- *          your applications primary random generator or primary entropy pool
- *          input. As a secondary input to your entropy pool, it IS able add
- *          the (limited) extra entropy it provides.
- *
- * Module:  library/havege.c
- * Caller:
- *
- * Requires: MBEDTLS_TIMING_C
- *
- * Uncomment to enable the HAVEGE random generator.
- */
-//#define MBEDTLS_HAVEGE_C
 
 /**
  * \def MBEDTLS_HKDF_C
@@ -3249,7 +3215,7 @@
  * Enable the RSA public-key cryptosystem.
  *
  * Module:  library/rsa.c
- *          library/rsa_internal.c
+ *          library/rsa_alt_helpers.c
  * Caller:  library/ssl_cli.c
  *          library/ssl_srv.c
  *          library/ssl_tls.c
@@ -3433,9 +3399,6 @@
  * https://tls.mbed.org/kb/how-to/how-do-i-port-mbed-tls-to-a-new-environment-OS
  *
  * Module:  library/timing.c
- * Caller:  library/havege.c
- *
- * This module is used by the HAVEGE random number generator.
  */
 #define MBEDTLS_TIMING_C
 
@@ -3843,7 +3806,6 @@
  */
 //#define MBEDTLS_SSL_DTLS_MAX_BUFFERING             32768
 
-//#define MBEDTLS_SSL_DEFAULT_TICKET_LIFETIME     86400 /**< Lifetime of session tickets (if enabled) */
 //#define MBEDTLS_PSK_MAX_LEN               32 /**< Max size of TLS pre-shared keys, in bytes (default 256 bits) */
 //#define MBEDTLS_SSL_COOKIE_TIMEOUT        60 /**< Default expiration delay of DTLS cookies, in seconds if HAVE_TIME, or in number of cookies issued */
 
