@@ -34,7 +34,7 @@
 #endif
 
 #include "mbedtls/ssl_cache.h"
-#include "mbedtls/ssl_internal.h"
+#include "ssl_misc.h"
 
 #include <string.h>
 
@@ -50,83 +50,70 @@ void mbedtls_ssl_cache_init( mbedtls_ssl_cache_context *cache )
 #endif
 }
 
-int mbedtls_ssl_cache_get( void *data, mbedtls_ssl_session *session )
+static int ssl_cache_find_entry( mbedtls_ssl_cache_context *cache,
+                                 unsigned char const *session_id,
+                                 size_t session_id_len,
+                                 mbedtls_ssl_cache_entry **dst )
 {
     int ret = 1;
 #if defined(MBEDTLS_HAVE_TIME)
     mbedtls_time_t t = mbedtls_time( NULL );
 #endif
+    mbedtls_ssl_cache_entry *cur;
+
+    for( cur = cache->chain; cur != NULL; cur = cur->next )
+    {
+#if defined(MBEDTLS_HAVE_TIME)
+        if( cache->timeout != 0 &&
+            (int) ( t - cur->timestamp ) > cache->timeout )
+            continue;
+#endif
+
+        if( session_id_len != cur->session_id_len ||
+            memcmp( session_id, cur->session_id,
+                    cur->session_id_len ) != 0 )
+        {
+            continue;
+        }
+
+        break;
+    }
+
+    if( cur != NULL )
+    {
+        *dst = cur;
+        ret = 0;
+    }
+
+    return( ret );
+}
+
+
+int mbedtls_ssl_cache_get( void *data,
+                           unsigned char const *session_id,
+                           size_t session_id_len,
+                           mbedtls_ssl_session *session )
+{
+    int ret = 1;
     mbedtls_ssl_cache_context *cache = (mbedtls_ssl_cache_context *) data;
-    mbedtls_ssl_cache_entry *cur, *entry;
+    mbedtls_ssl_cache_entry *entry;
 
 #if defined(MBEDTLS_THREADING_C)
     if( mbedtls_mutex_lock( &cache->mutex ) != 0 )
         return( 1 );
 #endif
 
-    cur = cache->chain;
-    entry = NULL;
-
-    while( cur != NULL )
-    {
-        entry = cur;
-        cur = cur->next;
-
-#if defined(MBEDTLS_HAVE_TIME)
-        if( cache->timeout != 0 &&
-            (int) ( t - entry->timestamp ) > cache->timeout )
-            continue;
-#endif
-
-        if( session->ciphersuite != entry->session.ciphersuite ||
-            session->compression != entry->session.compression ||
-            session->id_len != entry->session.id_len )
-            continue;
-
-        if( memcmp( session->id, entry->session.id,
-                    entry->session.id_len ) != 0 )
-            continue;
-
-        ret = mbedtls_ssl_session_copy( session, &entry->session );
-        if( ret != 0 )
-        {
-            ret = 1;
-            goto exit;
-        }
-
-#if defined(MBEDTLS_X509_CRT_PARSE_C) && \
-    defined(MBEDTLS_SSL_KEEP_PEER_CERTIFICATE)
-        /*
-         * Restore peer certificate (without rest of the original chain)
-         */
-        if( entry->peer_cert.p != NULL )
-        {
-            /* `session->peer_cert` is NULL after the call to
-             * mbedtls_ssl_session_copy(), because cache entries
-             * have the `peer_cert` field set to NULL. */
-
-            if( ( session->peer_cert = mbedtls_calloc( 1,
-                                 sizeof(mbedtls_x509_crt) ) ) == NULL )
-            {
-                ret = 1;
-                goto exit;
-            }
-
-            mbedtls_x509_crt_init( session->peer_cert );
-            if( mbedtls_x509_crt_parse( session->peer_cert, entry->peer_cert.p,
-                                entry->peer_cert.len ) != 0 )
-            {
-                mbedtls_free( session->peer_cert );
-                session->peer_cert = NULL;
-                ret = 1;
-                goto exit;
-            }
-        }
-#endif /* MBEDTLS_X509_CRT_PARSE_C && MBEDTLS_SSL_KEEP_PEER_CERTIFICATE */
-
-        ret = 0;
+    ret = ssl_cache_find_entry( cache, session_id, session_id_len, &entry );
+    if( ret != 0 )
         goto exit;
-    }
+
+    ret = mbedtls_ssl_session_load( session,
+                                    entry->session,
+                                    entry->session_len );
+    if( ret != 0 )
+        goto exit;
+
+    ret = 0;
 
 exit:
 #if defined(MBEDTLS_THREADING_C)
@@ -137,21 +124,18 @@ exit:
     return( ret );
 }
 
-int mbedtls_ssl_cache_set( void *data, const mbedtls_ssl_session *session )
+static int ssl_cache_find_fresh_entry( mbedtls_ssl_cache_context *cache,
+                                       unsigned char const *session_id,
+                                       size_t session_id_len,
+                                       mbedtls_ssl_cache_entry **dst )
 {
     int ret = 1;
 #if defined(MBEDTLS_HAVE_TIME)
     mbedtls_time_t t = mbedtls_time( NULL ), oldest = 0;
     mbedtls_ssl_cache_entry *old = NULL;
 #endif
-    mbedtls_ssl_cache_context *cache = (mbedtls_ssl_cache_context *) data;
-    mbedtls_ssl_cache_entry *cur, *prv;
     int count = 0;
-
-#if defined(MBEDTLS_THREADING_C)
-    if( ( ret = mbedtls_mutex_lock( &cache->mutex ) ) != 0 )
-        return( ret );
-#endif
+    mbedtls_ssl_cache_entry *cur, *prv;
 
     cur = cache->chain;
     prv = NULL;
@@ -169,8 +153,11 @@ int mbedtls_ssl_cache_set( void *data, const mbedtls_ssl_session *session )
         }
 #endif
 
-        if( memcmp( session->id, cur->session.id, cur->session.id_len ) == 0 )
+        if( session_id_len == cur->session_id_len &&
+            memcmp( session_id, cur->session_id, cur->session_id_len ) == 0 )
+        {
             break; /* client reconnected, keep timestamp for session id */
+        }
 
 #if defined(MBEDTLS_HAVE_TIME)
         if( oldest == 0 || cur->timestamp < oldest )
@@ -242,53 +229,88 @@ int mbedtls_ssl_cache_set( void *data, const mbedtls_ssl_session *session )
 #endif
     }
 
-#if defined(MBEDTLS_X509_CRT_PARSE_C) && \
-    defined(MBEDTLS_SSL_KEEP_PEER_CERTIFICATE)
-    /*
-     * If we're reusing an entry, free its certificate first
-     */
-    if( cur->peer_cert.p != NULL )
+    if( cur != NULL )
     {
-        mbedtls_free( cur->peer_cert.p );
-        memset( &cur->peer_cert, 0, sizeof(mbedtls_x509_buf) );
-    }
-#endif /* MBEDTLS_X509_CRT_PARSE_C && MBEDTLS_SSL_KEEP_PEER_CERTIFICATE */
+        *dst = cur;
 
-    /* Copy the entire session; this temporarily makes a copy of the
-     * X.509 CRT structure even though we only want to store the raw CRT.
-     * This inefficiency will go away as soon as we implement on-demand
-     * parsing of CRTs, in which case there's no need for the `peer_cert`
-     * field anymore in the first place, and we're done after this call. */
-    ret = mbedtls_ssl_session_copy( &cur->session, session );
+        /*
+         * If we're reusing an entry, free it first.
+         */
+        if( cur->session != NULL )
+        {
+            mbedtls_free( cur->session );
+            cur->session = NULL;
+            cur->session_len = 0;
+            memset( cur->session_id, 0, sizeof( cur->session_id ) );
+            cur->session_id_len = 0;
+        }
+
+        ret = 0;
+    }
+
+exit:
+
+    return( ret );
+}
+
+int mbedtls_ssl_cache_set( void *data,
+                           unsigned char const *session_id,
+                           size_t session_id_len,
+                           const mbedtls_ssl_session *session )
+{
+    int ret = 1;
+    mbedtls_ssl_cache_context *cache = (mbedtls_ssl_cache_context *) data;
+    mbedtls_ssl_cache_entry *cur;
+
+    size_t session_serialized_len;
+    unsigned char *session_serialized = NULL;
+
+#if defined(MBEDTLS_THREADING_C)
+    if( ( ret = mbedtls_mutex_lock( &cache->mutex ) ) != 0 )
+        return( ret );
+#endif
+
+    ret = ssl_cache_find_fresh_entry( cache,
+                                      session_id, session_id_len,
+                                      &cur );
     if( ret != 0 )
+        goto exit;
+
+    /* Check how much space we need to serialize the session
+     * and allocate a sufficiently large buffer. */
+    ret = mbedtls_ssl_session_save( session, NULL, 0, &session_serialized_len );
+    if( ret != MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL )
     {
         ret = 1;
         goto exit;
     }
 
-#if defined(MBEDTLS_X509_CRT_PARSE_C) && \
-    defined(MBEDTLS_SSL_KEEP_PEER_CERTIFICATE)
-    /* If present, free the X.509 structure and only store the raw CRT data. */
-    if( cur->session.peer_cert != NULL )
+    session_serialized = mbedtls_calloc( 1, session_serialized_len );
+    if( session_serialized == NULL )
     {
-        cur->peer_cert.p =
-            mbedtls_calloc( 1, cur->session.peer_cert->raw.len );
-        if( cur->peer_cert.p == NULL )
-        {
-            ret = 1;
-            goto exit;
-        }
-
-        memcpy( cur->peer_cert.p,
-                cur->session.peer_cert->raw.p,
-                cur->session.peer_cert->raw.len );
-        cur->peer_cert.len = session->peer_cert->raw.len;
-
-        mbedtls_x509_crt_free( cur->session.peer_cert );
-        mbedtls_free( cur->session.peer_cert );
-        cur->session.peer_cert = NULL;
+        ret = MBEDTLS_ERR_SSL_ALLOC_FAILED;
+        goto exit;
     }
-#endif /* MBEDTLS_X509_CRT_PARSE_C && MBEDTLS_SSL_KEEP_PEER_CERTIFICATE */
+
+    /* Now serialize the session into the allocated buffer. */
+    ret = mbedtls_ssl_session_save( session,
+                                    session_serialized,
+                                    session_serialized_len,
+                                    &session_serialized_len );
+    if( ret != 0 )
+        goto exit;
+
+    if( session_id_len > 32 )
+    {
+        ret = 1;
+        goto exit;
+    }
+    cur->session_id_len = session_id_len;
+    memcpy( cur->session_id, session_id, session_id_len );
+
+    cur->session = session_serialized;
+    cur->session_len = session_serialized_len;
+    session_serialized = NULL;
 
     ret = 0;
 
@@ -297,6 +319,9 @@ exit:
     if( mbedtls_mutex_unlock( &cache->mutex ) != 0 )
         ret = 1;
 #endif
+
+    if( session_serialized != NULL )
+        mbedtls_platform_zeroize( session_serialized, session_serialized_len );
 
     return( ret );
 }
@@ -328,13 +353,7 @@ void mbedtls_ssl_cache_free( mbedtls_ssl_cache_context *cache )
         prv = cur;
         cur = cur->next;
 
-        mbedtls_ssl_session_free( &prv->session );
-
-#if defined(MBEDTLS_X509_CRT_PARSE_C) && \
-    defined(MBEDTLS_SSL_KEEP_PEER_CERTIFICATE)
-        mbedtls_free( prv->peer_cert.p );
-#endif /* MBEDTLS_X509_CRT_PARSE_C && MBEDTLS_SSL_KEEP_PEER_CERTIFICATE */
-
+        mbedtls_free( prv->session );
         mbedtls_free( prv );
     }
 

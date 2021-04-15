@@ -39,7 +39,6 @@ set(src_crypto
     entropy_poll.c
     error.c
     gcm.c
-    havege.c
     hkdf.c
     hmac_drbg.c
     md.c
@@ -63,7 +62,6 @@ set(src_crypto
     platform_util.c
     poly1305.c
     psa_crypto.c
-    psa_crypto_aead.c
     psa_crypto_cipher.c
     psa_crypto_client.c
     psa_crypto_driver_wrappers.c
@@ -76,7 +74,7 @@ set(src_crypto
     psa_its_file.c
     ripemd160.c
     rsa.c
-    rsa_internal.c
+    rsa_alt_helpers.c
     sha1.c
     sha256.c
     sha512.c
@@ -90,7 +88,6 @@ set(src_crypto
 list(APPEND src_crypto ${thirdparty_src})
 
 set(src_x509
-    certs.c
     pkcs11.c
     x509.c
     x509_create.c
