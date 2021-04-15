@@ -38,7 +38,7 @@
 #endif
 
 #include "mbedtls/ssl.h"
-#include "mbedtls/ssl_internal.h"
+#include "ssl_misc.h"
 #include "mbedtls/debug.h"
 #include "mbedtls/error.h"
 #include "mbedtls/platform_util.h"
@@ -3411,7 +3411,10 @@ void mbedtls_ssl_handshake_wrapup( mbedtls_ssl_context *ssl )
         ssl->session->id_len != 0 &&
         resume == 0 )
     {
-        if( ssl->conf->f_set_cache( ssl->conf->p_cache, ssl->session ) != 0 )
+        if( ssl->conf->f_set_cache( ssl->conf->p_cache,
+                                    ssl->session->id,
+                                    ssl->session->id_len,
+                                    ssl->session ) != 0 )
             MBEDTLS_SSL_DEBUG_MSG( 1, ( "cache did not store session" ) );
     }
 
@@ -4167,9 +4170,9 @@ void mbedtls_ssl_set_timer_cb( mbedtls_ssl_context *ssl,
 
 #if defined(MBEDTLS_SSL_SRV_C)
 void mbedtls_ssl_conf_session_cache( mbedtls_ssl_config *conf,
-        void *p_cache,
-        int (*f_get_cache)(void *, mbedtls_ssl_session *),
-        int (*f_set_cache)(void *, const mbedtls_ssl_session *) )
+                                     void *p_cache,
+                                     mbedtls_ssl_cache_get_t *f_get_cache,
+                                     mbedtls_ssl_cache_set_t *f_set_cache )
 {
     conf->p_cache = p_cache;
     conf->f_get_cache = f_get_cache;

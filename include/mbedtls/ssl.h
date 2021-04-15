@@ -237,10 +237,6 @@
  * \{
  */
 
-#if !defined(MBEDTLS_SSL_DEFAULT_TICKET_LIFETIME)
-#define MBEDTLS_SSL_DEFAULT_TICKET_LIFETIME     86400 /**< Lifetime of session tickets (if enabled) */
-#endif
-
 /*
  * Maximum fragment length in bytes,
  * determines the size of each of the two internal I/O buffers.
@@ -505,6 +501,7 @@ typedef enum
    MBEDTLS_SSL_TLS_PRF_SHA256
 }
 mbedtls_tls_prf_types;
+
 /**
  * \brief          Callback type: send data on the network.
  *
@@ -619,7 +616,7 @@ typedef struct mbedtls_ssl_session mbedtls_ssl_session;
 typedef struct mbedtls_ssl_context mbedtls_ssl_context;
 typedef struct mbedtls_ssl_config  mbedtls_ssl_config;
 
-/* Defined in ssl_internal.h */
+/* Defined in library/ssl_misc.h */
 typedef struct mbedtls_ssl_transform mbedtls_ssl_transform;
 typedef struct mbedtls_ssl_handshake_params mbedtls_ssl_handshake_params;
 typedef struct mbedtls_ssl_sig_hash_set_t mbedtls_ssl_sig_hash_set_t;
@@ -629,6 +626,17 @@ typedef struct mbedtls_ssl_key_cert mbedtls_ssl_key_cert;
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
 typedef struct mbedtls_ssl_flight_item mbedtls_ssl_flight_item;
 #endif
+
+/* TODO: Document */
+typedef int mbedtls_ssl_cache_get_t( void *data,
+                                     unsigned char const *session_id,
+                                     size_t session_id_len,
+                                     mbedtls_ssl_session *session );
+/* TODO: Document */
+typedef int mbedtls_ssl_cache_set_t( void *data,
+                                     unsigned char const *session_id,
+                                     size_t session_id_len,
+                                     const mbedtls_ssl_session *session );
 
 #if defined(MBEDTLS_SSL_ASYNC_PRIVATE)
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
@@ -972,9 +980,9 @@ struct mbedtls_ssl_config
     void *p_rng;                    /*!< context for the RNG function       */
 
     /** Callback to retrieve a session from the cache                       */
-    int (*f_get_cache)(void *, mbedtls_ssl_session *);
+    mbedtls_ssl_cache_get_t *f_get_cache;
     /** Callback to store a session into the cache                          */
-    int (*f_set_cache)(void *, const mbedtls_ssl_session *);
+    mbedtls_ssl_cache_set_t *f_set_cache;
     void *p_cache;                  /*!< context for cache callbacks        */
 
 #if defined(MBEDTLS_SSL_SERVER_NAME_INDICATION)
@@ -2432,9 +2440,9 @@ void mbedtls_ssl_conf_handshake_timeout( mbedtls_ssl_config *conf, uint32_t min,
  * \param f_set_cache    session set callback
  */
 void mbedtls_ssl_conf_session_cache( mbedtls_ssl_config *conf,
-        void *p_cache,
-        int (*f_get_cache)(void *, mbedtls_ssl_session *),
-        int (*f_set_cache)(void *, const mbedtls_ssl_session *) );
+                                     void *p_cache,
+                                     mbedtls_ssl_cache_get_t *f_get_cache,
+                                     mbedtls_ssl_cache_set_t *f_set_cache );
 #endif /* MBEDTLS_SSL_SRV_C */
 
 #if defined(MBEDTLS_SSL_CLI_C)
