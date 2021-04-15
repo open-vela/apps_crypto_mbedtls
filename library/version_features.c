@@ -438,9 +438,6 @@ static const char * const features[] = {
 #if defined(MBEDTLS_PKCS1_V21)
     "MBEDTLS_PKCS1_V21",
 #endif /* MBEDTLS_PKCS1_V21 */
-#if defined(MBEDTLS_PSA_CRYPTO_BUILTIN_KEYS)
-    "MBEDTLS_PSA_CRYPTO_BUILTIN_KEYS",
-#endif /* MBEDTLS_PSA_CRYPTO_BUILTIN_KEYS */
 #if defined(MBEDTLS_PSA_CRYPTO_CLIENT)
     "MBEDTLS_PSA_CRYPTO_CLIENT",
 #endif /* MBEDTLS_PSA_CRYPTO_CLIENT */
@@ -651,9 +648,6 @@ static const char * const features[] = {
 #if defined(MBEDTLS_CCM_C)
     "MBEDTLS_CCM_C",
 #endif /* MBEDTLS_CCM_C */
-#if defined(MBEDTLS_CERTS_C)
-    "MBEDTLS_CERTS_C",
-#endif /* MBEDTLS_CERTS_C */
 #if defined(MBEDTLS_CHACHA20_C)
     "MBEDTLS_CHACHA20_C",
 #endif /* MBEDTLS_CHACHA20_C */
@@ -699,9 +693,6 @@ static const char * const features[] = {
 #if defined(MBEDTLS_GCM_C)
     "MBEDTLS_GCM_C",
 #endif /* MBEDTLS_GCM_C */
-#if defined(MBEDTLS_HAVEGE_C)
-    "MBEDTLS_HAVEGE_C",
-#endif /* MBEDTLS_HAVEGE_C */
 #if defined(MBEDTLS_HKDF_C)
     "MBEDTLS_HKDF_C",
 #endif /* MBEDTLS_HKDF_C */
