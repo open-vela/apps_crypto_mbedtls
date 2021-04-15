@@ -1,5 +1,5 @@
 /**
- * \file md.c
+ * \file mbedtls_md.c
  *
  * \brief Generic message digest wrapper for mbed TLS
  *
@@ -389,6 +389,13 @@ int mbedtls_md_clone( mbedtls_md_context_t *dst,
 
     return( 0 );
 }
+
+#if ! defined(MBEDTLS_DEPRECATED_REMOVED)
+int mbedtls_md_init_ctx( mbedtls_md_context_t *ctx, const mbedtls_md_info_t *md_info )
+{
+    return mbedtls_md_setup( ctx, md_info, 1 );
+}
+#endif
 
 #define ALLOC( type )                                                   \
     do {                                                                \
