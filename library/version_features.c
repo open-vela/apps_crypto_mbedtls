@@ -762,6 +762,9 @@ static const char * const features[] = {
 #if defined(MBEDTLS_SHA256_C)
     "MBEDTLS_SHA256_C",
 #endif /* MBEDTLS_SHA256_C */
+#if defined(MBEDTLS_SHA224_C)
+    "MBEDTLS_SHA224_C",
+#endif /* MBEDTLS_SHA224_C */
 #if defined(MBEDTLS_SHA512_C)
     "MBEDTLS_SHA512_C",
 #endif /* MBEDTLS_SHA512_C */
