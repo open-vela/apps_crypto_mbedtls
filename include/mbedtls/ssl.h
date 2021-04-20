@@ -67,17 +67,17 @@
 #define MBEDTLS_ERR_SSL_INVALID_MAC                       -0x7180  /**< Verification of the message MAC failed. */
 #define MBEDTLS_ERR_SSL_INVALID_RECORD                    -0x7200  /**< An invalid SSL record was received. */
 #define MBEDTLS_ERR_SSL_CONN_EOF                          -0x7280  /**< The connection indicated an EOF. */
-#define MBEDTLS_ERR_SSL_UNKNOWN_CIPHER                    -0x7300  /**< An unknown cipher was received. */
+/* NOTE: Error space gap */
 #define MBEDTLS_ERR_SSL_NO_CIPHER_CHOSEN                  -0x7380  /**< The server has no ciphersuites in common with the client. */
 #define MBEDTLS_ERR_SSL_NO_RNG                            -0x7400  /**< No RNG was provided to the SSL module. */
 #define MBEDTLS_ERR_SSL_NO_CLIENT_CERTIFICATE             -0x7480  /**< No client certification received from the client, but required by the authentication mode. */
-#define MBEDTLS_ERR_SSL_CERTIFICATE_TOO_LARGE             -0x7500  /**< Our own certificate(s) is/are too large to send in an SSL message. */
-#define MBEDTLS_ERR_SSL_CERTIFICATE_REQUIRED              -0x7580  /**< The own certificate is not set, but needed by the server. */
+/* NOTE: Error space gap */
+/* NOTE: Error space gap */
 #define MBEDTLS_ERR_SSL_PRIVATE_KEY_REQUIRED              -0x7600  /**< The own private key or pre-shared key is not set, but needed. */
 #define MBEDTLS_ERR_SSL_CA_CHAIN_REQUIRED                 -0x7680  /**< No CA Chain is set, but required to operate. */
 #define MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE                -0x7700  /**< An unexpected message was received from our peer. */
 #define MBEDTLS_ERR_SSL_FATAL_ALERT_MESSAGE               -0x7780  /**< A fatal alert message was received from our peer. */
-#define MBEDTLS_ERR_SSL_PEER_VERIFY_FAILED                -0x7800  /**< Verification of our peer failed. */
+/* NOTE: Error space gap */
 #define MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY                 -0x7880  /**< The peer notified us that the connection is going to be closed. */
 #define MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO               -0x7900  /**< Processing of the ClientHello handshake message failed. */
 #define MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO               -0x7980  /**< Processing of the ServerHello handshake message failed. */
@@ -111,7 +111,7 @@
 #define MBEDTLS_ERR_SSL_CLIENT_RECONNECT                  -0x6780  /**< The client initiated a reconnect from the same port. */
 #define MBEDTLS_ERR_SSL_UNEXPECTED_RECORD                 -0x6700  /**< Record header looks valid but is not expected. */
 #define MBEDTLS_ERR_SSL_NON_FATAL                         -0x6680  /**< The alert message received indicates a non-fatal error. */
-#define MBEDTLS_ERR_SSL_INVALID_VERIFY_HASH               -0x6600  /**< Couldn't set the hash for verifying CertificateVerify */
+/* NOTE: Error space gap */
 #define MBEDTLS_ERR_SSL_CONTINUE_PROCESSING               -0x6580  /**< Internal-only message signaling that further message-processing should be done */
 #define MBEDTLS_ERR_SSL_ASYNC_IN_PROGRESS                 -0x6500  /**< The asynchronous operation is not completed yet. */
 #define MBEDTLS_ERR_SSL_EARLY_MESSAGE                     -0x6480  /**< Internal-only message signaling that a message arrived early. */
@@ -236,16 +236,12 @@
  * if you're using the Max Fragment Length extension and you know all your
  * peers are using it too!
  */
-#if !defined(MBEDTLS_SSL_MAX_CONTENT_LEN)
-#define MBEDTLS_SSL_MAX_CONTENT_LEN         16384   /**< Size of the input / output buffer */
-#endif
-
 #if !defined(MBEDTLS_SSL_IN_CONTENT_LEN)
-#define MBEDTLS_SSL_IN_CONTENT_LEN MBEDTLS_SSL_MAX_CONTENT_LEN
+#define MBEDTLS_SSL_IN_CONTENT_LEN 16384
 #endif
 
 #if !defined(MBEDTLS_SSL_OUT_CONTENT_LEN)
-#define MBEDTLS_SSL_OUT_CONTENT_LEN MBEDTLS_SSL_MAX_CONTENT_LEN
+#define MBEDTLS_SSL_OUT_CONTENT_LEN 16384
 #endif
 
 /*
@@ -484,6 +480,7 @@ typedef enum
    MBEDTLS_SSL_TLS_PRF_SHA256
 }
 mbedtls_tls_prf_types;
+
 /**
  * \brief          Callback type: send data on the network.
  *
@@ -608,6 +605,56 @@ typedef struct mbedtls_ssl_key_cert mbedtls_ssl_key_cert;
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
 typedef struct mbedtls_ssl_flight_item mbedtls_ssl_flight_item;
 #endif
+
+/**
+ * \brief          Callback type: server-side session cache getter
+ *
+ *                 The session cache is logically a key value store, with
+ *                 keys being session IDs and values being instances of
+ *                 mbedtls_ssl_session.
+ *
+ *                 This callback retrieves an entry in this key-value store.
+ *
+ * \param data            The address of the session cache structure to query.
+ * \param session_id      The buffer holding the session ID to query.
+ * \param session_id_len  The length of \p session_id in Bytes.
+ * \param session         The address of the session structure to populate.
+ *                        It is initialized with mbdtls_ssl_session_init(),
+ *                        and the callback must always leave it in a state
+ *                        where it can safely be freed via
+ *                        mbedtls_ssl_session_free() independent of the
+ *                        return code of this function.
+ *
+ * \return                \c 0 on success
+ * \return                A non-zero return value on failure.
+ *
+ */
+typedef int mbedtls_ssl_cache_get_t( void *data,
+                                     unsigned char const *session_id,
+                                     size_t session_id_len,
+                                     mbedtls_ssl_session *session );
+/**
+ * \brief          Callback type: server-side session cache setter
+ *
+ *                 The session cache is logically a key value store, with
+ *                 keys being session IDs and values being instances of
+ *                 mbedtls_ssl_session.
+ *
+ *                 This callback sets an entry in this key-value store.
+ *
+ * \param data            The address of the session cache structure to modify.
+ * \param session_id      The buffer holding the session ID to query.
+ * \param session_id_len  The length of \p session_id in Bytes.
+ * \param session         The address of the session to be stored in the
+ *                        session cache.
+ *
+ * \return                \c 0 on success
+ * \return                A non-zero return value on failure.
+ */
+typedef int mbedtls_ssl_cache_set_t( void *data,
+                                     unsigned char const *session_id,
+                                     size_t session_id_len,
+                                     const mbedtls_ssl_session *session );
 
 #if defined(MBEDTLS_SSL_ASYNC_PRIVATE)
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
@@ -827,7 +874,7 @@ typedef void mbedtls_ssl_async_cancel_t( mbedtls_ssl_context *ssl );
 #if defined(MBEDTLS_SHA256_C)
 #define MBEDTLS_SSL_PEER_CERT_DIGEST_DFL_TYPE MBEDTLS_MD_SHA256
 #define MBEDTLS_SSL_PEER_CERT_DIGEST_DFL_LEN  32
-#elif defined(MBEDTLS_SHA512_C)
+#elif defined(MBEDTLS_SHA384_C)
 #define MBEDTLS_SSL_PEER_CERT_DIGEST_DFL_TYPE MBEDTLS_MD_SHA384
 #define MBEDTLS_SSL_PEER_CERT_DIGEST_DFL_LEN  48
 #elif defined(MBEDTLS_SHA1_C)
@@ -954,9 +1001,9 @@ struct mbedtls_ssl_config
     void *p_rng;                    /*!< context for the RNG function       */
 
     /** Callback to retrieve a session from the cache                       */
-    int (*f_get_cache)(void *, mbedtls_ssl_session *);
+    mbedtls_ssl_cache_get_t *f_get_cache;
     /** Callback to store a session into the cache                          */
-    int (*f_set_cache)(void *, const mbedtls_ssl_session *);
+    mbedtls_ssl_cache_set_t *f_set_cache;
     void *p_cache;                  /*!< context for cache callbacks        */
 
 #if defined(MBEDTLS_SSL_SERVER_NAME_INDICATION)
@@ -1795,7 +1842,6 @@ void mbedtls_ssl_set_verify( mbedtls_ssl_context *ssl,
  */
 void mbedtls_ssl_conf_read_timeout( mbedtls_ssl_config *conf, uint32_t timeout );
 
-#if defined(MBEDTLS_SSL_RECORD_CHECKING)
 /**
  * \brief          Check whether a buffer contains a valid and authentic record
  *                 that has not been seen before. (DTLS only).
@@ -1843,7 +1889,6 @@ void mbedtls_ssl_conf_read_timeout( mbedtls_ssl_config *conf, uint32_t timeout )
 int mbedtls_ssl_check_record( mbedtls_ssl_context const *ssl,
                               unsigned char *buf,
                               size_t buflen );
-#endif /* MBEDTLS_SSL_RECORD_CHECKING */
 
 /**
  * \brief          Set the timer callbacks (Mandatory for DTLS.)
@@ -2366,9 +2411,9 @@ void mbedtls_ssl_conf_handshake_timeout( mbedtls_ssl_config *conf, uint32_t min,
  * \param f_set_cache    session set callback
  */
 void mbedtls_ssl_conf_session_cache( mbedtls_ssl_config *conf,
-        void *p_cache,
-        int (*f_get_cache)(void *, mbedtls_ssl_session *),
-        int (*f_set_cache)(void *, const mbedtls_ssl_session *) );
+                                     void *p_cache,
+                                     mbedtls_ssl_cache_get_t *f_get_cache,
+                                     mbedtls_ssl_cache_set_t *f_set_cache );
 #endif /* MBEDTLS_SSL_SRV_C */
 
 #if defined(MBEDTLS_SSL_CLI_C)
@@ -2696,18 +2741,6 @@ int mbedtls_ssl_conf_own_cert( mbedtls_ssl_config *conf,
  * \brief          Configure a pre-shared key (PSK) and identity
  *                 to be used in PSK-based ciphersuites.
  *
- *                 This function may be called multiple times to attempt
- *                 to register multiple PSKs. The number of supported PSKs
- *                 is version-specific (see below for the current limit).
- *                 Once the limit is reached, this function fails, maintaining
- *                 the PSKs previously configured and ignoring the excess request.
- *                 This behavior is in contrast to Mbed TLS 2.x, where later
- *                 invocations would overwrite the effect of earlier calls.
- *
- * \note           Currently, the library supports only support a single PSK,
- *                 but this limit is not part of the API and may change in
- *                 future minor versions.
- *
  * \note           This is mainly useful for clients. Servers will usually
  *                 want to use \c mbedtls_ssl_conf_psk_cb() instead.
  *
@@ -2743,18 +2776,6 @@ int mbedtls_ssl_conf_psk( mbedtls_ssl_config *conf,
 /**
  * \brief          Configure an opaque pre-shared key (PSK) and identity
  *                 to be used in PSK-based ciphersuites.
- *
- *                 This function may be called multiple times to attempt
- *                 to register multiple PSKs. The number of supported PSKs
- *                 is version-specific (see below for the current limit).
- *                 Once the limit is reached, this function fails, maintaining
- *                 the PSKs previously configured and ignoring the excess request.
- *                 This behavior is in contrast to Mbed TLS 2.x, where later
- *                 invocations would overwrite the effect of earlier calls.
- *
- * \note           Currently, the library supports only support a single PSK,
- *                 but this limit is not part of the API and may change in
- *                 future minor versions.
  *
  * \note           This is mainly useful for clients. Servers will usually
  *                 want to use \c mbedtls_ssl_conf_psk_cb() instead.
@@ -3623,39 +3644,6 @@ const char *mbedtls_ssl_get_version( const mbedtls_ssl_context *ssl );
  * \return         Current maximum record expansion in bytes
  */
 int mbedtls_ssl_get_record_expansion( const mbedtls_ssl_context *ssl );
-
-#if defined(MBEDTLS_SSL_MAX_FRAGMENT_LENGTH)
-/**
- * \brief          Return the maximum fragment length (payload, in bytes) for
- *                 the output buffer. For the client, this is the configured
- *                 value. For the server, it is the minimum of two - the
- *                 configured value and the negotiated one.
- *
- * \sa             mbedtls_ssl_conf_max_frag_len()
- * \sa             mbedtls_ssl_get_max_record_payload()
- *
- * \param ssl      SSL context
- *
- * \return         Current maximum fragment length for the output buffer.
- */
-size_t mbedtls_ssl_get_output_max_frag_len( const mbedtls_ssl_context *ssl );
-
-/**
- * \brief          Return the maximum fragment length (payload, in bytes) for
- *                 the input buffer. This is the negotiated maximum fragment
- *                 length, or, if there is none, MBEDTLS_SSL_MAX_CONTENT_LEN.
- *                 If it is not defined either, the value is 2^14. This function
- *                 works as its predecessor, \c mbedtls_ssl_get_max_frag_len().
- *
- * \sa             mbedtls_ssl_conf_max_frag_len()
- * \sa             mbedtls_ssl_get_max_record_payload()
- *
- * \param ssl      SSL context
- *
- * \return         Current maximum fragment length for the output buffer.
- */
-size_t mbedtls_ssl_get_input_max_frag_len( const mbedtls_ssl_context *ssl );
-#endif /* MBEDTLS_SSL_MAX_FRAGMENT_LENGTH */
 
 /**
  * \brief          Return the current maximum outgoing record payload in bytes.
