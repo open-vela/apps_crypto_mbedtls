@@ -1936,9 +1936,8 @@ int mbedtls_ssl_write_certificate( mbedtls_ssl_context *ssl )
     {
         if( mbedtls_ssl_own_cert( ssl ) == NULL )
         {
-            /* Should never happen because we shouldn't have picked the
-             * ciphersuite if we don't have a certificate. */
-            return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
+            MBEDTLS_SSL_DEBUG_MSG( 1, ( "got no certificate to send" ) );
+            return( MBEDTLS_ERR_SSL_CERTIFICATE_REQUIRED );
         }
     }
 #endif
@@ -1965,7 +1964,7 @@ int mbedtls_ssl_write_certificate( mbedtls_ssl_context *ssl )
             MBEDTLS_SSL_DEBUG_MSG( 1, ( "certificate too large, %" MBEDTLS_PRINTF_SIZET
                                         " > %" MBEDTLS_PRINTF_SIZET,
                            i + 3 + n, (size_t) MBEDTLS_SSL_OUT_CONTENT_LEN ) );
-            return( MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL );
+            return( MBEDTLS_ERR_SSL_CERTIFICATE_TOO_LARGE );
         }
 
         ssl->out_msg[i    ] = (unsigned char)( n >> 16 );
@@ -4181,24 +4180,6 @@ void mbedtls_ssl_conf_psk_cb( mbedtls_ssl_config *conf,
 #endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
 
 #if defined(MBEDTLS_DHM_C) && defined(MBEDTLS_SSL_SRV_C)
-
-#if !defined(MBEDTLS_DEPRECATED_REMOVED)
-int mbedtls_ssl_conf_dh_param( mbedtls_ssl_config *conf, const char *dhm_P, const char *dhm_G )
-{
-    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
-
-    if( ( ret = mbedtls_mpi_read_string( &conf->dhm_P, 16, dhm_P ) ) != 0 ||
-        ( ret = mbedtls_mpi_read_string( &conf->dhm_G, 16, dhm_G ) ) != 0 )
-    {
-        mbedtls_mpi_free( &conf->dhm_P );
-        mbedtls_mpi_free( &conf->dhm_G );
-        return( ret );
-    }
-
-    return( 0 );
-}
-#endif /* MBEDTLS_DEPRECATED_REMOVED */
-
 int mbedtls_ssl_conf_dh_param_bin( mbedtls_ssl_config *conf,
                                    const unsigned char *dhm_P, size_t P_len,
                                    const unsigned char *dhm_G, size_t G_len )
@@ -4723,13 +4704,6 @@ size_t mbedtls_ssl_get_output_max_frag_len( const mbedtls_ssl_context *ssl )
 
     return( max_len );
 }
-
-#if !defined(MBEDTLS_DEPRECATED_REMOVED)
-size_t mbedtls_ssl_get_max_frag_len( const mbedtls_ssl_context *ssl )
-{
-    return mbedtls_ssl_get_output_max_frag_len( ssl );
-}
-#endif /* !MBEDTLS_DEPRECATED_REMOVED */
 #endif /* MBEDTLS_SSL_MAX_FRAGMENT_LENGTH */
 
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
@@ -6999,14 +6973,14 @@ int mbedtls_ssl_set_calc_verify_md( mbedtls_ssl_context *ssl, int md )
 {
 #if defined(MBEDTLS_SSL_PROTO_TLS1_2)
     if( ssl->minor_ver != MBEDTLS_SSL_MINOR_VERSION_3 )
-        return( -1 );
+        return MBEDTLS_ERR_SSL_INVALID_VERIFY_HASH;
 
     switch( md )
     {
 #if defined(MBEDTLS_SSL_PROTO_TLS1) || defined(MBEDTLS_SSL_PROTO_TLS1_1)
 #if defined(MBEDTLS_MD5_C)
         case MBEDTLS_SSL_HASH_MD5:
-            return( -1 );
+            return MBEDTLS_ERR_SSL_INVALID_VERIFY_HASH;
 #endif
 #if defined(MBEDTLS_SHA1_C)
         case MBEDTLS_SSL_HASH_SHA1:
@@ -7025,7 +6999,7 @@ int mbedtls_ssl_set_calc_verify_md( mbedtls_ssl_context *ssl, int md )
             break;
 #endif
         default:
-            return( -1 );
+            return MBEDTLS_ERR_SSL_INVALID_VERIFY_HASH;
     }
 
     return 0;
@@ -7033,7 +7007,7 @@ int mbedtls_ssl_set_calc_verify_md( mbedtls_ssl_context *ssl, int md )
     (void) ssl;
     (void) md;
 
-    return( -1 );
+    return MBEDTLS_ERR_SSL_INVALID_VERIFY_HASH;
 #endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
 }
 
