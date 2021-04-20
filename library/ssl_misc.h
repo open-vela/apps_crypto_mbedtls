@@ -130,6 +130,14 @@
  * counter (8) + header (5) + IV(16) + MAC (16-48) + padding (0-256).
  */
 
+#if defined(MBEDTLS_SSL_PROTO_TLS1)   ||      \
+    defined(MBEDTLS_SSL_PROTO_TLS1_1) ||      \
+    defined(MBEDTLS_SSL_PROTO_TLS1_2)
+#define MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER
+#endif
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER)
+
 /* This macro determines whether CBC is supported. */
 #if defined(MBEDTLS_CIPHER_MODE_CBC) &&                               \
     ( defined(MBEDTLS_AES_C)      ||                                  \
@@ -137,6 +145,12 @@
       defined(MBEDTLS_ARIA_C)     ||                                  \
       defined(MBEDTLS_DES_C) )
 #define MBEDTLS_SSL_SOME_SUITES_USE_CBC
+#endif
+
+/* This macro determines whether a ciphersuite using a
+ * stream cipher can be used. */
+#if defined(MBEDTLS_CIPHER_NULL_CIPHER)
+#define MBEDTLS_SSL_SOME_SUITES_USE_STREAM
 #endif
 
 /* This macro determines whether the CBC construct used in TLS 1.0-1.2 is supported. */
@@ -147,21 +161,23 @@
 #define MBEDTLS_SSL_SOME_SUITES_USE_TLS_CBC
 #endif
 
-#if defined(MBEDTLS_CIPHER_NULL_CIPHER) ||   \
+#if defined(MBEDTLS_SSL_SOME_SUITES_USE_STREAM) || \
     defined(MBEDTLS_SSL_SOME_SUITES_USE_CBC)
-#define MBEDTLS_SSL_SOME_MODES_USE_MAC
+#define MBEDTLS_SSL_SOME_SUITES_USE_MAC
 #endif
 
-#if defined(MBEDTLS_SSL_SOME_MODES_USE_MAC)
+#endif /* MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER */
+
+#if defined(MBEDTLS_SSL_SOME_SUITES_USE_MAC)
 /* Ciphersuites using HMAC */
-#if defined(MBEDTLS_SHA512_C)
+#if defined(MBEDTLS_SHA384_C)
 #define MBEDTLS_SSL_MAC_ADD                 48  /* SHA-384 used for HMAC */
 #elif defined(MBEDTLS_SHA256_C)
 #define MBEDTLS_SSL_MAC_ADD                 32  /* SHA-256 used for HMAC */
 #else
 #define MBEDTLS_SSL_MAC_ADD                 20  /* SHA-1   used for HMAC */
 #endif
-#else /* MBEDTLS_SSL_SOME_MODES_USE_MAC */
+#else /* MBEDTLS_SSL_SOME_SUITES_USE_MAC */
 /* AEAD ciphersuites: GCM and CCM use a 128 bits tag */
 #define MBEDTLS_SSL_MAC_ADD                 16
 #endif
@@ -213,23 +229,19 @@
  * Check that we obey the standard's message size bounds
  */
 
-#if MBEDTLS_SSL_MAX_CONTENT_LEN > 16384
-#error "Bad configuration - record content too large."
+#if MBEDTLS_SSL_IN_CONTENT_LEN > 16384
+#error "Bad configuration - incoming record content too large."
 #endif
 
-#if MBEDTLS_SSL_IN_CONTENT_LEN > MBEDTLS_SSL_MAX_CONTENT_LEN
-#error "Bad configuration - incoming record content should not be larger than MBEDTLS_SSL_MAX_CONTENT_LEN."
+#if MBEDTLS_SSL_OUT_CONTENT_LEN > 16384
+#error "Bad configuration - outgoing record content too large."
 #endif
 
-#if MBEDTLS_SSL_OUT_CONTENT_LEN > MBEDTLS_SSL_MAX_CONTENT_LEN
-#error "Bad configuration - outgoing record content should not be larger than MBEDTLS_SSL_MAX_CONTENT_LEN."
-#endif
-
-#if MBEDTLS_SSL_IN_PAYLOAD_LEN > MBEDTLS_SSL_MAX_CONTENT_LEN + 2048
+#if MBEDTLS_SSL_IN_PAYLOAD_LEN > MBEDTLS_SSL_IN_CONTENT_LEN + 2048
 #error "Bad configuration - incoming protected record payload too large."
 #endif
 
-#if MBEDTLS_SSL_OUT_PAYLOAD_LEN > MBEDTLS_SSL_MAX_CONTENT_LEN + 2048
+#if MBEDTLS_SSL_OUT_PAYLOAD_LEN > MBEDTLS_SSL_OUT_CONTENT_LEN + 2048
 #error "Bad configuration - outgoing protected record payload too large."
 #endif
 
@@ -257,6 +269,39 @@
     ( ( MBEDTLS_SSL_HEADER_LEN ) + ( MBEDTLS_SSL_OUT_PAYLOAD_LEN )    \
       + ( MBEDTLS_SSL_CID_OUT_LEN_MAX ) )
 #endif
+
+#if defined(MBEDTLS_SSL_MAX_FRAGMENT_LENGTH)
+/**
+ * \brief          Return the maximum fragment length (payload, in bytes) for
+ *                 the output buffer. For the client, this is the configured
+ *                 value. For the server, it is the minimum of two - the
+ *                 configured value and the negotiated one.
+ *
+ * \sa             mbedtls_ssl_conf_max_frag_len()
+ * \sa             mbedtls_ssl_get_max_out_record_payload()
+ *
+ * \param ssl      SSL context
+ *
+ * \return         Current maximum fragment length for the output buffer.
+ */
+size_t mbedtls_ssl_get_output_max_frag_len( const mbedtls_ssl_context *ssl );
+
+/**
+ * \brief          Return the maximum fragment length (payload, in bytes) for
+ *                 the input buffer. This is the negotiated maximum fragment
+ *                 length, or, if there is none, MBEDTLS_SSL_MAX_CONTENT_LEN.
+ *                 If it is not defined either, the value is 2^14. This function
+ *                 works as its predecessor, \c mbedtls_ssl_get_max_frag_len().
+ *
+ * \sa             mbedtls_ssl_conf_max_frag_len()
+ * \sa             mbedtls_ssl_get_max_in_record_payload()
+ *
+ * \param ssl      SSL context
+ *
+ * \return         Current maximum fragment length for the output buffer.
+ */
+size_t mbedtls_ssl_get_input_max_frag_len( const mbedtls_ssl_context *ssl );
+#endif /* MBEDTLS_SSL_MAX_FRAGMENT_LENGTH */
 
 #if defined(MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH)
 static inline size_t mbedtls_ssl_get_output_buflen( const mbedtls_ssl_context *ctx )
@@ -550,7 +595,7 @@ struct mbedtls_ssl_handshake_params
     mbedtls_sha256_context fin_sha256;
 #endif
 #endif
-#if defined(MBEDTLS_SHA512_C)
+#if defined(MBEDTLS_SHA384_C)
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
     psa_hash_operation_t fin_sha384_psa;
 #else
@@ -711,7 +756,7 @@ struct mbedtls_ssl_transform
     unsigned char iv_enc[16];           /*!<  IV (encryption)         */
     unsigned char iv_dec[16];           /*!<  IV (decryption)         */
 
-#if defined(MBEDTLS_SSL_SOME_MODES_USE_MAC)
+#if defined(MBEDTLS_SSL_SOME_SUITES_USE_MAC)
 
     mbedtls_md_context_t md_ctx_enc;            /*!<  MAC (encryption)        */
     mbedtls_md_context_t md_ctx_dec;            /*!<  MAC (decryption)        */
@@ -720,7 +765,7 @@ struct mbedtls_ssl_transform
     int encrypt_then_mac;       /*!< flag for EtM activation                */
 #endif
 
-#endif /* MBEDTLS_SSL_SOME_MODES_USE_MAC */
+#endif /* MBEDTLS_SSL_SOME_SUITES_USE_MAC */
 
     mbedtls_cipher_context_t cipher_ctx_enc;    /*!<  encryption context      */
     mbedtls_cipher_context_t cipher_ctx_dec;    /*!<  decryption context      */
@@ -747,7 +792,7 @@ struct mbedtls_ssl_transform
 static inline int mbedtls_ssl_transform_uses_aead(
         const mbedtls_ssl_transform *transform )
 {
-#if defined(MBEDTLS_SSL_SOME_MODES_USE_MAC)
+#if defined(MBEDTLS_SSL_SOME_SUITES_USE_MAC)
     return( transform->maclen == 0 && transform->taglen != 0 );
 #else
     (void) transform;
