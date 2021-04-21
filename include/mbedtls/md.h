@@ -38,9 +38,6 @@
 #define MBEDTLS_ERR_MD_ALLOC_FAILED                       -0x5180  /**< Failed to allocate memory. */
 #define MBEDTLS_ERR_MD_FILE_IO_ERROR                      -0x5200  /**< Opening or reading of file failed. */
 
-/* MBEDTLS_ERR_MD_HW_ACCEL_FAILED is deprecated and should not be used. */
-#define MBEDTLS_ERR_MD_HW_ACCEL_FAILED                    -0x5280  /**< MD hardware accelerator failed. */
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -79,8 +76,15 @@ typedef enum {
 #endif
 
 /**
- * Opaque struct defined in md_internal.h.
+ * Opaque struct.
+ *
+ * Constructed using either #mbedtls_md_info_from_string or
+ * #mbedtls_md_info_from_type.
+ *
+ * Fields can be accessed with #mbedtls_md_get_size,
+ * #mbedtls_md_get_type and #mbedtls_md_get_name.
  */
+/* Defined internally in library/md_wrap.h. */
 typedef struct mbedtls_md_info_t mbedtls_md_info_t;
 
 /**
