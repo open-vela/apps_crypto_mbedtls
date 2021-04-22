@@ -2423,7 +2423,7 @@
  *      MBEDTLS_TLS_ECDHE_PSK_WITH_ARIA_128_CBC_SHA256
  *      MBEDTLS_TLS_ECDHE_PSK_WITH_ARIA_256_CBC_SHA384
  */
-#define MBEDTLS_ARIA_C
+//#define MBEDTLS_ARIA_C
 
 /**
  * \def MBEDTLS_CCM_C
@@ -2482,7 +2482,7 @@
  * Requires: MBEDTLS_AES_C or MBEDTLS_DES_C
  *
  */
-#define MBEDTLS_CMAC_C
+//#define MBEDTLS_CMAC_C
 
 /**
  * \def MBEDTLS_CTR_DRBG_C
@@ -2618,7 +2618,7 @@
  *
  * Requires: MBEDTLS_ECP_C, MBEDTLS_MD_C
  */
-#define MBEDTLS_ECJPAKE_C
+//#define MBEDTLS_ECJPAKE_C
 
 /**
  * \def MBEDTLS_ECP_C
@@ -2714,7 +2714,7 @@
  *
  * Requires: MBEDTLS_AES_C and MBEDTLS_CIPHER_C
  */
-#define MBEDTLS_NIST_KW_C
+//#define MBEDTLS_NIST_KW_C
 
 /**
  * \def MBEDTLS_MD_C
@@ -2947,24 +2947,6 @@
  * This module adds support for the PKCS#5 functions.
  */
 #define MBEDTLS_PKCS5_C
-
-/**
- * \def MBEDTLS_PKCS11_C
- *
- * Enable wrapper for PKCS#11 smartcard support via the pkcs11-helper library.
- *
- * \deprecated This option is deprecated and will be removed in a future
- *             version of Mbed TLS.
- *
- * Module:  library/pkcs11.c
- * Caller:  library/pk.c
- *
- * Requires: MBEDTLS_PK_C
- *
- * This module enables SSL/TLS PKCS #11 smartcard support.
- * Requires the presence of the PKCS#11 helper library (libpkcs11-helper)
- */
-//#define MBEDTLS_PKCS11_C
 
 /**
  * \def MBEDTLS_PKCS12_C
