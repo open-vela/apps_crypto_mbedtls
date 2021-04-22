@@ -56,6 +56,10 @@ void mbedtls_ctr_drbg_init( mbedtls_ctr_drbg_context *ctx )
     ctx->reseed_counter = -1;
 
     ctx->reseed_interval = MBEDTLS_CTR_DRBG_RESEED_INTERVAL;
+
+#if defined(MBEDTLS_THREADING_C)
+    mbedtls_mutex_init( &ctx->mutex );
+#endif
 }
 
 /*
@@ -68,14 +72,15 @@ void mbedtls_ctr_drbg_free( mbedtls_ctr_drbg_context *ctx )
         return;
 
 #if defined(MBEDTLS_THREADING_C)
-    /* The mutex is initialized iff f_entropy is set. */
-    if( ctx->f_entropy != NULL )
-        mbedtls_mutex_free( &ctx->mutex );
+    mbedtls_mutex_free( &ctx->mutex );
 #endif
     mbedtls_aes_free( &ctx->aes_ctx );
     mbedtls_platform_zeroize( ctx, sizeof( mbedtls_ctr_drbg_context ) );
     ctx->reseed_interval = MBEDTLS_CTR_DRBG_RESEED_INTERVAL;
     ctx->reseed_counter = -1;
+#if defined(MBEDTLS_THREADING_C)
+    mbedtls_mutex_init( &ctx->mutex );
+#endif
 }
 
 void mbedtls_ctr_drbg_set_prediction_resistance( mbedtls_ctr_drbg_context *ctx,
@@ -458,11 +463,6 @@ int mbedtls_ctr_drbg_seed( mbedtls_ctr_drbg_context *ctx,
     size_t nonce_len;
 
     memset( key, 0, MBEDTLS_CTR_DRBG_KEYSIZE );
-
-    /* The mutex is initialized iff f_entropy is set. */
-#if defined(MBEDTLS_THREADING_C)
-    mbedtls_mutex_init( &ctx->mutex );
-#endif
 
     mbedtls_aes_init( &ctx->aes_ctx );
 
