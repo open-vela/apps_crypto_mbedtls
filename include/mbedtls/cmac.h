@@ -38,6 +38,9 @@
 extern "C" {
 #endif
 
+/* MBEDTLS_ERR_CMAC_HW_ACCEL_FAILED is deprecated and should not be used. */
+#define MBEDTLS_ERR_CMAC_HW_ACCEL_FAILED -0x007A  /**< CMAC hardware accelerator failed. */
+
 #define MBEDTLS_AES_BLOCK_SIZE          16
 #define MBEDTLS_DES3_BLOCK_SIZE         8
 
@@ -194,13 +197,6 @@ int mbedtls_aes_cmac_prf_128( const unsigned char *key, size_t key_len,
 #if defined(MBEDTLS_SELF_TEST) && ( defined(MBEDTLS_AES_C) || defined(MBEDTLS_DES_C) )
 /**
  * \brief          The CMAC checkup routine.
- *
- * \note           In case the CMAC routines are provided by an alternative
- *                 implementation (i.e. #MBEDTLS_CMAC_ALT is defined), the
- *                 checkup routine will succeed even if the implementation does
- *                 not support the less widely used AES-192 or 3DES primitives.
- *                 The self-test requires at least AES-128 and AES-256 to be
- *                 supported by the underlying implementation.
  *
  * \return         \c 0 on success.
  * \return         \c 1 on failure.
