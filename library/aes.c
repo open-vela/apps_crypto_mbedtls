@@ -34,10 +34,10 @@
 #include "mbedtls/platform_util.h"
 #include "mbedtls/error.h"
 #if defined(MBEDTLS_PADLOCK_C)
-#include "padlock.h"
+#include "mbedtls/padlock.h"
 #endif
 #if defined(MBEDTLS_AESNI_C)
-#include "aesni.h"
+#include "mbedtls/aesni.h"
 #endif
 
 #if defined(MBEDTLS_SELF_TEST)
