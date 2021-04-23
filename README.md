@@ -25,8 +25,6 @@ To generate a local copy of the library documentation in HTML format, tailored t
 1. Run `make apidoc`.
 1. Browse `apidoc/index.html` or `apidoc/modules.html`.
 
-For other sources of documentation, see the [SUPPORT](SUPPORT.md) document.
-
 Compiling
 ---------
 
