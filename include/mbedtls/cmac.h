@@ -38,9 +38,6 @@
 extern "C" {
 #endif
 
-/* MBEDTLS_ERR_CMAC_HW_ACCEL_FAILED is deprecated and should not be used. */
-#define MBEDTLS_ERR_CMAC_HW_ACCEL_FAILED -0x007A  /**< CMAC hardware accelerator failed. */
-
 #define MBEDTLS_AES_BLOCK_SIZE          16
 #define MBEDTLS_DES3_BLOCK_SIZE         8
 
@@ -76,12 +73,6 @@ struct mbedtls_cmac_context_t
  * \brief               This function sets the CMAC key, and prepares to authenticate
  *                      the input data.
  *                      Must be called with an initialized cipher context.
- *
- * \note                When the CMAC implementation is supplied by an alternate
- *                      implementation (through #MBEDTLS_CMAC_ALT), some ciphers
- *                      may not be supported by that implementation, and thus
- *                      return an error. Alternate implementations must support
- *                      AES-128 and AES-256, and may support AES-192 and 3DES.
  *
  * \param ctx           The cipher context used for the CMAC operation, initialized
  *                      as one of the following types: MBEDTLS_CIPHER_AES_128_ECB,
@@ -160,11 +151,6 @@ int mbedtls_cipher_cmac_reset( mbedtls_cipher_context_t *ctx );
  *                      The CMAC result is calculated as
  *                      output = generic CMAC(cmac key, input buffer).
  *
- * \note                When the CMAC implementation is supplied by an alternate
- *                      implementation (through #MBEDTLS_CMAC_ALT), some ciphers
- *                      may not be supported by that implementation, and thus
- *                      return an error. Alternate implementations must support
- *                      AES-128 and AES-256, and may support AES-192 and 3DES.
  *
  * \param cipher_info   The cipher information.
  * \param key           The CMAC key.
