@@ -2613,7 +2613,7 @@
  *
  * \warning This is currently experimental. EC J-PAKE support is based on the
  * Thread v1.0.0 specification; incompatible changes to the specification
- * might still happen. For this reason, this is disabled by default.
+ * might still happen.
  *
  * Module:  library/ecjpake.c
  * Caller:
