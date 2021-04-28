@@ -1,5 +1,5 @@
 /**
- * \file rsa_alt_helpers.h
+ * \file rsa_internal.h
  *
  * \brief Context-independent RSA helper functions
  *
@@ -221,4 +221,4 @@ int mbedtls_rsa_validate_crt( const mbedtls_mpi *P,  const mbedtls_mpi *Q,
 }
 #endif
 
-#endif /* rsa_alt_helpers.h */
+#endif /* rsa_internal.h */
