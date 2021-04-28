@@ -57,7 +57,6 @@
 #define MBEDTLS_RSA_C
 #define MBEDTLS_SHA1_C
 #define MBEDTLS_SHA256_C
-#define MBEDTLS_SHA224_C
 #define MBEDTLS_SSL_CLI_C
 #define MBEDTLS_SSL_SRV_C
 #define MBEDTLS_SSL_TLS_C
@@ -66,6 +65,7 @@
 
 /* For test certificates */
 #define MBEDTLS_BASE64_C
+#define MBEDTLS_CERTS_C
 #define MBEDTLS_PEM_PARSE_C
 
 /* For testing with compat.sh */

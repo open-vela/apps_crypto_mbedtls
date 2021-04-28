@@ -64,9 +64,7 @@
 #define MBEDTLS_PK_C
 #define MBEDTLS_PK_PARSE_C
 #define MBEDTLS_SHA256_C
-#define MBEDTLS_SHA224_C
 #define MBEDTLS_SHA512_C
-#define MBEDTLS_SHA384_C
 #define MBEDTLS_SSL_CLI_C
 #define MBEDTLS_SSL_SRV_C
 #define MBEDTLS_SSL_TLS_C
@@ -75,6 +73,7 @@
 
 /* For test certificates */
 #define MBEDTLS_BASE64_C
+#define MBEDTLS_CERTS_C
 #define MBEDTLS_PEM_PARSE_C
 
 /* Save RAM at the expense of ROM */
