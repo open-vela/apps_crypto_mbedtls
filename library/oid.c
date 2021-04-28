@@ -345,13 +345,11 @@ static const oid_sig_alg_t oid_sig_alg[] =
         MBEDTLS_MD_SHA1,     MBEDTLS_PK_RSA,
     },
 #endif /* MBEDTLS_SHA1_C */
-#if defined(MBEDTLS_SHA224_C)
+#if defined(MBEDTLS_SHA256_C)
     {
         { ADD_LEN( MBEDTLS_OID_PKCS1_SHA224 ),     "sha224WithRSAEncryption",  "RSA with SHA-224" },
         MBEDTLS_MD_SHA224,   MBEDTLS_PK_RSA,
     },
-#endif
-#if defined(MBEDTLS_SHA256_C)
     {
         { ADD_LEN( MBEDTLS_OID_PKCS1_SHA256 ),     "sha256WithRSAEncryption",  "RSA with SHA-256" },
         MBEDTLS_MD_SHA256,   MBEDTLS_PK_RSA,
@@ -381,13 +379,11 @@ static const oid_sig_alg_t oid_sig_alg[] =
         MBEDTLS_MD_SHA1,     MBEDTLS_PK_ECDSA,
     },
 #endif /* MBEDTLS_SHA1_C */
-#if defined(MBEDTLS_SHA224_C)
+#if defined(MBEDTLS_SHA256_C)
     {
         { ADD_LEN( MBEDTLS_OID_ECDSA_SHA224 ),     "ecdsa-with-SHA224",    "ECDSA with SHA224" },
         MBEDTLS_MD_SHA224,   MBEDTLS_PK_ECDSA,
     },
-#endif
-#if defined(MBEDTLS_SHA256_C)
     {
         { ADD_LEN( MBEDTLS_OID_ECDSA_SHA256 ),     "ecdsa-with-SHA256",    "ECDSA with SHA256" },
         MBEDTLS_MD_SHA256,   MBEDTLS_PK_ECDSA,
@@ -606,13 +602,11 @@ static const oid_md_alg_t oid_md_alg[] =
         MBEDTLS_MD_SHA1,
     },
 #endif /* MBEDTLS_SHA1_C */
-#if defined(MBEDTLS_SHA224_C)
+#if defined(MBEDTLS_SHA256_C)
     {
         { ADD_LEN( MBEDTLS_OID_DIGEST_ALG_SHA224 ),    "id-sha224",    "SHA-224" },
         MBEDTLS_MD_SHA224,
     },
-#endif
-#if defined(MBEDTLS_SHA256_C)
     {
         { ADD_LEN( MBEDTLS_OID_DIGEST_ALG_SHA256 ),    "id-sha256",    "SHA-256" },
         MBEDTLS_MD_SHA256,
@@ -660,13 +654,11 @@ static const oid_md_hmac_t oid_md_hmac[] =
         MBEDTLS_MD_SHA1,
     },
 #endif /* MBEDTLS_SHA1_C */
-#if defined(MBEDTLS_SHA224_C)
+#if defined(MBEDTLS_SHA256_C)
     {
         { ADD_LEN( MBEDTLS_OID_HMAC_SHA224 ),    "hmacSHA224",    "HMAC-SHA-224" },
         MBEDTLS_MD_SHA224,
     },
-#endif
-#if defined(MBEDTLS_SHA256_C)
     {
         { ADD_LEN( MBEDTLS_OID_HMAC_SHA256 ),    "hmacSHA256",    "HMAC-SHA-256" },
         MBEDTLS_MD_SHA256,
