@@ -19,7 +19,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\programs\random\gen_random_havege.c" />
+    <ClCompile Include="..\..\programs\aes\aescrypt2.c" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="mbedTLS.vcxproj">
@@ -28,9 +28,9 @@
     </ProjectReference>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{71257802-BBCA-99F5-E9D2-905738F30893}</ProjectGuid>
+    <ProjectGuid>{7A851DBD-7D57-E8F4-85E5-CCA72AEA7DF8}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
-    <RootNamespace>gen_random_havege</RootNamespace>
+    <RootNamespace>aescrypt2</RootNamespace>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
