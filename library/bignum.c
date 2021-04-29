@@ -38,7 +38,7 @@
 #if defined(MBEDTLS_BIGNUM_C)
 
 #include "mbedtls/bignum.h"
-#include "bn_mul.h"
+#include "mbedtls/bn_mul.h"
 #include "mbedtls/platform_util.h"
 #include "mbedtls/error.h"
 
@@ -470,7 +470,6 @@ int mbedtls_mpi_read_string( mbedtls_mpi *X, int radix, const char *s )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     size_t i, j, slen, n;
-    int sign = 1;
     mbedtls_mpi_uint d;
     mbedtls_mpi T;
     MPI_VALIDATE_RET( X != NULL );
@@ -480,12 +479,6 @@ int mbedtls_mpi_read_string( mbedtls_mpi *X, int radix, const char *s )
         return( MBEDTLS_ERR_MPI_BAD_INPUT_DATA );
 
     mbedtls_mpi_init( &T );
-
-    if( s[0] == '-' )
-    {
-        ++s;
-        sign = -1;
-    }
 
     slen = strlen( s );
 
@@ -501,6 +494,12 @@ int mbedtls_mpi_read_string( mbedtls_mpi *X, int radix, const char *s )
 
         for( i = slen, j = 0; i > 0; i--, j++ )
         {
+            if( i == 1 && s[i - 1] == '-' )
+            {
+                X->s = -1;
+                break;
+            }
+
             MBEDTLS_MPI_CHK( mpi_get_digit( &d, radix, s[i - 1] ) );
             X->p[j / ( 2 * ciL )] |= d << ( ( j % ( 2 * ciL ) ) << 2 );
         }
@@ -511,14 +510,25 @@ int mbedtls_mpi_read_string( mbedtls_mpi *X, int radix, const char *s )
 
         for( i = 0; i < slen; i++ )
         {
+            if( i == 0 && s[i] == '-' )
+            {
+                X->s = -1;
+                continue;
+            }
+
             MBEDTLS_MPI_CHK( mpi_get_digit( &d, radix, s[i] ) );
             MBEDTLS_MPI_CHK( mbedtls_mpi_mul_int( &T, X, radix ) );
-            MBEDTLS_MPI_CHK( mbedtls_mpi_add_int( X, &T, d ) );
+
+            if( X->s == 1 )
+            {
+                MBEDTLS_MPI_CHK( mbedtls_mpi_add_int( X, &T, d ) );
+            }
+            else
+            {
+                MBEDTLS_MPI_CHK( mbedtls_mpi_sub_int( X, &T, d ) );
+            }
         }
     }
-
-    if( sign < 0 && mbedtls_mpi_bitlen( X ) != 0 )
-        X->s = -1;
 
 cleanup:
 
@@ -1329,32 +1339,29 @@ cleanup:
 /**
  * Helper for mbedtls_mpi subtraction.
  *
- * Calculate l - r where l and r have the same size.
+ * Calculate d - s where d and s have the same size.
  * This function operates modulo (2^ciL)^n and returns the carry
- * (1 if there was a wraparound, i.e. if `l < r`, and 0 otherwise).
+ * (1 if there was a wraparound, i.e. if `d < s`, and 0 otherwise).
  *
- * d may be aliased to l or r.
+ * \param n             Number of limbs of \p d and \p s.
+ * \param[in,out] d     On input, the left operand.
+ *                      On output, the result of the subtraction:
+ * \param[in] s         The right operand.
  *
- * \param n             Number of limbs of \p d, \p l and \p r.
- * \param[out] d        The result of the subtraction.
- * \param[in] l         The left operand.
- * \param[in] r         The right operand.
- *
- * \return              1 if `l < r`.
- *                      0 if `l >= r`.
+ * \return              1 if `d < s`.
+ *                      0 if `d >= s`.
  */
 static mbedtls_mpi_uint mpi_sub_hlp( size_t n,
                                      mbedtls_mpi_uint *d,
-                                     const mbedtls_mpi_uint *l,
-                                     const mbedtls_mpi_uint *r )
+                                     const mbedtls_mpi_uint *s )
 {
     size_t i;
-    mbedtls_mpi_uint c = 0, t, z;
+    mbedtls_mpi_uint c, z;
 
-    for( i = 0; i < n; i++ )
+    for( i = c = 0; i < n; i++, s++, d++ )
     {
-        z = ( l[i] <  c );    t = l[i] - c;
-        c = ( t < r[i] ) + z; d[i] = t - r[i];
+        z = ( *d <  c );     *d -=  c;
+        c = ( *d < *s ) + z; *d -= *s;
     }
 
     return( c );
@@ -1365,6 +1372,7 @@ static mbedtls_mpi_uint mpi_sub_hlp( size_t n,
  */
 int mbedtls_mpi_sub_abs( mbedtls_mpi *X, const mbedtls_mpi *A, const mbedtls_mpi *B )
 {
+    mbedtls_mpi TB;
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     size_t n;
     mbedtls_mpi_uint carry;
@@ -1372,27 +1380,29 @@ int mbedtls_mpi_sub_abs( mbedtls_mpi *X, const mbedtls_mpi *A, const mbedtls_mpi
     MPI_VALIDATE_RET( A != NULL );
     MPI_VALIDATE_RET( B != NULL );
 
+    mbedtls_mpi_init( &TB );
+
+    if( X == B )
+    {
+        MBEDTLS_MPI_CHK( mbedtls_mpi_copy( &TB, B ) );
+        B = &TB;
+    }
+
+    if( X != A )
+        MBEDTLS_MPI_CHK( mbedtls_mpi_copy( X, A ) );
+
+    /*
+     * X should always be positive as a result of unsigned subtractions.
+     */
+    X->s = 1;
+
+    ret = 0;
+
     for( n = B->n; n > 0; n-- )
         if( B->p[n - 1] != 0 )
             break;
-    if( n > A->n )
-    {
-        /* B >= (2^ciL)^n > A */
-        ret = MBEDTLS_ERR_MPI_NEGATIVE_VALUE;
-        goto cleanup;
-    }
 
-    MBEDTLS_MPI_CHK( mbedtls_mpi_grow( X, A->n ) );
-
-    /* Set the high limbs of X to match A. Don't touch the lower limbs
-     * because X might be aliased to B, and we must not overwrite the
-     * significant digits of B. */
-    if( A->n > n )
-        memcpy( X->p + n, A->p + n, ( A->n - n ) * ciL );
-    if( X->n > A->n )
-        memset( X->p + A->n, 0, ( X->n - A->n ) * ciL );
-
-    carry = mpi_sub_hlp( n, X->p, A->p, B->p );
+    carry = mpi_sub_hlp( n, X->p, B->p );
     if( carry != 0 )
     {
         /* Propagate the carry to the first nonzero limb of X. */
@@ -1408,10 +1418,10 @@ int mbedtls_mpi_sub_abs( mbedtls_mpi *X, const mbedtls_mpi *A, const mbedtls_mpi
         --X->p[n];
     }
 
-    /* X should always be positive as a result of unsigned subtractions. */
-    X->s = 1;
-
 cleanup:
+
+    mbedtls_mpi_free( &TB );
+
     return( ret );
 }
 
@@ -1521,21 +1531,8 @@ int mbedtls_mpi_sub_int( mbedtls_mpi *X, const mbedtls_mpi *A, mbedtls_mpi_sint 
     return( mbedtls_mpi_sub_mpi( X, A, &_B ) );
 }
 
-/** Helper for mbedtls_mpi multiplication.
- *
- * Add \p b * \p s to \p d.
- *
- * \param i             The number of limbs of \p s.
- * \param[in] s         A bignum to multiply, of size \p i.
- *                      It may overlap with \p d, but only if
- *                      \p d <= \p s.
- *                      Its leading limb must not be \c 0.
- * \param[in,out] d     The bignum to add to.
- *                      It must be sufficiently large to store the
- *                      result of the multiplication. This means
- *                      \p i + 1 limbs if \p d[\p i - 1] started as 0 and \p b
- *                      is not known a priori.
- * \param b             A scalar to multiply.
+/*
+ * Helper for mbedtls_mpi multiplication
  */
 static
 #if defined(__APPLE__) && defined(__arm__)
@@ -1545,10 +1542,7 @@ static
  */
 __attribute__ ((noinline))
 #endif
-void mpi_mul_hlp( size_t i,
-                  const mbedtls_mpi_uint *s,
-                  mbedtls_mpi_uint *d,
-                  mbedtls_mpi_uint b )
+void mpi_mul_hlp( size_t i, mbedtls_mpi_uint *s, mbedtls_mpi_uint *d, mbedtls_mpi_uint b )
 {
     mbedtls_mpi_uint c = 0, t = 0;
 
@@ -1603,10 +1597,10 @@ void mpi_mul_hlp( size_t i,
 
     t++;
 
-    while( c != 0 )
-    {
+    do {
         *d += c; c = ( *d < c ); d++;
     }
+    while( c != 0 );
 }
 
 /*
@@ -1654,38 +1648,17 @@ cleanup:
  */
 int mbedtls_mpi_mul_int( mbedtls_mpi *X, const mbedtls_mpi *A, mbedtls_mpi_uint b )
 {
+    mbedtls_mpi _B;
+    mbedtls_mpi_uint p[1];
     MPI_VALIDATE_RET( X != NULL );
     MPI_VALIDATE_RET( A != NULL );
 
-    /* mpi_mul_hlp can't deal with a leading 0. */
-    size_t n = A->n;
-    while( n > 0 && A->p[n - 1] == 0 )
-        --n;
+    _B.s = 1;
+    _B.n = 1;
+    _B.p = p;
+    p[0] = b;
 
-    /* The general method below doesn't work if n==0 or b==0. By chance
-     * calculating the result is trivial in those cases. */
-    if( b == 0 || n == 0 )
-    {
-        mbedtls_mpi_lset( X, 0 );
-        return( 0 );
-    }
-
-    /* Calculate A*b as A + A*(b-1) to take advantage of mpi_mul_hlp */
-    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
-    /* In general, A * b requires 1 limb more than b. If
-     * A->p[n - 1] * b / b == A->p[n - 1], then A * b fits in the same
-     * number of limbs as A and the call to grow() is not required since
-     * copy() will take care of the growth if needed. However, experimentally,
-     * making the call to grow() unconditional causes slightly fewer
-     * calls to calloc() in ECP code, presumably because it reuses the
-     * same mpi for a while and this way the mpi is more likely to directly
-     * grow to its final size. */
-    MBEDTLS_MPI_CHK( mbedtls_mpi_grow( X, n + 1 ) );
-    MBEDTLS_MPI_CHK( mbedtls_mpi_copy( X, A ) );
-    mpi_mul_hlp( n, A->p, X->p, b - 1 );
-
-cleanup:
-    return( ret );
+    return( mbedtls_mpi_mul_mpi( X, A, &_B ) );
 }
 
 /*
@@ -1826,7 +1799,7 @@ int mbedtls_mpi_div_mpi( mbedtls_mpi *Q, mbedtls_mpi *R, const mbedtls_mpi *A,
 
     MBEDTLS_MPI_CHK( mbedtls_mpi_grow( &Z, A->n + 2 ) );
     MBEDTLS_MPI_CHK( mbedtls_mpi_lset( &Z,  0 ) );
-    MBEDTLS_MPI_CHK( mbedtls_mpi_grow( &T1, A->n + 2 ) );
+    MBEDTLS_MPI_CHK( mbedtls_mpi_grow( &T1, 2 ) );
 
     k = mbedtls_mpi_bitlen( &Y ) % biL;
     if( k < biL - 1 )
@@ -2092,7 +2065,7 @@ static void mpi_montmul( mbedtls_mpi *A, const mbedtls_mpi *B, const mbedtls_mpi
      * do the calculation without using conditional tests. */
     /* Set d to d0 + (2^biL)^n - N where d0 is the current value of d. */
     d[n] += 1;
-    d[n] -= mpi_sub_hlp( n, d, d, N->p );
+    d[n] -= mpi_sub_hlp( n, d, N->p );
     /* If d0 < N then d < (2^biL)^n
      * so d[n] == 0 and we want to keep A as it is.
      * If d0 >= N then d >= (2^biL)^n, and d <= (2^biL)^n + N < 2 * (2^biL)^n
@@ -2717,26 +2690,6 @@ int mbedtls_mpi_is_prime_ext( const mbedtls_mpi *X, int rounds,
 
     return( mpi_miller_rabin( &XX, rounds, f_rng, p_rng ) );
 }
-
-#if !defined(MBEDTLS_DEPRECATED_REMOVED)
-/*
- * Pseudo-primality test, error probability 2^-80
- */
-int mbedtls_mpi_is_prime( const mbedtls_mpi *X,
-                  int (*f_rng)(void *, unsigned char *, size_t),
-                  void *p_rng )
-{
-    MPI_VALIDATE_RET( X     != NULL );
-    MPI_VALIDATE_RET( f_rng != NULL );
-
-    /*
-     * In the past our key generation aimed for an error rate of at most
-     * 2^-80. Since this function is deprecated, aim for the same certainty
-     * here as well.
-     */
-    return( mbedtls_mpi_is_prime_ext( X, 40, f_rng, p_rng ) );
-}
-#endif
 
 /*
  * Prime number generation
