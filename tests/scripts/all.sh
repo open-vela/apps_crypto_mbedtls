@@ -51,9 +51,9 @@
 #   * arm-gcc and mingw-gcc
 #   * ArmCC 5 and ArmCC 6, unless invoked with --no-armcc
 #   * OpenSSL and GnuTLS command line tools, recent enough for the
-#     interoperability tests. If they don't support SSLv3 then a legacy
-#     version of these tools must be present as well (search for LEGACY
-#     below).
+#     interoperability tests. If they don't support old features which we want
+#     to test, then a legacy version of these tools must be present as well
+#     (search for LEGACY below).
 # See the invocation of check_tools below for details.
 #
 # This script must be invoked from the toplevel directory of a git
@@ -254,7 +254,7 @@ Tool path options:
      --gnutls-legacy-cli=<GnuTLS_cli_path>      GnuTLS client executable to use for legacy tests.
      --gnutls-legacy-serv=<GnuTLS_serv_path>    GnuTLS server executable to use for legacy tests.
      --openssl=<OpenSSL_path>                   OpenSSL executable to use for most tests.
-     --openssl-legacy=<OpenSSL_path>            OpenSSL executable to use for legacy tests e.g. SSLv3.
+     --openssl-legacy=<OpenSSL_path>            OpenSSL executable to use for legacy tests..
      --openssl-next=<OpenSSL_path>              OpenSSL executable to use for recent things like ARIA
 EOF
 }
@@ -809,69 +809,10 @@ component_test_psa_crypto_client () {
     make test
 }
 
-component_test_zlib_make() {
-    msg "build: zlib enabled, make"
-    scripts/config.py set MBEDTLS_ZLIB_SUPPORT
-    make ZLIB=1 CFLAGS='-Werror -O1'
-
-    msg "test: main suites (zlib, make)"
-    make test
-
-    msg "test: ssl-opt.sh (zlib, make)"
-    if_build_succeeded tests/ssl-opt.sh
-}
-support_test_zlib_make () {
-    base=support_test_zlib_$$
-    cat <<'EOF' > ${base}.c
-#include "zlib.h"
-int main(void) { return 0; }
-EOF
-    gcc -o ${base}.exe ${base}.c -lz 2>/dev/null
-    ret=$?
-    rm -f ${base}.*
-    return $ret
-}
-
-component_test_zlib_cmake() {
-    msg "build: zlib enabled, cmake"
-    scripts/config.py set MBEDTLS_ZLIB_SUPPORT
-    cmake -D ENABLE_ZLIB_SUPPORT=On -D CMAKE_BUILD_TYPE:String=Check .
-    make
-
-    msg "test: main suites (zlib, cmake)"
-    make test
-
-    msg "test: ssl-opt.sh (zlib, cmake)"
-    if_build_succeeded tests/ssl-opt.sh
-}
-support_test_zlib_cmake () {
-    support_test_zlib_make "$@"
-}
-
 component_test_ref_configs () {
     msg "test/build: ref-configs (ASan build)" # ~ 6 min 20s
     CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
     record_status tests/scripts/test-ref-configs.pl
-}
-
-component_test_sslv3 () {
-    msg "build: Default + SSLv3 (ASan build)" # ~ 6 min
-    scripts/config.py set MBEDTLS_SSL_PROTO_SSL3
-    CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
-    make
-
-    msg "test: SSLv3 - main suites (inc. selftests) (ASan build)" # ~ 50s
-    make test
-
-    msg "build: SSLv3 - compat.sh (ASan build)" # ~ 6 min
-    if_build_succeeded tests/compat.sh -m 'tls1 tls1_1 tls1_2 dtls1 dtls1_2'
-    if_build_succeeded env OPENSSL_CMD="$OPENSSL_LEGACY" tests/compat.sh -m 'ssl3'
-
-    msg "build: SSLv3 - ssl-opt.sh (ASan build)" # ~ 6 min
-    if_build_succeeded tests/ssl-opt.sh
-
-    msg "build: SSLv3 - context-info.sh (ASan build)" # ~ 15 sec
-    if_build_succeeded tests/context-info.sh
 }
 
 component_test_no_renegotiation () {
@@ -1158,7 +1099,6 @@ component_test_everest_curve25519_only () {
     scripts/config.py unset MBEDTLS_ECDSA_C
     scripts/config.py unset MBEDTLS_KEY_EXCHANGE_ECDH_ECDSA_ENABLED
     scripts/config.py unset MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED
-    scripts/config.py unset MBEDTLS_ECJPAKE_C
     # Disable all curves
     for c in $(sed -n 's/#define \(MBEDTLS_ECP_DP_[0-9A-Z_a-z]*_ENABLED\).*/\1/p' <"$CONFIG_H"); do
         scripts/config.py unset "$c"
@@ -2123,7 +2063,6 @@ component_test_when_no_ciphersuites_have_mac () {
     scripts/config.py unset MBEDTLS_CIPHER_NULL_CIPHER
     scripts/config.py unset MBEDTLS_ARC4_C
     scripts/config.py unset MBEDTLS_CIPHER_MODE_CBC
-    scripts/config.py unset MBEDTLS_CMAC_C
     make
 
     msg "test: !MBEDTLS_SSL_SOME_MODES_USE_MAC"
@@ -2141,7 +2080,6 @@ component_test_null_entropy () {
     scripts/config.py unset MBEDTLS_ENTROPY_NV_SEED
     scripts/config.py unset MBEDTLS_PLATFORM_NV_SEED_ALT
     scripts/config.py unset MBEDTLS_ENTROPY_HARDWARE_ALT
-    scripts/config.py unset MBEDTLS_HAVEGE_C
     CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan -D UNSAFE_BUILD=ON .
     make
 
@@ -2271,6 +2209,7 @@ component_test_psa_crypto_drivers () {
     msg "build: MBEDTLS_PSA_CRYPTO_DRIVERS w/ driver hooks"
     scripts/config.py full
     scripts/config.py set MBEDTLS_PSA_CRYPTO_DRIVERS
+    scripts/config.py set MBEDTLS_PSA_CRYPTO_BUILTIN_KEYS
     # Need to define the correct symbol and include the test driver header path in order to build with the test driver
     loc_cflags="$ASAN_CFLAGS -DPSA_CRYPTO_DRIVER_TEST"
     loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_KEY_TYPE_AES"
@@ -2489,6 +2428,20 @@ component_test_no_strings () {
     make test
 }
 
+component_test_no_x509_info () {
+    msg "build: full + MBEDTLS_X509_REMOVE_INFO" # ~ 10s
+    scripts/config.pl full
+    scripts/config.pl unset MBEDTLS_MEMORY_BACKTRACE # too slow for tests
+    scripts/config.pl set MBEDTLS_X509_REMOVE_INFO
+    make CFLAGS='-Werror -O1'
+
+    msg "test: full + MBEDTLS_X509_REMOVE_INFO" # ~ 10s
+    make test
+
+    msg "test: ssl-opt.sh, full + MBEDTLS_X509_REMOVE_INFO" # ~ 1 min
+    if_build_succeeded tests/ssl-opt.sh
+}
+
 component_build_arm_none_eabi_gcc () {
     msg "build: ${ARM_NONE_EABI_GCC_PREFIX}gcc -O1" # ~ 10s
     scripts/config.py baremetal
@@ -2563,21 +2516,6 @@ component_build_armcc () {
 
     # ARM Compiler 6 - Target ARMv8-A - AArch64
     armc6_build_test "--target=aarch64-arm-none-eabi -march=armv8.2-a"
-}
-
-component_build_ssl_hw_record_accel() {
-    msg "build: default config with MBEDTLS_SSL_HW_RECORD_ACCEL enabled"
-    scripts/config.pl set MBEDTLS_SSL_HW_RECORD_ACCEL
-    make CFLAGS='-Werror -O1'
-}
-
-component_test_allow_sha1 () {
-    msg "build: allow SHA1 in certificates by default"
-    scripts/config.py set MBEDTLS_TLS_DEFAULT_ALLOW_SHA1_IN_CERTIFICATES
-    make CFLAGS='-Werror -Wall -Wextra'
-    msg "test: allow SHA1 in certificates by default"
-    make test
-    if_build_succeeded tests/ssl-opt.sh -f SHA-1
 }
 
 component_test_tls13_experimental () {
