@@ -41,8 +41,9 @@
 #endif
 
 /* Adding guard for MBEDTLS_ECDSA_C to ensure no compile errors due
- * to guards in TLS code. There is a gap in functionality that access to
- * ecdh_ctx structure is needed for MBEDTLS_ECDSA_C which does not seem correct.
+ * to guards also being in ssl_srv.c and ssl_cli.c. There is a gap
+ * in functionality that access to ecdh_ctx structure is needed for
+ * MBEDTLS_ECDSA_C which does not seem correct.
  */
 #if defined(MBEDTLS_ECDH_C) || defined(MBEDTLS_ECDSA_C)
 #include "mbedtls/ecdh.h"
@@ -1118,11 +1119,10 @@ struct mbedtls_ssl_session
 
     unsigned char MBEDTLS_PRIVATE(exported);
 
-    /*!< Minor version negotiated in the session. Used if and when
-     *   renegotiating or resuming a session instead of the configured minor
-     *   version.
-     */
-    unsigned char MBEDTLS_PRIVATE(minor_ver);
+    /* This field is temporarily duplicated with mbedtls_ssl_context.minor_ver.
+     * Once runtime negotiation of TLS 1.2 and TLS 1.3 is implemented, it needs
+     * to be studied whether one of them can be removed. */
+    unsigned char MBEDTLS_PRIVATE(minor_ver);    /*!< The TLS version used in the session. */
 
 #if defined(MBEDTLS_HAVE_TIME)
     mbedtls_time_t MBEDTLS_PRIVATE(start);       /*!< starting time      */
@@ -1496,25 +1496,12 @@ struct mbedtls_ssl_context
                                   renego_max_records is < 0           */
 #endif /* MBEDTLS_SSL_RENEGOTIATION */
 
-    /*!< Equal to MBEDTLS_SSL_MAJOR_VERSION_3 */
-    int MBEDTLS_PRIVATE(major_ver);
+    int MBEDTLS_PRIVATE(major_ver);              /*!< equal to  MBEDTLS_SSL_MAJOR_VERSION_3    */
 
-    /*!< Server: Negotiated minor version.
-     *   Client: Maximum minor version to be negotiated, then negotiated minor
-     *           version.
-     *
-     *   It is initialized as the maximum minor version to be negotiated in the
-     *   ClientHello writing preparation stage and used throughout the
-     *   ClientHello writing. For a fresh handshake not linked to any previous
-     *   handshake, it is initialized to the configured maximum minor version
-     *   to be negotiated. When renegotiating or resuming a session, it is
-     *   initialized to the previously negotiated minor version.
-     *
-     *   Updated to the negotiated minor version as soon as the ServerHello is
-     *   received.
-     */
-    int MBEDTLS_PRIVATE(minor_ver);
-
+    /* This field is temporarily duplicated with mbedtls_ssl_context.minor_ver.
+     * Once runtime negotiation of TLS 1.2 and TLS 1.3 is implemented, it needs
+     * to be studied whether one of them can be removed. */
+    int MBEDTLS_PRIVATE(minor_ver);              /*!< one of MBEDTLS_SSL_MINOR_VERSION_x macros */
     unsigned MBEDTLS_PRIVATE(badmac_seen);       /*!< records with a bad MAC received    */
 
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
@@ -2035,40 +2022,6 @@ int mbedtls_ssl_set_cid( mbedtls_ssl_context *ssl,
                          int enable,
                          unsigned char const *own_cid,
                          size_t own_cid_len );
-
-/**
- * \brief              Get information about our request for usage of the CID
- *                     extension in the current connection.
- *
- * \param ssl          The SSL context to query.
- * \param enabled      The address at which to store whether the CID extension
- *                     is requested to be used or not. If the CID is
- *                     requested, `*enabled` is set to
- *                     MBEDTLS_SSL_CID_ENABLED; otherwise, it is set to
- *                     MBEDTLS_SSL_CID_DISABLED.
- * \param own_cid      The address of the buffer in which to store our own
- *                     CID (if the CID extension is requested). This may be
- *                     \c NULL in case the value of our CID isn't needed. If
- *                     it is not \c NULL, \p own_cid_len must not be \c NULL.
- * \param own_cid_len  The address at which to store the size of our own CID
- *                     (if the CID extension is requested). This is also the
- *                     number of Bytes in \p own_cid that have been written.
- *                     This may be \c NULL in case the length of our own CID
- *                     isn't needed. If it is \c NULL, \p own_cid must be
- *                     \c NULL, too.
- *
- *\note                If we are requesting an empty CID this function sets
- *                     `*enabled` to #MBEDTLS_SSL_CID_DISABLED (the rationale
- *                     for this is that the resulting outcome is the
- *                     same as if the CID extensions wasn't requested).
- *
- * \return            \c 0 on success.
- * \return            A negative error code on failure.
- */
-int mbedtls_ssl_get_own_cid( mbedtls_ssl_context *ssl,
-                            int *enabled,
-                            unsigned char own_cid[MBEDTLS_SSL_CID_OUT_LEN_MAX],
-                            size_t *own_cid_len );
 
 /**
  * \brief              Get information about the use of the CID extension
