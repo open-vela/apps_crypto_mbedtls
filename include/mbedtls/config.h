@@ -1312,6 +1312,22 @@
  */
 #define MBEDTLS_PKCS1_V21
 
+/** \def MBEDTLS_PSA_CRYPTO_BUILTIN_KEYS
+ *
+ * Enable support for platform built-in keys. If you enable this feature,
+ * you must implement the function mbedtls_psa_platform_get_builtin_key().
+ * See the documentation of that function for more information.
+ *
+ * Built-in keys are typically derived from a hardware unique key or
+ * stored in a secure element.
+ *
+ * Requires: MBEDTLS_PSA_CRYPTO_C.
+ *
+ * \warning This interface is experimental and may change or be removed
+ * without notice.
+ */
+//#define MBEDTLS_PSA_CRYPTO_BUILTIN_KEYS
+
 /** \def MBEDTLS_PSA_CRYPTO_CLIENT
  *
  * Enable support for PSA crypto client.
@@ -2128,6 +2144,17 @@
 #define MBEDTLS_X509_CHECK_EXTENDED_KEY_USAGE
 
 /**
+ * \def MBEDTLS_X509_REMOVE_INFO
+ *
+ * Disable mbedtls_x509_*_info() and related APIs.
+ *
+ * Uncomment to omit mbedtls_x509_*_info(), as well as mbedtls_debug_print_crt()
+ * and other functions/constants only used by these functions, thus reducing
+ * the code footprint by several KB.
+ */
+//#define MBEDTLS_X509_REMOVE_INFO
+
+/**
  * \def MBEDTLS_X509_RSASSA_PSS_SUPPORT
  *
  * Enable parsing and verification of X.509 certificates, CRLs and CSRS
@@ -2423,7 +2450,7 @@
  *      MBEDTLS_TLS_ECDHE_PSK_WITH_ARIA_128_CBC_SHA256
  *      MBEDTLS_TLS_ECDHE_PSK_WITH_ARIA_256_CBC_SHA384
  */
-#define MBEDTLS_ARIA_C
+//#define MBEDTLS_ARIA_C
 
 /**
  * \def MBEDTLS_CCM_C
@@ -2482,7 +2509,7 @@
  * Requires: MBEDTLS_AES_C or MBEDTLS_DES_C
  *
  */
-#define MBEDTLS_CMAC_C
+//#define MBEDTLS_CMAC_C
 
 /**
  * \def MBEDTLS_CTR_DRBG_C
@@ -2608,7 +2635,7 @@
  *
  * \warning This is currently experimental. EC J-PAKE support is based on the
  * Thread v1.0.0 specification; incompatible changes to the specification
- * might still happen.
+ * might still happen. For this reason, this is disabled by default.
  *
  * Module:  library/ecjpake.c
  * Caller:
@@ -2618,7 +2645,7 @@
  *
  * Requires: MBEDTLS_ECP_C, MBEDTLS_MD_C
  */
-#define MBEDTLS_ECJPAKE_C
+//#define MBEDTLS_ECJPAKE_C
 
 /**
  * \def MBEDTLS_ECP_C
@@ -2714,7 +2741,7 @@
  *
  * Requires: MBEDTLS_AES_C and MBEDTLS_CIPHER_C
  */
-#define MBEDTLS_NIST_KW_C
+//#define MBEDTLS_NIST_KW_C
 
 /**
  * \def MBEDTLS_MD_C
