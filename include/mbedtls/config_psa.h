@@ -50,6 +50,12 @@ extern "C" {
 #define PSA_WANT_ALG_ECDSA_ANY PSA_WANT_ALG_ECDSA
 #endif
 
+#if defined(PSA_WANT_ALG_CCM_STAR_NO_TAG) && !defined(PSA_WANT_ALG_CCM)
+#define PSA_WANT_ALG_CCM PSA_WANT_ALG_CCM_STAR_NO_TAG
+#elif !defined(PSA_WANT_ALG_CCM_STAR_NO_TAG) && defined(PSA_WANT_ALG_CCM)
+#define PSA_WANT_ALG_CCM_STAR_NO_TAG PSA_WANT_ALG_CCM
+#endif
+
 #if defined(PSA_WANT_ALG_RSA_PKCS1V15_SIGN_RAW) && !defined(PSA_WANT_ALG_RSA_PKCS1V15_SIGN)
 #define PSA_WANT_ALG_RSA_PKCS1V15_SIGN PSA_WANT_ALG_RSA_PKCS1V15_SIGN_RAW
 #elif !defined(PSA_WANT_ALG_RSA_PKCS1V15_SIGN_RAW) && defined(PSA_WANT_ALG_RSA_PKCS1V15_SIGN)
@@ -411,6 +417,7 @@ extern "C" {
     defined(PSA_HAVE_SOFT_KEY_TYPE_ARIA) || \
     defined(PSA_HAVE_SOFT_KEY_TYPE_CAMELLIA)
 #define MBEDTLS_PSA_BUILTIN_ALG_CCM 1
+#define MBEDTLS_PSA_BUILTIN_ALG_CCM_STAR_NO_TAG 1
 #define MBEDTLS_CCM_C
 #endif
 #endif /* PSA_WANT_ALG_CCM */
@@ -515,7 +522,7 @@ extern "C" {
 #if !defined(MBEDTLS_PSA_ACCEL_ECC_SECP_K1_224)
 /*
  * SECP224K1 is buggy via the PSA API in Mbed TLS
- * (https://github.com/Mbed-TLS/mbedtls/issues/3541).
+ * (https://github.com/ARMmbed/mbedtls/issues/3541).
  */
 #error "SECP224K1 is buggy via the PSA API in Mbed TLS."
 #define MBEDTLS_ECP_DP_SECP224K1_ENABLED
@@ -545,7 +552,9 @@ extern "C" {
 
 #if defined(MBEDTLS_CCM_C)
 #define MBEDTLS_PSA_BUILTIN_ALG_CCM 1
+#define MBEDTLS_PSA_BUILTIN_ALG_CCM_STAR_NO_TAG 1
 #define PSA_WANT_ALG_CCM 1
+#define PSA_WANT_ALG_CCM_STAR_NO_TAG 1
 #endif /* MBEDTLS_CCM_C */
 
 #if defined(MBEDTLS_CMAC_C)
@@ -776,7 +785,7 @@ extern "C" {
 #define PSA_WANT_ECC_SECP_K1_192
 #endif
 
-/* SECP224K1 is buggy via the PSA API (https://github.com/Mbed-TLS/mbedtls/issues/3541) */
+/* SECP224K1 is buggy via the PSA API (https://github.com/ARMmbed/mbedtls/issues/3541) */
 #if 0 && defined(MBEDTLS_ECP_DP_SECP224K1_ENABLED)
 #define MBEDTLS_PSA_BUILTIN_ECC_SECP_K1_224 1
 #define PSA_WANT_ECC_SECP_K1_224
