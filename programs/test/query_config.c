@@ -1211,14 +1211,6 @@ int query_config( const char *config )
     }
 #endif /* MBEDTLS_PKCS1_V21 */
 
-#if defined(MBEDTLS_PSA_CRYPTO_BUILTIN_KEYS)
-    if( strcmp( "MBEDTLS_PSA_CRYPTO_BUILTIN_KEYS", config ) == 0 )
-    {
-        MACRO_EXPANSION_TO_STR( MBEDTLS_PSA_CRYPTO_BUILTIN_KEYS );
-        return( 0 );
-    }
-#endif /* MBEDTLS_PSA_CRYPTO_BUILTIN_KEYS */
-
 #if defined(MBEDTLS_PSA_CRYPTO_CLIENT)
     if( strcmp( "MBEDTLS_PSA_CRYPTO_CLIENT", config ) == 0 )
     {
@@ -1642,14 +1634,6 @@ int query_config( const char *config )
         return( 0 );
     }
 #endif /* MBEDTLS_X509_CHECK_EXTENDED_KEY_USAGE */
-
-#if defined(MBEDTLS_X509_REMOVE_INFO)
-    if( strcmp( "MBEDTLS_X509_REMOVE_INFO", config ) == 0 )
-    {
-        MACRO_EXPANSION_TO_STR( MBEDTLS_X509_REMOVE_INFO );
-        return( 0 );
-    }
-#endif /* MBEDTLS_X509_REMOVE_INFO */
 
 #if defined(MBEDTLS_X509_RSASSA_PSS_SUPPORT)
     if( strcmp( "MBEDTLS_X509_RSASSA_PSS_SUPPORT", config ) == 0 )
