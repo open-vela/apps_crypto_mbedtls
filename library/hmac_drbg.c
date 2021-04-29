@@ -54,6 +54,10 @@ void mbedtls_hmac_drbg_init( mbedtls_hmac_drbg_context *ctx )
     memset( ctx, 0, sizeof( mbedtls_hmac_drbg_context ) );
 
     ctx->reseed_interval = MBEDTLS_HMAC_DRBG_RESEED_INTERVAL;
+
+#if defined(MBEDTLS_THREADING_C)
+    mbedtls_mutex_init( &ctx->mutex );
+#endif
 }
 
 /*
@@ -104,15 +108,6 @@ exit:
     return( ret );
 }
 
-#if !defined(MBEDTLS_DEPRECATED_REMOVED)
-void mbedtls_hmac_drbg_update( mbedtls_hmac_drbg_context *ctx,
-                               const unsigned char *additional,
-                               size_t add_len )
-{
-    (void) mbedtls_hmac_drbg_update_ret( ctx, additional, add_len );
-}
-#endif /* MBEDTLS_DEPRECATED_REMOVED */
-
 /*
  * Simplified HMAC_DRBG initialisation (for use with deterministic ECDSA)
  */
@@ -124,10 +119,6 @@ int mbedtls_hmac_drbg_seed_buf( mbedtls_hmac_drbg_context *ctx,
 
     if( ( ret = mbedtls_md_setup( &ctx->md_ctx, md_info, 1 ) ) != 0 )
         return( ret );
-
-#if defined(MBEDTLS_THREADING_C)
-    mbedtls_mutex_init( &ctx->mutex );
-#endif
 
     /*
      * Set initial working state.
@@ -253,11 +244,6 @@ int mbedtls_hmac_drbg_seed( mbedtls_hmac_drbg_context *ctx,
 
     if( ( ret = mbedtls_md_setup( &ctx->md_ctx, md_info, 1 ) ) != 0 )
         return( ret );
-
-    /* The mutex is initialized iff the md context is set up. */
-#if defined(MBEDTLS_THREADING_C)
-    mbedtls_mutex_init( &ctx->mutex );
-#endif
 
     md_size = mbedtls_md_get_size( md_info );
 
@@ -426,13 +412,14 @@ void mbedtls_hmac_drbg_free( mbedtls_hmac_drbg_context *ctx )
         return;
 
 #if defined(MBEDTLS_THREADING_C)
-    /* The mutex is initialized iff the md context is set up. */
-    if( ctx->md_ctx.md_info != NULL )
-        mbedtls_mutex_free( &ctx->mutex );
+    mbedtls_mutex_free( &ctx->mutex );
 #endif
     mbedtls_md_free( &ctx->md_ctx );
     mbedtls_platform_zeroize( ctx, sizeof( mbedtls_hmac_drbg_context ) );
     ctx->reseed_interval = MBEDTLS_HMAC_DRBG_RESEED_INTERVAL;
+#if defined(MBEDTLS_THREADING_C)
+    mbedtls_mutex_init( &ctx->mutex );
+#endif
 }
 
 #if defined(MBEDTLS_FS_IO)
