@@ -3290,6 +3290,48 @@ psa_status_t psa_key_derivation_input_bytes(
     const uint8_t *data,
     size_t data_length);
 
+/** Provide a numeric input for key derivation or key agreement.
+ *
+ * Which inputs are required and in what order depends on the algorithm.
+ * Refer to the documentation of each key derivation or key agreement
+ * algorithm for information.
+ *
+ * This function is used for inputs which are small non-negative integers.
+ *
+ * If this function returns an error status, the operation enters an error
+ * state and must be aborted by calling psa_key_derivation_abort().
+ *
+ * \param[in,out] operation       The key derivation operation object to use.
+ *                                It must have been set up with
+ *                                psa_key_derivation_setup() and must not
+ *                                have produced any output yet.
+ * \param step                    Which step the input data is for.
+ * \param[in] data                Input data to use.
+ * \param data_length             Size of the \p data buffer in bytes.
+ *
+ * \retval #PSA_SUCCESS
+ *         Success.
+ * \retval #PSA_ERROR_INVALID_ARGUMENT
+ *         \c step is not compatible with the operation's algorithm.
+ * \retval #PSA_ERROR_INVALID_ARGUMENT
+ *         \c step does not allow numeric inputs.
+ * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
+ * \retval #PSA_ERROR_COMMUNICATION_FAILURE
+ * \retval #PSA_ERROR_HARDWARE_FAILURE
+ * \retval #PSA_ERROR_CORRUPTION_DETECTED
+ * \retval #PSA_ERROR_STORAGE_FAILURE
+ * \retval #PSA_ERROR_BAD_STATE
+ *         The operation state is not valid for this input \p step.
+ * \retval #PSA_ERROR_BAD_STATE
+ *         The library has not been previously initialized by psa_crypto_init().
+ *         It is implementation-dependent whether a failure to initialize
+ *         results in this error code.
+ */
+psa_status_t psa_key_derivation_input_integer(
+    psa_key_derivation_operation_t *operation,
+    psa_key_derivation_step_t step,
+    uint64_t value);
+
 /** Provide an input for key derivation in the form of a key.
  *
  * Which inputs are required and in what order depends on the algorithm.
@@ -3600,6 +3642,100 @@ psa_status_t psa_key_derivation_output_key(
     const psa_key_attributes_t *attributes,
     psa_key_derivation_operation_t *operation,
     mbedtls_svc_key_id_t *key);
+
+/** Compare output data from a key derivation operation to an expected value.
+ *
+ * This function calculates output bytes from a key derivation algorithm and
+ * compares those bytes to an expected value.
+ * If you view the key derivation's output as a stream of bytes, this
+ * function destructively reads the requested number of bytes from the
+ * stream before comparing them.
+ * The operation's capacity decreases by the number of bytes read.
+ *
+ * If this function returns an error status other than
+ * #PSA_ERROR_INSUFFICIENT_DATA, the operation enters an error
+ * state and must be aborted by calling psa_key_derivation_abort().
+ *
+ * \param[in,out] operation The key derivation operation object to read from.
+ * \param[in] expected_output Buffer where the output will be written.
+ * \param output_length     Length ot the expected output; this is also the
+ *                          number of bytes that will be read.
+ *
+ * \retval #PSA_SUCCESS
+ * \retval #PSA_ERROR_INVALID_SIGNATURE
+ *         The output was read successfully, but if differs from the expected
+ *         output.
+ * \retval #PSA_ERROR_INSUFFICIENT_DATA
+ *                          The operation's capacity was less than
+ *                          \p output_length bytes. Note that in this case,
+ *                          the operation's capacity is set to 0, thus
+ *                          subsequent calls to this function will not
+ *                          succeed, even with a smaller output buffer.
+ * \retval #PSA_ERROR_BAD_STATE
+ *         The operation state is not valid (it must be active and completed
+ *         all required input steps).
+ * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
+ * \retval #PSA_ERROR_COMMUNICATION_FAILURE
+ * \retval #PSA_ERROR_HARDWARE_FAILURE
+ * \retval #PSA_ERROR_CORRUPTION_DETECTED
+ * \retval #PSA_ERROR_STORAGE_FAILURE
+ * \retval #PSA_ERROR_BAD_STATE
+ *         The library has not been previously initialized by psa_crypto_init().
+ *         It is implementation-dependent whether a failure to initialize
+ *         results in this error code.
+ */
+psa_status_t psa_key_derivation_verify_output_bytes(
+    psa_key_derivation_operation_t *operation,
+    const uint8_t *output,
+    size_t output_length);
+
+/** Compare output data from a key derivation operation to an expected value.
+ *
+ * This function calculates output bytes from a key derivation algorithm and
+ * compares those bytes to an expected value, provided as key of type
+ * #PSA_KEY_TYPE_RAW_DATA.
+ * If you view the key derivation's output as a stream of bytes, this
+ * function destructively reads the number of bytes corresponding the the
+ * length of the expected value from the stream before comparing them.
+ * The operation's capacity decreases by the number of bytes read.
+ *
+ * If this function returns an error status other than
+ * #PSA_ERROR_INSUFFICIENT_DATA, the operation enters an error
+ * state and must be aborted by calling psa_key_derivation_abort().
+ *
+ * \param[in,out] operation The key derivation operation object to read from.
+ * \param[in] expected      A key of type #PSA_KEY_TYPE_RAW_DATA containing
+ *                          the expected output. Its policy must include the
+ *                          #PSA_KEY_USAGE_PASSWORD_HASH_VERIFIER flag.
+ *
+ * \retval #PSA_SUCCESS
+ * \retval #PSA_ERROR_INVALID_SIGNATURE
+ *         The output was read successfully, but if differs from the expected
+ *         output.
+ * \retval #PSA_ERROR_NOT_PERMITTED
+ *         The key passed as the expected value does not allow this usage.
+ * \retval #PSA_ERROR_INSUFFICIENT_DATA
+ *                          The operation's capacity was less than
+ *                          the length of the expected value. In this case,
+ *                          the operation's capacity is set to 0, thus
+ *                          subsequent calls to this function will not
+ *                          succeed, even with a smaller output buffer.
+ * \retval #PSA_ERROR_BAD_STATE
+ *         The operation state is not valid (it must be active and completed
+ *         all required input steps).
+ * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
+ * \retval #PSA_ERROR_COMMUNICATION_FAILURE
+ * \retval #PSA_ERROR_HARDWARE_FAILURE
+ * \retval #PSA_ERROR_CORRUPTION_DETECTED
+ * \retval #PSA_ERROR_STORAGE_FAILURE
+ * \retval #PSA_ERROR_BAD_STATE
+ *         The library has not been previously initialized by psa_crypto_init().
+ *         It is implementation-dependent whether a failure to initialize
+ *         results in this error code.
+ */
+psa_status_t psa_key_derivation_verify_output_key(
+    psa_key_derivation_operation_t *operation,
+    psa_key_id_t expected);
 
 /** Abort a key derivation operation.
  *

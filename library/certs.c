@@ -19,7 +19,9 @@
 
 #include "common.h"
 
-#include <test/certs.h>
+#include "mbedtls/certs.h"
+
+#if defined(MBEDTLS_CERTS_C)
 
 /*
  * Test CA Certificates
@@ -1740,3 +1742,5 @@ const char mbedtls_test_cas_pem[] =
     "";
 const size_t mbedtls_test_cas_pem_len = sizeof( mbedtls_test_cas_pem );
 #endif /* MBEDTLS_PEM_PARSE_C */
+
+#endif /* MBEDTLS_CERTS_C */
