@@ -101,10 +101,8 @@
  * HKDF      5   1 (Started from top)
  * SSL       5   2 (Started from 0x5F00)
  * CIPHER    6   8 (Started from 0x6080)
- * SSL       6   23 (Started from top, plus 0x6000, gaps at
- *                   0x6600)
- * SSL       7   28 (Started from 0x7080, gaps at
- *                   0x7300, 0x7500, 0x7580, 0x7800)
+ * SSL       6   24 (Started from top, plus 0x6000)
+ * SSL       7   32
  *
  * Module dependent error code (5 bits 0x.00.-0x.F8.)
  */
@@ -115,9 +113,6 @@ extern "C" {
 
 #define MBEDTLS_ERR_ERROR_GENERIC_ERROR       -0x0001  /**< Generic error */
 #define MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED -0x006E  /**< This is a bug in the library */
-
-#define MBEDTLS_ERR_PLATFORM_HW_ACCEL_FAILED     -0x0070 /**< Hardware accelerator failed */
-#define MBEDTLS_ERR_PLATFORM_FEATURE_UNSUPPORTED -0x0072 /**< The requested feature is not supported by the platform */
 
 /**
  * \brief Translate a mbed TLS error code into a string representation,
