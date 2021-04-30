@@ -1,2 +1,0 @@
-Removals
-   * Remove deprecated functions and constants. Fix #4282
