@@ -38,7 +38,7 @@
 #if defined(MBEDTLS_BIGNUM_C)
 
 #include "mbedtls/bignum.h"
-#include "bn_mul.h"
+#include "mbedtls/bn_mul.h"
 #include "mbedtls/platform_util.h"
 #include "mbedtls/error.h"
 
@@ -1666,7 +1666,8 @@ int mbedtls_mpi_mul_int( mbedtls_mpi *X, const mbedtls_mpi *A, mbedtls_mpi_uint 
      * calculating the result is trivial in those cases. */
     if( b == 0 || n == 0 )
     {
-        return( mbedtls_mpi_lset( X, 0 ) );
+        mbedtls_mpi_lset( X, 0 );
+        return( 0 );
     }
 
     /* Calculate A*b as A + A*(b-1) to take advantage of mpi_mul_hlp */
