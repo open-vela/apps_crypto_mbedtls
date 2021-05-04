@@ -76,9 +76,8 @@ extern "C" {
 #include "mbedtls/cmac.h"
 #include "mbedtls/gcm.h"
 
-/* Include the context definition for the compiled-in drivers for the primitive
- * algorithms. */
-#include "psa/crypto_driver_contexts_primitives.h"
+/* Include the context definition for the compiled-in drivers */
+#include "psa/crypto_driver_contexts.h"
 
 struct psa_hash_operation_s
 {
@@ -96,6 +95,46 @@ struct psa_hash_operation_s
 static inline struct psa_hash_operation_s psa_hash_operation_init( void )
 {
     const struct psa_hash_operation_s v = PSA_HASH_OPERATION_INIT;
+    return( v );
+}
+
+#if defined(MBEDTLS_MD_C)
+typedef struct
+{
+        /** The HMAC algorithm in use */
+        psa_algorithm_t alg;
+        /** The hash context. */
+        struct psa_hash_operation_s hash_ctx;
+        /** The HMAC part of the context. */
+        uint8_t opad[PSA_HMAC_MAX_HASH_BLOCK_SIZE];
+} psa_hmac_internal_data;
+#endif /* MBEDTLS_MD_C */
+
+struct psa_mac_operation_s
+{
+    psa_algorithm_t alg;
+    unsigned int key_set : 1;
+    unsigned int iv_required : 1;
+    unsigned int iv_set : 1;
+    unsigned int has_input : 1;
+    unsigned int is_sign : 1;
+    uint8_t mac_size;
+    union
+    {
+        unsigned dummy; /* Make the union non-empty even with no supported algorithms. */
+#if defined(MBEDTLS_MD_C)
+        psa_hmac_internal_data hmac;
+#endif
+#if defined(MBEDTLS_CMAC_C)
+        mbedtls_cipher_context_t cmac;
+#endif
+    } ctx;
+};
+
+#define PSA_MAC_OPERATION_INIT {0, 0, 0, 0, 0, 0, 0, {0}}
+static inline struct psa_mac_operation_s psa_mac_operation_init( void )
+{
+    const struct psa_mac_operation_s v = PSA_MAC_OPERATION_INIT;
     return( v );
 }
 
@@ -124,29 +163,6 @@ static inline struct psa_cipher_operation_s psa_cipher_operation_init( void )
     return( v );
 }
 
-/* Include the context definition for the compiled-in drivers for the composite
- * algorithms. */
-#include "psa/crypto_driver_contexts_composites.h"
-
-struct psa_mac_operation_s
-{
-    /** Unique ID indicating which driver got assigned to do the
-     * operation. Since driver contexts are driver-specific, swapping
-     * drivers halfway through the operation is not supported.
-     * ID values are auto-generated in psa_driver_wrappers.h
-     * ID value zero means the context is not valid or not assigned to
-     * any driver (i.e. none of the driver contexts are active). */
-    unsigned int id;
-    psa_driver_mac_context_t ctx;
-};
-
-#define PSA_MAC_OPERATION_INIT {0, {0}}
-static inline struct psa_mac_operation_s psa_mac_operation_init( void )
-{
-    const struct psa_mac_operation_s v = PSA_MAC_OPERATION_INIT;
-    return( v );
-}
-
 struct psa_aead_operation_s
 {
     psa_algorithm_t alg;
@@ -168,12 +184,12 @@ static inline struct psa_aead_operation_s psa_aead_operation_init( void )
     return( v );
 }
 
-#if defined(MBEDTLS_PSA_BUILTIN_ALG_HKDF)
+#if defined(MBEDTLS_MD_C)
 typedef struct
 {
     uint8_t *info;
     size_t info_length;
-    psa_mac_operation_t hmac;
+    psa_hmac_internal_data hmac;
     uint8_t prk[PSA_HASH_MAX_SIZE];
     uint8_t output_block[PSA_HASH_MAX_SIZE];
 #if PSA_HASH_MAX_SIZE > 0xff
@@ -184,10 +200,9 @@ typedef struct
     unsigned int state : 2;
     unsigned int info_set : 1;
 } psa_hkdf_key_derivation_t;
-#endif /* MBEDTLS_PSA_BUILTIN_ALG_HKDF */
+#endif /* MBEDTLS_MD_C */
 
-#if defined(MBEDTLS_PSA_BUILTIN_ALG_TLS12_PRF) || \
-    defined(MBEDTLS_PSA_BUILTIN_ALG_TLS12_PSK_TO_MS)
+#if defined(MBEDTLS_MD_C)
 typedef enum
 {
     PSA_TLS12_PRF_STATE_INIT,       /* no input provided */
@@ -212,20 +227,17 @@ typedef struct psa_tls12_prf_key_derivation_s
 
     psa_tls12_prf_key_derivation_state_t state;
 
-    uint8_t *secret;
-    size_t secret_length;
     uint8_t *seed;
     size_t seed_length;
     uint8_t *label;
     size_t label_length;
-
+    psa_hmac_internal_data hmac;
     uint8_t Ai[PSA_HASH_MAX_SIZE];
 
     /* `HMAC_hash( prk, A(i) + seed )` in the notation of RFC 5246, Sect. 5. */
     uint8_t output_block[PSA_HASH_MAX_SIZE];
 } psa_tls12_prf_key_derivation_t;
-#endif /* MBEDTLS_PSA_BUILTIN_ALG_TLS12_PRF) ||
-        * MBEDTLS_PSA_BUILTIN_ALG_TLS12_PSK_TO_MS */
+#endif /* MBEDTLS_MD_C */
 
 struct psa_key_derivation_s
 {
@@ -236,11 +248,8 @@ struct psa_key_derivation_s
     {
         /* Make the union non-empty even with no supported algorithms. */
         uint8_t dummy;
-#if defined(MBEDTLS_PSA_BUILTIN_ALG_HKDF)
+#if defined(MBEDTLS_MD_C)
         psa_hkdf_key_derivation_t hkdf;
-#endif
-#if defined(MBEDTLS_PSA_BUILTIN_ALG_TLS12_PRF) || \
-    defined(MBEDTLS_PSA_BUILTIN_ALG_TLS12_PSK_TO_MS)
         psa_tls12_prf_key_derivation_t tls12_prf;
 #endif
     } ctx;
