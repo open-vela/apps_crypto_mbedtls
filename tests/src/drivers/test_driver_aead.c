@@ -28,10 +28,9 @@
 
 #include "test/drivers/aead.h"
 
-mbedtls_test_driver_aead_hooks_t
-    mbedtls_test_driver_aead_hooks = MBEDTLS_TEST_DRIVER_AEAD_INIT;
+test_driver_aead_hooks_t test_driver_aead_hooks = TEST_DRIVER_AEAD_INIT;
 
-psa_status_t mbedtls_test_transparent_aead_encrypt(
+psa_status_t test_transparent_aead_encrypt(
     const psa_key_attributes_t *attributes,
     const uint8_t *key_buffer, size_t key_buffer_size,
     psa_algorithm_t alg,
@@ -40,16 +39,16 @@ psa_status_t mbedtls_test_transparent_aead_encrypt(
     const uint8_t *plaintext, size_t plaintext_length,
     uint8_t *ciphertext, size_t ciphertext_size, size_t *ciphertext_length )
 {
-    mbedtls_test_driver_aead_hooks.hits++;
+    test_driver_aead_hooks.hits++;
 
-    if( mbedtls_test_driver_aead_hooks.forced_status != PSA_SUCCESS )
+    if( test_driver_aead_hooks.forced_status != PSA_SUCCESS )
     {
-         mbedtls_test_driver_aead_hooks.driver_status =
-             mbedtls_test_driver_aead_hooks.forced_status;
+         test_driver_aead_hooks.driver_status =
+             test_driver_aead_hooks.forced_status;
     }
     else
     {
-        mbedtls_test_driver_aead_hooks.driver_status =
+        test_driver_aead_hooks.driver_status =
             mbedtls_psa_aead_encrypt(
                 attributes, key_buffer, key_buffer_size,
                 alg,
@@ -59,10 +58,10 @@ psa_status_t mbedtls_test_transparent_aead_encrypt(
                 ciphertext, ciphertext_size, ciphertext_length );
     }
 
-    return( mbedtls_test_driver_aead_hooks.driver_status );
+    return( test_driver_aead_hooks.driver_status );
 }
 
-psa_status_t mbedtls_test_transparent_aead_decrypt(
+psa_status_t test_transparent_aead_decrypt(
     const psa_key_attributes_t *attributes,
     const uint8_t *key_buffer, size_t key_buffer_size,
     psa_algorithm_t alg,
@@ -71,16 +70,16 @@ psa_status_t mbedtls_test_transparent_aead_decrypt(
     const uint8_t *ciphertext, size_t ciphertext_length,
     uint8_t *plaintext, size_t plaintext_size, size_t *plaintext_length )
 {
-    mbedtls_test_driver_aead_hooks.hits++;
+    test_driver_aead_hooks.hits++;
 
-    if( mbedtls_test_driver_aead_hooks.forced_status != PSA_SUCCESS )
+    if( test_driver_aead_hooks.forced_status != PSA_SUCCESS )
     {
-         mbedtls_test_driver_aead_hooks.driver_status =
-             mbedtls_test_driver_aead_hooks.forced_status;
+         test_driver_aead_hooks.driver_status =
+             test_driver_aead_hooks.forced_status;
     }
     else
     {
-        mbedtls_test_driver_aead_hooks.driver_status =
+        test_driver_aead_hooks.driver_status =
             mbedtls_psa_aead_decrypt(
                 attributes, key_buffer, key_buffer_size,
                 alg,
@@ -90,7 +89,7 @@ psa_status_t mbedtls_test_transparent_aead_decrypt(
                 plaintext, plaintext_size, plaintext_length );
     }
 
-    return( mbedtls_test_driver_aead_hooks.driver_status );
+    return( test_driver_aead_hooks.driver_status );
 }
 
 #endif /* MBEDTLS_PSA_CRYPTO_DRIVERS && PSA_CRYPTO_DRIVER_TEST */
