@@ -782,7 +782,7 @@ int mbedtls_ssl_encrypt_buf( mbedtls_ssl_context *ssl,
                    &rec->data_len,
                    transform->taglen ) ) != 0 )
         {
-            MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_cipher_auth_encrypt", ret );
+            MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_cipher_auth_encrypt_ext", ret );
             return( ret );
         }
         MBEDTLS_SSL_DEBUG_BUF( 4, "after encrypt: tag",
@@ -1341,7 +1341,7 @@ int mbedtls_ssl_decrypt_buf( mbedtls_ssl_context const *ssl,
          * explicit_iv_len Bytes preceeding data, and taglen
          * bytes following data + data_len. This justifies
          * the debug message and the invocation of
-         * mbedtls_cipher_auth_decrypt() below. */
+         * mbedtls_cipher_auth_decrypt_ext() below. */
 
         MBEDTLS_SSL_DEBUG_BUF( 4, "IV used", iv, transform->ivlen );
         MBEDTLS_SSL_DEBUG_BUF( 4, "TAG used", data + rec->data_len,
@@ -1357,7 +1357,7 @@ int mbedtls_ssl_decrypt_buf( mbedtls_ssl_context const *ssl,
                   data, rec->buf_len - (data - rec->buf), &olen,    /* dst */
                   transform->taglen ) ) != 0 )
         {
-            MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_cipher_auth_decrypt", ret );
+            MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_cipher_auth_decrypt_ext", ret );
 
             if( ret == MBEDTLS_ERR_CIPHER_AUTH_FAILED )
                 return( MBEDTLS_ERR_SSL_INVALID_MAC );
@@ -4871,6 +4871,7 @@ void mbedtls_ssl_update_out_pointers( mbedtls_ssl_context *ssl,
     else
 #endif
     {
+        ssl->out_ctr = ssl->out_hdr - 8;
         ssl->out_len = ssl->out_hdr + 3;
 #if defined(MBEDTLS_SSL_DTLS_CONNECTION_ID)
         ssl->out_cid = ssl->out_len;
@@ -4951,7 +4952,6 @@ void mbedtls_ssl_reset_in_out_pointers( mbedtls_ssl_context *ssl )
     else
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
     {
-        ssl->out_ctr = ssl->out_buf;
         ssl->out_hdr = ssl->out_buf + 8;
         ssl->in_hdr  = ssl->in_buf  + 8;
     }
