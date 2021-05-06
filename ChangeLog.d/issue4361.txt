@@ -1,2 +1,0 @@
-Removals
-   * Remove the MBEDTLS_SSL_RECORD_CHECKING option. Fixes #4361.
