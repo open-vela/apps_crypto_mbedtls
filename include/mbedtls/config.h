@@ -659,7 +659,8 @@
  * Warning: Only do so when you know what you are doing. This allows for
  * encryption or channels without any security!
  *
- * To enable the following ciphersuites:
+ * Requires MBEDTLS_ENABLE_WEAK_CIPHERSUITES as well to enable
+ * the following ciphersuites:
  *      MBEDTLS_TLS_ECDH_ECDSA_WITH_NULL_SHA
  *      MBEDTLS_TLS_ECDH_RSA_WITH_NULL_SHA
  *      MBEDTLS_TLS_ECDHE_ECDSA_WITH_NULL_SHA
@@ -706,6 +707,20 @@
  * By default, CTR_DRBG uses a 256-bit key.
  */
 //#define MBEDTLS_CTR_DRBG_USE_128_BIT_KEY
+
+/**
+ * \def MBEDTLS_ENABLE_WEAK_CIPHERSUITES
+ *
+ * Enable weak ciphersuites in SSL / TLS.
+ * Warning: Only do so when you know what you are doing. This allows for
+ * channels with virtually no security at all!
+ *
+ * Uncomment this macro to enable weak ciphersuites
+ *
+ * \warning   DES is considered a weak cipher and its use constitutes a
+ *            security risk. We recommend considering stronger ciphers instead.
+ */
+//#define MBEDTLS_ENABLE_WEAK_CIPHERSUITES
 
 /**
  * \def MBEDTLS_REMOVE_3DES_CIPHERSUITES
@@ -1296,22 +1311,6 @@
  * This enables support for RSAES-OAEP and RSASSA-PSS operations.
  */
 #define MBEDTLS_PKCS1_V21
-
-/** \def MBEDTLS_PSA_CRYPTO_BUILTIN_KEYS
- *
- * Enable support for platform built-in keys. If you enable this feature,
- * you must implement the function mbedtls_psa_platform_get_builtin_key().
- * See the documentation of that function for more information.
- *
- * Built-in keys are typically derived from a hardware unique key or
- * stored in a secure element.
- *
- * Requires: MBEDTLS_PSA_CRYPTO_C.
- *
- * \warning This interface is experimental and may change or be removed
- * without notice.
- */
-//#define MBEDTLS_PSA_CRYPTO_BUILTIN_KEYS
 
 /** \def MBEDTLS_PSA_CRYPTO_CLIENT
  *
@@ -2129,17 +2128,6 @@
 #define MBEDTLS_X509_CHECK_EXTENDED_KEY_USAGE
 
 /**
- * \def MBEDTLS_X509_REMOVE_INFO
- *
- * Disable mbedtls_x509_*_info() and related APIs.
- *
- * Uncomment to omit mbedtls_x509_*_info(), as well as mbedtls_debug_print_crt()
- * and other functions/constants only used by these functions, thus reducing
- * the code footprint by several KB.
- */
-//#define MBEDTLS_X509_REMOVE_INFO
-
-/**
  * \def MBEDTLS_X509_RSASSA_PSS_SUPPORT
  *
  * Enable parsing and verification of X.509 certificates, CRLs and CSRS
@@ -2435,7 +2423,7 @@
  *      MBEDTLS_TLS_ECDHE_PSK_WITH_ARIA_128_CBC_SHA256
  *      MBEDTLS_TLS_ECDHE_PSK_WITH_ARIA_256_CBC_SHA384
  */
-//#define MBEDTLS_ARIA_C
+#define MBEDTLS_ARIA_C
 
 /**
  * \def MBEDTLS_CCM_C
@@ -2489,17 +2477,12 @@
  * Enable the CMAC (Cipher-based Message Authentication Code) mode for block
  * ciphers.
  *
- * \note When #MBEDTLS_CMAC_ALT is active, meaning that the underlying
- *       implementation of the CMAC algorithm is provided by an alternate
- *       implementation, that alternate implementation may opt to not support
- *       AES-192 or 3DES as underlying block ciphers for the CMAC operation.
- *
  * Module:  library/cmac.c
  *
  * Requires: MBEDTLS_AES_C or MBEDTLS_DES_C
  *
  */
-//#define MBEDTLS_CMAC_C
+#define MBEDTLS_CMAC_C
 
 /**
  * \def MBEDTLS_CTR_DRBG_C
@@ -2623,10 +2606,6 @@
  *
  * Enable the elliptic curve J-PAKE library.
  *
- * \warning This is currently experimental. EC J-PAKE support is based on the
- * Thread v1.0.0 specification; incompatible changes to the specification
- * might still happen. For this reason, this is disabled by default.
- *
  * Module:  library/ecjpake.c
  * Caller:
  *
@@ -2635,7 +2614,7 @@
  *
  * Requires: MBEDTLS_ECP_C, MBEDTLS_MD_C
  */
-//#define MBEDTLS_ECJPAKE_C
+#define MBEDTLS_ECJPAKE_C
 
 /**
  * \def MBEDTLS_ECP_C
@@ -2731,7 +2710,7 @@
  *
  * Requires: MBEDTLS_AES_C and MBEDTLS_CIPHER_C
  */
-//#define MBEDTLS_NIST_KW_C
+#define MBEDTLS_NIST_KW_C
 
 /**
  * \def MBEDTLS_MD_C
