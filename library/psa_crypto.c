@@ -78,9 +78,9 @@
 #include "mbedtls/md4.h"
 #include "mbedtls/md5.h"
 #include "mbedtls/md.h"
-#include "mbedtls/md_internal.h"
+#include "md_wrap.h"
 #include "mbedtls/pk.h"
-#include "mbedtls/pk_internal.h"
+#include "pk_wrap.h"
 #include "mbedtls/platform_util.h"
 #include "mbedtls/error.h"
 #include "mbedtls/ripemd160.h"
@@ -151,14 +151,7 @@ psa_status_t mbedtls_to_psa_error( int ret )
 
         case MBEDTLS_ERR_AES_INVALID_KEY_LENGTH:
         case MBEDTLS_ERR_AES_INVALID_INPUT_LENGTH:
-        case MBEDTLS_ERR_AES_FEATURE_UNAVAILABLE:
             return( PSA_ERROR_NOT_SUPPORTED );
-        case MBEDTLS_ERR_AES_HW_ACCEL_FAILED:
-            return( PSA_ERROR_HARDWARE_FAILURE );
-
-        case MBEDTLS_ERR_ARC4_HW_ACCEL_FAILED:
-            return( PSA_ERROR_HARDWARE_FAILURE );
-
         case MBEDTLS_ERR_ASN1_OUT_OF_DATA:
         case MBEDTLS_ERR_ASN1_UNEXPECTED_TAG:
         case MBEDTLS_ERR_ASN1_INVALID_LENGTH:
@@ -172,30 +165,20 @@ psa_status_t mbedtls_to_psa_error( int ret )
 
 #if defined(MBEDTLS_ERR_BLOWFISH_BAD_INPUT_DATA)
         case MBEDTLS_ERR_BLOWFISH_BAD_INPUT_DATA:
-#elif defined(MBEDTLS_ERR_BLOWFISH_INVALID_KEY_LENGTH)
-        case MBEDTLS_ERR_BLOWFISH_INVALID_KEY_LENGTH:
 #endif
         case MBEDTLS_ERR_BLOWFISH_INVALID_INPUT_LENGTH:
             return( PSA_ERROR_NOT_SUPPORTED );
-        case MBEDTLS_ERR_BLOWFISH_HW_ACCEL_FAILED:
-            return( PSA_ERROR_HARDWARE_FAILURE );
 
 #if defined(MBEDTLS_ERR_CAMELLIA_BAD_INPUT_DATA)
         case MBEDTLS_ERR_CAMELLIA_BAD_INPUT_DATA:
-#elif defined(MBEDTLS_ERR_CAMELLIA_INVALID_KEY_LENGTH)
-        case MBEDTLS_ERR_CAMELLIA_INVALID_KEY_LENGTH:
 #endif
         case MBEDTLS_ERR_CAMELLIA_INVALID_INPUT_LENGTH:
             return( PSA_ERROR_NOT_SUPPORTED );
-        case MBEDTLS_ERR_CAMELLIA_HW_ACCEL_FAILED:
-            return( PSA_ERROR_HARDWARE_FAILURE );
 
         case MBEDTLS_ERR_CCM_BAD_INPUT:
             return( PSA_ERROR_INVALID_ARGUMENT );
         case MBEDTLS_ERR_CCM_AUTH_FAILED:
             return( PSA_ERROR_INVALID_SIGNATURE );
-        case MBEDTLS_ERR_CCM_HW_ACCEL_FAILED:
-            return( PSA_ERROR_HARDWARE_FAILURE );
 
         case MBEDTLS_ERR_CHACHA20_BAD_INPUT_DATA:
             return( PSA_ERROR_INVALID_ARGUMENT );
@@ -219,11 +202,6 @@ psa_status_t mbedtls_to_psa_error( int ret )
             return( PSA_ERROR_INVALID_SIGNATURE );
         case MBEDTLS_ERR_CIPHER_INVALID_CONTEXT:
             return( PSA_ERROR_CORRUPTION_DETECTED );
-        case MBEDTLS_ERR_CIPHER_HW_ACCEL_FAILED:
-            return( PSA_ERROR_HARDWARE_FAILURE );
-
-        case MBEDTLS_ERR_CMAC_HW_ACCEL_FAILED:
-            return( PSA_ERROR_HARDWARE_FAILURE );
 
 #if !( defined(MBEDTLS_PSA_CRYPTO_EXTERNAL_RNG) ||      \
        defined(MBEDTLS_PSA_HMAC_DRBG_MD_TYPE) )
@@ -240,8 +218,6 @@ psa_status_t mbedtls_to_psa_error( int ret )
 
         case MBEDTLS_ERR_DES_INVALID_INPUT_LENGTH:
             return( PSA_ERROR_NOT_SUPPORTED );
-        case MBEDTLS_ERR_DES_HW_ACCEL_FAILED:
-            return( PSA_ERROR_HARDWARE_FAILURE );
 
         case MBEDTLS_ERR_ENTROPY_NO_SOURCES_DEFINED:
         case MBEDTLS_ERR_ENTROPY_NO_STRONG_SOURCE:
@@ -252,8 +228,6 @@ psa_status_t mbedtls_to_psa_error( int ret )
             return( PSA_ERROR_INVALID_SIGNATURE );
         case MBEDTLS_ERR_GCM_BAD_INPUT:
             return( PSA_ERROR_INVALID_ARGUMENT );
-        case MBEDTLS_ERR_GCM_HW_ACCEL_FAILED:
-            return( PSA_ERROR_HARDWARE_FAILURE );
 
 #if !defined(MBEDTLS_PSA_CRYPTO_EXTERNAL_RNG) &&        \
     defined(MBEDTLS_PSA_HMAC_DRBG_MD_TYPE)
@@ -268,11 +242,6 @@ psa_status_t mbedtls_to_psa_error( int ret )
             return( PSA_ERROR_INSUFFICIENT_ENTROPY );
 #endif
 
-        case MBEDTLS_ERR_MD2_HW_ACCEL_FAILED:
-        case MBEDTLS_ERR_MD4_HW_ACCEL_FAILED:
-        case MBEDTLS_ERR_MD5_HW_ACCEL_FAILED:
-            return( PSA_ERROR_HARDWARE_FAILURE );
-
         case MBEDTLS_ERR_MD_FEATURE_UNAVAILABLE:
             return( PSA_ERROR_NOT_SUPPORTED );
         case MBEDTLS_ERR_MD_BAD_INPUT_DATA:
@@ -281,8 +250,6 @@ psa_status_t mbedtls_to_psa_error( int ret )
             return( PSA_ERROR_INSUFFICIENT_MEMORY );
         case MBEDTLS_ERR_MD_FILE_IO_ERROR:
             return( PSA_ERROR_STORAGE_FAILURE );
-        case MBEDTLS_ERR_MD_HW_ACCEL_FAILED:
-            return( PSA_ERROR_HARDWARE_FAILURE );
 
         case MBEDTLS_ERR_MPI_FILE_IO_ERROR:
             return( PSA_ERROR_STORAGE_FAILURE );
@@ -324,16 +291,11 @@ psa_status_t mbedtls_to_psa_error( int ret )
             return( PSA_ERROR_NOT_SUPPORTED );
         case MBEDTLS_ERR_PK_SIG_LEN_MISMATCH:
             return( PSA_ERROR_INVALID_SIGNATURE );
-        case MBEDTLS_ERR_PK_HW_ACCEL_FAILED:
-            return( PSA_ERROR_HARDWARE_FAILURE );
 
         case MBEDTLS_ERR_PLATFORM_HW_ACCEL_FAILED:
             return( PSA_ERROR_HARDWARE_FAILURE );
         case MBEDTLS_ERR_PLATFORM_FEATURE_UNSUPPORTED:
             return( PSA_ERROR_NOT_SUPPORTED );
-
-        case MBEDTLS_ERR_RIPEMD160_HW_ACCEL_FAILED:
-            return( PSA_ERROR_HARDWARE_FAILURE );
 
         case MBEDTLS_ERR_RSA_BAD_INPUT_DATA:
             return( PSA_ERROR_INVALID_ARGUMENT );
@@ -352,20 +314,9 @@ psa_status_t mbedtls_to_psa_error( int ret )
             return( PSA_ERROR_BUFFER_TOO_SMALL );
         case MBEDTLS_ERR_RSA_RNG_FAILED:
             return( PSA_ERROR_INSUFFICIENT_ENTROPY );
-        case MBEDTLS_ERR_RSA_UNSUPPORTED_OPERATION:
-            return( PSA_ERROR_NOT_SUPPORTED );
-        case MBEDTLS_ERR_RSA_HW_ACCEL_FAILED:
-            return( PSA_ERROR_HARDWARE_FAILURE );
-
-        case MBEDTLS_ERR_SHA1_HW_ACCEL_FAILED:
-        case MBEDTLS_ERR_SHA256_HW_ACCEL_FAILED:
-        case MBEDTLS_ERR_SHA512_HW_ACCEL_FAILED:
-            return( PSA_ERROR_HARDWARE_FAILURE );
 
         case MBEDTLS_ERR_XTEA_INVALID_INPUT_LENGTH:
             return( PSA_ERROR_INVALID_ARGUMENT );
-        case MBEDTLS_ERR_XTEA_HW_ACCEL_FAILED:
-            return( PSA_ERROR_HARDWARE_FAILURE );
 
         case MBEDTLS_ERR_ECP_BAD_INPUT_DATA:
         case MBEDTLS_ERR_ECP_INVALID_KEY:
@@ -381,8 +332,6 @@ psa_status_t mbedtls_to_psa_error( int ret )
             return( PSA_ERROR_INSUFFICIENT_MEMORY );
         case MBEDTLS_ERR_ECP_RANDOM_FAILED:
             return( PSA_ERROR_INSUFFICIENT_ENTROPY );
-        case MBEDTLS_ERR_ECP_HW_ACCEL_FAILED:
-            return( PSA_ERROR_HARDWARE_FAILURE );
 
         case MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED:
             return( PSA_ERROR_CORRUPTION_DETECTED );
@@ -604,20 +553,8 @@ MBEDTLS_STATIC_TESTABLE psa_status_t psa_mac_key_can_do(
     return( PSA_ERROR_INVALID_ARGUMENT );
 }
 
-/** Try to allocate a buffer to an empty key slot.
- *
- * \param[in,out] slot          Key slot to attach buffer to.
- * \param[in] buffer_length     Requested size of the buffer.
- *
- * \retval #PSA_SUCCESS
- *         The buffer has been successfully allocated.
- * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
- *         Not enough memory was available for allocation.
- * \retval #PSA_ERROR_ALREADY_EXISTS
- *         Trying to allocate a buffer to a non-empty key slot.
- */
-static psa_status_t psa_allocate_buffer_to_slot( psa_key_slot_t *slot,
-                                                 size_t buffer_length )
+psa_status_t psa_allocate_buffer_to_slot( psa_key_slot_t *slot,
+                                          size_t buffer_length )
 {
     if( slot->key.data != NULL )
         return( PSA_ERROR_ALREADY_EXISTS );
@@ -1075,8 +1012,7 @@ static psa_status_t psa_get_and_lock_transparent_key_slot_with_policy(
     psa_get_and_lock_key_slot_with_policy( key, p_slot, usage, alg )
 #endif /* MBEDTLS_PSA_CRYPTO_SE_C */
 
-/** Wipe key data from a slot. Preserve metadata such as the policy. */
-static psa_status_t psa_remove_key_data_from_memory( psa_key_slot_t *slot )
+psa_status_t psa_remove_key_data_from_memory( psa_key_slot_t *slot )
 {
     /* Data pointer will always be either a valid pointer or NULL in an
      * initialized slot, so we can just free it. */
@@ -1571,7 +1507,6 @@ static psa_status_t psa_validate_key_policy( const psa_key_policy_t *policy )
                              PSA_KEY_USAGE_DECRYPT |
                              PSA_KEY_USAGE_SIGN_HASH |
                              PSA_KEY_USAGE_VERIFY_HASH |
-                             PSA_KEY_USAGE_VERIFY_DERIVATION |
                              PSA_KEY_USAGE_DERIVE ) ) != 0 )
         return( PSA_ERROR_INVALID_ARGUMENT );
 
@@ -4893,7 +4828,7 @@ int mbedtls_psa_get_random( void *p_rng,
 #endif /* MBEDTLS_PSA_CRYPTO_EXTERNAL_RNG */
 
 #if defined(MBEDTLS_PSA_INJECT_ENTROPY)
-#include "mbedtls/entropy_poll.h"
+#include "entropy_poll.h"
 
 psa_status_t mbedtls_psa_inject_entropy( const uint8_t *seed,
                                          size_t seed_size )
