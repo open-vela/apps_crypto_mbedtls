@@ -421,13 +421,7 @@
  * of mbedtls_sha1_context, so your implementation of mbedtls_sha1_process must be compatible
  * with this definition.
  *
- * \note Because of a signature change, the core AES encryption and decryption routines are
- *       currently named mbedtls_aes_internal_encrypt and mbedtls_aes_internal_decrypt,
- *       respectively. When setting up alternative implementations, these functions should
- *       be overridden, but the wrapper functions mbedtls_aes_decrypt and mbedtls_aes_encrypt
- *       must stay untouched.
- *
- * \note If you use the AES_xxx_ALT macros, then is is recommended to also set
+ * \note If you use the AES_xxx_ALT macros, then it is recommended to also set
  *       MBEDTLS_AES_ROM_TABLES in order to help the linker garbage-collect the AES
  *       tables.
  *
@@ -445,9 +439,7 @@
  *            alternative implementations should use the RNG only for generating
  *            the ephemeral key and nothing else. If this is not possible, then
  *            MBEDTLS_ECDSA_DETERMINISTIC should be disabled and an alternative
- *            implementation should be provided for mbedtls_ecdsa_sign_det_ext()
- *            (and for mbedtls_ecdsa_sign_det() too if backward compatibility is
- *            desirable).
+ *            implementation should be provided for mbedtls_ecdsa_sign_det_ext().
  *
  */
 //#define MBEDTLS_MD2_PROCESS_ALT
@@ -659,8 +651,7 @@
  * Warning: Only do so when you know what you are doing. This allows for
  * encryption or channels without any security!
  *
- * Requires MBEDTLS_ENABLE_WEAK_CIPHERSUITES as well to enable
- * the following ciphersuites:
+ * To enable the following ciphersuites:
  *      MBEDTLS_TLS_ECDH_ECDSA_WITH_NULL_SHA
  *      MBEDTLS_TLS_ECDH_RSA_WITH_NULL_SHA
  *      MBEDTLS_TLS_ECDHE_ECDSA_WITH_NULL_SHA
@@ -707,20 +698,6 @@
  * By default, CTR_DRBG uses a 256-bit key.
  */
 //#define MBEDTLS_CTR_DRBG_USE_128_BIT_KEY
-
-/**
- * \def MBEDTLS_ENABLE_WEAK_CIPHERSUITES
- *
- * Enable weak ciphersuites in SSL / TLS.
- * Warning: Only do so when you know what you are doing. This allows for
- * channels with virtually no security at all!
- *
- * Uncomment this macro to enable weak ciphersuites
- *
- * \warning   DES is considered a weak cipher and its use constitutes a
- *            security risk. We recommend considering stronger ciphers instead.
- */
-//#define MBEDTLS_ENABLE_WEAK_CIPHERSUITES
 
 /**
  * \def MBEDTLS_REMOVE_3DES_CIPHERSUITES
@@ -1312,6 +1289,22 @@
  */
 #define MBEDTLS_PKCS1_V21
 
+/** \def MBEDTLS_PSA_CRYPTO_BUILTIN_KEYS
+ *
+ * Enable support for platform built-in keys. If you enable this feature,
+ * you must implement the function mbedtls_psa_platform_get_builtin_key().
+ * See the documentation of that function for more information.
+ *
+ * Built-in keys are typically derived from a hardware unique key or
+ * stored in a secure element.
+ *
+ * Requires: MBEDTLS_PSA_CRYPTO_C.
+ *
+ * \warning This interface is experimental and may change or be removed
+ * without notice.
+ */
+//#define MBEDTLS_PSA_CRYPTO_BUILTIN_KEYS
+
 /** \def MBEDTLS_PSA_CRYPTO_CLIENT
  *
  * Enable support for PSA crypto client.
@@ -1447,6 +1440,18 @@
  * Uncomment to enable the smaller implementation of SHA512.
  */
 //#define MBEDTLS_SHA512_SMALLER
+
+/**
+ * \def MBEDTLS_SHA512_NO_SHA384
+ *
+ * Disable the SHA-384 option of the SHA-512 module. Use this to save some
+ * code size on devices that don't use SHA-384.
+ *
+ * Requires: MBEDTLS_SHA512_C
+ *
+ * Uncomment to disable SHA-384
+ */
+//#define MBEDTLS_SHA512_NO_SHA384
 
 /**
  * \def MBEDTLS_SSL_ALL_ALERT_MESSAGES
@@ -1802,7 +1807,7 @@
 /**
  * \def MBEDTLS_SSL_DTLS_SRTP
  *
- * Enable support for negotation of DTLS-SRTP (RFC 5764)
+ * Enable support for negotiation of DTLS-SRTP (RFC 5764)
  * through the use_srtp extension.
  *
  * \note This feature provides the minimum functionality required
@@ -2116,6 +2121,17 @@
 #define MBEDTLS_X509_CHECK_EXTENDED_KEY_USAGE
 
 /**
+ * \def MBEDTLS_X509_REMOVE_INFO
+ *
+ * Disable mbedtls_x509_*_info() and related APIs.
+ *
+ * Uncomment to omit mbedtls_x509_*_info(), as well as mbedtls_debug_print_crt()
+ * and other functions/constants only used by these functions, thus reducing
+ * the code footprint by several KB.
+ */
+//#define MBEDTLS_X509_REMOVE_INFO
+
+/**
  * \def MBEDTLS_X509_RSASSA_PSS_SUPPORT
  *
  * Enable parsing and verification of X.509 certificates, CRLs and CSRS
@@ -2411,7 +2427,7 @@
  *      MBEDTLS_TLS_ECDHE_PSK_WITH_ARIA_128_CBC_SHA256
  *      MBEDTLS_TLS_ECDHE_PSK_WITH_ARIA_256_CBC_SHA384
  */
-//#define MBEDTLS_ARIA_C
+#define MBEDTLS_ARIA_C
 
 /**
  * \def MBEDTLS_CCM_C
@@ -2465,12 +2481,17 @@
  * Enable the CMAC (Cipher-based Message Authentication Code) mode for block
  * ciphers.
  *
+ * \note When #MBEDTLS_CMAC_ALT is active, meaning that the underlying
+ *       implementation of the CMAC algorithm is provided by an alternate
+ *       implementation, that alternate implementation may opt to not support
+ *       AES-192 or 3DES as underlying block ciphers for the CMAC operation.
+ *
  * Module:  library/cmac.c
  *
  * Requires: MBEDTLS_AES_C or MBEDTLS_DES_C
  *
  */
-//#define MBEDTLS_CMAC_C
+#define MBEDTLS_CMAC_C
 
 /**
  * \def MBEDTLS_CTR_DRBG_C
@@ -2594,9 +2615,9 @@
  *
  * Enable the elliptic curve J-PAKE library.
  *
- * \warning This is currently experimental. EC J-PAKE support is based on the
- * Thread v1.0.0 specification; incompatible changes to the specification
- * might still happen. For this reason, this is disabled by default.
+ * \note EC J-PAKE support is based on the Thread v1.0.0 specification.
+ *       It has not been reviewed for compliance with newer standards such as
+ *       Thread v1.1 or RFC 8236.
  *
  * Module:  library/ecjpake.c
  * Caller:
@@ -2606,7 +2627,7 @@
  *
  * Requires: MBEDTLS_ECP_C, MBEDTLS_MD_C
  */
-//#define MBEDTLS_ECJPAKE_C
+#define MBEDTLS_ECJPAKE_C
 
 /**
  * \def MBEDTLS_ECP_C
@@ -2702,7 +2723,7 @@
  *
  * Requires: MBEDTLS_AES_C and MBEDTLS_CIPHER_C
  */
-//#define MBEDTLS_NIST_KW_C
+#define MBEDTLS_NIST_KW_C
 
 /**
  * \def MBEDTLS_MD_C
@@ -3094,29 +3115,9 @@
 #define MBEDTLS_SHA1_C
 
 /**
- * \def MBEDTLS_SHA224_C
- *
- * Enable the SHA-224 cryptographic hash algorithm.
- *
- * Requires: MBEDTLS_SHA256_C. Library does not support enabling
- *           SHA-224 without SHA-256. Future version will have
- *           this option disabled by default.
- *
- * Module:  library/sha256.c
- * Caller:  library/md.c
- *          library/ssl_cookie.c
- *
- * This module adds support for SHA-224.
- */
-#define MBEDTLS_SHA224_C
-
-/**
  * \def MBEDTLS_SHA256_C
  *
- * Enable the SHA-256 cryptographic hash algorithm.
- *
- * Requires: MBEDTLS_SHA224_C. Library does not support enabling
- *           SHA-256 without SHA-224.
+ * Enable the SHA-224 and SHA-256 cryptographic hash algorithms.
  *
  * Module:  library/sha256.c
  * Caller:  library/entropy.c
@@ -3125,39 +3126,23 @@
  *          library/ssl_srv.c
  *          library/ssl_tls.c
  *
- * This module adds support for SHA-256.
+ * This module adds support for SHA-224 and SHA-256.
  * This module is required for the SSL/TLS 1.2 PRF function.
  */
 #define MBEDTLS_SHA256_C
 
 /**
- * \def MBEDTLS_SHA384_C
- *
- * Enable the SHA-384 cryptographic hash algorithm.
- *
- * Requires: MBEDTLS_SHA512_C
- *
- * Module:  library/sha512.c
- * Caller:  library/md.c
- *          library/ssl_cli.c
- *          library/ssl_srv.c
- *
- * Comment to disable SHA-384
- */
-#define MBEDTLS_SHA384_C
-
-/**
  * \def MBEDTLS_SHA512_C
  *
- * Enable SHA-512 cryptographic hash algorithms.
+ * Enable the SHA-384 and SHA-512 cryptographic hash algorithms.
  *
  * Module:  library/sha512.c
  * Caller:  library/entropy.c
  *          library/md.c
- *          library/ssl_tls.c
- *          library/ssl_cookie.c
+ *          library/ssl_cli.c
+ *          library/ssl_srv.c
  *
- * This module adds support for SHA-512.
+ * This module adds support for SHA-384 and SHA-512.
  */
 #define MBEDTLS_SHA512_C
 
@@ -3546,13 +3531,17 @@
 
 /* SSL options */
 
-/** \def MBEDTLS_SSL_IN_CONTENT_LEN
+/** \def MBEDTLS_SSL_MAX_CONTENT_LEN
  *
- * Maximum length (in bytes) of incoming plaintext fragments.
+ * Maximum length (in bytes) of incoming and outgoing plaintext fragments.
  *
- * This determines the size of the incoming TLS I/O buffer in such a way
- * that it is capable of holding the specified amount of plaintext data,
- * regardless of the protection mechanism used.
+ * This determines the size of both the incoming and outgoing TLS I/O buffers
+ * in such a way that both are capable of holding the specified amount of
+ * plaintext data, regardless of the protection mechanism used.
+ *
+ * To configure incoming and outgoing I/O buffers separately, use
+ * #MBEDTLS_SSL_IN_CONTENT_LEN and #MBEDTLS_SSL_OUT_CONTENT_LEN,
+ * which overwrite the value set by this option.
  *
  * \note When using a value less than the default of 16KB on the client, it is
  *       recommended to use the Maximum Fragment Length (MFL) extension to
@@ -3563,7 +3552,33 @@
  *       to only change the outgoing buffer size #MBEDTLS_SSL_OUT_CONTENT_LEN
  *       while keeping the default value of 16KB for the incoming buffer.
  *
- * Uncomment to set the maximum plaintext size of the incoming I/O buffer.
+ * Uncomment to set the maximum plaintext size of both
+ * incoming and outgoing I/O buffers.
+ */
+//#define MBEDTLS_SSL_MAX_CONTENT_LEN             16384
+
+/** \def MBEDTLS_SSL_IN_CONTENT_LEN
+ *
+ * Maximum length (in bytes) of incoming plaintext fragments.
+ *
+ * This determines the size of the incoming TLS I/O buffer in such a way
+ * that it is capable of holding the specified amount of plaintext data,
+ * regardless of the protection mechanism used.
+ *
+ * If this option is undefined, it inherits its value from
+ * #MBEDTLS_SSL_MAX_CONTENT_LEN.
+ *
+ * \note When using a value less than the default of 16KB on the client, it is
+ *       recommended to use the Maximum Fragment Length (MFL) extension to
+ *       inform the server about this limitation. On the server, there
+ *       is no supported, standardized way of informing the client about
+ *       restriction on the maximum size of incoming messages, and unless
+ *       the limitation has been communicated by other means, it is recommended
+ *       to only change the outgoing buffer size #MBEDTLS_SSL_OUT_CONTENT_LEN
+ *       while keeping the default value of 16KB for the incoming buffer.
+ *
+ * Uncomment to set the maximum plaintext size of the incoming I/O buffer
+ * independently of the outgoing I/O buffer.
  */
 //#define MBEDTLS_SSL_IN_CONTENT_LEN              16384
 
@@ -3622,6 +3637,9 @@
  * that it is capable of holding the specified amount of plaintext data,
  * regardless of the protection mechanism used.
  *
+ * If this option undefined, it inherits its value from
+ * #MBEDTLS_SSL_MAX_CONTENT_LEN.
+ *
  * It is possible to save RAM by setting a smaller outward buffer, while keeping
  * the default inward 16384 byte buffer to conform to the TLS specification.
  *
@@ -3630,7 +3648,8 @@
  * The specific size requirement depends on the configured ciphers and any
  * certificate data which is sent during the handshake.
  *
- * Uncomment to set the maximum plaintext size of the outgoing I/O buffer.
+ * Uncomment to set the maximum plaintext size of the outgoing I/O buffer
+ * independently of the incoming I/O buffer.
  */
 //#define MBEDTLS_SSL_OUT_CONTENT_LEN             16384
 
