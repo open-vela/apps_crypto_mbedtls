@@ -236,12 +236,16 @@
  * if you're using the Max Fragment Length extension and you know all your
  * peers are using it too!
  */
+#if !defined(MBEDTLS_SSL_MAX_CONTENT_LEN)
+#define MBEDTLS_SSL_MAX_CONTENT_LEN         16384   /**< Size of the input / output buffer */
+#endif
+
 #if !defined(MBEDTLS_SSL_IN_CONTENT_LEN)
-#define MBEDTLS_SSL_IN_CONTENT_LEN 16384
+#define MBEDTLS_SSL_IN_CONTENT_LEN MBEDTLS_SSL_MAX_CONTENT_LEN
 #endif
 
 #if !defined(MBEDTLS_SSL_OUT_CONTENT_LEN)
-#define MBEDTLS_SSL_OUT_CONTENT_LEN 16384
+#define MBEDTLS_SSL_OUT_CONTENT_LEN MBEDTLS_SSL_MAX_CONTENT_LEN
 #endif
 
 /*
@@ -823,7 +827,7 @@ typedef void mbedtls_ssl_async_cancel_t( mbedtls_ssl_context *ssl );
 #if defined(MBEDTLS_SHA256_C)
 #define MBEDTLS_SSL_PEER_CERT_DIGEST_DFL_TYPE MBEDTLS_MD_SHA256
 #define MBEDTLS_SSL_PEER_CERT_DIGEST_DFL_LEN  32
-#elif defined(MBEDTLS_SHA384_C)
+#elif defined(MBEDTLS_SHA512_C)
 #define MBEDTLS_SSL_PEER_CERT_DIGEST_DFL_TYPE MBEDTLS_MD_SHA384
 #define MBEDTLS_SSL_PEER_CERT_DIGEST_DFL_LEN  48
 #elif defined(MBEDTLS_SHA1_C)
@@ -2492,7 +2496,7 @@ void mbedtls_ssl_conf_ciphersuites( mbedtls_ssl_config *conf,
  *
  * \param conf          The SSL configuration.
  * \param prot_version  Protocol version. One of MBEDTLS_SSL_MINOR_VERSION_x macros.
- * \return              Ciphersuites pointer if succesful.
+ * \return              Ciphersuites pointer if successful.
  * \return              \c NULL if no ciphersuites where found.
  */
 const int *mbedtls_ssl_get_protocol_version_ciphersuites(
@@ -2855,34 +2859,6 @@ void mbedtls_ssl_conf_psk_cb( mbedtls_ssl_config *conf,
 #endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
 
 #if defined(MBEDTLS_DHM_C) && defined(MBEDTLS_SSL_SRV_C)
-
-#if !defined(MBEDTLS_DEPRECATED_REMOVED)
-
-#if defined(MBEDTLS_DEPRECATED_WARNING)
-#define MBEDTLS_DEPRECATED    __attribute__((deprecated))
-#else
-#define MBEDTLS_DEPRECATED
-#endif
-
-/**
- * \brief          Set the Diffie-Hellman public P and G values,
- *                 read as hexadecimal strings (server-side only)
- *                 (Default values: MBEDTLS_DHM_RFC3526_MODP_2048_[PG])
- *
- * \param conf     SSL configuration
- * \param dhm_P    Diffie-Hellman-Merkle modulus
- * \param dhm_G    Diffie-Hellman-Merkle generator
- *
- * \deprecated     Superseded by \c mbedtls_ssl_conf_dh_param_bin.
- *
- * \return         0 if successful
- */
-MBEDTLS_DEPRECATED int mbedtls_ssl_conf_dh_param( mbedtls_ssl_config *conf,
-                                                  const char *dhm_P,
-                                                  const char *dhm_G );
-
-#endif /* MBEDTLS_DEPRECATED_REMOVED */
-
 /**
  * \brief          Set the Diffie-Hellman public P and G values
  *                 from big-endian binary presentations.
@@ -3643,7 +3619,7 @@ size_t mbedtls_ssl_get_output_max_frag_len( const mbedtls_ssl_context *ssl );
 /**
  * \brief          Return the maximum fragment length (payload, in bytes) for
  *                 the input buffer. This is the negotiated maximum fragment
- *                 length, or, if there is none, MBEDTLS_SSL_IN_CONTENT_LEN.
+ *                 length, or, if there is none, MBEDTLS_SSL_MAX_CONTENT_LEN.
  *                 If it is not defined either, the value is 2^14. This function
  *                 works as its predecessor, \c mbedtls_ssl_get_max_frag_len().
  *
@@ -3655,32 +3631,6 @@ size_t mbedtls_ssl_get_output_max_frag_len( const mbedtls_ssl_context *ssl );
  * \return         Current maximum fragment length for the output buffer.
  */
 size_t mbedtls_ssl_get_input_max_frag_len( const mbedtls_ssl_context *ssl );
-
-#if !defined(MBEDTLS_DEPRECATED_REMOVED)
-
-#if defined(MBEDTLS_DEPRECATED_WARNING)
-#define MBEDTLS_DEPRECATED    __attribute__((deprecated))
-#else
-#define MBEDTLS_DEPRECATED
-#endif
-
-/**
- * \brief          This function is a deprecated approach to getting the max
- *                 fragment length. Its an alias for
- *                 \c mbedtls_ssl_get_output_max_frag_len(), as the behaviour
- *                 is the same. See \c mbedtls_ssl_get_output_max_frag_len() for
- *                 more detail.
- *
- * \sa             mbedtls_ssl_get_input_max_frag_len()
- * \sa             mbedtls_ssl_get_output_max_frag_len()
- *
- * \param ssl      SSL context
- *
- * \return         Current maximum fragment length for the output buffer.
- */
-MBEDTLS_DEPRECATED size_t mbedtls_ssl_get_max_frag_len(
-                                        const mbedtls_ssl_context *ssl );
-#endif /* MBEDTLS_DEPRECATED_REMOVED */
 #endif /* MBEDTLS_SSL_MAX_FRAGMENT_LENGTH */
 
 /**
@@ -4238,7 +4188,7 @@ void mbedtls_ssl_session_free( mbedtls_ssl_session *session );
 /**
  * \brief          TLS-PRF function for key derivation.
  *
- * \param prf      The tls_prf type funtion type to be used.
+ * \param prf      The tls_prf type function type to be used.
  * \param secret   Secret for the key derivation function.
  * \param slen     Length of the secret.
  * \param label    String label for the key derivation function,
@@ -4248,7 +4198,7 @@ void mbedtls_ssl_session_free( mbedtls_ssl_session *session );
  * \param dstbuf   The buffer holding the derived key.
  * \param dlen     Length of the output buffer.
  *
- * \return         0 on sucess. An SSL specific error on failure.
+ * \return         0 on success. An SSL specific error on failure.
  */
 int  mbedtls_ssl_tls_prf( const mbedtls_tls_prf_types prf,
                           const unsigned char *secret, size_t slen,
