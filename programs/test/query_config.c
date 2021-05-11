@@ -723,6 +723,14 @@ int query_config( const char *config )
     }
 #endif /* MBEDTLS_ECP_NORMALIZE_MXZ_ALT */
 
+#if defined(MBEDTLS_TEST_NULL_ENTROPY)
+    if( strcmp( "MBEDTLS_TEST_NULL_ENTROPY", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( MBEDTLS_TEST_NULL_ENTROPY );
+        return( 0 );
+    }
+#endif /* MBEDTLS_TEST_NULL_ENTROPY */
+
 #if defined(MBEDTLS_ENTROPY_HARDWARE_ALT)
     if( strcmp( "MBEDTLS_ENTROPY_HARDWARE_ALT", config ) == 0 )
     {
@@ -2586,14 +2594,6 @@ int query_config( const char *config )
         return( 0 );
     }
 #endif /* MBEDTLS_SSL_CACHE_DEFAULT_MAX_ENTRIES */
-
-#if defined(MBEDTLS_SSL_MAX_CONTENT_LEN)
-    if( strcmp( "MBEDTLS_SSL_MAX_CONTENT_LEN", config ) == 0 )
-    {
-        MACRO_EXPANSION_TO_STR( MBEDTLS_SSL_MAX_CONTENT_LEN );
-        return( 0 );
-    }
-#endif /* MBEDTLS_SSL_MAX_CONTENT_LEN */
 
 #if defined(MBEDTLS_SSL_IN_CONTENT_LEN)
     if( strcmp( "MBEDTLS_SSL_IN_CONTENT_LEN", config ) == 0 )
