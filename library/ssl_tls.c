@@ -3668,12 +3668,10 @@ void mbedtls_ssl_conf_dtls_anti_replay( mbedtls_ssl_config *conf, char mode )
 }
 #endif
 
-#if defined(MBEDTLS_SSL_DTLS_BADMAC_LIMIT)
 void mbedtls_ssl_conf_dtls_badmac_limit( mbedtls_ssl_config *conf, unsigned limit )
 {
     conf->badmac_limit = limit;
 }
-#endif
 
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
 
@@ -5714,11 +5712,7 @@ void mbedtls_ssl_session_free( mbedtls_ssl_session *session )
 #define SSL_SERIALIZED_CONTEXT_CONFIG_DTLS_CONNECTION_ID 0u
 #endif /* MBEDTLS_SSL_DTLS_CONNECTION_ID */
 
-#if defined(MBEDTLS_SSL_DTLS_BADMAC_LIMIT)
 #define SSL_SERIALIZED_CONTEXT_CONFIG_DTLS_BADMAC_LIMIT 1u
-#else
-#define SSL_SERIALIZED_CONTEXT_CONFIG_DTLS_BADMAC_LIMIT 0u
-#endif /* MBEDTLS_SSL_DTLS_BADMAC_LIMIT */
 
 #if defined(MBEDTLS_SSL_DTLS_ANTI_REPLAY)
 #define SSL_SERIALIZED_CONTEXT_CONFIG_DTLS_ANTI_REPLAY 1u
@@ -5935,7 +5929,6 @@ int mbedtls_ssl_context_save( mbedtls_ssl_context *ssl,
     /*
      * Saved fields from top-level ssl_context structure
      */
-#if defined(MBEDTLS_SSL_DTLS_BADMAC_LIMIT)
     used += 4;
     if( used <= buf_len )
     {
@@ -5944,7 +5937,6 @@ int mbedtls_ssl_context_save( mbedtls_ssl_context *ssl,
         *p++ = (unsigned char)( ( ssl->badmac_seen >>  8 ) & 0xFF );
         *p++ = (unsigned char)( ( ssl->badmac_seen       ) & 0xFF );
     }
-#endif /* MBEDTLS_SSL_DTLS_BADMAC_LIMIT */
 
 #if defined(MBEDTLS_SSL_DTLS_ANTI_REPLAY)
     used += 16;
@@ -6200,7 +6192,6 @@ static int ssl_context_load( mbedtls_ssl_context *ssl,
     /*
      * Saved fields from top-level ssl_context structure
      */
-#if defined(MBEDTLS_SSL_DTLS_BADMAC_LIMIT)
     if( (size_t)( end - p ) < 4 )
         return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
 
@@ -6209,7 +6200,6 @@ static int ssl_context_load( mbedtls_ssl_context *ssl,
                        ( (uint32_t) p[2] <<  8 ) |
                        ( (uint32_t) p[3]       );
     p += 4;
-#endif /* MBEDTLS_SSL_DTLS_BADMAC_LIMIT */
 
 #if defined(MBEDTLS_SSL_DTLS_ANTI_REPLAY)
     if( (size_t)( end - p ) < 16 )
