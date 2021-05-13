@@ -97,9 +97,8 @@ LIBRARY="$( ls library/*.c )"
 LIBRARY="$LIBRARY 3rdparty/everest/library/everest.c 3rdparty/everest/library/x25519.c"
 NL='
 '
-cat $HEADERS $LIBRARY \
-    | grep -v -e '//no-check-names' -e '#error' \
-    | sed -n 's/MBED..._[A-Z0-9_]*/\'"$NL"'&\'"$NL"/gp \
+sed -n 's/MBED..._[A-Z0-9_]*/\'"$NL"'&\'"$NL"/gp \
+    $HEADERS $LIBRARY \
     | grep MBEDTLS | sort -u > _MBEDTLS_XXX
 TYPOS=$( diff _caps _MBEDTLS_XXX | sed -n 's/^> //p' \
             | egrep -v 'XXX|__|_$|^MBEDTLS_.*CONFIG_FILE$' || true )
