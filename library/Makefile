@@ -119,7 +119,6 @@ OBJS_CRYPTO= \
 	     platform_util.o \
 	     poly1305.o \
 	     psa_crypto.o \
-	     psa_crypto_aead.o \
 	     psa_crypto_cipher.o \
 	     psa_crypto_client.o \
 	     psa_crypto_driver_wrappers.o \
@@ -148,6 +147,7 @@ LOCAL_CFLAGS+=$(THIRDPARTY_INCLUDES)
 OBJS_CRYPTO+=$(THIRDPARTY_CRYPTO_OBJECTS)
 
 OBJS_X509= \
+	   pkcs11.o \
 	   x509.o \
 	   x509_create.o \
 	   x509_crl.o \
