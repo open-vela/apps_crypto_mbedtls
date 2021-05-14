@@ -35,13 +35,11 @@
 #endif /* MBEDTLS_PLATFORM_C */
 
 #if !defined(MBEDTLS_BIGNUM_C) || !defined(MBEDTLS_RSA_C) ||  \
-    !defined(MBEDTLS_X509_CSR_PARSE_C) || !defined(MBEDTLS_FS_IO) || \
-    defined(MBEDTLS_X509_REMOVE_INFO)
+    !defined(MBEDTLS_X509_CSR_PARSE_C) || !defined(MBEDTLS_FS_IO)
 int main( void )
 {
     mbedtls_printf("MBEDTLS_BIGNUM_C and/or MBEDTLS_RSA_C and/or "
-           "MBEDTLS_X509_CSR_PARSE_C and/or MBEDTLS_FS_IO not defined and/or "
-           "MBEDTLS_X509_REMOVE_INFO defined.\n");
+           "MBEDTLS_X509_CSR_PARSE_C and/or MBEDTLS_FS_IO not defined.\n");
     mbedtls_exit( 0 );
 }
 #else
