@@ -1299,14 +1299,6 @@ int query_config( const char *config )
     }
 #endif /* MBEDTLS_SSL_ALL_ALERT_MESSAGES */
 
-#if defined(MBEDTLS_SSL_RECORD_CHECKING)
-    if( strcmp( "MBEDTLS_SSL_RECORD_CHECKING", config ) == 0 )
-    {
-        MACRO_EXPANSION_TO_STR( MBEDTLS_SSL_RECORD_CHECKING );
-        return( 0 );
-    }
-#endif /* MBEDTLS_SSL_RECORD_CHECKING */
-
 #if defined(MBEDTLS_SSL_DTLS_CONNECTION_ID)
     if( strcmp( "MBEDTLS_SSL_DTLS_CONNECTION_ID", config ) == 0 )
     {
@@ -2722,14 +2714,6 @@ int query_config( const char *config )
         return( 0 );
     }
 #endif /* MBEDTLS_ECDH_VARIANT_EVEREST_ENABLED */
-
-#if defined(MBEDTLS_INTERNAL_CCM_NO_ZEROIZE_ON_TAG_FAIL)
-    if( strcmp( "MBEDTLS_INTERNAL_CCM_NO_ZEROIZE_ON_TAG_FAIL", config ) == 0 )
-    {
-        MACRO_EXPANSION_TO_STR( MBEDTLS_INTERNAL_CCM_NO_ZEROIZE_ON_TAG_FAIL );
-        return( 0 );
-    }
-#endif /* MBEDTLS_INTERNAL_CCM_NO_ZEROIZE_ON_TAG_FAIL */
 
     /* If the symbol is not found, return an error */
     return( 1 );

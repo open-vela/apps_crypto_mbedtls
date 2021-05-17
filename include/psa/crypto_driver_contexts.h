@@ -1,8 +1,6 @@
 /*
  *  Declaration of context structures for use with the PSA driver wrapper
- *  interface. This file contains the context structures for 'composite'
- *  operations, i.e. those operations which need to make use of other operations
- *  from the primitives (crypto_driver_contexts_primitives.h)
+ *  interface.
  *
  *  Warning: This file will be auto-generated in the future.
  *
@@ -31,16 +29,17 @@
  *  limitations under the License.
  */
 
-#ifndef PSA_CRYPTO_DRIVER_CONTEXTS_COMPOSITES_H
-#define PSA_CRYPTO_DRIVER_CONTEXTS_COMPOSITES_H
+#ifndef PSA_CRYPTO_DRIVER_CONTEXTS_H
+#define PSA_CRYPTO_DRIVER_CONTEXTS_H
 
+#include "psa/crypto.h"
 #include "psa/crypto_driver_common.h"
 
 /* Include the context structure definitions for those drivers that were
  * declared during the autogeneration process. */
 
 /* Include the context structure definitions for the Mbed TLS software drivers */
-#include "psa/crypto_builtin_composites.h"
+#include "psa/crypto_builtin.h"
 
 /* Define the context to be used for an operation that is executed through the
  * PSA Driver wrapper layer as the union of all possible driver's contexts.
@@ -51,12 +50,20 @@
 
 typedef union {
     unsigned dummy; /* Make sure this union is always non-empty */
-    mbedtls_psa_mac_operation_t mbedtls_ctx;
+    mbedtls_psa_hash_operation_t mbedtls_ctx;
 #if defined(PSA_CRYPTO_DRIVER_TEST)
-    mbedtls_transparent_test_driver_mac_operation_t transparent_test_driver_ctx;
-    mbedtls_opaque_test_driver_mac_operation_t opaque_test_driver_ctx;
+    mbedtls_transparent_test_driver_hash_operation_t test_driver_ctx;
 #endif
-} psa_driver_mac_context_t;
+} psa_driver_hash_context_t;
 
-#endif /* PSA_CRYPTO_DRIVER_CONTEXTS_COMPOSITES_H */
+typedef union {
+    unsigned dummy; /* Make sure this union is always non-empty */
+    mbedtls_psa_cipher_operation_t mbedtls_ctx;
+#if defined(PSA_CRYPTO_DRIVER_TEST)
+    mbedtls_transparent_test_driver_cipher_operation_t transparent_test_driver_ctx;
+    mbedtls_opaque_test_driver_cipher_operation_t opaque_test_driver_ctx;
+#endif
+} psa_driver_cipher_context_t;
+
+#endif /* PSA_CRYPTO_DRIVER_CONTEXTS_H */
 /* End of automatically generated file. */
