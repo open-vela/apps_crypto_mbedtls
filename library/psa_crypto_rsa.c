@@ -274,8 +274,7 @@ static psa_status_t rsa_export_public_key(
 #endif /* defined(BUILTIN_KEY_TYPE_RSA_KEY_PAIR) ||
         * defined(BUILTIN_KEY_TYPE_RSA_PUBLIC_KEY) */
 
-#if defined(BUILTIN_KEY_TYPE_RSA_KEY_PAIR) && \
-    defined(MBEDTLS_GENPRIME)
+#if defined(BUILTIN_KEY_TYPE_RSA_KEY_PAIR)
 static psa_status_t psa_rsa_read_exponent( const uint8_t *domain_parameters,
                                            size_t domain_parameters_size,
                                            int *exponent )
@@ -333,8 +332,7 @@ static psa_status_t rsa_generate_key(
 
     return( status );
 }
-#endif /* defined(BUILTIN_KEY_TYPE_RSA_KEY_PAIR)
-        * defined(MBEDTLS_GENPRIME) */
+#endif /* defined(BUILTIN_KEY_TYPE_RSA_KEY_PAIR) */
 
 /****************************************************************/
 /* Sign/verify hashes */
@@ -567,8 +565,7 @@ psa_status_t mbedtls_psa_rsa_export_public_key(
 #endif /* defined(MBEDTLS_PSA_BUILTIN_KEY_TYPE_RSA_KEY_PAIR) ||
         * defined(MBEDTLS_PSA_BUILTIN_KEY_TYPE_RSA_PUBLIC_KEY) */
 
-#if defined(MBEDTLS_PSA_BUILTIN_KEY_TYPE_RSA_KEY_PAIR) && \
-    defined(MBEDTLS_GENPRIME)
+#if defined(MBEDTLS_PSA_BUILTIN_KEY_TYPE_RSA_KEY_PAIR)
 psa_status_t mbedtls_psa_rsa_generate_key(
     const psa_key_attributes_t *attributes,
     uint8_t *key_buffer, size_t key_buffer_size, size_t *key_buffer_length )
@@ -576,8 +573,7 @@ psa_status_t mbedtls_psa_rsa_generate_key(
     return( rsa_generate_key( attributes, key_buffer, key_buffer_size,
                               key_buffer_length ) );
 }
-#endif /* defined(MBEDTLS_PSA_BUILTIN_KEY_TYPE_RSA_KEY_PAIR)
-        * defined(MBEDTLS_GENPRIME) */
+#endif /* defined(MBEDTLS_PSA_BUILTIN_KEY_TYPE_RSA_KEY_PAIR) */
 
 #if defined(MBEDTLS_PSA_BUILTIN_ALG_RSA_PKCS1V15_SIGN) || \
     defined(MBEDTLS_PSA_BUILTIN_ALG_RSA_PSS)

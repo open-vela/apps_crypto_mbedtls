@@ -194,8 +194,10 @@ EXCLUDE_FROM_FULL = frozenset([
     'MBEDTLS_SHA512_NO_SHA384', # removes a feature
     'MBEDTLS_TEST_CONSTANT_FLOW_MEMSAN', # build dependency (clang+memsan)
     'MBEDTLS_TEST_CONSTANT_FLOW_VALGRIND', # build dependency (valgrind headers)
+    'MBEDTLS_TEST_NULL_ENTROPY', # removes a feature
     'MBEDTLS_X509_ALLOW_UNSUPPORTED_CRITICAL_EXTENSION', # influences the use of X.509 in TLS
     'MBEDTLS_X509_REMOVE_INFO', # removes a feature
+    'MBEDTLS_INTERNAL_CCM_NO_ZEROIZE_ON_TAG_FAIL', # lowers security of CCM
 ])
 
 def is_seamless_alt(name):
