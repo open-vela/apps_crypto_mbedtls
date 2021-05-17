@@ -135,7 +135,7 @@ static int rsa_decrypt_wrap( void *ctx,
         return( MBEDTLS_ERR_RSA_BAD_INPUT_DATA );
 
     return( mbedtls_rsa_pkcs1_decrypt( rsa, f_rng, p_rng,
-                olen, input, output, osize ) );
+                MBEDTLS_RSA_PRIVATE, olen, input, output, osize ) );
 }
 
 static int rsa_encrypt_wrap( void *ctx,
@@ -149,7 +149,7 @@ static int rsa_encrypt_wrap( void *ctx,
     if( *olen > osize )
         return( MBEDTLS_ERR_RSA_OUTPUT_TOO_LARGE );
 
-    return( mbedtls_rsa_pkcs1_encrypt( rsa, f_rng, p_rng,
+    return( mbedtls_rsa_pkcs1_encrypt( rsa, f_rng, p_rng, MBEDTLS_RSA_PUBLIC,
                                        ilen, input, output ) );
 }
 
@@ -788,7 +788,7 @@ static int rsa_alt_decrypt_wrap( void *ctx,
         return( MBEDTLS_ERR_RSA_BAD_INPUT_DATA );
 
     return( rsa_alt->decrypt_func( rsa_alt->key,
-                olen, input, output, osize ) );
+                MBEDTLS_RSA_PRIVATE, olen, input, output, osize ) );
 }
 
 #if defined(MBEDTLS_RSA_C)
