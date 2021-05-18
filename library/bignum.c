@@ -470,7 +470,6 @@ int mbedtls_mpi_read_string( mbedtls_mpi *X, int radix, const char *s )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     size_t i, j, slen, n;
-    int sign = 1;
     mbedtls_mpi_uint d;
     mbedtls_mpi T;
     MPI_VALIDATE_RET( X != NULL );
@@ -480,12 +479,6 @@ int mbedtls_mpi_read_string( mbedtls_mpi *X, int radix, const char *s )
         return( MBEDTLS_ERR_MPI_BAD_INPUT_DATA );
 
     mbedtls_mpi_init( &T );
-
-    if( s[0] == '-' )
-    {
-        ++s;
-        sign = -1;
-    }
 
     slen = strlen( s );
 
@@ -501,6 +494,12 @@ int mbedtls_mpi_read_string( mbedtls_mpi *X, int radix, const char *s )
 
         for( i = slen, j = 0; i > 0; i--, j++ )
         {
+            if( i == 1 && s[i - 1] == '-' )
+            {
+                X->s = -1;
+                break;
+            }
+
             MBEDTLS_MPI_CHK( mpi_get_digit( &d, radix, s[i - 1] ) );
             X->p[j / ( 2 * ciL )] |= d << ( ( j % ( 2 * ciL ) ) << 2 );
         }
@@ -511,14 +510,25 @@ int mbedtls_mpi_read_string( mbedtls_mpi *X, int radix, const char *s )
 
         for( i = 0; i < slen; i++ )
         {
+            if( i == 0 && s[i] == '-' )
+            {
+                X->s = -1;
+                continue;
+            }
+
             MBEDTLS_MPI_CHK( mpi_get_digit( &d, radix, s[i] ) );
             MBEDTLS_MPI_CHK( mbedtls_mpi_mul_int( &T, X, radix ) );
-            MBEDTLS_MPI_CHK( mbedtls_mpi_add_int( X, &T, d ) );
+
+            if( X->s == 1 )
+            {
+                MBEDTLS_MPI_CHK( mbedtls_mpi_add_int( X, &T, d ) );
+            }
+            else
+            {
+                MBEDTLS_MPI_CHK( mbedtls_mpi_sub_int( X, &T, d ) );
+            }
         }
     }
-
-    if( sign < 0 && mbedtls_mpi_bitlen( X ) != 0 )
-        X->s = -1;
 
 cleanup:
 
@@ -1666,7 +1676,8 @@ int mbedtls_mpi_mul_int( mbedtls_mpi *X, const mbedtls_mpi *A, mbedtls_mpi_uint 
      * calculating the result is trivial in those cases. */
     if( b == 0 || n == 0 )
     {
-        return( mbedtls_mpi_lset( X, 0 ) );
+        mbedtls_mpi_lset( X, 0 );
+        return( 0 );
     }
 
     /* Calculate A*b as A + A*(b-1) to take advantage of mpi_mul_hlp */
