@@ -328,7 +328,7 @@ int mbedtls_cipher_setkey( mbedtls_cipher_context_t *ctx,
             case PSA_ERROR_NOT_SUPPORTED:
                 return( MBEDTLS_ERR_CIPHER_FEATURE_UNAVAILABLE );
             default:
-                return( MBEDTLS_ERR_PLATFORM_HW_ACCEL_FAILED );
+                return( MBEDTLS_ERR_CIPHER_HW_ACCEL_FAILED );
         }
         /* Indicate that we own the key slot and need to
          * destroy it in mbedtls_cipher_free(). */
@@ -415,6 +415,15 @@ int mbedtls_cipher_set_iv( mbedtls_cipher_context_t *ctx,
     }
 #endif
 
+#if defined(MBEDTLS_GCM_C)
+    if( MBEDTLS_MODE_GCM == ctx->cipher_info->mode )
+    {
+        return( mbedtls_gcm_starts( (mbedtls_gcm_context *) ctx->cipher_ctx,
+                                    ctx->operation,
+                                    iv, iv_len ) );
+    }
+#endif
+
     if ( actual_iv_size != 0 )
     {
         memcpy( ctx->iv, iv, actual_iv_size );
@@ -466,8 +475,8 @@ int mbedtls_cipher_update_ad( mbedtls_cipher_context_t *ctx,
 #if defined(MBEDTLS_GCM_C)
     if( MBEDTLS_MODE_GCM == ctx->cipher_info->mode )
     {
-        return( mbedtls_gcm_starts( (mbedtls_gcm_context *) ctx->cipher_ctx, ctx->operation,
-                                    ctx->iv, ctx->iv_size, ad, ad_len ) );
+        return( mbedtls_gcm_update_ad( (mbedtls_gcm_context *) ctx->cipher_ctx,
+                                       ad, ad_len ) );
     }
 #endif
 
@@ -545,9 +554,9 @@ int mbedtls_cipher_update( mbedtls_cipher_context_t *ctx, const unsigned char *i
 #if defined(MBEDTLS_GCM_C)
     if( ctx->cipher_info->mode == MBEDTLS_MODE_GCM )
     {
-        *olen = ilen;
-        return( mbedtls_gcm_update( (mbedtls_gcm_context *) ctx->cipher_ctx, ilen, input,
-                                    output ) );
+        return( mbedtls_gcm_update( (mbedtls_gcm_context *) ctx->cipher_ctx,
+                                    input, ilen,
+                                    output, ilen, olen ) );
     }
 #endif
 
@@ -1101,6 +1110,7 @@ int mbedtls_cipher_write_tag( mbedtls_cipher_context_t *ctx,
 #if defined(MBEDTLS_GCM_C)
     if( MBEDTLS_MODE_GCM == ctx->cipher_info->mode )
         return( mbedtls_gcm_finish( (mbedtls_gcm_context *) ctx->cipher_ctx,
+                                    NULL, 0,
                                     tag, tag_len ) );
 #endif
 
@@ -1153,6 +1163,7 @@ int mbedtls_cipher_check_tag( mbedtls_cipher_context_t *ctx,
 
         if( 0 != ( ret = mbedtls_gcm_finish(
                        (mbedtls_gcm_context *) ctx->cipher_ctx,
+                       NULL, 0,
                        check_tag, tag_len ) ) )
         {
             return( ret );
@@ -1244,23 +1255,23 @@ int mbedtls_cipher_crypt( mbedtls_cipher_context_t *ctx,
          * are terminated by unsuccessful calls to psa_cipher_update(),
          * and by any call to psa_cipher_finish(). */
         if( status != PSA_SUCCESS )
-            return( MBEDTLS_ERR_PLATFORM_HW_ACCEL_FAILED );
+            return( MBEDTLS_ERR_CIPHER_HW_ACCEL_FAILED );
 
         status = psa_cipher_set_iv( &cipher_op, iv, iv_len );
         if( status != PSA_SUCCESS )
-            return( MBEDTLS_ERR_PLATFORM_HW_ACCEL_FAILED );
+            return( MBEDTLS_ERR_CIPHER_HW_ACCEL_FAILED );
 
         status = psa_cipher_update( &cipher_op,
                                     input, ilen,
                                     output, ilen, olen );
         if( status != PSA_SUCCESS )
-            return( MBEDTLS_ERR_PLATFORM_HW_ACCEL_FAILED );
+            return( MBEDTLS_ERR_CIPHER_HW_ACCEL_FAILED );
 
         status = psa_cipher_finish( &cipher_op,
                                     output + *olen, ilen - *olen,
                                     &part_len );
         if( status != PSA_SUCCESS )
-            return( MBEDTLS_ERR_PLATFORM_HW_ACCEL_FAILED );
+            return( MBEDTLS_ERR_CIPHER_HW_ACCEL_FAILED );
 
         *olen += part_len;
         return( 0 );
@@ -1323,7 +1334,7 @@ static int mbedtls_cipher_aead_encrypt( mbedtls_cipher_context_t *ctx,
                                    input, ilen,
                                    output, ilen + tag_len, olen );
         if( status != PSA_SUCCESS )
-            return( MBEDTLS_ERR_PLATFORM_HW_ACCEL_FAILED );
+            return( MBEDTLS_ERR_CIPHER_HW_ACCEL_FAILED );
 
         *olen -= tag_len;
         return( 0 );
@@ -1405,7 +1416,7 @@ static int mbedtls_cipher_aead_decrypt( mbedtls_cipher_context_t *ctx,
         if( status == PSA_ERROR_INVALID_SIGNATURE )
             return( MBEDTLS_ERR_CIPHER_AUTH_FAILED );
         else if( status != PSA_SUCCESS )
-            return( MBEDTLS_ERR_PLATFORM_HW_ACCEL_FAILED );
+            return( MBEDTLS_ERR_CIPHER_HW_ACCEL_FAILED );
 
         return( 0 );
     }
