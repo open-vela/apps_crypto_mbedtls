@@ -26,6 +26,7 @@
 
 #ifndef MBEDTLS_CIPHER_H
 #define MBEDTLS_CIPHER_H
+#include "mbedtls/private_access.h"
 
 #if !defined(MBEDTLS_CONFIG_FILE)
 #include "mbedtls/config.h"
@@ -267,37 +268,37 @@ typedef struct mbedtls_cipher_info_t
     /** Full cipher identifier. For example,
      * MBEDTLS_CIPHER_AES_256_CBC.
      */
-    mbedtls_cipher_type_t type;
+    mbedtls_cipher_type_t MBEDTLS_PRIVATE(type);
 
     /** The cipher mode. For example, MBEDTLS_MODE_CBC. */
-    mbedtls_cipher_mode_t mode;
+    mbedtls_cipher_mode_t MBEDTLS_PRIVATE(mode);
 
     /** The cipher key length, in bits. This is the
      * default length for variable sized ciphers.
      * Includes parity bits for ciphers like DES.
      */
-    unsigned int key_bitlen;
+    unsigned int MBEDTLS_PRIVATE(key_bitlen);
 
     /** Name of the cipher. */
-    const char * name;
+    const char * MBEDTLS_PRIVATE(name);
 
     /** IV or nonce size, in Bytes.
      * For ciphers that accept variable IV sizes,
      * this is the recommended size.
      */
-    unsigned int iv_size;
+    unsigned int MBEDTLS_PRIVATE(iv_size);
 
     /** Bitflag comprised of MBEDTLS_CIPHER_VARIABLE_IV_LEN and
      *  MBEDTLS_CIPHER_VARIABLE_KEY_LEN indicating whether the
      *  cipher supports variable IV or variable key sizes, respectively.
      */
-    int flags;
+    int MBEDTLS_PRIVATE(flags);
 
     /** The block size, in Bytes. */
-    unsigned int block_size;
+    unsigned int MBEDTLS_PRIVATE(block_size);
 
     /** Struct for base cipher information and functions. */
-    const mbedtls_cipher_base_t *base;
+    const mbedtls_cipher_base_t *MBEDTLS_PRIVATE(base);
 
 } mbedtls_cipher_info_t;
 
@@ -307,43 +308,43 @@ typedef struct mbedtls_cipher_info_t
 typedef struct mbedtls_cipher_context_t
 {
     /** Information about the associated cipher. */
-    const mbedtls_cipher_info_t *cipher_info;
+    const mbedtls_cipher_info_t *MBEDTLS_PRIVATE(cipher_info);
 
     /** Key length to use. */
-    int key_bitlen;
+    int MBEDTLS_PRIVATE(key_bitlen);
 
     /** Operation that the key of the context has been
      * initialized for.
      */
-    mbedtls_operation_t operation;
+    mbedtls_operation_t MBEDTLS_PRIVATE(operation);
 
 #if defined(MBEDTLS_CIPHER_MODE_WITH_PADDING)
     /** Padding functions to use, if relevant for
      * the specific cipher mode.
      */
-    void (*add_padding)( unsigned char *output, size_t olen, size_t data_len );
-    int (*get_padding)( unsigned char *input, size_t ilen, size_t *data_len );
+    void (*MBEDTLS_PRIVATE(add_padding))( unsigned char *output, size_t olen, size_t data_len );
+    int (*MBEDTLS_PRIVATE(get_padding))( unsigned char *input, size_t ilen, size_t *data_len );
 #endif
 
     /** Buffer for input that has not been processed yet. */
-    unsigned char unprocessed_data[MBEDTLS_MAX_BLOCK_LENGTH];
+    unsigned char MBEDTLS_PRIVATE(unprocessed_data)[MBEDTLS_MAX_BLOCK_LENGTH];
 
     /** Number of Bytes that have not been processed yet. */
-    size_t unprocessed_len;
+    size_t MBEDTLS_PRIVATE(unprocessed_len);
 
     /** Current IV or NONCE_COUNTER for CTR-mode, data unit (or sector) number
      * for XTS-mode. */
-    unsigned char iv[MBEDTLS_MAX_IV_LENGTH];
+    unsigned char MBEDTLS_PRIVATE(iv)[MBEDTLS_MAX_IV_LENGTH];
 
     /** IV size in Bytes, for ciphers with variable-length IVs. */
-    size_t iv_size;
+    size_t MBEDTLS_PRIVATE(iv_size);
 
     /** The cipher-specific context. */
-    void *cipher_ctx;
+    void *MBEDTLS_PRIVATE(cipher_ctx);
 
 #if defined(MBEDTLS_CMAC_C)
     /** CMAC-specific context. */
-    mbedtls_cmac_context_t *cmac_ctx;
+    mbedtls_cmac_context_t *MBEDTLS_PRIVATE(cmac_ctx);
 #endif
 
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
@@ -354,7 +355,7 @@ typedef struct mbedtls_cipher_context_t
      *  mbedtls_cipher_setup(), and set if it was established through
      *  mbedtls_cipher_setup_psa().
      */
-    unsigned char psa_enabled;
+    unsigned char MBEDTLS_PRIVATE(psa_enabled);
 #endif /* MBEDTLS_USE_PSA_CRYPTO */
 
 } mbedtls_cipher_context_t;
@@ -467,8 +468,8 @@ int mbedtls_cipher_setup( mbedtls_cipher_context_t *ctx,
  * \param cipher_info   The cipher to use.
  * \param taglen        For AEAD ciphers, the length in bytes of the
  *                      authentication tag to use. Subsequent uses of
- *                      mbedtls_cipher_auth_encrypt() or
- *                      mbedtls_cipher_auth_decrypt() must provide
+ *                      mbedtls_cipher_auth_encrypt_ext() or
+ *                      mbedtls_cipher_auth_decrypt_ext() must provide
  *                      the same tag length.
  *                      For non-AEAD ciphers, the value must be \c 0.
  *
@@ -495,10 +496,10 @@ static inline unsigned int mbedtls_cipher_get_block_size(
     const mbedtls_cipher_context_t *ctx )
 {
     MBEDTLS_INTERNAL_VALIDATE_RET( ctx != NULL, 0 );
-    if( ctx->cipher_info == NULL )
+    if( ctx->MBEDTLS_PRIVATE(cipher_info) == NULL )
         return 0;
 
-    return ctx->cipher_info->block_size;
+    return ctx->MBEDTLS_PRIVATE(cipher_info)->MBEDTLS_PRIVATE(block_size);
 }
 
 /**
@@ -514,10 +515,10 @@ static inline mbedtls_cipher_mode_t mbedtls_cipher_get_cipher_mode(
     const mbedtls_cipher_context_t *ctx )
 {
     MBEDTLS_INTERNAL_VALIDATE_RET( ctx != NULL, MBEDTLS_MODE_NONE );
-    if( ctx->cipher_info == NULL )
+    if( ctx->MBEDTLS_PRIVATE(cipher_info) == NULL )
         return MBEDTLS_MODE_NONE;
 
-    return ctx->cipher_info->mode;
+    return ctx->MBEDTLS_PRIVATE(cipher_info)->MBEDTLS_PRIVATE(mode);
 }
 
 /**
@@ -534,13 +535,13 @@ static inline int mbedtls_cipher_get_iv_size(
     const mbedtls_cipher_context_t *ctx )
 {
     MBEDTLS_INTERNAL_VALIDATE_RET( ctx != NULL, 0 );
-    if( ctx->cipher_info == NULL )
+    if( ctx->MBEDTLS_PRIVATE(cipher_info) == NULL )
         return 0;
 
-    if( ctx->iv_size != 0 )
-        return (int) ctx->iv_size;
+    if( ctx->MBEDTLS_PRIVATE(iv_size) != 0 )
+        return (int) ctx->MBEDTLS_PRIVATE(iv_size);
 
-    return (int) ctx->cipher_info->iv_size;
+    return (int) ctx->MBEDTLS_PRIVATE(cipher_info)->MBEDTLS_PRIVATE(iv_size);
 }
 
 /**
@@ -556,10 +557,10 @@ static inline mbedtls_cipher_type_t mbedtls_cipher_get_type(
 {
     MBEDTLS_INTERNAL_VALIDATE_RET(
         ctx != NULL, MBEDTLS_CIPHER_NONE );
-    if( ctx->cipher_info == NULL )
+    if( ctx->MBEDTLS_PRIVATE(cipher_info) == NULL )
         return MBEDTLS_CIPHER_NONE;
 
-    return ctx->cipher_info->type;
+    return ctx->MBEDTLS_PRIVATE(cipher_info)->MBEDTLS_PRIVATE(type);
 }
 
 /**
@@ -575,10 +576,10 @@ static inline const char *mbedtls_cipher_get_name(
     const mbedtls_cipher_context_t *ctx )
 {
     MBEDTLS_INTERNAL_VALIDATE_RET( ctx != NULL, 0 );
-    if( ctx->cipher_info == NULL )
+    if( ctx->MBEDTLS_PRIVATE(cipher_info) == NULL )
         return 0;
 
-    return ctx->cipher_info->name;
+    return ctx->MBEDTLS_PRIVATE(cipher_info)->MBEDTLS_PRIVATE(name);
 }
 
 /**
@@ -595,10 +596,10 @@ static inline int mbedtls_cipher_get_key_bitlen(
 {
     MBEDTLS_INTERNAL_VALIDATE_RET(
         ctx != NULL, MBEDTLS_KEY_LENGTH_NONE );
-    if( ctx->cipher_info == NULL )
+    if( ctx->MBEDTLS_PRIVATE(cipher_info) == NULL )
         return MBEDTLS_KEY_LENGTH_NONE;
 
-    return (int) ctx->cipher_info->key_bitlen;
+    return (int) ctx->MBEDTLS_PRIVATE(cipher_info)->MBEDTLS_PRIVATE(key_bitlen);
 }
 
 /**
@@ -614,10 +615,10 @@ static inline mbedtls_operation_t mbedtls_cipher_get_operation(
 {
     MBEDTLS_INTERNAL_VALIDATE_RET(
         ctx != NULL, MBEDTLS_OPERATION_NONE );
-    if( ctx->cipher_info == NULL )
+    if( ctx->MBEDTLS_PRIVATE(cipher_info) == NULL )
         return MBEDTLS_OPERATION_NONE;
 
-    return ctx->operation;
+    return ctx->MBEDTLS_PRIVATE(operation);
 }
 
 /**
@@ -723,11 +724,6 @@ int mbedtls_cipher_update_ad( mbedtls_cipher_context_t *ctx,
  *                      mbedtls_cipher_finish() is called.
  *                      Exception: For MBEDTLS_MODE_ECB, expects a single block
  *                      in size. For example, 16 Bytes for AES.
- *
- * \note                If the underlying cipher is used in GCM mode, all calls
- *                      to this function, except for the last one before
- *                      mbedtls_cipher_finish(), must have \p ilen as a
- *                      multiple of the block size of the cipher.
  *
  * \param ctx           The generic cipher context. This must be initialized and
  *                      bound to a key.
@@ -852,129 +848,6 @@ int mbedtls_cipher_crypt( mbedtls_cipher_context_t *ctx,
                   const unsigned char *iv, size_t iv_len,
                   const unsigned char *input, size_t ilen,
                   unsigned char *output, size_t *olen );
-
-#if defined(MBEDTLS_CIPHER_MODE_AEAD)
-#if ! defined(MBEDTLS_DEPRECATED_REMOVED)
-#if defined(MBEDTLS_DEPRECATED_WARNING)
-#define MBEDTLS_DEPRECATED    __attribute__((deprecated))
-#else
-#define MBEDTLS_DEPRECATED
-#endif /* MBEDTLS_DEPRECATED_WARNING */
-/**
- * \brief               The generic authenticated encryption (AEAD) function.
- *
- * \deprecated          Superseded by mbedtls_cipher_auth_encrypt_ext().
- *
- * \note                This function only supports AEAD algorithms, not key
- *                      wrapping algorithms such as NIST_KW; for this, see
- *                      mbedtls_cipher_auth_encrypt_ext().
- *
- * \param ctx           The generic cipher context. This must be initialized and
- *                      bound to a key associated with an AEAD algorithm.
- * \param iv            The nonce to use. This must be a readable buffer of
- *                      at least \p iv_len Bytes and must not be \c NULL.
- * \param iv_len        The length of the nonce. This must satisfy the
- *                      constraints imposed by the AEAD cipher used.
- * \param ad            The additional data to authenticate. This must be a
- *                      readable buffer of at least \p ad_len Bytes, and may
- *                      be \c NULL is \p ad_len is \c 0.
- * \param ad_len        The length of \p ad.
- * \param input         The buffer holding the input data. This must be a
- *                      readable buffer of at least \p ilen Bytes, and may be
- *                      \c NULL if \p ilen is \c 0.
- * \param ilen          The length of the input data.
- * \param output        The buffer for the output data. This must be a
- *                      writable buffer of at least \p ilen Bytes, and must
- *                      not be \c NULL.
- * \param olen          This will be filled with the actual number of Bytes
- *                      written to the \p output buffer. This must point to a
- *                      writable object of type \c size_t.
- * \param tag           The buffer for the authentication tag. This must be a
- *                      writable buffer of at least \p tag_len Bytes. See note
- *                      below regarding restrictions with PSA-based contexts.
- * \param tag_len       The desired length of the authentication tag. This
- *                      must match the constraints imposed by the AEAD cipher
- *                      used, and in particular must not be \c 0.
- *
- * \note                If the context is based on PSA (that is, it was set up
- *                      with mbedtls_cipher_setup_psa()), then it is required
- *                      that \c tag == output + ilen. That is, the tag must be
- *                      appended to the ciphertext as recommended by RFC 5116.
- *
- * \return              \c 0 on success.
- * \return              #MBEDTLS_ERR_CIPHER_BAD_INPUT_DATA on
- *                      parameter-verification failure.
- * \return              A cipher-specific error code on failure.
- */
-int mbedtls_cipher_auth_encrypt( mbedtls_cipher_context_t *ctx,
-                         const unsigned char *iv, size_t iv_len,
-                         const unsigned char *ad, size_t ad_len,
-                         const unsigned char *input, size_t ilen,
-                         unsigned char *output, size_t *olen,
-                         unsigned char *tag, size_t tag_len )
-                         MBEDTLS_DEPRECATED;
-
-/**
- * \brief               The generic authenticated decryption (AEAD) function.
- *
- * \deprecated          Superseded by mbedtls_cipher_auth_decrypt_ext().
- *
- * \note                This function only supports AEAD algorithms, not key
- *                      wrapping algorithms such as NIST_KW; for this, see
- *                      mbedtls_cipher_auth_decrypt_ext().
- *
- * \note                If the data is not authentic, then the output buffer
- *                      is zeroed out to prevent the unauthentic plaintext being
- *                      used, making this interface safer.
- *
- * \param ctx           The generic cipher context. This must be initialized and
- *                      bound to a key associated with an AEAD algorithm.
- * \param iv            The nonce to use. This must be a readable buffer of
- *                      at least \p iv_len Bytes and must not be \c NULL.
- * \param iv_len        The length of the nonce. This must satisfy the
- *                      constraints imposed by the AEAD cipher used.
- * \param ad            The additional data to authenticate. This must be a
- *                      readable buffer of at least \p ad_len Bytes, and may
- *                      be \c NULL is \p ad_len is \c 0.
- * \param ad_len        The length of \p ad.
- * \param input         The buffer holding the input data. This must be a
- *                      readable buffer of at least \p ilen Bytes, and may be
- *                      \c NULL if \p ilen is \c 0.
- * \param ilen          The length of the input data.
- * \param output        The buffer for the output data. This must be a
- *                      writable buffer of at least \p ilen Bytes, and must
- *                      not be \c NULL.
- * \param olen          This will be filled with the actual number of Bytes
- *                      written to the \p output buffer. This must point to a
- *                      writable object of type \c size_t.
- * \param tag           The buffer for the authentication tag. This must be a
- *                      readable buffer of at least \p tag_len Bytes. See note
- *                      below regarding restrictions with PSA-based contexts.
- * \param tag_len       The length of the authentication tag. This must match
- *                      the constraints imposed by the AEAD cipher used, and in
- *                      particular must not be \c 0.
- *
- * \note                If the context is based on PSA (that is, it was set up
- *                      with mbedtls_cipher_setup_psa()), then it is required
- *                      that \c tag == input + len. That is, the tag must be
- *                      appended to the ciphertext as recommended by RFC 5116.
- *
- * \return              \c 0 on success.
- * \return              #MBEDTLS_ERR_CIPHER_BAD_INPUT_DATA on
- *                      parameter-verification failure.
- * \return              #MBEDTLS_ERR_CIPHER_AUTH_FAILED if data is not authentic.
- * \return              A cipher-specific error code on failure.
- */
-int mbedtls_cipher_auth_decrypt( mbedtls_cipher_context_t *ctx,
-                         const unsigned char *iv, size_t iv_len,
-                         const unsigned char *ad, size_t ad_len,
-                         const unsigned char *input, size_t ilen,
-                         unsigned char *output, size_t *olen,
-                         const unsigned char *tag, size_t tag_len )
-                         MBEDTLS_DEPRECATED;
-#undef MBEDTLS_DEPRECATED
-#endif /* MBEDTLS_DEPRECATED_REMOVED */
-#endif /* MBEDTLS_CIPHER_MODE_AEAD */
 
 #if defined(MBEDTLS_CIPHER_MODE_AEAD) || defined(MBEDTLS_NIST_KW_C)
 /**
