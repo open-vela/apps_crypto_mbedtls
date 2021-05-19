@@ -356,7 +356,7 @@ void mbedtls_sha256_update( mbedtls_sha256_context *ctx,
  * SHA-256 final digest
  */
 int mbedtls_sha256_finish_ret( mbedtls_sha256_context *ctx,
-                               unsigned char output[32] )
+                               unsigned char *output )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     uint32_t used;
@@ -433,7 +433,7 @@ void mbedtls_sha256_finish( mbedtls_sha256_context *ctx,
  */
 int mbedtls_sha256_ret( const unsigned char *input,
                         size_t ilen,
-                        unsigned char output[32],
+                        unsigned char *output,
                         int is224 )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
