@@ -134,14 +134,13 @@ int mbedtls_sha512_update_ret( mbedtls_sha512_context *ctx,
  * \param ctx      The SHA-512 context. This must be initialized
  *                 and have a hash operation started.
  * \param output   The SHA-384 or SHA-512 checksum result.
- *                 This must be a writable buffer of length \c 64 bytes
- *                 for SHA-512, \c 48 bytes for SHA-384.
+ *                 This must be a writable buffer of length \c 64 Bytes.
  *
  * \return         \c 0 on success.
  * \return         A negative error code on failure.
  */
 int mbedtls_sha512_finish_ret( mbedtls_sha512_context *ctx,
-                               unsigned char *output );
+                               unsigned char output[64] );
 
 /**
  * \brief          This function processes a single data block within
@@ -172,8 +171,7 @@ int mbedtls_internal_sha512_process( mbedtls_sha512_context *ctx,
  *                 a readable buffer of length \p ilen Bytes.
  * \param ilen     The length of the input data in Bytes.
  * \param output   The SHA-384 or SHA-512 checksum result.
- *                 This must be a writable buffer of length \c 64 bytes
- *                 for SHA-512, \c 48 bytes for SHA-384.
+ *                 This must be a writable buffer of length \c 64 Bytes.
  * \param is384    Determines which function to use. This must be either
  *                 \c 0 for SHA-512, or \c 1 for SHA-384.
  *
@@ -186,7 +184,7 @@ int mbedtls_internal_sha512_process( mbedtls_sha512_context *ctx,
  */
 int mbedtls_sha512_ret( const unsigned char *input,
                         size_t ilen,
-                        unsigned char *output,
+                        unsigned char output[64],
                         int is384 );
 
 #if defined(MBEDTLS_SELF_TEST)
