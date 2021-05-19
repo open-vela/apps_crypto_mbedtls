@@ -135,7 +135,7 @@ static int rsa_decrypt_wrap( void *ctx,
         return( MBEDTLS_ERR_RSA_BAD_INPUT_DATA );
 
     return( mbedtls_rsa_pkcs1_decrypt( rsa, f_rng, p_rng,
-                olen, input, output, osize ) );
+                MBEDTLS_RSA_PRIVATE, olen, input, output, osize ) );
 }
 
 static int rsa_encrypt_wrap( void *ctx,
@@ -788,7 +788,7 @@ static int rsa_alt_decrypt_wrap( void *ctx,
         return( MBEDTLS_ERR_RSA_BAD_INPUT_DATA );
 
     return( rsa_alt->decrypt_func( rsa_alt->key,
-                olen, input, output, osize ) );
+                MBEDTLS_RSA_PRIVATE, olen, input, output, osize ) );
 }
 
 #if defined(MBEDTLS_RSA_C)
@@ -941,7 +941,7 @@ static int asn1_write_mpibuf( unsigned char **p, unsigned char *start,
 
     /* this is only reached if the signature was invalid */
     if( len == 0 )
-        return( MBEDTLS_ERR_PLATFORM_HW_ACCEL_FAILED );
+        return( MBEDTLS_ERR_PK_HW_ACCEL_FAILED );
 
     /* if the msb is 1, ASN.1 requires that we prepend a 0.
      * Neither r nor s can be 0, so we can assume len > 0 at all times. */
