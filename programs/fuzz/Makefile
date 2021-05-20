@@ -20,6 +20,8 @@ endif
 DLEXT ?= so
 EXEXT=
 SHARED_SUFFIX=
+# python2 for POSIX since FreeBSD has only python2 as default.
+PYTHON ?= python2
 
 ifdef FUZZINGENGINE
 LOCAL_LDFLAGS += -lFuzzingEngine
