@@ -1438,8 +1438,6 @@ component_test_psa_crypto_config_basic() {
     loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_SHA_384"
     loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_SHA_512"
     loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_XTS"
-    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_CMAC"
-    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_HMAC"
     loc_cflags="${loc_cflags} -I../tests/include -O2"
 
     make CC=gcc CFLAGS="$loc_cflags" LDFLAGS="$ASAN_CFLAGS"
@@ -2074,6 +2072,21 @@ component_test_when_no_ciphersuites_have_mac () {
     if_build_succeeded tests/ssl-opt.sh -f 'Default\|EtM' -e 'without EtM'
 }
 
+component_test_null_entropy () {
+    msg "build: default config with  MBEDTLS_TEST_NULL_ENTROPY (ASan build)"
+    scripts/config.py set MBEDTLS_TEST_NULL_ENTROPY
+    scripts/config.py set MBEDTLS_NO_DEFAULT_ENTROPY_SOURCES
+    scripts/config.py set MBEDTLS_ENTROPY_C
+    scripts/config.py unset MBEDTLS_ENTROPY_NV_SEED
+    scripts/config.py unset MBEDTLS_PLATFORM_NV_SEED_ALT
+    scripts/config.py unset MBEDTLS_ENTROPY_HARDWARE_ALT
+    CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan -D UNSAFE_BUILD=ON .
+    make
+
+    msg "test: MBEDTLS_TEST_NULL_ENTROPY - main suites (inc. selftests) (ASan build)"
+    make test
+}
+
 component_test_no_date_time () {
     msg "build: default config without MBEDTLS_HAVE_TIME_DATE"
     scripts/config.py unset MBEDTLS_HAVE_TIME_DATE
@@ -2222,8 +2235,6 @@ component_test_psa_crypto_drivers () {
     loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_SHA_384"
     loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_SHA_512"
     loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_XTS"
-    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_CMAC"
-    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_HMAC"
     loc_cflags="${loc_cflags} -I../tests/include -O2"
 
     make CC=gcc CFLAGS="${loc_cflags}" LDFLAGS="$ASAN_CFLAGS"
