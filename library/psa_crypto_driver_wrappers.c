@@ -28,8 +28,6 @@
 
 #include "mbedtls/platform.h"
 
-#if defined(MBEDTLS_PSA_CRYPTO_C)
-
 #if defined(MBEDTLS_PSA_CRYPTO_DRIVERS)
 
 /* Include test driver definition when running tests */
@@ -1779,5 +1777,4 @@ psa_status_t psa_driver_wrapper_mac_abort(
             return( PSA_ERROR_INVALID_ARGUMENT );
     }
 }
-
-#endif /* MBEDTLS_PSA_CRYPTO_C */
+/* End of automatically generated file. */
