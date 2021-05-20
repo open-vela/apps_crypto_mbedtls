@@ -21,6 +21,12 @@
 
 #if defined(MBEDTLS_ENTROPY_C)
 
+#if defined(MBEDTLS_TEST_NULL_ENTROPY)
+#warning "**** WARNING!  MBEDTLS_TEST_NULL_ENTROPY defined! "
+#warning "**** THIS BUILD HAS NO DEFINED ENTROPY SOURCES "
+#warning "**** THIS BUILD IS *NOT* SUITABLE FOR PRODUCTION USE "
+#endif
+
 #include "mbedtls/entropy.h"
 #include "entropy_poll.h"
 #include "mbedtls/platform_util.h"
@@ -66,6 +72,11 @@ void mbedtls_entropy_init( mbedtls_entropy_context *ctx )
 
     /* Reminder: Update ENTROPY_HAVE_STRONG in the test files
      *           when adding more strong entropy sources here. */
+
+#if defined(MBEDTLS_TEST_NULL_ENTROPY)
+    mbedtls_entropy_add_source( ctx, mbedtls_null_entropy_poll, NULL,
+                                1, MBEDTLS_ENTROPY_SOURCE_STRONG );
+#endif
 
 #if !defined(MBEDTLS_NO_DEFAULT_ENTROPY_SOURCES)
 #if !defined(MBEDTLS_NO_PLATFORM_ENTROPY)
@@ -513,6 +524,7 @@ int mbedtls_entropy_update_seed_file( mbedtls_entropy_context *ctx, const char *
 #endif /* MBEDTLS_FS_IO */
 
 #if defined(MBEDTLS_SELF_TEST)
+#if !defined(MBEDTLS_TEST_NULL_ENTROPY)
 /*
  * Dummy source function
  */
@@ -526,6 +538,7 @@ static int entropy_dummy_source( void *data, unsigned char *output,
 
     return( 0 );
 }
+#endif /* !MBEDTLS_TEST_NULL_ENTROPY */
 
 #if defined(MBEDTLS_ENTROPY_HARDWARE_ALT)
 
@@ -633,14 +646,17 @@ cleanup:
 int mbedtls_entropy_self_test( int verbose )
 {
     int ret = 1;
+#if !defined(MBEDTLS_TEST_NULL_ENTROPY)
     mbedtls_entropy_context ctx;
     unsigned char buf[MBEDTLS_ENTROPY_BLOCK_SIZE] = { 0 };
     unsigned char acc[MBEDTLS_ENTROPY_BLOCK_SIZE] = { 0 };
     size_t i, j;
+#endif /* !MBEDTLS_TEST_NULL_ENTROPY */
 
     if( verbose != 0 )
         mbedtls_printf( "  ENTROPY test: " );
 
+#if !defined(MBEDTLS_TEST_NULL_ENTROPY)
     mbedtls_entropy_init( &ctx );
 
     /* First do a gather to make sure we have default sources */
@@ -688,6 +704,7 @@ int mbedtls_entropy_self_test( int verbose )
 
 cleanup:
     mbedtls_entropy_free( &ctx );
+#endif /* !MBEDTLS_TEST_NULL_ENTROPY */
 
     if( verbose != 0 )
     {
