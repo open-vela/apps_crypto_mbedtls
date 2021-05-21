@@ -17,8 +17,6 @@
  *  limitations under the License.
  */
 
-#define MBEDTLS_ALLOW_PRIVATE_ACCESS
-
 #include "ssl_test_lib.h"
 
 #if defined(MBEDTLS_SSL_TEST_IMPOSSIBLE)
@@ -453,7 +451,7 @@ int main( void )
     "    server_port=%%d      default: 4433\n"              \
     "    debug_level=%%d      default: 0 (disabled)\n"      \
     "    buffer_size=%%d      default: 200 \n" \
-    "                         (minimum: 1)\n" \
+    "                         (minimum: 1, max: 16385)\n" \
     "    response_size=%%d    default: about 152 (basic response)\n" \
     "                          (minimum: 0, max: 16384)\n" \
     "                          increases buffer_size if bigger\n"\
@@ -805,7 +803,7 @@ int sni_callback( void *p_info, mbedtls_ssl_context *ssl,
             return( mbedtls_ssl_set_hs_own_cert( ssl, cur->cert, cur->key ) );
         }
 
-        cur = cur->MBEDTLS_PRIVATE(next);
+        cur = cur->next;
     }
 
     return( -1 );
@@ -921,7 +919,7 @@ int psk_callback( void *p_info, mbedtls_ssl_context *ssl,
             return( mbedtls_ssl_set_hs_psk( ssl, cur->key, cur->key_len ) );
         }
 
-        cur = cur->MBEDTLS_PRIVATE(next);
+        cur = cur->next;
     }
 
     return( -1 );
@@ -1574,13 +1572,13 @@ int main( int argc, char *argv[] )
         else if( strcmp( p, "buffer_size" ) == 0 )
         {
             opt.buffer_size = atoi( q );
-            if( opt.buffer_size < 1 )
+            if( opt.buffer_size < 1 || opt.buffer_size > MBEDTLS_SSL_MAX_CONTENT_LEN + 1 )
                 goto usage;
         }
         else if( strcmp( p, "response_size" ) == 0 )
         {
             opt.response_size = atoi( q );
-            if( opt.response_size < 0 || opt.response_size > MBEDTLS_SSL_OUT_CONTENT_LEN )
+            if( opt.response_size < 0 || opt.response_size > MBEDTLS_SSL_MAX_CONTENT_LEN )
                 goto usage;
             if( opt.buffer_size < opt.response_size )
                 opt.buffer_size = opt.response_size;
@@ -2089,11 +2087,11 @@ int main( int argc, char *argv[] )
             }
 
             /* Determine KDF algorithm the opaque PSK will be used in. */
-#if defined(MBEDTLS_SHA384_C)
+#if defined(MBEDTLS_SHA512_C)
             if( ciphersuite_info->mac == MBEDTLS_MD_SHA384 )
                 alg = PSA_ALG_TLS12_PSK_TO_MS(PSA_ALG_SHA_384);
             else
-#endif /* MBEDTLS_SHA384_C */
+#endif /* MBEDTLS_SHA512_C */
                 alg = PSA_ALG_TLS12_PSK_TO_MS(PSA_ALG_SHA_256);
         }
 #endif /* MBEDTLS_USE_PSA_CRYPTO */
