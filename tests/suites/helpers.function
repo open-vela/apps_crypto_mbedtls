@@ -2,8 +2,6 @@
 /*----------------------------------------------------------------------------*/
 /* Headers */
 
-#define MBEDTLS_ALLOW_PRIVATE_ACCESS
-
 #include <test/macros.h>
 #include <test/helpers.h>
 #include <test/random.h>
@@ -11,9 +9,6 @@
 
 #include <stdlib.h>
 
-#if defined (MBEDTLS_ERROR_C)
-#include "mbedtls/error.h"
-#endif
 #if defined(MBEDTLS_PLATFORM_C)
 #include "mbedtls/platform.h"
 #else
@@ -92,10 +87,11 @@ jmp_buf jmp_tmp;
 
 /* Indicates whether we expect mbedtls_entropy_init
  * to initialize some strong entropy source. */
-#if !defined(MBEDTLS_NO_DEFAULT_ENTROPY_SOURCES) && \
-    ( !defined(MBEDTLS_NO_PLATFORM_ENTROPY) ||      \
-        defined(MBEDTLS_ENTROPY_HARDWARE_ALT) ||    \
-        defined(ENTROPY_NV_SEED) )
+#if defined(MBEDTLS_TEST_NULL_ENTROPY) ||             \
+    ( !defined(MBEDTLS_NO_DEFAULT_ENTROPY_SOURCES) && \
+      ( !defined(MBEDTLS_NO_PLATFORM_ENTROPY)  ||     \
+         defined(MBEDTLS_ENTROPY_HARDWARE_ALT) ||     \
+         defined(ENTROPY_NV_SEED) ) )
 #define ENTROPY_HAVE_STRONG
 #endif
 
