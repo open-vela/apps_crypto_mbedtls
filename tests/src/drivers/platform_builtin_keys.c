@@ -20,8 +20,6 @@
  *  limitations under the License.
  */
 
-#define MBEDTLS_ALLOW_PRIVATE_ACCESS
-
 #include <psa/crypto.h>
 #include <psa/crypto_extra.h>
 

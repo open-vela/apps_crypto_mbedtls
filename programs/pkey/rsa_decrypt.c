@@ -164,7 +164,7 @@ int main( int argc, char *argv[] )
 
     fclose( f );
 
-    if( i != rsa.MBEDTLS_PRIVATE(len) )
+    if( i != rsa.len )
     {
         mbedtls_printf( "\n  ! Invalid RSA signature format\n\n" );
         goto exit;
@@ -177,7 +177,7 @@ int main( int argc, char *argv[] )
     fflush( stdout );
 
     ret = mbedtls_rsa_pkcs1_decrypt( &rsa, mbedtls_ctr_drbg_random,
-                                            &ctr_drbg, &i,
+                                            &ctr_drbg, MBEDTLS_RSA_PRIVATE, &i,
                                             buf, result, 1024 );
     if( ret != 0 )
     {
