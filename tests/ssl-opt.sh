@@ -374,7 +374,7 @@ requires_not_i686() {
 }
 
 # Calculate the input & output maximum content lengths set in the config
-MAX_CONTENT_LEN=16384
+MAX_CONTENT_LEN=$( ../scripts/config.py get MBEDTLS_SSL_MAX_CONTENT_LEN || echo "16384")
 MAX_IN_LEN=$( ../scripts/config.py get MBEDTLS_SSL_IN_CONTENT_LEN || echo "$MAX_CONTENT_LEN")
 MAX_OUT_LEN=$( ../scripts/config.py get MBEDTLS_SSL_OUT_CONTENT_LEN || echo "$MAX_CONTENT_LEN")
 
@@ -1197,7 +1197,7 @@ SRV_DELAY_SECONDS=0
 P_SRV="$P_SRV server_addr=127.0.0.1 server_port=$SRV_PORT"
 P_CLI="$P_CLI server_addr=127.0.0.1 server_port=+SRV_PORT"
 P_PXY="$P_PXY server_addr=127.0.0.1 server_port=$SRV_PORT listen_addr=127.0.0.1 listen_port=$PXY_PORT ${SEED:+"seed=$SEED"}"
-O_SRV="$O_SRV -accept $SRV_PORT"
+O_SRV="$O_SRV -accept $SRV_PORT -dhparam data_files/dhparams.pem"
 O_CLI="$O_CLI -connect localhost:+SRV_PORT"
 G_SRV="$G_SRV -p $SRV_PORT"
 G_CLI="$G_CLI -p +SRV_PORT"
@@ -3014,13 +3014,8 @@ run_test    "Session resume using cache, DTLS: openssl server" \
 
 # Tests for Max Fragment Length extension
 
-if [ "$MAX_IN_LEN" -lt "4096" ]; then
-    printf '%s defines MBEDTLS_SSL_IN_CONTENT_LEN to be less than 4096. Fragment length tests will fail.\n' "${CONFIG_H}"
-    exit 1
-fi
-
-if [ "$MAX_OUT_LEN" -lt "4096" ]; then
-    printf '%s defines MBEDTLS_SSL_OUT_CONTENT_LEN to be less than 4096. Fragment length tests will fail.\n' "${CONFIG_H}"
+if [ "$MAX_CONTENT_LEN" -lt "4096" ]; then
+    printf '%s defines MBEDTLS_SSL_MAX_CONTENT_LEN to be less than 4096. Fragment length tests will fail.\n' "${CONFIG_H}"
     exit 1
 fi
 
