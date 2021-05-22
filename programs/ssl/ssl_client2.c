@@ -1396,11 +1396,11 @@ int main( int argc, char *argv[] )
             }
 
             /* Determine KDF algorithm the opaque PSK will be used in. */
-#if defined(MBEDTLS_SHA384_C)
+#if defined(MBEDTLS_SHA512_C)
             if( ciphersuite_info->mac == MBEDTLS_MD_SHA384 )
                 alg = PSA_ALG_TLS12_PSK_TO_MS(PSA_ALG_SHA_384);
             else
-#endif /* MBEDTLS_SHA384_C */
+#endif /* MBEDTLS_SHA512_C */
                 alg = PSA_ALG_TLS12_PSK_TO_MS(PSA_ALG_SHA_256);
         }
 #endif /* MBEDTLS_USE_PSA_CRYPTO */
@@ -2083,6 +2083,13 @@ int main( int argc, char *argv[] )
     else
         mbedtls_printf( "    [ Record expansion is unknown ]\n" );
 
+#if defined(MBEDTLS_SSL_MAX_FRAGMENT_LENGTH)
+    mbedtls_printf( "    [ Maximum input fragment length is %u ]\n",
+                    (unsigned int) mbedtls_ssl_get_input_max_frag_len( &ssl ) );
+    mbedtls_printf( "    [ Maximum output fragment length is %u ]\n",
+                    (unsigned int) mbedtls_ssl_get_output_max_frag_len( &ssl ) );
+#endif
+
 #if defined(MBEDTLS_SSL_ALPN)
     if( opt.alpn_string != NULL )
     {
@@ -2217,6 +2224,8 @@ int main( int argc, char *argv[] )
 
         if( opt.reco_mode == 1 )
         {
+            mbedtls_ssl_session exported_session;
+
             /* free any previously saved data */
             if( session_data != NULL )
             {
@@ -2225,27 +2234,40 @@ int main( int argc, char *argv[] )
                 session_data = NULL;
             }
 
+            mbedtls_ssl_session_init( &exported_session );
+            ret = mbedtls_ssl_get_session( &ssl, &exported_session );
+            if( ret != 0 )
+            {
+                mbedtls_printf(
+                    "failed\n  ! mbedtls_ssl_get_session() returned -%#02x\n",
+                    (unsigned) -ret );
+                goto exit;
+            }
+
             /* get size of the buffer needed */
-            mbedtls_ssl_session_save( mbedtls_ssl_get_session_pointer( &ssl ),
-                                      NULL, 0, &session_data_len );
+            mbedtls_ssl_session_save( &exported_session, NULL, 0, &session_data_len );
             session_data = mbedtls_calloc( 1, session_data_len );
             if( session_data == NULL )
             {
                 mbedtls_printf( " failed\n  ! alloc %u bytes for session data\n",
                                 (unsigned) session_data_len );
+                mbedtls_ssl_session_free( &exported_session );
                 ret = MBEDTLS_ERR_SSL_ALLOC_FAILED;
                 goto exit;
             }
 
             /* actually save session data */
-            if( ( ret = mbedtls_ssl_session_save( mbedtls_ssl_get_session_pointer( &ssl ),
+            if( ( ret = mbedtls_ssl_session_save( &exported_session,
                                                   session_data, session_data_len,
                                                   &session_data_len ) ) != 0 )
             {
                 mbedtls_printf( " failed\n  ! mbedtls_ssl_session_saved returned -0x%04x\n\n",
                                 (unsigned int) -ret );
+                mbedtls_ssl_session_free( &exported_session );
                 goto exit;
             }
+
+            mbedtls_ssl_session_free( &exported_session );
         }
         else
         {
