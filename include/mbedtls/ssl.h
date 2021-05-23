@@ -2696,6 +2696,18 @@ int mbedtls_ssl_conf_own_cert( mbedtls_ssl_config *conf,
  * \brief          Configure a pre-shared key (PSK) and identity
  *                 to be used in PSK-based ciphersuites.
  *
+ *                 This function may be called multiple times to attempt
+ *                 to register multiple PSKs. The number of supported PSKs
+ *                 is version-specific (see below for the current limit).
+ *                 Once the limit is reached, this function fails, maintaining
+ *                 the PSKs previously configured and ignoring the excess request.
+ *                 This behavior is in contrast to Mbed TLS 2.x, where later
+ *                 invocations would overwrite the effect of earlier calls.
+ *
+ * \note           Currently, the library supports only support a single PSK,
+ *                 but this limit is not part of the API and may change in
+ *                 future minor versions.
+ *
  * \note           This is mainly useful for clients. Servers will usually
  *                 want to use \c mbedtls_ssl_conf_psk_cb() instead.
  *
@@ -2731,6 +2743,18 @@ int mbedtls_ssl_conf_psk( mbedtls_ssl_config *conf,
 /**
  * \brief          Configure an opaque pre-shared key (PSK) and identity
  *                 to be used in PSK-based ciphersuites.
+ *
+ *                 This function may be called multiple times to attempt
+ *                 to register multiple PSKs. The number of supported PSKs
+ *                 is version-specific (see below for the current limit).
+ *                 Once the limit is reached, this function fails, maintaining
+ *                 the PSKs previously configured and ignoring the excess request.
+ *                 This behavior is in contrast to Mbed TLS 2.x, where later
+ *                 invocations would overwrite the effect of earlier calls.
+ *
+ * \note           Currently, the library supports only support a single PSK,
+ *                 but this limit is not part of the API and may change in
+ *                 future minor versions.
  *
  * \note           This is mainly useful for clients. Servers will usually
  *                 want to use \c mbedtls_ssl_conf_psk_cb() instead.
