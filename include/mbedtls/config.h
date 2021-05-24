@@ -421,7 +421,13 @@
  * of mbedtls_sha1_context, so your implementation of mbedtls_sha1_process must be compatible
  * with this definition.
  *
- * \note If you use the AES_xxx_ALT macros, then it is recommended to also set
+ * \note Because of a signature change, the core AES encryption and decryption routines are
+ *       currently named mbedtls_aes_internal_encrypt and mbedtls_aes_internal_decrypt,
+ *       respectively. When setting up alternative implementations, these functions should
+ *       be overridden, but the wrapper functions mbedtls_aes_decrypt and mbedtls_aes_encrypt
+ *       must stay untouched.
+ *
+ * \note If you use the AES_xxx_ALT macros, then is is recommended to also set
  *       MBEDTLS_AES_ROM_TABLES in order to help the linker garbage-collect the AES
  *       tables.
  *
@@ -439,7 +445,9 @@
  *            alternative implementations should use the RNG only for generating
  *            the ephemeral key and nothing else. If this is not possible, then
  *            MBEDTLS_ECDSA_DETERMINISTIC should be disabled and an alternative
- *            implementation should be provided for mbedtls_ecdsa_sign_det_ext().
+ *            implementation should be provided for mbedtls_ecdsa_sign_det_ext()
+ *            (and for mbedtls_ecdsa_sign_det() too if backward compatibility is
+ *            desirable).
  *
  */
 //#define MBEDTLS_MD2_PROCESS_ALT
@@ -526,6 +534,23 @@
 //#define MBEDTLS_ECP_DOUBLE_ADD_MXZ_ALT
 //#define MBEDTLS_ECP_RANDOMIZE_MXZ_ALT
 //#define MBEDTLS_ECP_NORMALIZE_MXZ_ALT
+
+/**
+ * \def MBEDTLS_TEST_NULL_ENTROPY
+ *
+ * Enables testing and use of mbed TLS without any configured entropy sources.
+ * This permits use of the library on platforms before an entropy source has
+ * been integrated (see for example the MBEDTLS_ENTROPY_HARDWARE_ALT or the
+ * MBEDTLS_ENTROPY_NV_SEED switches).
+ *
+ * WARNING! This switch MUST be disabled in production builds, and is suitable
+ * only for development.
+ * Enabling the switch negates any security provided by the library.
+ *
+ * Requires MBEDTLS_ENTROPY_C, MBEDTLS_NO_DEFAULT_ENTROPY_SOURCES
+ *
+ */
+//#define MBEDTLS_TEST_NULL_ENTROPY
 
 /**
  * \def MBEDTLS_ENTROPY_HARDWARE_ALT
@@ -1425,6 +1450,18 @@
 //#define MBEDTLS_SHA512_SMALLER
 
 /**
+ * \def MBEDTLS_SHA512_NO_SHA384
+ *
+ * Disable the SHA-384 option of the SHA-512 module. Use this to save some
+ * code size on devices that don't use SHA-384.
+ *
+ * Requires: MBEDTLS_SHA512_C
+ *
+ * Uncomment to disable SHA-384
+ */
+//#define MBEDTLS_SHA512_NO_SHA384
+
+/**
  * \def MBEDTLS_SSL_ALL_ALERT_MESSAGES
  *
  * Enable sending of alert messages in case of encountered errors as per RFC.
@@ -1437,6 +1474,20 @@
  * Enable sending of all alert messages
  */
 #define MBEDTLS_SSL_ALL_ALERT_MESSAGES
+
+/**
+ * \def MBEDTLS_SSL_RECORD_CHECKING
+ *
+ * Enable the function mbedtls_ssl_check_record() which can be used to check
+ * the validity and authenticity of an incoming record, to verify that it has
+ * not been seen before. These checks are performed without modifying the
+ * externally visible state of the SSL context.
+ *
+ * See mbedtls_ssl_check_record() for more information.
+ *
+ * Uncomment to enable support for record checking.
+ */
+#define MBEDTLS_SSL_RECORD_CHECKING
 
 /**
  * \def MBEDTLS_SSL_DTLS_CONNECTION_ID
@@ -1530,7 +1581,9 @@
  *
  * This only affects CBC ciphersuites, and is useless if none is defined.
  *
- * Requires: MBEDTLS_SSL_PROTO_TLS1_2
+ * Requires: MBEDTLS_SSL_PROTO_TLS1    or
+ *           MBEDTLS_SSL_PROTO_TLS1_1  or
+ *           MBEDTLS_SSL_PROTO_TLS1_2
  *
  * Comment this macro to disable support for Encrypt-then-MAC
  */
@@ -1546,11 +1599,31 @@
  * renegotiation), since it actually fixes a more fundamental issue in the
  * original SSL/TLS design, and has implications beyond Triple Handshake.
  *
- * Requires: MBEDTLS_SSL_PROTO_TLS1_2
+ * Requires: MBEDTLS_SSL_PROTO_TLS1    or
+ *           MBEDTLS_SSL_PROTO_TLS1_1  or
+ *           MBEDTLS_SSL_PROTO_TLS1_2
  *
  * Comment this macro to disable support for Extended Master Secret.
  */
 #define MBEDTLS_SSL_EXTENDED_MASTER_SECRET
+
+/**
+ * \def MBEDTLS_SSL_FALLBACK_SCSV
+ *
+ * Enable support for RFC 7507: Fallback Signaling Cipher Suite Value (SCSV)
+ * for Preventing Protocol Downgrade Attacks.
+ *
+ * For servers, it is recommended to always enable this, unless you support
+ * only one version of TLS, or know for sure that none of your clients
+ * implements a fallback strategy.
+ *
+ * For clients, you only need this if you're using a fallback strategy, which
+ * is not recommended in the first place, unless you absolutely need it to
+ * interoperate with buggy (version-intolerant) servers.
+ *
+ * Comment this macro to disable support for FALLBACK_SCSV
+ */
+#define MBEDTLS_SSL_FALLBACK_SCSV
 
 /**
  * \def MBEDTLS_SSL_KEEP_PEER_CERTIFICATE
@@ -1573,6 +1646,18 @@
  * after the handshake.
  */
 #define MBEDTLS_SSL_KEEP_PEER_CERTIFICATE
+
+/**
+ * \def MBEDTLS_SSL_CBC_RECORD_SPLITTING
+ *
+ * Enable 1/n-1 record splitting for CBC mode in TLS 1.0.
+ *
+ * This is a countermeasure to the BEAST attack, which also minimizes the risk
+ * of interoperability issues compared to sending 0-length records.
+ *
+ * Comment this macro to disable 1/n-1 record splitting.
+ */
+#define MBEDTLS_SSL_CBC_RECORD_SPLITTING
 
 /**
  * \def MBEDTLS_SSL_RENEGOTIATION
@@ -1616,6 +1701,30 @@
 #define MBEDTLS_SSL_MAX_FRAGMENT_LENGTH
 
 /**
+ * \def MBEDTLS_SSL_PROTO_TLS1
+ *
+ * Enable support for TLS 1.0.
+ *
+ * Requires: MBEDTLS_MD5_C
+ *           MBEDTLS_SHA1_C
+ *
+ * Comment this macro to disable support for TLS 1.0
+ */
+#define MBEDTLS_SSL_PROTO_TLS1
+
+/**
+ * \def MBEDTLS_SSL_PROTO_TLS1_1
+ *
+ * Enable support for TLS 1.1 (and DTLS 1.0 if DTLS is enabled).
+ *
+ * Requires: MBEDTLS_MD5_C
+ *           MBEDTLS_SHA1_C
+ *
+ * Comment this macro to disable support for TLS 1.1 / DTLS 1.0
+ */
+#define MBEDTLS_SSL_PROTO_TLS1_1
+
+/**
  * \def MBEDTLS_SSL_PROTO_TLS1_2
  *
  * Enable support for TLS 1.2 (and DTLS 1.2 if DTLS is enabled).
@@ -1651,9 +1760,11 @@
  *
  * Enable support for DTLS (all available versions).
  *
- * Enable this and MBEDTLS_SSL_PROTO_TLS1_2 to enable DTLS 1.2.
+ * Enable this and MBEDTLS_SSL_PROTO_TLS1_1 to enable DTLS 1.0,
+ * and/or this and MBEDTLS_SSL_PROTO_TLS1_2 to enable DTLS 1.2.
  *
- * Requires: MBEDTLS_SSL_PROTO_TLS1_2
+ * Requires: MBEDTLS_SSL_PROTO_TLS1_1
+ *        or MBEDTLS_SSL_PROTO_TLS1_2
  *
  * Comment this macro to disable support for DTLS
  */
@@ -1704,7 +1815,7 @@
 /**
  * \def MBEDTLS_SSL_DTLS_SRTP
  *
- * Enable support for negotiation of DTLS-SRTP (RFC 5764)
+ * Enable support for negotation of DTLS-SRTP (RFC 5764)
  * through the use_srtp extension.
  *
  * \note This feature provides the minimum functionality required
@@ -2324,7 +2435,7 @@
  *      MBEDTLS_TLS_ECDHE_PSK_WITH_ARIA_128_CBC_SHA256
  *      MBEDTLS_TLS_ECDHE_PSK_WITH_ARIA_256_CBC_SHA384
  */
-#define MBEDTLS_ARIA_C
+//#define MBEDTLS_ARIA_C
 
 /**
  * \def MBEDTLS_CCM_C
@@ -2388,7 +2499,7 @@
  * Requires: MBEDTLS_AES_C or MBEDTLS_DES_C
  *
  */
-#define MBEDTLS_CMAC_C
+//#define MBEDTLS_CMAC_C
 
 /**
  * \def MBEDTLS_CTR_DRBG_C
@@ -2512,9 +2623,9 @@
  *
  * Enable the elliptic curve J-PAKE library.
  *
- * \note EC J-PAKE support is based on the Thread v1.0.0 specification.
- *       It has not been reviewed for compliance with newer standards such as
- *       Thread v1.1 or RFC 8236.
+ * \warning This is currently experimental. EC J-PAKE support is based on the
+ * Thread v1.0.0 specification; incompatible changes to the specification
+ * might still happen. For this reason, this is disabled by default.
  *
  * Module:  library/ecjpake.c
  * Caller:
@@ -2524,7 +2635,7 @@
  *
  * Requires: MBEDTLS_ECP_C, MBEDTLS_MD_C
  */
-#define MBEDTLS_ECJPAKE_C
+//#define MBEDTLS_ECJPAKE_C
 
 /**
  * \def MBEDTLS_ECP_C
@@ -2620,7 +2731,7 @@
  *
  * Requires: MBEDTLS_AES_C and MBEDTLS_CIPHER_C
  */
-#define MBEDTLS_NIST_KW_C
+//#define MBEDTLS_NIST_KW_C
 
 /**
  * \def MBEDTLS_MD_C
@@ -2678,9 +2789,10 @@
  *          library/pem.c
  *          library/ssl_tls.c
  *
- * This module is required for TLS 1.2 depending on the handshake parameters.
- * Further, it is used for checking MD5-signed certificates, and for PBKDF1
- * when decrypting PEM-encoded encrypted keys.
+ * This module is required for SSL/TLS up to version 1.1, and for TLS 1.2
+ * depending on the handshake parameters. Further, it is used for checking
+ * MD5-signed certificates, and for PBKDF1 when decrypting PEM-encoded
+ * encrypted keys.
  *
  * \warning   MD5 is considered a weak message digest and its use constitutes a
  *            security risk. If possible, we recommend avoiding dependencies on
@@ -3000,8 +3112,8 @@
  *          library/ssl_tls.c
  *          library/x509write_crt.c
  *
- * This module is required for TLS 1.2 depending on the handshake parameters,
- * and for SHA1-signed certificates.
+ * This module is required for SSL/TLS up to version 1.1, for TLS 1.2
+ * depending on the handshake parameters, and for SHA1-signed certificates.
  *
  * \warning   SHA-1 is considered a weak message digest and its use constitutes
  *            a security risk. If possible, we recommend avoiding dependencies
@@ -3011,28 +3123,9 @@
 #define MBEDTLS_SHA1_C
 
 /**
- * \def MBEDTLS_SHA224_C
- *
- * Enable the SHA-224 cryptographic hash algorithm.
- *
- * Requires: MBEDTLS_SHA256_C. The library does not currently support enabling
- *           SHA-224 without SHA-256.
- *
- * Module:  library/sha256.c
- * Caller:  library/md.c
- *          library/ssl_cookie.c
- *
- * This module adds support for SHA-224.
- */
-#define MBEDTLS_SHA224_C
-
-/**
  * \def MBEDTLS_SHA256_C
  *
- * Enable the SHA-256 cryptographic hash algorithm.
- *
- * Requires: MBEDTLS_SHA224_C. The library does not currently support enabling
- *           SHA-256 without SHA-224.
+ * Enable the SHA-224 and SHA-256 cryptographic hash algorithms.
  *
  * Module:  library/sha256.c
  * Caller:  library/entropy.c
@@ -3041,39 +3134,23 @@
  *          library/ssl_srv.c
  *          library/ssl_tls.c
  *
- * This module adds support for SHA-256.
+ * This module adds support for SHA-224 and SHA-256.
  * This module is required for the SSL/TLS 1.2 PRF function.
  */
 #define MBEDTLS_SHA256_C
 
 /**
- * \def MBEDTLS_SHA384_C
- *
- * Enable the SHA-384 cryptographic hash algorithm.
- *
- * Requires: MBEDTLS_SHA512_C
- *
- * Module:  library/sha512.c
- * Caller:  library/md.c
- *          library/ssl_cli.c
- *          library/ssl_srv.c
- *
- * Comment to disable SHA-384
- */
-#define MBEDTLS_SHA384_C
-
-/**
  * \def MBEDTLS_SHA512_C
  *
- * Enable SHA-512 cryptographic hash algorithms.
+ * Enable the SHA-384 and SHA-512 cryptographic hash algorithms.
  *
  * Module:  library/sha512.c
  * Caller:  library/entropy.c
  *          library/md.c
- *          library/ssl_tls.c
- *          library/ssl_cookie.c
+ *          library/ssl_cli.c
+ *          library/ssl_srv.c
  *
- * This module adds support for SHA-512.
+ * This module adds support for SHA-384 and SHA-512.
  */
 #define MBEDTLS_SHA512_C
 
@@ -3462,13 +3539,17 @@
 
 /* SSL options */
 
-/** \def MBEDTLS_SSL_IN_CONTENT_LEN
+/** \def MBEDTLS_SSL_MAX_CONTENT_LEN
  *
- * Maximum length (in bytes) of incoming plaintext fragments.
+ * Maximum length (in bytes) of incoming and outgoing plaintext fragments.
  *
- * This determines the size of the incoming TLS I/O buffer in such a way
- * that it is capable of holding the specified amount of plaintext data,
- * regardless of the protection mechanism used.
+ * This determines the size of both the incoming and outgoing TLS I/O buffers
+ * in such a way that both are capable of holding the specified amount of
+ * plaintext data, regardless of the protection mechanism used.
+ *
+ * To configure incoming and outgoing I/O buffers separately, use
+ * #MBEDTLS_SSL_IN_CONTENT_LEN and #MBEDTLS_SSL_OUT_CONTENT_LEN,
+ * which overwrite the value set by this option.
  *
  * \note When using a value less than the default of 16KB on the client, it is
  *       recommended to use the Maximum Fragment Length (MFL) extension to
@@ -3479,7 +3560,33 @@
  *       to only change the outgoing buffer size #MBEDTLS_SSL_OUT_CONTENT_LEN
  *       while keeping the default value of 16KB for the incoming buffer.
  *
- * Uncomment to set the maximum plaintext size of the incoming I/O buffer.
+ * Uncomment to set the maximum plaintext size of both
+ * incoming and outgoing I/O buffers.
+ */
+//#define MBEDTLS_SSL_MAX_CONTENT_LEN             16384
+
+/** \def MBEDTLS_SSL_IN_CONTENT_LEN
+ *
+ * Maximum length (in bytes) of incoming plaintext fragments.
+ *
+ * This determines the size of the incoming TLS I/O buffer in such a way
+ * that it is capable of holding the specified amount of plaintext data,
+ * regardless of the protection mechanism used.
+ *
+ * If this option is undefined, it inherits its value from
+ * #MBEDTLS_SSL_MAX_CONTENT_LEN.
+ *
+ * \note When using a value less than the default of 16KB on the client, it is
+ *       recommended to use the Maximum Fragment Length (MFL) extension to
+ *       inform the server about this limitation. On the server, there
+ *       is no supported, standardized way of informing the client about
+ *       restriction on the maximum size of incoming messages, and unless
+ *       the limitation has been communicated by other means, it is recommended
+ *       to only change the outgoing buffer size #MBEDTLS_SSL_OUT_CONTENT_LEN
+ *       while keeping the default value of 16KB for the incoming buffer.
+ *
+ * Uncomment to set the maximum plaintext size of the incoming I/O buffer
+ * independently of the outgoing I/O buffer.
  */
 //#define MBEDTLS_SSL_IN_CONTENT_LEN              16384
 
@@ -3538,6 +3645,9 @@
  * that it is capable of holding the specified amount of plaintext data,
  * regardless of the protection mechanism used.
  *
+ * If this option undefined, it inherits its value from
+ * #MBEDTLS_SSL_MAX_CONTENT_LEN.
+ *
  * It is possible to save RAM by setting a smaller outward buffer, while keeping
  * the default inward 16384 byte buffer to conform to the TLS specification.
  *
@@ -3546,7 +3656,8 @@
  * The specific size requirement depends on the configured ciphers and any
  * certificate data which is sent during the handshake.
  *
- * Uncomment to set the maximum plaintext size of the outgoing I/O buffer.
+ * Uncomment to set the maximum plaintext size of the outgoing I/O buffer
+ * independently of the incoming I/O buffer.
  */
 //#define MBEDTLS_SSL_OUT_CONTENT_LEN             16384
 
