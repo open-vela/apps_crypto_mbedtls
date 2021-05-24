@@ -3788,9 +3788,6 @@ int mbedtls_ssl_set_session( mbedtls_ssl_context *ssl, const mbedtls_ssl_session
         return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
     }
 
-    if( ssl->handshake->resume == 1 )
-        return( MBEDTLS_ERR_SSL_FEATURE_UNAVAILABLE );
-
     if( ( ret = mbedtls_ssl_session_copy( ssl->session_negotiate,
                                           session ) ) != 0 )
         return( ret );
@@ -4183,6 +4180,24 @@ void mbedtls_ssl_conf_psk_cb( mbedtls_ssl_config *conf,
 #endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
 
 #if defined(MBEDTLS_DHM_C) && defined(MBEDTLS_SSL_SRV_C)
+
+#if !defined(MBEDTLS_DEPRECATED_REMOVED)
+int mbedtls_ssl_conf_dh_param( mbedtls_ssl_config *conf, const char *dhm_P, const char *dhm_G )
+{
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+
+    if( ( ret = mbedtls_mpi_read_string( &conf->dhm_P, 16, dhm_P ) ) != 0 ||
+        ( ret = mbedtls_mpi_read_string( &conf->dhm_G, 16, dhm_G ) ) != 0 )
+    {
+        mbedtls_mpi_free( &conf->dhm_P );
+        mbedtls_mpi_free( &conf->dhm_G );
+        return( ret );
+    }
+
+    return( 0 );
+}
+#endif /* MBEDTLS_DEPRECATED_REMOVED */
+
 int mbedtls_ssl_conf_dh_param_bin( mbedtls_ssl_config *conf,
                                    const unsigned char *dhm_P, size_t P_len,
                                    const unsigned char *dhm_G, size_t G_len )
@@ -4707,6 +4722,13 @@ size_t mbedtls_ssl_get_output_max_frag_len( const mbedtls_ssl_context *ssl )
 
     return( max_len );
 }
+
+#if !defined(MBEDTLS_DEPRECATED_REMOVED)
+size_t mbedtls_ssl_get_max_frag_len( const mbedtls_ssl_context *ssl )
+{
+    return mbedtls_ssl_get_output_max_frag_len( ssl );
+}
+#endif /* !MBEDTLS_DEPRECATED_REMOVED */
 #endif /* MBEDTLS_SSL_MAX_FRAGMENT_LENGTH */
 
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
@@ -4792,8 +4814,6 @@ const mbedtls_x509_crt *mbedtls_ssl_get_peer_cert( const mbedtls_ssl_context *ss
 int mbedtls_ssl_get_session( const mbedtls_ssl_context *ssl,
                              mbedtls_ssl_session *dst )
 {
-    int ret;
-
     if( ssl == NULL ||
         dst == NULL ||
         ssl->session == NULL ||
@@ -4802,29 +4822,17 @@ int mbedtls_ssl_get_session( const mbedtls_ssl_context *ssl,
         return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
     }
 
-    /* Since Mbed TLS 3.0, mbedtls_ssl_get_session() is no longer
-     * idempotent: Each session can only be exported once.
-     *
-     * (This is in preparation for TLS 1.3 support where we will
-     * need the ability to export multiple sessions (aka tickets),
-     * which will be achieved by calling mbedtls_ssl_get_session()
-     * multiple times until it fails.)
-     *
-     * Check whether we have already exported the current session,
-     * and fail if so.
-     */
-    if( ssl->session->exported == 1 )
-        return( MBEDTLS_ERR_SSL_FEATURE_UNAVAILABLE );
-
-    ret = mbedtls_ssl_session_copy( dst, ssl->session );
-    if( ret != 0 )
-        return( ret );
-
-    /* Remember that we've exported the session. */
-    ssl->session->exported = 1;
-    return( 0 );
+    return( mbedtls_ssl_session_copy( dst, ssl->session ) );
 }
 #endif /* MBEDTLS_SSL_CLI_C */
+
+const mbedtls_ssl_session *mbedtls_ssl_get_session_pointer( const mbedtls_ssl_context *ssl )
+{
+    if( ssl == NULL )
+        return( NULL );
+
+    return( ssl->session );
+}
 
 /*
  * Define ticket header determining Mbed TLS version

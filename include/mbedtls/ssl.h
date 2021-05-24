@@ -897,8 +897,6 @@ struct mbedtls_ssl_session
     unsigned char id[32];       /*!< session identifier */
     unsigned char master[48];   /*!< the master secret  */
 
-    unsigned char exported;
-
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
 #if defined(MBEDTLS_SSL_KEEP_PEER_CERTIFICATE)
     mbedtls_x509_crt *peer_cert;       /*!< peer X.509 cert chain */
@@ -2375,49 +2373,18 @@ void mbedtls_ssl_conf_session_cache( mbedtls_ssl_config *conf,
 
 #if defined(MBEDTLS_SSL_CLI_C)
 /**
- * \brief          Load a session for session resumption.
+ * \brief          Request resumption of session (client-side only)
+ *                 Session data is copied from presented session structure.
  *
- *                 Sessions loaded through this call will be considered
- *                 for session resumption in the next handshake.
+ * \param ssl      SSL context
+ * \param session  session context
  *
- * \note           Even if this call succeeds, it is not guaranteed that
- *                 the next handshake will indeed be shortened through the
- *                 use of session resumption: The server is always free
- *                 to reject any attempt for resumption and fall back to
- *                 a full handshake.
- *
- * \note           The mechanism of session resumption is opaque to this
- *                 call: For TLS 1.2, both session ID-based resumption and
- *                 ticket-based resumption will be considered. For TLS 1.3,
- *                 once implemented, sessions equate to tickets, and loading
- *                 one or more sessions via this call will lead to their
- *                 corresponding tickets being advertised as resumption PSKs
- *                 by the client.
- *
- * \note           Calling this function multiple times will only be useful
- *                 once TLS 1.3 is supported. For TLS 1.2 connections, this
- *                 function should be called at most once.
- *
- * \param ssl      The SSL context representing the connection which should
- *                 be attempted to be setup using session resumption. This
- *                 must be initialized via mbedtls_ssl_init() and bound to
- *                 an SSL configuration via mbedtls_ssl_setup(), but
- *                 the handshake must not yet have been started.
- * \param session  The session to be considered for session resumption.
- *                 This must be a session previously exported via
- *                 mbedtls_ssl_get_session(), and potentially serialized and
- *                 deserialized through mbedtls_ssl_session_save() and
- *                 mbedtls_ssl_session_load() in the meantime.
- *
- * \return         \c 0 if successful.
- * \return         \c MBEDTLS_ERR_SSL_FEATURE_UNAVAILABLE if the session
- *                 could not be loaded because of an implementation limitation.
- *                 This error is non-fatal, and has no observable effect on
- *                 the SSL context or the session that was attempted to be loaded.
- * \return         Another negative error code on other kinds of failure.
+ * \return         0 if successful,
+ *                 MBEDTLS_ERR_SSL_ALLOC_FAILED if memory allocation failed,
+ *                 MBEDTLS_ERR_SSL_BAD_INPUT_DATA if used server-side or
+ *                 arguments are otherwise invalid
  *
  * \sa             mbedtls_ssl_get_session()
- * \sa             mbedtls_ssl_session_load()
  */
 int mbedtls_ssl_set_session( mbedtls_ssl_context *ssl, const mbedtls_ssl_session *session );
 #endif /* MBEDTLS_SSL_CLI_C */
@@ -2466,6 +2433,7 @@ int mbedtls_ssl_session_load( mbedtls_ssl_session *session,
  *                 of session cache or session tickets.
  *
  * \see            mbedtls_ssl_session_load()
+ * \see            mbedtls_ssl_get_session_pointer()
  *
  * \param session  The session structure to be saved.
  * \param buf      The buffer to write the serialized data to. It must be a
@@ -2487,6 +2455,23 @@ int mbedtls_ssl_session_save( const mbedtls_ssl_session *session,
                               unsigned char *buf,
                               size_t buf_len,
                               size_t *olen );
+
+/**
+ * \brief          Get a pointer to the current session structure, for example
+ *                 to serialize it.
+ *
+ * \warning        Ownership of the session remains with the SSL context, and
+ *                 the returned pointer is only guaranteed to be valid until
+ *                 the next API call operating on the same \p ssl context.
+ *
+ * \see            mbedtls_ssl_session_save()
+ *
+ * \param ssl      The SSL context.
+ *
+ * \return         A pointer to the current session if successful.
+ * \return         \c NULL if no session is active.
+ */
+const mbedtls_ssl_session *mbedtls_ssl_get_session_pointer( const mbedtls_ssl_context *ssl );
 
 /**
  * \brief               Set the list of allowed ciphersuites and the preference
@@ -2511,7 +2496,7 @@ void mbedtls_ssl_conf_ciphersuites( mbedtls_ssl_config *conf,
  *
  * \param conf          The SSL configuration.
  * \param prot_version  Protocol version. One of MBEDTLS_SSL_MINOR_VERSION_x macros.
- * \return              Ciphersuites pointer if successful.
+ * \return              Ciphersuites pointer if succesful.
  * \return              \c NULL if no ciphersuites where found.
  */
 const int *mbedtls_ssl_get_protocol_version_ciphersuites(
@@ -2874,6 +2859,34 @@ void mbedtls_ssl_conf_psk_cb( mbedtls_ssl_config *conf,
 #endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
 
 #if defined(MBEDTLS_DHM_C) && defined(MBEDTLS_SSL_SRV_C)
+
+#if !defined(MBEDTLS_DEPRECATED_REMOVED)
+
+#if defined(MBEDTLS_DEPRECATED_WARNING)
+#define MBEDTLS_DEPRECATED    __attribute__((deprecated))
+#else
+#define MBEDTLS_DEPRECATED
+#endif
+
+/**
+ * \brief          Set the Diffie-Hellman public P and G values,
+ *                 read as hexadecimal strings (server-side only)
+ *                 (Default values: MBEDTLS_DHM_RFC3526_MODP_2048_[PG])
+ *
+ * \param conf     SSL configuration
+ * \param dhm_P    Diffie-Hellman-Merkle modulus
+ * \param dhm_G    Diffie-Hellman-Merkle generator
+ *
+ * \deprecated     Superseded by \c mbedtls_ssl_conf_dh_param_bin.
+ *
+ * \return         0 if successful
+ */
+MBEDTLS_DEPRECATED int mbedtls_ssl_conf_dh_param( mbedtls_ssl_config *conf,
+                                                  const char *dhm_P,
+                                                  const char *dhm_G );
+
+#endif /* MBEDTLS_DEPRECATED_REMOVED */
+
 /**
  * \brief          Set the Diffie-Hellman public P and G values
  *                 from big-endian binary presentations.
@@ -3646,6 +3659,32 @@ size_t mbedtls_ssl_get_output_max_frag_len( const mbedtls_ssl_context *ssl );
  * \return         Current maximum fragment length for the output buffer.
  */
 size_t mbedtls_ssl_get_input_max_frag_len( const mbedtls_ssl_context *ssl );
+
+#if !defined(MBEDTLS_DEPRECATED_REMOVED)
+
+#if defined(MBEDTLS_DEPRECATED_WARNING)
+#define MBEDTLS_DEPRECATED    __attribute__((deprecated))
+#else
+#define MBEDTLS_DEPRECATED
+#endif
+
+/**
+ * \brief          This function is a deprecated approach to getting the max
+ *                 fragment length. Its an alias for
+ *                 \c mbedtls_ssl_get_output_max_frag_len(), as the behaviour
+ *                 is the same. See \c mbedtls_ssl_get_output_max_frag_len() for
+ *                 more detail.
+ *
+ * \sa             mbedtls_ssl_get_input_max_frag_len()
+ * \sa             mbedtls_ssl_get_output_max_frag_len()
+ *
+ * \param ssl      SSL context
+ *
+ * \return         Current maximum fragment length for the output buffer.
+ */
+MBEDTLS_DEPRECATED size_t mbedtls_ssl_get_max_frag_len(
+                                        const mbedtls_ssl_context *ssl );
+#endif /* MBEDTLS_DEPRECATED_REMOVED */
 #endif /* MBEDTLS_SSL_MAX_FRAGMENT_LENGTH */
 
 /**
@@ -3710,41 +3749,32 @@ const mbedtls_x509_crt *mbedtls_ssl_get_peer_cert( const mbedtls_ssl_context *ss
 
 #if defined(MBEDTLS_SSL_CLI_C)
 /**
- * \brief          Export a session in order to resume it later.
+ * \brief          Save session in order to resume it later (client-side only)
+ *                 Session data is copied to presented session structure.
  *
- * \param ssl      The SSL context representing the connection for which to
- *                 to export a session structure for later resumption.
- * \param session  The target structure in which to store the exported session.
- *                 This must have been initialized with mbedtls_ssl_init_session()
- *                 but otherwise be unused.
  *
- * \note           The mechanism of session resumption is opaque to this
- *                 call: For TLS 1.2, both session ID-based resumption and
- *                 ticket-based resumption will be considered. For TLS 1.3,
- *                 once implemented, sessions equate to tickets, and calling
- *                 this function multiple times will export the available
- *                 tickets one a time until no further tickets are available,
- *                 in which case MBEDTLS_ERR_SSL_FEATURE_UNAVAILABLE will
- *                 be returned.
+ * \param ssl      SSL context
+ * \param session  session context
  *
- * \note           Calling this function multiple times will only be useful
- *                 once TLS 1.3 is supported. For TLS 1.2 connections, this
- *                 function should be called at most once.
+ * \return         0 if successful,
+ *                 MBEDTLS_ERR_SSL_ALLOC_FAILED if memory allocation failed,
+ *                 MBEDTLS_ERR_SSL_BAD_INPUT_DATA if used server-side or
+ *                 arguments are otherwise invalid.
  *
- * \return         \c 0 if successful. In this case, \p session can be used for
- *                 session resumption by passing it to mbedtls_ssl_set_session(),
- *                 and serialized for storage via mbedtls_ssl_session_save().
- * \return         #MBEDTLS_ERR_SSL_FEATURE_UNAVAILABLE if no further session
- *                 is available for export.
- *                 This error is a non-fatal, and has no observable effect on
- *                 the SSL context or the destination session.
- * \return         Another negative error code on other kinds of failure.
+ * \note           Only the server certificate is copied, and not the full chain,
+ *                 so you should not attempt to validate the certificate again
+ *                 by calling \c mbedtls_x509_crt_verify() on it.
+ *                 Instead, you should use the results from the verification
+ *                 in the original handshake by calling \c mbedtls_ssl_get_verify_result()
+ *                 after loading the session again into a new SSL context
+ *                 using \c mbedtls_ssl_set_session().
+ *
+ * \note           Once the session object is not needed anymore, you should
+ *                 free it by calling \c mbedtls_ssl_session_free().
  *
  * \sa             mbedtls_ssl_set_session()
- * \sa             mbedtls_ssl_session_save()
  */
-int mbedtls_ssl_get_session( const mbedtls_ssl_context *ssl,
-                             mbedtls_ssl_session *session );
+int mbedtls_ssl_get_session( const mbedtls_ssl_context *ssl, mbedtls_ssl_session *session );
 #endif /* MBEDTLS_SSL_CLI_C */
 
 /**
@@ -4212,7 +4242,7 @@ void mbedtls_ssl_session_free( mbedtls_ssl_session *session );
 /**
  * \brief          TLS-PRF function for key derivation.
  *
- * \param prf      The tls_prf type function type to be used.
+ * \param prf      The tls_prf type funtion type to be used.
  * \param secret   Secret for the key derivation function.
  * \param slen     Length of the secret.
  * \param label    String label for the key derivation function,
@@ -4222,7 +4252,7 @@ void mbedtls_ssl_session_free( mbedtls_ssl_session *session );
  * \param dstbuf   The buffer holding the derived key.
  * \param dlen     Length of the output buffer.
  *
- * \return         0 on success. An SSL specific error on failure.
+ * \return         0 on sucess. An SSL specific error on failure.
  */
 int  mbedtls_ssl_tls_prf( const mbedtls_tls_prf_types prf,
                           const unsigned char *secret, size_t slen,
