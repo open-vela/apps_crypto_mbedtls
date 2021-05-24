@@ -415,15 +415,6 @@ int mbedtls_cipher_set_iv( mbedtls_cipher_context_t *ctx,
     }
 #endif
 
-#if defined(MBEDTLS_GCM_C)
-    if( MBEDTLS_MODE_GCM == ctx->cipher_info->mode )
-    {
-        return( mbedtls_gcm_starts( (mbedtls_gcm_context *) ctx->cipher_ctx,
-                                    ctx->operation,
-                                    iv, iv_len ) );
-    }
-#endif
-
     if ( actual_iv_size != 0 )
     {
         memcpy( ctx->iv, iv, actual_iv_size );
@@ -475,8 +466,8 @@ int mbedtls_cipher_update_ad( mbedtls_cipher_context_t *ctx,
 #if defined(MBEDTLS_GCM_C)
     if( MBEDTLS_MODE_GCM == ctx->cipher_info->mode )
     {
-        return( mbedtls_gcm_update_ad( (mbedtls_gcm_context *) ctx->cipher_ctx,
-                                       ad, ad_len ) );
+        return( mbedtls_gcm_starts( (mbedtls_gcm_context *) ctx->cipher_ctx, ctx->operation,
+                                    ctx->iv, ctx->iv_size, ad, ad_len ) );
     }
 #endif
 
@@ -554,9 +545,9 @@ int mbedtls_cipher_update( mbedtls_cipher_context_t *ctx, const unsigned char *i
 #if defined(MBEDTLS_GCM_C)
     if( ctx->cipher_info->mode == MBEDTLS_MODE_GCM )
     {
-        return( mbedtls_gcm_update( (mbedtls_gcm_context *) ctx->cipher_ctx,
-                                    input, ilen,
-                                    output, ilen, olen ) );
+        *olen = ilen;
+        return( mbedtls_gcm_update( (mbedtls_gcm_context *) ctx->cipher_ctx, ilen, input,
+                                    output ) );
     }
 #endif
 
@@ -1110,7 +1101,6 @@ int mbedtls_cipher_write_tag( mbedtls_cipher_context_t *ctx,
 #if defined(MBEDTLS_GCM_C)
     if( MBEDTLS_MODE_GCM == ctx->cipher_info->mode )
         return( mbedtls_gcm_finish( (mbedtls_gcm_context *) ctx->cipher_ctx,
-                                    NULL, 0,
                                     tag, tag_len ) );
 #endif
 
@@ -1163,7 +1153,6 @@ int mbedtls_cipher_check_tag( mbedtls_cipher_context_t *ctx,
 
         if( 0 != ( ret = mbedtls_gcm_finish(
                        (mbedtls_gcm_context *) ctx->cipher_ctx,
-                       NULL, 0,
                        check_tag, tag_len ) ) )
         {
             return( ret );
@@ -1299,8 +1288,8 @@ int mbedtls_cipher_crypt( mbedtls_cipher_context_t *ctx,
 
 #if defined(MBEDTLS_CIPHER_MODE_AEAD)
 /*
- * Packet-oriented encryption for AEAD modes: internal function used by
- * mbedtls_cipher_auth_encrypt_ext().
+ * Packet-oriented encryption for AEAD modes: internal function shared by
+ * mbedtls_cipher_auth_encrypt() and mbedtls_cipher_auth_encrypt_ext().
  */
 static int mbedtls_cipher_aead_encrypt( mbedtls_cipher_context_t *ctx,
                          const unsigned char *iv, size_t iv_len,
@@ -1379,8 +1368,8 @@ static int mbedtls_cipher_aead_encrypt( mbedtls_cipher_context_t *ctx,
 }
 
 /*
- * Packet-oriented encryption for AEAD modes: internal function used by
- * mbedtls_cipher_auth_encrypt_ext().
+ * Packet-oriented encryption for AEAD modes: internal function shared by
+ * mbedtls_cipher_auth_encrypt() and mbedtls_cipher_auth_encrypt_ext().
  */
 static int mbedtls_cipher_aead_decrypt( mbedtls_cipher_context_t *ctx,
                          const unsigned char *iv, size_t iv_len,
@@ -1479,6 +1468,54 @@ static int mbedtls_cipher_aead_decrypt( mbedtls_cipher_context_t *ctx,
 
     return( MBEDTLS_ERR_CIPHER_FEATURE_UNAVAILABLE );
 }
+
+#if !defined(MBEDTLS_DEPRECATED_REMOVED)
+/*
+ * Packet-oriented encryption for AEAD modes: public legacy function.
+ */
+int mbedtls_cipher_auth_encrypt( mbedtls_cipher_context_t *ctx,
+                         const unsigned char *iv, size_t iv_len,
+                         const unsigned char *ad, size_t ad_len,
+                         const unsigned char *input, size_t ilen,
+                         unsigned char *output, size_t *olen,
+                         unsigned char *tag, size_t tag_len )
+{
+    CIPHER_VALIDATE_RET( ctx != NULL );
+    CIPHER_VALIDATE_RET( iv_len == 0 || iv != NULL );
+    CIPHER_VALIDATE_RET( ad_len == 0 || ad != NULL );
+    CIPHER_VALIDATE_RET( ilen == 0 || input != NULL );
+    CIPHER_VALIDATE_RET( ilen == 0 || output != NULL );
+    CIPHER_VALIDATE_RET( olen != NULL );
+    CIPHER_VALIDATE_RET( tag_len == 0 || tag != NULL );
+
+    return( mbedtls_cipher_aead_encrypt( ctx, iv, iv_len, ad, ad_len,
+                                         input, ilen, output, olen,
+                                         tag, tag_len ) );
+}
+
+/*
+ * Packet-oriented decryption for AEAD modes: public legacy function.
+ */
+int mbedtls_cipher_auth_decrypt( mbedtls_cipher_context_t *ctx,
+                         const unsigned char *iv, size_t iv_len,
+                         const unsigned char *ad, size_t ad_len,
+                         const unsigned char *input, size_t ilen,
+                         unsigned char *output, size_t *olen,
+                         const unsigned char *tag, size_t tag_len )
+{
+    CIPHER_VALIDATE_RET( ctx != NULL );
+    CIPHER_VALIDATE_RET( iv_len == 0 || iv != NULL );
+    CIPHER_VALIDATE_RET( ad_len == 0 || ad != NULL );
+    CIPHER_VALIDATE_RET( ilen == 0 || input != NULL );
+    CIPHER_VALIDATE_RET( ilen == 0 || output != NULL );
+    CIPHER_VALIDATE_RET( olen != NULL );
+    CIPHER_VALIDATE_RET( tag_len == 0 || tag != NULL );
+
+    return( mbedtls_cipher_aead_decrypt( ctx, iv, iv_len, ad, ad_len,
+                                         input, ilen, output, olen,
+                                         tag, tag_len ) );
+}
+#endif /* !MBEDTLS_DEPRECATED_REMOVED */
 #endif /* MBEDTLS_CIPHER_MODE_AEAD */
 
 #if defined(MBEDTLS_CIPHER_MODE_AEAD) || defined(MBEDTLS_NIST_KW_C)
