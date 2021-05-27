@@ -17,6 +17,8 @@
  *  limitations under the License.
  */
 
+#define MBEDTLS_ALLOW_PRIVATE_ACCESS
+
 #include "ssl_test_lib.h"
 
 #if defined(MBEDTLS_SSL_TEST_IMPOSSIBLE)
@@ -363,8 +365,12 @@ int main( void )
 #define USAGE_ANTI_REPLAY ""
 #endif
 
+#if defined(MBEDTLS_SSL_DTLS_BADMAC_LIMIT)
 #define USAGE_BADMAC_LIMIT \
     "    badmac_limit=%%d     default: (library default: disabled)\n"
+#else
+#define USAGE_BADMAC_LIMIT ""
+#endif
 
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
 #define USAGE_DTLS \
@@ -799,7 +805,7 @@ int sni_callback( void *p_info, mbedtls_ssl_context *ssl,
             return( mbedtls_ssl_set_hs_own_cert( ssl, cur->cert, cur->key ) );
         }
 
-        cur = cur->next;
+        cur = cur->MBEDTLS_PRIVATE(next);
     }
 
     return( -1 );
@@ -915,7 +921,7 @@ int psk_callback( void *p_info, mbedtls_ssl_context *ssl,
             return( mbedtls_ssl_set_hs_psk( ssl, cur->key, cur->key_len ) );
         }
 
-        cur = cur->next;
+        cur = cur->MBEDTLS_PRIVATE(next);
     }
 
     return( -1 );
@@ -2707,8 +2713,10 @@ int main( int argc, char *argv[] )
             mbedtls_ssl_conf_dtls_anti_replay( &conf, opt.anti_replay );
 #endif
 
+#if defined(MBEDTLS_SSL_DTLS_BADMAC_LIMIT)
         if( opt.badmac_limit != DFL_BADMAC_LIMIT )
             mbedtls_ssl_conf_dtls_badmac_limit( &conf, opt.badmac_limit );
+#endif
     }
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
 
