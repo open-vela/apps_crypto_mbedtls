@@ -146,7 +146,7 @@ int main( int argc, char *argv[] )
         goto exit;
     }
 
-    if( ( ret = mbedtls_rsa_pkcs1_sign( &rsa, NULL, NULL, MBEDTLS_MD_SHA256,
+    if( ( ret = mbedtls_rsa_pkcs1_sign( &rsa, NULL, NULL, MBEDTLS_RSA_PRIVATE, MBEDTLS_MD_SHA256,
                                 20, hash, buf ) ) != 0 )
     {
         mbedtls_printf( " failed\n  ! mbedtls_rsa_pkcs1_sign returned -0x%0x\n\n", (unsigned int) -ret );
@@ -164,7 +164,7 @@ int main( int argc, char *argv[] )
         goto exit;
     }
 
-    for( i = 0; i < rsa.len; i++ )
+    for( i = 0; i < rsa.MBEDTLS_PRIVATE(len); i++ )
         mbedtls_fprintf( f, "%02X%s", buf[i],
                  ( i + 1 ) % 16 == 0 ? "\r\n" : " " );
 
