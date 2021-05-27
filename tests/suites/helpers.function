@@ -2,6 +2,8 @@
 /*----------------------------------------------------------------------------*/
 /* Headers */
 
+#define MBEDTLS_ALLOW_PRIVATE_ACCESS
+
 #include <test/macros.h>
 #include <test/helpers.h>
 #include <test/random.h>
@@ -9,6 +11,9 @@
 
 #include <stdlib.h>
 
+#if defined (MBEDTLS_ERROR_C)
+#include "mbedtls/error.h"
+#endif
 #if defined(MBEDTLS_PLATFORM_C)
 #include "mbedtls/platform.h"
 #else
