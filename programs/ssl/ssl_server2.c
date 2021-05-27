@@ -17,6 +17,8 @@
  *  limitations under the License.
  */
 
+#define MBEDTLS_ALLOW_PRIVATE_ACCESS
+
 #include "ssl_test_lib.h"
 
 #if defined(MBEDTLS_SSL_TEST_IMPOSSIBLE)
@@ -803,7 +805,7 @@ int sni_callback( void *p_info, mbedtls_ssl_context *ssl,
             return( mbedtls_ssl_set_hs_own_cert( ssl, cur->cert, cur->key ) );
         }
 
-        cur = cur->next;
+        cur = cur->MBEDTLS_PRIVATE(next);
     }
 
     return( -1 );
@@ -919,7 +921,7 @@ int psk_callback( void *p_info, mbedtls_ssl_context *ssl,
             return( mbedtls_ssl_set_hs_psk( ssl, cur->key, cur->key_len ) );
         }
 
-        cur = cur->next;
+        cur = cur->MBEDTLS_PRIVATE(next);
     }
 
     return( -1 );
