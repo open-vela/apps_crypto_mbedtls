@@ -828,6 +828,15 @@ component_test_psa_crypto_client () {
     make test
 }
 
+component_test_psa_crypto_rsa_no_genprime() {
+    msg "build: default config minus MBEDTLS_GENPRIME"
+    scripts/config.py unset MBEDTLS_GENPRIME
+    make
+
+    msg "test: default config minus MBEDTLS_GENPRIME"
+    make test
+}
+
 component_test_ref_configs () {
     msg "test/build: ref-configs (ASan build)" # ~ 6 min 20s
     CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
@@ -1076,26 +1085,8 @@ component_test_ecp_restartable_no_internal_rng () {
     # no SSL tests as they all depend on having a DRBG
 }
 
-component_test_new_ecdh_context () {
-    msg "build: new ECDH context (ASan build)" # ~ 6 min
-    scripts/config.py unset MBEDTLS_ECDH_LEGACY_CONTEXT
-    CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
-    make
-
-    msg "test: new ECDH context - main suites (inc. selftests) (ASan build)" # ~ 50s
-    make test
-
-    msg "test: new ECDH context - ECDH-related part of ssl-opt.sh (ASan build)" # ~ 5s
-    if_build_succeeded tests/ssl-opt.sh -f ECDH
-
-    msg "test: new ECDH context - compat.sh with some ECDH ciphersuites (ASan build)" # ~ 3 min
-    # Exclude some symmetric ciphers that are redundant here to gain time.
-    if_build_succeeded tests/compat.sh -f ECDH -V NO -e 'ARCFOUR\|ARIA\|CAMELLIA\|CHACHA\|DES\|RC4'
-}
-
 component_test_everest () {
     msg "build: Everest ECDH context (ASan build)" # ~ 6 min
-    scripts/config.py unset MBEDTLS_ECDH_LEGACY_CONTEXT
     scripts/config.py set MBEDTLS_ECDH_VARIANT_EVEREST_ENABLED
     CC=clang cmake -D CMAKE_BUILD_TYPE:String=Asan .
     make
@@ -1113,7 +1104,6 @@ component_test_everest () {
 
 component_test_everest_curve25519_only () {
     msg "build: Everest ECDH context, only Curve25519" # ~ 6 min
-    scripts/config.py unset MBEDTLS_ECDH_LEGACY_CONTEXT
     scripts/config.py set MBEDTLS_ECDH_VARIANT_EVEREST_ENABLED
     scripts/config.py unset MBEDTLS_ECDSA_C
     scripts/config.py unset MBEDTLS_KEY_EXCHANGE_ECDH_ECDSA_ENABLED
@@ -1864,38 +1854,6 @@ component_build_psa_accel_key_type_rsa_public_key() {
     make CC=gcc CFLAGS="$ASAN_CFLAGS -DPSA_CRYPTO_DRIVER_TEST -DMBEDTLS_PSA_ACCEL_KEY_TYPE_RSA_PUBLIC_KEY -I../tests/include -O2" LDFLAGS="$ASAN_CFLAGS"
 }
 
-component_test_check_params_functionality () {
-    msg "build+test: MBEDTLS_CHECK_PARAMS functionality"
-    scripts/config.py full # includes CHECK_PARAMS
-    # Make MBEDTLS_PARAM_FAILED call mbedtls_param_failed().
-    scripts/config.py unset MBEDTLS_CHECK_PARAMS_ASSERT
-    make CC=gcc CFLAGS='-Werror -O1' all test
-}
-
-component_test_check_params_without_platform () {
-    msg "build+test: MBEDTLS_CHECK_PARAMS without MBEDTLS_PLATFORM_C"
-    scripts/config.py full # includes CHECK_PARAMS
-    # Keep MBEDTLS_PARAM_FAILED as assert.
-    scripts/config.py unset MBEDTLS_PLATFORM_EXIT_ALT
-    scripts/config.py unset MBEDTLS_PLATFORM_TIME_ALT
-    scripts/config.py unset MBEDTLS_PLATFORM_FPRINTF_ALT
-    scripts/config.py unset MBEDTLS_PLATFORM_MEMORY
-    scripts/config.py unset MBEDTLS_PLATFORM_NV_SEED_ALT
-    scripts/config.py unset MBEDTLS_PLATFORM_PRINTF_ALT
-    scripts/config.py unset MBEDTLS_PLATFORM_SNPRINTF_ALT
-    scripts/config.py unset MBEDTLS_ENTROPY_NV_SEED
-    scripts/config.py unset MBEDTLS_PLATFORM_C
-    make CC=gcc CFLAGS='-Werror -O1' all test
-}
-
-component_test_check_params_silent () {
-    msg "build+test: MBEDTLS_CHECK_PARAMS with alternative MBEDTLS_PARAM_FAILED()"
-    scripts/config.py full # includes CHECK_PARAMS
-    # Set MBEDTLS_PARAM_FAILED to nothing.
-    sed -i 's/.*\(#define MBEDTLS_PARAM_FAILED( cond )\).*/\1/' "$CONFIG_H"
-    make CC=gcc CFLAGS='-Werror -O1' all test
-}
-
 component_test_no_platform () {
     # Full configuration build, without platform support, file IO and net sockets.
     # This should catch missing mbedtls_printf definitions, and by disabling file
@@ -2337,7 +2295,6 @@ support_test_m32_o1 () {
 
 component_test_m32_everest () {
     msg "build: i386, Everest ECDH context (ASan build)" # ~ 6 min
-    scripts/config.py unset MBEDTLS_ECDH_LEGACY_CONTEXT
     scripts/config.py set MBEDTLS_ECDH_VARIANT_EVEREST_ENABLED
     make CC=gcc CFLAGS="$ASAN_CFLAGS -m32 -O2" LDFLAGS="-m32 $ASAN_CFLAGS"
 
