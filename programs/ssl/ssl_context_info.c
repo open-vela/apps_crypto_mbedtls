@@ -17,8 +17,6 @@
  *  limitations under the License.
  */
 
-#define MBEDTLS_ALLOW_PRIVATE_ACCESS
-
 #if !defined(MBEDTLS_CONFIG_FILE)
 #include "mbedtls/config.h"
 #else
@@ -496,7 +494,6 @@ size_t read_next_b64_code( uint8_t **b64, size_t *max_len )
     return 0;
 }
 
-#if !defined(MBEDTLS_X509_REMOVE_INFO)
 /*
  * This function deserializes and prints to the stdout all obtained information
  * about the certificates from provided data.
@@ -551,7 +548,6 @@ void print_deserialized_ssl_cert( const uint8_t *ssl, uint32_t len )
 
    mbedtls_x509_crt_free( &crt );
 }
-#endif /* !MBEDTLS_X509_REMOVE_INFO */
 
 /*
  * This function deserializes and prints to the stdout all obtained information
@@ -684,9 +680,7 @@ void print_deserialized_ssl_session( const uint8_t *ssl, uint32_t len,
             if( cert_len > 0 )
             {
                 CHECK_SSL_END( cert_len );
-#if !defined(MBEDTLS_X509_REMOVE_INFO)
                 print_deserialized_ssl_cert( ssl, cert_len );
-#endif
                 ssl += cert_len;
             }
         }
@@ -874,6 +868,7 @@ void print_deserialized_ssl_context( const uint8_t *ssl, size_t len )
     print_if_bit( "MBEDTLS_SSL_SESSION_TICKETS and client", SESSION_CONFIG_CLIENT_TICKET_BIT, session_cfg_flag );
 
     print_if_bit( "MBEDTLS_SSL_DTLS_CONNECTION_ID", CONTEXT_CONFIG_DTLS_CONNECTION_ID_BIT, context_cfg_flag );
+    print_if_bit( "MBEDTLS_SSL_DTLS_BADMAC_LIMIT", CONTEXT_CONFIG_DTLS_BADMAC_LIMIT_BIT, context_cfg_flag );
     print_if_bit( "MBEDTLS_SSL_DTLS_ANTI_REPLAY", CONTEXT_CONFIG_DTLS_ANTI_REPLAY_BIT, context_cfg_flag );
     print_if_bit( "MBEDTLS_SSL_ALPN", CONTEXT_CONFIG_ALPN_BIT, context_cfg_flag );
 

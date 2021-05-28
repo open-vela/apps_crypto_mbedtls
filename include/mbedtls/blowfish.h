@@ -21,7 +21,6 @@
  */
 #ifndef MBEDTLS_BLOWFISH_H
 #define MBEDTLS_BLOWFISH_H
-#include "mbedtls/private_access.h"
 
 #if !defined(MBEDTLS_CONFIG_FILE)
 #include "mbedtls/config.h"
@@ -41,9 +40,16 @@
 #define MBEDTLS_BLOWFISH_ROUNDS      16         /**< Rounds to use. When increasing this value, make sure to extend the initialisation vectors */
 #define MBEDTLS_BLOWFISH_BLOCKSIZE   8          /* Blowfish uses 64 bit blocks */
 
+#if !defined(MBEDTLS_DEPRECATED_REMOVED)
+#define MBEDTLS_ERR_BLOWFISH_INVALID_KEY_LENGTH   MBEDTLS_DEPRECATED_NUMERIC_CONSTANT( -0x0016 )
+#endif /* !MBEDTLS_DEPRECATED_REMOVED */
 #define MBEDTLS_ERR_BLOWFISH_BAD_INPUT_DATA -0x0016 /**< Bad input data. */
 
 #define MBEDTLS_ERR_BLOWFISH_INVALID_INPUT_LENGTH -0x0018 /**< Invalid data input length. */
+
+/* MBEDTLS_ERR_BLOWFISH_HW_ACCEL_FAILED is deprecated and should not be used.
+ */
+#define MBEDTLS_ERR_BLOWFISH_HW_ACCEL_FAILED                   -0x0017  /**< Blowfish hardware accelerator failed. */
 
 #ifdef __cplusplus
 extern "C" {
@@ -58,8 +64,8 @@ extern "C" {
  */
 typedef struct mbedtls_blowfish_context
 {
-    uint32_t MBEDTLS_PRIVATE(P)[MBEDTLS_BLOWFISH_ROUNDS + 2];    /*!<  Blowfish round keys    */
-    uint32_t MBEDTLS_PRIVATE(S)[4][256];                 /*!<  key dependent S-boxes  */
+    uint32_t P[MBEDTLS_BLOWFISH_ROUNDS + 2];    /*!<  Blowfish round keys    */
+    uint32_t S[4][256];                 /*!<  key dependent S-boxes  */
 }
 mbedtls_blowfish_context;
 

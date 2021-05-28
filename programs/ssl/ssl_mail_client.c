@@ -20,7 +20,6 @@
 /* Enable definition of gethostname() even when compiling with -std=c99. Must
  * be set before config.h, which pulls in glibc's features.h indirectly.
  * Harmless on other platforms. */
-
 #define _POSIX_C_SOURCE 200112L
 #define _XOPEN_SOURCE 600
 
@@ -209,27 +208,21 @@ static int do_handshake( mbedtls_ssl_context *ssl )
     /* In real life, we probably want to bail out when ret != 0 */
     if( ( flags = mbedtls_ssl_get_verify_result( ssl ) ) != 0 )
     {
-#if !defined(MBEDTLS_X509_REMOVE_INFO)
         char vrfy_buf[512];
-#endif
 
         mbedtls_printf( " failed\n" );
 
-#if !defined(MBEDTLS_X509_REMOVE_INFO)
         mbedtls_x509_crt_verify_info( vrfy_buf, sizeof( vrfy_buf ), "  ! ", flags );
 
         mbedtls_printf( "%s\n", vrfy_buf );
-#endif
     }
     else
         mbedtls_printf( " ok\n" );
 
-#if !defined(MBEDTLS_X509_REMOVE_INFO)
     mbedtls_printf( "  . Peer certificate information    ...\n" );
     mbedtls_x509_crt_info( (char *) buf, sizeof( buf ) - 1, "      ",
                    mbedtls_ssl_get_peer_cert( ssl ) );
     mbedtls_printf( "%s\n", buf );
-#endif
 
     return( 0 );
 }

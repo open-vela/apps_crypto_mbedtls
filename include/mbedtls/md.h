@@ -24,7 +24,6 @@
 
 #ifndef MBEDTLS_MD_H
 #define MBEDTLS_MD_H
-#include "mbedtls/private_access.h"
 
 #include <stddef.h>
 
@@ -38,6 +37,9 @@
 #define MBEDTLS_ERR_MD_BAD_INPUT_DATA                     -0x5100  /**< Bad input parameters to function. */
 #define MBEDTLS_ERR_MD_ALLOC_FAILED                       -0x5180  /**< Failed to allocate memory. */
 #define MBEDTLS_ERR_MD_FILE_IO_ERROR                      -0x5200  /**< Opening or reading of file failed. */
+
+/* MBEDTLS_ERR_MD_HW_ACCEL_FAILED is deprecated and should not be used. */
+#define MBEDTLS_ERR_MD_HW_ACCEL_FAILED                    -0x5280  /**< MD hardware accelerator failed. */
 
 #ifdef __cplusplus
 extern "C" {
@@ -94,13 +96,13 @@ typedef struct mbedtls_md_info_t mbedtls_md_info_t;
 typedef struct mbedtls_md_context_t
 {
     /** Information about the associated message digest. */
-    const mbedtls_md_info_t *MBEDTLS_PRIVATE(md_info);
+    const mbedtls_md_info_t *md_info;
 
     /** The digest-specific context. */
-    void *MBEDTLS_PRIVATE(md_ctx);
+    void *md_ctx;
 
     /** The HMAC part of the context. */
-    void *MBEDTLS_PRIVATE(hmac_ctx);
+    void *hmac_ctx;
 } mbedtls_md_context_t;
 
 /**
@@ -163,6 +165,33 @@ void mbedtls_md_init( mbedtls_md_context_t *ctx );
  */
 void mbedtls_md_free( mbedtls_md_context_t *ctx );
 
+#if ! defined(MBEDTLS_DEPRECATED_REMOVED)
+#if defined(MBEDTLS_DEPRECATED_WARNING)
+#define MBEDTLS_DEPRECATED    __attribute__((deprecated))
+#else
+#define MBEDTLS_DEPRECATED
+#endif
+/**
+ * \brief           This function selects the message digest algorithm to use,
+ *                  and allocates internal structures.
+ *
+ *                  It should be called after mbedtls_md_init() or mbedtls_md_free().
+ *                  Makes it necessary to call mbedtls_md_free() later.
+ *
+ * \deprecated      Superseded by mbedtls_md_setup() in 2.0.0
+ *
+ * \param ctx       The context to set up.
+ * \param md_info   The information structure of the message-digest algorithm
+ *                  to use.
+ *
+ * \return          \c 0 on success.
+ * \return          #MBEDTLS_ERR_MD_BAD_INPUT_DATA on parameter-verification
+ *                  failure.
+ * \return          #MBEDTLS_ERR_MD_ALLOC_FAILED on memory-allocation failure.
+ */
+int mbedtls_md_init_ctx( mbedtls_md_context_t *ctx, const mbedtls_md_info_t *md_info ) MBEDTLS_DEPRECATED;
+#undef MBEDTLS_DEPRECATED
+#endif /* MBEDTLS_DEPRECATED_REMOVED */
 
 /**
  * \brief           This function selects the message digest algorithm to use,
