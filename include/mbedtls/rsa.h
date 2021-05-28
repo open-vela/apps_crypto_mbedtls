@@ -54,9 +54,18 @@
 #define MBEDTLS_ERR_RSA_OUTPUT_TOO_LARGE                  -0x4400  /**< The output buffer for decryption is not large enough. */
 #define MBEDTLS_ERR_RSA_RNG_FAILED                        -0x4480  /**< The random generator failed to generate non-zeros. */
 
+/* MBEDTLS_ERR_RSA_UNSUPPORTED_OPERATION is deprecated and should not be used.
+ */
+#define MBEDTLS_ERR_RSA_UNSUPPORTED_OPERATION             -0x4500  /**< The implementation does not offer the requested operation, for example, because of security violations or lack of functionality. */
+
+/* MBEDTLS_ERR_RSA_HW_ACCEL_FAILED is deprecated and should not be used. */
+#define MBEDTLS_ERR_RSA_HW_ACCEL_FAILED                   -0x4580  /**< RSA hardware accelerator failed. */
+
 /*
  * RSA constants
  */
+#define MBEDTLS_RSA_PUBLIC      0 /**< Request private key operation. */
+#define MBEDTLS_RSA_PRIVATE     1 /**< Request public key operation. */
 
 #define MBEDTLS_RSA_PKCS_V15    0 /**< Use PKCS#1 v1.5 encoding. */
 #define MBEDTLS_RSA_PKCS_V21    1 /**< Use PKCS#1 v2.1 encoding. */
@@ -421,7 +430,7 @@ size_t mbedtls_rsa_get_len( const mbedtls_rsa_context *ctx );
  *
  * \param ctx      The initialized RSA context used to hold the key.
  * \param f_rng    The RNG function to be used for key generation.
- *                 This is mandatory and must not be \c NULL.
+ *                 This must not be \c NULL.
  * \param p_rng    The RNG context to be passed to \p f_rng.
  *                 This may be \c NULL if \p f_rng doesn't need a context.
  * \param nbits    The size of the public key in bits.
@@ -542,9 +551,11 @@ int mbedtls_rsa_public( mbedtls_rsa_context *ctx,
  *                 of a PRNG.
  *
  * \param ctx      The initialized RSA context to use.
- * \param f_rng    The RNG function, used for blinding. It is mandatory.
+ * \param f_rng    The RNG function, used for blinding. It is discouraged
+ *                 and deprecated to pass \c NULL here, in which case
+ *                 blinding will be omitted.
  * \param p_rng    The RNG context to pass to \p f_rng. This may be \c NULL
- *                 if \p f_rng doesn't need a context.
+ *                 if \p f_rng is \c NULL or if \p f_rng doesn't need a context.
  * \param input    The input buffer. This must be a readable buffer
  *                 of length \c ctx->len Bytes. For example, \c 256 Bytes
  *                 for an 2048-bit RSA modulus.
@@ -567,13 +578,29 @@ int mbedtls_rsa_private( mbedtls_rsa_context *ctx,
  *                 operation.
  *
  *                 It is the generic wrapper for performing a PKCS#1 encryption
- *                 operation.
+ *                 operation using the \p mode from the context.
+ *
+ * \deprecated     It is deprecated and discouraged to call this function
+ *                 in #MBEDTLS_RSA_PRIVATE mode. Future versions of the library
+ *                 are likely to remove the \p mode argument and have it
+ *                 implicitly set to #MBEDTLS_RSA_PUBLIC.
+ *
+ * \note           Alternative implementations of RSA need not support
+ *                 mode being set to #MBEDTLS_RSA_PRIVATE and might instead
+ *                 return #MBEDTLS_ERR_PLATFORM_FEATURE_UNSUPPORTED.
  *
  * \param ctx      The initialized RSA context to use.
- * \param f_rng    The RNG to use. It is used for padding generation
- *                 and it is mandatory.
+ * \param f_rng    The RNG to use. It is mandatory for PKCS#1 v2.1 padding
+ *                 encoding, and for PKCS#1 v1.5 padding encoding when used
+ *                 with \p mode set to #MBEDTLS_RSA_PUBLIC. For PKCS#1 v1.5
+ *                 padding encoding and \p mode set to #MBEDTLS_RSA_PRIVATE,
+ *                 it is used for blinding and should be provided in this
+ *                 case; see mbedtls_rsa_private() for more.
  * \param p_rng    The RNG context to be passed to \p f_rng. May be
- *                 \c NULL if \p f_rng doesn't need a context argument.
+ *                 \c NULL if \p f_rng is \c NULL or if \p f_rng doesn't
+ *                 need a context argument.
+ * \param mode     The mode of operation. This must be either
+ *                 #MBEDTLS_RSA_PUBLIC or #MBEDTLS_RSA_PRIVATE (deprecated).
  * \param ilen     The length of the plaintext in Bytes.
  * \param input    The input data to encrypt. This must be a readable
  *                 buffer of size \p ilen Bytes. It may be \c NULL if
@@ -588,7 +615,7 @@ int mbedtls_rsa_private( mbedtls_rsa_context *ctx,
 int mbedtls_rsa_pkcs1_encrypt( mbedtls_rsa_context *ctx,
                        int (*f_rng)(void *, unsigned char *, size_t),
                        void *p_rng,
-                       size_t ilen,
+                       int mode, size_t ilen,
                        const unsigned char *input,
                        unsigned char *output );
 
@@ -596,11 +623,25 @@ int mbedtls_rsa_pkcs1_encrypt( mbedtls_rsa_context *ctx,
  * \brief          This function performs a PKCS#1 v1.5 encryption operation
  *                 (RSAES-PKCS1-v1_5-ENCRYPT).
  *
+ * \deprecated     It is deprecated and discouraged to call this function
+ *                 in #MBEDTLS_RSA_PRIVATE mode. Future versions of the library
+ *                 are likely to remove the \p mode argument and have it
+ *                 implicitly set to #MBEDTLS_RSA_PUBLIC.
+ *
+ * \note           Alternative implementations of RSA need not support
+ *                 mode being set to #MBEDTLS_RSA_PRIVATE and might instead
+ *                 return #MBEDTLS_ERR_PLATFORM_FEATURE_UNSUPPORTED.
+ *
  * \param ctx      The initialized RSA context to use.
- * \param f_rng    The RNG function to use. It is mandatory and used for
- *                 padding generation.
+ * \param f_rng    The RNG function to use. It is needed for padding generation
+ *                 if \p mode is #MBEDTLS_RSA_PUBLIC. If \p mode is
+ *                 #MBEDTLS_RSA_PRIVATE (discouraged), it is used for
+ *                 blinding and should be provided; see mbedtls_rsa_private().
  * \param p_rng    The RNG context to be passed to \p f_rng. This may
- *                 be \c NULL if \p f_rng doesn't need a context argument.
+ *                 be \c NULL if \p f_rng is \c NULL or if \p f_rng
+ *                 doesn't need a context argument.
+ * \param mode     The mode of operation. This must be either
+ *                 #MBEDTLS_RSA_PUBLIC or #MBEDTLS_RSA_PRIVATE (deprecated).
  * \param ilen     The length of the plaintext in Bytes.
  * \param input    The input data to encrypt. This must be a readable
  *                 buffer of size \p ilen Bytes. It may be \c NULL if
@@ -615,7 +656,7 @@ int mbedtls_rsa_pkcs1_encrypt( mbedtls_rsa_context *ctx,
 int mbedtls_rsa_rsaes_pkcs1_v15_encrypt( mbedtls_rsa_context *ctx,
                                  int (*f_rng)(void *, unsigned char *, size_t),
                                  void *p_rng,
-                                 size_t ilen,
+                                 int mode, size_t ilen,
                                  const unsigned char *input,
                                  unsigned char *output );
 
@@ -626,11 +667,22 @@ int mbedtls_rsa_rsaes_pkcs1_v15_encrypt( mbedtls_rsa_context *ctx,
  * \note             The output buffer must be as large as the size
  *                   of ctx->N. For example, 128 Bytes if RSA-1024 is used.
  *
+ * \deprecated       It is deprecated and discouraged to call this function
+ *                   in #MBEDTLS_RSA_PRIVATE mode. Future versions of the library
+ *                   are likely to remove the \p mode argument and have it
+ *                   implicitly set to #MBEDTLS_RSA_PUBLIC.
+ *
+ * \note             Alternative implementations of RSA need not support
+ *                   mode being set to #MBEDTLS_RSA_PRIVATE and might instead
+ *                   return #MBEDTLS_ERR_PLATFORM_FEATURE_UNSUPPORTED.
+ *
  * \param ctx        The initnialized RSA context to use.
  * \param f_rng      The RNG function to use. This is needed for padding
- *                   generation and is mandatory.
+ *                   generation and must be provided.
  * \param p_rng      The RNG context to be passed to \p f_rng. This may
  *                   be \c NULL if \p f_rng doesn't need a context argument.
+ * \param mode       The mode of operation. This must be either
+ *                   #MBEDTLS_RSA_PUBLIC or #MBEDTLS_RSA_PRIVATE (deprecated).
  * \param label      The buffer holding the custom label to use.
  *                   This must be a readable buffer of length \p label_len
  *                   Bytes. It may be \c NULL if \p label_len is \c 0.
@@ -649,6 +701,7 @@ int mbedtls_rsa_rsaes_pkcs1_v15_encrypt( mbedtls_rsa_context *ctx,
 int mbedtls_rsa_rsaes_oaep_encrypt( mbedtls_rsa_context *ctx,
                             int (*f_rng)(void *, unsigned char *, size_t),
                             void *p_rng,
+                            int mode,
                             const unsigned char *label, size_t label_len,
                             size_t ilen,
                             const unsigned char *input,
@@ -659,7 +712,7 @@ int mbedtls_rsa_rsaes_oaep_encrypt( mbedtls_rsa_context *ctx,
  *                 message padding.
  *
  *                 It is the generic wrapper for performing a PKCS#1 decryption
- *                 operation.
+ *                 operation using the \p mode from the context.
  *
  * \note           The output buffer length \c output_max_len should be
  *                 as large as the size \p ctx->len of \p ctx->N (for example,
@@ -668,11 +721,24 @@ int mbedtls_rsa_rsaes_oaep_encrypt( mbedtls_rsa_context *ctx,
  *                 hold the decryption of the particular ciphertext provided,
  *                 the function returns \c MBEDTLS_ERR_RSA_OUTPUT_TOO_LARGE.
  *
+ * \deprecated     It is deprecated and discouraged to call this function
+ *                 in #MBEDTLS_RSA_PUBLIC mode. Future versions of the library
+ *                 are likely to remove the \p mode argument and have it
+ *                 implicitly set to #MBEDTLS_RSA_PRIVATE.
+ *
+ * \note           Alternative implementations of RSA need not support
+ *                 mode being set to #MBEDTLS_RSA_PUBLIC and might instead
+ *                 return #MBEDTLS_ERR_PLATFORM_FEATURE_UNSUPPORTED.
+ *
  * \param ctx      The initialized RSA context to use.
- * \param f_rng    The RNG function. This is used for blinding and is
- *                 mandatory; see mbedtls_rsa_private() for more.
+ * \param f_rng    The RNG function. If \p mode is #MBEDTLS_RSA_PRIVATE,
+ *                 this is used for blinding and should be provided; see
+ *                 mbedtls_rsa_private() for more. If \p mode is
+ *                 #MBEDTLS_RSA_PUBLIC, it is ignored.
  * \param p_rng    The RNG context to be passed to \p f_rng. This may be
- *                 \c NULL if \p f_rng doesn't need a context.
+ *                 \c NULL if \p f_rng is \c NULL or doesn't need a context.
+ * \param mode     The mode of operation. This must be either
+ *                 #MBEDTLS_RSA_PRIVATE or #MBEDTLS_RSA_PUBLIC (deprecated).
  * \param olen     The address at which to store the length of
  *                 the plaintext. This must not be \c NULL.
  * \param input    The ciphertext buffer. This must be a readable buffer
@@ -688,7 +754,7 @@ int mbedtls_rsa_rsaes_oaep_encrypt( mbedtls_rsa_context *ctx,
 int mbedtls_rsa_pkcs1_decrypt( mbedtls_rsa_context *ctx,
                        int (*f_rng)(void *, unsigned char *, size_t),
                        void *p_rng,
-                       size_t *olen,
+                       int mode, size_t *olen,
                        const unsigned char *input,
                        unsigned char *output,
                        size_t output_max_len );
@@ -704,11 +770,24 @@ int mbedtls_rsa_pkcs1_decrypt( mbedtls_rsa_context *ctx,
  *                 hold the decryption of the particular ciphertext provided,
  *                 the function returns #MBEDTLS_ERR_RSA_OUTPUT_TOO_LARGE.
  *
+ * \deprecated     It is deprecated and discouraged to call this function
+ *                 in #MBEDTLS_RSA_PUBLIC mode. Future versions of the library
+ *                 are likely to remove the \p mode argument and have it
+ *                 implicitly set to #MBEDTLS_RSA_PRIVATE.
+ *
+ * \note           Alternative implementations of RSA need not support
+ *                 mode being set to #MBEDTLS_RSA_PUBLIC and might instead
+ *                 return #MBEDTLS_ERR_PLATFORM_FEATURE_UNSUPPORTED.
+ *
  * \param ctx      The initialized RSA context to use.
- * \param f_rng    The RNG function. This is used for blinding and is
- *                 mandatory; see mbedtls_rsa_private() for more.
+ * \param f_rng    The RNG function. If \p mode is #MBEDTLS_RSA_PRIVATE,
+ *                 this is used for blinding and should be provided; see
+ *                 mbedtls_rsa_private() for more. If \p mode is
+ *                 #MBEDTLS_RSA_PUBLIC, it is ignored.
  * \param p_rng    The RNG context to be passed to \p f_rng. This may be
- *                 \c NULL if \p f_rng doesn't need a context.
+ *                 \c NULL if \p f_rng is \c NULL or doesn't need a context.
+ * \param mode     The mode of operation. This must be either
+ *                 #MBEDTLS_RSA_PRIVATE or #MBEDTLS_RSA_PUBLIC (deprecated).
  * \param olen     The address at which to store the length of
  *                 the plaintext. This must not be \c NULL.
  * \param input    The ciphertext buffer. This must be a readable buffer
@@ -725,7 +804,7 @@ int mbedtls_rsa_pkcs1_decrypt( mbedtls_rsa_context *ctx,
 int mbedtls_rsa_rsaes_pkcs1_v15_decrypt( mbedtls_rsa_context *ctx,
                                  int (*f_rng)(void *, unsigned char *, size_t),
                                  void *p_rng,
-                                 size_t *olen,
+                                 int mode, size_t *olen,
                                  const unsigned char *input,
                                  unsigned char *output,
                                  size_t output_max_len );
@@ -742,11 +821,24 @@ int mbedtls_rsa_rsaes_pkcs1_v15_decrypt( mbedtls_rsa_context *ctx,
  *                   ciphertext provided, the function returns
  *                   #MBEDTLS_ERR_RSA_OUTPUT_TOO_LARGE.
  *
+ * \deprecated       It is deprecated and discouraged to call this function
+ *                   in #MBEDTLS_RSA_PUBLIC mode. Future versions of the library
+ *                   are likely to remove the \p mode argument and have it
+ *                   implicitly set to #MBEDTLS_RSA_PRIVATE.
+ *
+ * \note             Alternative implementations of RSA need not support
+ *                   mode being set to #MBEDTLS_RSA_PUBLIC and might instead
+ *                   return #MBEDTLS_ERR_PLATFORM_FEATURE_UNSUPPORTED.
+ *
  * \param ctx        The initialized RSA context to use.
- * \param f_rng      The RNG function. This is used for blinding and is
- *                   mandatory.
+ * \param f_rng      The RNG function. If \p mode is #MBEDTLS_RSA_PRIVATE,
+ *                   this is used for blinding and should be provided; see
+ *                   mbedtls_rsa_private() for more. If \p mode is
+ *                   #MBEDTLS_RSA_PUBLIC, it is ignored.
  * \param p_rng      The RNG context to be passed to \p f_rng. This may be
- *                   \c NULL if \p f_rng doesn't need a context.
+ *                   \c NULL if \p f_rng is \c NULL or doesn't need a context.
+ * \param mode       The mode of operation. This must be either
+ *                   #MBEDTLS_RSA_PRIVATE or #MBEDTLS_RSA_PUBLIC (deprecated).
  * \param label      The buffer holding the custom label to use.
  *                   This must be a readable buffer of length \p label_len
  *                   Bytes. It may be \c NULL if \p label_len is \c 0.
@@ -766,6 +858,7 @@ int mbedtls_rsa_rsaes_pkcs1_v15_decrypt( mbedtls_rsa_context *ctx,
 int mbedtls_rsa_rsaes_oaep_decrypt( mbedtls_rsa_context *ctx,
                             int (*f_rng)(void *, unsigned char *, size_t),
                             void *p_rng,
+                            int mode,
                             const unsigned char *label, size_t label_len,
                             size_t *olen,
                             const unsigned char *input,
@@ -777,7 +870,7 @@ int mbedtls_rsa_rsaes_oaep_decrypt( mbedtls_rsa_context *ctx,
  *                 a message digest using PKCS#1.
  *
  *                 It is the generic wrapper for performing a PKCS#1
- *                 signature.
+ *                 signature using the \p mode from the context.
  *
  * \note           The \p sig buffer must be as large as the size
  *                 of \p ctx->N. For example, 128 Bytes if RSA-1024 is used.
@@ -786,11 +879,25 @@ int mbedtls_rsa_rsaes_oaep_decrypt( mbedtls_rsa_context *ctx,
  *                 mbedtls_rsa_rsassa_pss_sign() for details on
  *                 \p md_alg and \p hash_id.
  *
+ * \deprecated     It is deprecated and discouraged to call this function
+ *                 in #MBEDTLS_RSA_PUBLIC mode. Future versions of the library
+ *                 are likely to remove the \p mode argument and have it
+ *                 implicitly set to #MBEDTLS_RSA_PRIVATE.
+ *
+ * \note           Alternative implementations of RSA need not support
+ *                 mode being set to #MBEDTLS_RSA_PUBLIC and might instead
+ *                 return #MBEDTLS_ERR_PLATFORM_FEATURE_UNSUPPORTED.
+ *
  * \param ctx      The initialized RSA context to use.
- * \param f_rng    The RNG function to use. This is mandatory and
- *                 must not be \c NULL.
+ * \param f_rng    The RNG function to use. If the padding mode is PKCS#1 v2.1,
+ *                 this must be provided. If the padding mode is PKCS#1 v1.5 and
+ *                 \p mode is #MBEDTLS_RSA_PRIVATE, it is used for blinding
+ *                 and should be provided; see mbedtls_rsa_private() for more
+ *                 more. It is ignored otherwise.
  * \param p_rng    The RNG context to be passed to \p f_rng. This may be \c NULL
- *                 if \p f_rng doesn't need a context argument.
+ *                 if \p f_rng is \c NULL or doesn't need a context argument.
+ * \param mode     The mode of operation. This must be either
+ *                 #MBEDTLS_RSA_PRIVATE or #MBEDTLS_RSA_PUBLIC (deprecated).
  * \param md_alg   The message-digest algorithm used to hash the original data.
  *                 Use #MBEDTLS_MD_NONE for signing raw data.
  * \param hashlen  The length of the message digest.
@@ -811,6 +918,7 @@ int mbedtls_rsa_rsaes_oaep_decrypt( mbedtls_rsa_context *ctx,
 int mbedtls_rsa_pkcs1_sign( mbedtls_rsa_context *ctx,
                     int (*f_rng)(void *, unsigned char *, size_t),
                     void *p_rng,
+                    int mode,
                     mbedtls_md_type_t md_alg,
                     unsigned int hashlen,
                     const unsigned char *hash,
@@ -820,11 +928,24 @@ int mbedtls_rsa_pkcs1_sign( mbedtls_rsa_context *ctx,
  * \brief          This function performs a PKCS#1 v1.5 signature
  *                 operation (RSASSA-PKCS1-v1_5-SIGN).
  *
+ * \deprecated     It is deprecated and discouraged to call this function
+ *                 in #MBEDTLS_RSA_PUBLIC mode. Future versions of the library
+ *                 are likely to remove the \p mode argument and have it
+ *                 implicitly set to #MBEDTLS_RSA_PRIVATE.
+ *
+ * \note           Alternative implementations of RSA need not support
+ *                 mode being set to #MBEDTLS_RSA_PUBLIC and might instead
+ *                 return #MBEDTLS_ERR_PLATFORM_FEATURE_UNSUPPORTED.
+ *
  * \param ctx      The initialized RSA context to use.
- * \param f_rng    The RNG function. This is used for blinding and is
- *                 mandatory; see mbedtls_rsa_private() for more.
+ * \param f_rng    The RNG function. If \p mode is #MBEDTLS_RSA_PRIVATE,
+ *                 this is used for blinding and should be provided; see
+ *                 mbedtls_rsa_private() for more. If \p mode is
+ *                 #MBEDTLS_RSA_PUBLIC, it is ignored.
  * \param p_rng    The RNG context to be passed to \p f_rng. This may be \c NULL
- *                 if \p f_rng doesn't need a context argument.
+ *                 if \p f_rng is \c NULL or doesn't need a context argument.
+ * \param mode     The mode of operation. This must be either
+ *                 #MBEDTLS_RSA_PRIVATE or #MBEDTLS_RSA_PUBLIC (deprecated).
  * \param md_alg   The message-digest algorithm used to hash the original data.
  *                 Use #MBEDTLS_MD_NONE for signing raw data.
  * \param hashlen  The length of the message digest.
@@ -845,6 +966,7 @@ int mbedtls_rsa_pkcs1_sign( mbedtls_rsa_context *ctx,
 int mbedtls_rsa_rsassa_pkcs1_v15_sign( mbedtls_rsa_context *ctx,
                                int (*f_rng)(void *, unsigned char *, size_t),
                                void *p_rng,
+                               int mode,
                                mbedtls_md_type_t md_alg,
                                unsigned int hashlen,
                                const unsigned char *hash,
@@ -869,7 +991,7 @@ int mbedtls_rsa_rsassa_pkcs1_v15_sign( mbedtls_rsa_context *ctx,
  *                 #MBEDTLS_ERR_RSA_BAD_INPUT_DATA.
  *
  * \param ctx      The initialized RSA context to use.
- * \param f_rng    The RNG function. It is mandatory and must not be \c NULL.
+ * \param f_rng    The RNG function. It must not be \c NULL.
  * \param p_rng    The RNG context to be passed to \p f_rng. This may be \c NULL
  *                 if \p f_rng doesn't need a context argument.
  * \param md_alg   The message-digest algorithm used to hash the original data.
@@ -924,10 +1046,21 @@ int mbedtls_rsa_rsassa_pss_sign_ext( mbedtls_rsa_context *ctx,
  *                 the key size in bytes), this function returns
  *                 #MBEDTLS_ERR_RSA_BAD_INPUT_DATA.
  *
+ * \deprecated     It is deprecated and discouraged to call this function
+ *                 in #MBEDTLS_RSA_PUBLIC mode. Future versions of the library
+ *                 are likely to remove the \p mode argument and have it
+ *                 implicitly set to #MBEDTLS_RSA_PRIVATE.
+ *
+ * \note           Alternative implementations of RSA need not support
+ *                 mode being set to #MBEDTLS_RSA_PUBLIC and might instead
+ *                 return #MBEDTLS_ERR_PLATFORM_FEATURE_UNSUPPORTED.
+ *
  * \param ctx      The initialized RSA context to use.
- * \param f_rng    The RNG function. It is mandatory and must not be \c NULL.
+ * \param f_rng    The RNG function. It must not be \c NULL.
  * \param p_rng    The RNG context to be passed to \p f_rng. This may be \c NULL
  *                 if \p f_rng doesn't need a context argument.
+ * \param mode     The mode of operation. This must be either
+ *                 #MBEDTLS_RSA_PRIVATE or #MBEDTLS_RSA_PUBLIC (deprecated).
  * \param md_alg   The message-digest algorithm used to hash the original data.
  *                 Use #MBEDTLS_MD_NONE for signing raw data.
  * \param hashlen  The length of the message digest.
@@ -948,6 +1081,7 @@ int mbedtls_rsa_rsassa_pss_sign_ext( mbedtls_rsa_context *ctx,
 int mbedtls_rsa_rsassa_pss_sign( mbedtls_rsa_context *ctx,
                          int (*f_rng)(void *, unsigned char *, size_t),
                          void *p_rng,
+                         int mode,
                          mbedtls_md_type_t md_alg,
                          unsigned int hashlen,
                          const unsigned char *hash,
@@ -958,13 +1092,29 @@ int mbedtls_rsa_rsassa_pss_sign( mbedtls_rsa_context *ctx,
  *                 the message digest.
  *
  *                 This is the generic wrapper for performing a PKCS#1
- *                 verification.
+ *                 verification using the mode from the context.
  *
  * \note           For PKCS#1 v2.1 encoding, see comments on
  *                 mbedtls_rsa_rsassa_pss_verify() about \p md_alg and
  *                 \p hash_id.
  *
+ * \deprecated     It is deprecated and discouraged to call this function
+ *                 in #MBEDTLS_RSA_PRIVATE mode. Future versions of the library
+ *                 are likely to remove the \p mode argument and have it
+ *                 set to #MBEDTLS_RSA_PUBLIC.
+ *
+ * \note           Alternative implementations of RSA need not support
+ *                 mode being set to #MBEDTLS_RSA_PRIVATE and might instead
+ *                 return #MBEDTLS_ERR_PLATFORM_FEATURE_UNSUPPORTED.
+ *
  * \param ctx      The initialized RSA public key context to use.
+ * \param f_rng    The RNG function to use. If \p mode is #MBEDTLS_RSA_PRIVATE,
+ *                 this is used for blinding and should be provided; see
+ *                 mbedtls_rsa_private() for more. Otherwise, it is ignored.
+ * \param p_rng    The RNG context to be passed to \p f_rng. This may be
+ *                 \c NULL if \p f_rng is \c NULL or doesn't need a context.
+ * \param mode     The mode of operation. This must be either
+ *                 #MBEDTLS_RSA_PUBLIC or #MBEDTLS_RSA_PRIVATE (deprecated).
  * \param md_alg   The message-digest algorithm used to hash the original data.
  *                 Use #MBEDTLS_MD_NONE for signing raw data.
  * \param hashlen  The length of the message digest.
@@ -982,6 +1132,9 @@ int mbedtls_rsa_rsassa_pss_sign( mbedtls_rsa_context *ctx,
  * \return         An \c MBEDTLS_ERR_RSA_XXX error code on failure.
  */
 int mbedtls_rsa_pkcs1_verify( mbedtls_rsa_context *ctx,
+                      int (*f_rng)(void *, unsigned char *, size_t),
+                      void *p_rng,
+                      int mode,
                       mbedtls_md_type_t md_alg,
                       unsigned int hashlen,
                       const unsigned char *hash,
@@ -991,7 +1144,23 @@ int mbedtls_rsa_pkcs1_verify( mbedtls_rsa_context *ctx,
  * \brief          This function performs a PKCS#1 v1.5 verification
  *                 operation (RSASSA-PKCS1-v1_5-VERIFY).
  *
+ * \deprecated     It is deprecated and discouraged to call this function
+ *                 in #MBEDTLS_RSA_PRIVATE mode. Future versions of the library
+ *                 are likely to remove the \p mode argument and have it
+ *                 set to #MBEDTLS_RSA_PUBLIC.
+ *
+ * \note           Alternative implementations of RSA need not support
+ *                 mode being set to #MBEDTLS_RSA_PRIVATE and might instead
+ *                 return #MBEDTLS_ERR_PLATFORM_FEATURE_UNSUPPORTED.
+ *
  * \param ctx      The initialized RSA public key context to use.
+ * \param f_rng    The RNG function to use. If \p mode is #MBEDTLS_RSA_PRIVATE,
+ *                 this is used for blinding and should be provided; see
+ *                 mbedtls_rsa_private() for more. Otherwise, it is ignored.
+ * \param p_rng    The RNG context to be passed to \p f_rng. This may be
+ *                 \c NULL if \p f_rng is \c NULL or doesn't need a context.
+ * \param mode     The mode of operation. This must be either
+ *                 #MBEDTLS_RSA_PUBLIC or #MBEDTLS_RSA_PRIVATE (deprecated).
  * \param md_alg   The message-digest algorithm used to hash the original data.
  *                 Use #MBEDTLS_MD_NONE for signing raw data.
  * \param hashlen  The length of the message digest.
@@ -1009,6 +1178,9 @@ int mbedtls_rsa_pkcs1_verify( mbedtls_rsa_context *ctx,
  * \return         An \c MBEDTLS_ERR_RSA_XXX error code on failure.
  */
 int mbedtls_rsa_rsassa_pkcs1_v15_verify( mbedtls_rsa_context *ctx,
+                                 int (*f_rng)(void *, unsigned char *, size_t),
+                                 void *p_rng,
+                                 int mode,
                                  mbedtls_md_type_t md_alg,
                                  unsigned int hashlen,
                                  const unsigned char *hash,
@@ -1029,7 +1201,23 @@ int mbedtls_rsa_rsassa_pkcs1_v15_verify( mbedtls_rsa_context *ctx,
  *                 same. If \p hash_id in the RSA context is unset,
  *                 the \p md_alg from the function call is used.
  *
+ * \deprecated     It is deprecated and discouraged to call this function
+ *                 in #MBEDTLS_RSA_PRIVATE mode. Future versions of the library
+ *                 are likely to remove the \p mode argument and have it
+ *                 implicitly set to #MBEDTLS_RSA_PUBLIC.
+ *
+ * \note           Alternative implementations of RSA need not support
+ *                 mode being set to #MBEDTLS_RSA_PRIVATE and might instead
+ *                 return #MBEDTLS_ERR_PLATFORM_FEATURE_UNSUPPORTED.
+ *
  * \param ctx      The initialized RSA public key context to use.
+ * \param f_rng    The RNG function to use. If \p mode is #MBEDTLS_RSA_PRIVATE,
+ *                 this is used for blinding and should be provided; see
+ *                 mbedtls_rsa_private() for more. Otherwise, it is ignored.
+ * \param p_rng    The RNG context to be passed to \p f_rng. This may be
+ *                 \c NULL if \p f_rng is \c NULL or doesn't need a context.
+ * \param mode     The mode of operation. This must be either
+ *                 #MBEDTLS_RSA_PUBLIC or #MBEDTLS_RSA_PRIVATE (deprecated).
  * \param md_alg   The message-digest algorithm used to hash the original data.
  *                 Use #MBEDTLS_MD_NONE for signing raw data.
  * \param hashlen  The length of the message digest.
@@ -1047,6 +1235,9 @@ int mbedtls_rsa_rsassa_pkcs1_v15_verify( mbedtls_rsa_context *ctx,
  * \return         An \c MBEDTLS_ERR_RSA_XXX error code on failure.
  */
 int mbedtls_rsa_rsassa_pss_verify( mbedtls_rsa_context *ctx,
+                           int (*f_rng)(void *, unsigned char *, size_t),
+                           void *p_rng,
+                           int mode,
                            mbedtls_md_type_t md_alg,
                            unsigned int hashlen,
                            const unsigned char *hash,
@@ -1065,6 +1256,13 @@ int mbedtls_rsa_rsassa_pss_verify( mbedtls_rsa_context *ctx,
  * \note           The \p hash_id in the RSA context is ignored.
  *
  * \param ctx      The initialized RSA public key context to use.
+ * \param f_rng    The RNG function to use. If \p mode is #MBEDTLS_RSA_PRIVATE,
+ *                 this is used for blinding and should be provided; see
+ *                 mbedtls_rsa_private() for more. Otherwise, it is ignored.
+ * \param p_rng    The RNG context to be passed to \p f_rng. This may be
+ *                 \c NULL if \p f_rng is \c NULL or doesn't need a context.
+ * \param mode     The mode of operation. This must be either
+ *                 #MBEDTLS_RSA_PUBLIC or #MBEDTLS_RSA_PRIVATE.
  * \param md_alg   The message-digest algorithm used to hash the original data.
  *                 Use #MBEDTLS_MD_NONE for signing raw data.
  * \param hashlen  The length of the message digest.
@@ -1085,6 +1283,9 @@ int mbedtls_rsa_rsassa_pss_verify( mbedtls_rsa_context *ctx,
  * \return         An \c MBEDTLS_ERR_RSA_XXX error code on failure.
  */
 int mbedtls_rsa_rsassa_pss_verify_ext( mbedtls_rsa_context *ctx,
+                               int (*f_rng)(void *, unsigned char *, size_t),
+                               void *p_rng,
+                               int mode,
                                mbedtls_md_type_t md_alg,
                                unsigned int hashlen,
                                const unsigned char *hash,

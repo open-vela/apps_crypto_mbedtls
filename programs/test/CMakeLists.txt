@@ -2,6 +2,10 @@ set(libs
     ${mbedtls_target}
 )
 
+if(USE_PKCS11_HELPER_LIBRARY)
+    set(libs ${libs} pkcs11-helper)
+endif(USE_PKCS11_HELPER_LIBRARY)
+
 set(executables_libs
     selftest
     udp_proxy
