@@ -67,6 +67,9 @@
 #define MBEDTLS_ERR_PK_FEATURE_UNAVAILABLE -0x3980  /**< Unavailable feature, e.g. RSA disabled for RSA key. */
 #define MBEDTLS_ERR_PK_SIG_LEN_MISMATCH    -0x3900  /**< The buffer contains a valid signature followed by more data. */
 
+/* MBEDTLS_ERR_PK_HW_ACCEL_FAILED is deprecated and should not be used. */
+#define MBEDTLS_ERR_PK_HW_ACCEL_FAILED     -0x3880  /**< PK hardware accelerator failed. */
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -229,12 +232,12 @@ static inline mbedtls_ecp_keypair *mbedtls_pk_ec( const mbedtls_pk_context pk )
 /**
  * \brief           Types for RSA-alt abstraction
  */
-typedef int (*mbedtls_pk_rsa_alt_decrypt_func)( void *ctx, size_t *olen,
+typedef int (*mbedtls_pk_rsa_alt_decrypt_func)( void *ctx, int mode, size_t *olen,
                     const unsigned char *input, unsigned char *output,
                     size_t output_max_len );
 typedef int (*mbedtls_pk_rsa_alt_sign_func)( void *ctx,
                     int (*f_rng)(void *, unsigned char *, size_t), void *p_rng,
-                    mbedtls_md_type_t md_alg, unsigned int hashlen,
+                    int mode, mbedtls_md_type_t md_alg, unsigned int hashlen,
                     const unsigned char *hash, unsigned char *sig );
 typedef size_t (*mbedtls_pk_rsa_alt_key_len_func)( void *ctx );
 #endif /* MBEDTLS_PK_RSA_ALT_SUPPORT */
