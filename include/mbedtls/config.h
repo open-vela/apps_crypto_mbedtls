@@ -1749,17 +1749,6 @@
 #define MBEDTLS_SSL_DTLS_CLIENT_PORT_REUSE
 
 /**
- * \def MBEDTLS_SSL_DTLS_BADMAC_LIMIT
- *
- * Enable support for a limit of records with bad MAC.
- *
- * See mbedtls_ssl_conf_dtls_badmac_limit().
- *
- * Requires: MBEDTLS_SSL_PROTO_DTLS
- */
-#define MBEDTLS_SSL_DTLS_BADMAC_LIMIT
-
-/**
  * \def MBEDTLS_SSL_SESSION_TICKETS
  *
  * Enable support for RFC 5077 session tickets in SSL.
@@ -1948,16 +1937,6 @@
  * Comment this to disable run-time checking and save ROM space
  */
 #define MBEDTLS_VERSION_FEATURES
-
-/**
- * \def MBEDTLS_X509_ALLOW_EXTENSIONS_NON_V3
- *
- * If set, the X509 parser will not break-off when parsing an X509 certificate
- * and encountering an extension in a v1 or v2 certificate.
- *
- * Uncomment to prevent an error.
- */
-//#define MBEDTLS_X509_ALLOW_EXTENSIONS_NON_V3
 
 /**
  * \def MBEDTLS_X509_ALLOW_UNSUPPORTED_CRITICAL_EXTENSION
@@ -3497,10 +3476,27 @@
  */
 //#define MBEDTLS_SSL_CID_OUT_LEN_MAX 32
 
-/** \def MBEDTLS_SSL_CID_TLS1_3_PADDING_GRANULARITY
+/** \def MBEDTLS_SSL_CID_PADDING_GRANULARITY
  *
  * This option controls the use of record plaintext padding
- * in TLS 1.3 and when using the Connection ID extension in DTLS 1.2.
+ * when using the Connection ID extension in DTLS 1.2.
+ *
+ * The padding will always be chosen so that the length of the
+ * padded plaintext is a multiple of the value of this option.
+ *
+ * Note: A value of \c 1 means that no padding will be used
+ *       for outgoing records.
+ *
+ * Note: On systems lacking division instructions,
+ *       a power of two should be preferred.
+ *
+ */
+//#define MBEDTLS_SSL_CID_PADDING_GRANULARITY 16
+
+/** \def MBEDTLS_SSL_TLS1_3_PADDING_GRANULARITY
+ *
+ * This option controls the use of record plaintext padding
+ * in TLS 1.3.
  *
  * The padding will always be chosen so that the length of the
  * padded plaintext is a multiple of the value of this option.
@@ -3511,7 +3507,7 @@
  * Note: On systems lacking division instructions,
  *       a power of two should be preferred.
  */
-//#define MBEDTLS_SSL_CID_TLS1_3_PADDING_GRANULARITY 16
+//#define MBEDTLS_SSL_TLS1_3_PADDING_GRANULARITY 1
 
 /** \def MBEDTLS_SSL_OUT_CONTENT_LEN
  *
