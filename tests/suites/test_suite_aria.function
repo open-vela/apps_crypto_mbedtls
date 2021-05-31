@@ -35,9 +35,6 @@ void aria_invalid_param( )
 
     ((void) iv_off);
     ((void) iv);
-    ((void) ctx);
-    ((void) input);
-    ((void) output);
 
     TEST_INVALID_PARAM( mbedtls_aria_init( NULL ) );
 
