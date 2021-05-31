@@ -4818,8 +4818,7 @@ psa_status_t psa_generate_key_internal(
     }
     else
 
-#if defined(MBEDTLS_PSA_BUILTIN_KEY_TYPE_RSA_KEY_PAIR) && \
-    defined(MBEDTLS_GENPRIME)
+#if defined(MBEDTLS_PSA_BUILTIN_KEY_TYPE_RSA_KEY_PAIR)
     if ( type == PSA_KEY_TYPE_RSA_KEY_PAIR )
     {
         return( mbedtls_psa_rsa_generate_key( attributes,
@@ -4828,8 +4827,7 @@ psa_status_t psa_generate_key_internal(
                                               key_buffer_length ) );
     }
     else
-#endif /* defined(MBEDTLS_PSA_BUILTIN_KEY_TYPE_RSA_KEY_PAIR)
-        * defined(MBEDTLS_GENPRIME) */
+#endif /* defined(MBEDTLS_PSA_BUILTIN_KEY_TYPE_RSA_KEY_PAIR) */
 
 #if defined(MBEDTLS_PSA_BUILTIN_KEY_TYPE_ECC_KEY_PAIR)
     if ( PSA_KEY_TYPE_IS_ECC( type ) && PSA_KEY_TYPE_IS_KEY_PAIR( type ) )
