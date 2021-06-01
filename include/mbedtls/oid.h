@@ -21,6 +21,7 @@
  */
 #ifndef MBEDTLS_OID_H
 #define MBEDTLS_OID_H
+#include "mbedtls/private_access.h"
 
 #if !defined(MBEDTLS_CONFIG_FILE)
 #include "mbedtls/config.h"
@@ -145,6 +146,7 @@
 #define MBEDTLS_OID_AT_DN_QUALIFIER             MBEDTLS_OID_AT "\x2E" /**< id-at-dnQualifier AttributeType:= {id-at 46} */
 #define MBEDTLS_OID_AT_PSEUDONYM                MBEDTLS_OID_AT "\x41" /**< id-at-pseudonym AttributeType:= {id-at 65} */
 
+#define MBEDTLS_OID_UID                         "\x09\x92\x26\x89\x93\xF2\x2C\x64\x01\x01" /** id-domainComponent AttributeType:= {itu-t(0) data(9) pss(2342) ucl(19200300) pilot(100) pilotAttributeType(1) uid(1)} */
 #define MBEDTLS_OID_DOMAIN_COMPONENT            "\x09\x92\x26\x89\x93\xF2\x2C\x64\x01\x19" /** id-domainComponent AttributeType:= {itu-t(0) data(9) pss(2342) ucl(19200300) pilot(100) pilotAttributeType(1) domainComponent(25)} */
 
 /*
@@ -439,10 +441,12 @@ extern "C" {
  */
 typedef struct mbedtls_oid_descriptor_t
 {
-    const char *asn1;               /*!< OID ASN.1 representation       */
-    size_t asn1_len;                /*!< length of asn1                 */
-    const char *name;               /*!< official name (e.g. from RFC)  */
-    const char *description;        /*!< human friendly description     */
+    const char *MBEDTLS_PRIVATE(asn1);               /*!< OID ASN.1 representation       */
+    size_t MBEDTLS_PRIVATE(asn1_len);                /*!< length of asn1                 */
+#if !defined(MBEDTLS_X509_REMOVE_INFO)
+    const char *MBEDTLS_PRIVATE(name);               /*!< official name (e.g. from RFC)  */
+    const char *MBEDTLS_PRIVATE(description);        /*!< human friendly description     */
+#endif
 } mbedtls_oid_descriptor_t;
 
 /**
@@ -582,6 +586,7 @@ int mbedtls_oid_get_md_alg( const mbedtls_asn1_buf *oid, mbedtls_md_type_t *md_a
 int mbedtls_oid_get_md_hmac( const mbedtls_asn1_buf *oid, mbedtls_md_type_t *md_hmac );
 #endif /* MBEDTLS_MD_C */
 
+#if !defined(MBEDTLS_X509_REMOVE_INFO)
 /**
  * \brief          Translate Extended Key Usage OID into description
  *
@@ -591,6 +596,7 @@ int mbedtls_oid_get_md_hmac( const mbedtls_asn1_buf *oid, mbedtls_md_type_t *md_
  * \return         0 if successful, or MBEDTLS_ERR_OID_NOT_FOUND
  */
 int mbedtls_oid_get_extended_key_usage( const mbedtls_asn1_buf *oid, const char **desc );
+#endif
 
 /**
  * \brief          Translate certificate policies OID into description

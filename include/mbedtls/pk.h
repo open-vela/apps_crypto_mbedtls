@@ -22,6 +22,7 @@
 
 #ifndef MBEDTLS_PK_H
 #define MBEDTLS_PK_H
+#include "mbedtls/private_access.h"
 
 #if !defined(MBEDTLS_CONFIG_FILE)
 #include "mbedtls/config.h"
@@ -67,9 +68,6 @@
 #define MBEDTLS_ERR_PK_FEATURE_UNAVAILABLE -0x3980  /**< Unavailable feature, e.g. RSA disabled for RSA key. */
 #define MBEDTLS_ERR_PK_SIG_LEN_MISMATCH    -0x3900  /**< The buffer contains a valid signature followed by more data. */
 
-/* MBEDTLS_ERR_PK_HW_ACCEL_FAILED is deprecated and should not be used. */
-#define MBEDTLS_ERR_PK_HW_ACCEL_FAILED     -0x3880  /**< PK hardware accelerator failed. */
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -94,8 +92,8 @@ typedef enum {
  */
 typedef struct mbedtls_pk_rsassa_pss_options
 {
-    mbedtls_md_type_t mgf1_hash_id;
-    int expected_salt_len;
+    mbedtls_md_type_t MBEDTLS_PRIVATE(mgf1_hash_id);
+    int MBEDTLS_PRIVATE(expected_salt_len);
 
 } mbedtls_pk_rsassa_pss_options;
 
@@ -118,7 +116,7 @@ typedef struct mbedtls_pk_rsassa_pss_options
 /* For RSA, the signature can be as large as the bignum module allows.
  * For RSA_ALT, the signature size is not necessarily tied to what the
  * bignum module can do, but in the absence of any specific setting,
- * we use that (rsa_alt_sign_wrap in pk_wrap will check). */
+ * we use that (rsa_alt_sign_wrap in library/pk_wrap.h will check). */
 #undef MBEDTLS_PK_SIGNATURE_MAX_SIZE
 #define MBEDTLS_PK_SIGNATURE_MAX_SIZE MBEDTLS_MPI_MAX_SIZE
 #endif
@@ -166,9 +164,9 @@ typedef enum
  */
 typedef struct mbedtls_pk_debug_item
 {
-    mbedtls_pk_debug_type type;
-    const char *name;
-    void *value;
+    mbedtls_pk_debug_type MBEDTLS_PRIVATE(type);
+    const char *MBEDTLS_PRIVATE(name);
+    void *MBEDTLS_PRIVATE(value);
 } mbedtls_pk_debug_item;
 
 /** Maximum number of item send for debugging, plus 1 */
@@ -184,8 +182,8 @@ typedef struct mbedtls_pk_info_t mbedtls_pk_info_t;
  */
 typedef struct mbedtls_pk_context
 {
-    const mbedtls_pk_info_t *   pk_info; /**< Public key information         */
-    void *                      pk_ctx;  /**< Underlying public key context  */
+    const mbedtls_pk_info_t *   MBEDTLS_PRIVATE(pk_info); /**< Public key information         */
+    void *                      MBEDTLS_PRIVATE(pk_ctx);  /**< Underlying public key context  */
 } mbedtls_pk_context;
 
 #if defined(MBEDTLS_ECDSA_C) && defined(MBEDTLS_ECP_RESTARTABLE)
@@ -194,8 +192,8 @@ typedef struct mbedtls_pk_context
  */
 typedef struct
 {
-    const mbedtls_pk_info_t *   pk_info; /**< Public key information         */
-    void *                      rs_ctx;  /**< Underlying restart context     */
+    const mbedtls_pk_info_t *   MBEDTLS_PRIVATE(pk_info); /**< Public key information         */
+    void *                      MBEDTLS_PRIVATE(rs_ctx);  /**< Underlying restart context     */
 } mbedtls_pk_restart_ctx;
 #else /* MBEDTLS_ECDSA_C && MBEDTLS_ECP_RESTARTABLE */
 /* Now we can declare functions that take a pointer to that */
@@ -211,7 +209,7 @@ typedef void mbedtls_pk_restart_ctx;
  */
 static inline mbedtls_rsa_context *mbedtls_pk_rsa( const mbedtls_pk_context pk )
 {
-    return( (mbedtls_rsa_context *) (pk).pk_ctx );
+    return( (mbedtls_rsa_context *) (pk).MBEDTLS_PRIVATE(pk_ctx) );
 }
 #endif /* MBEDTLS_RSA_C */
 
@@ -224,7 +222,7 @@ static inline mbedtls_rsa_context *mbedtls_pk_rsa( const mbedtls_pk_context pk )
  */
 static inline mbedtls_ecp_keypair *mbedtls_pk_ec( const mbedtls_pk_context pk )
 {
-    return( (mbedtls_ecp_keypair *) (pk).pk_ctx );
+    return( (mbedtls_ecp_keypair *) (pk).MBEDTLS_PRIVATE(pk_ctx) );
 }
 #endif /* MBEDTLS_ECP_C */
 
@@ -232,12 +230,12 @@ static inline mbedtls_ecp_keypair *mbedtls_pk_ec( const mbedtls_pk_context pk )
 /**
  * \brief           Types for RSA-alt abstraction
  */
-typedef int (*mbedtls_pk_rsa_alt_decrypt_func)( void *ctx, int mode, size_t *olen,
+typedef int (*mbedtls_pk_rsa_alt_decrypt_func)( void *ctx, size_t *olen,
                     const unsigned char *input, unsigned char *output,
                     size_t output_max_len );
 typedef int (*mbedtls_pk_rsa_alt_sign_func)( void *ctx,
                     int (*f_rng)(void *, unsigned char *, size_t), void *p_rng,
-                    int mode, mbedtls_md_type_t md_alg, unsigned int hashlen,
+                    mbedtls_md_type_t md_alg, unsigned int hashlen,
                     const unsigned char *hash, unsigned char *sig );
 typedef size_t (*mbedtls_pk_rsa_alt_key_len_func)( void *ctx );
 #endif /* MBEDTLS_PK_RSA_ALT_SUPPORT */
@@ -760,7 +758,7 @@ int mbedtls_pk_parse_public_keyfile( mbedtls_pk_context *ctx, const char *path )
  * \return          length of data written if successful, or a specific
  *                  error code
  */
-int mbedtls_pk_write_key_der( mbedtls_pk_context *ctx, unsigned char *buf, size_t size );
+int mbedtls_pk_write_key_der( const mbedtls_pk_context *ctx, unsigned char *buf, size_t size );
 
 /**
  * \brief           Write a public key to a SubjectPublicKeyInfo DER structure
@@ -775,7 +773,7 @@ int mbedtls_pk_write_key_der( mbedtls_pk_context *ctx, unsigned char *buf, size_
  * \return          length of data written if successful, or a specific
  *                  error code
  */
-int mbedtls_pk_write_pubkey_der( mbedtls_pk_context *ctx, unsigned char *buf, size_t size );
+int mbedtls_pk_write_pubkey_der( const mbedtls_pk_context *ctx, unsigned char *buf, size_t size );
 
 #if defined(MBEDTLS_PEM_WRITE_C)
 /**
@@ -788,7 +786,7 @@ int mbedtls_pk_write_pubkey_der( mbedtls_pk_context *ctx, unsigned char *buf, si
  *
  * \return          0 if successful, or a specific error code
  */
-int mbedtls_pk_write_pubkey_pem( mbedtls_pk_context *ctx, unsigned char *buf, size_t size );
+int mbedtls_pk_write_pubkey_pem( const mbedtls_pk_context *ctx, unsigned char *buf, size_t size );
 
 /**
  * \brief           Write a private key to a PKCS#1 or SEC1 PEM string
@@ -800,7 +798,7 @@ int mbedtls_pk_write_pubkey_pem( mbedtls_pk_context *ctx, unsigned char *buf, si
  *
  * \return          0 if successful, or a specific error code
  */
-int mbedtls_pk_write_key_pem( mbedtls_pk_context *ctx, unsigned char *buf, size_t size );
+int mbedtls_pk_write_key_pem( const mbedtls_pk_context *ctx, unsigned char *buf, size_t size );
 #endif /* MBEDTLS_PEM_WRITE_C */
 #endif /* MBEDTLS_PK_WRITE_C */
 
