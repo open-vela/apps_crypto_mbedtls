@@ -130,16 +130,6 @@
 #error "MBEDTLS_ECP_RESTARTABLE defined, but it cannot coexist with an alternative or PSA-based ECP implementation"
 #endif
 
-#if defined(MBEDTLS_ECP_RESTARTABLE)           && \
-    ! defined(MBEDTLS_ECDH_LEGACY_CONTEXT)
-#error "MBEDTLS_ECP_RESTARTABLE defined, but not MBEDTLS_ECDH_LEGACY_CONTEXT"
-#endif
-
-#if defined(MBEDTLS_ECDH_VARIANT_EVEREST_ENABLED)           && \
-    defined(MBEDTLS_ECDH_LEGACY_CONTEXT)
-#error "MBEDTLS_ECDH_VARIANT_EVEREST_ENABLED defined, but MBEDTLS_ECDH_LEGACY_CONTEXT not disabled"
-#endif
-
 #if defined(MBEDTLS_ECDSA_DETERMINISTIC) && !defined(MBEDTLS_HMAC_DRBG_C)
 #error "MBEDTLS_ECDSA_DETERMINISTIC defined, but not all prerequisites"
 #endif
@@ -698,6 +688,11 @@
     defined(MBEDTLS_SSL_CID_OUT_LEN_MAX) &&                 \
     MBEDTLS_SSL_CID_OUT_LEN_MAX > 255
 #error "MBEDTLS_SSL_CID_OUT_LEN_MAX too large (max 255)"
+#endif
+
+#if defined(MBEDTLS_SSL_DTLS_BADMAC_LIMIT) &&                              \
+    ( !defined(MBEDTLS_SSL_TLS_C) || !defined(MBEDTLS_SSL_PROTO_DTLS) )
+#error "MBEDTLS_SSL_DTLS_BADMAC_LIMIT  defined, but not all prerequisites"
 #endif
 
 #if defined(MBEDTLS_SSL_ENCRYPT_THEN_MAC) &&   \
