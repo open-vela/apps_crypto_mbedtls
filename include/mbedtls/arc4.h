@@ -25,6 +25,7 @@
  */
 #ifndef MBEDTLS_ARC4_H
 #define MBEDTLS_ARC4_H
+#include "mbedtls/private_access.h"
 
 #if !defined(MBEDTLS_CONFIG_FILE)
 #include "mbedtls/config.h"
@@ -33,9 +34,6 @@
 #endif
 
 #include <stddef.h>
-
-/* MBEDTLS_ERR_ARC4_HW_ACCEL_FAILED is deprecated and should not be used. */
-#define MBEDTLS_ERR_ARC4_HW_ACCEL_FAILED                  -0x0019  /**< ARC4 hardware accelerator failed. */
 
 #ifdef __cplusplus
 extern "C" {
@@ -54,9 +52,9 @@ extern "C" {
  */
 typedef struct mbedtls_arc4_context
 {
-    int x;                      /*!< permutation index */
-    int y;                      /*!< permutation index */
-    unsigned char m[256];       /*!< permutation table */
+    int MBEDTLS_PRIVATE(x);                      /*!< permutation index */
+    int MBEDTLS_PRIVATE(y);                      /*!< permutation index */
+    unsigned char MBEDTLS_PRIVATE(m)[256];       /*!< permutation table */
 }
 mbedtls_arc4_context;
 

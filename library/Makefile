@@ -2,7 +2,7 @@
 # Also see "include/mbedtls/config.h"
 
 CFLAGS	?= -O2
-WARNING_CFLAGS ?=  -Wall -Wextra
+WARNING_CFLAGS ?=  -Wall -Wextra -Wformat=2 -Wno-format-nonliteral
 LDFLAGS ?=
 
 # Include ../include for public headers and . for private headers.
@@ -21,6 +21,8 @@ endif
 
 # To compile on Plan9:
 # CFLAGS += -D_BSD_EXTENSION
+
+PERL ?= perl
 
 # if were running on Windows build for Windows
 ifdef WINDOWS
@@ -96,7 +98,6 @@ OBJS_CRYPTO= \
 	     entropy_poll.o \
 	     error.o \
 	     gcm.o \
-	     havege.o \
 	     hkdf.o \
 	     hmac_drbg.o \
 	     md.o \
@@ -104,6 +105,8 @@ OBJS_CRYPTO= \
 	     md4.o \
 	     md5.o \
 	     memory_buffer_alloc.o \
+	     mps_reader.o \
+	     mps_trace.o \
 	     nist_kw.o \
 	     oid.o \
 	     padlock.o \
@@ -118,9 +121,13 @@ OBJS_CRYPTO= \
 	     platform_util.o \
 	     poly1305.o \
 	     psa_crypto.o \
+	     psa_crypto_aead.o \
+	     psa_crypto_cipher.o \
 	     psa_crypto_client.o \
 	     psa_crypto_driver_wrappers.o \
 	     psa_crypto_ecp.o \
+	     psa_crypto_hash.o \
+	     psa_crypto_mac.o \
 	     psa_crypto_rsa.o \
 	     psa_crypto_se.o \
 	     psa_crypto_slot_management.o \
@@ -128,7 +135,7 @@ OBJS_CRYPTO= \
 	     psa_its_file.o \
 	     ripemd160.o \
 	     rsa.o \
-	     rsa_internal.o \
+	     rsa_alt_helpers.o \
 	     sha1.o \
 	     sha256.o \
 	     sha512.o \
@@ -144,8 +151,6 @@ LOCAL_CFLAGS+=$(THIRDPARTY_INCLUDES)
 OBJS_CRYPTO+=$(THIRDPARTY_CRYPTO_OBJECTS)
 
 OBJS_X509= \
-	   certs.o \
-	   pkcs11.o \
 	   x509.o \
 	   x509_create.o \
 	   x509_crl.o \
@@ -268,6 +273,29 @@ libmbedcrypto.dll: $(OBJS_CRYPTO)
 	echo "  CC    $<"
 	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) -o $@ -c $<
 
+.PHONY: generated_files
+GENERATED_FILES = error.c version_features.c
+generated_files: $(GENERATED_FILES)
+
+error.c: ../scripts/generate_errors.pl
+error.c: ../scripts/data_files/error.fmt
+error.c: $(filter-out %config%,$(wildcard ../include/mbedtls/*.h))
+error.c:
+	echo "  Gen   $@"
+	$(PERL) ../scripts/generate_errors.pl
+
+version_features.c: ../scripts/generate_features.pl
+version_features.c: ../scripts/data_files/version_features.fmt
+## The generated file only depends on the options that are present in config.h,
+## not on which options are set. To avoid regenerating this file all the time
+## when switching between configurations, don't declare config.h as a
+## dependency. Remove this file from your working tree if you've just added or
+## removed an option in config.h.
+#version_features.c: ../include/mbedtls/config.h
+version_features.c:
+	echo "  Gen   $@"
+	$(PERL) ../scripts/generate_features.pl
+
 clean:
 ifndef WINDOWS
 	rm -f *.o libmbed*
@@ -276,4 +304,11 @@ else
 	if exist *.o del /Q /F *.o
 	if exist libmbed* del /Q /F libmbed*
 	del /Q /F del_errors_out_if_the_file_list_is_empty_but_not_if_a_file_does_not_exist $(subst /,\,$(THIRDPARTY_CRYPTO_OBJECTS))
+endif
+
+neat: clean
+ifndef WINDOWS
+	rm -f $(GENERATED_FILES)
+else
+	for %f in ($(subst /,\,$(GENERATED_FILES))) if exist %f del /Q /F %f
 endif
