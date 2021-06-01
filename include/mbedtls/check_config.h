@@ -130,6 +130,16 @@
 #error "MBEDTLS_ECP_RESTARTABLE defined, but it cannot coexist with an alternative or PSA-based ECP implementation"
 #endif
 
+#if defined(MBEDTLS_ECP_RESTARTABLE)           && \
+    ! defined(MBEDTLS_ECDH_LEGACY_CONTEXT)
+#error "MBEDTLS_ECP_RESTARTABLE defined, but not MBEDTLS_ECDH_LEGACY_CONTEXT"
+#endif
+
+#if defined(MBEDTLS_ECDH_VARIANT_EVEREST_ENABLED)           && \
+    defined(MBEDTLS_ECDH_LEGACY_CONTEXT)
+#error "MBEDTLS_ECDH_VARIANT_EVEREST_ENABLED defined, but MBEDTLS_ECDH_LEGACY_CONTEXT not disabled"
+#endif
+
 #if defined(MBEDTLS_ECDSA_DETERMINISTIC) && !defined(MBEDTLS_HMAC_DRBG_C)
 #error "MBEDTLS_ECDSA_DETERMINISTIC defined, but not all prerequisites"
 #endif
@@ -611,16 +621,6 @@
 #error "MBEDTLS_SHA256_C defined without MBEDTLS_SHA224_C"
 #endif
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1) && ( !defined(MBEDTLS_MD5_C) ||     \
-    !defined(MBEDTLS_SHA1_C) )
-#error "MBEDTLS_SSL_PROTO_TLS1 defined, but not all prerequisites"
-#endif
-
-#if defined(MBEDTLS_SSL_PROTO_TLS1_1) && ( !defined(MBEDTLS_MD5_C) ||     \
-    !defined(MBEDTLS_SHA1_C) )
-#error "MBEDTLS_SSL_PROTO_TLS1_1 defined, but not all prerequisites"
-#endif
-
 #if defined(MBEDTLS_SSL_PROTO_TLS1_2) && ( !defined(MBEDTLS_SHA1_C) &&     \
     !defined(MBEDTLS_SHA256_C) && !defined(MBEDTLS_SHA512_C) )
 #error "MBEDTLS_SSL_PROTO_TLS1_2 defined, but not all prerequisites"
@@ -631,8 +631,7 @@
 #error "MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL defined, but not all prerequisites"
 #endif
 
-#if (defined(MBEDTLS_SSL_PROTO_TLS1) || defined(MBEDTLS_SSL_PROTO_TLS1_1) ||\
-     defined(MBEDTLS_SSL_PROTO_TLS1_2)) &&                                  \
+#if defined(MBEDTLS_SSL_PROTO_TLS1_2) &&                                    \
     !(defined(MBEDTLS_KEY_EXCHANGE_RSA_ENABLED) ||                          \
       defined(MBEDTLS_KEY_EXCHANGE_DHE_RSA_ENABLED) ||                      \
       defined(MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED) ||                    \
@@ -649,7 +648,6 @@
 #endif
 
 #if defined(MBEDTLS_SSL_PROTO_DTLS)     && \
-    !defined(MBEDTLS_SSL_PROTO_TLS1_1)  && \
     !defined(MBEDTLS_SSL_PROTO_TLS1_2)
 #error "MBEDTLS_SSL_PROTO_DTLS defined, but not all prerequisites"
 #endif
@@ -667,14 +665,8 @@
 #error "MBEDTLS_SSL_SRV_C defined, but not all prerequisites"
 #endif
 
-#if defined(MBEDTLS_SSL_TLS_C) && (!defined(MBEDTLS_SSL_PROTO_TLS1) && \
-    !defined(MBEDTLS_SSL_PROTO_TLS1_1) && !defined(MBEDTLS_SSL_PROTO_TLS1_2))
+#if defined(MBEDTLS_SSL_TLS_C) && !defined(MBEDTLS_SSL_PROTO_TLS1_2)
 #error "MBEDTLS_SSL_TLS_C defined, but no protocols are active"
-#endif
-
-#if defined(MBEDTLS_SSL_TLS_C) && (defined(MBEDTLS_SSL_PROTO_TLS1) && \
-    defined(MBEDTLS_SSL_PROTO_TLS1_2) && !defined(MBEDTLS_SSL_PROTO_TLS1_1))
-#error "Illegal protocol selection"
 #endif
 
 #if defined(MBEDTLS_SSL_DTLS_HELLO_VERIFY) && !defined(MBEDTLS_SSL_PROTO_DTLS)
@@ -708,31 +700,18 @@
 #error "MBEDTLS_SSL_CID_OUT_LEN_MAX too large (max 255)"
 #endif
 
-#if defined(MBEDTLS_SSL_DTLS_BADMAC_LIMIT) &&                              \
-    ( !defined(MBEDTLS_SSL_TLS_C) || !defined(MBEDTLS_SSL_PROTO_DTLS) )
-#error "MBEDTLS_SSL_DTLS_BADMAC_LIMIT  defined, but not all prerequisites"
-#endif
-
 #if defined(MBEDTLS_SSL_ENCRYPT_THEN_MAC) &&   \
-    !defined(MBEDTLS_SSL_PROTO_TLS1)   &&      \
-    !defined(MBEDTLS_SSL_PROTO_TLS1_1) &&      \
     !defined(MBEDTLS_SSL_PROTO_TLS1_2)
 #error "MBEDTLS_SSL_ENCRYPT_THEN_MAC defined, but not all prerequsites"
 #endif
 
 #if defined(MBEDTLS_SSL_EXTENDED_MASTER_SECRET) && \
-    !defined(MBEDTLS_SSL_PROTO_TLS1)   &&          \
-    !defined(MBEDTLS_SSL_PROTO_TLS1_1) &&          \
     !defined(MBEDTLS_SSL_PROTO_TLS1_2)
 #error "MBEDTLS_SSL_EXTENDED_MASTER_SECRET defined, but not all prerequsites"
 #endif
 
 #if defined(MBEDTLS_SSL_TICKET_C) && !defined(MBEDTLS_CIPHER_C)
 #error "MBEDTLS_SSL_TICKET_C defined, but not all prerequisites"
-#endif
-
-#if defined(MBEDTLS_SSL_CBC_RECORD_SPLITTING) && !defined(MBEDTLS_SSL_PROTO_TLS1)
-#error "MBEDTLS_SSL_CBC_RECORD_SPLITTING defined, but not all prerequisites"
 #endif
 
 #if defined(MBEDTLS_SSL_SERVER_NAME_INDICATION) && \
@@ -849,6 +828,13 @@
 #error "MBEDTLS_ZLIB_SUPPORT was removed in Mbed TLS 3.0. See https://github.com/ARMmbed/mbedtls/issues/4031"
 #endif
 
+#if defined(MBEDTLS_SSL_PROTO_TLS1) //no-check-names
+#error "MBEDTLS_SSL_PROTO_TLS1 (TLS v1.0 support) was removed in Mbed TLS 3.0. See https://github.com/ARMmbed/mbedtls/issues/4286"
+#endif
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_1) //no-check-names
+#error "MBEDTLS_SSL_PROTO_TLS1_1 (TLS v1.1 support) was removed in Mbed TLS 3.0. See https://github.com/ARMmbed/mbedtls/issues/4286"
+#endif
 
 /*
  * Avoid warning from -pedantic. This is a convenient place for this
