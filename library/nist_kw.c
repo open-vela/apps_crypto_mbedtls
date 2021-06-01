@@ -189,6 +189,8 @@ int mbedtls_nist_kw_wrap( mbedtls_nist_kw_context *ctx,
     uint64_t t = 0;
     unsigned char outbuff[KW_SEMIBLOCK_LENGTH * 2];
     unsigned char inbuff[KW_SEMIBLOCK_LENGTH * 2];
+    unsigned char *R2 = output + KW_SEMIBLOCK_LENGTH;
+    unsigned char *A = output;
 
     *out_len = 0;
     /*
@@ -264,9 +266,6 @@ int mbedtls_nist_kw_wrap( mbedtls_nist_kw_context *ctx,
     }
     else
     {
-        unsigned char *R2 = output + KW_SEMIBLOCK_LENGTH;
-        unsigned char *A = output;
-
         /*
          * Do the wrapping function W, as defined in RFC 3394 section 2.2.1
          */
@@ -330,7 +329,7 @@ static int unwrap( mbedtls_nist_kw_context *ctx,
     uint64_t t = 0;
     unsigned char outbuff[KW_SEMIBLOCK_LENGTH * 2];
     unsigned char inbuff[KW_SEMIBLOCK_LENGTH * 2];
-    unsigned char *R = NULL;
+    unsigned char *R = output + ( semiblocks - 2 ) * KW_SEMIBLOCK_LENGTH;
     *out_len = 0;
 
     if( semiblocks < MIN_SEMIBLOCKS_COUNT )
@@ -340,7 +339,6 @@ static int unwrap( mbedtls_nist_kw_context *ctx,
 
     memcpy( A, input, KW_SEMIBLOCK_LENGTH );
     memmove( output, input + KW_SEMIBLOCK_LENGTH, ( semiblocks - 1 ) * KW_SEMIBLOCK_LENGTH );
-    R = output + ( semiblocks - 2 ) * KW_SEMIBLOCK_LENGTH;
 
     /* Calculate intermediate values */
     for( t = s; t >= 1; t-- )
