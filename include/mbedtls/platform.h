@@ -30,6 +30,7 @@
  */
 #ifndef MBEDTLS_PLATFORM_H
 #define MBEDTLS_PLATFORM_H
+#include "mbedtls/private_access.h"
 
 #if !defined(MBEDTLS_CONFIG_FILE)
 #include "mbedtls/config.h"
@@ -40,9 +41,6 @@
 #if defined(MBEDTLS_HAVE_TIME)
 #include "mbedtls/platform_time.h"
 #endif
-
-#define MBEDTLS_ERR_PLATFORM_HW_ACCEL_FAILED     -0x0070 /**< Hardware accelerator failed */
-#define MBEDTLS_ERR_PLATFORM_FEATURE_UNSUPPORTED -0x0072 /**< The requested feature is not supported by the platform */
 
 #ifdef __cplusplus
 extern "C" {
@@ -370,7 +368,7 @@ int mbedtls_platform_set_nv_seed(
  */
 typedef struct mbedtls_platform_context
 {
-    char dummy; /**< A placeholder member, as empty structs are not portable. */
+    char MBEDTLS_PRIVATE(dummy); /**< A placeholder member, as empty structs are not portable. */
 }
 mbedtls_platform_context;
 
