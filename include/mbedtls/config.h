@@ -683,6 +683,26 @@
 //#define MBEDTLS_CTR_DRBG_USE_128_BIT_KEY
 
 /**
+ * \def MBEDTLS_REMOVE_3DES_CIPHERSUITES
+ *
+ * Remove 3DES ciphersuites by default in SSL / TLS.
+ * This flag removes the ciphersuites based on 3DES from the default list as
+ * returned by mbedtls_ssl_list_ciphersuites(). However, it is still possible
+ * to enable (some of) them with mbedtls_ssl_conf_ciphersuites() by including
+ * them explicitly.
+ *
+ * A man-in-the-browser attacker can recover authentication tokens sent through
+ * a TLS connection using a 3DES based cipher suite (see "On the Practical
+ * (In-)Security of 64-bit Block Ciphers" by Karthikeyan Bhargavan and Gaëtan
+ * Leurent, see https://sweet32.info/SWEET32_CCS16.pdf). If this attack falls
+ * in your threat model or you are unsure, then you should keep this option
+ * enabled to remove 3DES based cipher suites.
+ *
+ * Comment this macro to keep 3DES in the default ciphersuite list.
+ */
+#define MBEDTLS_REMOVE_3DES_CIPHERSUITES
+
+/**
  * \def MBEDTLS_ECP_DP_SECP192R1_ENABLED
  *
  * MBEDTLS_ECP_XXXX_ENABLED: Enables specific curves within the Elliptic Curve
@@ -823,6 +843,7 @@
  *      MBEDTLS_TLS_PSK_WITH_AES_128_CBC_SHA
  *      MBEDTLS_TLS_PSK_WITH_CAMELLIA_128_GCM_SHA256
  *      MBEDTLS_TLS_PSK_WITH_CAMELLIA_128_CBC_SHA256
+ *      MBEDTLS_TLS_PSK_WITH_3DES_EDE_CBC_SHA
  */
 #define MBEDTLS_KEY_EXCHANGE_PSK_ENABLED
 
@@ -845,6 +866,7 @@
  *      MBEDTLS_TLS_DHE_PSK_WITH_AES_128_CBC_SHA
  *      MBEDTLS_TLS_DHE_PSK_WITH_CAMELLIA_128_GCM_SHA256
  *      MBEDTLS_TLS_DHE_PSK_WITH_CAMELLIA_128_CBC_SHA256
+ *      MBEDTLS_TLS_DHE_PSK_WITH_3DES_EDE_CBC_SHA
  *
  * \warning    Using DHE constitutes a security risk as it
  *             is not possible to validate custom DH parameters.
@@ -870,6 +892,7 @@
  *      MBEDTLS_TLS_ECDHE_PSK_WITH_AES_128_CBC_SHA256
  *      MBEDTLS_TLS_ECDHE_PSK_WITH_AES_128_CBC_SHA
  *      MBEDTLS_TLS_ECDHE_PSK_WITH_CAMELLIA_128_CBC_SHA256
+ *      MBEDTLS_TLS_ECDHE_PSK_WITH_3DES_EDE_CBC_SHA
  */
 #define MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
 
@@ -893,6 +916,7 @@
  *      MBEDTLS_TLS_RSA_PSK_WITH_AES_128_CBC_SHA
  *      MBEDTLS_TLS_RSA_PSK_WITH_CAMELLIA_128_GCM_SHA256
  *      MBEDTLS_TLS_RSA_PSK_WITH_CAMELLIA_128_CBC_SHA256
+ *      MBEDTLS_TLS_RSA_PSK_WITH_3DES_EDE_CBC_SHA
  */
 #define MBEDTLS_KEY_EXCHANGE_RSA_PSK_ENABLED
 
@@ -918,6 +942,7 @@
  *      MBEDTLS_TLS_RSA_WITH_CAMELLIA_128_GCM_SHA256
  *      MBEDTLS_TLS_RSA_WITH_CAMELLIA_128_CBC_SHA256
  *      MBEDTLS_TLS_RSA_WITH_CAMELLIA_128_CBC_SHA
+ *      MBEDTLS_TLS_RSA_WITH_3DES_EDE_CBC_SHA
  */
 #define MBEDTLS_KEY_EXCHANGE_RSA_ENABLED
 
@@ -943,6 +968,7 @@
  *      MBEDTLS_TLS_DHE_RSA_WITH_CAMELLIA_128_GCM_SHA256
  *      MBEDTLS_TLS_DHE_RSA_WITH_CAMELLIA_128_CBC_SHA256
  *      MBEDTLS_TLS_DHE_RSA_WITH_CAMELLIA_128_CBC_SHA
+ *      MBEDTLS_TLS_DHE_RSA_WITH_3DES_EDE_CBC_SHA
  *
  * \warning    Using DHE constitutes a security risk as it
  *             is not possible to validate custom DH parameters.
@@ -973,6 +999,7 @@
  *      MBEDTLS_TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA
  *      MBEDTLS_TLS_ECDHE_RSA_WITH_CAMELLIA_128_GCM_SHA256
  *      MBEDTLS_TLS_ECDHE_RSA_WITH_CAMELLIA_128_CBC_SHA256
+ *      MBEDTLS_TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA
  */
 #define MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED
 
@@ -995,6 +1022,7 @@
  *      MBEDTLS_TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA
  *      MBEDTLS_TLS_ECDHE_ECDSA_WITH_CAMELLIA_128_GCM_SHA256
  *      MBEDTLS_TLS_ECDHE_ECDSA_WITH_CAMELLIA_128_CBC_SHA256
+ *      MBEDTLS_TLS_ECDHE_ECDSA_WITH_3DES_EDE_CBC_SHA
  */
 #define MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED
 
@@ -1007,6 +1035,7 @@
  *
  * This enables the following ciphersuites (if other requisites are
  * enabled as well):
+ *      MBEDTLS_TLS_ECDH_ECDSA_WITH_3DES_EDE_CBC_SHA
  *      MBEDTLS_TLS_ECDH_ECDSA_WITH_AES_128_CBC_SHA
  *      MBEDTLS_TLS_ECDH_ECDSA_WITH_AES_256_CBC_SHA
  *      MBEDTLS_TLS_ECDH_ECDSA_WITH_AES_128_CBC_SHA256
@@ -1029,6 +1058,7 @@
  *
  * This enables the following ciphersuites (if other requisites are
  * enabled as well):
+ *      MBEDTLS_TLS_ECDH_RSA_WITH_3DES_EDE_CBC_SHA
  *      MBEDTLS_TLS_ECDH_RSA_WITH_AES_128_CBC_SHA
  *      MBEDTLS_TLS_ECDH_RSA_WITH_AES_256_CBC_SHA
  *      MBEDTLS_TLS_ECDH_RSA_WITH_AES_128_CBC_SHA256
@@ -1500,7 +1530,9 @@
  *
  * This only affects CBC ciphersuites, and is useless if none is defined.
  *
- * Requires: MBEDTLS_SSL_PROTO_TLS1_2
+ * Requires: MBEDTLS_SSL_PROTO_TLS1    or
+ *           MBEDTLS_SSL_PROTO_TLS1_1  or
+ *           MBEDTLS_SSL_PROTO_TLS1_2
  *
  * Comment this macro to disable support for Encrypt-then-MAC
  */
@@ -1516,11 +1548,31 @@
  * renegotiation), since it actually fixes a more fundamental issue in the
  * original SSL/TLS design, and has implications beyond Triple Handshake.
  *
- * Requires: MBEDTLS_SSL_PROTO_TLS1_2
+ * Requires: MBEDTLS_SSL_PROTO_TLS1    or
+ *           MBEDTLS_SSL_PROTO_TLS1_1  or
+ *           MBEDTLS_SSL_PROTO_TLS1_2
  *
  * Comment this macro to disable support for Extended Master Secret.
  */
 #define MBEDTLS_SSL_EXTENDED_MASTER_SECRET
+
+/**
+ * \def MBEDTLS_SSL_FALLBACK_SCSV
+ *
+ * Enable support for RFC 7507: Fallback Signaling Cipher Suite Value (SCSV)
+ * for Preventing Protocol Downgrade Attacks.
+ *
+ * For servers, it is recommended to always enable this, unless you support
+ * only one version of TLS, or know for sure that none of your clients
+ * implements a fallback strategy.
+ *
+ * For clients, you only need this if you're using a fallback strategy, which
+ * is not recommended in the first place, unless you absolutely need it to
+ * interoperate with buggy (version-intolerant) servers.
+ *
+ * Comment this macro to disable support for FALLBACK_SCSV
+ */
+#define MBEDTLS_SSL_FALLBACK_SCSV
 
 /**
  * \def MBEDTLS_SSL_KEEP_PEER_CERTIFICATE
@@ -1543,6 +1595,18 @@
  * after the handshake.
  */
 #define MBEDTLS_SSL_KEEP_PEER_CERTIFICATE
+
+/**
+ * \def MBEDTLS_SSL_CBC_RECORD_SPLITTING
+ *
+ * Enable 1/n-1 record splitting for CBC mode in TLS 1.0.
+ *
+ * This is a countermeasure to the BEAST attack, which also minimizes the risk
+ * of interoperability issues compared to sending 0-length records.
+ *
+ * Comment this macro to disable 1/n-1 record splitting.
+ */
+#define MBEDTLS_SSL_CBC_RECORD_SPLITTING
 
 /**
  * \def MBEDTLS_SSL_RENEGOTIATION
@@ -1586,6 +1650,30 @@
 #define MBEDTLS_SSL_MAX_FRAGMENT_LENGTH
 
 /**
+ * \def MBEDTLS_SSL_PROTO_TLS1
+ *
+ * Enable support for TLS 1.0.
+ *
+ * Requires: MBEDTLS_MD5_C
+ *           MBEDTLS_SHA1_C
+ *
+ * Comment this macro to disable support for TLS 1.0
+ */
+#define MBEDTLS_SSL_PROTO_TLS1
+
+/**
+ * \def MBEDTLS_SSL_PROTO_TLS1_1
+ *
+ * Enable support for TLS 1.1 (and DTLS 1.0 if DTLS is enabled).
+ *
+ * Requires: MBEDTLS_MD5_C
+ *           MBEDTLS_SHA1_C
+ *
+ * Comment this macro to disable support for TLS 1.1 / DTLS 1.0
+ */
+#define MBEDTLS_SSL_PROTO_TLS1_1
+
+/**
  * \def MBEDTLS_SSL_PROTO_TLS1_2
  *
  * Enable support for TLS 1.2 (and DTLS 1.2 if DTLS is enabled).
@@ -1621,9 +1709,11 @@
  *
  * Enable support for DTLS (all available versions).
  *
- * Enable this and MBEDTLS_SSL_PROTO_TLS1_2 to enable DTLS 1.2.
+ * Enable this and MBEDTLS_SSL_PROTO_TLS1_1 to enable DTLS 1.0,
+ * and/or this and MBEDTLS_SSL_PROTO_TLS1_2 to enable DTLS 1.2.
  *
- * Requires: MBEDTLS_SSL_PROTO_TLS1_2
+ * Requires: MBEDTLS_SSL_PROTO_TLS1_1
+ *        or MBEDTLS_SSL_PROTO_TLS1_2
  *
  * Comment this macro to disable support for DTLS
  */
@@ -1717,6 +1807,17 @@
  * Comment this to disable support for clients reusing the source port.
  */
 #define MBEDTLS_SSL_DTLS_CLIENT_PORT_REUSE
+
+/**
+ * \def MBEDTLS_SSL_DTLS_BADMAC_LIMIT
+ *
+ * Enable support for a limit of records with bad MAC.
+ *
+ * See mbedtls_ssl_conf_dtls_badmac_limit().
+ *
+ * Requires: MBEDTLS_SSL_PROTO_DTLS
+ */
+#define MBEDTLS_SSL_DTLS_BADMAC_LIMIT
 
 /**
  * \def MBEDTLS_SSL_SESSION_TICKETS
@@ -2392,6 +2493,19 @@
  * Caller:  library/pem.c
  *          library/cipher.c
  *
+ * This module enables the following ciphersuites (if other requisites are
+ * enabled as well):
+ *      MBEDTLS_TLS_ECDH_ECDSA_WITH_3DES_EDE_CBC_SHA
+ *      MBEDTLS_TLS_ECDH_RSA_WITH_3DES_EDE_CBC_SHA
+ *      MBEDTLS_TLS_ECDHE_ECDSA_WITH_3DES_EDE_CBC_SHA
+ *      MBEDTLS_TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA
+ *      MBEDTLS_TLS_DHE_RSA_WITH_3DES_EDE_CBC_SHA
+ *      MBEDTLS_TLS_ECDHE_PSK_WITH_3DES_EDE_CBC_SHA
+ *      MBEDTLS_TLS_DHE_PSK_WITH_3DES_EDE_CBC_SHA
+ *      MBEDTLS_TLS_RSA_WITH_3DES_EDE_CBC_SHA
+ *      MBEDTLS_TLS_RSA_PSK_WITH_3DES_EDE_CBC_SHA
+ *      MBEDTLS_TLS_PSK_WITH_3DES_EDE_CBC_SHA
+ *
  * PEM_PARSE uses DES/3DES for decrypting encrypted keys.
  *
  * \warning   DES is considered a weak cipher and its use constitutes a
@@ -2624,9 +2738,10 @@
  *          library/pem.c
  *          library/ssl_tls.c
  *
- * This module is required for TLS 1.2 depending on the handshake parameters.
- * Further, it is used for checking MD5-signed certificates, and for PBKDF1
- * when decrypting PEM-encoded encrypted keys.
+ * This module is required for SSL/TLS up to version 1.1, and for TLS 1.2
+ * depending on the handshake parameters. Further, it is used for checking
+ * MD5-signed certificates, and for PBKDF1 when decrypting PEM-encoded
+ * encrypted keys.
  *
  * \warning   MD5 is considered a weak message digest and its use constitutes a
  *            security risk. If possible, we recommend avoiding dependencies on
@@ -2946,8 +3061,8 @@
  *          library/ssl_tls.c
  *          library/x509write_crt.c
  *
- * This module is required for TLS 1.2 depending on the handshake parameters,
- * and for SHA1-signed certificates.
+ * This module is required for SSL/TLS up to version 1.1, for TLS 1.2
+ * depending on the handshake parameters, and for SHA1-signed certificates.
  *
  * \warning   SHA-1 is considered a weak message digest and its use constitutes
  *            a security risk. If possible, we recommend avoiding dependencies
