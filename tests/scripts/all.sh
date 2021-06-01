@@ -828,6 +828,15 @@ component_test_psa_crypto_client () {
     make test
 }
 
+component_test_psa_crypto_rsa_no_genprime() {
+    msg "build: default config minus MBEDTLS_GENPRIME"
+    scripts/config.py unset MBEDTLS_GENPRIME
+    make
+
+    msg "test: default config minus MBEDTLS_GENPRIME"
+    make test
+}
+
 component_test_ref_configs () {
     msg "test/build: ref-configs (ASan build)" # ~ 6 min 20s
     CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
@@ -1078,6 +1087,7 @@ component_test_ecp_restartable_no_internal_rng () {
 
 component_test_new_ecdh_context () {
     msg "build: new ECDH context (ASan build)" # ~ 6 min
+    scripts/config.py unset MBEDTLS_ECDH_LEGACY_CONTEXT
     CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
     make
 
@@ -1094,6 +1104,7 @@ component_test_new_ecdh_context () {
 
 component_test_everest () {
     msg "build: Everest ECDH context (ASan build)" # ~ 6 min
+    scripts/config.py unset MBEDTLS_ECDH_LEGACY_CONTEXT
     scripts/config.py set MBEDTLS_ECDH_VARIANT_EVEREST_ENABLED
     CC=clang cmake -D CMAKE_BUILD_TYPE:String=Asan .
     make
@@ -1111,6 +1122,7 @@ component_test_everest () {
 
 component_test_everest_curve25519_only () {
     msg "build: Everest ECDH context, only Curve25519" # ~ 6 min
+    scripts/config.py unset MBEDTLS_ECDH_LEGACY_CONTEXT
     scripts/config.py set MBEDTLS_ECDH_VARIANT_EVEREST_ENABLED
     scripts/config.py unset MBEDTLS_ECDSA_C
     scripts/config.py unset MBEDTLS_KEY_EXCHANGE_ECDH_ECDSA_ENABLED
@@ -2040,24 +2052,6 @@ component_test_variable_ssl_in_out_buffer_len_CID () {
     if_build_succeeded tests/compat.sh
 }
 
-component_test_variable_ssl_in_out_buffer_len_record_splitting () {
-    msg "build: MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH and MBEDTLS_SSL_CBC_RECORD_SPLITTING enabled (ASan build)"
-    scripts/config.py set MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH
-    scripts/config.py set MBEDTLS_SSL_CBC_RECORD_SPLITTING
-
-    CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
-    make
-
-    msg "test: MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH and MBEDTLS_SSL_CBC_RECORD_SPLITTING"
-    make test
-
-    msg "test: ssl-opt.sh, MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH and MBEDTLS_SSL_CBC_RECORD_SPLITTING enabled"
-    if_build_succeeded tests/ssl-opt.sh
-
-    msg "test: compat.sh, MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH and MBEDTLS_SSL_CBC_RECORD_SPLITTING enabled"
-    if_build_succeeded tests/compat.sh
-}
-
 component_test_ssl_alloc_buffer_and_mfl () {
     msg "build: default config with memory buffer allocator and MFL extension"
     scripts/config.py set MBEDTLS_MEMORY_BUFFER_ALLOC_C
@@ -2332,6 +2326,7 @@ support_test_m32_o1 () {
 
 component_test_m32_everest () {
     msg "build: i386, Everest ECDH context (ASan build)" # ~ 6 min
+    scripts/config.py unset MBEDTLS_ECDH_LEGACY_CONTEXT
     scripts/config.py set MBEDTLS_ECDH_VARIANT_EVEREST_ENABLED
     make CC=gcc CFLAGS="$ASAN_CFLAGS -m32 -O2" LDFLAGS="-m32 $ASAN_CFLAGS"
 
