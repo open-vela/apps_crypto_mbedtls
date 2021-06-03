@@ -500,10 +500,7 @@ int mbedtls_pk_encrypt( mbedtls_pk_context *ctx,
 /*
  * Check public-private key pair
  */
-int mbedtls_pk_check_pair( const mbedtls_pk_context *pub,
-                           const mbedtls_pk_context *prv,
-                           int (*f_rng)(void *, unsigned char *, size_t),
-                           void *p_rng )
+int mbedtls_pk_check_pair( const mbedtls_pk_context *pub, const mbedtls_pk_context *prv )
 {
     PK_VALIDATE_RET( pub != NULL );
     PK_VALIDATE_RET( prv != NULL );
@@ -513,9 +510,6 @@ int mbedtls_pk_check_pair( const mbedtls_pk_context *pub,
     {
         return( MBEDTLS_ERR_PK_BAD_INPUT_DATA );
     }
-
-    if( f_rng == NULL )
-        return( MBEDTLS_ERR_PK_BAD_INPUT_DATA );
 
     if( prv->pk_info->check_pair_func == NULL )
         return( MBEDTLS_ERR_PK_FEATURE_UNAVAILABLE );
@@ -531,7 +525,7 @@ int mbedtls_pk_check_pair( const mbedtls_pk_context *pub,
             return( MBEDTLS_ERR_PK_TYPE_MISMATCH );
     }
 
-    return( prv->pk_info->check_pair_func( pub->pk_ctx, prv->pk_ctx, f_rng, p_rng ) );
+    return( prv->pk_info->check_pair_func( pub->pk_ctx, prv->pk_ctx ) );
 }
 
 /*
