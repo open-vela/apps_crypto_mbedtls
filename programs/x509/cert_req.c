@@ -346,8 +346,7 @@ int main( int argc, char *argv[] )
     mbedtls_printf( "  . Loading the private key ..." );
     fflush( stdout );
 
-    ret = mbedtls_pk_parse_keyfile( &key, opt.filename, opt.password,
-                                    mbedtls_ctr_drbg_random, &ctr_drbg );
+    ret = mbedtls_pk_parse_keyfile( &key, opt.filename, opt.password );
 
     if( ret != 0 )
     {
