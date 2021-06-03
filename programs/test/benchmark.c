@@ -17,8 +17,6 @@
  *  limitations under the License.
  */
 
-#define MBEDTLS_ALLOW_PRIVATE_ACCESS
-
 #if !defined(MBEDTLS_CONFIG_FILE)
 #include "mbedtls/config.h"
 #else
@@ -77,40 +75,9 @@ int main( void )
 
 #include "mbedtls/error.h"
 
-#ifndef asm
-#define asm __asm
-#endif
-
-#if defined(_WIN32) && !defined(EFIX64) && !defined(EFI32)
-
-#include <windows.h>
-#include <process.h>
-
-struct _hr_time
-{
-    LARGE_INTEGER start;
-};
-
-#else
-
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/time.h>
-#include <signal.h>
-#include <time.h>
-
-struct _hr_time
-{
-    struct timeval start;
-};
-
-#endif /* _WIN32 && !EFIX64 && !EFI32 */
-
 #if defined(MBEDTLS_MEMORY_BUFFER_ALLOC_C)
 #include "mbedtls/memory_buffer_alloc.h"
 #endif
-
-static void mbedtls_set_alarm( int seconds );
 
 /*
  * For heap usage estimates, we need an estimate of the overhead per allocated
@@ -243,226 +210,6 @@ do {                                                                    \
     }                                                                   \
 } while( 0 )
 
-#if !defined(HAVE_HARDCLOCK) && defined(MBEDTLS_HAVE_ASM) &&  \
-    ( defined(_MSC_VER) && defined(_M_IX86) ) || defined(__WATCOMC__)
-
-#define HAVE_HARDCLOCK
-
-static unsigned long mbedtls_timing_hardclock( void )
-{
-    unsigned long tsc;
-    __asm   rdtsc
-    __asm   mov  [tsc], eax
-    return( tsc );
-}
-#endif /* !HAVE_HARDCLOCK && MBEDTLS_HAVE_ASM &&
-          ( _MSC_VER && _M_IX86 ) || __WATCOMC__ */
-
-/* some versions of mingw-64 have 32-bit longs even on x84_64 */
-#if !defined(HAVE_HARDCLOCK) && defined(MBEDTLS_HAVE_ASM) &&  \
-    defined(__GNUC__) && ( defined(__i386__) || (                       \
-    ( defined(__amd64__) || defined( __x86_64__) ) && __SIZEOF_LONG__ == 4 ) )
-
-#define HAVE_HARDCLOCK
-
-static unsigned long mbedtls_timing_hardclock( void )
-{
-    unsigned long lo, hi;
-    asm volatile( "rdtsc" : "=a" (lo), "=d" (hi) );
-    return( lo );
-}
-#endif /* !HAVE_HARDCLOCK && MBEDTLS_HAVE_ASM &&
-          __GNUC__ && __i386__ */
-
-#if !defined(HAVE_HARDCLOCK) && defined(MBEDTLS_HAVE_ASM) &&  \
-    defined(__GNUC__) && ( defined(__amd64__) || defined(__x86_64__) )
-
-#define HAVE_HARDCLOCK
-
-static unsigned long mbedtls_timing_hardclock( void )
-{
-    unsigned long lo, hi;
-    asm volatile( "rdtsc" : "=a" (lo), "=d" (hi) );
-    return( lo | ( hi << 32 ) );
-}
-#endif /* !HAVE_HARDCLOCK && MBEDTLS_HAVE_ASM &&
-          __GNUC__ && ( __amd64__ || __x86_64__ ) */
-
-#if !defined(HAVE_HARDCLOCK) && defined(MBEDTLS_HAVE_ASM) &&  \
-    defined(__GNUC__) && ( defined(__powerpc__) || defined(__ppc__) )
-
-#define HAVE_HARDCLOCK
-
-static unsigned long mbedtls_timing_hardclock( void )
-{
-    unsigned long tbl, tbu0, tbu1;
-
-    do
-    {
-        asm volatile( "mftbu %0" : "=r" (tbu0) );
-        asm volatile( "mftb  %0" : "=r" (tbl ) );
-        asm volatile( "mftbu %0" : "=r" (tbu1) );
-    }
-    while( tbu0 != tbu1 );
-
-    return( tbl );
-}
-#endif /* !HAVE_HARDCLOCK && MBEDTLS_HAVE_ASM &&
-          __GNUC__ && ( __powerpc__ || __ppc__ ) */
-
-#if !defined(HAVE_HARDCLOCK) && defined(MBEDTLS_HAVE_ASM) &&  \
-    defined(__GNUC__) && defined(__sparc64__)
-
-#if defined(__OpenBSD__)
-#warning OpenBSD does not allow access to tick register using software version instead
-#else
-#define HAVE_HARDCLOCK
-
-static unsigned long mbedtls_timing_hardclock( void )
-{
-    unsigned long tick;
-    asm volatile( "rdpr %%tick, %0;" : "=&r" (tick) );
-    return( tick );
-}
-#endif /* __OpenBSD__ */
-#endif /* !HAVE_HARDCLOCK && MBEDTLS_HAVE_ASM &&
-          __GNUC__ && __sparc64__ */
-
-#if !defined(HAVE_HARDCLOCK) && defined(MBEDTLS_HAVE_ASM) &&  \
-    defined(__GNUC__) && defined(__sparc__) && !defined(__sparc64__)
-
-#define HAVE_HARDCLOCK
-
-static unsigned long mbedtls_timing_hardclock( void )
-{
-    unsigned long tick;
-    asm volatile( ".byte 0x83, 0x41, 0x00, 0x00" );
-    asm volatile( "mov   %%g1, %0" : "=r" (tick) );
-    return( tick );
-}
-#endif /* !HAVE_HARDCLOCK && MBEDTLS_HAVE_ASM &&
-          __GNUC__ && __sparc__ && !__sparc64__ */
-
-#if !defined(HAVE_HARDCLOCK) && defined(MBEDTLS_HAVE_ASM) &&      \
-    defined(__GNUC__) && defined(__alpha__)
-
-#define HAVE_HARDCLOCK
-
-static unsigned long mbedtls_timing_hardclock( void )
-{
-    unsigned long cc;
-    asm volatile( "rpcc %0" : "=r" (cc) );
-    return( cc & 0xFFFFFFFF );
-}
-#endif /* !HAVE_HARDCLOCK && MBEDTLS_HAVE_ASM &&
-          __GNUC__ && __alpha__ */
-
-#if !defined(HAVE_HARDCLOCK) && defined(MBEDTLS_HAVE_ASM) &&      \
-    defined(__GNUC__) && defined(__ia64__)
-
-#define HAVE_HARDCLOCK
-
-static unsigned long mbedtls_timing_hardclock( void )
-{
-    unsigned long itc;
-    asm volatile( "mov %0 = ar.itc" : "=r" (itc) );
-    return( itc );
-}
-#endif /* !HAVE_HARDCLOCK && MBEDTLS_HAVE_ASM &&
-          __GNUC__ && __ia64__ */
-
-#if !defined(HAVE_HARDCLOCK) && defined(_MSC_VER) && \
-    !defined(EFIX64) && !defined(EFI32)
-
-#define HAVE_HARDCLOCK
-
-static unsigned long mbedtls_timing_hardclock( void )
-{
-    LARGE_INTEGER offset;
-
-    QueryPerformanceCounter( &offset );
-
-    return( (unsigned long)( offset.QuadPart ) );
-}
-#endif /* !HAVE_HARDCLOCK && _MSC_VER && !EFIX64 && !EFI32 */
-
-#if !defined(HAVE_HARDCLOCK)
-
-#define HAVE_HARDCLOCK
-
-static int hardclock_init = 0;
-static struct timeval tv_init;
-
-static unsigned long mbedtls_timing_hardclock( void )
-{
-    struct timeval tv_cur;
-
-    if( hardclock_init == 0 )
-    {
-        gettimeofday( &tv_init, NULL );
-        hardclock_init = 1;
-    }
-
-    gettimeofday( &tv_cur, NULL );
-    return( ( tv_cur.tv_sec  - tv_init.tv_sec  ) * 1000000
-          + ( tv_cur.tv_usec - tv_init.tv_usec ) );
-}
-#endif /* !HAVE_HARDCLOCK */
-
-volatile int mbedtls_timing_alarmed = 0;
-
-#if defined(_WIN32) && !defined(EFIX64) && !defined(EFI32)
-
-/* It's OK to use a global because alarm() is supposed to be global anyway */
-static DWORD alarmMs;
-
-static void TimerProc( void *TimerContext )
-{
-    (void) TimerContext;
-    Sleep( alarmMs );
-    mbedtls_timing_alarmed = 1;
-    /* _endthread will be called implicitly on return
-     * That ensures execution of thread funcition's epilogue */
-}
-
-static void mbedtls_set_alarm( int seconds )
-{
-    if( seconds == 0 )
-    {
-        /* No need to create a thread for this simple case.
-         * Also, this shorcut is more reliable at least on MinGW32 */
-        mbedtls_timing_alarmed = 1;
-        return;
-    }
-
-    mbedtls_timing_alarmed = 0;
-    alarmMs = seconds * 1000;
-    (void) _beginthread( TimerProc, 0, NULL );
-}
-
-#else /* _WIN32 && !EFIX64 && !EFI32 */
-
-static void sighandler( int signum )
-{
-    mbedtls_timing_alarmed = 1;
-    signal( signum, sighandler );
-}
-
-static void mbedtls_set_alarm( int seconds )
-{
-    mbedtls_timing_alarmed = 0;
-    signal( SIGALRM, sighandler );
-    alarm( seconds );
-    if( seconds == 0 )
-    {
-        /* alarm(0) cancelled any previous pending alarm, but the
-           handler won't fire, so raise the flag straight away. */
-        mbedtls_timing_alarmed = 1;
-    }
-}
-
-#endif /* _WIN32 && !EFIX64 && !EFI32 */
-
 static int myrand( void *rng_state, unsigned char *output, size_t len )
 {
     size_t use_len;
@@ -504,11 +251,7 @@ static int myrand( void *rng_state, unsigned char *output, size_t len )
 #if defined(MBEDTLS_ECP_C)
 void ecp_clear_precomputed( mbedtls_ecp_group *grp )
 {
-    if( grp->T != NULL
-#if MBEDTLS_ECP_FIXED_POINT_OPTIM == 1
-        && grp->T_size != 0
-#endif
-    )
+    if( grp->T != NULL )
     {
         size_t i;
         for( i = 0; i < grp->T_size; i++ )
@@ -658,32 +401,32 @@ int main( int argc, char *argv[] )
 
 #if defined(MBEDTLS_MD4_C)
     if( todo.md4 )
-        TIME_AND_TSC( "MD4", mbedtls_md4( buf, BUFSIZE, tmp ) );
+        TIME_AND_TSC( "MD4", mbedtls_md4_ret( buf, BUFSIZE, tmp ) );
 #endif
 
 #if defined(MBEDTLS_MD5_C)
     if( todo.md5 )
-        TIME_AND_TSC( "MD5", mbedtls_md5( buf, BUFSIZE, tmp ) );
+        TIME_AND_TSC( "MD5", mbedtls_md5_ret( buf, BUFSIZE, tmp ) );
 #endif
 
 #if defined(MBEDTLS_RIPEMD160_C)
     if( todo.ripemd160 )
-        TIME_AND_TSC( "RIPEMD160", mbedtls_ripemd160( buf, BUFSIZE, tmp ) );
+        TIME_AND_TSC( "RIPEMD160", mbedtls_ripemd160_ret( buf, BUFSIZE, tmp ) );
 #endif
 
 #if defined(MBEDTLS_SHA1_C)
     if( todo.sha1 )
-        TIME_AND_TSC( "SHA-1", mbedtls_sha1( buf, BUFSIZE, tmp ) );
+        TIME_AND_TSC( "SHA-1", mbedtls_sha1_ret( buf, BUFSIZE, tmp ) );
 #endif
 
 #if defined(MBEDTLS_SHA256_C)
     if( todo.sha256 )
-        TIME_AND_TSC( "SHA-256", mbedtls_sha256( buf, BUFSIZE, tmp, 0 ) );
+        TIME_AND_TSC( "SHA-256", mbedtls_sha256_ret( buf, BUFSIZE, tmp, 0 ) );
 #endif
 
 #if defined(MBEDTLS_SHA512_C)
     if( todo.sha512 )
-        TIME_AND_TSC( "SHA-512", mbedtls_sha512( buf, BUFSIZE, tmp, 0 ) );
+        TIME_AND_TSC( "SHA-512", mbedtls_sha512_ret( buf, BUFSIZE, tmp, 0 ) );
 #endif
 
 #if defined(MBEDTLS_ARC4_C)
@@ -1039,7 +782,7 @@ int main( int argc, char *argv[] )
         {
             mbedtls_snprintf( title, sizeof( title ), "RSA-%d", keysize );
 
-            mbedtls_rsa_init( &rsa );
+            mbedtls_rsa_init( &rsa, MBEDTLS_RSA_PKCS_V15, 0 );
             mbedtls_rsa_gen_key( &rsa, myrand, NULL, keysize, 65537 );
 
             TIME_PUBLIC( title, " public",
@@ -1078,7 +821,6 @@ int main( int argc, char *argv[] )
 
         mbedtls_dhm_context dhm;
         size_t olen;
-        size_t n;
         for( i = 0; (size_t) i < sizeof( dhm_sizes ) / sizeof( dhm_sizes[0] ); i++ )
         {
             mbedtls_dhm_init( &dhm );
@@ -1091,14 +833,14 @@ int main( int argc, char *argv[] )
                 mbedtls_exit( 1 );
             }
 
-            n = mbedtls_mpi_size( &dhm.P );
-            mbedtls_dhm_make_public( &dhm, (int) n, buf, n, myrand, NULL );
+            dhm.len = mbedtls_mpi_size( &dhm.P );
+            mbedtls_dhm_make_public( &dhm, (int) dhm.len, buf, dhm.len, myrand, NULL );
             if( mbedtls_mpi_copy( &dhm.GY, &dhm.GX ) != 0 )
                 mbedtls_exit( 1 );
 
             mbedtls_snprintf( title, sizeof( title ), "DHE-%d", dhm_sizes[i] );
             TIME_PUBLIC( title, "handshake",
-                    ret |= mbedtls_dhm_make_public( &dhm, (int) n, buf, n,
+                    ret |= mbedtls_dhm_make_public( &dhm, (int) dhm.len, buf, dhm.len,
                                             myrand, NULL );
                     ret |= mbedtls_dhm_calc_secret( &dhm, buf, sizeof( buf ), &olen, myrand, NULL ) );
 

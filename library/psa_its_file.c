@@ -18,7 +18,11 @@
  *  limitations under the License.
  */
 
-#include "common.h"
+#if defined(MBEDTLS_CONFIG_FILE)
+#include MBEDTLS_CONFIG_FILE
+#else
+#include "mbedtls/config.h"
+#endif
 
 #if defined(MBEDTLS_PSA_ITS_FILE_C)
 
