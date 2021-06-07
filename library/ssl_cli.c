@@ -1155,7 +1155,8 @@ static int ssl_write_client_hello( mbedtls_ssl_context *ssl )
     /*
      * Ciphersuite list
      */
-    ciphersuites = ssl->conf->ciphersuite_list;
+    ciphersuites = mbedtls_ssl_get_protocol_version_ciphersuites( ssl->conf,
+                                                                ssl->minor_ver );
 
     /* Skip writing ciphersuite length for now */
     n = 0;
@@ -2243,7 +2244,7 @@ static int ssl_parse_server_hello( mbedtls_ssl_context *ssl )
     i = 0;
     while( 1 )
     {
-        if( ssl->conf->ciphersuite_list[i] == 0 )
+        if( mbedtls_ssl_get_protocol_version_ciphersuites( ssl->conf, ssl->minor_ver )[i] == 0 )
         {
             MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad server hello message" ) );
             mbedtls_ssl_send_alert_message(
@@ -2253,7 +2254,7 @@ static int ssl_parse_server_hello( mbedtls_ssl_context *ssl )
             return( MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO );
         }
 
-        if( ssl->conf->ciphersuite_list[i++] ==
+        if( mbedtls_ssl_get_protocol_version_ciphersuites( ssl->conf, ssl->minor_ver )[i++] ==
             ssl->session_negotiate->ciphersuite )
         {
             break;
