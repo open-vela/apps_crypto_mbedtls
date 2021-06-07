@@ -143,7 +143,8 @@ int main( int argc, char *argv[] )
     fflush( stdout );
 
     ret = mbedtls_rsa_pkcs1_encrypt( &rsa, mbedtls_ctr_drbg_random,
-                                     &ctr_drbg, strlen( argv[1] ), input, buf );
+                                     &ctr_drbg, MBEDTLS_RSA_PUBLIC,
+                                     strlen( argv[1] ), input, buf );
     if( ret != 0 )
     {
         mbedtls_printf( " failed\n  ! mbedtls_rsa_pkcs1_encrypt returned %d\n\n",
