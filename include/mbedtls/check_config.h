@@ -690,11 +690,6 @@
 #error "MBEDTLS_SSL_CID_OUT_LEN_MAX too large (max 255)"
 #endif
 
-#if defined(MBEDTLS_SSL_DTLS_BADMAC_LIMIT) &&                              \
-    ( !defined(MBEDTLS_SSL_TLS_C) || !defined(MBEDTLS_SSL_PROTO_DTLS) )
-#error "MBEDTLS_SSL_DTLS_BADMAC_LIMIT  defined, but not all prerequisites"
-#endif
-
 #if defined(MBEDTLS_SSL_ENCRYPT_THEN_MAC) &&   \
     !defined(MBEDTLS_SSL_PROTO_TLS1_2)
 #error "MBEDTLS_SSL_ENCRYPT_THEN_MAC defined, but not all prerequsites"
@@ -829,6 +824,14 @@
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_1) //no-check-names
 #error "MBEDTLS_SSL_PROTO_TLS1_1 (TLS v1.1 support) was removed in Mbed TLS 3.0. See https://github.com/ARMmbed/mbedtls/issues/4286"
+#endif
+
+#if defined(MBEDTLS_SSL_CID_PADDING_GRANULARITY) //no-check-names
+#error "MBEDTLS_SSL_CID_PADDING_GRANULARITY was removed in Mbed TLS 3.0. See https://github.com/ARMmbed/mbedtls/issues/4335"
+#endif
+
+#if defined(MBEDTLS_SSL_TLS1_3_PADDING_GRANULARITY) //no-check-names
+#error "MBEDTLS_SSL_TLS1_3_PADDING_GRANULARITY was removed in Mbed TLS 3.0. See https://github.com/ARMmbed/mbedtls/issues/4335"
 #endif
 
 /*
