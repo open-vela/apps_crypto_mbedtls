@@ -3514,10 +3514,73 @@ int mbedtls_ssl_set_session( mbedtls_ssl_context *ssl, const mbedtls_ssl_session
 }
 #endif /* MBEDTLS_SSL_CLI_C */
 
+static int protocol_version_to_ciphersuites_list_index(int prot_version)
+{
+    switch(prot_version) {
+        case MBEDTLS_SSL_MINOR_VERSION_1:
+            return 0;
+        case MBEDTLS_SSL_MINOR_VERSION_2:
+            return 1;
+        case MBEDTLS_SSL_MINOR_VERSION_3:
+            return 2;
+        default:
+            return -1;
+    };
+}
+
+static void set_protocol_version_ciphersuites( mbedtls_ssl_config *conf,
+                                               int prot_version,
+                                               const int* ciphersuites )
+{
+    int ciphersuite_list_index =
+        protocol_version_to_ciphersuites_list_index(prot_version);
+    if ( ciphersuite_list_index >= 0 &&
+         (unsigned int)ciphersuite_list_index <
+         sizeof(conf->ciphersuite_list)/sizeof(conf->ciphersuite_list[0]) )
+    {
+        conf->ciphersuite_list[ciphersuite_list_index] = ciphersuites;
+    }
+}
+
 void mbedtls_ssl_conf_ciphersuites( mbedtls_ssl_config *conf,
                                     const int *ciphersuites )
 {
-    conf->ciphersuite_list = ciphersuites;
+    set_protocol_version_ciphersuites(conf, MBEDTLS_SSL_MINOR_VERSION_1,
+        ciphersuites);
+    set_protocol_version_ciphersuites(conf, MBEDTLS_SSL_MINOR_VERSION_2,
+        ciphersuites);
+    set_protocol_version_ciphersuites(conf, MBEDTLS_SSL_MINOR_VERSION_3,
+        ciphersuites);
+}
+
+const int *mbedtls_ssl_get_protocol_version_ciphersuites(
+    const mbedtls_ssl_config *conf, int prot_version )
+{
+    int ciphersuite_list_index =
+        protocol_version_to_ciphersuites_list_index(prot_version);
+    if ( ciphersuite_list_index >= 0 &&
+         (unsigned int)ciphersuite_list_index <
+         sizeof(conf->ciphersuite_list)/sizeof(conf->ciphersuite_list[0]) )
+    {
+        return conf->ciphersuite_list[ciphersuite_list_index];
+    }
+    else
+    {
+        return NULL;
+    }
+}
+
+void mbedtls_ssl_conf_ciphersuites_for_version( mbedtls_ssl_config *conf,
+                                       const int *ciphersuites,
+                                       int major, int minor )
+{
+    if( major != MBEDTLS_SSL_MAJOR_VERSION_3 )
+        return;
+
+    if( minor != MBEDTLS_SSL_MINOR_VERSION_3 )
+        return;
+
+    set_protocol_version_ciphersuites(conf, minor, ciphersuites);
 }
 
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
@@ -3658,19 +3721,6 @@ int mbedtls_ssl_set_hs_ecjpake_password( mbedtls_ssl_context *ssl,
 
 #if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
 
-static int ssl_conf_psk_is_configured( mbedtls_ssl_config const *conf )
-{
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
-    if( !mbedtls_svc_key_id_is_null( conf->psk_opaque ) )
-        return( 1 );
-#endif /* MBEDTLS_USE_PSA_CRYPTO */
-
-    if( conf->psk != NULL )
-        return( 1 );
-
-    return( 0 );
-}
-
 static void ssl_conf_remove_psk( mbedtls_ssl_config *conf )
 {
     /* Remove reference to existing PSK, if any. */
@@ -3736,10 +3786,8 @@ int mbedtls_ssl_conf_psk( mbedtls_ssl_config *conf,
                 const unsigned char *psk_identity, size_t psk_identity_len )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
-
-    /* We currently only support one PSK, raw or opaque. */
-    if( ssl_conf_psk_is_configured( conf ) )
-        return( MBEDTLS_ERR_SSL_FEATURE_UNAVAILABLE );
+    /* Remove opaque/raw PSK + PSK Identity */
+    ssl_conf_remove_psk( conf );
 
     /* Check and set raw PSK */
     if( psk == NULL )
@@ -3807,10 +3855,8 @@ int mbedtls_ssl_conf_psk_opaque( mbedtls_ssl_config *conf,
                                  size_t psk_identity_len )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
-
-    /* We currently only support one PSK, raw or opaque. */
-    if( ssl_conf_psk_is_configured( conf ) )
-        return( MBEDTLS_ERR_SSL_FEATURE_UNAVAILABLE );
+    /* Clear opaque/raw PSK + PSK Identity, if present. */
+    ssl_conf_remove_psk( conf );
 
     /* Check and set opaque PSK */
     if( mbedtls_svc_key_id_is_null( psk ) )
@@ -6215,7 +6261,12 @@ int mbedtls_ssl_config_defaults( mbedtls_ssl_config *conf,
             conf->max_major_ver = MBEDTLS_SSL_MAX_MAJOR_VERSION;
             conf->max_minor_ver = MBEDTLS_SSL_MAX_MINOR_VERSION;
 
-            conf->ciphersuite_list = ssl_preset_suiteb_ciphersuites;
+            set_protocol_version_ciphersuites(conf, MBEDTLS_SSL_MINOR_VERSION_1,
+                                              ssl_preset_suiteb_ciphersuites);
+            set_protocol_version_ciphersuites(conf, MBEDTLS_SSL_MINOR_VERSION_2,
+                                              ssl_preset_suiteb_ciphersuites);
+            set_protocol_version_ciphersuites(conf, MBEDTLS_SSL_MINOR_VERSION_3,
+                                              ssl_preset_suiteb_ciphersuites);
 
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
             conf->cert_profile = &mbedtls_x509_crt_profile_suiteb;
@@ -6249,7 +6300,13 @@ int mbedtls_ssl_config_defaults( mbedtls_ssl_config *conf,
             if( transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM )
                 conf->min_minor_ver = MBEDTLS_SSL_MINOR_VERSION_3;
 #endif
-            conf->ciphersuite_list = mbedtls_ssl_list_ciphersuites();
+            const int* default_ciphersuites = mbedtls_ssl_list_ciphersuites();
+            set_protocol_version_ciphersuites(conf, MBEDTLS_SSL_MINOR_VERSION_1,
+                                              default_ciphersuites);
+            set_protocol_version_ciphersuites(conf, MBEDTLS_SSL_MINOR_VERSION_2,
+                                              default_ciphersuites);
+            set_protocol_version_ciphersuites(conf, MBEDTLS_SSL_MINOR_VERSION_3,
+                                              default_ciphersuites);
 
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
             conf->cert_profile = &mbedtls_x509_crt_profile_default;
@@ -6526,10 +6583,22 @@ int mbedtls_ssl_check_cert_usage( const mbedtls_x509_crt *cert,
                           uint32_t *flags )
 {
     int ret = 0;
+#if defined(MBEDTLS_X509_CHECK_KEY_USAGE)
     int usage = 0;
+#endif
+#if defined(MBEDTLS_X509_CHECK_EXTENDED_KEY_USAGE)
     const char *ext_oid;
     size_t ext_len;
+#endif
 
+#if !defined(MBEDTLS_X509_CHECK_KEY_USAGE) &&          \
+    !defined(MBEDTLS_X509_CHECK_EXTENDED_KEY_USAGE)
+    ((void) cert);
+    ((void) cert_endpoint);
+    ((void) flags);
+#endif
+
+#if defined(MBEDTLS_X509_CHECK_KEY_USAGE)
     if( cert_endpoint == MBEDTLS_SSL_IS_SERVER )
     {
         /* Server part of the key exchange */
@@ -6571,7 +6640,11 @@ int mbedtls_ssl_check_cert_usage( const mbedtls_x509_crt *cert,
         *flags |= MBEDTLS_X509_BADCERT_KEY_USAGE;
         ret = -1;
     }
+#else
+    ((void) ciphersuite);
+#endif /* MBEDTLS_X509_CHECK_KEY_USAGE */
 
+#if defined(MBEDTLS_X509_CHECK_EXTENDED_KEY_USAGE)
     if( cert_endpoint == MBEDTLS_SSL_IS_SERVER )
     {
         ext_oid = MBEDTLS_OID_SERVER_AUTH;
@@ -6588,6 +6661,7 @@ int mbedtls_ssl_check_cert_usage( const mbedtls_x509_crt *cert,
         *flags |= MBEDTLS_X509_BADCERT_EXT_KEY_USAGE;
         ret = -1;
     }
+#endif /* MBEDTLS_X509_CHECK_EXTENDED_KEY_USAGE */
 
     return( ret );
 }
