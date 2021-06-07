@@ -827,6 +827,7 @@ int mbedtls_x509_crt_verify_with_ca_cb( mbedtls_x509_crt *crt,
 
 #endif /* MBEDTLS_X509_TRUSTED_CERTIFICATE_CALLBACK */
 
+#if defined(MBEDTLS_X509_CHECK_KEY_USAGE)
 /**
  * \brief          Check usage of certificate against keyUsage extension.
  *
@@ -850,7 +851,9 @@ int mbedtls_x509_crt_verify_with_ca_cb( mbedtls_x509_crt *crt,
  */
 int mbedtls_x509_crt_check_key_usage( const mbedtls_x509_crt *crt,
                                       unsigned int usage );
+#endif /* MBEDTLS_X509_CHECK_KEY_USAGE) */
 
+#if defined(MBEDTLS_X509_CHECK_EXTENDED_KEY_USAGE)
 /**
  * \brief           Check usage of certificate against extendedKeyUsage.
  *
@@ -867,6 +870,7 @@ int mbedtls_x509_crt_check_key_usage( const mbedtls_x509_crt *crt,
 int mbedtls_x509_crt_check_extended_key_usage( const mbedtls_x509_crt *crt,
                                                const char *usage_oid,
                                                size_t usage_len );
+#endif /* MBEDTLS_X509_CHECK_EXTENDED_KEY_USAGE */
 
 #if defined(MBEDTLS_X509_CRL_PARSE_C)
 /**
