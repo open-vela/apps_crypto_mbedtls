@@ -255,72 +255,6 @@
  */
 //#define MBEDTLS_DEPRECATED_REMOVED
 
-/**
- * \def MBEDTLS_CHECK_PARAMS
- *
- * This configuration option controls whether the library validates more of
- * the parameters passed to it.
- *
- * When this flag is not defined, the library only attempts to validate an
- * input parameter if: (1) they may come from the outside world (such as the
- * network, the filesystem, etc.) or (2) not validating them could result in
- * internal memory errors such as overflowing a buffer controlled by the
- * library. On the other hand, it doesn't attempt to validate parameters whose
- * values are fully controlled by the application (such as pointers).
- *
- * When this flag is defined, the library additionally attempts to validate
- * parameters that are fully controlled by the application, and should always
- * be valid if the application code is fully correct and trusted.
- *
- * For example, when a function accepts as input a pointer to a buffer that may
- * contain untrusted data, and its documentation mentions that this pointer
- * must not be NULL:
- * - The pointer is checked to be non-NULL only if this option is enabled.
- * - The content of the buffer is always validated.
- *
- * When this flag is defined, if a library function receives a parameter that
- * is invalid:
- * 1. The function will invoke the macro MBEDTLS_PARAM_FAILED().
- * 2. If MBEDTLS_PARAM_FAILED() did not terminate the program, the function
- *   will immediately return. If the function returns an Mbed TLS error code,
- *   the error code in this case is MBEDTLS_ERR_xxx_BAD_INPUT_DATA.
- *
- * When defining this flag, you also need to arrange a definition for
- * MBEDTLS_PARAM_FAILED(). You can do this by any of the following methods:
- * - By default, the library defines MBEDTLS_PARAM_FAILED() to call a
- *   function mbedtls_param_failed(), but the library does not define this
- *   function. If you do not make any other arrangements, you must provide
- *   the function mbedtls_param_failed() in your application.
- *   See `platform_util.h` for its prototype.
- * - If you enable the macro #MBEDTLS_CHECK_PARAMS_ASSERT, then the
- *   library defines MBEDTLS_PARAM_FAILED(\c cond) to be `assert(cond)`.
- *   You can still supply an alternative definition of
- *   MBEDTLS_PARAM_FAILED(), which may call `assert`.
- * - If you define a macro MBEDTLS_PARAM_FAILED() before including `config.h`
- *   or you uncomment the definition of MBEDTLS_PARAM_FAILED() in `config.h`,
- *   the library will call the macro that you defined and will not supply
- *   its own version. Note that if MBEDTLS_PARAM_FAILED() calls `assert`,
- *   you need to enable #MBEDTLS_CHECK_PARAMS_ASSERT so that library source
- *   files include `<assert.h>`.
- *
- * Uncomment to enable validation of application-controlled parameters.
- */
-//#define MBEDTLS_CHECK_PARAMS
-
-/**
- * \def MBEDTLS_CHECK_PARAMS_ASSERT
- *
- * Allow MBEDTLS_PARAM_FAILED() to call `assert`, and make it default to
- * `assert`. This macro is only used if #MBEDTLS_CHECK_PARAMS is defined.
- *
- * If this macro is not defined, then MBEDTLS_PARAM_FAILED() defaults to
- * calling a function mbedtls_param_failed(). See the documentation of
- * #MBEDTLS_CHECK_PARAMS for details.
- *
- * Uncomment to allow MBEDTLS_PARAM_FAILED() to call `assert`.
- */
-//#define MBEDTLS_CHECK_PARAMS_ASSERT
-
 /* \} name SECTION: System support */
 
 /**
@@ -759,38 +693,9 @@
  *
  * \note  This option only works with the default software implementation of
  *        elliptic curve functionality. It is incompatible with
- *        MBEDTLS_ECP_ALT, MBEDTLS_ECDH_XXX_ALT, MBEDTLS_ECDSA_XXX_ALT
- *        and MBEDTLS_ECDH_LEGACY_CONTEXT.
+ *        MBEDTLS_ECP_ALT, MBEDTLS_ECDH_XXX_ALT, MBEDTLS_ECDSA_XXX_ALT.
  */
 //#define MBEDTLS_ECP_RESTARTABLE
-
-/**
- * \def MBEDTLS_ECDH_LEGACY_CONTEXT
- *
- * Use a backward compatible ECDH context.
- *
- * Mbed TLS supports two formats for ECDH contexts (#mbedtls_ecdh_context
- * defined in `ecdh.h`). For most applications, the choice of format makes
- * no difference, since all library functions can work with either format,
- * except that the new format is incompatible with MBEDTLS_ECP_RESTARTABLE.
-
- * The new format used when this option is disabled is smaller
- * (56 bytes on a 32-bit platform). In future versions of the library, it
- * will support alternative implementations of ECDH operations.
- * The new format is incompatible with applications that access
- * context fields directly and with restartable ECP operations.
- *
- * Define this macro if you enable MBEDTLS_ECP_RESTARTABLE or if you
- * want to access ECDH context fields directly. Otherwise you should
- * comment out this macro definition.
- *
- * This option has no effect if #MBEDTLS_ECDH_C is not enabled.
- *
- * \note This configuration option is experimental. Future versions of the
- *       library may modify the way the ECDH context layout is configured
- *       and may modify the layout of the new context type.
- */
-#define MBEDTLS_ECDH_LEGACY_CONTEXT
 
 /**
  * \def MBEDTLS_ECDSA_DETERMINISTIC
@@ -3331,42 +3236,6 @@
 //#define MBEDTLS_PLATFORM_VSNPRINTF_MACRO    vsnprintf /**< Default vsnprintf macro to use, can be undefined */
 //#define MBEDTLS_PLATFORM_NV_SEED_READ_MACRO   mbedtls_platform_std_nv_seed_read /**< Default nv_seed_read function to use, can be undefined */
 //#define MBEDTLS_PLATFORM_NV_SEED_WRITE_MACRO  mbedtls_platform_std_nv_seed_write /**< Default nv_seed_write function to use, can be undefined */
-
-/**
- * \brief       This macro is invoked by the library when an invalid parameter
- *              is detected that is only checked with #MBEDTLS_CHECK_PARAMS
- *              (see the documentation of that option for context).
- *
- *              When you leave this undefined here, the library provides
- *              a default definition. If the macro #MBEDTLS_CHECK_PARAMS_ASSERT
- *              is defined, the default definition is `assert(cond)`,
- *              otherwise the default definition calls a function
- *              mbedtls_param_failed(). This function is declared in
- *              `platform_util.h` for the benefit of the library, but
- *              you need to define in your application.
- *
- *              When you define this here, this replaces the default
- *              definition in platform_util.h (which no longer declares the
- *              function mbedtls_param_failed()) and it is your responsibility
- *              to make sure this macro expands to something suitable (in
- *              particular, that all the necessary declarations are visible
- *              from within the library - you can ensure that by providing
- *              them in this file next to the macro definition).
- *              If you define this macro to call `assert`, also define
- *              #MBEDTLS_CHECK_PARAMS_ASSERT so that library source files
- *              include `<assert.h>`.
- *
- *              Note that you may define this macro to expand to nothing, in
- *              which case you don't have to worry about declarations or
- *              definitions. However, you will then be notified about invalid
- *              parameters only in non-void functions, and void function will
- *              just silently return early on invalid parameters, which
- *              partially negates the benefits of enabling
- *              #MBEDTLS_CHECK_PARAMS in the first place, so is discouraged.
- *
- * \param cond  The expression that should evaluate to true, but doesn't.
- */
-//#define MBEDTLS_PARAM_FAILED( cond )               assert( cond )
 
 /* PSA options */
 /**
