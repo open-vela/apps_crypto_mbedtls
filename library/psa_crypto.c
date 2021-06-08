@@ -1019,18 +1019,8 @@ psa_status_t psa_wipe_key_slot( psa_key_slot_t *slot )
 {
     psa_status_t status = psa_remove_key_data_from_memory( slot );
 
-    /*
-     * As the return error code may not be handled in case of multiple errors,
-     * do our best to report an unexpected lock counter: if available
-     * call MBEDTLS_PARAM_FAILED that may terminate execution (if called as
-     * part of the execution of a test suite this will stop the test suite
-     * execution).
-     */
     if( slot->lock_count != 1 )
     {
-#ifdef MBEDTLS_CHECK_PARAMS
-        MBEDTLS_PARAM_FAILED( slot->lock_count == 1 );
-#endif
         status = PSA_ERROR_CORRUPTION_DETECTED;
     }
 
@@ -2918,7 +2908,6 @@ psa_status_t psa_asymmetric_encrypt( mbedtls_svc_key_id_t key,
                     mbedtls_rsa_pkcs1_encrypt( rsa,
                                                mbedtls_psa_get_random,
                                                MBEDTLS_PSA_RANDOM_STATE,
-                                               MBEDTLS_RSA_PUBLIC,
                                                input_length,
                                                input,
                                                output ) );
@@ -2933,7 +2922,6 @@ psa_status_t psa_asymmetric_encrypt( mbedtls_svc_key_id_t key,
                 mbedtls_rsa_rsaes_oaep_encrypt( rsa,
                                                 mbedtls_psa_get_random,
                                                 MBEDTLS_PSA_RANDOM_STATE,
-                                                MBEDTLS_RSA_PUBLIC,
                                                 salt, salt_length,
                                                 input_length,
                                                 input,
@@ -4820,7 +4808,8 @@ psa_status_t psa_generate_key_internal(
     }
     else
 
-#if defined(MBEDTLS_PSA_BUILTIN_KEY_TYPE_RSA_KEY_PAIR)
+#if defined(MBEDTLS_PSA_BUILTIN_KEY_TYPE_RSA_KEY_PAIR) && \
+    defined(MBEDTLS_GENPRIME)
     if ( type == PSA_KEY_TYPE_RSA_KEY_PAIR )
     {
         return( mbedtls_psa_rsa_generate_key( attributes,
@@ -4829,7 +4818,8 @@ psa_status_t psa_generate_key_internal(
                                               key_buffer_length ) );
     }
     else
-#endif /* defined(MBEDTLS_PSA_BUILTIN_KEY_TYPE_RSA_KEY_PAIR) */
+#endif /* defined(MBEDTLS_PSA_BUILTIN_KEY_TYPE_RSA_KEY_PAIR)
+        * defined(MBEDTLS_GENPRIME) */
 
 #if defined(MBEDTLS_PSA_BUILTIN_KEY_TYPE_ECC_KEY_PAIR)
     if ( PSA_KEY_TYPE_IS_ECC( type ) && PSA_KEY_TYPE_IS_KEY_PAIR( type ) )
