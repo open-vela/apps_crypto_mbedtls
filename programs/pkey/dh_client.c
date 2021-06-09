@@ -92,7 +92,6 @@ int main( void )
     mbedtls_aes_context aes;
 
     mbedtls_net_init( &server_fd );
-    mbedtls_rsa_init( &rsa, MBEDTLS_RSA_PKCS_V15, MBEDTLS_MD_SHA256 );
     mbedtls_dhm_init( &dhm );
     mbedtls_aes_init( &aes );
     mbedtls_ctr_drbg_init( &ctr_drbg );
@@ -125,7 +124,7 @@ int main( void )
         goto exit;
     }
 
-    mbedtls_rsa_init( &rsa, MBEDTLS_RSA_PKCS_V15, 0 );
+    mbedtls_rsa_init( &rsa );
 
     if( ( ret = mbedtls_mpi_read_file( &rsa.N, 16, f ) ) != 0 ||
         ( ret = mbedtls_mpi_read_file( &rsa.E, 16, f ) ) != 0 )
@@ -214,9 +213,9 @@ int main( void )
         goto exit;
     }
 
-    if( ( ret = mbedtls_sha1( buf, (int)( p - 2 - buf ), hash ) ) != 0 )
+    if( ( ret = mbedtls_sha1_ret( buf, (int)( p - 2 - buf ), hash ) ) != 0 )
     {
-        mbedtls_printf( " failed\n  ! mbedtls_sha1 returned %d\n\n", ret );
+        mbedtls_printf( " failed\n  ! mbedtls_sha1_ret returned %d\n\n", ret );
         goto exit;
     }
 
