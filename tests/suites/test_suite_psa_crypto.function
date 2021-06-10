@@ -16,6 +16,9 @@
 #include "test/psa_crypto_helpers.h"
 #include "test/psa_exercise_key.h"
 
+/* If this comes up, it's a bug in the test code or in the test data. */
+#define UNUSED 0xdeadbeef
+
 /** An invalid export length that will never be set by psa_export_key(). */
 static const size_t INVALID_EXPORT_LENGTH = ~0U;
 
@@ -1984,7 +1987,21 @@ void mac_sign( int key_type_arg,
         mbedtls_test_set_step( output_size );
         ASSERT_ALLOC( actual_mac, output_size );
 
-        /* Calculate the MAC. */
+        /* Calculate the MAC, one-shot case. */
+        TEST_EQUAL( psa_mac_compute( key, alg,
+                                     input->x, input->len,
+                                     actual_mac, output_size, &mac_length ),
+                    expected_status );
+        if( expected_status == PSA_SUCCESS )
+        {
+            ASSERT_COMPARE( expected_mac->x, expected_mac->len,
+                            actual_mac, mac_length );
+        }
+
+        if( output_size > 0 )
+            memset( actual_mac, 0, output_size );
+
+        /* Calculate the MAC, multi-part case. */
         PSA_ASSERT( psa_mac_sign_setup( &operation, key, alg ) );
         PSA_ASSERT( psa_mac_update( &operation,
                                     input->x, input->len ) );
@@ -2036,7 +2053,11 @@ void mac_verify( int key_type_arg,
     PSA_ASSERT( psa_import_key( &attributes, key_data->x, key_data->len,
                                 &key ) );
 
-    /* Test the correct MAC. */
+    /* Verify correct MAC, one-shot case. */
+    PSA_ASSERT( psa_mac_verify( key, alg, input->x, input->len,
+                                expected_mac->x, expected_mac->len ) );
+
+    /* Verify correct MAC, multi-part case. */
     PSA_ASSERT( psa_mac_verify_setup( &operation, key, alg ) );
     PSA_ASSERT( psa_mac_update( &operation,
                                 input->x, input->len ) );
@@ -2044,7 +2065,14 @@ void mac_verify( int key_type_arg,
                                        expected_mac->x,
                                        expected_mac->len ) );
 
-    /* Test a MAC that's too short. */
+    /* Test a MAC that's too short, one-shot case. */
+    TEST_EQUAL( psa_mac_verify( key, alg,
+                                input->x, input->len,
+                                expected_mac->x,
+                                expected_mac->len - 1 ),
+                PSA_ERROR_INVALID_SIGNATURE );
+
+    /* Test a MAC that's too short, multi-part case. */
     PSA_ASSERT( psa_mac_verify_setup( &operation, key, alg ) );
     PSA_ASSERT( psa_mac_update( &operation,
                                 input->x, input->len ) );
@@ -2053,9 +2081,15 @@ void mac_verify( int key_type_arg,
                                        expected_mac->len - 1 ),
                 PSA_ERROR_INVALID_SIGNATURE );
 
-    /* Test a MAC that's too long. */
+    /* Test a MAC that's too long, one-shot case. */
     ASSERT_ALLOC( perturbed_mac, expected_mac->len + 1 );
     memcpy( perturbed_mac, expected_mac->x, expected_mac->len );
+    TEST_EQUAL( psa_mac_verify( key, alg,
+                                input->x, input->len,
+                                 perturbed_mac, expected_mac->len + 1 ),
+                PSA_ERROR_INVALID_SIGNATURE );
+
+    /* Test a MAC that's too long, multi-part case. */
     PSA_ASSERT( psa_mac_verify_setup( &operation, key, alg ) );
     PSA_ASSERT( psa_mac_update( &operation,
                                 input->x, input->len ) );
@@ -2069,6 +2103,12 @@ void mac_verify( int key_type_arg,
     {
         mbedtls_test_set_step( i );
         perturbed_mac[i] ^= 1;
+
+        TEST_EQUAL( psa_mac_verify( key, alg,
+                                    input->x, input->len,
+                                    perturbed_mac, expected_mac->len ),
+                    PSA_ERROR_INVALID_SIGNATURE );
+
         PSA_ASSERT( psa_mac_verify_setup( &operation, key, alg ) );
         PSA_ASSERT( psa_mac_update( &operation,
                                     input->x, input->len ) );
@@ -4027,7 +4067,12 @@ void derive_input( int alg_arg,
 
     for( i = 0; i < ARRAY_LENGTH( steps ); i++ )
     {
-        if( key_types[i] != PSA_KEY_TYPE_NONE )
+        mbedtls_test_set_step( i );
+        if( steps[i] == 0 )
+        {
+            /* Skip this step */
+        }
+        else if( key_types[i] != PSA_KEY_TYPE_NONE )
         {
             psa_set_key_type( &attributes, key_types[i] );
             PSA_ASSERT( psa_import_key( &attributes,
@@ -4086,7 +4131,7 @@ exit:
 /* END_CASE */
 
 /* BEGIN_CASE */
-void test_derive_invalid_key_derivation_state( int alg_arg )
+void derive_over_capacity( int alg_arg )
 {
     psa_algorithm_t alg = alg_arg;
     mbedtls_svc_key_id_t key = MBEDTLS_SVC_KEY_ID_INIT;
@@ -4137,7 +4182,7 @@ exit:
 /* END_CASE */
 
 /* BEGIN_CASE */
-void test_derive_invalid_key_derivation_tests( )
+void derive_actions_without_setup( )
 {
     uint8_t output_buffer[16];
     size_t buffer_size = 16;
