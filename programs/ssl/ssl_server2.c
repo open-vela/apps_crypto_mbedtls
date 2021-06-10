@@ -334,13 +334,6 @@ int main( void )
 #define USAGE_MAX_FRAG_LEN ""
 #endif /* MBEDTLS_SSL_MAX_FRAGMENT_LENGTH */
 
-#if defined(MBEDTLS_SSL_TRUNCATED_HMAC)
-#define USAGE_TRUNC_HMAC \
-    "    trunc_hmac=%%d       default: library default\n"
-#else
-#define USAGE_TRUNC_HMAC ""
-#endif
-
 #if defined(MBEDTLS_SSL_ALPN)
 #define USAGE_ALPN \
     "    alpn=%%s             default: \"\" (disabled)\n"   \
@@ -487,7 +480,6 @@ int main( void )
     USAGE_NSS_KEYLOG_FILE                                   \
     USAGE_CACHE                                             \
     USAGE_MAX_FRAG_LEN                                      \
-    USAGE_TRUNC_HMAC                                        \
     USAGE_ALPN                                              \
     USAGE_EMS                                               \
     USAGE_ETM                                               \
@@ -525,6 +517,8 @@ int main( void )
     (out_be)[(i) + 7] = (unsigned char)( ( (in_le) >> 0  ) & 0xFF );    \
 }
 
+/* This is global so it can be easily accessed by callback functions */
+rng_context_t rng;
 
 /*
  * global options
@@ -727,7 +721,7 @@ sni_entry *sni_parse( char *sni_string )
         mbedtls_pk_init( new->key );
 
         if( mbedtls_x509_crt_parse_file( new->cert, crt_file ) != 0 ||
-            mbedtls_pk_parse_keyfile( new->key, key_file, "" ) != 0 )
+            mbedtls_pk_parse_keyfile( new->key, key_file, "", rng_get, &rng ) != 0 )
             goto error;
 
         if( strcmp( ca_file, "-" ) != 0 )
@@ -1045,7 +1039,8 @@ static int ssl_async_start( mbedtls_ssl_context *ssl,
     for( slot = 0; slot < config_data->slots_used; slot++ )
     {
         if( mbedtls_pk_check_pair( &cert->pk,
-                                   config_data->slots[slot].pk ) == 0 )
+                                   config_data->slots[slot].pk,
+                                   rng_get, &rng ) == 0 )
             break;
     }
     if( slot == config_data->slots_used )
@@ -1271,7 +1266,6 @@ int main( int argc, char *argv[] )
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
     mbedtls_x509_crt_profile crt_profile_for_test = mbedtls_x509_crt_profile_default;
 #endif
-    rng_context_t rng;
     mbedtls_ssl_context ssl;
     mbedtls_ssl_config conf;
 #if defined(MBEDTLS_TIMING_C)
@@ -2257,7 +2251,7 @@ int main( int argc, char *argv[] )
     {
         key_cert_init++;
         if( ( ret = mbedtls_pk_parse_keyfile( &pkey, opt.key_file,
-                                              opt.key_pwd ) ) != 0 )
+                                              opt.key_pwd, rng_get, &rng ) ) != 0 )
         {
             mbedtls_printf( " failed\n  !  mbedtls_pk_parse_keyfile returned -0x%x\n\n", (unsigned int) -ret );
             goto exit;
@@ -2283,7 +2277,7 @@ int main( int argc, char *argv[] )
     {
         key_cert_init2++;
         if( ( ret = mbedtls_pk_parse_keyfile( &pkey2, opt.key_file2,
-                                              opt.key_pwd2 ) ) != 0 )
+                                              opt.key_pwd2, rng_get, &rng ) ) != 0 )
         {
             mbedtls_printf( " failed\n  !  mbedtls_pk_parse_keyfile(2) returned -0x%x\n\n",
                             (unsigned int) -ret );
@@ -2314,7 +2308,8 @@ int main( int argc, char *argv[] )
         }
         if( ( ret = mbedtls_pk_parse_key( &pkey,
                                   (const unsigned char *) mbedtls_test_srv_key_rsa,
-                                  mbedtls_test_srv_key_rsa_len, NULL, 0 ) ) != 0 )
+                                  mbedtls_test_srv_key_rsa_len, NULL, 0,
+                                  rng_get, &rng ) ) != 0 )
         {
             mbedtls_printf( " failed\n  !  mbedtls_pk_parse_key returned -0x%x\n\n",
                             (unsigned int) -ret );
@@ -2333,7 +2328,8 @@ int main( int argc, char *argv[] )
         }
         if( ( ret = mbedtls_pk_parse_key( &pkey2,
                                   (const unsigned char *) mbedtls_test_srv_key_ec,
-                                  mbedtls_test_srv_key_ec_len, NULL, 0 ) ) != 0 )
+                                  mbedtls_test_srv_key_ec_len, NULL, 0,
+                                  rng_get, &rng ) ) != 0 )
         {
             mbedtls_printf( " failed\n  !  pk_parse_key2 returned -0x%x\n\n",
                             (unsigned int) -ret );
@@ -2505,11 +2501,6 @@ int main( int argc, char *argv[] )
         goto exit;
     }
 #endif /* MBEDTLS_SSL_DTLS_SRTP */
-
-#if defined(MBEDTLS_SSL_TRUNCATED_HMAC)
-    if( opt.trunc_hmac != DFL_TRUNC_HMAC )
-        mbedtls_ssl_conf_truncated_hmac( &conf, opt.trunc_hmac );
-#endif
 
 #if defined(MBEDTLS_SSL_EXTENDED_MASTER_SECRET)
     if( opt.extended_ms != DFL_EXTENDED_MS )
