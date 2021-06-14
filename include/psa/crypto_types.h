@@ -32,7 +32,6 @@
 
 #ifndef PSA_CRYPTO_TYPES_H
 #define PSA_CRYPTO_TYPES_H
-#include "mbedtls/private_access.h"
 
 #include "crypto_platform.h"
 
@@ -235,8 +234,8 @@ typedef psa_key_id_t mbedtls_svc_key_id_t;
  */
 typedef struct
 {
-    psa_key_id_t MBEDTLS_PRIVATE(key_id);
-    mbedtls_key_owner_id_t MBEDTLS_PRIVATE(owner);
+    psa_key_id_t key_id;
+    mbedtls_key_owner_id_t owner;
 } mbedtls_svc_key_id_t;
 
 #endif /* !MBEDTLS_PSA_CRYPTO_KEY_ID_ENCODES_OWNER */

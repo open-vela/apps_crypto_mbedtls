@@ -17,8 +17,6 @@
  *  limitations under the License.
  */
 
-#define MBEDTLS_ALLOW_PRIVATE_ACCESS
-
 #include "ssl_test_lib.h"
 
 #if defined(MBEDTLS_SSL_TEST_IMPOSSIBLE)
