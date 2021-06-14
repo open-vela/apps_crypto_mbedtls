@@ -31,7 +31,6 @@
 
 #include "mbedtls/ssl_ciphersuites.h"
 #include "mbedtls/ssl.h"
-#include "ssl_misc.h"
 
 #include <string.h>
 
