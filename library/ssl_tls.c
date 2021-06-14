@@ -1429,7 +1429,7 @@ void ssl_calc_verify_tls_sha256( const mbedtls_ssl_context *ssl,
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> calc verify sha256" ) );
 
     mbedtls_sha256_clone( &sha256, &ssl->handshake->fin_sha256 );
-    mbedtls_sha256_finish_ret( &sha256, hash );
+    mbedtls_sha256_finish( &sha256, hash );
 
     *hlen = 32;
 
@@ -1478,7 +1478,7 @@ void ssl_calc_verify_tls_sha384( const mbedtls_ssl_context *ssl,
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> calc verify sha384" ) );
 
     mbedtls_sha512_clone( &sha512, &ssl->handshake->fin_sha512 );
-    mbedtls_sha512_finish_ret( &sha512, hash );
+    mbedtls_sha512_finish( &sha512, hash );
 
     *hlen = 48;
 
@@ -2490,7 +2490,7 @@ void mbedtls_ssl_reset_checksum( mbedtls_ssl_context *ssl )
     psa_hash_abort( &ssl->handshake->fin_sha256_psa );
     psa_hash_setup( &ssl->handshake->fin_sha256_psa, PSA_ALG_SHA_256 );
 #else
-    mbedtls_sha256_starts_ret( &ssl->handshake->fin_sha256, 0 );
+    mbedtls_sha256_starts( &ssl->handshake->fin_sha256, 0 );
 #endif
 #endif
 #if defined(MBEDTLS_SHA384_C)
@@ -2498,7 +2498,7 @@ void mbedtls_ssl_reset_checksum( mbedtls_ssl_context *ssl )
     psa_hash_abort( &ssl->handshake->fin_sha384_psa );
     psa_hash_setup( &ssl->handshake->fin_sha384_psa, PSA_ALG_SHA_384 );
 #else
-    mbedtls_sha512_starts_ret( &ssl->handshake->fin_sha512, 1 );
+    mbedtls_sha512_starts( &ssl->handshake->fin_sha512, 1 );
 #endif
 #endif
 #endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
@@ -2512,14 +2512,14 @@ static void ssl_update_checksum_start( mbedtls_ssl_context *ssl,
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
     psa_hash_update( &ssl->handshake->fin_sha256_psa, buf, len );
 #else
-    mbedtls_sha256_update_ret( &ssl->handshake->fin_sha256, buf, len );
+    mbedtls_sha256_update( &ssl->handshake->fin_sha256, buf, len );
 #endif
 #endif
 #if defined(MBEDTLS_SHA384_C)
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
     psa_hash_update( &ssl->handshake->fin_sha384_psa, buf, len );
 #else
-    mbedtls_sha512_update_ret( &ssl->handshake->fin_sha512, buf, len );
+    mbedtls_sha512_update( &ssl->handshake->fin_sha512, buf, len );
 #endif
 #endif
 #endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
@@ -2533,7 +2533,7 @@ static void ssl_update_checksum_sha256( mbedtls_ssl_context *ssl,
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
     psa_hash_update( &ssl->handshake->fin_sha256_psa, buf, len );
 #else
-    mbedtls_sha256_update_ret( &ssl->handshake->fin_sha256, buf, len );
+    mbedtls_sha256_update( &ssl->handshake->fin_sha256, buf, len );
 #endif
 }
 #endif
@@ -2545,7 +2545,7 @@ static void ssl_update_checksum_sha384( mbedtls_ssl_context *ssl,
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
     psa_hash_update( &ssl->handshake->fin_sha384_psa, buf, len );
 #else
-    mbedtls_sha512_update_ret( &ssl->handshake->fin_sha512, buf, len );
+    mbedtls_sha512_update( &ssl->handshake->fin_sha512, buf, len );
 #endif
 }
 #endif
@@ -2613,7 +2613,7 @@ static void ssl_calc_finished_tls_sha256(
                    sha256.state, sizeof( sha256.state ) );
 #endif
 
-    mbedtls_sha256_finish_ret( &sha256, padbuf );
+    mbedtls_sha256_finish( &sha256, padbuf );
     mbedtls_sha256_free( &sha256 );
 #endif /* MBEDTLS_USE_PSA_CRYPTO */
 
@@ -2688,7 +2688,7 @@ static void ssl_calc_finished_tls_sha384(
     MBEDTLS_SSL_DEBUG_BUF( 4, "finished sha512 state", (unsigned char *)
                    sha512.state, sizeof( sha512.state ) );
 #endif
-    mbedtls_sha512_finish_ret( &sha512, padbuf );
+    mbedtls_sha512_finish( &sha512, padbuf );
 
     mbedtls_sha512_free( &sha512 );
 #endif
@@ -2988,7 +2988,7 @@ static void ssl_handshake_params_init( mbedtls_ssl_handshake_params *handshake )
     psa_hash_setup( &handshake->fin_sha256_psa, PSA_ALG_SHA_256 );
 #else
     mbedtls_sha256_init(   &handshake->fin_sha256    );
-    mbedtls_sha256_starts_ret( &handshake->fin_sha256, 0 );
+    mbedtls_sha256_starts( &handshake->fin_sha256, 0 );
 #endif
 #endif
 #if defined(MBEDTLS_SHA384_C)
@@ -2997,7 +2997,7 @@ static void ssl_handshake_params_init( mbedtls_ssl_handshake_params *handshake )
     psa_hash_setup( &handshake->fin_sha384_psa, PSA_ALG_SHA_384 );
 #else
     mbedtls_sha512_init(   &handshake->fin_sha512    );
-    mbedtls_sha512_starts_ret( &handshake->fin_sha512, 1 );
+    mbedtls_sha512_starts( &handshake->fin_sha512, 1 );
 #endif
 #endif
 #endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
@@ -3871,10 +3871,8 @@ int mbedtls_ssl_conf_dh_param_ctx( mbedtls_ssl_config *conf, mbedtls_dhm_context
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
 
-    if( ( ret = mbedtls_dhm_get_value( dhm_ctx, MBEDTLS_DHM_PARAM_P,
-                                       &conf->dhm_P ) ) != 0 ||
-        ( ret = mbedtls_dhm_get_value( dhm_ctx, MBEDTLS_DHM_PARAM_G,
-                                       &conf->dhm_G ) ) != 0 )
+    if( ( ret = mbedtls_mpi_copy( &conf->dhm_P, &dhm_ctx->P ) ) != 0 ||
+        ( ret = mbedtls_mpi_copy( &conf->dhm_G, &dhm_ctx->G ) ) != 0 )
     {
         mbedtls_mpi_free( &conf->dhm_P );
         mbedtls_mpi_free( &conf->dhm_G );
@@ -6546,10 +6544,22 @@ int mbedtls_ssl_check_cert_usage( const mbedtls_x509_crt *cert,
                           uint32_t *flags )
 {
     int ret = 0;
+#if defined(MBEDTLS_X509_CHECK_KEY_USAGE)
     int usage = 0;
+#endif
+#if defined(MBEDTLS_X509_CHECK_EXTENDED_KEY_USAGE)
     const char *ext_oid;
     size_t ext_len;
+#endif
 
+#if !defined(MBEDTLS_X509_CHECK_KEY_USAGE) &&          \
+    !defined(MBEDTLS_X509_CHECK_EXTENDED_KEY_USAGE)
+    ((void) cert);
+    ((void) cert_endpoint);
+    ((void) flags);
+#endif
+
+#if defined(MBEDTLS_X509_CHECK_KEY_USAGE)
     if( cert_endpoint == MBEDTLS_SSL_IS_SERVER )
     {
         /* Server part of the key exchange */
@@ -6591,7 +6601,11 @@ int mbedtls_ssl_check_cert_usage( const mbedtls_x509_crt *cert,
         *flags |= MBEDTLS_X509_BADCERT_KEY_USAGE;
         ret = -1;
     }
+#else
+    ((void) ciphersuite);
+#endif /* MBEDTLS_X509_CHECK_KEY_USAGE */
 
+#if defined(MBEDTLS_X509_CHECK_EXTENDED_KEY_USAGE)
     if( cert_endpoint == MBEDTLS_SSL_IS_SERVER )
     {
         ext_oid = MBEDTLS_OID_SERVER_AUTH;
@@ -6608,6 +6622,7 @@ int mbedtls_ssl_check_cert_usage( const mbedtls_x509_crt *cert,
         *flags |= MBEDTLS_X509_BADCERT_EXT_KEY_USAGE;
         ret = -1;
     }
+#endif /* MBEDTLS_X509_CHECK_EXTENDED_KEY_USAGE */
 
     return( ret );
 }
