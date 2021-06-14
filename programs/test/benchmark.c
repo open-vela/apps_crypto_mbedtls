@@ -17,8 +17,6 @@
  *  limitations under the License.
  */
 
-#define MBEDTLS_ALLOW_PRIVATE_ACCESS
-
 #if !defined(MBEDTLS_CONFIG_FILE)
 #include "mbedtls/config.h"
 #else
@@ -253,11 +251,7 @@ static int myrand( void *rng_state, unsigned char *output, size_t len )
 #if defined(MBEDTLS_ECP_C)
 void ecp_clear_precomputed( mbedtls_ecp_group *grp )
 {
-    if( grp->T != NULL
-#if MBEDTLS_ECP_FIXED_POINT_OPTIM == 1
-        && grp->T_size != 0
-#endif
-    )
+    if( grp->T != NULL )
     {
         size_t i;
         for( i = 0; i < grp->T_size; i++ )
@@ -788,7 +782,7 @@ int main( int argc, char *argv[] )
         {
             mbedtls_snprintf( title, sizeof( title ), "RSA-%d", keysize );
 
-            mbedtls_rsa_init( &rsa );
+            mbedtls_rsa_init( &rsa, MBEDTLS_RSA_PKCS_V15, 0 );
             mbedtls_rsa_gen_key( &rsa, myrand, NULL, keysize, 65537 );
 
             TIME_PUBLIC( title, " public",
