@@ -32,7 +32,6 @@
 
 #ifndef PSA_CRYPTO_BUILTIN_PRIMITIVES_H
 #define PSA_CRYPTO_BUILTIN_PRIMITIVES_H
-#include "mbedtls/private_access.h"
 
 #include <psa/crypto_driver_common.h>
 
@@ -62,32 +61,32 @@
 
 typedef struct
 {
-    psa_algorithm_t MBEDTLS_PRIVATE(alg);
+    psa_algorithm_t alg;
     union
     {
-        unsigned MBEDTLS_PRIVATE(dummy); /* Make the union non-empty even with no supported algorithms. */
+        unsigned dummy; /* Make the union non-empty even with no supported algorithms. */
 #if defined(MBEDTLS_MD2_C)
-        mbedtls_md2_context MBEDTLS_PRIVATE(md2);
+        mbedtls_md2_context md2;
 #endif
 #if defined(MBEDTLS_MD4_C)
-        mbedtls_md4_context MBEDTLS_PRIVATE(md4);
+        mbedtls_md4_context md4;
 #endif
 #if defined(MBEDTLS_MD5_C)
-        mbedtls_md5_context MBEDTLS_PRIVATE(md5);
+        mbedtls_md5_context md5;
 #endif
 #if defined(MBEDTLS_RIPEMD160_C)
-        mbedtls_ripemd160_context MBEDTLS_PRIVATE(ripemd160);
+        mbedtls_ripemd160_context ripemd160;
 #endif
 #if defined(MBEDTLS_SHA1_C)
-        mbedtls_sha1_context MBEDTLS_PRIVATE(sha1);
+        mbedtls_sha1_context sha1;
 #endif
 #if defined(MBEDTLS_SHA256_C)
-        mbedtls_sha256_context MBEDTLS_PRIVATE(sha256);
+        mbedtls_sha256_context sha256;
 #endif
 #if defined(MBEDTLS_SHA512_C)
-        mbedtls_sha512_context MBEDTLS_PRIVATE(sha512);
+        mbedtls_sha512_context sha512;
 #endif
-    } MBEDTLS_PRIVATE(ctx);
+    } ctx;
 } mbedtls_psa_hash_operation_t;
 
 #define MBEDTLS_PSA_HASH_OPERATION_INIT {0, {0}}
@@ -111,10 +110,10 @@ typedef struct
 
 typedef struct {
     /* Context structure for the Mbed TLS cipher implementation. */
-    psa_algorithm_t MBEDTLS_PRIVATE(alg);
-    uint8_t MBEDTLS_PRIVATE(iv_length);
-    uint8_t MBEDTLS_PRIVATE(block_length);
-    mbedtls_cipher_context_t MBEDTLS_PRIVATE(cipher);
+    psa_algorithm_t alg;
+    uint8_t iv_length;
+    uint8_t block_length;
+    mbedtls_cipher_context_t cipher;
 } mbedtls_psa_cipher_operation_t;
 
 #define MBEDTLS_PSA_CIPHER_OPERATION_INIT {0, 0, 0, {0}}
