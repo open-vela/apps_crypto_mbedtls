@@ -1872,43 +1872,27 @@ read_record_header:
     got_common_suite = 0;
     ciphersuites = ssl->conf->ciphersuite_list;
     ciphersuite_info = NULL;
-
-    if (ssl->conf->respect_cli_pref == MBEDTLS_SSL_SRV_CIPHERSUITE_ORDER_CLIENT)
-    {
-        for( j = 0, p = buf + ciph_offset + 2; j < ciph_len; j += 2, p += 2 )
-            for( i = 0; ciphersuites[i] != 0; i++ )
-            {
-                if( p[0] != ( ( ciphersuites[i] >> 8 ) & 0xFF ) ||
-                    p[1] != ( ( ciphersuites[i]      ) & 0xFF ) )
-                    continue;
-
-                got_common_suite = 1;
-
-                if( ( ret = ssl_ciphersuite_match( ssl, ciphersuites[i],
-                                                   &ciphersuite_info ) ) != 0 )
-                    return( ret );
-
-                if( ciphersuite_info != NULL )
-                    goto have_ciphersuite;
-            }
-    } else {
+#if defined(MBEDTLS_SSL_SRV_RESPECT_CLIENT_PREFERENCE)
+    for( j = 0, p = buf + ciph_offset + 2; j < ciph_len; j += 2, p += 2 )
         for( i = 0; ciphersuites[i] != 0; i++ )
-            for( j = 0, p = buf + ciph_offset + 2; j < ciph_len; j += 2, p += 2 )
-            {
-                if( p[0] != ( ( ciphersuites[i] >> 8 ) & 0xFF ) ||
-                    p[1] != ( ( ciphersuites[i]      ) & 0xFF ) )
-                    continue;
+#else
+    for( i = 0; ciphersuites[i] != 0; i++ )
+        for( j = 0, p = buf + ciph_offset + 2; j < ciph_len; j += 2, p += 2 )
+#endif
+        {
+            if( p[0] != ( ( ciphersuites[i] >> 8 ) & 0xFF ) ||
+                p[1] != ( ( ciphersuites[i]      ) & 0xFF ) )
+                continue;
 
-                got_common_suite = 1;
+            got_common_suite = 1;
 
-                if( ( ret = ssl_ciphersuite_match( ssl, ciphersuites[i],
-                                                   &ciphersuite_info ) ) != 0 )
-                    return( ret );
+            if( ( ret = ssl_ciphersuite_match( ssl, ciphersuites[i],
+                                               &ciphersuite_info ) ) != 0 )
+                return( ret );
 
-                if( ciphersuite_info != NULL )
-                    goto have_ciphersuite;
-            }
-    }
+            if( ciphersuite_info != NULL )
+                goto have_ciphersuite;
+        }
 
     if( got_common_suite )
     {
@@ -4432,10 +4416,4 @@ int mbedtls_ssl_handshake_server_step( mbedtls_ssl_context *ssl )
 
     return( ret );
 }
-
-void mbedtls_ssl_conf_preference_order( mbedtls_ssl_config *conf, int order )
-{
-    conf->respect_cli_pref = order;
-}
-
 #endif /* MBEDTLS_SSL_SRV_C */
