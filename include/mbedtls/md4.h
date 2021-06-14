@@ -26,7 +26,6 @@
  */
 #ifndef MBEDTLS_MD4_H
 #define MBEDTLS_MD4_H
-#include "mbedtls/private_access.h"
 
 #if !defined(MBEDTLS_CONFIG_FILE)
 #include "mbedtls/config.h"
@@ -55,9 +54,9 @@ extern "C" {
  */
 typedef struct mbedtls_md4_context
 {
-    uint32_t MBEDTLS_PRIVATE(total)[2];          /*!< number of bytes processed  */
-    uint32_t MBEDTLS_PRIVATE(state)[4];          /*!< intermediate digest state  */
-    unsigned char MBEDTLS_PRIVATE(buffer)[64];   /*!< data block being processed */
+    uint32_t total[2];          /*!< number of bytes processed  */
+    uint32_t state[4];          /*!< intermediate digest state  */
+    unsigned char buffer[64];   /*!< data block being processed */
 }
 mbedtls_md4_context;
 
@@ -114,7 +113,7 @@ void mbedtls_md4_clone( mbedtls_md4_context *dst,
  *                 constitutes a security risk. We recommend considering
  *                 stronger message digests instead.
  */
-int mbedtls_md4_starts_ret( mbedtls_md4_context *ctx );
+int mbedtls_md4_starts( mbedtls_md4_context *ctx );
 
 /**
  * \brief          MD4 process buffer
@@ -130,9 +129,9 @@ int mbedtls_md4_starts_ret( mbedtls_md4_context *ctx );
  *                 stronger message digests instead.
  *
  */
-int mbedtls_md4_update_ret( mbedtls_md4_context *ctx,
-                            const unsigned char *input,
-                            size_t ilen );
+int mbedtls_md4_update( mbedtls_md4_context *ctx,
+                        const unsigned char *input,
+                        size_t ilen );
 
 /**
  * \brief          MD4 final digest
@@ -147,8 +146,8 @@ int mbedtls_md4_update_ret( mbedtls_md4_context *ctx,
  *                 stronger message digests instead.
  *
  */
-int mbedtls_md4_finish_ret( mbedtls_md4_context *ctx,
-                            unsigned char output[16] );
+int mbedtls_md4_finish( mbedtls_md4_context *ctx,
+                        unsigned char output[16] );
 
 /**
  * \brief          MD4 process data block (internal use only)
@@ -180,9 +179,9 @@ int mbedtls_internal_md4_process( mbedtls_md4_context *ctx,
  *                 stronger message digests instead.
  *
  */
-int mbedtls_md4_ret( const unsigned char *input,
-                     size_t ilen,
-                     unsigned char output[16] );
+int mbedtls_md4( const unsigned char *input,
+                 size_t ilen,
+                 unsigned char output[16] );
 
 #if defined(MBEDTLS_SELF_TEST)
 

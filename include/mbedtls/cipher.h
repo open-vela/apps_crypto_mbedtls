@@ -26,7 +26,6 @@
 
 #ifndef MBEDTLS_CIPHER_H
 #define MBEDTLS_CIPHER_H
-#include "mbedtls/private_access.h"
 
 #if !defined(MBEDTLS_CONFIG_FILE)
 #include "mbedtls/config.h"
@@ -268,37 +267,37 @@ typedef struct mbedtls_cipher_info_t
     /** Full cipher identifier. For example,
      * MBEDTLS_CIPHER_AES_256_CBC.
      */
-    mbedtls_cipher_type_t MBEDTLS_PRIVATE(type);
+    mbedtls_cipher_type_t type;
 
     /** The cipher mode. For example, MBEDTLS_MODE_CBC. */
-    mbedtls_cipher_mode_t MBEDTLS_PRIVATE(mode);
+    mbedtls_cipher_mode_t mode;
 
     /** The cipher key length, in bits. This is the
      * default length for variable sized ciphers.
      * Includes parity bits for ciphers like DES.
      */
-    unsigned int MBEDTLS_PRIVATE(key_bitlen);
+    unsigned int key_bitlen;
 
     /** Name of the cipher. */
-    const char * MBEDTLS_PRIVATE(name);
+    const char * name;
 
     /** IV or nonce size, in Bytes.
      * For ciphers that accept variable IV sizes,
      * this is the recommended size.
      */
-    unsigned int MBEDTLS_PRIVATE(iv_size);
+    unsigned int iv_size;
 
     /** Bitflag comprised of MBEDTLS_CIPHER_VARIABLE_IV_LEN and
      *  MBEDTLS_CIPHER_VARIABLE_KEY_LEN indicating whether the
      *  cipher supports variable IV or variable key sizes, respectively.
      */
-    int MBEDTLS_PRIVATE(flags);
+    int flags;
 
     /** The block size, in Bytes. */
-    unsigned int MBEDTLS_PRIVATE(block_size);
+    unsigned int block_size;
 
     /** Struct for base cipher information and functions. */
-    const mbedtls_cipher_base_t *MBEDTLS_PRIVATE(base);
+    const mbedtls_cipher_base_t *base;
 
 } mbedtls_cipher_info_t;
 
@@ -308,43 +307,43 @@ typedef struct mbedtls_cipher_info_t
 typedef struct mbedtls_cipher_context_t
 {
     /** Information about the associated cipher. */
-    const mbedtls_cipher_info_t *MBEDTLS_PRIVATE(cipher_info);
+    const mbedtls_cipher_info_t *cipher_info;
 
     /** Key length to use. */
-    int MBEDTLS_PRIVATE(key_bitlen);
+    int key_bitlen;
 
     /** Operation that the key of the context has been
      * initialized for.
      */
-    mbedtls_operation_t MBEDTLS_PRIVATE(operation);
+    mbedtls_operation_t operation;
 
 #if defined(MBEDTLS_CIPHER_MODE_WITH_PADDING)
     /** Padding functions to use, if relevant for
      * the specific cipher mode.
      */
-    void (*MBEDTLS_PRIVATE(add_padding))( unsigned char *output, size_t olen, size_t data_len );
-    int (*MBEDTLS_PRIVATE(get_padding))( unsigned char *input, size_t ilen, size_t *data_len );
+    void (*add_padding)( unsigned char *output, size_t olen, size_t data_len );
+    int (*get_padding)( unsigned char *input, size_t ilen, size_t *data_len );
 #endif
 
     /** Buffer for input that has not been processed yet. */
-    unsigned char MBEDTLS_PRIVATE(unprocessed_data)[MBEDTLS_MAX_BLOCK_LENGTH];
+    unsigned char unprocessed_data[MBEDTLS_MAX_BLOCK_LENGTH];
 
     /** Number of Bytes that have not been processed yet. */
-    size_t MBEDTLS_PRIVATE(unprocessed_len);
+    size_t unprocessed_len;
 
     /** Current IV or NONCE_COUNTER for CTR-mode, data unit (or sector) number
      * for XTS-mode. */
-    unsigned char MBEDTLS_PRIVATE(iv)[MBEDTLS_MAX_IV_LENGTH];
+    unsigned char iv[MBEDTLS_MAX_IV_LENGTH];
 
     /** IV size in Bytes, for ciphers with variable-length IVs. */
-    size_t MBEDTLS_PRIVATE(iv_size);
+    size_t iv_size;
 
     /** The cipher-specific context. */
-    void *MBEDTLS_PRIVATE(cipher_ctx);
+    void *cipher_ctx;
 
 #if defined(MBEDTLS_CMAC_C)
     /** CMAC-specific context. */
-    mbedtls_cmac_context_t *MBEDTLS_PRIVATE(cmac_ctx);
+    mbedtls_cmac_context_t *cmac_ctx;
 #endif
 
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
@@ -355,7 +354,7 @@ typedef struct mbedtls_cipher_context_t
      *  mbedtls_cipher_setup(), and set if it was established through
      *  mbedtls_cipher_setup_psa().
      */
-    unsigned char MBEDTLS_PRIVATE(psa_enabled);
+    unsigned char psa_enabled;
 #endif /* MBEDTLS_USE_PSA_CRYPTO */
 
 } mbedtls_cipher_context_t;
@@ -505,10 +504,10 @@ static inline unsigned int mbedtls_cipher_get_block_size(
     const mbedtls_cipher_context_t *ctx )
 {
     MBEDTLS_INTERNAL_VALIDATE_RET( ctx != NULL, 0 );
-    if( ctx->MBEDTLS_PRIVATE(cipher_info) == NULL )
+    if( ctx->cipher_info == NULL )
         return 0;
 
-    return ctx->MBEDTLS_PRIVATE(cipher_info)->MBEDTLS_PRIVATE(block_size);
+    return ctx->cipher_info->block_size;
 }
 
 /**
@@ -524,10 +523,10 @@ static inline mbedtls_cipher_mode_t mbedtls_cipher_get_cipher_mode(
     const mbedtls_cipher_context_t *ctx )
 {
     MBEDTLS_INTERNAL_VALIDATE_RET( ctx != NULL, MBEDTLS_MODE_NONE );
-    if( ctx->MBEDTLS_PRIVATE(cipher_info) == NULL )
+    if( ctx->cipher_info == NULL )
         return MBEDTLS_MODE_NONE;
 
-    return ctx->MBEDTLS_PRIVATE(cipher_info)->MBEDTLS_PRIVATE(mode);
+    return ctx->cipher_info->mode;
 }
 
 /**
@@ -544,13 +543,13 @@ static inline int mbedtls_cipher_get_iv_size(
     const mbedtls_cipher_context_t *ctx )
 {
     MBEDTLS_INTERNAL_VALIDATE_RET( ctx != NULL, 0 );
-    if( ctx->MBEDTLS_PRIVATE(cipher_info) == NULL )
+    if( ctx->cipher_info == NULL )
         return 0;
 
-    if( ctx->MBEDTLS_PRIVATE(iv_size) != 0 )
-        return (int) ctx->MBEDTLS_PRIVATE(iv_size);
+    if( ctx->iv_size != 0 )
+        return (int) ctx->iv_size;
 
-    return (int) ctx->MBEDTLS_PRIVATE(cipher_info)->MBEDTLS_PRIVATE(iv_size);
+    return (int) ctx->cipher_info->iv_size;
 }
 
 /**
@@ -566,10 +565,10 @@ static inline mbedtls_cipher_type_t mbedtls_cipher_get_type(
 {
     MBEDTLS_INTERNAL_VALIDATE_RET(
         ctx != NULL, MBEDTLS_CIPHER_NONE );
-    if( ctx->MBEDTLS_PRIVATE(cipher_info) == NULL )
+    if( ctx->cipher_info == NULL )
         return MBEDTLS_CIPHER_NONE;
 
-    return ctx->MBEDTLS_PRIVATE(cipher_info)->MBEDTLS_PRIVATE(type);
+    return ctx->cipher_info->type;
 }
 
 /**
@@ -585,10 +584,10 @@ static inline const char *mbedtls_cipher_get_name(
     const mbedtls_cipher_context_t *ctx )
 {
     MBEDTLS_INTERNAL_VALIDATE_RET( ctx != NULL, 0 );
-    if( ctx->MBEDTLS_PRIVATE(cipher_info) == NULL )
+    if( ctx->cipher_info == NULL )
         return 0;
 
-    return ctx->MBEDTLS_PRIVATE(cipher_info)->MBEDTLS_PRIVATE(name);
+    return ctx->cipher_info->name;
 }
 
 /**
@@ -605,10 +604,10 @@ static inline int mbedtls_cipher_get_key_bitlen(
 {
     MBEDTLS_INTERNAL_VALIDATE_RET(
         ctx != NULL, MBEDTLS_KEY_LENGTH_NONE );
-    if( ctx->MBEDTLS_PRIVATE(cipher_info) == NULL )
+    if( ctx->cipher_info == NULL )
         return MBEDTLS_KEY_LENGTH_NONE;
 
-    return (int) ctx->MBEDTLS_PRIVATE(cipher_info)->MBEDTLS_PRIVATE(key_bitlen);
+    return (int) ctx->cipher_info->key_bitlen;
 }
 
 /**
@@ -624,10 +623,10 @@ static inline mbedtls_operation_t mbedtls_cipher_get_operation(
 {
     MBEDTLS_INTERNAL_VALIDATE_RET(
         ctx != NULL, MBEDTLS_OPERATION_NONE );
-    if( ctx->MBEDTLS_PRIVATE(cipher_info) == NULL )
+    if( ctx->cipher_info == NULL )
         return MBEDTLS_OPERATION_NONE;
 
-    return ctx->MBEDTLS_PRIVATE(operation);
+    return ctx->operation;
 }
 
 /**
