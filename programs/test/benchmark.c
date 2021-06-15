@@ -17,6 +17,8 @@
  *  limitations under the License.
  */
 
+#define MBEDTLS_ALLOW_PRIVATE_ACCESS
+
 #if !defined(MBEDTLS_CONFIG_FILE)
 #include "mbedtls/config.h"
 #else
@@ -251,7 +253,11 @@ static int myrand( void *rng_state, unsigned char *output, size_t len )
 #if defined(MBEDTLS_ECP_C)
 void ecp_clear_precomputed( mbedtls_ecp_group *grp )
 {
-    if( grp->T != NULL )
+    if( grp->T != NULL
+#if MBEDTLS_ECP_FIXED_POINT_OPTIM == 1
+        && grp->T_size != 0
+#endif
+    )
     {
         size_t i;
         for( i = 0; i < grp->T_size; i++ )
@@ -401,32 +407,32 @@ int main( int argc, char *argv[] )
 
 #if defined(MBEDTLS_MD4_C)
     if( todo.md4 )
-        TIME_AND_TSC( "MD4", mbedtls_md4_ret( buf, BUFSIZE, tmp ) );
+        TIME_AND_TSC( "MD4", mbedtls_md4( buf, BUFSIZE, tmp ) );
 #endif
 
 #if defined(MBEDTLS_MD5_C)
     if( todo.md5 )
-        TIME_AND_TSC( "MD5", mbedtls_md5_ret( buf, BUFSIZE, tmp ) );
+        TIME_AND_TSC( "MD5", mbedtls_md5( buf, BUFSIZE, tmp ) );
 #endif
 
 #if defined(MBEDTLS_RIPEMD160_C)
     if( todo.ripemd160 )
-        TIME_AND_TSC( "RIPEMD160", mbedtls_ripemd160_ret( buf, BUFSIZE, tmp ) );
+        TIME_AND_TSC( "RIPEMD160", mbedtls_ripemd160( buf, BUFSIZE, tmp ) );
 #endif
 
 #if defined(MBEDTLS_SHA1_C)
     if( todo.sha1 )
-        TIME_AND_TSC( "SHA-1", mbedtls_sha1_ret( buf, BUFSIZE, tmp ) );
+        TIME_AND_TSC( "SHA-1", mbedtls_sha1( buf, BUFSIZE, tmp ) );
 #endif
 
 #if defined(MBEDTLS_SHA256_C)
     if( todo.sha256 )
-        TIME_AND_TSC( "SHA-256", mbedtls_sha256_ret( buf, BUFSIZE, tmp, 0 ) );
+        TIME_AND_TSC( "SHA-256", mbedtls_sha256( buf, BUFSIZE, tmp, 0 ) );
 #endif
 
 #if defined(MBEDTLS_SHA512_C)
     if( todo.sha512 )
-        TIME_AND_TSC( "SHA-512", mbedtls_sha512_ret( buf, BUFSIZE, tmp, 0 ) );
+        TIME_AND_TSC( "SHA-512", mbedtls_sha512( buf, BUFSIZE, tmp, 0 ) );
 #endif
 
 #if defined(MBEDTLS_ARC4_C)
@@ -782,7 +788,7 @@ int main( int argc, char *argv[] )
         {
             mbedtls_snprintf( title, sizeof( title ), "RSA-%d", keysize );
 
-            mbedtls_rsa_init( &rsa, MBEDTLS_RSA_PKCS_V15, 0 );
+            mbedtls_rsa_init( &rsa );
             mbedtls_rsa_gen_key( &rsa, myrand, NULL, keysize, 65537 );
 
             TIME_PUBLIC( title, " public",
@@ -821,6 +827,7 @@ int main( int argc, char *argv[] )
 
         mbedtls_dhm_context dhm;
         size_t olen;
+        size_t n;
         for( i = 0; (size_t) i < sizeof( dhm_sizes ) / sizeof( dhm_sizes[0] ); i++ )
         {
             mbedtls_dhm_init( &dhm );
@@ -833,14 +840,14 @@ int main( int argc, char *argv[] )
                 mbedtls_exit( 1 );
             }
 
-            dhm.len = mbedtls_mpi_size( &dhm.P );
-            mbedtls_dhm_make_public( &dhm, (int) dhm.len, buf, dhm.len, myrand, NULL );
+            n = mbedtls_mpi_size( &dhm.P );
+            mbedtls_dhm_make_public( &dhm, (int) n, buf, n, myrand, NULL );
             if( mbedtls_mpi_copy( &dhm.GY, &dhm.GX ) != 0 )
                 mbedtls_exit( 1 );
 
             mbedtls_snprintf( title, sizeof( title ), "DHE-%d", dhm_sizes[i] );
             TIME_PUBLIC( title, "handshake",
-                    ret |= mbedtls_dhm_make_public( &dhm, (int) dhm.len, buf, dhm.len,
+                    ret |= mbedtls_dhm_make_public( &dhm, (int) n, buf, n,
                                             myrand, NULL );
                     ret |= mbedtls_dhm_calc_secret( &dhm, buf, sizeof( buf ), &olen, myrand, NULL ) );
 

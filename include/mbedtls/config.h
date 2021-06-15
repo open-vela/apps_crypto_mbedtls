@@ -255,72 +255,6 @@
  */
 //#define MBEDTLS_DEPRECATED_REMOVED
 
-/**
- * \def MBEDTLS_CHECK_PARAMS
- *
- * This configuration option controls whether the library validates more of
- * the parameters passed to it.
- *
- * When this flag is not defined, the library only attempts to validate an
- * input parameter if: (1) they may come from the outside world (such as the
- * network, the filesystem, etc.) or (2) not validating them could result in
- * internal memory errors such as overflowing a buffer controlled by the
- * library. On the other hand, it doesn't attempt to validate parameters whose
- * values are fully controlled by the application (such as pointers).
- *
- * When this flag is defined, the library additionally attempts to validate
- * parameters that are fully controlled by the application, and should always
- * be valid if the application code is fully correct and trusted.
- *
- * For example, when a function accepts as input a pointer to a buffer that may
- * contain untrusted data, and its documentation mentions that this pointer
- * must not be NULL:
- * - The pointer is checked to be non-NULL only if this option is enabled.
- * - The content of the buffer is always validated.
- *
- * When this flag is defined, if a library function receives a parameter that
- * is invalid:
- * 1. The function will invoke the macro MBEDTLS_PARAM_FAILED().
- * 2. If MBEDTLS_PARAM_FAILED() did not terminate the program, the function
- *   will immediately return. If the function returns an Mbed TLS error code,
- *   the error code in this case is MBEDTLS_ERR_xxx_BAD_INPUT_DATA.
- *
- * When defining this flag, you also need to arrange a definition for
- * MBEDTLS_PARAM_FAILED(). You can do this by any of the following methods:
- * - By default, the library defines MBEDTLS_PARAM_FAILED() to call a
- *   function mbedtls_param_failed(), but the library does not define this
- *   function. If you do not make any other arrangements, you must provide
- *   the function mbedtls_param_failed() in your application.
- *   See `platform_util.h` for its prototype.
- * - If you enable the macro #MBEDTLS_CHECK_PARAMS_ASSERT, then the
- *   library defines MBEDTLS_PARAM_FAILED(\c cond) to be `assert(cond)`.
- *   You can still supply an alternative definition of
- *   MBEDTLS_PARAM_FAILED(), which may call `assert`.
- * - If you define a macro MBEDTLS_PARAM_FAILED() before including `config.h`
- *   or you uncomment the definition of MBEDTLS_PARAM_FAILED() in `config.h`,
- *   the library will call the macro that you defined and will not supply
- *   its own version. Note that if MBEDTLS_PARAM_FAILED() calls `assert`,
- *   you need to enable #MBEDTLS_CHECK_PARAMS_ASSERT so that library source
- *   files include `<assert.h>`.
- *
- * Uncomment to enable validation of application-controlled parameters.
- */
-//#define MBEDTLS_CHECK_PARAMS
-
-/**
- * \def MBEDTLS_CHECK_PARAMS_ASSERT
- *
- * Allow MBEDTLS_PARAM_FAILED() to call `assert`, and make it default to
- * `assert`. This macro is only used if #MBEDTLS_CHECK_PARAMS is defined.
- *
- * If this macro is not defined, then MBEDTLS_PARAM_FAILED() defaults to
- * calling a function mbedtls_param_failed(). See the documentation of
- * #MBEDTLS_CHECK_PARAMS for details.
- *
- * Uncomment to allow MBEDTLS_PARAM_FAILED() to call `assert`.
- */
-//#define MBEDTLS_CHECK_PARAMS_ASSERT
-
 /* \} name SECTION: System support */
 
 /**
@@ -528,23 +462,6 @@
 //#define MBEDTLS_ECP_NORMALIZE_MXZ_ALT
 
 /**
- * \def MBEDTLS_TEST_NULL_ENTROPY
- *
- * Enables testing and use of mbed TLS without any configured entropy sources.
- * This permits use of the library on platforms before an entropy source has
- * been integrated (see for example the MBEDTLS_ENTROPY_HARDWARE_ALT or the
- * MBEDTLS_ENTROPY_NV_SEED switches).
- *
- * WARNING! This switch MUST be disabled in production builds, and is suitable
- * only for development.
- * Enabling the switch negates any security provided by the library.
- *
- * Requires MBEDTLS_ENTROPY_C, MBEDTLS_NO_DEFAULT_ENTROPY_SOURCES
- *
- */
-//#define MBEDTLS_TEST_NULL_ENTROPY
-
-/**
  * \def MBEDTLS_ENTROPY_HARDWARE_ALT
  *
  * Uncomment this macro to let mbed TLS use your own implementation of a
@@ -700,26 +617,6 @@
 //#define MBEDTLS_CTR_DRBG_USE_128_BIT_KEY
 
 /**
- * \def MBEDTLS_REMOVE_3DES_CIPHERSUITES
- *
- * Remove 3DES ciphersuites by default in SSL / TLS.
- * This flag removes the ciphersuites based on 3DES from the default list as
- * returned by mbedtls_ssl_list_ciphersuites(). However, it is still possible
- * to enable (some of) them with mbedtls_ssl_conf_ciphersuites() by including
- * them explicitly.
- *
- * A man-in-the-browser attacker can recover authentication tokens sent through
- * a TLS connection using a 3DES based cipher suite (see "On the Practical
- * (In-)Security of 64-bit Block Ciphers" by Karthikeyan Bhargavan and Gaëtan
- * Leurent, see https://sweet32.info/SWEET32_CCS16.pdf). If this attack falls
- * in your threat model or you are unsure, then you should keep this option
- * enabled to remove 3DES based cipher suites.
- *
- * Comment this macro to keep 3DES in the default ciphersuite list.
- */
-#define MBEDTLS_REMOVE_3DES_CIPHERSUITES
-
-/**
  * \def MBEDTLS_ECP_DP_SECP192R1_ENABLED
  *
  * MBEDTLS_ECP_XXXX_ENABLED: Enables specific curves within the Elliptic Curve
@@ -796,38 +693,9 @@
  *
  * \note  This option only works with the default software implementation of
  *        elliptic curve functionality. It is incompatible with
- *        MBEDTLS_ECP_ALT, MBEDTLS_ECDH_XXX_ALT, MBEDTLS_ECDSA_XXX_ALT
- *        and MBEDTLS_ECDH_LEGACY_CONTEXT.
+ *        MBEDTLS_ECP_ALT, MBEDTLS_ECDH_XXX_ALT, MBEDTLS_ECDSA_XXX_ALT.
  */
 //#define MBEDTLS_ECP_RESTARTABLE
-
-/**
- * \def MBEDTLS_ECDH_LEGACY_CONTEXT
- *
- * Use a backward compatible ECDH context.
- *
- * Mbed TLS supports two formats for ECDH contexts (#mbedtls_ecdh_context
- * defined in `ecdh.h`). For most applications, the choice of format makes
- * no difference, since all library functions can work with either format,
- * except that the new format is incompatible with MBEDTLS_ECP_RESTARTABLE.
-
- * The new format used when this option is disabled is smaller
- * (56 bytes on a 32-bit platform). In future versions of the library, it
- * will support alternative implementations of ECDH operations.
- * The new format is incompatible with applications that access
- * context fields directly and with restartable ECP operations.
- *
- * Define this macro if you enable MBEDTLS_ECP_RESTARTABLE or if you
- * want to access ECDH context fields directly. Otherwise you should
- * comment out this macro definition.
- *
- * This option has no effect if #MBEDTLS_ECDH_C is not enabled.
- *
- * \note This configuration option is experimental. Future versions of the
- *       library may modify the way the ECDH context layout is configured
- *       and may modify the layout of the new context type.
- */
-#define MBEDTLS_ECDH_LEGACY_CONTEXT
 
 /**
  * \def MBEDTLS_ECDSA_DETERMINISTIC
@@ -860,7 +728,6 @@
  *      MBEDTLS_TLS_PSK_WITH_AES_128_CBC_SHA
  *      MBEDTLS_TLS_PSK_WITH_CAMELLIA_128_GCM_SHA256
  *      MBEDTLS_TLS_PSK_WITH_CAMELLIA_128_CBC_SHA256
- *      MBEDTLS_TLS_PSK_WITH_3DES_EDE_CBC_SHA
  */
 #define MBEDTLS_KEY_EXCHANGE_PSK_ENABLED
 
@@ -883,7 +750,6 @@
  *      MBEDTLS_TLS_DHE_PSK_WITH_AES_128_CBC_SHA
  *      MBEDTLS_TLS_DHE_PSK_WITH_CAMELLIA_128_GCM_SHA256
  *      MBEDTLS_TLS_DHE_PSK_WITH_CAMELLIA_128_CBC_SHA256
- *      MBEDTLS_TLS_DHE_PSK_WITH_3DES_EDE_CBC_SHA
  *
  * \warning    Using DHE constitutes a security risk as it
  *             is not possible to validate custom DH parameters.
@@ -909,7 +775,6 @@
  *      MBEDTLS_TLS_ECDHE_PSK_WITH_AES_128_CBC_SHA256
  *      MBEDTLS_TLS_ECDHE_PSK_WITH_AES_128_CBC_SHA
  *      MBEDTLS_TLS_ECDHE_PSK_WITH_CAMELLIA_128_CBC_SHA256
- *      MBEDTLS_TLS_ECDHE_PSK_WITH_3DES_EDE_CBC_SHA
  */
 #define MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
 
@@ -933,7 +798,6 @@
  *      MBEDTLS_TLS_RSA_PSK_WITH_AES_128_CBC_SHA
  *      MBEDTLS_TLS_RSA_PSK_WITH_CAMELLIA_128_GCM_SHA256
  *      MBEDTLS_TLS_RSA_PSK_WITH_CAMELLIA_128_CBC_SHA256
- *      MBEDTLS_TLS_RSA_PSK_WITH_3DES_EDE_CBC_SHA
  */
 #define MBEDTLS_KEY_EXCHANGE_RSA_PSK_ENABLED
 
@@ -959,7 +823,6 @@
  *      MBEDTLS_TLS_RSA_WITH_CAMELLIA_128_GCM_SHA256
  *      MBEDTLS_TLS_RSA_WITH_CAMELLIA_128_CBC_SHA256
  *      MBEDTLS_TLS_RSA_WITH_CAMELLIA_128_CBC_SHA
- *      MBEDTLS_TLS_RSA_WITH_3DES_EDE_CBC_SHA
  */
 #define MBEDTLS_KEY_EXCHANGE_RSA_ENABLED
 
@@ -985,7 +848,6 @@
  *      MBEDTLS_TLS_DHE_RSA_WITH_CAMELLIA_128_GCM_SHA256
  *      MBEDTLS_TLS_DHE_RSA_WITH_CAMELLIA_128_CBC_SHA256
  *      MBEDTLS_TLS_DHE_RSA_WITH_CAMELLIA_128_CBC_SHA
- *      MBEDTLS_TLS_DHE_RSA_WITH_3DES_EDE_CBC_SHA
  *
  * \warning    Using DHE constitutes a security risk as it
  *             is not possible to validate custom DH parameters.
@@ -1016,7 +878,6 @@
  *      MBEDTLS_TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA
  *      MBEDTLS_TLS_ECDHE_RSA_WITH_CAMELLIA_128_GCM_SHA256
  *      MBEDTLS_TLS_ECDHE_RSA_WITH_CAMELLIA_128_CBC_SHA256
- *      MBEDTLS_TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA
  */
 #define MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED
 
@@ -1039,7 +900,6 @@
  *      MBEDTLS_TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA
  *      MBEDTLS_TLS_ECDHE_ECDSA_WITH_CAMELLIA_128_GCM_SHA256
  *      MBEDTLS_TLS_ECDHE_ECDSA_WITH_CAMELLIA_128_CBC_SHA256
- *      MBEDTLS_TLS_ECDHE_ECDSA_WITH_3DES_EDE_CBC_SHA
  */
 #define MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED
 
@@ -1052,7 +912,6 @@
  *
  * This enables the following ciphersuites (if other requisites are
  * enabled as well):
- *      MBEDTLS_TLS_ECDH_ECDSA_WITH_3DES_EDE_CBC_SHA
  *      MBEDTLS_TLS_ECDH_ECDSA_WITH_AES_128_CBC_SHA
  *      MBEDTLS_TLS_ECDH_ECDSA_WITH_AES_256_CBC_SHA
  *      MBEDTLS_TLS_ECDH_ECDSA_WITH_AES_128_CBC_SHA256
@@ -1075,7 +934,6 @@
  *
  * This enables the following ciphersuites (if other requisites are
  * enabled as well):
- *      MBEDTLS_TLS_ECDH_RSA_WITH_3DES_EDE_CBC_SHA
  *      MBEDTLS_TLS_ECDH_RSA_WITH_AES_128_CBC_SHA
  *      MBEDTLS_TLS_ECDH_RSA_WITH_AES_256_CBC_SHA
  *      MBEDTLS_TLS_ECDH_RSA_WITH_AES_128_CBC_SHA256
@@ -1442,18 +1300,6 @@
 //#define MBEDTLS_SHA512_SMALLER
 
 /**
- * \def MBEDTLS_SHA512_NO_SHA384
- *
- * Disable the SHA-384 option of the SHA-512 module. Use this to save some
- * code size on devices that don't use SHA-384.
- *
- * Requires: MBEDTLS_SHA512_C
- *
- * Uncomment to disable SHA-384
- */
-//#define MBEDTLS_SHA512_NO_SHA384
-
-/**
  * \def MBEDTLS_SSL_ALL_ALERT_MESSAGES
  *
  * Enable sending of alert messages in case of encountered errors as per RFC.
@@ -1466,20 +1312,6 @@
  * Enable sending of all alert messages
  */
 #define MBEDTLS_SSL_ALL_ALERT_MESSAGES
-
-/**
- * \def MBEDTLS_SSL_RECORD_CHECKING
- *
- * Enable the function mbedtls_ssl_check_record() which can be used to check
- * the validity and authenticity of an incoming record, to verify that it has
- * not been seen before. These checks are performed without modifying the
- * externally visible state of the SSL context.
- *
- * See mbedtls_ssl_check_record() for more information.
- *
- * Uncomment to enable support for record checking.
- */
-#define MBEDTLS_SSL_RECORD_CHECKING
 
 /**
  * \def MBEDTLS_SSL_DTLS_CONNECTION_ID
@@ -1573,9 +1405,7 @@
  *
  * This only affects CBC ciphersuites, and is useless if none is defined.
  *
- * Requires: MBEDTLS_SSL_PROTO_TLS1    or
- *           MBEDTLS_SSL_PROTO_TLS1_1  or
- *           MBEDTLS_SSL_PROTO_TLS1_2
+ * Requires: MBEDTLS_SSL_PROTO_TLS1_2
  *
  * Comment this macro to disable support for Encrypt-then-MAC
  */
@@ -1591,31 +1421,11 @@
  * renegotiation), since it actually fixes a more fundamental issue in the
  * original SSL/TLS design, and has implications beyond Triple Handshake.
  *
- * Requires: MBEDTLS_SSL_PROTO_TLS1    or
- *           MBEDTLS_SSL_PROTO_TLS1_1  or
- *           MBEDTLS_SSL_PROTO_TLS1_2
+ * Requires: MBEDTLS_SSL_PROTO_TLS1_2
  *
  * Comment this macro to disable support for Extended Master Secret.
  */
 #define MBEDTLS_SSL_EXTENDED_MASTER_SECRET
-
-/**
- * \def MBEDTLS_SSL_FALLBACK_SCSV
- *
- * Enable support for RFC 7507: Fallback Signaling Cipher Suite Value (SCSV)
- * for Preventing Protocol Downgrade Attacks.
- *
- * For servers, it is recommended to always enable this, unless you support
- * only one version of TLS, or know for sure that none of your clients
- * implements a fallback strategy.
- *
- * For clients, you only need this if you're using a fallback strategy, which
- * is not recommended in the first place, unless you absolutely need it to
- * interoperate with buggy (version-intolerant) servers.
- *
- * Comment this macro to disable support for FALLBACK_SCSV
- */
-#define MBEDTLS_SSL_FALLBACK_SCSV
 
 /**
  * \def MBEDTLS_SSL_KEEP_PEER_CERTIFICATE
@@ -1640,18 +1450,6 @@
 #define MBEDTLS_SSL_KEEP_PEER_CERTIFICATE
 
 /**
- * \def MBEDTLS_SSL_CBC_RECORD_SPLITTING
- *
- * Enable 1/n-1 record splitting for CBC mode in TLS 1.0.
- *
- * This is a countermeasure to the BEAST attack, which also minimizes the risk
- * of interoperability issues compared to sending 0-length records.
- *
- * Comment this macro to disable 1/n-1 record splitting.
- */
-#define MBEDTLS_SSL_CBC_RECORD_SPLITTING
-
-/**
  * \def MBEDTLS_SSL_RENEGOTIATION
  *
  * Enable support for TLS renegotiation.
@@ -1674,16 +1472,6 @@
 #define MBEDTLS_SSL_RENEGOTIATION
 
 /**
- * \def MBEDTLS_SSL_SRV_RESPECT_CLIENT_PREFERENCE
- *
- * Pick the ciphersuite according to the client's preferences rather than ours
- * in the SSL Server module (MBEDTLS_SSL_SRV_C).
- *
- * Uncomment this macro to respect client's ciphersuite order
- */
-//#define MBEDTLS_SSL_SRV_RESPECT_CLIENT_PREFERENCE
-
-/**
  * \def MBEDTLS_SSL_MAX_FRAGMENT_LENGTH
  *
  * Enable support for RFC 6066 max_fragment_length extension in SSL.
@@ -1691,30 +1479,6 @@
  * Comment this macro to disable support for the max_fragment_length extension
  */
 #define MBEDTLS_SSL_MAX_FRAGMENT_LENGTH
-
-/**
- * \def MBEDTLS_SSL_PROTO_TLS1
- *
- * Enable support for TLS 1.0.
- *
- * Requires: MBEDTLS_MD5_C
- *           MBEDTLS_SHA1_C
- *
- * Comment this macro to disable support for TLS 1.0
- */
-#define MBEDTLS_SSL_PROTO_TLS1
-
-/**
- * \def MBEDTLS_SSL_PROTO_TLS1_1
- *
- * Enable support for TLS 1.1 (and DTLS 1.0 if DTLS is enabled).
- *
- * Requires: MBEDTLS_MD5_C
- *           MBEDTLS_SHA1_C
- *
- * Comment this macro to disable support for TLS 1.1 / DTLS 1.0
- */
-#define MBEDTLS_SSL_PROTO_TLS1_1
 
 /**
  * \def MBEDTLS_SSL_PROTO_TLS1_2
@@ -1752,11 +1516,9 @@
  *
  * Enable support for DTLS (all available versions).
  *
- * Enable this and MBEDTLS_SSL_PROTO_TLS1_1 to enable DTLS 1.0,
- * and/or this and MBEDTLS_SSL_PROTO_TLS1_2 to enable DTLS 1.2.
+ * Enable this and MBEDTLS_SSL_PROTO_TLS1_2 to enable DTLS 1.2.
  *
- * Requires: MBEDTLS_SSL_PROTO_TLS1_1
- *        or MBEDTLS_SSL_PROTO_TLS1_2
+ * Requires: MBEDTLS_SSL_PROTO_TLS1_2
  *
  * Comment this macro to disable support for DTLS
  */
@@ -1850,17 +1612,6 @@
  * Comment this to disable support for clients reusing the source port.
  */
 #define MBEDTLS_SSL_DTLS_CLIENT_PORT_REUSE
-
-/**
- * \def MBEDTLS_SSL_DTLS_BADMAC_LIMIT
- *
- * Enable support for a limit of records with bad MAC.
- *
- * See mbedtls_ssl_conf_dtls_badmac_limit().
- *
- * Requires: MBEDTLS_SSL_PROTO_DTLS
- */
-#define MBEDTLS_SSL_DTLS_BADMAC_LIMIT
 
 /**
  * \def MBEDTLS_SSL_SESSION_TICKETS
@@ -2053,28 +1804,6 @@
 #define MBEDTLS_VERSION_FEATURES
 
 /**
- * \def MBEDTLS_X509_ALLOW_EXTENSIONS_NON_V3
- *
- * If set, the X509 parser will not break-off when parsing an X509 certificate
- * and encountering an extension in a v1 or v2 certificate.
- *
- * Uncomment to prevent an error.
- */
-//#define MBEDTLS_X509_ALLOW_EXTENSIONS_NON_V3
-
-/**
- * \def MBEDTLS_X509_ALLOW_UNSUPPORTED_CRITICAL_EXTENSION
- *
- * If set, the X509 parser will not break-off when parsing an X509 certificate
- * and encountering an unknown critical extension.
- *
- * \warning Depending on your PKI use, enabling this can be a security risk!
- *
- * Uncomment to prevent an error.
- */
-//#define MBEDTLS_X509_ALLOW_UNSUPPORTED_CRITICAL_EXTENSION
-
-/**
  * \def MBEDTLS_X509_TRUSTED_CERTIFICATE_CALLBACK
  *
  * If set, this enables the X.509 API `mbedtls_x509_crt_verify_with_ca_cb()`
@@ -2092,33 +1821,6 @@
  * Uncomment to enable trusted certificate callbacks.
  */
 //#define MBEDTLS_X509_TRUSTED_CERTIFICATE_CALLBACK
-
-/**
- * \def MBEDTLS_X509_CHECK_KEY_USAGE
- *
- * Enable verification of the keyUsage extension (CA and leaf certificates).
- *
- * Disabling this avoids problems with mis-issued and/or misused
- * (intermediate) CA and leaf certificates.
- *
- * \warning Depending on your PKI use, disabling this can be a security risk!
- *
- * Comment to skip keyUsage checking for both CA and leaf certificates.
- */
-#define MBEDTLS_X509_CHECK_KEY_USAGE
-
-/**
- * \def MBEDTLS_X509_CHECK_EXTENDED_KEY_USAGE
- *
- * Enable verification of the extendedKeyUsage extension (leaf certificates).
- *
- * Disabling this avoids problems with mis-issued and/or misused certificates.
- *
- * \warning Depending on your PKI use, disabling this can be a security risk!
- *
- * Comment to skip extendedKeyUsage checking for certificates.
- */
-#define MBEDTLS_X509_CHECK_EXTENDED_KEY_USAGE
 
 /**
  * \def MBEDTLS_X509_REMOVE_INFO
@@ -2536,19 +2238,6 @@
  * Caller:  library/pem.c
  *          library/cipher.c
  *
- * This module enables the following ciphersuites (if other requisites are
- * enabled as well):
- *      MBEDTLS_TLS_ECDH_ECDSA_WITH_3DES_EDE_CBC_SHA
- *      MBEDTLS_TLS_ECDH_RSA_WITH_3DES_EDE_CBC_SHA
- *      MBEDTLS_TLS_ECDHE_ECDSA_WITH_3DES_EDE_CBC_SHA
- *      MBEDTLS_TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA
- *      MBEDTLS_TLS_DHE_RSA_WITH_3DES_EDE_CBC_SHA
- *      MBEDTLS_TLS_ECDHE_PSK_WITH_3DES_EDE_CBC_SHA
- *      MBEDTLS_TLS_DHE_PSK_WITH_3DES_EDE_CBC_SHA
- *      MBEDTLS_TLS_RSA_WITH_3DES_EDE_CBC_SHA
- *      MBEDTLS_TLS_RSA_PSK_WITH_3DES_EDE_CBC_SHA
- *      MBEDTLS_TLS_PSK_WITH_3DES_EDE_CBC_SHA
- *
  * PEM_PARSE uses DES/3DES for decrypting encrypted keys.
  *
  * \warning   DES is considered a weak cipher and its use constitutes a
@@ -2781,10 +2470,9 @@
  *          library/pem.c
  *          library/ssl_tls.c
  *
- * This module is required for SSL/TLS up to version 1.1, and for TLS 1.2
- * depending on the handshake parameters. Further, it is used for checking
- * MD5-signed certificates, and for PBKDF1 when decrypting PEM-encoded
- * encrypted keys.
+ * This module is required for TLS 1.2 depending on the handshake parameters.
+ * Further, it is used for checking MD5-signed certificates, and for PBKDF1
+ * when decrypting PEM-encoded encrypted keys.
  *
  * \warning   MD5 is considered a weak message digest and its use constitutes a
  *            security risk. If possible, we recommend avoiding dependencies on
@@ -3104,8 +2792,8 @@
  *          library/ssl_tls.c
  *          library/x509write_crt.c
  *
- * This module is required for SSL/TLS up to version 1.1, for TLS 1.2
- * depending on the handshake parameters, and for SHA1-signed certificates.
+ * This module is required for TLS 1.2 depending on the handshake parameters,
+ * and for SHA1-signed certificates.
  *
  * \warning   SHA-1 is considered a weak message digest and its use constitutes
  *            a security risk. If possible, we recommend avoiding dependencies
@@ -3115,9 +2803,28 @@
 #define MBEDTLS_SHA1_C
 
 /**
+ * \def MBEDTLS_SHA224_C
+ *
+ * Enable the SHA-224 cryptographic hash algorithm.
+ *
+ * Requires: MBEDTLS_SHA256_C. The library does not currently support enabling
+ *           SHA-224 without SHA-256.
+ *
+ * Module:  library/sha256.c
+ * Caller:  library/md.c
+ *          library/ssl_cookie.c
+ *
+ * This module adds support for SHA-224.
+ */
+#define MBEDTLS_SHA224_C
+
+/**
  * \def MBEDTLS_SHA256_C
  *
- * Enable the SHA-224 and SHA-256 cryptographic hash algorithms.
+ * Enable the SHA-256 cryptographic hash algorithm.
+ *
+ * Requires: MBEDTLS_SHA224_C. The library does not currently support enabling
+ *           SHA-256 without SHA-224.
  *
  * Module:  library/sha256.c
  * Caller:  library/entropy.c
@@ -3126,23 +2833,39 @@
  *          library/ssl_srv.c
  *          library/ssl_tls.c
  *
- * This module adds support for SHA-224 and SHA-256.
+ * This module adds support for SHA-256.
  * This module is required for the SSL/TLS 1.2 PRF function.
  */
 #define MBEDTLS_SHA256_C
 
 /**
+ * \def MBEDTLS_SHA384_C
+ *
+ * Enable the SHA-384 cryptographic hash algorithm.
+ *
+ * Requires: MBEDTLS_SHA512_C
+ *
+ * Module:  library/sha512.c
+ * Caller:  library/md.c
+ *          library/ssl_cli.c
+ *          library/ssl_srv.c
+ *
+ * Comment to disable SHA-384
+ */
+#define MBEDTLS_SHA384_C
+
+/**
  * \def MBEDTLS_SHA512_C
  *
- * Enable the SHA-384 and SHA-512 cryptographic hash algorithms.
+ * Enable SHA-512 cryptographic hash algorithms.
  *
  * Module:  library/sha512.c
  * Caller:  library/entropy.c
  *          library/md.c
- *          library/ssl_cli.c
- *          library/ssl_srv.c
+ *          library/ssl_tls.c
+ *          library/ssl_cookie.c
  *
- * This module adds support for SHA-384 and SHA-512.
+ * This module adds support for SHA-512.
  */
 #define MBEDTLS_SHA512_C
 
@@ -3422,7 +3145,6 @@
 //#define MBEDTLS_HMAC_DRBG_MAX_SEED_INPUT      384 /**< Maximum size of (re)seed buffer */
 
 /* ECP options */
-//#define MBEDTLS_ECP_MAX_BITS             521 /**< Maximum bit size of groups */
 //#define MBEDTLS_ECP_WINDOW_SIZE            6 /**< Maximum window size used */
 //#define MBEDTLS_ECP_FIXED_POINT_OPTIM      1 /**< Enable fixed-point speed-up */
 
@@ -3465,42 +3187,6 @@
 //#define MBEDTLS_PLATFORM_NV_SEED_READ_MACRO   mbedtls_platform_std_nv_seed_read /**< Default nv_seed_read function to use, can be undefined */
 //#define MBEDTLS_PLATFORM_NV_SEED_WRITE_MACRO  mbedtls_platform_std_nv_seed_write /**< Default nv_seed_write function to use, can be undefined */
 
-/**
- * \brief       This macro is invoked by the library when an invalid parameter
- *              is detected that is only checked with #MBEDTLS_CHECK_PARAMS
- *              (see the documentation of that option for context).
- *
- *              When you leave this undefined here, the library provides
- *              a default definition. If the macro #MBEDTLS_CHECK_PARAMS_ASSERT
- *              is defined, the default definition is `assert(cond)`,
- *              otherwise the default definition calls a function
- *              mbedtls_param_failed(). This function is declared in
- *              `platform_util.h` for the benefit of the library, but
- *              you need to define in your application.
- *
- *              When you define this here, this replaces the default
- *              definition in platform_util.h (which no longer declares the
- *              function mbedtls_param_failed()) and it is your responsibility
- *              to make sure this macro expands to something suitable (in
- *              particular, that all the necessary declarations are visible
- *              from within the library - you can ensure that by providing
- *              them in this file next to the macro definition).
- *              If you define this macro to call `assert`, also define
- *              #MBEDTLS_CHECK_PARAMS_ASSERT so that library source files
- *              include `<assert.h>`.
- *
- *              Note that you may define this macro to expand to nothing, in
- *              which case you don't have to worry about declarations or
- *              definitions. However, you will then be notified about invalid
- *              parameters only in non-void functions, and void function will
- *              just silently return early on invalid parameters, which
- *              partially negates the benefits of enabling
- *              #MBEDTLS_CHECK_PARAMS in the first place, so is discouraged.
- *
- * \param cond  The expression that should evaluate to true, but doesn't.
- */
-//#define MBEDTLS_PARAM_FAILED( cond )               assert( cond )
-
 /* PSA options */
 /**
  * Use HMAC_DRBG with the specified hash algorithm for HMAC_DRBG for the
@@ -3531,32 +3217,6 @@
 
 /* SSL options */
 
-/** \def MBEDTLS_SSL_MAX_CONTENT_LEN
- *
- * Maximum length (in bytes) of incoming and outgoing plaintext fragments.
- *
- * This determines the size of both the incoming and outgoing TLS I/O buffers
- * in such a way that both are capable of holding the specified amount of
- * plaintext data, regardless of the protection mechanism used.
- *
- * To configure incoming and outgoing I/O buffers separately, use
- * #MBEDTLS_SSL_IN_CONTENT_LEN and #MBEDTLS_SSL_OUT_CONTENT_LEN,
- * which overwrite the value set by this option.
- *
- * \note When using a value less than the default of 16KB on the client, it is
- *       recommended to use the Maximum Fragment Length (MFL) extension to
- *       inform the server about this limitation. On the server, there
- *       is no supported, standardized way of informing the client about
- *       restriction on the maximum size of incoming messages, and unless
- *       the limitation has been communicated by other means, it is recommended
- *       to only change the outgoing buffer size #MBEDTLS_SSL_OUT_CONTENT_LEN
- *       while keeping the default value of 16KB for the incoming buffer.
- *
- * Uncomment to set the maximum plaintext size of both
- * incoming and outgoing I/O buffers.
- */
-//#define MBEDTLS_SSL_MAX_CONTENT_LEN             16384
-
 /** \def MBEDTLS_SSL_IN_CONTENT_LEN
  *
  * Maximum length (in bytes) of incoming plaintext fragments.
@@ -3565,9 +3225,6 @@
  * that it is capable of holding the specified amount of plaintext data,
  * regardless of the protection mechanism used.
  *
- * If this option is undefined, it inherits its value from
- * #MBEDTLS_SSL_MAX_CONTENT_LEN.
- *
  * \note When using a value less than the default of 16KB on the client, it is
  *       recommended to use the Maximum Fragment Length (MFL) extension to
  *       inform the server about this limitation. On the server, there
@@ -3577,8 +3234,7 @@
  *       to only change the outgoing buffer size #MBEDTLS_SSL_OUT_CONTENT_LEN
  *       while keeping the default value of 16KB for the incoming buffer.
  *
- * Uncomment to set the maximum plaintext size of the incoming I/O buffer
- * independently of the outgoing I/O buffer.
+ * Uncomment to set the maximum plaintext size of the incoming I/O buffer.
  */
 //#define MBEDTLS_SSL_IN_CONTENT_LEN              16384
 
@@ -3596,27 +3252,10 @@
  */
 //#define MBEDTLS_SSL_CID_OUT_LEN_MAX 32
 
-/** \def MBEDTLS_SSL_CID_PADDING_GRANULARITY
+/** \def MBEDTLS_SSL_CID_TLS1_3_PADDING_GRANULARITY
  *
  * This option controls the use of record plaintext padding
- * when using the Connection ID extension in DTLS 1.2.
- *
- * The padding will always be chosen so that the length of the
- * padded plaintext is a multiple of the value of this option.
- *
- * Note: A value of \c 1 means that no padding will be used
- *       for outgoing records.
- *
- * Note: On systems lacking division instructions,
- *       a power of two should be preferred.
- *
- */
-//#define MBEDTLS_SSL_CID_PADDING_GRANULARITY 16
-
-/** \def MBEDTLS_SSL_TLS1_3_PADDING_GRANULARITY
- *
- * This option controls the use of record plaintext padding
- * in TLS 1.3.
+ * in TLS 1.3 and when using the Connection ID extension in DTLS 1.2.
  *
  * The padding will always be chosen so that the length of the
  * padded plaintext is a multiple of the value of this option.
@@ -3627,7 +3266,7 @@
  * Note: On systems lacking division instructions,
  *       a power of two should be preferred.
  */
-//#define MBEDTLS_SSL_TLS1_3_PADDING_GRANULARITY 1
+//#define MBEDTLS_SSL_CID_TLS1_3_PADDING_GRANULARITY 16
 
 /** \def MBEDTLS_SSL_OUT_CONTENT_LEN
  *
@@ -3637,9 +3276,6 @@
  * that it is capable of holding the specified amount of plaintext data,
  * regardless of the protection mechanism used.
  *
- * If this option undefined, it inherits its value from
- * #MBEDTLS_SSL_MAX_CONTENT_LEN.
- *
  * It is possible to save RAM by setting a smaller outward buffer, while keeping
  * the default inward 16384 byte buffer to conform to the TLS specification.
  *
@@ -3648,8 +3284,7 @@
  * The specific size requirement depends on the configured ciphers and any
  * certificate data which is sent during the handshake.
  *
- * Uncomment to set the maximum plaintext size of the outgoing I/O buffer
- * independently of the incoming I/O buffer.
+ * Uncomment to set the maximum plaintext size of the outgoing I/O buffer.
  */
 //#define MBEDTLS_SSL_OUT_CONTENT_LEN             16384
 
