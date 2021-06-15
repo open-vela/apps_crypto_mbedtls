@@ -16,7 +16,9 @@
 #   mbedtls, mbedx509, mbedcrypto and apidoc targets.
 #
 
-cmake_minimum_required(VERSION 2.8.12)
+# We specify a minimum requirement of 3.10.2, but for now use 3.5.1 here
+# until our infrastructure catches up.
+cmake_minimum_required(VERSION 3.5.1)
 
 # https://cmake.org/cmake/help/latest/policy/CMP0011.html
 # Setting this policy is required in CMake >= 3.18.0, otherwise a warning is generated. The OLD
@@ -56,17 +58,6 @@ else()
 endif()
 
 # Warning string - created as a list for compatibility with CMake 2.8
-set(WARNING_BORDER "*******************************************************\n")
-set(NULL_ENTROPY_WARN_L1 "****  WARNING!  MBEDTLS_TEST_NULL_ENTROPY defined!\n")
-set(NULL_ENTROPY_WARN_L2 "****  THIS BUILD HAS NO DEFINED ENTROPY SOURCES\n")
-set(NULL_ENTROPY_WARN_L3 "****  AND IS *NOT* SUITABLE FOR PRODUCTION USE\n")
-
-set(NULL_ENTROPY_WARNING "${WARNING_BORDER}"
-                         "${NULL_ENTROPY_WARN_L1}"
-                         "${NULL_ENTROPY_WARN_L2}"
-                         "${NULL_ENTROPY_WARN_L3}"
-                         "${WARNING_BORDER}")
-
 set(CTR_DRBG_128_BIT_KEY_WARN_L1 "****  WARNING!  MBEDTLS_CTR_DRBG_USE_128_BIT_KEY defined!\n")
 set(CTR_DRBG_128_BIT_KEY_WARN_L2 "****  Using 128-bit keys for CTR_DRBG limits the security of generated\n")
 set(CTR_DRBG_128_BIT_KEY_WARN_L3 "****  keys and operations that use random values generated to 128-bit security\n")
@@ -99,26 +90,6 @@ if(MBEDTLS_PYTHON_EXECUTABLE)
         message(WARNING ${CTR_DRBG_128_BIT_KEY_WARNING})
     endif()
 
-    # If NULL Entropy is configured, display an appropriate warning
-    execute_process(COMMAND ${MBEDTLS_PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/scripts/config.py -f ${CMAKE_CURRENT_SOURCE_DIR}/include/mbedtls/config.h get MBEDTLS_TEST_NULL_ENTROPY
-                        RESULT_VARIABLE result)
-    if(${result} EQUAL 0)
-        message(WARNING ${NULL_ENTROPY_WARNING})
-
-        if(NOT UNSAFE_BUILD)
-            message(FATAL_ERROR "\
-\n\
-Warning! You have enabled MBEDTLS_TEST_NULL_ENTROPY. \
-This option is not safe for production use and negates all security \
-It is intended for development use only. \
-\n\
-To confirm you want to build with this option, re-run cmake with the \
-option: \n\
-  cmake -DUNSAFE_BUILD=ON ")
-
-            return()
-        endif()
-    endif()
 endif()
 
 # If this is the root project add longer list of available CMAKE_BUILD_TYPE values
