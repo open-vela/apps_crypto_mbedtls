@@ -1472,16 +1472,6 @@
 #define MBEDTLS_SSL_RENEGOTIATION
 
 /**
- * \def MBEDTLS_SSL_SRV_RESPECT_CLIENT_PREFERENCE
- *
- * Pick the ciphersuite according to the client's preferences rather than ours
- * in the SSL Server module (MBEDTLS_SSL_SRV_C).
- *
- * Uncomment this macro to respect client's ciphersuite order
- */
-//#define MBEDTLS_SSL_SRV_RESPECT_CLIENT_PREFERENCE
-
-/**
  * \def MBEDTLS_SSL_MAX_FRAGMENT_LENGTH
  *
  * Enable support for RFC 6066 max_fragment_length extension in SSL.
@@ -1814,18 +1804,6 @@
 #define MBEDTLS_VERSION_FEATURES
 
 /**
- * \def MBEDTLS_X509_ALLOW_UNSUPPORTED_CRITICAL_EXTENSION
- *
- * If set, the X509 parser will not break-off when parsing an X509 certificate
- * and encountering an unknown critical extension.
- *
- * \warning Depending on your PKI use, enabling this can be a security risk!
- *
- * Uncomment to prevent an error.
- */
-//#define MBEDTLS_X509_ALLOW_UNSUPPORTED_CRITICAL_EXTENSION
-
-/**
  * \def MBEDTLS_X509_TRUSTED_CERTIFICATE_CALLBACK
  *
  * If set, this enables the X.509 API `mbedtls_x509_crt_verify_with_ca_cb()`
@@ -1843,33 +1821,6 @@
  * Uncomment to enable trusted certificate callbacks.
  */
 //#define MBEDTLS_X509_TRUSTED_CERTIFICATE_CALLBACK
-
-/**
- * \def MBEDTLS_X509_CHECK_KEY_USAGE
- *
- * Enable verification of the keyUsage extension (CA and leaf certificates).
- *
- * Disabling this avoids problems with mis-issued and/or misused
- * (intermediate) CA and leaf certificates.
- *
- * \warning Depending on your PKI use, disabling this can be a security risk!
- *
- * Comment to skip keyUsage checking for both CA and leaf certificates.
- */
-#define MBEDTLS_X509_CHECK_KEY_USAGE
-
-/**
- * \def MBEDTLS_X509_CHECK_EXTENDED_KEY_USAGE
- *
- * Enable verification of the extendedKeyUsage extension (leaf certificates).
- *
- * Disabling this avoids problems with mis-issued and/or misused certificates.
- *
- * \warning Depending on your PKI use, disabling this can be a security risk!
- *
- * Comment to skip extendedKeyUsage checking for certificates.
- */
-#define MBEDTLS_X509_CHECK_EXTENDED_KEY_USAGE
 
 /**
  * \def MBEDTLS_X509_REMOVE_INFO
@@ -3194,7 +3145,6 @@
 //#define MBEDTLS_HMAC_DRBG_MAX_SEED_INPUT      384 /**< Maximum size of (re)seed buffer */
 
 /* ECP options */
-//#define MBEDTLS_ECP_MAX_BITS             521 /**< Maximum bit size of groups */
 //#define MBEDTLS_ECP_WINDOW_SIZE            6 /**< Maximum window size used */
 //#define MBEDTLS_ECP_FIXED_POINT_OPTIM      1 /**< Enable fixed-point speed-up */
 
