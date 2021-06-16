@@ -32,7 +32,6 @@
 
 #ifndef PSA_CRYPTO_BUILTIN_COMPOSITES_H
 #define PSA_CRYPTO_BUILTIN_COMPOSITES_H
-#include "mbedtls/private_access.h"
 
 #include <psa/crypto_driver_common.h>
 
@@ -48,11 +47,11 @@
 typedef struct
 {
     /** The HMAC algorithm in use */
-    psa_algorithm_t MBEDTLS_PRIVATE(alg);
+    psa_algorithm_t alg;
     /** The hash context. */
     struct psa_hash_operation_s hash_ctx;
     /** The HMAC part of the context. */
-    uint8_t MBEDTLS_PRIVATE(opad)[PSA_HMAC_MAX_HASH_BLOCK_SIZE];
+    uint8_t opad[PSA_HMAC_MAX_HASH_BLOCK_SIZE];
 } mbedtls_psa_hmac_operation_t;
 
 #define MBEDTLS_PSA_HMAC_OPERATION_INIT {0, PSA_HASH_OPERATION_INIT, {0}}
@@ -62,17 +61,17 @@ typedef struct
 
 typedef struct
 {
-    psa_algorithm_t MBEDTLS_PRIVATE(alg);
+    psa_algorithm_t alg;
     union
     {
-        unsigned MBEDTLS_PRIVATE(dummy); /* Make the union non-empty even with no supported algorithms. */
+        unsigned dummy; /* Make the union non-empty even with no supported algorithms. */
 #if defined(MBEDTLS_PSA_BUILTIN_ALG_HMAC) || defined(PSA_CRYPTO_DRIVER_TEST)
-        mbedtls_psa_hmac_operation_t MBEDTLS_PRIVATE(hmac);
+        mbedtls_psa_hmac_operation_t hmac;
 #endif /* MBEDTLS_PSA_BUILTIN_ALG_HMAC */
 #if defined(MBEDTLS_PSA_BUILTIN_ALG_CMAC) || defined(PSA_CRYPTO_DRIVER_TEST)
-        mbedtls_cipher_context_t MBEDTLS_PRIVATE(cmac);
+        mbedtls_cipher_context_t cmac;
 #endif /* MBEDTLS_PSA_BUILTIN_ALG_CMAC */
-    } MBEDTLS_PRIVATE(ctx);
+    } ctx;
 } mbedtls_psa_mac_operation_t;
 
 #define MBEDTLS_PSA_MAC_OPERATION_INIT {0, {0}}

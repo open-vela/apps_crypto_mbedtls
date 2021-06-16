@@ -112,6 +112,12 @@ psa_status_t psa_crypto_init(void);
  * This macro returns a suitable initializer for a key attribute structure
  * of type #psa_key_attributes_t.
  */
+#ifdef __DOXYGEN_ONLY__
+/* This is an example definition for documentation purposes.
+ * Implementations should define a suitable value in `crypto_struct.h`.
+ */
+#define PSA_KEY_ATTRIBUTES_INIT {0}
+#endif
 
 /** Return an initial value for a key attributes structure.
  */
@@ -932,8 +938,8 @@ psa_status_t psa_hash_compare(psa_algorithm_t alg,
  *   \endcode
  *
  * This is an implementation-defined \c struct. Applications should not
- * make any assumptions about the content of this structure.
- * Implementation details can change in future versions without notice. */
+ * make any assumptions about the content of this structure except
+ * as directed by the documentation of a specific implementation. */
 typedef struct psa_hash_operation_s psa_hash_operation_t;
 
 /** \def PSA_HASH_OPERATION_INIT
@@ -941,6 +947,12 @@ typedef struct psa_hash_operation_s psa_hash_operation_t;
  * This macro returns a suitable initializer for a hash operation object
  * of type #psa_hash_operation_t.
  */
+#ifdef __DOXYGEN_ONLY__
+/* This is an example definition for documentation purposes.
+ * Implementations should define a suitable value in `crypto_struct.h`.
+ */
+#define PSA_HASH_OPERATION_INIT {0}
+#endif
 
 /** Return an initial value for a hash operation object.
  */
@@ -1295,10 +1307,9 @@ psa_status_t psa_mac_verify(mbedtls_svc_key_id_t key,
  *   operation = psa_mac_operation_init();
  *   \endcode
  *
- *
  * This is an implementation-defined \c struct. Applications should not
- * make any assumptions about the content of this structure.
- * Implementation details can change in future versions without notice. */
+ * make any assumptions about the content of this structure except
+ * as directed by the documentation of a specific implementation. */
 typedef struct psa_mac_operation_s psa_mac_operation_t;
 
 /** \def PSA_MAC_OPERATION_INIT
@@ -1306,6 +1317,12 @@ typedef struct psa_mac_operation_s psa_mac_operation_t;
  * This macro returns a suitable initializer for a MAC operation object of type
  * #psa_mac_operation_t.
  */
+#ifdef __DOXYGEN_ONLY__
+/* This is an example definition for documentation purposes.
+ * Implementations should define a suitable value in `crypto_struct.h`.
+ */
+#define PSA_MAC_OPERATION_INIT {0}
+#endif
 
 /** Return an initial value for a MAC operation object.
  */
@@ -1715,8 +1732,8 @@ psa_status_t psa_cipher_decrypt(mbedtls_svc_key_id_t key,
  *   \endcode
  *
  * This is an implementation-defined \c struct. Applications should not
- * make any assumptions about the content of this structure.
- * Implementation details can change in future versions without notice. */
+ * make any assumptions about the content of this structure except
+ * as directed by the documentation of a specific implementation. */
 typedef struct psa_cipher_operation_s psa_cipher_operation_t;
 
 /** \def PSA_CIPHER_OPERATION_INIT
@@ -1724,6 +1741,12 @@ typedef struct psa_cipher_operation_s psa_cipher_operation_t;
  * This macro returns a suitable initializer for a cipher operation object of
  * type #psa_cipher_operation_t.
  */
+#ifdef __DOXYGEN_ONLY__
+/* This is an example definition for documentation purposes.
+ * Implementations should define a suitable value in `crypto_struct.h`.
+ */
+#define PSA_CIPHER_OPERATION_INIT {0}
+#endif
 
 /** Return an initial value for a cipher operation object.
  */
@@ -2238,8 +2261,8 @@ psa_status_t psa_aead_decrypt(mbedtls_svc_key_id_t key,
  *   \endcode
  *
  * This is an implementation-defined \c struct. Applications should not
- * make any assumptions about the content of this structure.
- * Implementation details can change in future versions without notice. */
+ * make any assumptions about the content of this structure except
+ * as directed by the documentation of a specific implementation. */
 typedef struct psa_aead_operation_s psa_aead_operation_t;
 
 /** \def PSA_AEAD_OPERATION_INIT
@@ -2247,6 +2270,12 @@ typedef struct psa_aead_operation_s psa_aead_operation_t;
  * This macro returns a suitable initializer for an AEAD operation object of
  * type #psa_aead_operation_t.
  */
+#ifdef __DOXYGEN_ONLY__
+/* This is an example definition for documentation purposes.
+ * Implementations should define a suitable value in `crypto_struct.h`.
+ */
+#define PSA_AEAD_OPERATION_INIT {0}
+#endif
 
 /** Return an initial value for an AEAD operation object.
  */
@@ -2861,123 +2890,6 @@ psa_status_t psa_aead_abort(psa_aead_operation_t *operation);
  */
 
 /**
- * \brief Sign a message with a private key. For hash-and-sign algorithms,
- *        this includes the hashing step.
- *
- * \note To perform a multi-part hash-and-sign signature algorithm, first use
- *       a multi-part hash operation and then pass the resulting hash to
- *       psa_sign_hash(). PSA_ALG_GET_HASH(\p alg) can be used to determine the
- *       hash algorithm to use.
- *
- * \param[in]  key              Identifier of the key to use for the operation.
- *                              It must be an asymmetric key pair. The key must
- *                              allow the usage #PSA_KEY_USAGE_SIGN_MESSAGE.
- * \param[in]  alg              An asymmetric signature algorithm (PSA_ALG_XXX
- *                              value such that #PSA_ALG_IS_SIGN_MESSAGE(\p alg)
- *                              is true), that is compatible with the type of
- *                              \p key.
- * \param[in]  input            The input message to sign.
- * \param[in]  input_length     Size of the \p input buffer in bytes.
- * \param[out] signature        Buffer where the signature is to be written.
- * \param[in]  signature_size   Size of the \p signature buffer in bytes. This
- *                              must be appropriate for the selected
- *                              algorithm and key:
- *                              - The required signature size is
- *                                #PSA_SIGN_OUTPUT_SIZE(\c key_type, \c key_bits, \p alg)
- *                                where \c key_type and \c key_bits are the type and
- *                                bit-size respectively of key.
- *                              - #PSA_SIGNATURE_MAX_SIZE evaluates to the
- *                                maximum signature size of any supported
- *                                signature algorithm.
- * \param[out] signature_length On success, the number of bytes that make up
- *                              the returned signature value.
- *
- * \retval #PSA_SUCCESS
- * \retval #PSA_ERROR_INVALID_HANDLE
- * \retval #PSA_ERROR_NOT_PERMITTED
- *         The key does not have the #PSA_KEY_USAGE_SIGN_MESSAGE flag,
- *         or it does not permit the requested algorithm.
- * \retval #PSA_ERROR_BUFFER_TOO_SMALL
- *         The size of the \p signature buffer is too small. You can
- *         determine a sufficient buffer size by calling
- *         #PSA_SIGN_OUTPUT_SIZE(\c key_type, \c key_bits, \p alg)
- *         where \c key_type and \c key_bits are the type and bit-size
- *         respectively of \p key.
- * \retval #PSA_ERROR_NOT_SUPPORTED
- * \retval #PSA_ERROR_INVALID_ARGUMENT
- * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
- * \retval #PSA_ERROR_COMMUNICATION_FAILURE
- * \retval #PSA_ERROR_HARDWARE_FAILURE
- * \retval #PSA_ERROR_CORRUPTION_DETECTED
- * \retval #PSA_ERROR_STORAGE_FAILURE
- * \retval #PSA_ERROR_DATA_CORRUPT
- * \retval #PSA_ERROR_DATA_INVALID
- * \retval #PSA_ERROR_INSUFFICIENT_ENTROPY
- * \retval #PSA_ERROR_BAD_STATE
- *         The library has not been previously initialized by psa_crypto_init().
- *         It is implementation-dependent whether a failure to initialize
- *         results in this error code.
- */
-psa_status_t psa_sign_message( mbedtls_svc_key_id_t key,
-                               psa_algorithm_t alg,
-                               const uint8_t * input,
-                               size_t input_length,
-                               uint8_t * signature,
-                               size_t signature_size,
-                               size_t * signature_length );
-
-/** \brief Verify the signature of a message with a public key, using
- *         a hash-and-sign verification algorithm.
- *
- * \note To perform a multi-part hash-and-sign signature verification
- *       algorithm, first use a multi-part hash operation to hash the message
- *       and then pass the resulting hash to psa_verify_hash().
- *       PSA_ALG_GET_HASH(\p alg) can be used to determine the hash algorithm
- *       to use.
- *
- * \param[in]  key              Identifier of the key to use for the operation.
- *                              It must be a public key or an asymmetric key
- *                              pair. The key must allow the usage
- *                              #PSA_KEY_USAGE_VERIFY_MESSAGE.
- * \param[in]  alg              An asymmetric signature algorithm (PSA_ALG_XXX
- *                              value such that #PSA_ALG_IS_SIGN_MESSAGE(\p alg)
- *                              is true), that is compatible with the type of
- *                              \p key.
- * \param[in]  input            The message whose signature is to be verified.
- * \param[in]  input_length     Size of the \p input buffer in bytes.
- * \param[out] signature        Buffer containing the signature to verify.
- * \param[in]  signature_length Size of the \p signature buffer in bytes.
- *
- * \retval #PSA_SUCCESS
- * \retval #PSA_ERROR_INVALID_HANDLE
- * \retval #PSA_ERROR_NOT_PERMITTED
- *         The key does not have the #PSA_KEY_USAGE_SIGN_MESSAGE flag,
- *         or it does not permit the requested algorithm.
- * \retval #PSA_ERROR_INVALID_SIGNATURE
- *         The calculation was performed successfully, but the passed signature
- *         is not a valid signature.
- * \retval #PSA_ERROR_NOT_SUPPORTED
- * \retval #PSA_ERROR_INVALID_ARGUMENT
- * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
- * \retval #PSA_ERROR_COMMUNICATION_FAILURE
- * \retval #PSA_ERROR_HARDWARE_FAILURE
- * \retval #PSA_ERROR_CORRUPTION_DETECTED
- * \retval #PSA_ERROR_STORAGE_FAILURE
- * \retval #PSA_ERROR_DATA_CORRUPT
- * \retval #PSA_ERROR_DATA_INVALID
- * \retval #PSA_ERROR_BAD_STATE
- *         The library has not been previously initialized by psa_crypto_init().
- *         It is implementation-dependent whether a failure to initialize
- *         results in this error code.
- */
-psa_status_t psa_verify_message( mbedtls_svc_key_id_t key,
-                                 psa_algorithm_t alg,
-                                 const uint8_t * input,
-                                 size_t input_length,
-                                 const uint8_t * signature,
-                                 size_t signature_length );
-
-/**
  * \brief Sign a hash or short message with a private key.
  *
  * Note that to perform a hash-and-sign signature algorithm, you must
@@ -3030,7 +2942,7 @@ psa_status_t psa_sign_hash(mbedtls_svc_key_id_t key,
                            size_t *signature_length);
 
 /**
- * \brief Verify the signature of a hash or short message using a public key.
+ * \brief Verify the signature a hash or short message using a public key.
  *
  * Note that to perform a hash-and-sign signature algorithm, you must
  * first calculate the hash by calling psa_hash_setup(), psa_hash_update()
@@ -3231,8 +3143,8 @@ psa_status_t psa_asymmetric_decrypt(mbedtls_svc_key_id_t key,
  *   \endcode
  *
  * This is an implementation-defined \c struct. Applications should not
- * make any assumptions about the content of this structure.
- * Implementation details can change in future versions without notice.
+ * make any assumptions about the content of this structure except
+ * as directed by the documentation of a specific implementation.
  */
 typedef struct psa_key_derivation_s psa_key_derivation_operation_t;
 
@@ -3241,6 +3153,12 @@ typedef struct psa_key_derivation_s psa_key_derivation_operation_t;
  * This macro returns a suitable initializer for a key derivation operation
  * object of type #psa_key_derivation_operation_t.
  */
+#ifdef __DOXYGEN_ONLY__
+/* This is an example definition for documentation purposes.
+ * Implementations should define a suitable value in `crypto_struct.h`.
+ */
+#define PSA_KEY_DERIVATION_OPERATION_INIT {0}
+#endif
 
 /** Return an initial value for a key derivation operation object.
  */

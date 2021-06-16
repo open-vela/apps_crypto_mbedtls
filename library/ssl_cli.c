@@ -559,6 +559,36 @@ static int ssl_write_max_fragment_length_ext( mbedtls_ssl_context *ssl,
 }
 #endif /* MBEDTLS_SSL_MAX_FRAGMENT_LENGTH */
 
+#if defined(MBEDTLS_SSL_TRUNCATED_HMAC)
+static int ssl_write_truncated_hmac_ext( mbedtls_ssl_context *ssl,
+                                         unsigned char *buf,
+                                         const unsigned char *end,
+                                         size_t *olen )
+{
+    unsigned char *p = buf;
+
+    *olen = 0;
+
+    if( ssl->conf->trunc_hmac == MBEDTLS_SSL_TRUNC_HMAC_DISABLED )
+        return( 0 );
+
+    MBEDTLS_SSL_DEBUG_MSG( 3,
+        ( "client hello, adding truncated_hmac extension" ) );
+
+    MBEDTLS_SSL_CHK_BUF_PTR( p, end, 4 );
+
+    *p++ = (unsigned char)( ( MBEDTLS_TLS_EXT_TRUNCATED_HMAC >> 8 ) & 0xFF );
+    *p++ = (unsigned char)( ( MBEDTLS_TLS_EXT_TRUNCATED_HMAC      ) & 0xFF );
+
+    *p++ = 0x00;
+    *p++ = 0x00;
+
+    *olen = 4;
+
+    return( 0 );
+}
+#endif /* MBEDTLS_SSL_TRUNCATED_HMAC */
+
 #if defined(MBEDTLS_SSL_ENCRYPT_THEN_MAC)
 static int ssl_write_encrypt_then_mac_ext( mbedtls_ssl_context *ssl,
                                            unsigned char *buf,
@@ -1125,7 +1155,8 @@ static int ssl_write_client_hello( mbedtls_ssl_context *ssl )
     /*
      * Ciphersuite list
      */
-    ciphersuites = ssl->conf->ciphersuite_list;
+    ciphersuites = mbedtls_ssl_get_protocol_version_ciphersuites( ssl->conf,
+                                                                ssl->minor_ver );
 
     /* Skip writing ciphersuite length for now */
     n = 0;
@@ -1174,6 +1205,19 @@ static int ssl_write_client_hello( mbedtls_ssl_context *ssl )
         *p++ = (unsigned char)( MBEDTLS_SSL_EMPTY_RENEGOTIATION_INFO      );
         n++;
     }
+
+    /* Some versions of OpenSSL don't handle it correctly if not at end */
+#if defined(MBEDTLS_SSL_FALLBACK_SCSV)
+    if( ssl->conf->fallback == MBEDTLS_SSL_IS_FALLBACK )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 3, ( "adding FALLBACK_SCSV" ) );
+
+        MBEDTLS_SSL_CHK_BUF_PTR( p, end, 2 );
+        *p++ = (unsigned char)( MBEDTLS_SSL_FALLBACK_SCSV_VALUE >> 8 );
+        *p++ = (unsigned char)( MBEDTLS_SSL_FALLBACK_SCSV_VALUE      );
+        n++;
+    }
+#endif
 
     *q++ = (unsigned char)( n >> 7 );
     *q++ = (unsigned char)( n << 1 );
@@ -1269,6 +1313,16 @@ static int ssl_write_client_hello( mbedtls_ssl_context *ssl )
                                                    end, &olen ) ) != 0 )
     {
         MBEDTLS_SSL_DEBUG_RET( 1, "ssl_write_max_fragment_length_ext", ret );
+        return( ret );
+    }
+    ext_len += olen;
+#endif
+
+#if defined(MBEDTLS_SSL_TRUNCATED_HMAC)
+    if( ( ret = ssl_write_truncated_hmac_ext( ssl, p + 2 + ext_len,
+                                              end, &olen ) ) != 0 )
+    {
+        MBEDTLS_SSL_DEBUG_RET( 1, "ssl_write_truncated_hmac_ext", ret );
         return( ret );
     }
     ext_len += olen;
@@ -1439,6 +1493,31 @@ static int ssl_parse_max_fragment_length_ext( mbedtls_ssl_context *ssl,
 }
 #endif /* MBEDTLS_SSL_MAX_FRAGMENT_LENGTH */
 
+#if defined(MBEDTLS_SSL_TRUNCATED_HMAC)
+static int ssl_parse_truncated_hmac_ext( mbedtls_ssl_context *ssl,
+                                         const unsigned char *buf,
+                                         size_t len )
+{
+    if( ssl->conf->trunc_hmac == MBEDTLS_SSL_TRUNC_HMAC_DISABLED ||
+        len != 0 )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 1,
+            ( "non-matching truncated HMAC extension" ) );
+        mbedtls_ssl_send_alert_message(
+            ssl,
+            MBEDTLS_SSL_ALERT_LEVEL_FATAL,
+            MBEDTLS_SSL_ALERT_MSG_HANDSHAKE_FAILURE );
+        return( MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO );
+    }
+
+    ((void) buf);
+
+    ssl->session_negotiate->trunc_hmac = MBEDTLS_SSL_TRUNC_HMAC_ENABLED;
+
+    return( 0 );
+}
+#endif /* MBEDTLS_SSL_TRUNCATED_HMAC */
+
 #if defined(MBEDTLS_SSL_DTLS_CONNECTION_ID)
 static int ssl_parse_cid_ext( mbedtls_ssl_context *ssl,
                               const unsigned char *buf,
@@ -1598,8 +1677,7 @@ static int ssl_parse_supported_point_formats_ext( mbedtls_ssl_context *ssl,
             ssl->handshake->ecdh_ctx.point_format = p[0];
 #endif
 #if defined(MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED)
-            mbedtls_ecjpake_set_point_format( &ssl->handshake->ecjpake_ctx,
-                                              p[0] );
+            ssl->handshake->ecjpake_ctx.point_format = p[0];
 #endif
             MBEDTLS_SSL_DEBUG_MSG( 4, ( "point format selected: %d", p[0] ) );
             return( 0 );
@@ -2179,7 +2257,7 @@ static int ssl_parse_server_hello( mbedtls_ssl_context *ssl )
     i = 0;
     while( 1 )
     {
-        if( ssl->conf->ciphersuite_list[i] == 0 )
+        if( mbedtls_ssl_get_protocol_version_ciphersuites( ssl->conf, ssl->minor_ver )[i] == 0 )
         {
             MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad server hello message" ) );
             mbedtls_ssl_send_alert_message(
@@ -2189,7 +2267,7 @@ static int ssl_parse_server_hello( mbedtls_ssl_context *ssl )
             return( MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO );
         }
 
-        if( ssl->conf->ciphersuite_list[i++] ==
+        if( mbedtls_ssl_get_protocol_version_ciphersuites( ssl->conf, ssl->minor_ver )[i++] ==
             ssl->session_negotiate->ciphersuite )
         {
             break;
@@ -2280,6 +2358,19 @@ static int ssl_parse_server_hello( mbedtls_ssl_context *ssl )
 
             break;
 #endif /* MBEDTLS_SSL_MAX_FRAGMENT_LENGTH */
+
+#if defined(MBEDTLS_SSL_TRUNCATED_HMAC)
+        case MBEDTLS_TLS_EXT_TRUNCATED_HMAC:
+            MBEDTLS_SSL_DEBUG_MSG( 3, ( "found truncated_hmac extension" ) );
+
+            if( ( ret = ssl_parse_truncated_hmac_ext( ssl,
+                            ext + 4, ext_size ) ) != 0 )
+            {
+                return( ret );
+            }
+
+            break;
+#endif /* MBEDTLS_SSL_TRUNCATED_HMAC */
 
 #if defined(MBEDTLS_SSL_DTLS_CONNECTION_ID)
         case MBEDTLS_TLS_EXT_CID:
@@ -2476,7 +2567,7 @@ static int ssl_parse_server_dh_params( mbedtls_ssl_context *ssl,
         return( ret );
     }
 
-    dhm_actual_bitlen = mbedtls_dhm_get_bitlen( &ssl->handshake->dhm_ctx );
+    dhm_actual_bitlen = mbedtls_mpi_bitlen( &ssl->handshake->dhm_ctx.P );
     if( dhm_actual_bitlen < ssl->conf->dhm_min_bitlen )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "DHM prime too short: %" MBEDTLS_PRINTF_SIZET " < %u",
@@ -2752,7 +2843,8 @@ static int ssl_write_encrypted_pms( mbedtls_ssl_context *ssl,
         return( ret );
     }
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
+#if defined(MBEDTLS_SSL_PROTO_TLS1) || defined(MBEDTLS_SSL_PROTO_TLS1_1) || \
+    defined(MBEDTLS_SSL_PROTO_TLS1_2)
     if( len_bytes == 2 )
     {
         ssl->out_msg[offset+0] = (unsigned char)( *olen >> 8 );
@@ -3146,6 +3238,17 @@ start_processing:
         }
         else
 #endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
+#if defined(MBEDTLS_SSL_PROTO_TLS1) || defined(MBEDTLS_SSL_PROTO_TLS1_1)
+        if( ssl->minor_ver < MBEDTLS_SSL_MINOR_VERSION_3 )
+        {
+            pk_alg = mbedtls_ssl_get_ciphersuite_sig_pk_alg( ciphersuite_info );
+
+            /* Default hash for ECDSA is SHA-1 */
+            if( pk_alg == MBEDTLS_PK_ECDSA && md_alg == MBEDTLS_MD_NONE )
+                md_alg = MBEDTLS_MD_SHA1;
+        }
+        else
+#endif
         {
             MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
             return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
@@ -3182,7 +3285,19 @@ start_processing:
         /*
          * Compute the hash that has been signed
          */
-#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
+#if defined(MBEDTLS_SSL_PROTO_TLS1) || defined(MBEDTLS_SSL_PROTO_TLS1_1)
+        if( md_alg == MBEDTLS_MD_NONE )
+        {
+            hashlen = 36;
+            ret = mbedtls_ssl_get_key_exchange_md_ssl_tls( ssl, hash, params,
+                                                           params_len );
+            if( ret != 0 )
+                return( ret );
+        }
+        else
+#endif /* MBEDTLS_SSL_PROTO_TLS1 || MBEDTLS_SSL_PROTO_TLS1_1 */
+#if defined(MBEDTLS_SSL_PROTO_TLS1) || defined(MBEDTLS_SSL_PROTO_TLS1_1) || \
+    defined(MBEDTLS_SSL_PROTO_TLS1_2)
         if( md_alg != MBEDTLS_MD_NONE )
         {
             ret = mbedtls_ssl_get_key_exchange_md_tls1_2( ssl, hash, &hashlen,
@@ -3192,7 +3307,8 @@ start_processing:
                 return( ret );
         }
         else
-#endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
+#endif /* MBEDTLS_SSL_PROTO_TLS1 || MBEDTLS_SSL_PROTO_TLS1_1 || \
+          MBEDTLS_SSL_PROTO_TLS1_2 */
         {
             MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
             return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
@@ -3511,14 +3627,14 @@ static int ssl_write_client_key_exchange( mbedtls_ssl_context *ssl )
         /*
          * DHM key exchange -- send G^X mod P
          */
-        content_len = mbedtls_dhm_get_len( &ssl->handshake->dhm_ctx );
+        content_len = ssl->handshake->dhm_ctx.len;
 
         ssl->out_msg[4] = (unsigned char)( content_len >> 8 );
         ssl->out_msg[5] = (unsigned char)( content_len      );
         header_len = 6;
 
         ret = mbedtls_dhm_make_public( &ssl->handshake->dhm_ctx,
-                          (int) mbedtls_dhm_get_len( &ssl->handshake->dhm_ctx ),
+                          (int) mbedtls_mpi_size( &ssl->handshake->dhm_ctx.P ),
                           &ssl->out_msg[header_len], content_len,
                           ssl->conf->f_rng, ssl->conf->p_rng );
         if( ret != 0 )
@@ -3771,7 +3887,7 @@ ecdh_calc_secret:
             /*
              * ClientDiffieHellmanPublic public (DHM send G^X mod P)
              */
-            content_len = mbedtls_dhm_get_len( &ssl->handshake->dhm_ctx );
+            content_len = ssl->handshake->dhm_ctx.len;
 
             if( header_len + 2 + content_len >
                 MBEDTLS_SSL_OUT_CONTENT_LEN )
@@ -3785,7 +3901,7 @@ ecdh_calc_secret:
             ssl->out_msg[header_len++] = (unsigned char)( content_len      );
 
             ret = mbedtls_dhm_make_public( &ssl->handshake->dhm_ctx,
-                    (int) mbedtls_dhm_get_len( &ssl->handshake->dhm_ctx ),
+                    (int) mbedtls_mpi_size( &ssl->handshake->dhm_ctx.P ),
                     &ssl->out_msg[header_len], content_len,
                     ssl->conf->f_rng, ssl->conf->p_rng );
             if( ret != 0 )
@@ -3997,6 +4113,35 @@ sign:
 
     ssl->handshake->calc_verify( ssl, hash, &hashlen );
 
+#if defined(MBEDTLS_SSL_PROTO_TLS1) || defined(MBEDTLS_SSL_PROTO_TLS1_1)
+    if( ssl->minor_ver != MBEDTLS_SSL_MINOR_VERSION_3 )
+    {
+        /*
+         * digitally-signed struct {
+         *     opaque md5_hash[16];
+         *     opaque sha_hash[20];
+         * };
+         *
+         * md5_hash
+         *     MD5(handshake_messages);
+         *
+         * sha_hash
+         *     SHA(handshake_messages);
+         */
+        md_alg = MBEDTLS_MD_NONE;
+
+        /*
+         * For ECDSA, default hash is SHA-1 only
+         */
+        if( mbedtls_pk_can_do( mbedtls_ssl_own_key( ssl ), MBEDTLS_PK_ECDSA ) )
+        {
+            hash_start += 16;
+            hashlen -= 16;
+            md_alg = MBEDTLS_MD_SHA1;
+        }
+    }
+    else
+#endif /* MBEDTLS_SSL_PROTO_TLS1 || MBEDTLS_SSL_PROTO_TLS1_1 */
 #if defined(MBEDTLS_SSL_PROTO_TLS1_2)
     if( ssl->minor_ver == MBEDTLS_SSL_MINOR_VERSION_3 )
     {
