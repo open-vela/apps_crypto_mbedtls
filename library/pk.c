@@ -21,7 +21,7 @@
 
 #if defined(MBEDTLS_PK_C)
 #include "mbedtls/pk.h"
-#include "pk_wrap.h"
+#include "mbedtls/pk_internal.h"
 
 #include "mbedtls/platform_util.h"
 #include "mbedtls/error.h"
@@ -367,10 +367,11 @@ int mbedtls_pk_verify_ext( mbedtls_pk_type_t type, const void *options,
             return( MBEDTLS_ERR_RSA_VERIFY_FAILED );
 
         ret = mbedtls_rsa_rsassa_pss_verify_ext( mbedtls_pk_rsa( *ctx ),
-                                                 md_alg, (unsigned int) hash_len, hash,
-                                                 pss_opts->mgf1_hash_id,
-                                                 pss_opts->expected_salt_len,
-                                                 sig );
+                NULL, NULL, MBEDTLS_RSA_PUBLIC,
+                md_alg, (unsigned int) hash_len, hash,
+                pss_opts->mgf1_hash_id,
+                pss_opts->expected_salt_len,
+                sig );
         if( ret != 0 )
             return( ret );
 
@@ -500,10 +501,7 @@ int mbedtls_pk_encrypt( mbedtls_pk_context *ctx,
 /*
  * Check public-private key pair
  */
-int mbedtls_pk_check_pair( const mbedtls_pk_context *pub,
-                           const mbedtls_pk_context *prv,
-                           int (*f_rng)(void *, unsigned char *, size_t),
-                           void *p_rng )
+int mbedtls_pk_check_pair( const mbedtls_pk_context *pub, const mbedtls_pk_context *prv )
 {
     PK_VALIDATE_RET( pub != NULL );
     PK_VALIDATE_RET( prv != NULL );
@@ -513,9 +511,6 @@ int mbedtls_pk_check_pair( const mbedtls_pk_context *pub,
     {
         return( MBEDTLS_ERR_PK_BAD_INPUT_DATA );
     }
-
-    if( f_rng == NULL )
-        return( MBEDTLS_ERR_PK_BAD_INPUT_DATA );
 
     if( prv->pk_info->check_pair_func == NULL )
         return( MBEDTLS_ERR_PK_FEATURE_UNAVAILABLE );
@@ -531,7 +526,7 @@ int mbedtls_pk_check_pair( const mbedtls_pk_context *pub,
             return( MBEDTLS_ERR_PK_TYPE_MISMATCH );
     }
 
-    return( prv->pk_info->check_pair_func( pub->pk_ctx, prv->pk_ctx, f_rng, p_rng ) );
+    return( prv->pk_info->check_pair_func( pub->pk_ctx, prv->pk_ctx ) );
 }
 
 /*
@@ -631,7 +626,7 @@ int mbedtls_pk_wrap_as_opaque( mbedtls_pk_context *pk,
 
     /* import private key into PSA */
     if( PSA_SUCCESS != psa_import_key( &attributes, d, d_len, key ) )
-        return( MBEDTLS_ERR_PLATFORM_HW_ACCEL_FAILED );
+        return( MBEDTLS_ERR_PK_HW_ACCEL_FAILED );
 
     /* make PK context wrap the key slot */
     mbedtls_pk_free( pk );

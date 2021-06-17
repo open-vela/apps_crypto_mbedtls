@@ -20,7 +20,7 @@
 #include "common.h"
 
 #if defined(MBEDTLS_PK_C)
-#include "pk_wrap.h"
+#include "mbedtls/pk_internal.h"
 #include "mbedtls/error.h"
 
 /* Even if RSA not activated, for the sake of RSA-alt */
@@ -90,9 +90,9 @@ static int rsa_verify_wrap( void *ctx, mbedtls_md_type_t md_alg,
     if( sig_len < rsa_len )
         return( MBEDTLS_ERR_RSA_VERIFY_FAILED );
 
-    if( ( ret = mbedtls_rsa_pkcs1_verify( rsa, md_alg,
-                                          (unsigned int) hash_len,
-                                          hash, sig ) ) != 0 )
+    if( ( ret = mbedtls_rsa_pkcs1_verify( rsa, NULL, NULL,
+                                  MBEDTLS_RSA_PUBLIC, md_alg,
+                                  (unsigned int) hash_len, hash, sig ) ) != 0 )
         return( ret );
 
     /* The buffer contains a valid signature followed by extra data.
@@ -120,9 +120,8 @@ static int rsa_sign_wrap( void *ctx, mbedtls_md_type_t md_alg,
 
     *sig_len = mbedtls_rsa_get_len( rsa );
 
-    return( mbedtls_rsa_pkcs1_sign( rsa, f_rng, p_rng,
-                                    md_alg, (unsigned int) hash_len,
-                                    hash, sig ) );
+    return( mbedtls_rsa_pkcs1_sign( rsa, f_rng, p_rng, MBEDTLS_RSA_PRIVATE,
+                md_alg, (unsigned int) hash_len, hash, sig ) );
 }
 
 static int rsa_decrypt_wrap( void *ctx,
@@ -136,7 +135,7 @@ static int rsa_decrypt_wrap( void *ctx,
         return( MBEDTLS_ERR_RSA_BAD_INPUT_DATA );
 
     return( mbedtls_rsa_pkcs1_decrypt( rsa, f_rng, p_rng,
-                olen, input, output, osize ) );
+                MBEDTLS_RSA_PRIVATE, olen, input, output, osize ) );
 }
 
 static int rsa_encrypt_wrap( void *ctx,
@@ -150,16 +149,12 @@ static int rsa_encrypt_wrap( void *ctx,
     if( *olen > osize )
         return( MBEDTLS_ERR_RSA_OUTPUT_TOO_LARGE );
 
-    return( mbedtls_rsa_pkcs1_encrypt( rsa, f_rng, p_rng,
+    return( mbedtls_rsa_pkcs1_encrypt( rsa, f_rng, p_rng, MBEDTLS_RSA_PUBLIC,
                                        ilen, input, output ) );
 }
 
-static int rsa_check_pair_wrap( const void *pub, const void *prv,
-                                int (*f_rng)(void *, unsigned char *, size_t),
-                                void *p_rng )
+static int rsa_check_pair_wrap( const void *pub, const void *prv )
 {
-    (void) f_rng;
-    (void) p_rng;
     return( mbedtls_rsa_check_pub_priv( (const mbedtls_rsa_context *) pub,
                                 (const mbedtls_rsa_context *) prv ) );
 }
@@ -169,7 +164,7 @@ static void *rsa_alloc_wrap( void )
     void *ctx = mbedtls_calloc( 1, sizeof( mbedtls_rsa_context ) );
 
     if( ctx != NULL )
-        mbedtls_rsa_init( (mbedtls_rsa_context *) ctx );
+        mbedtls_rsa_init( (mbedtls_rsa_context *) ctx, 0, 0 );
 
     return( ctx );
 }
@@ -182,11 +177,6 @@ static void rsa_free_wrap( void *ctx )
 
 static void rsa_debug( const void *ctx, mbedtls_pk_debug_item *items )
 {
-#if defined(MBEDTLS_RSA_ALT)
-    /* Not supported */
-    (void) ctx;
-    (void) items;
-#else
     items->type = MBEDTLS_PK_DEBUG_MPI;
     items->name = "rsa.N";
     items->value = &( ((mbedtls_rsa_context *) ctx)->N );
@@ -196,7 +186,6 @@ static void rsa_debug( const void *ctx, mbedtls_pk_debug_item *items )
     items->type = MBEDTLS_PK_DEBUG_MPI;
     items->name = "rsa.E";
     items->value = &( ((mbedtls_rsa_context *) ctx)->E );
-#endif
 }
 
 const mbedtls_pk_info_t mbedtls_rsa_info = {
@@ -392,13 +381,10 @@ cleanup:
 #endif /* MBEDTLS_ECP_RESTARTABLE */
 #endif /* MBEDTLS_ECDSA_C */
 
-static int eckey_check_pair( const void *pub, const void *prv,
-                             int (*f_rng)(void *, unsigned char *, size_t),
-                             void *p_rng )
+static int eckey_check_pair( const void *pub, const void *prv )
 {
     return( mbedtls_ecp_check_pub_priv( (const mbedtls_ecp_keypair *) pub,
-                                (const mbedtls_ecp_keypair *) prv,
-                                f_rng, p_rng ) );
+                                (const mbedtls_ecp_keypair *) prv ) );
 }
 
 static void *eckey_alloc_wrap( void )
@@ -784,7 +770,7 @@ static int rsa_alt_sign_wrap( void *ctx, mbedtls_md_type_t md_alg,
     if( *sig_len > MBEDTLS_PK_SIGNATURE_MAX_SIZE )
         return( MBEDTLS_ERR_PK_BAD_INPUT_DATA );
 
-    return( rsa_alt->sign_func( rsa_alt->key, f_rng, p_rng,
+    return( rsa_alt->sign_func( rsa_alt->key, f_rng, p_rng, MBEDTLS_RSA_PRIVATE,
                 md_alg, (unsigned int) hash_len, hash, sig ) );
 }
 
@@ -802,13 +788,11 @@ static int rsa_alt_decrypt_wrap( void *ctx,
         return( MBEDTLS_ERR_RSA_BAD_INPUT_DATA );
 
     return( rsa_alt->decrypt_func( rsa_alt->key,
-                olen, input, output, osize ) );
+                MBEDTLS_RSA_PRIVATE, olen, input, output, osize ) );
 }
 
 #if defined(MBEDTLS_RSA_C)
-static int rsa_alt_check_pair( const void *pub, const void *prv,
-                               int (*f_rng)(void *, unsigned char *, size_t),
-                               void *p_rng )
+static int rsa_alt_check_pair( const void *pub, const void *prv )
 {
     unsigned char sig[MBEDTLS_MPI_MAX_SIZE];
     unsigned char hash[32];
@@ -822,7 +806,7 @@ static int rsa_alt_check_pair( const void *pub, const void *prv,
 
     if( ( ret = rsa_alt_sign_wrap( (void *) prv, MBEDTLS_MD_NONE,
                                    hash, sizeof( hash ),
-                                   sig, &sig_len, f_rng, p_rng ) ) != 0 )
+                                   sig, &sig_len, NULL, NULL ) ) != 0 )
     {
         return( ret );
     }
@@ -957,7 +941,7 @@ static int asn1_write_mpibuf( unsigned char **p, unsigned char *start,
 
     /* this is only reached if the signature was invalid */
     if( len == 0 )
-        return( MBEDTLS_ERR_PLATFORM_HW_ACCEL_FAILED );
+        return( MBEDTLS_ERR_PK_HW_ACCEL_FAILED );
 
     /* if the msb is 1, ASN.1 requires that we prepend a 0.
      * Neither r nor s can be 0, so we can assume len > 0 at all times. */
