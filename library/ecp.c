@@ -101,6 +101,16 @@
 
 #include "ecp_internal_alt.h"
 
+#if !defined(MBEDTLS_ECP_NO_INTERNAL_RNG)
+#if defined(MBEDTLS_HMAC_DRBG_C)
+#include "mbedtls/hmac_drbg.h"
+#elif defined(MBEDTLS_CTR_DRBG_C)
+#include "mbedtls/ctr_drbg.h"
+#else
+#error "Invalid configuration detected. Include check_config.h to ensure that the configuration is valid."
+#endif
+#endif /* MBEDTLS_ECP_NO_INTERNAL_RNG */
+
 #if ( defined(__ARMCC_VERSION) || defined(_MSC_VER) ) && \
     !defined(inline) && !defined(__cplusplus)
 #define inline __inline
@@ -113,6 +123,144 @@
  */
 static unsigned long add_count, dbl_count, mul_count;
 #endif
+
+#if !defined(MBEDTLS_ECP_NO_INTERNAL_RNG)
+/*
+ * Currently ecp_mul() takes a RNG function as an argument, used for
+ * side-channel protection, but it can be NULL. The initial reasoning was
+ * that people will pass non-NULL RNG when they care about side-channels, but
+ * unfortunately we have some APIs that call ecp_mul() with a NULL RNG, with
+ * no opportunity for the user to do anything about it.
+ *
+ * The obvious strategies for addressing that include:
+ * - change those APIs so that they take RNG arguments;
+ * - require a global RNG to be available to all crypto modules.
+ *
+ * Unfortunately those would break compatibility. So what we do instead is
+ * have our own internal DRBG instance, seeded from the secret scalar.
+ *
+ * The following is a light-weight abstraction layer for doing that with
+ * HMAC_DRBG (first choice) or CTR_DRBG.
+ */
+
+#if defined(MBEDTLS_HMAC_DRBG_C)
+
+/* DRBG context type */
+typedef mbedtls_hmac_drbg_context ecp_drbg_context;
+
+/* DRBG context init */
+static inline void ecp_drbg_init( ecp_drbg_context *ctx )
+{
+    mbedtls_hmac_drbg_init( ctx );
+}
+
+/* DRBG context free */
+static inline void ecp_drbg_free( ecp_drbg_context *ctx )
+{
+    mbedtls_hmac_drbg_free( ctx );
+}
+
+/* DRBG function */
+static inline int ecp_drbg_random( void *p_rng,
+                                   unsigned char *output, size_t output_len )
+{
+    return( mbedtls_hmac_drbg_random( p_rng, output, output_len ) );
+}
+
+/* DRBG context seeding */
+static int ecp_drbg_seed( ecp_drbg_context *ctx,
+                   const mbedtls_mpi *secret, size_t secret_len )
+{
+    int ret;
+    unsigned char secret_bytes[MBEDTLS_ECP_MAX_BYTES];
+    /* The list starts with strong hashes */
+    const mbedtls_md_type_t md_type = mbedtls_md_list()[0];
+    const mbedtls_md_info_t *md_info = mbedtls_md_info_from_type( md_type );
+
+    if( secret_len > MBEDTLS_ECP_MAX_BYTES )
+    {
+        ret = MBEDTLS_ERR_ECP_RANDOM_FAILED;
+        goto cleanup;
+    }
+
+    MBEDTLS_MPI_CHK( mbedtls_mpi_write_binary( secret,
+                                               secret_bytes, secret_len ) );
+
+    ret = mbedtls_hmac_drbg_seed_buf( ctx, md_info, secret_bytes, secret_len );
+
+cleanup:
+    mbedtls_platform_zeroize( secret_bytes, secret_len );
+
+    return( ret );
+}
+
+#elif defined(MBEDTLS_CTR_DRBG_C)
+
+/* DRBG context type */
+typedef mbedtls_ctr_drbg_context ecp_drbg_context;
+
+/* DRBG context init */
+static inline void ecp_drbg_init( ecp_drbg_context *ctx )
+{
+    mbedtls_ctr_drbg_init( ctx );
+}
+
+/* DRBG context free */
+static inline void ecp_drbg_free( ecp_drbg_context *ctx )
+{
+    mbedtls_ctr_drbg_free( ctx );
+}
+
+/* DRBG function */
+static inline int ecp_drbg_random( void *p_rng,
+                                   unsigned char *output, size_t output_len )
+{
+    return( mbedtls_ctr_drbg_random( p_rng, output, output_len ) );
+}
+
+/*
+ * Since CTR_DRBG doesn't have a seed_buf() function the way HMAC_DRBG does,
+ * we need to pass an entropy function when seeding. So we use a dummy
+ * function for that, and pass the actual entropy as customisation string.
+ * (During seeding of CTR_DRBG the entropy input and customisation string are
+ * concatenated before being used to update the secret state.)
+ */
+static int ecp_ctr_drbg_null_entropy(void *ctx, unsigned char *out, size_t len)
+{
+    (void) ctx;
+    memset( out, 0, len );
+    return( 0 );
+}
+
+/* DRBG context seeding */
+static int ecp_drbg_seed( ecp_drbg_context *ctx,
+                   const mbedtls_mpi *secret, size_t secret_len )
+{
+    int ret;
+    unsigned char secret_bytes[MBEDTLS_ECP_MAX_BYTES];
+
+    if( secret_len > MBEDTLS_ECP_MAX_BYTES )
+    {
+        ret = MBEDTLS_ERR_ECP_RANDOM_FAILED;
+        goto cleanup;
+    }
+
+    MBEDTLS_MPI_CHK( mbedtls_mpi_write_binary( secret,
+                                               secret_bytes, secret_len ) );
+
+    ret = mbedtls_ctr_drbg_seed( ctx, ecp_ctr_drbg_null_entropy, NULL,
+                                 secret_bytes, secret_len );
+
+cleanup:
+    mbedtls_platform_zeroize( secret_bytes, secret_len );
+
+    return( ret );
+}
+
+#else
+#error "Invalid configuration detected. Include check_config.h to ensure that the configuration is valid."
+#endif /* DRBG modules */
+#endif /* MBEDTLS_ECP_NO_INTERNAL_RNG */
 
 #if defined(MBEDTLS_ECP_RESTARTABLE)
 /*
@@ -161,6 +309,10 @@ struct mbedtls_ecp_restart_mul
         ecp_rsm_comb_core,      /* ecp_mul_comb_core()                      */
         ecp_rsm_final_norm,     /* do the final normalization               */
     } state;
+#if !defined(MBEDTLS_ECP_NO_INTERNAL_RNG)
+    ecp_drbg_context drbg_ctx;
+    unsigned char drbg_seeded;
+#endif
 };
 
 /*
@@ -173,6 +325,10 @@ static void ecp_restart_rsm_init( mbedtls_ecp_restart_mul_ctx *ctx )
     ctx->T = NULL;
     ctx->T_size = 0;
     ctx->state = ecp_rsm_init;
+#if !defined(MBEDTLS_ECP_NO_INTERNAL_RNG)
+    ecp_drbg_init( &ctx->drbg_ctx );
+    ctx->drbg_seeded = 0;
+#endif
 }
 
 /*
@@ -193,6 +349,10 @@ static void ecp_restart_rsm_free( mbedtls_ecp_restart_mul_ctx *ctx )
             mbedtls_ecp_point_free( ctx->T + i );
         mbedtls_free( ctx->T );
     }
+
+#if !defined(MBEDTLS_ECP_NO_INTERNAL_RNG)
+    ecp_drbg_free( &ctx->drbg_ctx );
+#endif
 
     ecp_restart_rsm_init( ctx );
 }
@@ -349,9 +509,9 @@ int mbedtls_ecp_check_budget( const mbedtls_ecp_group *grp,
  *  - readable name
  *
  * Curves are listed in order: largest curves first, and for a given size,
- * fastest curves first.
+ * fastest curves first. This provides the default order for the SSL module.
  *
- * Reminder: update profiles in x509_crt.c and ssl_tls.c when adding a new curve!
+ * Reminder: update profiles in x509_crt.c when adding a new curves!
  */
 static const mbedtls_ecp_curve_info ecp_supported_curves[] =
 {
@@ -1908,7 +2068,9 @@ static int ecp_mul_comb_core( const mbedtls_ecp_group *grp, mbedtls_ecp_point *R
         i = d;
         MBEDTLS_MPI_CHK( ecp_select_comb( grp, R, T, T_size, x[i] ) );
         MBEDTLS_MPI_CHK( mbedtls_mpi_lset( &R->Z, 1 ) );
+#if defined(MBEDTLS_ECP_NO_INTERNAL_RNG)
         if( f_rng != 0 )
+#endif
             MBEDTLS_MPI_CHK( ecp_randomize_jac( grp, R, f_rng, p_rng ) );
     }
 
@@ -2042,7 +2204,9 @@ final_norm:
      *
      * Avoid the leak by randomizing coordinates before we normalize them.
      */
+#if defined(MBEDTLS_ECP_NO_INTERNAL_RNG)
     if( f_rng != 0 )
+#endif
         MBEDTLS_MPI_CHK( ecp_randomize_jac( grp, RR, f_rng, p_rng ) );
 
     MBEDTLS_MPI_CHK( ecp_normalize_jac( grp, RR ) );
@@ -2122,8 +2286,41 @@ static int ecp_mul_comb( mbedtls_ecp_group *grp, mbedtls_ecp_point *R,
     size_t d;
     unsigned char T_size = 0, T_ok = 0;
     mbedtls_ecp_point *T = NULL;
+#if !defined(MBEDTLS_ECP_NO_INTERNAL_RNG)
+    ecp_drbg_context drbg_ctx;
+
+    ecp_drbg_init( &drbg_ctx );
+#endif
 
     ECP_RS_ENTER( rsm );
+
+#if !defined(MBEDTLS_ECP_NO_INTERNAL_RNG)
+    if( f_rng == NULL )
+    {
+        /* Adjust pointers */
+        f_rng = &ecp_drbg_random;
+#if defined(MBEDTLS_ECP_RESTARTABLE)
+        if( rs_ctx != NULL && rs_ctx->rsm != NULL )
+            p_rng = &rs_ctx->rsm->drbg_ctx;
+        else
+#endif
+            p_rng = &drbg_ctx;
+
+        /* Initialize internal DRBG if necessary */
+#if defined(MBEDTLS_ECP_RESTARTABLE)
+        if( rs_ctx == NULL || rs_ctx->rsm == NULL ||
+            rs_ctx->rsm->drbg_seeded == 0 )
+#endif
+        {
+            const size_t m_len = ( grp->nbits + 7 ) / 8;
+            MBEDTLS_MPI_CHK( ecp_drbg_seed( p_rng, m, m_len ) );
+        }
+#if defined(MBEDTLS_ECP_RESTARTABLE)
+        if( rs_ctx != NULL && rs_ctx->rsm != NULL )
+            rs_ctx->rsm->drbg_seeded = 1;
+#endif
+    }
+#endif /* !MBEDTLS_ECP_NO_INTERNAL_RNG */
 
     /* Is P the base point ? */
 #if MBEDTLS_ECP_FIXED_POINT_OPTIM == 1
@@ -2195,6 +2392,10 @@ static int ecp_mul_comb( mbedtls_ecp_group *grp, mbedtls_ecp_point *R,
                                                  f_rng, p_rng, rs_ctx ) );
 
 cleanup:
+
+#if !defined(MBEDTLS_ECP_NO_INTERNAL_RNG)
+    ecp_drbg_free( &drbg_ctx );
+#endif
 
     /* does T belong to the group? */
     if( T == grp->T )
@@ -2382,10 +2583,22 @@ static int ecp_mul_mxz( mbedtls_ecp_group *grp, mbedtls_ecp_point *R,
     unsigned char b;
     mbedtls_ecp_point RP;
     mbedtls_mpi PX;
+#if !defined(MBEDTLS_ECP_NO_INTERNAL_RNG)
+    ecp_drbg_context drbg_ctx;
+
+    ecp_drbg_init( &drbg_ctx );
+#endif
     mbedtls_ecp_point_init( &RP ); mbedtls_mpi_init( &PX );
 
+#if !defined(MBEDTLS_ECP_NO_INTERNAL_RNG)
     if( f_rng == NULL )
-        return( MBEDTLS_ERR_ECP_BAD_INPUT_DATA );
+    {
+        const size_t m_len = ( grp->nbits + 7 ) / 8;
+        MBEDTLS_MPI_CHK( ecp_drbg_seed( &drbg_ctx, m, m_len ) );
+        f_rng = &ecp_drbg_random;
+        p_rng = &drbg_ctx;
+    }
+#endif /* !MBEDTLS_ECP_NO_INTERNAL_RNG */
 
     /* Save PX and read from P before writing to R, in case P == R */
     MBEDTLS_MPI_CHK( mbedtls_mpi_copy( &PX, &P->X ) );
@@ -2400,7 +2613,10 @@ static int ecp_mul_mxz( mbedtls_ecp_group *grp, mbedtls_ecp_point *R,
     MOD_ADD( RP.X );
 
     /* Randomize coordinates of the starting point */
-    MBEDTLS_MPI_CHK( ecp_randomize_mxz( grp, &RP, f_rng, p_rng ) );
+#if defined(MBEDTLS_ECP_NO_INTERNAL_RNG)
+    if( f_rng != NULL )
+#endif
+        MBEDTLS_MPI_CHK( ecp_randomize_mxz( grp, &RP, f_rng, p_rng ) );
 
     /* Loop invariant: R = result so far, RP = R + P */
     i = mbedtls_mpi_bitlen( m ); /* one past the (zero-based) most significant bit */
@@ -2432,10 +2648,18 @@ static int ecp_mul_mxz( mbedtls_ecp_group *grp, mbedtls_ecp_point *R,
      *
      * Avoid the leak by randomizing coordinates before we normalize them.
      */
-    MBEDTLS_MPI_CHK( ecp_randomize_mxz( grp, R, f_rng, p_rng ) );
+#if defined(MBEDTLS_ECP_NO_INTERNAL_RNG)
+    if( f_rng != NULL )
+#endif
+        MBEDTLS_MPI_CHK( ecp_randomize_mxz( grp, R, f_rng, p_rng ) );
+
     MBEDTLS_MPI_CHK( ecp_normalize_mxz( grp, R ) );
 
 cleanup:
+#if !defined(MBEDTLS_ECP_NO_INTERNAL_RNG)
+    ecp_drbg_free( &drbg_ctx );
+#endif
+
     mbedtls_ecp_point_free( &RP ); mbedtls_mpi_free( &PX );
 
     return( ret );
@@ -2445,11 +2669,8 @@ cleanup:
 
 /*
  * Restartable multiplication R = m * P
- *
- * This internal function can be called without an RNG in case where we know
- * the inputs are not sensitive.
  */
-static int ecp_mul_restartable_internal( mbedtls_ecp_group *grp, mbedtls_ecp_point *R,
+int mbedtls_ecp_mul_restartable( mbedtls_ecp_group *grp, mbedtls_ecp_point *R,
              const mbedtls_mpi *m, const mbedtls_ecp_point *P,
              int (*f_rng)(void *, unsigned char *, size_t), void *p_rng,
              mbedtls_ecp_restart_ctx *rs_ctx )
@@ -2458,6 +2679,10 @@ static int ecp_mul_restartable_internal( mbedtls_ecp_group *grp, mbedtls_ecp_poi
 #if defined(MBEDTLS_ECP_INTERNAL_ALT)
     char is_grp_capable = 0;
 #endif
+    ECP_VALIDATE_RET( grp != NULL );
+    ECP_VALIDATE_RET( R   != NULL );
+    ECP_VALIDATE_RET( m   != NULL );
+    ECP_VALIDATE_RET( P   != NULL );
 
 #if defined(MBEDTLS_ECP_RESTARTABLE)
     /* reset ops count for this call if top-level */
@@ -2508,25 +2733,6 @@ cleanup:
 #endif
 
     return( ret );
-}
-
-/*
- * Restartable multiplication R = m * P
- */
-int mbedtls_ecp_mul_restartable( mbedtls_ecp_group *grp, mbedtls_ecp_point *R,
-             const mbedtls_mpi *m, const mbedtls_ecp_point *P,
-             int (*f_rng)(void *, unsigned char *, size_t), void *p_rng,
-             mbedtls_ecp_restart_ctx *rs_ctx )
-{
-    ECP_VALIDATE_RET( grp != NULL );
-    ECP_VALIDATE_RET( R   != NULL );
-    ECP_VALIDATE_RET( m   != NULL );
-    ECP_VALIDATE_RET( P   != NULL );
-
-    if( f_rng == NULL )
-        return( MBEDTLS_ERR_ECP_BAD_INPUT_DATA );
-
-    return( ecp_mul_restartable_internal( grp, R, m, P, f_rng, p_rng, rs_ctx ) );
 }
 
 /*
@@ -2622,8 +2828,8 @@ static int mbedtls_ecp_mul_shortcuts( mbedtls_ecp_group *grp,
     }
     else
     {
-        MBEDTLS_MPI_CHK( ecp_mul_restartable_internal( grp, R, m, P,
-                                                       NULL, NULL, rs_ctx ) );
+        MBEDTLS_MPI_CHK( mbedtls_ecp_mul_restartable( grp, R, m, P,
+                                                      NULL, NULL, rs_ctx ) );
     }
 
 cleanup:
@@ -2746,92 +2952,6 @@ int mbedtls_ecp_muladd( mbedtls_ecp_group *grp, mbedtls_ecp_point *R,
 #endif /* MBEDTLS_ECP_SHORT_WEIERSTRASS_ENABLED */
 
 #if defined(MBEDTLS_ECP_MONTGOMERY_ENABLED)
-#if defined(MBEDTLS_ECP_DP_CURVE25519_ENABLED)
-/* Duplicated macros from ecp_curves.c */
-#if defined(MBEDTLS_HAVE_INT32)
-#define BYTES_TO_T_UINT_8( a, b, c, d, e, f, g, h ) \
-    BYTES_TO_T_UINT_4( a, b, c, d ),                \
-    BYTES_TO_T_UINT_4( e, f, g, h )
-#else /* 64-bits */
-#define BYTES_TO_T_UINT_8( a, b, c, d, e, f, g, h ) \
-    ( (mbedtls_mpi_uint) (a) <<  0 ) |                        \
-    ( (mbedtls_mpi_uint) (b) <<  8 ) |                        \
-    ( (mbedtls_mpi_uint) (c) << 16 ) |                        \
-    ( (mbedtls_mpi_uint) (d) << 24 ) |                        \
-    ( (mbedtls_mpi_uint) (e) << 32 ) |                        \
-    ( (mbedtls_mpi_uint) (f) << 40 ) |                        \
-    ( (mbedtls_mpi_uint) (g) << 48 ) |                        \
-    ( (mbedtls_mpi_uint) (h) << 56 )
-#endif /* bits in mbedtls_mpi_uint */
-#define ECP_MPI_INIT(s, n, p) {s, (n), (mbedtls_mpi_uint *)(p)}
-#define ECP_MPI_INIT_ARRAY(x)   \
-    ECP_MPI_INIT(1, sizeof(x) / sizeof(mbedtls_mpi_uint), x)
-/*
- * Constants for the two points other than 0, 1, -1 (mod p) in
- * https://cr.yp.to/ecdh.html#validate
- * See ecp_check_pubkey_x25519().
- */
-static const mbedtls_mpi_uint x25519_bad_point_1[] = {
-    BYTES_TO_T_UINT_8( 0xe0, 0xeb, 0x7a, 0x7c, 0x3b, 0x41, 0xb8, 0xae ),
-    BYTES_TO_T_UINT_8( 0x16, 0x56, 0xe3, 0xfa, 0xf1, 0x9f, 0xc4, 0x6a ),
-    BYTES_TO_T_UINT_8( 0xda, 0x09, 0x8d, 0xeb, 0x9c, 0x32, 0xb1, 0xfd ),
-    BYTES_TO_T_UINT_8( 0x86, 0x62, 0x05, 0x16, 0x5f, 0x49, 0xb8, 0x00 ),
-};
-static const mbedtls_mpi_uint x25519_bad_point_2[] = {
-    BYTES_TO_T_UINT_8( 0x5f, 0x9c, 0x95, 0xbc, 0xa3, 0x50, 0x8c, 0x24 ),
-    BYTES_TO_T_UINT_8( 0xb1, 0xd0, 0xb1, 0x55, 0x9c, 0x83, 0xef, 0x5b ),
-    BYTES_TO_T_UINT_8( 0x04, 0x44, 0x5c, 0xc4, 0x58, 0x1c, 0x8e, 0x86 ),
-    BYTES_TO_T_UINT_8( 0xd8, 0x22, 0x4e, 0xdd, 0xd0, 0x9f, 0x11, 0x57 ),
-};
-static const mbedtls_mpi ecp_x25519_bad_point_1 = ECP_MPI_INIT_ARRAY(
-        x25519_bad_point_1 );
-static const mbedtls_mpi ecp_x25519_bad_point_2 = ECP_MPI_INIT_ARRAY(
-        x25519_bad_point_2 );
-
-/*
- * Check that the input point is not one of the low-order points.
- * This is recommended by the "May the Fourth" paper:
- * https://eprint.iacr.org/2017/806.pdf
- * Those points are never sent by an honest peer.
- */
-static int ecp_check_pubkey_x25519( const mbedtls_mpi *X, const mbedtls_mpi *P )
-{
-    int ret;
-    mbedtls_mpi XmP;
-
-    mbedtls_mpi_init( &XmP );
-
-    /* Reduce X mod P so that we only need to check values less than P.
-     * We know X < 2^256 so we can proceed by subtraction. */
-    MBEDTLS_MPI_CHK( mbedtls_mpi_copy( &XmP, X ) );
-    while( mbedtls_mpi_cmp_mpi( &XmP, P ) >= 0 )
-        MBEDTLS_MPI_CHK( mbedtls_mpi_sub_mpi( &XmP, &XmP, P ) );
-
-    /* Check against the known bad values that are less than P in the
-     * following list: https://cr.yp.to/ecdh.html#validate */
-    if( mbedtls_mpi_cmp_int( &XmP, 1 ) <= 0 ) /* takes care of 0 and 1 */
-        return( MBEDTLS_ERR_ECP_INVALID_KEY );
-
-    if( mbedtls_mpi_cmp_mpi( &XmP, &ecp_x25519_bad_point_1 ) == 0 )
-        return( MBEDTLS_ERR_ECP_INVALID_KEY );
-
-    if( mbedtls_mpi_cmp_mpi( &XmP, &ecp_x25519_bad_point_2 ) == 0 )
-        return( MBEDTLS_ERR_ECP_INVALID_KEY );
-
-    /* Final check: check if XmP + 1 is P (final because it changes XmP!) */
-    MBEDTLS_MPI_CHK( mbedtls_mpi_add_int( &XmP, &XmP, 1 ) );
-    if( mbedtls_mpi_cmp_mpi( &XmP, P ) == 0 )
-        return( MBEDTLS_ERR_ECP_INVALID_KEY );
-
-    ret = 0;
-
-cleanup:
-    mbedtls_mpi_free( &XmP );
-
-    return( ret );
-}
-#endif /* MBEDTLS_ECP_DP_CURVE25519_ENABLED */
-
 /*
  * Check validity of a public key for Montgomery curves with x-only schemes
  */
@@ -2842,17 +2962,6 @@ static int ecp_check_pubkey_mx( const mbedtls_ecp_group *grp, const mbedtls_ecp_
      * (RFC 7748 sec. 5 para. 3). */
     if( mbedtls_mpi_size( &pt->X ) > ( grp->nbits + 7 ) / 8 )
         return( MBEDTLS_ERR_ECP_INVALID_KEY );
-
-    /* Implicit in all standards (as they don't consider negative numbers):
-     * X must be non-negative. This is normally ensured by the way it's
-     * encoded for transmission, but let's be extra sure. */
-    if( mbedtls_mpi_cmp_int( &pt->X, 0 ) < 0 )
-        return( MBEDTLS_ERR_ECP_INVALID_KEY );
-
-#if defined(MBEDTLS_ECP_DP_CURVE25519_ENABLED)
-    if( grp->id == MBEDTLS_ECP_DP_CURVE25519 )
-        return( ecp_check_pubkey_x25519( &pt->X, &grp->P ) );
-#endif
 
     return( 0 );
 }
@@ -3163,9 +3272,7 @@ cleanup:
 /*
  * Check a public-private key pair
  */
-int mbedtls_ecp_check_pub_priv(
-        const mbedtls_ecp_keypair *pub, const mbedtls_ecp_keypair *prv,
-        int (*f_rng)(void *, unsigned char *, size_t), void *p_rng )
+int mbedtls_ecp_check_pub_priv( const mbedtls_ecp_keypair *pub, const mbedtls_ecp_keypair *prv )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     mbedtls_ecp_point Q;
@@ -3189,7 +3296,7 @@ int mbedtls_ecp_check_pub_priv(
     mbedtls_ecp_group_copy( &grp, &prv->grp );
 
     /* Also checks d is valid */
-    MBEDTLS_MPI_CHK( mbedtls_ecp_mul( &grp, &Q, &prv->d, &prv->grp.G, f_rng, p_rng ) );
+    MBEDTLS_MPI_CHK( mbedtls_ecp_mul( &grp, &Q, &prv->d, &prv->grp.G, NULL, NULL ) );
 
     if( mbedtls_mpi_cmp_mpi( &Q.X, &prv->Q.X ) ||
         mbedtls_mpi_cmp_mpi( &Q.Y, &prv->Q.Y ) ||
@@ -3207,28 +3314,6 @@ cleanup:
 }
 
 #if defined(MBEDTLS_SELF_TEST)
-
-/*
- * PRNG for test - !!!INSECURE NEVER USE IN PRODUCTION!!!
- *
- * This is the linear congruential generator from numerical recipes,
- * except we only use the low byte as the output. See
- * https://en.wikipedia.org/wiki/Linear_congruential_generator#Parameters_in_common_use
- */
-static int self_test_rng( void *ctx, unsigned char *out, size_t len )
-{
-    static uint32_t state = 42;
-
-    (void) ctx;
-
-    for( size_t i = 0; i < len; i++ )
-    {
-        state = state * 1664525u + 1013904223u;
-        out[i] = (unsigned char) state;
-    }
-
-    return( 0 );
-}
 
 /* Adjust the exponent to be a valid private point for the specified curve.
  * This is sometimes necessary because we use a single set of exponents
@@ -3285,7 +3370,7 @@ static int self_test_point( int verbose,
 
     MBEDTLS_MPI_CHK( mbedtls_mpi_read_string( m, 16, exponents[0] ) );
     MBEDTLS_MPI_CHK( self_test_adjust_exponent( grp, m ) );
-    MBEDTLS_MPI_CHK( mbedtls_ecp_mul( grp, R, m, P, self_test_rng, NULL ) );
+    MBEDTLS_MPI_CHK( mbedtls_ecp_mul( grp, R, m, P, NULL, NULL ) );
 
     for( i = 1; i < n_exponents; i++ )
     {
@@ -3298,7 +3383,7 @@ static int self_test_point( int verbose,
 
         MBEDTLS_MPI_CHK( mbedtls_mpi_read_string( m, 16, exponents[i] ) );
         MBEDTLS_MPI_CHK( self_test_adjust_exponent( grp, m ) );
-        MBEDTLS_MPI_CHK( mbedtls_ecp_mul( grp, R, m, P, self_test_rng, NULL ) );
+        MBEDTLS_MPI_CHK( mbedtls_ecp_mul( grp, R, m, P, NULL, NULL ) );
 
         if( add_count != add_c_prev ||
             dbl_count != dbl_c_prev ||
@@ -3376,7 +3461,7 @@ int mbedtls_ecp_self_test( int verbose )
         mbedtls_printf( "  ECP SW test #1 (constant op_count, base point G): " );
     /* Do a dummy multiplication first to trigger precomputation */
     MBEDTLS_MPI_CHK( mbedtls_mpi_lset( &m, 2 ) );
-    MBEDTLS_MPI_CHK( mbedtls_ecp_mul( &grp, &P, &m, &grp.G, self_test_rng, NULL ) );
+    MBEDTLS_MPI_CHK( mbedtls_ecp_mul( &grp, &P, &m, &grp.G, NULL, NULL ) );
     ret = self_test_point( verbose,
                            &grp, &R, &m, &grp.G,
                            sw_exponents,
