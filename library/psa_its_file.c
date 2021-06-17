@@ -18,7 +18,11 @@
  *  limitations under the License.
  */
 
-#include "common.h"
+#if defined(MBEDTLS_CONFIG_FILE)
+#include MBEDTLS_CONFIG_FILE
+#else
+#include "mbedtls/config.h"
+#endif
 
 #if defined(MBEDTLS_PSA_ITS_FILE_C)
 
@@ -43,7 +47,7 @@
 #define PSA_ITS_STORAGE_PREFIX ""
 #endif
 
-#define PSA_ITS_STORAGE_FILENAME_PATTERN "%08x%08x"
+#define PSA_ITS_STORAGE_FILENAME_PATTERN "%08lx%08lx"
 #define PSA_ITS_STORAGE_SUFFIX ".psa_its"
 #define PSA_ITS_STORAGE_FILENAME_LENGTH         \
     ( sizeof( PSA_ITS_STORAGE_PREFIX ) - 1 + /*prefix without terminating 0*/ \
@@ -83,8 +87,8 @@ static void psa_its_fill_filename( psa_storage_uid_t uid, char *filename )
     mbedtls_snprintf( filename, PSA_ITS_STORAGE_FILENAME_LENGTH,
                       "%s" PSA_ITS_STORAGE_FILENAME_PATTERN "%s",
                       PSA_ITS_STORAGE_PREFIX,
-                      (unsigned) ( uid >> 32 ),
-                      (unsigned) ( uid & 0xffffffff ),
+                      (unsigned long) ( uid >> 32 ),
+                      (unsigned long) ( uid & 0xffffffff ),
                       PSA_ITS_STORAGE_SUFFIX );
 }
 
