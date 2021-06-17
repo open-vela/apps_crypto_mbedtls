@@ -26,7 +26,6 @@
  */
 #ifndef MBEDTLS_MD4_H
 #define MBEDTLS_MD4_H
-#include "mbedtls/private_access.h"
 
 #if !defined(MBEDTLS_CONFIG_FILE)
 #include "mbedtls/config.h"
@@ -36,6 +35,9 @@
 
 #include <stddef.h>
 #include <stdint.h>
+
+/* MBEDTLS_ERR_MD4_HW_ACCEL_FAILED is deprecated and should not be used. */
+#define MBEDTLS_ERR_MD4_HW_ACCEL_FAILED                   -0x002D  /**< MD4 hardware accelerator failed */
 
 #ifdef __cplusplus
 extern "C" {
@@ -55,9 +57,9 @@ extern "C" {
  */
 typedef struct mbedtls_md4_context
 {
-    uint32_t MBEDTLS_PRIVATE(total)[2];          /*!< number of bytes processed  */
-    uint32_t MBEDTLS_PRIVATE(state)[4];          /*!< intermediate digest state  */
-    unsigned char MBEDTLS_PRIVATE(buffer)[64];   /*!< data block being processed */
+    uint32_t total[2];          /*!< number of bytes processed  */
+    uint32_t state[4];          /*!< intermediate digest state  */
+    unsigned char buffer[64];   /*!< data block being processed */
 }
 mbedtls_md4_context;
 
@@ -114,7 +116,7 @@ void mbedtls_md4_clone( mbedtls_md4_context *dst,
  *                 constitutes a security risk. We recommend considering
  *                 stronger message digests instead.
  */
-int mbedtls_md4_starts( mbedtls_md4_context *ctx );
+int mbedtls_md4_starts_ret( mbedtls_md4_context *ctx );
 
 /**
  * \brief          MD4 process buffer
@@ -130,9 +132,9 @@ int mbedtls_md4_starts( mbedtls_md4_context *ctx );
  *                 stronger message digests instead.
  *
  */
-int mbedtls_md4_update( mbedtls_md4_context *ctx,
-                        const unsigned char *input,
-                        size_t ilen );
+int mbedtls_md4_update_ret( mbedtls_md4_context *ctx,
+                            const unsigned char *input,
+                            size_t ilen );
 
 /**
  * \brief          MD4 final digest
@@ -147,8 +149,8 @@ int mbedtls_md4_update( mbedtls_md4_context *ctx,
  *                 stronger message digests instead.
  *
  */
-int mbedtls_md4_finish( mbedtls_md4_context *ctx,
-                        unsigned char output[16] );
+int mbedtls_md4_finish_ret( mbedtls_md4_context *ctx,
+                            unsigned char output[16] );
 
 /**
  * \brief          MD4 process data block (internal use only)
@@ -166,6 +168,79 @@ int mbedtls_md4_finish( mbedtls_md4_context *ctx,
 int mbedtls_internal_md4_process( mbedtls_md4_context *ctx,
                                   const unsigned char data[64] );
 
+#if !defined(MBEDTLS_DEPRECATED_REMOVED)
+#if defined(MBEDTLS_DEPRECATED_WARNING)
+#define MBEDTLS_DEPRECATED      __attribute__((deprecated))
+#else
+#define MBEDTLS_DEPRECATED
+#endif
+/**
+ * \brief          MD4 context setup
+ *
+ * \deprecated     Superseded by mbedtls_md4_starts_ret() in 2.7.0
+ *
+ * \param ctx      context to be initialized
+ *
+ * \warning        MD4 is considered a weak message digest and its use
+ *                 constitutes a security risk. We recommend considering
+ *                 stronger message digests instead.
+ *
+ */
+MBEDTLS_DEPRECATED void mbedtls_md4_starts( mbedtls_md4_context *ctx );
+
+/**
+ * \brief          MD4 process buffer
+ *
+ * \deprecated     Superseded by mbedtls_md4_update_ret() in 2.7.0
+ *
+ * \param ctx      MD4 context
+ * \param input    buffer holding the data
+ * \param ilen     length of the input data
+ *
+ * \warning        MD4 is considered a weak message digest and its use
+ *                 constitutes a security risk. We recommend considering
+ *                 stronger message digests instead.
+ *
+ */
+MBEDTLS_DEPRECATED void mbedtls_md4_update( mbedtls_md4_context *ctx,
+                                            const unsigned char *input,
+                                            size_t ilen );
+
+/**
+ * \brief          MD4 final digest
+ *
+ * \deprecated     Superseded by mbedtls_md4_finish_ret() in 2.7.0
+ *
+ * \param ctx      MD4 context
+ * \param output   MD4 checksum result
+ *
+ * \warning        MD4 is considered a weak message digest and its use
+ *                 constitutes a security risk. We recommend considering
+ *                 stronger message digests instead.
+ *
+ */
+MBEDTLS_DEPRECATED void mbedtls_md4_finish( mbedtls_md4_context *ctx,
+                                            unsigned char output[16] );
+
+/**
+ * \brief          MD4 process data block (internal use only)
+ *
+ * \deprecated     Superseded by mbedtls_internal_md4_process() in 2.7.0
+ *
+ * \param ctx      MD4 context
+ * \param data     buffer holding one block of data
+ *
+ * \warning        MD4 is considered a weak message digest and its use
+ *                 constitutes a security risk. We recommend considering
+ *                 stronger message digests instead.
+ *
+ */
+MBEDTLS_DEPRECATED void mbedtls_md4_process( mbedtls_md4_context *ctx,
+                                             const unsigned char data[64] );
+
+#undef MBEDTLS_DEPRECATED
+#endif /* !MBEDTLS_DEPRECATED_REMOVED */
+
 /**
  * \brief          Output = MD4( input buffer )
  *
@@ -180,9 +255,36 @@ int mbedtls_internal_md4_process( mbedtls_md4_context *ctx,
  *                 stronger message digests instead.
  *
  */
-int mbedtls_md4( const unsigned char *input,
-                 size_t ilen,
-                 unsigned char output[16] );
+int mbedtls_md4_ret( const unsigned char *input,
+                     size_t ilen,
+                     unsigned char output[16] );
+
+#if !defined(MBEDTLS_DEPRECATED_REMOVED)
+#if defined(MBEDTLS_DEPRECATED_WARNING)
+#define MBEDTLS_DEPRECATED      __attribute__((deprecated))
+#else
+#define MBEDTLS_DEPRECATED
+#endif
+/**
+ * \brief          Output = MD4( input buffer )
+ *
+ * \deprecated     Superseded by mbedtls_md4_ret() in 2.7.0
+ *
+ * \param input    buffer holding the data
+ * \param ilen     length of the input data
+ * \param output   MD4 checksum result
+ *
+ * \warning        MD4 is considered a weak message digest and its use
+ *                 constitutes a security risk. We recommend considering
+ *                 stronger message digests instead.
+ *
+ */
+MBEDTLS_DEPRECATED void mbedtls_md4( const unsigned char *input,
+                                     size_t ilen,
+                                     unsigned char output[16] );
+
+#undef MBEDTLS_DEPRECATED
+#endif /* !MBEDTLS_DEPRECATED_REMOVED */
 
 #if defined(MBEDTLS_SELF_TEST)
 
