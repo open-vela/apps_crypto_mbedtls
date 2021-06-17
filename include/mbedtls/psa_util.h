@@ -25,7 +25,6 @@
 
 #ifndef MBEDTLS_PSA_UTIL_H
 #define MBEDTLS_PSA_UTIL_H
-#include "mbedtls/private_access.h"
 
 #if !defined(MBEDTLS_CONFIG_FILE)
 #include "mbedtls/config.h"
@@ -121,6 +120,14 @@ static inline psa_algorithm_t mbedtls_psa_translate_md( mbedtls_md_type_t md_alg
 {
     switch( md_alg )
     {
+#if defined(MBEDTLS_MD2_C)
+    case MBEDTLS_MD_MD2:
+        return( PSA_ALG_MD2 );
+#endif
+#if defined(MBEDTLS_MD4_C)
+    case MBEDTLS_MD_MD4:
+        return( PSA_ALG_MD4 );
+#endif
 #if defined(MBEDTLS_MD5_C)
     case MBEDTLS_MD_MD5:
         return( PSA_ALG_MD5 );
@@ -129,19 +136,15 @@ static inline psa_algorithm_t mbedtls_psa_translate_md( mbedtls_md_type_t md_alg
     case MBEDTLS_MD_SHA1:
         return( PSA_ALG_SHA_1 );
 #endif
-#if defined(MBEDTLS_SHA224_C)
+#if defined(MBEDTLS_SHA256_C)
     case MBEDTLS_MD_SHA224:
         return( PSA_ALG_SHA_224 );
-#endif
-#if defined(MBEDTLS_SHA256_C)
     case MBEDTLS_MD_SHA256:
         return( PSA_ALG_SHA_256 );
 #endif
-#if defined(MBEDTLS_SHA384_C)
+#if defined(MBEDTLS_SHA512_C)
     case MBEDTLS_MD_SHA384:
         return( PSA_ALG_SHA_384 );
-#endif
-#if defined(MBEDTLS_SHA512_C)
     case MBEDTLS_MD_SHA512:
         return( PSA_ALG_SHA_512 );
 #endif
@@ -373,7 +376,7 @@ static inline psa_key_type_t mbedtls_psa_parse_tls_ecc_group(
     if( curve_info == NULL )
         return( 0 );
     return( PSA_KEY_TYPE_ECC_KEY_PAIR(
-                mbedtls_ecc_group_to_psa( curve_info->MBEDTLS_PRIVATE(grp_id), bits ) ) );
+                mbedtls_ecc_group_to_psa( curve_info->grp_id, bits ) ) );
 }
 #endif /* MBEDTLS_ECP_C */
 

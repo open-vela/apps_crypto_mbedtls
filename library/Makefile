@@ -22,8 +22,6 @@ endif
 # To compile on Plan9:
 # CFLAGS += -D_BSD_EXTENSION
 
-PERL ?= perl
-
 # if were running on Windows build for Windows
 ifdef WINDOWS
 WINDOWS_BUILD=1
@@ -72,11 +70,13 @@ endif
 OBJS_CRYPTO= \
 	     aes.o \
 	     aesni.o \
+	     arc4.o \
 	     aria.o \
 	     asn1parse.o \
 	     asn1write.o \
 	     base64.o \
 	     bignum.o \
+	     blowfish.o \
 	     camellia.o \
 	     ccm.o \
 	     chacha20.o \
@@ -99,6 +99,8 @@ OBJS_CRYPTO= \
 	     hkdf.o \
 	     hmac_drbg.o \
 	     md.o \
+	     md2.o \
+	     md4.o \
 	     md5.o \
 	     memory_buffer_alloc.o \
 	     mps_reader.o \
@@ -139,6 +141,7 @@ OBJS_CRYPTO= \
 	     timing.o \
 	     version.o \
 	     version_features.o \
+	     xtea.o \
 	     # This line is intentionally left blank
 
 include ../3rdparty/Makefile.inc
@@ -268,29 +271,6 @@ libmbedcrypto.dll: $(OBJS_CRYPTO)
 	echo "  CC    $<"
 	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) -o $@ -c $<
 
-.PHONY: generated_files
-GENERATED_FILES = error.c version_features.c
-generated_files: $(GENERATED_FILES)
-
-error.c: ../scripts/generate_errors.pl
-error.c: ../scripts/data_files/error.fmt
-error.c: $(filter-out %config%,$(wildcard ../include/mbedtls/*.h))
-error.c:
-	echo "  Gen   $@"
-	$(PERL) ../scripts/generate_errors.pl
-
-version_features.c: ../scripts/generate_features.pl
-version_features.c: ../scripts/data_files/version_features.fmt
-## The generated file only depends on the options that are present in config.h,
-## not on which options are set. To avoid regenerating this file all the time
-## when switching between configurations, don't declare config.h as a
-## dependency. Remove this file from your working tree if you've just added or
-## removed an option in config.h.
-#version_features.c: ../include/mbedtls/config.h
-version_features.c:
-	echo "  Gen   $@"
-	$(PERL) ../scripts/generate_features.pl
-
 clean:
 ifndef WINDOWS
 	rm -f *.o libmbed*
@@ -299,11 +279,4 @@ else
 	if exist *.o del /Q /F *.o
 	if exist libmbed* del /Q /F libmbed*
 	del /Q /F del_errors_out_if_the_file_list_is_empty_but_not_if_a_file_does_not_exist $(subst /,\,$(THIRDPARTY_CRYPTO_OBJECTS))
-endif
-
-neat: clean
-ifndef WINDOWS
-	rm -f $(GENERATED_FILES)
-else
-	for %f in ($(subst /,\,$(GENERATED_FILES))) if exist %f del /Q /F %f
 endif

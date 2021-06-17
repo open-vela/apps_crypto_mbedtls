@@ -57,6 +57,12 @@ struct mbedtls_md_info_t
     unsigned char block_size;
 };
 
+#if defined(MBEDTLS_MD2_C)
+extern const mbedtls_md_info_t mbedtls_md2_info;
+#endif
+#if defined(MBEDTLS_MD4_C)
+extern const mbedtls_md_info_t mbedtls_md4_info;
+#endif
 #if defined(MBEDTLS_MD5_C)
 extern const mbedtls_md_info_t mbedtls_md5_info;
 #endif
@@ -66,16 +72,14 @@ extern const mbedtls_md_info_t mbedtls_ripemd160_info;
 #if defined(MBEDTLS_SHA1_C)
 extern const mbedtls_md_info_t mbedtls_sha1_info;
 #endif
-#if defined(MBEDTLS_SHA224_C)
-extern const mbedtls_md_info_t mbedtls_sha224_info;
-#endif
 #if defined(MBEDTLS_SHA256_C)
+extern const mbedtls_md_info_t mbedtls_sha224_info;
 extern const mbedtls_md_info_t mbedtls_sha256_info;
 #endif
-#if defined(MBEDTLS_SHA384_C)
+#if defined(MBEDTLS_SHA512_C)
+#if !defined(MBEDTLS_SHA512_NO_SHA384)
 extern const mbedtls_md_info_t mbedtls_sha384_info;
 #endif
-#if defined(MBEDTLS_SHA512_C)
 extern const mbedtls_md_info_t mbedtls_sha512_info;
 #endif
 

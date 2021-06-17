@@ -33,7 +33,7 @@ class KeyType:
         `name` is a string 'PSA_KEY_TYPE_xxx' which is the name of a PSA key
         type macro. For key types that take arguments, the arguments can
         be passed either through the optional argument `params` or by
-        passing an expression of the form 'PSA_KEY_TYPE_xxx(param1, ...)'
+        passing an expression of the form 'PSA_KEY_TYPE_xxx(param1, param2)'
         in `name` as a string.
         """
 
@@ -48,7 +48,7 @@ class KeyType:
                 m = re.match(r'(\w+)\s*\((.*)\)\Z', self.name)
                 assert m is not None
                 self.name = m.group(1)
-                params = m.group(2).split(',')
+                params = ','.split(m.group(2))
         self.params = (None if params is None else
                        [param.strip() for param in params])
         """The parameters of the key type, if there are any.
@@ -82,6 +82,7 @@ class KeyType:
     }
     KEY_TYPE_SIZES = {
         'PSA_KEY_TYPE_AES': (128, 192, 256), # exhaustive
+        'PSA_KEY_TYPE_ARC4': (8, 128, 2048), # extremes + sensible
         'PSA_KEY_TYPE_ARIA': (128, 192, 256), # exhaustive
         'PSA_KEY_TYPE_CAMELLIA': (128, 192, 256), # exhaustive
         'PSA_KEY_TYPE_CHACHA20': (256,), # exhaustive

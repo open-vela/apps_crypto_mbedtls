@@ -56,12 +56,15 @@ CLASSIC_DEPENDENCIES = frozenset([
     #'MBEDTLS_GENPRIME', #needed for RSA key generation
     'MBEDTLS_PKCS1_V15',
     'MBEDTLS_PKCS1_V21',
+    'MBEDTLS_SHA512_NO_SHA384',
 
     # Mbed TLS modules.
     # Only modules that provide cryptographic mechanisms are listed here.
     # Platform, data formatting, X.509 or TLS modules are omitted.
     'MBEDTLS_AES_C',
+    'MBEDTLS_ARC4_C',
     'MBEDTLS_BIGNUM_C',
+    #cipher#'MBEDTLS_BLOWFISH_C',
     'MBEDTLS_CAMELLIA_C',
     'MBEDTLS_ARIA_C',
     'MBEDTLS_CCM_C',
@@ -80,6 +83,8 @@ CLASSIC_DEPENDENCIES = frozenset([
     'MBEDTLS_HKDF_C',
     'MBEDTLS_HMAC_DRBG_C',
     'MBEDTLS_NIST_KW_C',
+    'MBEDTLS_MD2_C',
+    'MBEDTLS_MD4_C',
     'MBEDTLS_MD5_C',
     'MBEDTLS_PKCS5_C',
     'MBEDTLS_PKCS12_C',
@@ -89,6 +94,7 @@ CLASSIC_DEPENDENCIES = frozenset([
     'MBEDTLS_SHA1_C',
     'MBEDTLS_SHA256_C',
     'MBEDTLS_SHA512_C',
+    'MBEDTLS_XTEA_C',
 ])
 
 def is_classic_dependency(dep):
