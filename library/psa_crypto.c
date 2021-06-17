@@ -2454,7 +2454,100 @@ cleanup:
     return( status == PSA_SUCCESS ? abort_status : status );
 }
 
+psa_status_t psa_mac_compute( mbedtls_svc_key_id_t key,
+                              psa_algorithm_t alg,
+                              const uint8_t *input,
+                              size_t input_length,
+                              uint8_t *mac,
+                              size_t mac_size,
+                              size_t *mac_length)
+{
+    psa_status_t status = PSA_ERROR_CORRUPTION_DETECTED;
+    psa_status_t unlock_status = PSA_ERROR_CORRUPTION_DETECTED;
+    psa_key_slot_t *slot;
+    uint8_t operation_mac_size = 0;
 
+    status = psa_get_and_lock_key_slot_with_policy(
+                 key, &slot, PSA_KEY_USAGE_SIGN_HASH, alg );
+    if( status != PSA_SUCCESS )
+        goto exit;
+
+    psa_key_attributes_t attributes = {
+        .core = slot->attr
+    };
+
+    status = psa_mac_finalize_alg_and_key_validation( alg, &attributes,
+                                                      &operation_mac_size );
+    if( status != PSA_SUCCESS )
+        goto exit;
+
+    if( mac_size < operation_mac_size )
+    {
+        status = PSA_ERROR_BUFFER_TOO_SMALL;
+        goto exit;
+    }
+
+    status = psa_driver_wrapper_mac_compute(
+                 &attributes,
+                 slot->key.data, slot->key.bytes,
+                 alg,
+                 input, input_length,
+                 mac, operation_mac_size, mac_length );
+
+exit:
+    if( status == PSA_SUCCESS )
+    {
+        /* Set the excess room in the output buffer to an invalid value, to
+         * avoid potentially leaking a longer MAC. */
+        if( mac_size > operation_mac_size )
+            memset( &mac[operation_mac_size],
+                    '!',
+                    mac_size - operation_mac_size );
+    }
+    else
+    {
+        /* Set the output length and content to a safe default, such that in
+         * case the caller misses an error check, the output would be an
+         * unachievable MAC. */
+        *mac_length = mac_size;
+        memset( mac, '!', mac_size );
+    }
+
+    unlock_status = psa_unlock_key_slot( slot );
+
+    return( ( status == PSA_SUCCESS ) ? unlock_status : status );
+}
+
+psa_status_t psa_mac_verify( mbedtls_svc_key_id_t key,
+                             psa_algorithm_t alg,
+                             const uint8_t *input,
+                             size_t input_length,
+                             const uint8_t *mac,
+                             size_t mac_length)
+{
+    psa_status_t status = PSA_ERROR_CORRUPTION_DETECTED;
+    psa_mac_operation_t operation = PSA_MAC_OPERATION_INIT;
+
+    status = psa_mac_verify_setup( &operation, key, alg );
+    if( status != PSA_SUCCESS )
+        goto exit;
+
+    status = psa_mac_update( &operation, input, input_length );
+    if( status != PSA_SUCCESS )
+        goto exit;
+
+    status = psa_mac_verify_finish( &operation, mac, mac_length );
+    if( status != PSA_SUCCESS )
+        goto exit;
+
+exit:
+    if ( status == PSA_SUCCESS )
+        status = psa_mac_abort( &operation );
+    else
+        psa_mac_abort( &operation );
+
+    return ( status );
+}
 
 /****************************************************************/
 /* Asymmetric cryptography */
@@ -3739,17 +3832,6 @@ static psa_status_t psa_key_derivation_tls12_prf_read(
     uint8_t hash_length = PSA_HASH_LENGTH( hash_alg );
     psa_status_t status;
     uint8_t offset, length;
-
-    switch( tls12_prf->state )
-    {
-        case PSA_TLS12_PRF_STATE_LABEL_SET:
-            tls12_prf->state = PSA_TLS12_PRF_STATE_OUTPUT;
-            break;
-        case PSA_TLS12_PRF_STATE_OUTPUT:
-            break;
-        default:
-            return( PSA_ERROR_BAD_STATE );
-    }
 
     while( output_length != 0 )
     {

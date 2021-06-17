@@ -556,17 +556,12 @@ int main( int argc, char *argv[] )
 
 #if defined(MBEDTLS_FS_IO)
     if( strlen( opt.key_file ) )
-    {
-        ret = mbedtls_pk_parse_keyfile( &pkey, opt.key_file, "",
-                mbedtls_ctr_drbg_random, &ctr_drbg );
-    }
+        ret = mbedtls_pk_parse_keyfile( &pkey, opt.key_file, "" );
     else
 #endif
 #if defined(MBEDTLS_PEM_PARSE_C)
-    {
         ret = mbedtls_pk_parse_key( &pkey, (const unsigned char *) mbedtls_test_cli_key,
-                mbedtls_test_cli_key_len, NULL, 0, mbedtls_ctr_drbg_random, &ctr_drbg );
-    }
+                mbedtls_test_cli_key_len, NULL, 0 );
 #else
     {
         mbedtls_printf("MBEDTLS_PEM_PARSE_C not defined.");
