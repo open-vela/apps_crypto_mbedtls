@@ -5,13 +5,10 @@
 *.sln
 *.vcxproj
 
-# Generated source files
-/psa/psa_constant_names_generated.c
-/test/query_config.c
-
 *.o
 *.exe
 
+aes/aescrypt2
 aes/crypt_and_hash
 hash/generic_sum
 hash/hello
@@ -43,6 +40,7 @@ psa/key_ladder_demo
 psa/psa_constant_names
 random/gen_entropy
 random/gen_random_ctr_drbg
+random/gen_random_havege
 ssl/dtls_client
 ssl/dtls_server
 ssl/mini_client
@@ -70,5 +68,5 @@ x509/cert_write
 x509/crl_app
 x509/req_app
 
-# Generated data files
+# generated files
 pkey/keyfile.key

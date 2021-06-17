@@ -214,6 +214,7 @@ run_test "Default configuration, server" \
          -u "MBEDTLS_SSL_ENCRYPT_THEN_MAC$" \
          -u "MBEDTLS_SSL_SESSION_TICKETS$" \
          -u "MBEDTLS_SSL_SESSION_TICKETS and client$" \
+         -u "MBEDTLS_SSL_DTLS_BADMAC_LIMIT$" \
          -u "MBEDTLS_SSL_DTLS_ANTI_REPLAY$" \
          -u "MBEDTLS_SSL_ALPN$" \
          -u "ciphersuite.* TLS-ECDHE-RSA-WITH-CHACHA20-POLY1305-SHA256$" \
@@ -237,6 +238,7 @@ run_test "Default configuration, client" \
          -u "MBEDTLS_SSL_ENCRYPT_THEN_MAC$" \
          -u "MBEDTLS_SSL_SESSION_TICKETS$" \
          -u "MBEDTLS_SSL_SESSION_TICKETS and client$" \
+         -u "MBEDTLS_SSL_DTLS_BADMAC_LIMIT$" \
          -u "MBEDTLS_SSL_DTLS_ANTI_REPLAY$" \
          -u "MBEDTLS_SSL_ALPN$" \
          -u "ciphersuite.* TLS-ECDHE-RSA-WITH-CHACHA20-POLY1305-SHA256$" \
@@ -343,6 +345,7 @@ run_test "Minimal configuration, server" \
          -n "MBEDTLS_SSL_ENCRYPT_THEN_MAC$" \
          -n "MBEDTLS_SSL_SESSION_TICKETS$" \
          -n "MBEDTLS_SSL_SESSION_TICKETS and client$" \
+         -n "MBEDTLS_SSL_DTLS_BADMAC_LIMIT$" \
          -n "MBEDTLS_SSL_DTLS_ANTI_REPLAY$" \
          -n "MBEDTLS_SSL_ALPN$" \
 
@@ -354,6 +357,7 @@ run_test "Minimal configuration, client" \
          -n "MBEDTLS_SSL_ENCRYPT_THEN_MAC$" \
          -n "MBEDTLS_SSL_SESSION_TICKETS$" \
          -n "MBEDTLS_SSL_SESSION_TICKETS and client$" \
+         -n "MBEDTLS_SSL_DTLS_BADMAC_LIMIT$" \
          -n "MBEDTLS_SSL_DTLS_ANTI_REPLAY$" \
          -n "MBEDTLS_SSL_ALPN$" \
 
