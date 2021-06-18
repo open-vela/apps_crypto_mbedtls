@@ -49,6 +49,8 @@
 #define MBEDTLS_PKCS1_V21
 #define MBEDTLS_SELF_TEST
 #define MBEDTLS_VERSION_FEATURES
+#define MBEDTLS_X509_CHECK_KEY_USAGE
+#define MBEDTLS_X509_CHECK_EXTENDED_KEY_USAGE
 
 /* mbed TLS modules */
 #define MBEDTLS_AES_C
@@ -71,12 +73,7 @@
 #define MBEDTLS_PK_WRITE_C
 #define MBEDTLS_PLATFORM_C
 #define MBEDTLS_RSA_C
-/* The library does not currently support enabling SHA-224 without SHA-256.
- * A future version of the library will have this option disabled
- * by default. */
-#define MBEDTLS_SHA224_C
 #define MBEDTLS_SHA256_C
-#define MBEDTLS_SHA384_C
 #define MBEDTLS_SHA512_C
 #define MBEDTLS_VERSION_C
 #define MBEDTLS_X509_USE_C
