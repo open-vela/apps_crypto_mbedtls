@@ -956,10 +956,6 @@ struct mbedtls_ssl_session
     unsigned char MBEDTLS_PRIVATE(mfl_code);     /*!< MaxFragmentLength negotiated by peer */
 #endif /* MBEDTLS_SSL_MAX_FRAGMENT_LENGTH */
 
-#if defined(MBEDTLS_SSL_TRUNCATED_HMAC)
-    int MBEDTLS_PRIVATE(trunc_hmac);             /*!< flag for truncated hmac activation   */
-#endif /* MBEDTLS_SSL_TRUNCATED_HMAC */
-
 #if defined(MBEDTLS_SSL_ENCRYPT_THEN_MAC)
     int MBEDTLS_PRIVATE(encrypt_then_mac);       /*!< flag for EtM activation                */
 #endif
@@ -1179,9 +1175,6 @@ struct mbedtls_ssl_config
 #endif
 #if defined(MBEDTLS_SSL_RENEGOTIATION)
     unsigned int MBEDTLS_PRIVATE(disable_renegotiation) : 1; /*!< disable renegotiation?     */
-#endif
-#if defined(MBEDTLS_SSL_TRUNCATED_HMAC)
-    unsigned int MBEDTLS_PRIVATE(trunc_hmac) : 1;    /*!< negotiate truncated hmac?          */
 #endif
 #if defined(MBEDTLS_SSL_SESSION_TICKETS)
     unsigned int MBEDTLS_PRIVATE(session_tickets) : 1;   /*!< use session tickets?           */
@@ -2893,6 +2886,7 @@ void mbedtls_ssl_conf_dhm_min_bitlen( mbedtls_ssl_config *conf,
 #if defined(MBEDTLS_ECP_C)
 /**
  * \brief          Set the allowed curves in order of preference.
+ *                 (Default: all defined curves.)
  *
  *                 On server: this only affects selection of the ECDHE curve;
  *                 the curves used for ECDH and ECDSA are determined by the
@@ -2913,19 +2907,6 @@ void mbedtls_ssl_conf_dhm_min_bitlen( mbedtls_ssl_config *conf,
  * \note           This list should be ordered by decreasing preference
  *                 (preferred curve first).
  *
- * \note           The default list is the same set of curves that
- *                 #mbedtls_x509_crt_profile_default allows, plus
- *                 ECDHE-only curves selected according to the same criteria.
- *                 The order favors curves with the lowest resource usage.
- *
- * \note           New minor versions of Mbed TLS may extend this list,
- *                 for example if new curves are added to the library.
- *                 New minor versions of Mbed TLS will not remove items
- *                 from this list unless serious security concerns require it.
- *                 New minor versions of Mbed TLS may change the order in
- *                 keeping with the general principle of favoring the lowest
- *                 resource usage.
- *
  * \param conf     SSL configuration
  * \param curves   Ordered list of allowed curves,
  *                 terminated by MBEDTLS_ECP_DP_NONE.
@@ -2937,6 +2918,7 @@ void mbedtls_ssl_conf_curves( mbedtls_ssl_config *conf,
 #if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
 /**
  * \brief          Set the allowed hashes for signatures during the handshake.
+ *                 (Default: all available hashes except MD5.)
  *
  * \note           This only affects which hashes are offered and can be used
  *                 for signatures during the handshake. Hashes for message
@@ -2947,18 +2929,6 @@ void mbedtls_ssl_conf_curves( mbedtls_ssl_config *conf,
  *
  * \note           This list should be ordered by decreasing preference
  *                 (preferred hash first).
- *
- * \note           By default, all supported hashes whose length is at least
- *                 256 bits are allowed. This is the same set as the default
- *                 for certificate verification
- *                 (#mbedtls_x509_crt_profile_default).
- *                 The preference order is currently unspecified and may
- *                 change in future versions.
- *
- * \note           New minor versions of Mbed TLS may extend this list,
- *                 for example if new curves are added to the library.
- *                 New minor versions of Mbed TLS will not remove items
- *                 from this list unless serious security concerns require it.
  *
  * \param conf     SSL configuration
  * \param hashes   Ordered list of allowed signature hashes,
@@ -3337,18 +3307,6 @@ int mbedtls_ssl_conf_max_frag_len( mbedtls_ssl_config *conf, unsigned char mfl_c
  */
 void mbedtls_ssl_conf_preference_order( mbedtls_ssl_config *conf, int order );
 #endif /* MBEDTLS_SSL_SRV_C */
-
-#if defined(MBEDTLS_SSL_TRUNCATED_HMAC)
-/**
- * \brief          Activate negotiation of truncated HMAC
- *                 (Default: MBEDTLS_SSL_TRUNC_HMAC_DISABLED)
- *
- * \param conf     SSL configuration
- * \param truncate Enable or disable (MBEDTLS_SSL_TRUNC_HMAC_ENABLED or
- *                                    MBEDTLS_SSL_TRUNC_HMAC_DISABLED)
- */
-void mbedtls_ssl_conf_truncated_hmac( mbedtls_ssl_config *conf, int truncate );
-#endif /* MBEDTLS_SSL_TRUNCATED_HMAC */
 
 #if defined(MBEDTLS_SSL_SESSION_TICKETS) && defined(MBEDTLS_SSL_CLI_C)
 /**
