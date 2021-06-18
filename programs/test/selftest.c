@@ -17,6 +17,8 @@
  *  limitations under the License.
  */
 
+#define MBEDTLS_ALLOW_PRIVATE_ACCESS
+
 #if !defined(MBEDTLS_CONFIG_FILE)
 #include "mbedtls/config.h"
 #else
@@ -343,10 +345,6 @@ const selftest_t selftests[] =
 #endif
 #if defined(MBEDTLS_PKCS5_C)
     {"pkcs5", mbedtls_pkcs5_self_test},
-#endif
-/* Slower test after the faster ones */
-#if defined(MBEDTLS_TIMING_C)
-    {"timing", mbedtls_timing_self_test},
 #endif
 /* Heap test comes last */
 #if defined(MBEDTLS_MEMORY_BUFFER_ALLOC_C)
