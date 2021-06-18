@@ -74,11 +74,7 @@
 #if !defined(_WIN32) || defined(EFIX64) || defined(EFI32)
 #include <sys/types.h>
 #include <sys/stat.h>
-#if defined(__MBED__)
-#include <platform/mbed_retarget.h>
-#else
 #include <dirent.h>
-#endif /* __MBED__ */
 #endif /* !_WIN32 || EFIX64 || EFI32 */
 #endif
 
@@ -154,17 +150,6 @@ const mbedtls_x509_crt_profile mbedtls_x509_crt_profile_suiteb =
     0,
 #endif
     0,
-};
-
-/*
- * Empty / all-forbidden profile
- */
-const mbedtls_x509_crt_profile mbedtls_x509_crt_profile_none =
-{
-    0,
-    0,
-    0,
-    (uint32_t) -1,
 };
 
 /*
@@ -829,7 +814,8 @@ static int x509_get_certificate_policies( unsigned char **p,
         {
             /*
              * Set the parsing return code but continue parsing, in case this
-             * extension is critical.
+             * extension is critical and MBEDTLS_X509_ALLOW_UNSUPPORTED_CRITICAL_EXTENSION
+             * is configured.
              */
             parse_ret = MBEDTLS_ERR_X509_FEATURE_UNAVAILABLE;
         }
@@ -971,12 +957,14 @@ static int x509_get_crt_ext( unsigned char **p,
             /* No parser found, skip extension */
             *p = end_ext_octet;
 
+#if !defined(MBEDTLS_X509_ALLOW_UNSUPPORTED_CRITICAL_EXTENSION)
             if( is_critical )
             {
                 /* Data is marked as critical: fail */
                 return( MBEDTLS_ERROR_ADD( MBEDTLS_ERR_X509_INVALID_EXTENSIONS,
                         MBEDTLS_ERR_ASN1_UNEXPECTED_TAG ) );
             }
+#endif
             continue;
         }
 
@@ -1035,9 +1023,11 @@ static int x509_get_crt_ext( unsigned char **p,
                         start_ext_octet, end_ext_octet ) == 0 )
                     break;
 
+#if !defined(MBEDTLS_X509_ALLOW_UNSUPPORTED_CRITICAL_EXTENSION)
                 if( is_critical )
                     return( ret );
                 else
+#endif
                 /*
                  * If MBEDTLS_ERR_X509_FEATURE_UNAVAILABLE is returned, then we
                  * cannot interpret or enforce the policy. However, it is up to
@@ -1055,9 +1045,11 @@ static int x509_get_crt_ext( unsigned char **p,
              * supports, but there isn't an x509 parser for it,
              * skip the extension.
              */
+#if !defined(MBEDTLS_X509_ALLOW_UNSUPPORTED_CRITICAL_EXTENSION)
             if( is_critical )
                 return( MBEDTLS_ERR_X509_FEATURE_UNAVAILABLE );
             else
+#endif
                 *p = end_ext_octet;
         }
     }
@@ -1272,7 +1264,9 @@ static int x509_crt_parse_der_core( mbedtls_x509_crt *crt,
         }
     }
 
+#if !defined(MBEDTLS_X509_ALLOW_EXTENSIONS_NON_V3)
     if( crt->version == 3 )
+#endif
     {
         ret = x509_get_crt_ext( &p, end, crt, cb, p_ctx );
         if( ret != 0 )
@@ -2242,6 +2236,7 @@ int mbedtls_x509_crt_verify_info( char *buf, size_t size, const char *prefix,
 }
 #endif /* MBEDTLS_X509_REMOVE_INFO */
 
+#if defined(MBEDTLS_X509_CHECK_KEY_USAGE)
 int mbedtls_x509_crt_check_key_usage( const mbedtls_x509_crt *crt,
                                       unsigned int usage )
 {
@@ -2264,7 +2259,9 @@ int mbedtls_x509_crt_check_key_usage( const mbedtls_x509_crt *crt,
 
     return( 0 );
 }
+#endif
 
+#if defined(MBEDTLS_X509_CHECK_EXTENDED_KEY_USAGE)
 int mbedtls_x509_crt_check_extended_key_usage( const mbedtls_x509_crt *crt,
                                        const char *usage_oid,
                                        size_t usage_len )
@@ -2294,6 +2291,7 @@ int mbedtls_x509_crt_check_extended_key_usage( const mbedtls_x509_crt *crt,
 
     return( MBEDTLS_ERR_X509_BAD_INPUT_DATA );
 }
+#endif /* MBEDTLS_X509_CHECK_EXTENDED_KEY_USAGE */
 
 #if defined(MBEDTLS_X509_CRL_PARSE_C)
 /*
@@ -2344,12 +2342,14 @@ static int x509_crt_verifycrl( mbedtls_x509_crt *crt, mbedtls_x509_crt *ca,
         /*
          * Check if the CA is configured to sign CRLs
          */
+#if defined(MBEDTLS_X509_CHECK_KEY_USAGE)
         if( mbedtls_x509_crt_check_key_usage( ca,
                                               MBEDTLS_X509_KU_CRL_SIGN ) != 0 )
         {
             flags |= MBEDTLS_X509_BADCRL_NOT_TRUSTED;
             break;
         }
+#endif
 
         /*
          * Check if CRL is correctly signed by the trusted CA
@@ -2486,11 +2486,13 @@ static int x509_crt_check_parent( const mbedtls_x509_crt *child,
     if( need_ca_bit && ! parent->ca_istrue )
         return( -1 );
 
+#if defined(MBEDTLS_X509_CHECK_KEY_USAGE)
     if( need_ca_bit &&
         mbedtls_x509_crt_check_key_usage( parent, MBEDTLS_X509_KU_KEY_CERT_SIGN ) != 0 )
     {
         return( -1 );
     }
+#endif
 
     return( 0 );
 }
