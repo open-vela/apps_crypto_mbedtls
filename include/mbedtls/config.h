@@ -47,6 +47,7 @@
  *
  * Used in:
  *      library/aria.c
+ *      library/timing.c
  *      library/bn_mul.h
  *
  * Required by:
@@ -267,7 +268,7 @@
 /**
  * \def MBEDTLS_TIMING_ALT
  *
- * Uncomment to provide your own alternate implementation for
+ * Uncomment to provide your own alternate implementation for mbedtls_timing_hardclock(),
  * mbedtls_timing_get_timer(), mbedtls_set_alarm(), mbedtls_set/get_delay()
  *
  * Only works if you have MBEDTLS_TIMING_C enabled.
@@ -1013,7 +1014,8 @@
 /**
  * \def MBEDTLS_NO_DEFAULT_ENTROPY_SOURCES
  *
- * Do not add default entropy sources in mbedtls_entropy_init().
+ * Do not add default entropy sources. These are the platform specific
+ * or mbedtls_timing_hardclock poll function.
  *
  * This is useful to have more control over the added entropy sources in an
  * application.
@@ -1645,15 +1647,6 @@
  * Comment this macro to disable support for server name indication in SSL
  */
 #define MBEDTLS_SSL_SERVER_NAME_INDICATION
-
-/**
- * \def MBEDTLS_SSL_TRUNCATED_HMAC
- *
- * Enable support for RFC 6066 truncated HMAC in SSL.
- *
- * Comment this macro to disable support for truncated HMAC in SSL
- */
-#define MBEDTLS_SSL_TRUNCATED_HMAC
 
 /**
  * \def MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH
