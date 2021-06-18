@@ -672,9 +672,6 @@ static int ssl_populate_transform( mbedtls_ssl_transform *transform,
 #if defined(MBEDTLS_SSL_ENCRYPT_THEN_MAC)
                                    int encrypt_then_mac,
 #endif /* MBEDTLS_SSL_ENCRYPT_THEN_MAC */
-#if defined(MBEDTLS_SSL_TRUNCATED_HMAC)
-                                   int trunc_hmac,
-#endif /* MBEDTLS_SSL_TRUNCATED_HMAC */
 #endif /* MBEDTLS_SSL_SOME_SUITES_USE_MAC */
                                    ssl_tls_prf_t tls_prf,
                                    const unsigned char randbytes[64],
@@ -844,18 +841,6 @@ static int ssl_populate_transform( mbedtls_ssl_transform *transform,
         /* Get MAC length */
         mac_key_len = mbedtls_md_get_size( md_info );
         transform->maclen = mac_key_len;
-
-#if defined(MBEDTLS_SSL_TRUNCATED_HMAC)
-        /*
-         * If HMAC is to be truncated, we shall keep the leftmost bytes,
-         * (rfc 6066 page 13 or rfc 2104 section 4),
-         * so we only need to adjust the length here.
-         */
-        if( trunc_hmac == MBEDTLS_SSL_TRUNC_HMAC_ENABLED )
-        {
-            transform->maclen = MBEDTLS_SSL_TRUNCATED_HMAC_LEN;
-        }
-#endif /* MBEDTLS_SSL_TRUNCATED_HMAC */
 
         /* IV length */
         transform->ivlen = cipher_info->iv_size;
@@ -1368,9 +1353,6 @@ int mbedtls_ssl_derive_keys( mbedtls_ssl_context *ssl )
 #if defined(MBEDTLS_SSL_ENCRYPT_THEN_MAC)
                                   ssl->session_negotiate->encrypt_then_mac,
 #endif /* MBEDTLS_SSL_ENCRYPT_THEN_MAC */
-#if defined(MBEDTLS_SSL_TRUNCATED_HMAC)
-                                  ssl->session_negotiate->trunc_hmac,
-#endif /* MBEDTLS_SSL_TRUNCATED_HMAC */
 #endif /* MBEDTLS_SSL_SOME_SUITES_USE_MAC */
                                   ssl->handshake->tls_prf,
                                   ssl->handshake->randbytes,
@@ -4138,13 +4120,6 @@ int mbedtls_ssl_conf_max_frag_len( mbedtls_ssl_config *conf, unsigned char mfl_c
 }
 #endif /* MBEDTLS_SSL_MAX_FRAGMENT_LENGTH */
 
-#if defined(MBEDTLS_SSL_TRUNCATED_HMAC)
-void mbedtls_ssl_conf_truncated_hmac( mbedtls_ssl_config *conf, int truncate )
-{
-    conf->trunc_hmac = truncate;
-}
-#endif /* MBEDTLS_SSL_TRUNCATED_HMAC */
-
 void mbedtls_ssl_conf_legacy_renegotiation( mbedtls_ssl_config *conf, int allow_legacy )
 {
     conf->allow_legacy_renegotiation = allow_legacy;
@@ -4519,11 +4494,7 @@ const mbedtls_ssl_session *mbedtls_ssl_get_session_pointer( const mbedtls_ssl_co
 #define SSL_SERIALIZED_SESSION_CONFIG_MFL 0
 #endif /* MBEDTLS_SSL_MAX_FRAGMENT_LENGTH */
 
-#if defined(MBEDTLS_SSL_TRUNCATED_HMAC)
-#define SSL_SERIALIZED_SESSION_CONFIG_TRUNC_HMAC 1
-#else
 #define SSL_SERIALIZED_SESSION_CONFIG_TRUNC_HMAC 0
-#endif /* MBEDTLS_SSL_TRUNCATED_HMAC */
 
 #if defined(MBEDTLS_SSL_ENCRYPT_THEN_MAC)
 #define SSL_SERIALIZED_SESSION_CONFIG_ETM 1
@@ -4766,13 +4737,6 @@ static int ssl_session_save( const mbedtls_ssl_session *session,
         *p++ = session->mfl_code;
 #endif
 
-#if defined(MBEDTLS_SSL_TRUNCATED_HMAC)
-    used += 1;
-
-    if( used <= buf_len )
-        *p++ = (unsigned char)( ( session->trunc_hmac ) & 0xFF );
-#endif
-
 #if defined(MBEDTLS_SSL_ENCRYPT_THEN_MAC)
     used += 1;
 
@@ -5006,13 +4970,6 @@ static int ssl_session_load( mbedtls_ssl_session *session,
         return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
 
     session->mfl_code = *p++;
-#endif
-
-#if defined(MBEDTLS_SSL_TRUNCATED_HMAC)
-    if( 1 > (size_t)( end - p ) )
-        return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
-
-    session->trunc_hmac = *p++;
 #endif
 
 #if defined(MBEDTLS_SSL_ENCRYPT_THEN_MAC)
@@ -5831,9 +5788,6 @@ static int ssl_context_load( mbedtls_ssl_context *ssl,
 #if defined(MBEDTLS_SSL_ENCRYPT_THEN_MAC)
                   ssl->session->encrypt_then_mac,
 #endif
-#if defined(MBEDTLS_SSL_TRUNCATED_HMAC)
-                  ssl->session->trunc_hmac,
-#endif
 #endif /* MBEDTLS_SSL_SOME_SUITES_USE_MAC */
                   ssl_tls12prf_from_cs( ssl->session->ciphersuite ),
                   p, /* currently pointing to randbytes */
@@ -6098,11 +6052,6 @@ void mbedtls_ssl_config_init( mbedtls_ssl_config *conf )
 }
 
 #if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
-/* The selection should be the same as mbedtls_x509_crt_profile_default in
- * x509_crt.c. Here, the order matters. Currently we favor stronger hashes,
- * for no fundamental reason.
- * See the documentation of mbedtls_ssl_conf_curves() for what we promise
- * about this list. */
 static int ssl_preset_default_hashes[] = {
 #if defined(MBEDTLS_SHA512_C)
     MBEDTLS_MD_SHA512,
@@ -6113,43 +6062,13 @@ static int ssl_preset_default_hashes[] = {
 #if defined(MBEDTLS_SHA256_C)
     MBEDTLS_MD_SHA256,
 #endif
+#if defined(MBEDTLS_SHA224_C)
+    MBEDTLS_MD_SHA224,
+#endif
+#if defined(MBEDTLS_SHA1_C) && defined(MBEDTLS_TLS_DEFAULT_ALLOW_SHA1_IN_KEY_EXCHANGE)
+    MBEDTLS_MD_SHA1,
+#endif
     MBEDTLS_MD_NONE
-};
-#endif
-
-#if defined(MBEDTLS_ECP_C)
-/* The selection should be the same as mbedtls_x509_crt_profile_default in
- * x509_crt.c, plus Montgomery curves for ECDHE. Here, the order matters:
- * curves with a lower resource usage come first.
- * See the documentation of mbedtls_ssl_conf_curves() for what we promise
- * about this list.
- */
-static mbedtls_ecp_group_id ssl_preset_default_curves[] = {
-#if defined(MBEDTLS_ECP_DP_CURVE25519_ENABLED)
-    MBEDTLS_ECP_DP_CURVE25519,
-#endif
-#if defined(MBEDTLS_ECP_DP_SECP256R1_ENABLED)
-    MBEDTLS_ECP_DP_SECP256R1,
-#endif
-#if defined(MBEDTLS_ECP_DP_SECP384R1_ENABLED)
-    MBEDTLS_ECP_DP_SECP384R1,
-#endif
-#if defined(MBEDTLS_ECP_DP_CURVE448_ENABLED)
-    MBEDTLS_ECP_DP_CURVE448,
-#endif
-#if defined(MBEDTLS_ECP_DP_SECP521R1_ENABLED)
-    MBEDTLS_ECP_DP_SECP521R1,
-#endif
-#if defined(MBEDTLS_ECP_DP_BP256R1_ENABLED)
-    MBEDTLS_ECP_DP_BP256R1,
-#endif
-#if defined(MBEDTLS_ECP_DP_BP384R1_ENABLED)
-    MBEDTLS_ECP_DP_BP384R1,
-#endif
-#if defined(MBEDTLS_ECP_DP_BP512R1_ENABLED)
-    MBEDTLS_ECP_DP_BP512R1,
-#endif
-    MBEDTLS_ECP_DP_NONE
 };
 #endif
 
@@ -6316,7 +6235,7 @@ int mbedtls_ssl_config_defaults( mbedtls_ssl_config *conf,
 #endif
 
 #if defined(MBEDTLS_ECP_C)
-            conf->curve_list = ssl_preset_default_curves;
+            conf->curve_list = mbedtls_ecp_grp_id_list();
 #endif
 
 #if defined(MBEDTLS_DHM_C) && defined(MBEDTLS_SSL_CLI_C)
