@@ -211,41 +211,6 @@ int mbedtls_platform_entropy_poll( void *data,
 #endif /* _WIN32 && !EFIX64 && !EFI32 */
 #endif /* !MBEDTLS_NO_PLATFORM_ENTROPY */
 
-#if defined(MBEDTLS_TEST_NULL_ENTROPY)
-int mbedtls_null_entropy_poll( void *data,
-                    unsigned char *output, size_t len, size_t *olen )
-{
-    ((void) data);
-    ((void) output);
-
-    *olen = 0;
-    if( len < sizeof(unsigned char) )
-        return( 0 );
-
-    output[0] = 0;
-    *olen = sizeof(unsigned char);
-    return( 0 );
-}
-#endif
-
-#if defined(MBEDTLS_TIMING_C)
-int mbedtls_hardclock_poll( void *data,
-                    unsigned char *output, size_t len, size_t *olen )
-{
-    unsigned long timer = mbedtls_timing_hardclock();
-    ((void) data);
-    *olen = 0;
-
-    if( len < sizeof(unsigned long) )
-        return( 0 );
-
-    memcpy( output, &timer, sizeof(unsigned long) );
-    *olen = sizeof(unsigned long);
-
-    return( 0 );
-}
-#endif /* MBEDTLS_TIMING_C */
-
 #if defined(MBEDTLS_ENTROPY_NV_SEED)
 int mbedtls_nv_seed_poll( void *data,
                           unsigned char *output, size_t len, size_t *olen )
