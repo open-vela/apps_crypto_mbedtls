@@ -147,15 +147,6 @@ class Config:
             setting.active = adapter(setting.name, setting.active,
                                      setting.section)
 
-    def change_matching(self, regexs, enable):
-        """Change all symbols matching one of the regexs to the desired state."""
-        if not regexs:
-            return
-        regex = re.compile('|'.join(regexs))
-        for setting in self.settings.values():
-            if regex.search(setting.name):
-                setting.active = enable
-
 def is_full_section(section):
     """Is this section affected by "config.py full" and friends?"""
     return section.endswith('support') or section.endswith('modules')
@@ -198,9 +189,13 @@ EXCLUDE_FROM_FULL = frozenset([
     'MBEDTLS_PSA_CRYPTO_KEY_ID_ENCODES_OWNER', # incompatible with USE_PSA_CRYPTO
     'MBEDTLS_PSA_CRYPTO_SPM', # platform dependency (PSA SPM)
     'MBEDTLS_PSA_INJECT_ENTROPY', # build dependency (hook functions)
+    'MBEDTLS_REMOVE_3DES_CIPHERSUITES', # removes a feature
     'MBEDTLS_RSA_NO_CRT', # influences the use of RSA in X.509 and TLS
+    'MBEDTLS_SHA512_NO_SHA384', # removes a feature
     'MBEDTLS_TEST_CONSTANT_FLOW_MEMSAN', # build dependency (clang+memsan)
     'MBEDTLS_TEST_CONSTANT_FLOW_VALGRIND', # build dependency (valgrind headers)
+    'MBEDTLS_TEST_NULL_ENTROPY', # removes a feature
+    'MBEDTLS_X509_ALLOW_UNSUPPORTED_CRITICAL_EXTENSION', # influences the use of X.509 in TLS
     'MBEDTLS_X509_REMOVE_INFO', # removes a feature
 ])
 
@@ -463,21 +458,11 @@ if __name__ == '__main__':
         parser_set.add_argument('symbol', metavar='SYMBOL')
         parser_set.add_argument('value', metavar='VALUE', nargs='?',
                                 default='')
-        parser_set_all = subparsers.add_parser('set-all',
-                                               help="""Uncomment all #define
-                                               whose name contains a match for
-                                               REGEX.""")
-        parser_set_all.add_argument('regexs', metavar='REGEX', nargs='*')
         parser_unset = subparsers.add_parser('unset',
                                              help="""Comment out the #define
                                              for SYMBOL. Do nothing if none
                                              is present.""")
         parser_unset.add_argument('symbol', metavar='SYMBOL')
-        parser_unset_all = subparsers.add_parser('unset-all',
-                                                 help="""Comment out all #define
-                                                 whose name contains a match for
-                                                 REGEX.""")
-        parser_unset_all.add_argument('regexs', metavar='REGEX', nargs='*')
 
         def add_adapter(name, function, description):
             subparser = subparsers.add_parser(name, help=description)
@@ -524,12 +509,8 @@ if __name__ == '__main__':
                                  .format(args.symbol, config.filename))
                 return 1
             config.set(args.symbol, value=args.value)
-        elif args.command == 'set-all':
-            config.change_matching(args.regexs, True)
         elif args.command == 'unset':
             config.unset(args.symbol)
-        elif args.command == 'unset-all':
-            config.change_matching(args.regexs, False)
         else:
             config.adapt(args.adapter)
         config.write(args.write)
