@@ -264,13 +264,16 @@ void mbedtls_x509write_csr_free( mbedtls_x509write_csr *ctx );
  * \param ctx       CSR to write away
  * \param buf       buffer to write to
  * \param size      size of the buffer
- * \param f_rng     RNG function. This must not be \c NULL.
+ * \param f_rng     RNG function (for signature, see note)
  * \param p_rng     RNG parameter
  *
  * \return          length of data written if successful, or a specific
  *                  error code
  *
- * \note            \p f_rng is used for the signature operation.
+ * \note            f_rng may be NULL if RSA is used for signature and the
+ *                  signature is made offline (otherwise f_rng is desirable
+ *                  for countermeasures against timing attacks).
+ *                  ECDSA signatures always require a non-NULL f_rng.
  */
 int mbedtls_x509write_csr_der( mbedtls_x509write_csr *ctx, unsigned char *buf, size_t size,
                        int (*f_rng)(void *, unsigned char *, size_t),
@@ -284,12 +287,15 @@ int mbedtls_x509write_csr_der( mbedtls_x509write_csr *ctx, unsigned char *buf, s
  * \param ctx       CSR to write away
  * \param buf       buffer to write to
  * \param size      size of the buffer
- * \param f_rng     RNG function. This must not be \c NULL.
+ * \param f_rng     RNG function (for signature, see note)
  * \param p_rng     RNG parameter
  *
  * \return          0 if successful, or a specific error code
  *
- * \note            \p f_rng is used for the signature operation.
+ * \note            f_rng may be NULL if RSA is used for signature and the
+ *                  signature is made offline (otherwise f_rng is desirable
+ *                  for countermeasures against timing attacks).
+ *                  ECDSA signatures always require a non-NULL f_rng.
  */
 int mbedtls_x509write_csr_pem( mbedtls_x509write_csr *ctx, unsigned char *buf, size_t size,
                        int (*f_rng)(void *, unsigned char *, size_t),
