@@ -53,7 +53,7 @@ struct mbedtls_pk_info_t
     /** Make signature */
     int (*sign_func)( void *ctx, mbedtls_md_type_t md_alg,
                       const unsigned char *hash, size_t hash_len,
-                      unsigned char *sig, size_t *sig_len,
+                      unsigned char *sig, size_t sig_size, size_t *sig_len,
                       int (*f_rng)(void *, unsigned char *, size_t),
                       void *p_rng );
 
@@ -67,7 +67,7 @@ struct mbedtls_pk_info_t
     /** Make signature (restartable) */
     int (*sign_rs_func)( void *ctx, mbedtls_md_type_t md_alg,
                          const unsigned char *hash, size_t hash_len,
-                         unsigned char *sig, size_t *sig_len,
+                         unsigned char *sig, size_t sig_size, size_t *sig_len,
                          int (*f_rng)(void *, unsigned char *, size_t),
                          void *p_rng, void *rs_ctx );
 #endif /* MBEDTLS_ECDSA_C && MBEDTLS_ECP_RESTARTABLE */
@@ -85,7 +85,9 @@ struct mbedtls_pk_info_t
                          void *p_rng );
 
     /** Check public-private key pair */
-    int (*check_pair_func)( const void *pub, const void *prv );
+    int (*check_pair_func)( const void *pub, const void *prv,
+                            int (*f_rng)(void *, unsigned char *, size_t),
+                            void *p_rng );
 
     /** Allocate a new context */
     void * (*ctx_alloc_func)( void );
