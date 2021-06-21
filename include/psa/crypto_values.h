@@ -33,6 +33,7 @@
 
 #ifndef PSA_CRYPTO_VALUES_H
 #define PSA_CRYPTO_VALUES_H
+#include "mbedtls/private_access.h"
 
 /** \defgroup error Error codes
  * @{
@@ -480,12 +481,6 @@
  * Camellia block cipher. */
 #define PSA_KEY_TYPE_CAMELLIA                       ((psa_key_type_t)0x2403)
 
-/** Key for the RC4 stream cipher.
- *
- * Note that RC4 is weak and deprecated and should only be used in
- * legacy protocols. */
-#define PSA_KEY_TYPE_ARC4                           ((psa_key_type_t)0x2002)
-
 /** Key for the ChaCha20 stream cipher or the Chacha20-Poly1305 AEAD algorithm.
  *
  * ChaCha20 and the ChaCha20_Poly1305 construction are defined in RFC 7539.
@@ -849,10 +844,6 @@
      (alg) & PSA_ALG_KEY_DERIVATION_STRETCHING_FLAG)
 
 #define PSA_ALG_HASH_MASK                       ((psa_algorithm_t)0x000000ff)
-/** MD2 */
-#define PSA_ALG_MD2                             ((psa_algorithm_t)0x02000001)
-/** MD4 */
-#define PSA_ALG_MD4                             ((psa_algorithm_t)0x02000002)
 /** MD5 */
 #define PSA_ALG_MD5                             ((psa_algorithm_t)0x02000003)
 /** PSA_ALG_RIPEMD160 */
@@ -1114,7 +1105,6 @@
  *
  * The underlying stream cipher is determined by the key type.
  * - To use ChaCha20, use a key type of #PSA_KEY_TYPE_CHACHA20.
- * - To use ARC4, use a key type of #PSA_KEY_TYPE_ARC4.
  */
 #define PSA_ALG_STREAM_CIPHER                   ((psa_algorithm_t)0x04800100)
 
@@ -2030,6 +2020,27 @@
     (PSA_KEY_LIFETIME_GET_PERSISTENCE(lifetime) == \
      PSA_KEY_PERSISTENCE_VOLATILE)
 
+/** Whether a key lifetime indicates that the key is read-only.
+ *
+ * Read-only keys cannot be created or destroyed through the PSA Crypto API.
+ * They must be created through platform-specific means that bypass the API.
+ *
+ * Some platforms may offer ways to destroy read-only keys. For example,
+ * consider a platform with multiple levels of privilege, where a
+ * low-privilege application can use a key but is not allowed to destroy
+ * it, and the platform exposes the key to the application with a read-only
+ * lifetime. High-privilege code can destroy the key even though the
+ * application sees the key as read-only.
+ *
+ * \param lifetime      The lifetime value to query (value of type
+ *                      ::psa_key_lifetime_t).
+ *
+ * \return \c 1 if the key is read-only, otherwise \c 0.
+ */
+#define PSA_KEY_LIFETIME_IS_READ_ONLY(lifetime)  \
+    (PSA_KEY_LIFETIME_GET_PERSISTENCE(lifetime) == \
+     PSA_KEY_PERSISTENCE_READ_ONLY)
+
 /** Construct a lifetime from a persistence level and a location.
  *
  * \param persistence   The persistence level
@@ -2124,8 +2135,8 @@ static inline int mbedtls_svc_key_id_is_null( mbedtls_svc_key_id_t key )
 static inline mbedtls_svc_key_id_t mbedtls_svc_key_id_make(
     mbedtls_key_owner_id_t owner_id, psa_key_id_t key_id )
 {
-    return( (mbedtls_svc_key_id_t){ .key_id = key_id,
-                                    .owner = owner_id } );
+    return( (mbedtls_svc_key_id_t){ .MBEDTLS_PRIVATE(key_id) = key_id,
+                                    .MBEDTLS_PRIVATE(owner) = owner_id } );
 }
 
 /** Compare two key identifiers.
@@ -2138,8 +2149,8 @@ static inline mbedtls_svc_key_id_t mbedtls_svc_key_id_make(
 static inline int mbedtls_svc_key_id_equal( mbedtls_svc_key_id_t id1,
                                             mbedtls_svc_key_id_t id2 )
 {
-    return( ( id1.key_id == id2.key_id ) &&
-            mbedtls_key_owner_id_equal( id1.owner, id2.owner ) );
+    return( ( id1.MBEDTLS_PRIVATE(key_id) == id2.MBEDTLS_PRIVATE(key_id) ) &&
+            mbedtls_key_owner_id_equal( id1.MBEDTLS_PRIVATE(owner), id2.MBEDTLS_PRIVATE(owner) ) );
 }
 
 /** Check whether a key identifier is null.
@@ -2150,7 +2161,7 @@ static inline int mbedtls_svc_key_id_equal( mbedtls_svc_key_id_t id1,
  */
 static inline int mbedtls_svc_key_id_is_null( mbedtls_svc_key_id_t key )
 {
-    return( ( key.key_id == 0 ) && ( key.owner == 0 ) );
+    return( key.MBEDTLS_PRIVATE(key_id) == 0 );
 }
 
 #endif /* !MBEDTLS_PSA_CRYPTO_KEY_ID_ENCODES_OWNER */
