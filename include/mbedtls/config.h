@@ -47,7 +47,6 @@
  *
  * Used in:
  *      library/aria.c
- *      library/timing.c
  *      library/bn_mul.h
  *
  * Required by:
@@ -268,7 +267,7 @@
 /**
  * \def MBEDTLS_TIMING_ALT
  *
- * Uncomment to provide your own alternate implementation for mbedtls_timing_hardclock(),
+ * Uncomment to provide your own alternate implementation for
  * mbedtls_timing_get_timer(), mbedtls_set_alarm(), mbedtls_set/get_delay()
  *
  * Only works if you have MBEDTLS_TIMING_C enabled.
@@ -652,28 +651,6 @@
 #define MBEDTLS_ECP_NIST_OPTIM
 
 /**
- * \def MBEDTLS_ECP_NO_INTERNAL_RNG
- *
- * When this option is disabled, mbedtls_ecp_mul() will make use of an
- * internal RNG when called with a NULL \c f_rng argument, in order to protect
- * against some side-channel attacks.
- *
- * This protection introduces a dependency of the ECP module on one of the
- * DRBG modules. For very constrained implementations that don't require this
- * protection (for example, because you're only doing signature verification,
- * so not manipulating any secret, or because local/physical side-channel
- * attacks are outside your threat model), it might be desirable to get rid of
- * that dependency.
- *
- * \warning Enabling this option makes some uses of ECP vulnerable to some
- * side-channel attacks. Only enable it if you know that's not a problem for
- * your use case.
- *
- * Uncomment this macro to disable some counter-measures in ECP.
- */
-//#define MBEDTLS_ECP_NO_INTERNAL_RNG
-
-/**
  * \def MBEDTLS_ECP_RESTARTABLE
  *
  * Enable "non-blocking" ECC operations that can return early and be resumed.
@@ -1014,8 +991,7 @@
 /**
  * \def MBEDTLS_NO_DEFAULT_ENTROPY_SOURCES
  *
- * Do not add default entropy sources. These are the platform specific
- * or mbedtls_timing_hardclock poll function.
+ * Do not add default entropy sources in mbedtls_entropy_init().
  *
  * This is useful to have more control over the added entropy sources in an
  * application.
@@ -1580,7 +1556,7 @@
  * (see Section 5 of RFC 5764), are not handled by this feature.
  * Instead, after successful completion of a handshake negotiating
  * the use of DTLS-SRTP, the extended key exporter API
- * mbedtls_ssl_conf_export_keys_ext_cb() should be used to implement
+ * mbedtls_ssl_conf_export_keys_cb() should be used to implement
  * the key exporter described in Section 4.2 of RFC 5764 and RFC 5705
  * (this is implemented in the SSL example programs).
  * The resulting key should then be passed to an SRTP stack.
