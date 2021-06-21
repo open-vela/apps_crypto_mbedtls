@@ -119,7 +119,7 @@ int main( void )
     "    max_pathlen=%%d          default: -1 (none)\n"     \
     "    md=%%s                   default: SHA256\n"        \
     "                            Supported values (if enabled):\n"      \
-    "                            MD2, MD4, MD5, RIPEMD160, SHA1,\n" \
+    "                            MD5, RIPEMD160, SHA1,\n" \
     "                            SHA224, SHA256, SHA384, SHA512\n" \
     "    version=%%d              default: 3\n"            \
     "                            Possible values: 1, 2, 3\n"\
@@ -577,7 +577,7 @@ int main( int argc, char *argv[] )
         fflush( stdout );
 
         ret = mbedtls_pk_parse_keyfile( &loaded_subject_key, opt.subject_key,
-                opt.subject_pwd, mbedtls_ctr_drbg_random, &ctr_drbg );
+                                 opt.subject_pwd );
         if( ret != 0 )
         {
             mbedtls_strerror( ret, buf, 1024 );
@@ -593,7 +593,7 @@ int main( int argc, char *argv[] )
     fflush( stdout );
 
     ret = mbedtls_pk_parse_keyfile( &loaded_issuer_key, opt.issuer_key,
-            opt.issuer_pwd, mbedtls_ctr_drbg_random, &ctr_drbg );
+                             opt.issuer_pwd );
     if( ret != 0 )
     {
         mbedtls_strerror( ret, buf, 1024 );
@@ -606,8 +606,7 @@ int main( int argc, char *argv[] )
     //
     if( strlen( opt.issuer_crt ) )
     {
-        if( mbedtls_pk_check_pair( &issuer_crt.MBEDTLS_PRIVATE(pk), issuer_key,
-                                   mbedtls_ctr_drbg_random, &ctr_drbg ) != 0 )
+        if( mbedtls_pk_check_pair( &issuer_crt.MBEDTLS_PRIVATE(pk), issuer_key ) != 0 )
         {
             mbedtls_printf( " failed\n  !  issuer_key does not match "
                             "issuer certificate\n\n" );

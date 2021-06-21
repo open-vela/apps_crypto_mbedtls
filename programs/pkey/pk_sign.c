@@ -101,8 +101,7 @@ int main( int argc, char *argv[] )
     mbedtls_printf( "\n  . Reading private key from '%s'", argv[1] );
     fflush( stdout );
 
-    if( ( ret = mbedtls_pk_parse_keyfile( &pk, argv[1], "",
-                    mbedtls_ctr_drbg_random, &ctr_drbg ) ) != 0 )
+    if( ( ret = mbedtls_pk_parse_keyfile( &pk, argv[1], "" ) ) != 0 )
     {
         mbedtls_printf( " failed\n  ! Could not parse '%s'\n", argv[1] );
         goto exit;
