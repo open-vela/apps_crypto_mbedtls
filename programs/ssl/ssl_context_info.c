@@ -700,6 +700,12 @@ void print_deserialized_ssl_session( const uint8_t *ssl, uint32_t len,
                 case MBEDTLS_MD_NONE:
                     printf( "none\n" );
                     break;
+                case MBEDTLS_MD_MD2:
+                    printf( "MD2\n" );
+                    break;
+                case MBEDTLS_MD_MD4:
+                    printf( "MD4\n" );
+                    break;
                 case MBEDTLS_MD_MD5:
                     printf( "MD5\n" );
                     break;
@@ -862,6 +868,7 @@ void print_deserialized_ssl_context( const uint8_t *ssl, size_t len )
     print_if_bit( "MBEDTLS_HAVE_TIME", SESSION_CONFIG_TIME_BIT, session_cfg_flag );
     print_if_bit( "MBEDTLS_X509_CRT_PARSE_C", SESSION_CONFIG_CRT_BIT, session_cfg_flag );
     print_if_bit( "MBEDTLS_SSL_MAX_FRAGMENT_LENGTH", SESSION_CONFIG_MFL_BIT, session_cfg_flag );
+    print_if_bit( "MBEDTLS_SSL_TRUNCATED_HMAC", SESSION_CONFIG_TRUNC_HMAC_BIT, session_cfg_flag );
     print_if_bit( "MBEDTLS_SSL_ENCRYPT_THEN_MAC", SESSION_CONFIG_ETM_BIT, session_cfg_flag );
     print_if_bit( "MBEDTLS_SSL_SESSION_TICKETS", SESSION_CONFIG_TICKET_BIT, session_cfg_flag );
     print_if_bit( "MBEDTLS_SSL_SESSION_TICKETS and client", SESSION_CONFIG_CLIENT_TICKET_BIT, session_cfg_flag );

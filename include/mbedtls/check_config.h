@@ -150,6 +150,14 @@
 #error "MBEDTLS_ECP_C defined, but not all prerequisites"
 #endif
 
+#if defined(MBEDTLS_ECP_C) && !(            \
+    defined(MBEDTLS_ECP_ALT) ||             \
+    defined(MBEDTLS_CTR_DRBG_C) ||          \
+    defined(MBEDTLS_HMAC_DRBG_C) ||         \
+    defined(MBEDTLS_ECP_NO_INTERNAL_RNG))
+#error "MBEDTLS_ECP_C requires a DRBG module unless MBEDTLS_ECP_NO_INTERNAL_RNG is defined or an alternative implementation is used"
+#endif
+
 #if defined(MBEDTLS_PK_PARSE_C) && !defined(MBEDTLS_ASN1_PARSE_C)
 #error "MBEDTLS_PK_PARSE_C defined, but not all prerequesites"
 #endif
@@ -827,10 +835,6 @@
 
 #if defined(MBEDTLS_SSL_TLS1_3_PADDING_GRANULARITY) //no-check-names
 #error "MBEDTLS_SSL_TLS1_3_PADDING_GRANULARITY was removed in Mbed TLS 3.0. See https://github.com/ARMmbed/mbedtls/issues/4335"
-#endif
-
-#if defined(MBEDTLS_SSL_TRUNCATED_HMAC) //no-check-names
-#error "MBEDTLS_SSL_TRUNCATED_HMAC was removed in Mbed TLS 3.0. See https://github.com/ARMmbed/mbedtls/issues/4341"
 #endif
 
 /*
