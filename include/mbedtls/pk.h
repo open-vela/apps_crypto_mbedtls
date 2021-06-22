@@ -22,6 +22,7 @@
 
 #ifndef MBEDTLS_PK_H
 #define MBEDTLS_PK_H
+#include "mbedtls/private_access.h"
 
 #if !defined(MBEDTLS_CONFIG_FILE)
 #include "mbedtls/config.h"
@@ -91,8 +92,8 @@ typedef enum {
  */
 typedef struct mbedtls_pk_rsassa_pss_options
 {
-    mbedtls_md_type_t mgf1_hash_id;
-    int expected_salt_len;
+    mbedtls_md_type_t MBEDTLS_PRIVATE(mgf1_hash_id);
+    int MBEDTLS_PRIVATE(expected_salt_len);
 
 } mbedtls_pk_rsassa_pss_options;
 
@@ -163,9 +164,9 @@ typedef enum
  */
 typedef struct mbedtls_pk_debug_item
 {
-    mbedtls_pk_debug_type type;
-    const char *name;
-    void *value;
+    mbedtls_pk_debug_type MBEDTLS_PRIVATE(type);
+    const char *MBEDTLS_PRIVATE(name);
+    void *MBEDTLS_PRIVATE(value);
 } mbedtls_pk_debug_item;
 
 /** Maximum number of item send for debugging, plus 1 */
@@ -181,8 +182,8 @@ typedef struct mbedtls_pk_info_t mbedtls_pk_info_t;
  */
 typedef struct mbedtls_pk_context
 {
-    const mbedtls_pk_info_t *   pk_info; /**< Public key information         */
-    void *                      pk_ctx;  /**< Underlying public key context  */
+    const mbedtls_pk_info_t *   MBEDTLS_PRIVATE(pk_info); /**< Public key information         */
+    void *                      MBEDTLS_PRIVATE(pk_ctx);  /**< Underlying public key context  */
 } mbedtls_pk_context;
 
 #if defined(MBEDTLS_ECDSA_C) && defined(MBEDTLS_ECP_RESTARTABLE)
@@ -191,8 +192,8 @@ typedef struct mbedtls_pk_context
  */
 typedef struct
 {
-    const mbedtls_pk_info_t *   pk_info; /**< Public key information         */
-    void *                      rs_ctx;  /**< Underlying restart context     */
+    const mbedtls_pk_info_t *   MBEDTLS_PRIVATE(pk_info); /**< Public key information         */
+    void *                      MBEDTLS_PRIVATE(rs_ctx);  /**< Underlying restart context     */
 } mbedtls_pk_restart_ctx;
 #else /* MBEDTLS_ECDSA_C && MBEDTLS_ECP_RESTARTABLE */
 /* Now we can declare functions that take a pointer to that */
@@ -208,7 +209,7 @@ typedef void mbedtls_pk_restart_ctx;
  */
 static inline mbedtls_rsa_context *mbedtls_pk_rsa( const mbedtls_pk_context pk )
 {
-    return( (mbedtls_rsa_context *) (pk).pk_ctx );
+    return( (mbedtls_rsa_context *) (pk).MBEDTLS_PRIVATE(pk_ctx) );
 }
 #endif /* MBEDTLS_RSA_C */
 
@@ -221,7 +222,7 @@ static inline mbedtls_rsa_context *mbedtls_pk_rsa( const mbedtls_pk_context pk )
  */
 static inline mbedtls_ecp_keypair *mbedtls_pk_ec( const mbedtls_pk_context pk )
 {
-    return( (mbedtls_ecp_keypair *) (pk).pk_ctx );
+    return( (mbedtls_ecp_keypair *) (pk).MBEDTLS_PRIVATE(pk_ctx) );
 }
 #endif /* MBEDTLS_ECP_C */
 
@@ -398,9 +399,17 @@ int mbedtls_pk_can_do( const mbedtls_pk_context *ctx, mbedtls_pk_type_t type );
  * \brief           Verify signature (including padding if relevant).
  *
  * \param ctx       The PK context to use. It must have been set up.
- * \param md_alg    Hash algorithm used (see notes)
+ * \param md_alg    Hash algorithm used.
+ *                  This can be #MBEDTLS_MD_NONE if the signature algorithm
+ *                  does not rely on a hash algorithm (non-deterministic
+ *                  ECDSA, RSA PKCS#1 v1.5).
+ *                  For PKCS#1 v1.5, if \p md_alg is #MBEDTLS_MD_NONE, then
+ *                  \p hash is the DigestInfo structure used by RFC 8017
+ *                  &sect;9.2 steps 3&ndash;6. If \p md_alg is a valid hash
+ *                  algorithm then \p hash is the digest itself, and this
+ *                  function calculates the DigestInfo encoding internally.
  * \param hash      Hash of the message to sign
- * \param hash_len  Hash length or 0 (see notes)
+ * \param hash_len  Hash length
  * \param sig       Signature to verify
  * \param sig_len   Signature length
  *
@@ -412,11 +421,6 @@ int mbedtls_pk_can_do( const mbedtls_pk_context *ctx, mbedtls_pk_type_t type );
  * \note            For RSA keys, the default padding type is PKCS#1 v1.5.
  *                  Use \c mbedtls_pk_verify_ext( MBEDTLS_PK_RSASSA_PSS, ... )
  *                  to verify RSASSA_PSS signatures.
- *
- * \note            If hash_len is 0, then the length associated with md_alg
- *                  is used instead, or an error returned if it is invalid.
- *
- * \note            md_alg may be MBEDTLS_MD_NONE, only if hash_len != 0
  */
 int mbedtls_pk_verify( mbedtls_pk_context *ctx, mbedtls_md_type_t md_alg,
                const unsigned char *hash, size_t hash_len,
@@ -489,7 +493,7 @@ int mbedtls_pk_verify_ext( mbedtls_pk_type_t type, const void *options,
  *                  with a private key.
  * \param md_alg    Hash algorithm used (see notes)
  * \param hash      Hash of the message to sign
- * \param hash_len  Hash length or 0 (see notes)
+ * \param hash_len  Hash length
  * \param sig       Place to write the signature.
  *                  It must have enough room for the signature.
  *                  #MBEDTLS_PK_SIGNATURE_MAX_SIZE is always enough.
@@ -505,9 +509,6 @@ int mbedtls_pk_verify_ext( mbedtls_pk_type_t type, const void *options,
  * \note            For RSA keys, the default padding type is PKCS#1 v1.5.
  *                  There is no interface in the PK module to make RSASSA-PSS
  *                  signatures yet.
- *
- * \note            If hash_len is 0, then the length associated with md_alg
- *                  is used instead, or an error returned if it is invalid.
  *
  * \note            For RSA, md_alg may be MBEDTLS_MD_NONE if hash_len != 0.
  *                  For ECDSA, md_alg may never be MBEDTLS_MD_NONE.
@@ -529,7 +530,7 @@ int mbedtls_pk_sign( mbedtls_pk_context *ctx, mbedtls_md_type_t md_alg,
  *                  with a private key.
  * \param md_alg    Hash algorithm used (see notes for mbedtls_pk_sign())
  * \param hash      Hash of the message to sign
- * \param hash_len  Hash length or 0 (see notes for mbedtls_pk_sign())
+ * \param hash_len  Hash length
  * \param sig       Place to write the signature.
  *                  It must have enough room for the signature.
  *                  #MBEDTLS_PK_SIGNATURE_MAX_SIZE is always enough.
