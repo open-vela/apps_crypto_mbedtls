@@ -296,14 +296,16 @@
  * Uncomment a macro to enable alternate implementation of the corresponding
  * module.
  *
- * \warning   MD5, DES and SHA-1 are considered weak and their
+ * \warning   MD2, MD4, MD5, ARC4, DES and SHA-1 are considered weak and their
  *            use constitutes a security risk. If possible, we recommend
  *            avoiding dependencies on them, and considering stronger message
  *            digests and ciphers instead.
  *
  */
 //#define MBEDTLS_AES_ALT
+//#define MBEDTLS_ARC4_ALT
 //#define MBEDTLS_ARIA_ALT
+//#define MBEDTLS_BLOWFISH_ALT
 //#define MBEDTLS_CAMELLIA_ALT
 //#define MBEDTLS_CCM_ALT
 //#define MBEDTLS_CHACHA20_ALT
@@ -314,6 +316,8 @@
 //#define MBEDTLS_ECJPAKE_ALT
 //#define MBEDTLS_GCM_ALT
 //#define MBEDTLS_NIST_KW_ALT
+//#define MBEDTLS_MD2_ALT
+//#define MBEDTLS_MD4_ALT
 //#define MBEDTLS_MD5_ALT
 //#define MBEDTLS_POLY1305_ALT
 //#define MBEDTLS_RIPEMD160_ALT
@@ -321,6 +325,7 @@
 //#define MBEDTLS_SHA1_ALT
 //#define MBEDTLS_SHA256_ALT
 //#define MBEDTLS_SHA512_ALT
+//#define MBEDTLS_XTEA_ALT
 
 /*
  * When replacing the elliptic curve module, pleace consider, that it is
@@ -334,7 +339,7 @@
 //#define MBEDTLS_ECP_ALT
 
 /**
- * \def MBEDTLS_SHA256_PROCESS_ALT
+ * \def MBEDTLS_MD2_PROCESS_ALT
  *
  * MBEDTLS__FUNCTION_NAME__ALT: Uncomment a macro to let mbed TLS use you
  * alternate core implementation of symmetric crypto or hash function. Keep in
@@ -356,7 +361,7 @@
  * Uncomment a macro to enable alternate implementation of the corresponding
  * function.
  *
- * \warning   MD5, DES and SHA-1 are considered weak and their use
+ * \warning   MD2, MD4, MD5, DES and SHA-1 are considered weak and their use
  *            constitutes a security risk. If possible, we recommend avoiding
  *            dependencies on them, and considering stronger message digests
  *            and ciphers instead.
@@ -370,6 +375,8 @@
  *            implementation should be provided for mbedtls_ecdsa_sign_det_ext().
  *
  */
+//#define MBEDTLS_MD2_PROCESS_ALT
+//#define MBEDTLS_MD4_PROCESS_ALT
 //#define MBEDTLS_MD5_PROCESS_ALT
 //#define MBEDTLS_RIPEMD160_PROCESS_ALT
 //#define MBEDTLS_SHA1_PROCESS_ALT
@@ -1549,7 +1556,7 @@
  * (see Section 5 of RFC 5764), are not handled by this feature.
  * Instead, after successful completion of a handshake negotiating
  * the use of DTLS-SRTP, the extended key exporter API
- * mbedtls_ssl_conf_export_keys_ext_cb() should be used to implement
+ * mbedtls_ssl_conf_export_keys_cb() should be used to implement
  * the key exporter described in Section 4.2 of RFC 5764 and RFC 5705
  * (this is implemented in the SSL example programs).
  * The resulting key should then be passed to an SRTP stack.
@@ -1616,6 +1623,15 @@
  * Comment this macro to disable support for server name indication in SSL
  */
 #define MBEDTLS_SSL_SERVER_NAME_INDICATION
+
+/**
+ * \def MBEDTLS_SSL_TRUNCATED_HMAC
+ *
+ * Enable support for RFC 6066 truncated HMAC in SSL.
+ *
+ * Comment this macro to disable support for truncated HMAC in SSL
+ */
+#define MBEDTLS_SSL_TRUNCATED_HMAC
 
 /**
  * \def MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH
@@ -1901,6 +1917,24 @@
 #define MBEDTLS_AES_C
 
 /**
+ * \def MBEDTLS_ARC4_C
+ *
+ * Enable the ARCFOUR stream cipher.
+ *
+ * Module:  library/arc4.c
+ * Caller:  library/cipher.c
+ *
+ * This module enables the following ciphersuites (if other requisites are
+ * enabled as well):
+ *
+ * \warning   ARC4 is considered a weak cipher and its use constitutes a
+ *            security risk. If possible, we recommend avoidng dependencies on
+ *            it, and considering stronger ciphers instead.
+ *
+ */
+#define MBEDTLS_ARC4_C
+
+/**
  * \def MBEDTLS_ASN1_PARSE_C
  *
  * Enable the generic ASN1 parser.
@@ -1956,6 +1990,15 @@
  * This module is required for RSA, DHM and ECC (ECDH, ECDSA) support.
  */
 #define MBEDTLS_BIGNUM_C
+
+/**
+ * \def MBEDTLS_BLOWFISH_C
+ *
+ * Enable the Blowfish block cipher.
+ *
+ * Module:  library/blowfish.c
+ */
+#define MBEDTLS_BLOWFISH_C
 
 /**
  * \def MBEDTLS_CAMELLIA_C
@@ -2360,6 +2403,40 @@
 #define MBEDTLS_MD_C
 
 /**
+ * \def MBEDTLS_MD2_C
+ *
+ * Enable the MD2 hash algorithm.
+ *
+ * Module:  library/md2.c
+ * Caller:
+ *
+ * Uncomment to enable support for (rare) MD2-signed X.509 certs.
+ *
+ * \warning   MD2 is considered a weak message digest and its use constitutes a
+ *            security risk. If possible, we recommend avoiding dependencies on
+ *            it, and considering stronger message digests instead.
+ *
+ */
+//#define MBEDTLS_MD2_C
+
+/**
+ * \def MBEDTLS_MD4_C
+ *
+ * Enable the MD4 hash algorithm.
+ *
+ * Module:  library/md4.c
+ * Caller:
+ *
+ * Uncomment to enable support for (rare) MD4-signed X.509 certs.
+ *
+ * \warning   MD4 is considered a weak message digest and its use constitutes a
+ *            security risk. If possible, we recommend avoiding dependencies on
+ *            it, and considering stronger message digests instead.
+ *
+ */
+//#define MBEDTLS_MD4_C
+
+/**
  * \def MBEDTLS_MD5_C
  *
  * Enable the MD5 hash algorithm.
@@ -2554,6 +2631,7 @@
  * Caller:  library/pkparse.c
  *
  * Requires: MBEDTLS_ASN1_PARSE_C, MBEDTLS_CIPHER_C, MBEDTLS_MD_C
+ * Can use:  MBEDTLS_ARC4_C
  *
  * This module enables PKCS#12 functions.
  */
@@ -2998,6 +3076,16 @@
  */
 #define MBEDTLS_X509_CSR_WRITE_C
 
+/**
+ * \def MBEDTLS_XTEA_C
+ *
+ * Enable the XTEA block cipher.
+ *
+ * Module:  library/xtea.c
+ * Caller:
+ */
+#define MBEDTLS_XTEA_C
+
 /* \} name SECTION: mbed TLS modules */
 
 /**
@@ -3033,7 +3121,7 @@
 //#define MBEDTLS_HMAC_DRBG_MAX_SEED_INPUT      384 /**< Maximum size of (re)seed buffer */
 
 /* ECP options */
-//#define MBEDTLS_ECP_WINDOW_SIZE            4 /**< Maximum window size used */
+//#define MBEDTLS_ECP_WINDOW_SIZE            6 /**< Maximum window size used */
 //#define MBEDTLS_ECP_FIXED_POINT_OPTIM      1 /**< Enable fixed-point speed-up */
 
 /* Entropy options */
@@ -3213,6 +3301,23 @@
 /* X509 options */
 //#define MBEDTLS_X509_MAX_INTERMEDIATE_CA   8   /**< Maximum number of intermediate CAs in a verification chain. */
 //#define MBEDTLS_X509_MAX_FILE_PATH_LEN     512 /**< Maximum length of a path/filename string in bytes including the null terminator character ('\0'). */
+
+/**
+ * Allow SHA-1 in the default TLS configuration for TLS 1.2 handshake
+ * signature and ciphersuite selection. Without this build-time option, SHA-1
+ * support must be activated explicitly through mbedtls_ssl_conf_sig_hashes.
+ * The use of SHA-1 in TLS <= 1.1 and in HMAC-SHA-1 is always allowed by
+ * default. At the time of writing, there is no practical attack on the use
+ * of SHA-1 in handshake signatures, hence this option is turned on by default
+ * to preserve compatibility with existing peers, but the general
+ * warning applies nonetheless:
+ *
+ * \warning   SHA-1 is considered a weak message digest and its use constitutes
+ *            a security risk. If possible, we recommend avoiding dependencies
+ *            on it, and considering stronger message digests instead.
+ *
+ */
+#define MBEDTLS_TLS_DEFAULT_ALLOW_SHA1_IN_KEY_EXCHANGE
 
 /**
  * Uncomment the macro to let mbed TLS use your alternate implementation of
