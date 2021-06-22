@@ -17,8 +17,6 @@
  *  limitations under the License.
  */
 
-#define MBEDTLS_ALLOW_PRIVATE_ACCESS
-
 #if !defined(MBEDTLS_CONFIG_FILE)
 #include "mbedtls/config.h"
 #else
@@ -253,11 +251,7 @@ static int myrand( void *rng_state, unsigned char *output, size_t len )
 #if defined(MBEDTLS_ECP_C)
 void ecp_clear_precomputed( mbedtls_ecp_group *grp )
 {
-    if( grp->T != NULL
-#if MBEDTLS_ECP_FIXED_POINT_OPTIM == 1
-        && grp->T_size != 0
-#endif
-    )
+    if( grp->T != NULL )
     {
         size_t i;
         for( i = 0; i < grp->T_size; i++ )
@@ -788,7 +782,7 @@ int main( int argc, char *argv[] )
         {
             mbedtls_snprintf( title, sizeof( title ), "RSA-%d", keysize );
 
-            mbedtls_rsa_init( &rsa );
+            mbedtls_rsa_init( &rsa, MBEDTLS_RSA_PKCS_V15, 0 );
             mbedtls_rsa_gen_key( &rsa, myrand, NULL, keysize, 65537 );
 
             TIME_PUBLIC( title, " public",
@@ -827,7 +821,6 @@ int main( int argc, char *argv[] )
 
         mbedtls_dhm_context dhm;
         size_t olen;
-        size_t n;
         for( i = 0; (size_t) i < sizeof( dhm_sizes ) / sizeof( dhm_sizes[0] ); i++ )
         {
             mbedtls_dhm_init( &dhm );
@@ -840,14 +833,14 @@ int main( int argc, char *argv[] )
                 mbedtls_exit( 1 );
             }
 
-            n = mbedtls_mpi_size( &dhm.P );
-            mbedtls_dhm_make_public( &dhm, (int) n, buf, n, myrand, NULL );
+            dhm.len = mbedtls_mpi_size( &dhm.P );
+            mbedtls_dhm_make_public( &dhm, (int) dhm.len, buf, dhm.len, myrand, NULL );
             if( mbedtls_mpi_copy( &dhm.GY, &dhm.GX ) != 0 )
                 mbedtls_exit( 1 );
 
             mbedtls_snprintf( title, sizeof( title ), "DHE-%d", dhm_sizes[i] );
             TIME_PUBLIC( title, "handshake",
-                    ret |= mbedtls_dhm_make_public( &dhm, (int) n, buf, n,
+                    ret |= mbedtls_dhm_make_public( &dhm, (int) dhm.len, buf, dhm.len,
                                             myrand, NULL );
                     ret |= mbedtls_dhm_calc_secret( &dhm, buf, sizeof( buf ), &olen, myrand, NULL ) );
 

@@ -17,8 +17,6 @@
  *  limitations under the License.
  */
 
-#define MBEDTLS_ALLOW_PRIVATE_ACCESS
-
 #include "ssl_test_lib.h"
 
 #if defined(MBEDTLS_SSL_TEST_IMPOSSIBLE)
@@ -1736,6 +1734,27 @@ int main( int argc, char *argv[] )
         mbedtls_ssl_conf_encrypt_then_mac( &conf, opt.etm );
 #endif
 
+#if defined(MBEDTLS_SSL_EXPORT_KEYS)
+    if( opt.eap_tls != 0 )
+    {
+        mbedtls_ssl_conf_export_keys_ext_cb( &conf, eap_tls_key_derivation,
+                                             &eap_tls_keying );
+    }
+    else if( opt.nss_keylog != 0 )
+    {
+        mbedtls_ssl_conf_export_keys_ext_cb( &conf,
+                                             nss_keylog_export,
+                                             NULL );
+    }
+#if defined( MBEDTLS_SSL_DTLS_SRTP )
+    else if( opt.use_srtp != 0 )
+    {
+        mbedtls_ssl_conf_export_keys_ext_cb( &conf, dtls_srtp_key_derivation,
+                                             &dtls_srtp_keying );
+    }
+#endif /* MBEDTLS_SSL_DTLS_SRTP */
+#endif /* MBEDTLS_SSL_EXPORT_KEYS */
+
 #if defined(MBEDTLS_DHM_C)
     if( opt.dhmlen != DFL_DHMLEN )
         mbedtls_ssl_conf_dhm_min_bitlen( &conf, opt.dhmlen );
@@ -1864,27 +1883,6 @@ int main( int argc, char *argv[] )
                         (unsigned int) -ret );
         goto exit;
     }
-
-#if defined(MBEDTLS_SSL_EXPORT_KEYS)
-    if( opt.eap_tls != 0 )
-    {
-        mbedtls_ssl_set_export_keys_cb( &ssl, eap_tls_key_derivation,
-                                        &eap_tls_keying );
-    }
-    else if( opt.nss_keylog != 0 )
-    {
-        mbedtls_ssl_set_export_keys_cb( &ssl,
-                                        nss_keylog_export,
-                                        NULL );
-    }
-#if defined( MBEDTLS_SSL_DTLS_SRTP )
-    else if( opt.use_srtp != 0 )
-    {
-        mbedtls_ssl_set_export_keys_cb( &ssl, dtls_srtp_key_derivation,
-                                        &dtls_srtp_keying );
-    }
-#endif /* MBEDTLS_SSL_DTLS_SRTP */
-#endif /* MBEDTLS_SSL_EXPORT_KEYS */
 
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
     if( ( ret = mbedtls_ssl_set_hostname( &ssl, opt.server_name ) ) != 0 )
@@ -2023,10 +2021,10 @@ int main( int argc, char *argv[] )
         mbedtls_printf( "    [ Record expansion is unknown ]\n" );
 
 #if defined(MBEDTLS_SSL_MAX_FRAGMENT_LENGTH)
-    mbedtls_printf( "    [ Maximum incoming record payload length is %u ]\n",
-                    (unsigned int) mbedtls_ssl_get_max_in_record_payload( &ssl ) );
-    mbedtls_printf( "    [ Maximum outgoing record payload length is %u ]\n",
-                    (unsigned int) mbedtls_ssl_get_max_out_record_payload( &ssl ) );
+    mbedtls_printf( "    [ Maximum input fragment length is %u ]\n",
+                    (unsigned int) mbedtls_ssl_get_input_max_frag_len( &ssl ) );
+    mbedtls_printf( "    [ Maximum output fragment length is %u ]\n",
+                    (unsigned int) mbedtls_ssl_get_output_max_frag_len( &ssl ) );
 #endif
 
 #if defined(MBEDTLS_SSL_ALPN)
