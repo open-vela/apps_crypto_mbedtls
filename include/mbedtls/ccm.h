@@ -46,7 +46,6 @@
 
 #ifndef MBEDTLS_CCM_H
 #define MBEDTLS_CCM_H
-#include "mbedtls/private_access.h"
 
 #if !defined(MBEDTLS_CONFIG_FILE)
 #include "mbedtls/config.h"
@@ -78,7 +77,7 @@ extern "C" {
  */
 typedef struct mbedtls_ccm_context
 {
-    mbedtls_cipher_context_t MBEDTLS_PRIVATE(cipher_ctx);    /*!< The cipher context used. */
+    mbedtls_cipher_context_t cipher_ctx;    /*!< The cipher context used. */
 }
 mbedtls_ccm_context;
 
