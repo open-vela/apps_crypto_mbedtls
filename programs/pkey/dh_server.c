@@ -219,9 +219,9 @@ int main( void )
     /*
      * 5. Sign the parameters and send them
      */
-    if( ( ret = mbedtls_sha1_ret( buf, n, hash ) ) != 0 )
+    if( ( ret = mbedtls_sha1( buf, n, hash ) ) != 0 )
     {
-        mbedtls_printf( " failed\n  ! mbedtls_sha1_ret returned %d\n\n", ret );
+        mbedtls_printf( " failed\n  ! mbedtls_sha1 returned %d\n\n", ret );
         goto exit;
     }
 
@@ -229,7 +229,7 @@ int main( void )
     buf[n + 1] = (unsigned char)( rsa.MBEDTLS_PRIVATE(len)      );
 
     if( ( ret = mbedtls_rsa_pkcs1_sign( &rsa, NULL, NULL, MBEDTLS_MD_SHA256,
-                                32, hash, buf + n + 2 ) ) != 0 )
+                                0, hash, buf + n + 2 ) ) != 0 )
     {
         mbedtls_printf( " failed\n  ! mbedtls_rsa_pkcs1_sign returned %d\n\n", ret );
         goto exit;
