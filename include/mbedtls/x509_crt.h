@@ -332,22 +332,12 @@ typedef void mbedtls_x509_crt_restart_ctx;
 /**
  * Default security profile. Should provide a good balance between security
  * and compatibility with current deployments.
- *
- * This profile permits:
- * - SHA2 hashes with at least 256 bits: SHA-256, SHA-384, SHA-512.
- * - Elliptic curves with 255 bits and above except secp256k1.
- * - RSA with 2048 bits and above.
- *
- * New minor versions of Mbed TLS may extend this profile, for example if
- * new algorithms are added to the library. New minor versions of Mbed TLS will
- * not reduce this profile unless serious security concerns require it.
  */
 extern const mbedtls_x509_crt_profile mbedtls_x509_crt_profile_default;
 
 /**
  * Expected next default profile. Recommended for new deployments.
- * Currently targets a 128-bit security level, except for allowing RSA-2048.
- * This profile may change at any time.
+ * Currently targets a 128-bit security level, except for RSA-2048.
  */
 extern const mbedtls_x509_crt_profile mbedtls_x509_crt_profile_next;
 
@@ -1118,13 +1108,16 @@ void mbedtls_x509write_crt_free( mbedtls_x509write_cert *ctx );
  * \param ctx       certificate to write away
  * \param buf       buffer to write to
  * \param size      size of the buffer
- * \param f_rng     RNG function. This must not be \c NULL.
+ * \param f_rng     RNG function (for signature, see note)
  * \param p_rng     RNG parameter
  *
  * \return          length of data written if successful, or a specific
  *                  error code
  *
- * \note            \p f_rng is used for the signature operation.
+ * \note            f_rng may be NULL if RSA is used for signature and the
+ *                  signature is made offline (otherwise f_rng is desirable
+ *                  for countermeasures against timing attacks).
+ *                  ECDSA signatures always require a non-NULL f_rng.
  */
 int mbedtls_x509write_crt_der( mbedtls_x509write_cert *ctx, unsigned char *buf, size_t size,
                        int (*f_rng)(void *, unsigned char *, size_t),
@@ -1137,12 +1130,15 @@ int mbedtls_x509write_crt_der( mbedtls_x509write_cert *ctx, unsigned char *buf, 
  * \param ctx       certificate to write away
  * \param buf       buffer to write to
  * \param size      size of the buffer
- * \param f_rng     RNG function. This must not be \c NULL.
+ * \param f_rng     RNG function (for signature, see note)
  * \param p_rng     RNG parameter
  *
  * \return          0 if successful, or a specific error code
  *
- * \note            \p f_rng is used for the signature operation.
+ * \note            f_rng may be NULL if RSA is used for signature and the
+ *                  signature is made offline (otherwise f_rng is desirable
+ *                  for countermeasures against timing attacks).
+ *                  ECDSA signatures always require a non-NULL f_rng.
  */
 int mbedtls_x509write_crt_pem( mbedtls_x509write_cert *ctx, unsigned char *buf, size_t size,
                        int (*f_rng)(void *, unsigned char *, size_t),
