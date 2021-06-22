@@ -21,7 +21,6 @@
  */
 #ifndef MBEDTLS_SSL_CIPHERSUITES_H
 #define MBEDTLS_SSL_CIPHERSUITES_H
-#include "mbedtls/private_access.h"
 
 #if !defined(MBEDTLS_CONFIG_FILE)
 #include "mbedtls/config.h"
@@ -363,19 +362,19 @@ typedef struct mbedtls_ssl_ciphersuite_t mbedtls_ssl_ciphersuite_t;
  */
 struct mbedtls_ssl_ciphersuite_t
 {
-    int MBEDTLS_PRIVATE(id);
-    const char * MBEDTLS_PRIVATE(name);
+    int id;
+    const char * name;
 
-    mbedtls_cipher_type_t MBEDTLS_PRIVATE(cipher);
-    mbedtls_md_type_t MBEDTLS_PRIVATE(mac);
-    mbedtls_key_exchange_type_t MBEDTLS_PRIVATE(key_exchange);
+    mbedtls_cipher_type_t cipher;
+    mbedtls_md_type_t mac;
+    mbedtls_key_exchange_type_t key_exchange;
 
-    int MBEDTLS_PRIVATE(min_major_ver);
-    int MBEDTLS_PRIVATE(min_minor_ver);
-    int MBEDTLS_PRIVATE(max_major_ver);
-    int MBEDTLS_PRIVATE(max_minor_ver);
+    int min_major_ver;
+    int min_minor_ver;
+    int max_major_ver;
+    int max_minor_ver;
 
-    unsigned char MBEDTLS_PRIVATE(flags);
+    unsigned char flags;
 };
 
 const int *mbedtls_ssl_list_ciphersuites( void );
@@ -394,7 +393,7 @@ int mbedtls_ssl_ciphersuite_uses_psk( const mbedtls_ssl_ciphersuite_t *info );
 #if defined(MBEDTLS_KEY_EXCHANGE_SOME_PFS_ENABLED)
 static inline int mbedtls_ssl_ciphersuite_has_pfs( const mbedtls_ssl_ciphersuite_t *info )
 {
-    switch( info->MBEDTLS_PRIVATE(key_exchange) )
+    switch( info->key_exchange )
     {
         case MBEDTLS_KEY_EXCHANGE_DHE_RSA:
         case MBEDTLS_KEY_EXCHANGE_DHE_PSK:
@@ -413,7 +412,7 @@ static inline int mbedtls_ssl_ciphersuite_has_pfs( const mbedtls_ssl_ciphersuite
 #if defined(MBEDTLS_KEY_EXCHANGE_SOME_NON_PFS_ENABLED)
 static inline int mbedtls_ssl_ciphersuite_no_pfs( const mbedtls_ssl_ciphersuite_t *info )
 {
-    switch( info->MBEDTLS_PRIVATE(key_exchange) )
+    switch( info->key_exchange )
     {
         case MBEDTLS_KEY_EXCHANGE_ECDH_RSA:
         case MBEDTLS_KEY_EXCHANGE_ECDH_ECDSA:
@@ -431,7 +430,7 @@ static inline int mbedtls_ssl_ciphersuite_no_pfs( const mbedtls_ssl_ciphersuite_
 #if defined(MBEDTLS_KEY_EXCHANGE_SOME_ECDH_ENABLED)
 static inline int mbedtls_ssl_ciphersuite_uses_ecdh( const mbedtls_ssl_ciphersuite_t *info )
 {
-    switch( info->MBEDTLS_PRIVATE(key_exchange) )
+    switch( info->key_exchange )
     {
         case MBEDTLS_KEY_EXCHANGE_ECDH_RSA:
         case MBEDTLS_KEY_EXCHANGE_ECDH_ECDSA:
@@ -445,7 +444,7 @@ static inline int mbedtls_ssl_ciphersuite_uses_ecdh( const mbedtls_ssl_ciphersui
 
 static inline int mbedtls_ssl_ciphersuite_cert_req_allowed( const mbedtls_ssl_ciphersuite_t *info )
 {
-    switch( info->MBEDTLS_PRIVATE(key_exchange) )
+    switch( info->key_exchange )
     {
         case MBEDTLS_KEY_EXCHANGE_RSA:
         case MBEDTLS_KEY_EXCHANGE_DHE_RSA:
@@ -462,7 +461,7 @@ static inline int mbedtls_ssl_ciphersuite_cert_req_allowed( const mbedtls_ssl_ci
 
 static inline int mbedtls_ssl_ciphersuite_uses_srv_cert( const mbedtls_ssl_ciphersuite_t *info )
 {
-    switch( info->MBEDTLS_PRIVATE(key_exchange) )
+    switch( info->key_exchange )
     {
         case MBEDTLS_KEY_EXCHANGE_RSA:
         case MBEDTLS_KEY_EXCHANGE_RSA_PSK:
@@ -481,7 +480,7 @@ static inline int mbedtls_ssl_ciphersuite_uses_srv_cert( const mbedtls_ssl_ciphe
 #if defined(MBEDTLS_KEY_EXCHANGE_SOME_DHE_ENABLED)
 static inline int mbedtls_ssl_ciphersuite_uses_dhe( const mbedtls_ssl_ciphersuite_t *info )
 {
-    switch( info->MBEDTLS_PRIVATE(key_exchange) )
+    switch( info->key_exchange )
     {
         case MBEDTLS_KEY_EXCHANGE_DHE_RSA:
         case MBEDTLS_KEY_EXCHANGE_DHE_PSK:
@@ -496,7 +495,7 @@ static inline int mbedtls_ssl_ciphersuite_uses_dhe( const mbedtls_ssl_ciphersuit
 #if defined(MBEDTLS_KEY_EXCHANGE_SOME_ECDHE_ENABLED)
 static inline int mbedtls_ssl_ciphersuite_uses_ecdhe( const mbedtls_ssl_ciphersuite_t *info )
 {
-    switch( info->MBEDTLS_PRIVATE(key_exchange) )
+    switch( info->key_exchange )
     {
         case MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA:
         case MBEDTLS_KEY_EXCHANGE_ECDHE_RSA:
@@ -512,7 +511,7 @@ static inline int mbedtls_ssl_ciphersuite_uses_ecdhe( const mbedtls_ssl_ciphersu
 #if defined(MBEDTLS_KEY_EXCHANGE_WITH_SERVER_SIGNATURE_ENABLED)
 static inline int mbedtls_ssl_ciphersuite_uses_server_signature( const mbedtls_ssl_ciphersuite_t *info )
 {
-    switch( info->MBEDTLS_PRIVATE(key_exchange) )
+    switch( info->key_exchange )
     {
         case MBEDTLS_KEY_EXCHANGE_DHE_RSA:
         case MBEDTLS_KEY_EXCHANGE_ECDHE_RSA:
