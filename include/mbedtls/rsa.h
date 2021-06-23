@@ -27,7 +27,6 @@
  */
 #ifndef MBEDTLS_RSA_H
 #define MBEDTLS_RSA_H
-#include "mbedtls/private_access.h"
 
 #if !defined(MBEDTLS_CONFIG_FILE)
 #include "mbedtls/config.h"
@@ -82,44 +81,48 @@ extern "C" {
 
 /**
  * \brief   The RSA context structure.
+ *
+ * \note    Direct manipulation of the members of this structure
+ *          is deprecated. All manipulation should instead be done through
+ *          the public interface functions.
  */
 typedef struct mbedtls_rsa_context
 {
-    int MBEDTLS_PRIVATE(ver);                    /*!<  Reserved for internal purposes.
+    int ver;                    /*!<  Reserved for internal purposes.
                                  *    Do not set this field in application
                                  *    code. Its meaning might change without
                                  *    notice. */
-    size_t MBEDTLS_PRIVATE(len);                 /*!<  The size of \p N in Bytes. */
+    size_t len;                 /*!<  The size of \p N in Bytes. */
 
-    mbedtls_mpi MBEDTLS_PRIVATE(N);              /*!<  The public modulus. */
-    mbedtls_mpi MBEDTLS_PRIVATE(E);              /*!<  The public exponent. */
+    mbedtls_mpi N;              /*!<  The public modulus. */
+    mbedtls_mpi E;              /*!<  The public exponent. */
 
-    mbedtls_mpi MBEDTLS_PRIVATE(D);              /*!<  The private exponent. */
-    mbedtls_mpi MBEDTLS_PRIVATE(P);              /*!<  The first prime factor. */
-    mbedtls_mpi MBEDTLS_PRIVATE(Q);              /*!<  The second prime factor. */
+    mbedtls_mpi D;              /*!<  The private exponent. */
+    mbedtls_mpi P;              /*!<  The first prime factor. */
+    mbedtls_mpi Q;              /*!<  The second prime factor. */
 
-    mbedtls_mpi MBEDTLS_PRIVATE(DP);             /*!<  <code>D % (P - 1)</code>. */
-    mbedtls_mpi MBEDTLS_PRIVATE(DQ);             /*!<  <code>D % (Q - 1)</code>. */
-    mbedtls_mpi MBEDTLS_PRIVATE(QP);             /*!<  <code>1 / (Q % P)</code>. */
+    mbedtls_mpi DP;             /*!<  <code>D % (P - 1)</code>. */
+    mbedtls_mpi DQ;             /*!<  <code>D % (Q - 1)</code>. */
+    mbedtls_mpi QP;             /*!<  <code>1 / (Q % P)</code>. */
 
-    mbedtls_mpi MBEDTLS_PRIVATE(RN);             /*!<  cached <code>R^2 mod N</code>. */
+    mbedtls_mpi RN;             /*!<  cached <code>R^2 mod N</code>. */
 
-    mbedtls_mpi MBEDTLS_PRIVATE(RP);             /*!<  cached <code>R^2 mod P</code>. */
-    mbedtls_mpi MBEDTLS_PRIVATE(RQ);             /*!<  cached <code>R^2 mod Q</code>. */
+    mbedtls_mpi RP;             /*!<  cached <code>R^2 mod P</code>. */
+    mbedtls_mpi RQ;             /*!<  cached <code>R^2 mod Q</code>. */
 
-    mbedtls_mpi MBEDTLS_PRIVATE(Vi);             /*!<  The cached blinding value. */
-    mbedtls_mpi MBEDTLS_PRIVATE(Vf);             /*!<  The cached un-blinding value. */
+    mbedtls_mpi Vi;             /*!<  The cached blinding value. */
+    mbedtls_mpi Vf;             /*!<  The cached un-blinding value. */
 
-    int MBEDTLS_PRIVATE(padding);                /*!< Selects padding mode:
+    int padding;                /*!< Selects padding mode:
                                      #MBEDTLS_RSA_PKCS_V15 for 1.5 padding and
                                      #MBEDTLS_RSA_PKCS_V21 for OAEP or PSS. */
-    int MBEDTLS_PRIVATE(hash_id);                /*!< Hash identifier of mbedtls_md_type_t type,
+    int hash_id;                /*!< Hash identifier of mbedtls_md_type_t type,
                                      as specified in md.h for use in the MGF
                                      mask generating function used in the
                                      EME-OAEP and EMSA-PSS encodings. */
 #if defined(MBEDTLS_THREADING_C)
     /* Invariant: the mutex is initialized iff ver != 0. */
-    mbedtls_threading_mutex_t MBEDTLS_PRIVATE(mutex);    /*!<  Thread-safety mutex. */
+    mbedtls_threading_mutex_t mutex;    /*!<  Thread-safety mutex. */
 #endif
 }
 mbedtls_rsa_context;
@@ -131,51 +134,33 @@ mbedtls_rsa_context;
 /**
  * \brief          This function initializes an RSA context.
  *
- * \note           This function initializes the padding and the hash
- *                 identifier to respectively #MBEDTLS_RSA_PKCS_V15 and
- *                 #MBEDTLS_MD_NONE. See mbedtls_rsa_set_padding() for more
- *                 information about those parameters.
- *
- * \param ctx      The RSA context to initialize. This must not be \c NULL.
- */
-void mbedtls_rsa_init( mbedtls_rsa_context *ctx );
-
-/**
- * \brief          This function sets padding for an already initialized RSA
- *                 context.
- *
  * \note           Set padding to #MBEDTLS_RSA_PKCS_V21 for the RSAES-OAEP
  *                 encryption scheme and the RSASSA-PSS signature scheme.
  *
  * \note           The \p hash_id parameter is ignored when using
  *                 #MBEDTLS_RSA_PKCS_V15 padding.
  *
- * \note           The choice of padding mode is strictly enforced for private
- *                 key operations, since there might be security concerns in
+ * \note           The choice of padding mode is strictly enforced for private key
+ *                 operations, since there might be security concerns in
  *                 mixing padding modes. For public key operations it is
  *                 a default value, which can be overridden by calling specific
- *                 \c mbedtls_rsa_rsaes_xxx or \c mbedtls_rsa_rsassa_xxx
- *                 functions.
+ *                 \c rsa_rsaes_xxx or \c rsa_rsassa_xxx functions.
  *
  * \note           The hash selected in \p hash_id is always used for OEAP
  *                 encryption. For PSS signatures, it is always used for
  *                 making signatures, but can be overridden for verifying them.
  *                 If set to #MBEDTLS_MD_NONE, it is always overridden.
  *
- * \param ctx      The initialized RSA context to be configured.
+ * \param ctx      The RSA context to initialize. This must not be \c NULL.
  * \param padding  The padding mode to use. This must be either
  *                 #MBEDTLS_RSA_PKCS_V15 or #MBEDTLS_RSA_PKCS_V21.
- * \param hash_id  The hash identifier for PSS or OAEP, if \p padding is
- *                 #MBEDTLS_RSA_PKCS_V21. #MBEDTLS_MD_NONE is accepted by this
- *                 function but may be not suitable for some operations.
- *                 Ignored if \p padding is #MBEDTLS_RSA_PKCS_V15.
- *
- * \return         \c 0 on success.
- * \return         #MBEDTLS_ERR_RSA_INVALID_PADDING failure:
- *                 \p padding or \p hash_id is invalid.
+ * \param hash_id  The hash identifier of ::mbedtls_md_type_t type, if
+ *                 \p padding is #MBEDTLS_RSA_PKCS_V21. It is unused
+ *                 otherwise.
  */
-int mbedtls_rsa_set_padding( mbedtls_rsa_context *ctx, int padding,
-                             mbedtls_md_type_t hash_id );
+void mbedtls_rsa_init( mbedtls_rsa_context *ctx,
+                       int padding,
+                       int hash_id );
 
 /**
  * \brief          This function imports a set of core parameters into an
@@ -405,6 +390,18 @@ int mbedtls_rsa_export_raw( const mbedtls_rsa_context *ctx,
  */
 int mbedtls_rsa_export_crt( const mbedtls_rsa_context *ctx,
                             mbedtls_mpi *DP, mbedtls_mpi *DQ, mbedtls_mpi *QP );
+
+/**
+ * \brief          This function sets padding for an already initialized RSA
+ *                 context. See mbedtls_rsa_init() for details.
+ *
+ * \param ctx      The initialized RSA context to be configured.
+ * \param padding  The padding mode to use. This must be either
+ *                 #MBEDTLS_RSA_PKCS_V15 or #MBEDTLS_RSA_PKCS_V21.
+ * \param hash_id  The #MBEDTLS_RSA_PKCS_V21 hash identifier.
+ */
+void mbedtls_rsa_set_padding( mbedtls_rsa_context *ctx, int padding,
+                              int hash_id );
 
 /**
  * \brief          This function retrieves the length of RSA modulus in Bytes.
@@ -857,13 +854,12 @@ int mbedtls_rsa_rsassa_pkcs1_v15_sign( mbedtls_rsa_context *ctx,
  * \brief          This function performs a PKCS#1 v2.1 PSS signature
  *                 operation (RSASSA-PSS-SIGN).
  *
- * \note           The \c hash_id set in \p ctx by calling
- *                 mbedtls_rsa_set_padding() selects the hash used for the
- *                 encoding operation and for the mask generation function
- *                 (MGF1). For more details on the encoding operation and the
- *                 mask generation function, consult <em>RFC-3447: Public-Key
+ * \note           The \p hash_id in the RSA context is the one used for the
+ *                 encoding. \p md_alg in the function call is the type of hash
+ *                 that is encoded. According to <em>RFC-3447: Public-Key
  *                 Cryptography Standards (PKCS) #1 v2.1: RSA Cryptography
- *                 Specifications</em>.
+ *                 Specifications</em> it is advised to keep both hashes the
+ *                 same.
  *
  * \note           This function enforces that the provided salt length complies
  *                 with FIPS 186-4 §5.5 (e) and RFC 8017 (PKCS#1 v2.2) §9.1.1
@@ -911,13 +907,12 @@ int mbedtls_rsa_rsassa_pss_sign_ext( mbedtls_rsa_context *ctx,
  * \brief          This function performs a PKCS#1 v2.1 PSS signature
  *                 operation (RSASSA-PSS-SIGN).
  *
- * \note           The \c hash_id set in \p ctx by calling
- *                 mbedtls_rsa_set_padding() selects the hash used for the
- *                 encoding operation and for the mask generation function
- *                 (MGF1). For more details on the encoding operation and the
- *                 mask generation function, consult <em>RFC-3447: Public-Key
+ * \note           The \p hash_id in the RSA context is the one used for the
+ *                 encoding. \p md_alg in the function call is the type of hash
+ *                 that is encoded. According to <em>RFC-3447: Public-Key
  *                 Cryptography Standards (PKCS) #1 v2.1: RSA Cryptography
- *                 Specifications</em>.
+ *                 Specifications</em> it is advised to keep both hashes the
+ *                 same.
  *
  * \note           This function always uses the maximum possible salt size,
  *                 up to the length of the payload hash. This choice of salt
@@ -936,7 +931,7 @@ int mbedtls_rsa_rsassa_pss_sign_ext( mbedtls_rsa_context *ctx,
  * \param md_alg   The message-digest algorithm used to hash the original data.
  *                 Use #MBEDTLS_MD_NONE for signing raw data.
  * \param hashlen  The length of the message digest.
- *                 This is only used if \p md_alg is #MBEDTLS_MD_NONE.
+ *                 Ths is only used if \p md_alg is #MBEDTLS_MD_NONE.
  * \param hash     The buffer holding the message digest or raw data.
  *                 If \p md_alg is #MBEDTLS_MD_NONE, this must be a readable
  *                 buffer of length \p hashlen Bytes. If \p md_alg is not
@@ -1023,15 +1018,16 @@ int mbedtls_rsa_rsassa_pkcs1_v15_verify( mbedtls_rsa_context *ctx,
  * \brief          This function performs a PKCS#1 v2.1 PSS verification
  *                 operation (RSASSA-PSS-VERIFY).
  *
- * \note           The \c hash_id set in \p ctx by calling
- *                 mbedtls_rsa_set_padding() selects the hash used for the
- *                 encoding operation and for the mask generation function
- *                 (MGF1). For more details on the encoding operation and the
- *                 mask generation function, consult <em>RFC-3447: Public-Key
+ *                 The hash function for the MGF mask generating function
+ *                 is that specified in the RSA context.
+ *
+ * \note           The \p hash_id in the RSA context is the one used for the
+ *                 verification. \p md_alg in the function call is the type of
+ *                 hash that is verified. According to <em>RFC-3447: Public-Key
  *                 Cryptography Standards (PKCS) #1 v2.1: RSA Cryptography
- *                 Specifications</em>. If the \c hash_id set in \p ctx by
- *                 mbedtls_rsa_set_padding() is #MBEDTLS_MD_NONE, the \p md_alg
- *                 parameter is used.
+ *                 Specifications</em> it is advised to keep both hashes the
+ *                 same. If \p hash_id in the RSA context is unset,
+ *                 the \p md_alg from the function call is used.
  *
  * \param ctx      The initialized RSA public key context to use.
  * \param md_alg   The message-digest algorithm used to hash the original data.
@@ -1060,11 +1056,13 @@ int mbedtls_rsa_rsassa_pss_verify( mbedtls_rsa_context *ctx,
  * \brief          This function performs a PKCS#1 v2.1 PSS verification
  *                 operation (RSASSA-PSS-VERIFY).
  *
+ *                 The hash function for the MGF mask generating function
+ *                 is that specified in \p mgf1_hash_id.
+ *
  * \note           The \p sig buffer must be as large as the size
  *                 of \p ctx->N. For example, 128 Bytes if RSA-1024 is used.
  *
- * \note           The \c hash_id set in \p ctx by mbedtls_rsa_set_padding() is
- *                 ignored.
+ * \note           The \p hash_id in the RSA context is ignored.
  *
  * \param ctx      The initialized RSA public key context to use.
  * \param md_alg   The message-digest algorithm used to hash the original data.
@@ -1076,13 +1074,7 @@ int mbedtls_rsa_rsassa_pss_verify( mbedtls_rsa_context *ctx,
  *                 buffer of length \p hashlen Bytes. If \p md_alg is not
  *                 #MBEDTLS_MD_NONE, it must be a readable buffer of length
  *                 the size of the hash corresponding to \p md_alg.
- * \param mgf1_hash_id      The message digest algorithm used for the
- *                          verification operation and the mask generation
- *                          function (MGF1). For more details on the encoding
- *                          operation and the mask generation function, consult
- *                          <em>RFC-3447: Public-Key Cryptography Standards
- *                          (PKCS) #1 v2.1: RSA Cryptography
- *                          Specifications</em>.
+ * \param mgf1_hash_id      The message digest used for mask generation.
  * \param expected_salt_len The length of the salt used in padding. Use
  *                          #MBEDTLS_RSA_SALT_LEN_ANY to accept any salt length.
  * \param sig      The buffer holding the signature. This must be a readable
