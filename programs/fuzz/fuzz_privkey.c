@@ -1,9 +1,6 @@
-#define MBEDTLS_ALLOW_PRIVATE_ACCESS
-
 #include <stdint.h>
 #include <stdlib.h>
 #include "mbedtls/pk.h"
-#include "common.h"
 
 //4 Kb should be enough for every bug ;-)
 #define MAX_LEN 0x1000
@@ -20,8 +17,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
     }
 
     mbedtls_pk_init( &pk );
-    ret = mbedtls_pk_parse_key( &pk, Data, Size, NULL, 0,
-                                dummy_random, NULL );
+    ret = mbedtls_pk_parse_key( &pk, Data, Size, NULL, 0 );
     if (ret == 0) {
 #if defined(MBEDTLS_RSA_C)
         if( mbedtls_pk_get_type( &pk ) == MBEDTLS_PK_RSA )
