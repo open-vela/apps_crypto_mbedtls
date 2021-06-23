@@ -36,11 +36,8 @@
 
 typedef struct
 {
-    unsigned char *buf; /* Pointer to a buffer of length bytes. */
+    unsigned char *buf;
     size_t length;
-    /* If fallback_f_rng is NULL, fail after delivering length bytes. */
-    int ( *fallback_f_rng )( void*, unsigned char *, size_t );
-    void *fallback_p_rng;
 } mbedtls_test_rnd_buf_info;
 
 /**
@@ -70,25 +67,24 @@ int mbedtls_test_rnd_std_rand( void *rng_state,
                                size_t len );
 
 /**
- * This function only returns zeros.
+ * This function only returns zeros
  *
- * \p rng_state shall be \c NULL.
+ * rng_state shall be NULL.
  */
 int mbedtls_test_rnd_zero_rand( void *rng_state,
                                 unsigned char *output,
                                 size_t len );
 
 /**
- * This function returns random data based on a buffer it receives.
+ * This function returns random based on a buffer it receives.
  *
- * \p rng_state shall be a pointer to a #mbedtls_test_rnd_buf_info structure.
+ * rng_state shall be a pointer to a rnd_buf_info structure.
  *
  * The number of bytes released from the buffer on each call to
- * the random function is specified by \p len.
+ * the random function is specified by per_call. (Can be between
+ * 1 and 4)
  *
- * After the buffer is empty, this function will call the fallback RNG in the
- * #mbedtls_test_rnd_buf_info structure if there is one, and
- * will return #MBEDTLS_ERR_ENTROPY_SOURCE_FAILED otherwise.
+ * After the buffer is empty it will return rand();
  */
 int mbedtls_test_rnd_buffer_rand( void *rng_state,
                                   unsigned char *output,
@@ -100,7 +96,7 @@ int mbedtls_test_rnd_buffer_rand( void *rng_state,
  * Pseudo random is based on the XTEA encryption algorithm to
  * generate pseudorandom.
  *
- * \p rng_state shall be a pointer to a #mbedtls_test_rnd_pseudo_info structure.
+ * rng_state shall be a pointer to a rnd_pseudo_info structure.
  */
 int mbedtls_test_rnd_pseudo_rand( void *rng_state,
                                   unsigned char *output,
