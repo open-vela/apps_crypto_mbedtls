@@ -579,7 +579,7 @@ int mbedtls_ssl_encrypt_buf( mbedtls_ssl_context *ssl,
     {
         size_t padding =
             ssl_compute_padding_length( rec->data_len,
-                                        MBEDTLS_SSL_CID_TLS1_3_PADDING_GRANULARITY );
+                                        MBEDTLS_SSL_TLS1_3_PADDING_GRANULARITY );
         if( ssl_build_inner_plaintext( data,
                                        &rec->data_len,
                                        post_avail,
@@ -605,7 +605,7 @@ int mbedtls_ssl_encrypt_buf( mbedtls_ssl_context *ssl,
     {
         size_t padding =
             ssl_compute_padding_length( rec->data_len,
-                                        MBEDTLS_SSL_CID_TLS1_3_PADDING_GRANULARITY );
+                                        MBEDTLS_SSL_CID_PADDING_GRANULARITY );
         /*
          * Wrap plaintext into DTLSInnerPlaintext structure.
          * See ssl_build_inner_plaintext() for more information.
@@ -1147,9 +1147,6 @@ MBEDTLS_STATIC_TESTABLE int mbedtls_ssl_cf_hmac(
         if( offset < max_data_len )
             MD_CHK( mbedtls_md_update( ctx, data + offset, 1 ) );
     }
-
-    /* The context needs to finish() before it starts() again */
-    MD_CHK( mbedtls_md_finish( ctx, aux_out ) );
 
     /* Now compute HASH(okey + inner_hash) */
     MD_CHK( mbedtls_md_starts( ctx ) );
