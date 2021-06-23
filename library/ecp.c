@@ -2746,6 +2746,55 @@ int mbedtls_ecp_muladd( mbedtls_ecp_group *grp, mbedtls_ecp_point *R,
 #endif /* MBEDTLS_ECP_SHORT_WEIERSTRASS_ENABLED */
 
 #if defined(MBEDTLS_ECP_MONTGOMERY_ENABLED)
+#if defined(MBEDTLS_ECP_DP_CURVE25519_ENABLED)
+/* The following constants are defined in ecp_curves.c */
+extern const mbedtls_mpi mbedtls_ecp_x25519_bad_point_1;
+extern const mbedtls_mpi mbedtls_ecp_x25519_bad_point_2;
+
+/*
+ * Check that the input point is not one of the low-order points.
+ * This is recommended by the "May the Fourth" paper:
+ * https://eprint.iacr.org/2017/806.pdf
+ * Those points are never sent by an honest peer.
+ */
+static int ecp_check_pubkey_x25519( const mbedtls_mpi *X, const mbedtls_mpi *P )
+{
+    int ret;
+    mbedtls_mpi XmP;
+
+    mbedtls_mpi_init( &XmP );
+
+    /* Reduce X mod P so that we only need to check values less than P.
+     * We know X < 2^256 so we can proceed by subtraction. */
+    MBEDTLS_MPI_CHK( mbedtls_mpi_copy( &XmP, X ) );
+    while( mbedtls_mpi_cmp_mpi( &XmP, P ) >= 0 )
+        MBEDTLS_MPI_CHK( mbedtls_mpi_sub_mpi( &XmP, &XmP, P ) );
+
+    /* Check against the known bad values that are less than P in the
+     * following list: https://cr.yp.to/ecdh.html#validate */
+    if( mbedtls_mpi_cmp_int( &XmP, 1 ) <= 0 ) /* takes care of 0 and 1 */
+        return( MBEDTLS_ERR_ECP_INVALID_KEY );
+
+    if( mbedtls_mpi_cmp_mpi( &XmP, &mbedtls_ecp_x25519_bad_point_1 ) == 0 )
+        return( MBEDTLS_ERR_ECP_INVALID_KEY );
+
+    if( mbedtls_mpi_cmp_mpi( &XmP, &mbedtls_ecp_x25519_bad_point_2 ) == 0 )
+        return( MBEDTLS_ERR_ECP_INVALID_KEY );
+
+    /* Final check: check if XmP + 1 is P (final because it changes XmP!) */
+    MBEDTLS_MPI_CHK( mbedtls_mpi_add_int( &XmP, &XmP, 1 ) );
+    if( mbedtls_mpi_cmp_mpi( &XmP, P ) == 0 )
+        return( MBEDTLS_ERR_ECP_INVALID_KEY );
+
+    ret = 0;
+
+cleanup:
+    mbedtls_mpi_free( &XmP );
+
+    return( ret );
+}
+#endif /* MBEDTLS_ECP_DP_CURVE25519_ENABLED */
+
 /*
  * Check validity of a public key for Montgomery curves with x-only schemes
  */
@@ -2756,6 +2805,17 @@ static int ecp_check_pubkey_mx( const mbedtls_ecp_group *grp, const mbedtls_ecp_
      * (RFC 7748 sec. 5 para. 3). */
     if( mbedtls_mpi_size( &pt->X ) > ( grp->nbits + 7 ) / 8 )
         return( MBEDTLS_ERR_ECP_INVALID_KEY );
+
+    /* Implicit in all standards (as they don't consider negative numbers):
+     * X must be non-negative. This is normally ensured by the way it's
+     * encoded for transmission, but let's be extra sure. */
+    if( mbedtls_mpi_cmp_int( &pt->X, 0 ) < 0 )
+        return( MBEDTLS_ERR_ECP_INVALID_KEY );
+
+#if defined(MBEDTLS_ECP_DP_CURVE25519_ENABLED)
+    if( grp->id == MBEDTLS_ECP_DP_CURVE25519 )
+        return( ecp_check_pubkey_x25519( &pt->X, &grp->P ) );
+#endif
 
     return( 0 );
 }
