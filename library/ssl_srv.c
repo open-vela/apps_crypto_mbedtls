@@ -407,8 +407,7 @@ static int ssl_parse_supported_point_formats( mbedtls_ssl_context *ssl,
             ssl->handshake->ecdh_ctx.point_format = p[0];
 #endif
 #if defined(MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED)
-            mbedtls_ecjpake_set_point_format( &ssl->handshake->ecjpake_ctx,
-                                              p[0] );
+            ssl->handshake->ecjpake_ctx.point_format = p[0];
 #endif
             MBEDTLS_SSL_DEBUG_MSG( 4, ( "point format selected: %d", p[0] ) );
             return( 0 );
@@ -542,6 +541,28 @@ static int ssl_parse_cid_ext( mbedtls_ssl_context *ssl,
     return( 0 );
 }
 #endif /* MBEDTLS_SSL_DTLS_CONNECTION_ID */
+
+#if defined(MBEDTLS_SSL_TRUNCATED_HMAC)
+static int ssl_parse_truncated_hmac_ext( mbedtls_ssl_context *ssl,
+                                         const unsigned char *buf,
+                                         size_t len )
+{
+    if( len != 0 )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad client hello message" ) );
+        mbedtls_ssl_send_alert_message( ssl, MBEDTLS_SSL_ALERT_LEVEL_FATAL,
+                                        MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR );
+        return( MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO );
+    }
+
+    ((void) buf);
+
+    if( ssl->conf->trunc_hmac == MBEDTLS_SSL_TRUNC_HMAC_ENABLED )
+        ssl->session_negotiate->trunc_hmac = MBEDTLS_SSL_TRUNC_HMAC_ENABLED;
+
+    return( 0 );
+}
+#endif /* MBEDTLS_SSL_TRUNCATED_HMAC */
 
 #if defined(MBEDTLS_SSL_ENCRYPT_THEN_MAC)
 static int ssl_parse_encrypt_then_mac_ext( mbedtls_ssl_context *ssl,
@@ -1681,6 +1702,16 @@ read_record_header:
                 break;
 #endif /* MBEDTLS_SSL_MAX_FRAGMENT_LENGTH */
 
+#if defined(MBEDTLS_SSL_TRUNCATED_HMAC)
+            case MBEDTLS_TLS_EXT_TRUNCATED_HMAC:
+                MBEDTLS_SSL_DEBUG_MSG( 3, ( "found truncated hmac extension" ) );
+
+                ret = ssl_parse_truncated_hmac_ext( ssl, ext + 4, ext_size );
+                if( ret != 0 )
+                    return( ret );
+                break;
+#endif /* MBEDTLS_SSL_TRUNCATED_HMAC */
+
 #if defined(MBEDTLS_SSL_DTLS_CONNECTION_ID)
             case MBEDTLS_TLS_EXT_CID:
                 MBEDTLS_SSL_DEBUG_MSG( 3, ( "found CID extension" ) );
@@ -1689,7 +1720,7 @@ read_record_header:
                 if( ret != 0 )
                     return( ret );
                 break;
-#endif /* MBEDTLS_SSL_DTLS_CONNECTION_ID */
+#endif /* MBEDTLS_SSL_TRUNCATED_HMAC */
 
 #if defined(MBEDTLS_SSL_ENCRYPT_THEN_MAC)
             case MBEDTLS_TLS_EXT_ENCRYPT_THEN_MAC:
@@ -1839,45 +1870,29 @@ read_record_header:
      * and certificate from the SNI callback triggered by the SNI extension.)
      */
     got_common_suite = 0;
-    ciphersuites = ssl->conf->ciphersuite_list;
+    ciphersuites = mbedtls_ssl_get_protocol_version_ciphersuites( ssl->conf, ssl->minor_ver );
     ciphersuite_info = NULL;
-
-    if (ssl->conf->respect_cli_pref == MBEDTLS_SSL_SRV_CIPHERSUITE_ORDER_CLIENT)
-    {
-        for( j = 0, p = buf + ciph_offset + 2; j < ciph_len; j += 2, p += 2 )
-            for( i = 0; ciphersuites[i] != 0; i++ )
-            {
-                if( p[0] != ( ( ciphersuites[i] >> 8 ) & 0xFF ) ||
-                    p[1] != ( ( ciphersuites[i]      ) & 0xFF ) )
-                    continue;
-
-                got_common_suite = 1;
-
-                if( ( ret = ssl_ciphersuite_match( ssl, ciphersuites[i],
-                                                   &ciphersuite_info ) ) != 0 )
-                    return( ret );
-
-                if( ciphersuite_info != NULL )
-                    goto have_ciphersuite;
-            }
-    } else {
+#if defined(MBEDTLS_SSL_SRV_RESPECT_CLIENT_PREFERENCE)
+    for( j = 0, p = buf + ciph_offset + 2; j < ciph_len; j += 2, p += 2 )
         for( i = 0; ciphersuites[i] != 0; i++ )
-            for( j = 0, p = buf + ciph_offset + 2; j < ciph_len; j += 2, p += 2 )
-            {
-                if( p[0] != ( ( ciphersuites[i] >> 8 ) & 0xFF ) ||
-                    p[1] != ( ( ciphersuites[i]      ) & 0xFF ) )
-                    continue;
+#else
+    for( i = 0; ciphersuites[i] != 0; i++ )
+        for( j = 0, p = buf + ciph_offset + 2; j < ciph_len; j += 2, p += 2 )
+#endif
+        {
+            if( p[0] != ( ( ciphersuites[i] >> 8 ) & 0xFF ) ||
+                p[1] != ( ( ciphersuites[i]      ) & 0xFF ) )
+                continue;
 
-                got_common_suite = 1;
+            got_common_suite = 1;
 
-                if( ( ret = ssl_ciphersuite_match( ssl, ciphersuites[i],
-                                                   &ciphersuite_info ) ) != 0 )
-                    return( ret );
+            if( ( ret = ssl_ciphersuite_match( ssl, ciphersuites[i],
+                                               &ciphersuite_info ) ) != 0 )
+                return( ret );
 
-                if( ciphersuite_info != NULL )
-                    goto have_ciphersuite;
-            }
-    }
+            if( ciphersuite_info != NULL )
+                goto have_ciphersuite;
+        }
 
     if( got_common_suite )
     {
@@ -1934,6 +1949,31 @@ have_ciphersuite:
 
     return( 0 );
 }
+
+#if defined(MBEDTLS_SSL_TRUNCATED_HMAC)
+static void ssl_write_truncated_hmac_ext( mbedtls_ssl_context *ssl,
+                                          unsigned char *buf,
+                                          size_t *olen )
+{
+    unsigned char *p = buf;
+
+    if( ssl->session_negotiate->trunc_hmac == MBEDTLS_SSL_TRUNC_HMAC_DISABLED )
+    {
+        *olen = 0;
+        return;
+    }
+
+    MBEDTLS_SSL_DEBUG_MSG( 3, ( "server hello, adding truncated hmac extension" ) );
+
+    *p++ = (unsigned char)( ( MBEDTLS_TLS_EXT_TRUNCATED_HMAC >> 8 ) & 0xFF );
+    *p++ = (unsigned char)( ( MBEDTLS_TLS_EXT_TRUNCATED_HMAC      ) & 0xFF );
+
+    *p++ = 0x00;
+    *p++ = 0x00;
+
+    *olen = 4;
+}
+#endif /* MBEDTLS_SSL_TRUNCATED_HMAC */
 
 #if defined(MBEDTLS_SSL_DTLS_CONNECTION_ID)
 static void ssl_write_cid_ext( mbedtls_ssl_context *ssl,
@@ -2597,6 +2637,11 @@ static int ssl_write_server_hello( mbedtls_ssl_context *ssl )
     ext_len += olen;
 #endif
 
+#if defined(MBEDTLS_SSL_TRUNCATED_HMAC)
+    ssl_write_truncated_hmac_ext( ssl, p + 2 + ext_len, &olen );
+    ext_len += olen;
+#endif
+
 #if defined(MBEDTLS_SSL_DTLS_CONNECTION_ID)
     ssl_write_cid_ext( ssl, p + 2 + ext_len, &olen );
     ext_len += olen;
@@ -3004,7 +3049,7 @@ static int ssl_prepare_server_key_exchange( mbedtls_ssl_context *ssl,
 
         if( ( ret = mbedtls_dhm_make_params(
                   &ssl->handshake->dhm_ctx,
-                  (int) mbedtls_dhm_get_len( &ssl->handshake->dhm_ctx ),
+                  (int) mbedtls_mpi_size( &ssl->handshake->dhm_ctx.P ),
                   ssl->out_msg + ssl->out_msglen, &len,
                   ssl->conf->f_rng, ssl->conf->p_rng ) ) != 0 )
         {
@@ -4371,10 +4416,4 @@ int mbedtls_ssl_handshake_server_step( mbedtls_ssl_context *ssl )
 
     return( ret );
 }
-
-void mbedtls_ssl_conf_preference_order( mbedtls_ssl_config *conf, int order )
-{
-    conf->respect_cli_pref = order;
-}
-
 #endif /* MBEDTLS_SSL_SRV_C */
