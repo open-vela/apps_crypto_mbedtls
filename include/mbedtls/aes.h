@@ -39,7 +39,6 @@
 
 #ifndef MBEDTLS_AES_H
 #define MBEDTLS_AES_H
-#include "mbedtls/private_access.h"
 
 #if !defined(MBEDTLS_CONFIG_FILE)
 #include "mbedtls/config.h"
@@ -79,9 +78,9 @@ extern "C" {
  */
 typedef struct mbedtls_aes_context
 {
-    int MBEDTLS_PRIVATE(nr);                     /*!< The number of rounds. */
-    uint32_t *MBEDTLS_PRIVATE(rk);               /*!< AES round keys. */
-    uint32_t MBEDTLS_PRIVATE(buf)[68];           /*!< Unaligned data buffer. This buffer can
+    int nr;                     /*!< The number of rounds. */
+    uint32_t *rk;               /*!< AES round keys. */
+    uint32_t buf[68];           /*!< Unaligned data buffer. This buffer can
                                      hold 32 extra Bytes, which can be used for
                                      one of the following purposes:
                                      <ul><li>Alignment if VIA padlock is
@@ -98,9 +97,9 @@ mbedtls_aes_context;
  */
 typedef struct mbedtls_aes_xts_context
 {
-    mbedtls_aes_context MBEDTLS_PRIVATE(crypt); /*!< The AES context to use for AES block
+    mbedtls_aes_context crypt; /*!< The AES context to use for AES block
                                         encryption or decryption. */
-    mbedtls_aes_context MBEDTLS_PRIVATE(tweak); /*!< The AES context used for tweak
+    mbedtls_aes_context tweak; /*!< The AES context used for tweak
                                         computation. */
 } mbedtls_aes_xts_context;
 #endif /* MBEDTLS_CIPHER_MODE_XTS */
