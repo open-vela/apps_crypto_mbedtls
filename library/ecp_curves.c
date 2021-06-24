@@ -83,14 +83,13 @@
 
 #define ECP_MPI_INIT(s, n, p) {s, (n), (mbedtls_mpi_uint *)(p)}
 
+#define ECP_MPI_INIT_ARRAY(x)   \
+    ECP_MPI_INIT(1, sizeof(x) / sizeof(mbedtls_mpi_uint), x)
+
 #define ECP_POINT_INIT_XY_Z0(x, y) { \
-    ECP_MPI_INIT(1, sizeof(x) / sizeof(mbedtls_mpi_uint), x),\
-    ECP_MPI_INIT(1, sizeof(y) / sizeof(mbedtls_mpi_uint), y), \
-    ECP_MPI_INIT(1, 0, NULL) }
+    ECP_MPI_INIT_ARRAY(x), ECP_MPI_INIT_ARRAY(y), ECP_MPI_INIT(1, 0, NULL) }
 #define ECP_POINT_INIT_XY_Z1(x, y) { \
-    ECP_MPI_INIT(1, sizeof(x) / sizeof(mbedtls_mpi_uint), x),\
-    ECP_MPI_INIT(1, sizeof(y) / sizeof(mbedtls_mpi_uint), y), \
-    ECP_MPI_INIT(1, 1, mpi_one) }
+    ECP_MPI_INIT_ARRAY(x), ECP_MPI_INIT_ARRAY(y), ECP_MPI_INIT(1, 1, mpi_one) }
 
 #if defined(MBEDTLS_ECP_DP_SECP192R1_ENABLED) ||   \
     defined(MBEDTLS_ECP_DP_SECP224R1_ENABLED) ||   \
@@ -4667,6 +4666,13 @@ static int ecp_mod_p256k1( mbedtls_mpi * );
 #endif /* ECP_LOAD_GROUP */
 
 #if defined(MBEDTLS_ECP_DP_CURVE25519_ENABLED)
+/* Constants used by ecp_use_curve25519() */
+static const unsigned char curve25519_a24[] = { 0x01, 0xDB, 0x42 };
+static const unsigned char curve25519_part_of_n[] = {
+    0x14, 0xDE, 0xF9, 0xDE, 0xA2, 0xF7, 0x9C, 0xD6,
+    0x58, 0x12, 0x63, 0x1A, 0x5C, 0xF5, 0xD3, 0xED,
+};
+
 /*
  * Specialized function for creating the Curve25519 group
  */
@@ -4675,7 +4681,8 @@ static int ecp_use_curve25519( mbedtls_ecp_group *grp )
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
 
     /* Actually ( A + 2 ) / 4 */
-    MBEDTLS_MPI_CHK( mbedtls_mpi_read_string( &grp->A, 16, "01DB42" ) );
+    MBEDTLS_MPI_CHK( mbedtls_mpi_read_binary( &grp->A,
+                        curve25519_a24, sizeof( curve25519_a24 ) ) );
 
     /* P = 2^255 - 19 */
     MBEDTLS_MPI_CHK( mbedtls_mpi_lset( &grp->P, 1 ) );
@@ -4684,8 +4691,8 @@ static int ecp_use_curve25519( mbedtls_ecp_group *grp )
     grp->pbits = mbedtls_mpi_bitlen( &grp->P );
 
     /* N = 2^252 + 27742317777372353535851937790883648493 */
-    MBEDTLS_MPI_CHK( mbedtls_mpi_read_string( &grp->N, 16,
-                                              "14DEF9DEA2F79CD65812631A5CF5D3ED" ) );
+    MBEDTLS_MPI_CHK( mbedtls_mpi_read_binary( &grp->N,
+                     curve25519_part_of_n, sizeof( curve25519_part_of_n ) ) );
     MBEDTLS_MPI_CHK( mbedtls_mpi_set_bit( &grp->N, 252, 1 ) );
 
     /* Y intentionally not set, since we use x/z coordinates.
@@ -4706,6 +4713,15 @@ cleanup:
 #endif /* MBEDTLS_ECP_DP_CURVE25519_ENABLED */
 
 #if defined(MBEDTLS_ECP_DP_CURVE448_ENABLED)
+/* Constants used by ecp_use_curve448() */
+static const unsigned char curve448_a24[] = { 0x98, 0xAA };
+static const unsigned char curve448_part_of_n[] = {
+    0x83, 0x35, 0xDC, 0x16, 0x3B, 0xB1, 0x24,
+    0xB6, 0x51, 0x29, 0xC9, 0x6F, 0xDE, 0x93,
+    0x3D, 0x8D, 0x72, 0x3A, 0x70, 0xAA, 0xDC,
+    0x87, 0x3D, 0x6D, 0x54, 0xA7, 0xBB, 0x0D,
+};
+
 /*
  * Specialized function for creating the Curve448 group
  */
@@ -4717,7 +4733,8 @@ static int ecp_use_curve448( mbedtls_ecp_group *grp )
     mbedtls_mpi_init( &Ns );
 
     /* Actually ( A + 2 ) / 4 */
-    MBEDTLS_MPI_CHK( mbedtls_mpi_read_string( &grp->A, 16, "98AA" ) );
+    MBEDTLS_MPI_CHK( mbedtls_mpi_read_binary( &grp->A,
+                        curve448_a24, sizeof( curve448_a24 ) ) );
 
     /* P = 2^448 - 2^224 - 1 */
     MBEDTLS_MPI_CHK( mbedtls_mpi_lset( &grp->P, 1 ) );
@@ -4735,8 +4752,8 @@ static int ecp_use_curve448( mbedtls_ecp_group *grp )
 
     /* N = 2^446 - 13818066809895115352007386748515426880336692474882178609894547503885 */
     MBEDTLS_MPI_CHK( mbedtls_mpi_set_bit( &grp->N, 446, 1 ) );
-    MBEDTLS_MPI_CHK( mbedtls_mpi_read_string( &Ns, 16,
-                                              "8335DC163BB124B65129C96FDE933D8D723A70AADC873D6D54A7BB0D" ) );
+    MBEDTLS_MPI_CHK( mbedtls_mpi_read_binary( &Ns,
+                        curve448_part_of_n, sizeof( curve448_part_of_n ) ) );
     MBEDTLS_MPI_CHK( mbedtls_mpi_sub_mpi( &grp->N, &grp->N, &Ns ) );
 
     /* Actually, the required msb for private keys */
