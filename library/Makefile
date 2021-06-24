@@ -72,11 +72,13 @@ endif
 OBJS_CRYPTO= \
 	     aes.o \
 	     aesni.o \
+	     arc4.o \
 	     aria.o \
 	     asn1parse.o \
 	     asn1write.o \
 	     base64.o \
 	     bignum.o \
+	     blowfish.o \
 	     camellia.o \
 	     ccm.o \
 	     chacha20.o \
@@ -99,6 +101,8 @@ OBJS_CRYPTO= \
 	     hkdf.o \
 	     hmac_drbg.o \
 	     md.o \
+	     md2.o \
+	     md4.o \
 	     md5.o \
 	     memory_buffer_alloc.o \
 	     mps_reader.o \
@@ -139,6 +143,7 @@ OBJS_CRYPTO= \
 	     timing.o \
 	     version.o \
 	     version_features.o \
+	     xtea.o \
 	     # This line is intentionally left blank
 
 include ../3rdparty/Makefile.inc
