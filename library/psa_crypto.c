@@ -3244,7 +3244,6 @@ static psa_status_t psa_cipher_setup( psa_cipher_operation_t *operation,
         goto exit;
     }
 
-    /* The requested algorithm must be one that can be processed by cipher. */
     if( ! PSA_ALG_IS_CIPHER( alg ) )
     {
         status = PSA_ERROR_INVALID_ARGUMENT;
@@ -3495,7 +3494,6 @@ psa_status_t psa_cipher_encrypt( mbedtls_svc_key_id_t key,
     psa_key_type_t key_type;
     size_t iv_length;
 
-    /* The requested algorithm must be one that can be processed by cipher. */
     if( ! PSA_ALG_IS_CIPHER( alg ) )
         return( PSA_ERROR_INVALID_ARGUMENT );
 
