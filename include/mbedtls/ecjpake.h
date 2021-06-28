@@ -39,7 +39,11 @@
  * The payloads are serialized in a way suitable for use in TLS, but could
  * also be use outside TLS.
  */
-#include "mbedtls/build_info.h"
+#if !defined(MBEDTLS_CONFIG_FILE)
+#include "mbedtls/config.h"
+#else
+#include MBEDTLS_CONFIG_FILE
+#endif
 
 #include "mbedtls/ecp.h"
 #include "mbedtls/md.h"
