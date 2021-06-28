@@ -17,7 +17,11 @@
  *  limitations under the License.
  */
 
-#include "mbedtls/build_info.h"
+#if !defined(MBEDTLS_CONFIG_FILE)
+#include "mbedtls/config.h"
+#else
+#include MBEDTLS_CONFIG_FILE
+#endif
 
 #if defined(MBEDTLS_PLATFORM_C)
 #include "mbedtls/platform.h"
@@ -217,7 +221,7 @@ int main( void )
     }
 
     if( ( ret = mbedtls_rsa_pkcs1_verify( &rsa, MBEDTLS_MD_SHA256,
-                                          32, hash, p ) ) != 0 )
+                                          0, hash, p ) ) != 0 )
     {
         mbedtls_printf( " failed\n  ! mbedtls_rsa_pkcs1_verify returned %d\n\n", ret );
         goto exit;

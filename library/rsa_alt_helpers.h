@@ -55,7 +55,11 @@
 #ifndef MBEDTLS_RSA_INTERNAL_H
 #define MBEDTLS_RSA_INTERNAL_H
 
-#include "mbedtls/build_info.h"
+#if !defined(MBEDTLS_CONFIG_FILE)
+#include "mbedtls/config.h"
+#else
+#include MBEDTLS_CONFIG_FILE
+#endif
 
 #include "mbedtls/bignum.h"
 

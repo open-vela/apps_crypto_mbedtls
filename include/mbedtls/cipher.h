@@ -28,7 +28,11 @@
 #define MBEDTLS_CIPHER_H
 #include "mbedtls/private_access.h"
 
-#include "mbedtls/build_info.h"
+#if !defined(MBEDTLS_CONFIG_FILE)
+#include "mbedtls/config.h"
+#else
+#include MBEDTLS_CONFIG_FILE
+#endif
 
 #include <stddef.h>
 #include "mbedtls/platform_util.h"
@@ -721,6 +725,8 @@ int mbedtls_cipher_reset( mbedtls_cipher_context_t *ctx );
 /**
  * \brief               This function adds additional data for AEAD ciphers.
  *                      Currently supported with GCM and ChaCha20+Poly1305.
+ *                      This must be called exactly once, after
+ *                      mbedtls_cipher_reset().
  *
  * \param ctx           The generic cipher context. This must be initialized.
  * \param ad            The additional data to use. This must be a readable
