@@ -17,7 +17,11 @@
  *  limitations under the License.
  */
 
-#include "mbedtls/build_info.h"
+#if !defined(MBEDTLS_CONFIG_FILE)
+#include "mbedtls/config.h"
+#else
+#include MBEDTLS_CONFIG_FILE
+#endif
 
 #if defined(MBEDTLS_PLATFORM_C)
 #include "mbedtls/platform.h"
@@ -225,7 +229,7 @@ int main( void )
     buf[n + 1] = (unsigned char)( rsa.MBEDTLS_PRIVATE(len)      );
 
     if( ( ret = mbedtls_rsa_pkcs1_sign( &rsa, NULL, NULL, MBEDTLS_MD_SHA256,
-                                32, hash, buf + n + 2 ) ) != 0 )
+                                0, hash, buf + n + 2 ) ) != 0 )
     {
         mbedtls_printf( " failed\n  ! mbedtls_rsa_pkcs1_sign returned %d\n\n", ret );
         goto exit;
