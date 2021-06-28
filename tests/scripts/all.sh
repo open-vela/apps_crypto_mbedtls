@@ -34,7 +34,7 @@
 # Warning: the test is destructive. It includes various build modes and
 # configurations, and can and will arbitrarily change the current CMake
 # configuration. The following files must be committed into git:
-#    * include/mbedtls/config.h
+#    * include/mbedtls/mbedtls_config.h
 #    * Makefile, library/Makefile, programs/Makefile, tests/Makefile,
 #      programs/fuzz/Makefile
 # After running this script, the CMake cache will be lost and CMake
@@ -85,7 +85,7 @@
 # means that components can assume that the working directory is in a
 # cleaned-up state, and don't need to perform the cleanup themselves.
 # * Run `make clean`.
-# * Restore `include/mbedtks/config.h` from a backup made before running
+# * Restore `include/mbedtls/mbedtls_config.h` from a backup made before running
 #   the component.
 # * Check out `Makefile`, `library/Makefile`, `programs/Makefile`,
 #   `tests/Makefile` and `programs/fuzz/Makefile` from git.
@@ -125,7 +125,7 @@ pre_check_environment () {
 }
 
 pre_initialize_variables () {
-    CONFIG_H='include/mbedtls/config.h'
+    CONFIG_H='include/mbedtls/mbedtls_config.h'
     CONFIG_BAK="$CONFIG_H.bak"
     CRYPTO_CONFIG_H='include/psa/crypto_config.h'
     CRYPTO_CONFIG_BAK="$CRYPTO_CONFIG_H.bak"
@@ -273,7 +273,7 @@ cleanup()
            -iname CMakeFiles -exec rm -rf {} \+ -o \
            \( -iname cmake_install.cmake -o \
               -iname CTestTestfile.cmake -o \
-              -iname CMakeCache.txt \) -exec rm {} \+
+              -iname CMakeCache.txt \) -exec rm -f {} \+
     # Recover files overwritten by in-tree CMake builds
     rm -f include/Makefile include/mbedtls/Makefile programs/*/Makefile
     git update-index --no-skip-worktree Makefile library/Makefile programs/Makefile tests/Makefile programs/fuzz/Makefile
@@ -283,6 +283,16 @@ cleanup()
     rm -rf programs/test/cmake_subproject/build
     rm -f programs/test/cmake_subproject/Makefile
     rm -f programs/test/cmake_subproject/cmake_subproject
+
+    # Remove any artifacts from the component_test_cmake_as_package test.
+    rm -rf programs/test/cmake_package/build
+    rm -f programs/test/cmake_package/Makefile
+    rm -f programs/test/cmake_package/cmake_package
+
+    # Remove any artifacts from the component_test_cmake_as_installed_package test.
+    rm -rf programs/test/cmake_package_install/build
+    rm -f programs/test/cmake_package_install/Makefile
+    rm -f programs/test/cmake_package_install/cmake_package_install
 
     if [ -f "$CONFIG_BAK" ]; then
         mv "$CONFIG_BAK" "$CONFIG_H"
@@ -453,8 +463,8 @@ pre_check_git () {
             exit 1
         fi
 
-        if ! git diff --quiet include/mbedtls/config.h; then
-            err_msg "Warning - the configuration file 'include/mbedtls/config.h' has been edited. "
+        if ! git diff --quiet include/mbedtls/mbedtls_config.h; then
+            err_msg "Warning - the configuration file 'include/mbedtls/mbedtls_config.h' has been edited. "
             echo "You can either delete or preserve your work, or force the test by rerunning the"
             echo "script as: $0 --force"
             exit 1
@@ -818,6 +828,32 @@ component_test_psa_crypto_key_id_encodes_owner () {
 
     msg "test: full config - USE_PSA_CRYPTO + PSA_CRYPTO_KEY_ID_ENCODES_OWNER, cmake, gcc, ASan"
     make test
+}
+
+# check_renamed_symbols HEADER LIB
+# Check that if HEADER contains '#define MACRO ...' then MACRO is not a symbol
+# name is LIB.
+check_renamed_symbols () {
+    ! nm "$2" | sed 's/.* //' |
+      grep -x -F "$(sed -n 's/^ *# *define  *\([A-Z_a-z][0-9A-Z_a-z]*\)..*/\1/p' "$1")"
+}
+
+component_build_psa_crypto_spm () {
+    msg "build: full config - USE_PSA_CRYPTO + PSA_CRYPTO_KEY_ID_ENCODES_OWNER + PSA_CRYPTO_SPM, make, gcc"
+    scripts/config.py full
+    scripts/config.py unset MBEDTLS_USE_PSA_CRYPTO
+    scripts/config.py unset MBEDTLS_PSA_CRYPTO_BUILTIN_KEYS
+    scripts/config.py set MBEDTLS_PSA_CRYPTO_KEY_ID_ENCODES_OWNER
+    scripts/config.py set MBEDTLS_PSA_CRYPTO_SPM
+    # We can only compile, not link, since our test and sample programs
+    # aren't equipped for the modified names used when MBEDTLS_PSA_CRYPTO_SPM
+    # is active.
+    make CC=gcc CFLAGS='-Werror -Wall -Wextra -I../tests/include/spe' lib
+
+    # Check that if a symbol is renamed by crypto_spe.h, the non-renamed
+    # version is not present.
+    echo "Checking for renamed symbols in the library"
+    if_build_succeeded check_renamed_symbols tests/include/spe/crypto_spe.h library/libmbedcrypto.a
 }
 
 component_test_psa_crypto_client () {
@@ -2509,6 +2545,32 @@ component_test_cmake_as_subdirectory () {
     cmake .
     make
     if_build_succeeded ./cmake_subproject
+
+    cd "$MBEDTLS_ROOT_DIR"
+    unset MBEDTLS_ROOT_DIR
+}
+
+component_test_cmake_as_package () {
+    msg "build: cmake 'as-package' build"
+    MBEDTLS_ROOT_DIR="$PWD"
+
+    cd programs/test/cmake_package
+    cmake .
+    make
+    if_build_succeeded ./cmake_package
+
+    cd "$MBEDTLS_ROOT_DIR"
+    unset MBEDTLS_ROOT_DIR
+}
+
+component_test_cmake_as_package_install () {
+    msg "build: cmake 'as-installed-package' build"
+    MBEDTLS_ROOT_DIR="$PWD"
+
+    cd programs/test/cmake_package_install
+    cmake .
+    make
+    if_build_succeeded ./cmake_package_install
 
     cd "$MBEDTLS_ROOT_DIR"
     unset MBEDTLS_ROOT_DIR
