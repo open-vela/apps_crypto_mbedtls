@@ -32,6 +32,9 @@
  * See README.txt for usage instructions.
  */
 
+#ifndef MBEDTLS_CONFIG_H
+#define MBEDTLS_CONFIG_H
+
 /* System support */
 #define MBEDTLS_HAVE_ASM
 
@@ -86,3 +89,7 @@
 
 /* Save ROM and a few bytes of RAM by specifying our own ciphersuite list */
 #define MBEDTLS_SSL_CIPHERSUITES MBEDTLS_TLS_ECJPAKE_WITH_AES_128_CCM_8
+
+#include "mbedtls/check_config.h"
+
+#endif /* MBEDTLS_CONFIG_H */

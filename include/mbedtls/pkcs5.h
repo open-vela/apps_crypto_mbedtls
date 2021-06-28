@@ -24,7 +24,11 @@
 #ifndef MBEDTLS_PKCS5_H
 #define MBEDTLS_PKCS5_H
 
-#include "mbedtls/build_info.h"
+#if !defined(MBEDTLS_CONFIG_FILE)
+#include "mbedtls/config.h"
+#else
+#include MBEDTLS_CONFIG_FILE
+#endif
 
 #include "mbedtls/asn1.h"
 #include "mbedtls/md.h"
