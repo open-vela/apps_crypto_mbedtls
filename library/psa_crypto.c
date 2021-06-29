@@ -26,7 +26,6 @@
 #include "check_crypto_config.h"
 #endif
 
-#include "psa_crypto_service_integration.h"
 #include "psa/crypto.h"
 
 #include "psa_crypto_cipher.h"
@@ -267,6 +266,8 @@ psa_status_t mbedtls_to_psa_error( int ret )
             return( PSA_ERROR_NOT_SUPPORTED );
         case MBEDTLS_ERR_PK_SIG_LEN_MISMATCH:
             return( PSA_ERROR_INVALID_SIGNATURE );
+        case MBEDTLS_ERR_PK_BUFFER_TOO_SMALL:
+            return( PSA_ERROR_BUFFER_TOO_SMALL );
 
         case MBEDTLS_ERR_PLATFORM_HW_ACCEL_FAILED:
             return( PSA_ERROR_HARDWARE_FAILURE );
@@ -1052,6 +1053,17 @@ psa_status_t psa_destroy_key( mbedtls_svc_key_id_t key )
        return( PSA_ERROR_GENERIC_ERROR );
     }
 
+    if( PSA_KEY_LIFETIME_IS_READ_ONLY( slot->attr.lifetime ) )
+    {
+        /* Refuse the destruction of a read-only key (which may or may not work
+         * if we attempt it, depending on whether the key is merely read-only
+         * by policy or actually physically read-only).
+         * Just do the best we can, which is to wipe the copy in memory
+         * (done in this function's cleanup code). */
+        overall_status = PSA_ERROR_NOT_PERMITTED;
+        goto exit;
+    }
+
 #if defined(MBEDTLS_PSA_CRYPTO_SE_C)
     driver = psa_get_se_driver_entry( slot->attr.lifetime );
     if( driver != NULL )
@@ -1113,12 +1125,10 @@ psa_status_t psa_destroy_key( mbedtls_svc_key_id_t key )
     }
 #endif /* MBEDTLS_PSA_CRYPTO_SE_C */
 
-#if defined(MBEDTLS_PSA_CRYPTO_SE_C)
 exit:
-#endif /* MBEDTLS_PSA_CRYPTO_SE_C */
     status = psa_wipe_key_slot( slot );
     /* Prioritize CORRUPTION_DETECTED from wiping over a storage error */
-    if( overall_status == PSA_SUCCESS )
+    if( status != PSA_SUCCESS )
         overall_status = status;
     return( overall_status );
 }

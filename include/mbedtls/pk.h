@@ -63,6 +63,7 @@
 #define MBEDTLS_ERR_PK_UNKNOWN_NAMED_CURVE -0x3A00  /**< Elliptic curve is unsupported (only NIST curves are supported). */
 #define MBEDTLS_ERR_PK_FEATURE_UNAVAILABLE -0x3980  /**< Unavailable feature, e.g. RSA disabled for RSA key. */
 #define MBEDTLS_ERR_PK_SIG_LEN_MISMATCH    -0x3900  /**< The buffer contains a valid signature followed by more data. */
+#define MBEDTLS_ERR_PK_BUFFER_TOO_SMALL    -0x3880  /**< The output buffer is too small. */
 
 #ifdef __cplusplus
 extern "C" {
@@ -395,9 +396,17 @@ int mbedtls_pk_can_do( const mbedtls_pk_context *ctx, mbedtls_pk_type_t type );
  * \brief           Verify signature (including padding if relevant).
  *
  * \param ctx       The PK context to use. It must have been set up.
- * \param md_alg    Hash algorithm used (see notes)
+ * \param md_alg    Hash algorithm used.
+ *                  This can be #MBEDTLS_MD_NONE if the signature algorithm
+ *                  does not rely on a hash algorithm (non-deterministic
+ *                  ECDSA, RSA PKCS#1 v1.5).
+ *                  For PKCS#1 v1.5, if \p md_alg is #MBEDTLS_MD_NONE, then
+ *                  \p hash is the DigestInfo structure used by RFC 8017
+ *                  &sect;9.2 steps 3&ndash;6. If \p md_alg is a valid hash
+ *                  algorithm then \p hash is the digest itself, and this
+ *                  function calculates the DigestInfo encoding internally.
  * \param hash      Hash of the message to sign
- * \param hash_len  Hash length or 0 (see notes)
+ * \param hash_len  Hash length
  * \param sig       Signature to verify
  * \param sig_len   Signature length
  *
@@ -409,11 +418,6 @@ int mbedtls_pk_can_do( const mbedtls_pk_context *ctx, mbedtls_pk_type_t type );
  * \note            For RSA keys, the default padding type is PKCS#1 v1.5.
  *                  Use \c mbedtls_pk_verify_ext( MBEDTLS_PK_RSASSA_PSS, ... )
  *                  to verify RSASSA_PSS signatures.
- *
- * \note            If hash_len is 0, then the length associated with md_alg
- *                  is used instead, or an error returned if it is invalid.
- *
- * \note            md_alg may be MBEDTLS_MD_NONE, only if hash_len != 0
  */
 int mbedtls_pk_verify( mbedtls_pk_context *ctx, mbedtls_md_type_t md_alg,
                const unsigned char *hash, size_t hash_len,
@@ -486,12 +490,13 @@ int mbedtls_pk_verify_ext( mbedtls_pk_type_t type, const void *options,
  *                  with a private key.
  * \param md_alg    Hash algorithm used (see notes)
  * \param hash      Hash of the message to sign
- * \param hash_len  Hash length or 0 (see notes)
+ * \param hash_len  Hash length
  * \param sig       Place to write the signature.
  *                  It must have enough room for the signature.
  *                  #MBEDTLS_PK_SIGNATURE_MAX_SIZE is always enough.
  *                  You may use a smaller buffer if it is large enough
  *                  given the key type.
+ * \param sig_size  The size of the \p sig buffer in bytes.
  * \param sig_len   On successful return,
  *                  the number of bytes written to \p sig.
  * \param f_rng     RNG function, must not be \c NULL.
@@ -503,15 +508,12 @@ int mbedtls_pk_verify_ext( mbedtls_pk_type_t type, const void *options,
  *                  There is no interface in the PK module to make RSASSA-PSS
  *                  signatures yet.
  *
- * \note            If hash_len is 0, then the length associated with md_alg
- *                  is used instead, or an error returned if it is invalid.
- *
  * \note            For RSA, md_alg may be MBEDTLS_MD_NONE if hash_len != 0.
  *                  For ECDSA, md_alg may never be MBEDTLS_MD_NONE.
  */
 int mbedtls_pk_sign( mbedtls_pk_context *ctx, mbedtls_md_type_t md_alg,
              const unsigned char *hash, size_t hash_len,
-             unsigned char *sig, size_t *sig_len,
+             unsigned char *sig, size_t sig_size, size_t *sig_len,
              int (*f_rng)(void *, unsigned char *, size_t), void *p_rng );
 
 /**
@@ -526,12 +528,13 @@ int mbedtls_pk_sign( mbedtls_pk_context *ctx, mbedtls_md_type_t md_alg,
  *                  with a private key.
  * \param md_alg    Hash algorithm used (see notes for mbedtls_pk_sign())
  * \param hash      Hash of the message to sign
- * \param hash_len  Hash length or 0 (see notes for mbedtls_pk_sign())
+ * \param hash_len  Hash length
  * \param sig       Place to write the signature.
  *                  It must have enough room for the signature.
  *                  #MBEDTLS_PK_SIGNATURE_MAX_SIZE is always enough.
  *                  You may use a smaller buffer if it is large enough
  *                  given the key type.
+ * \param sig_size  The size of the \p sig buffer in bytes.
  * \param sig_len   On successful return,
  *                  the number of bytes written to \p sig.
  * \param f_rng     RNG function, must not be \c NULL.
@@ -545,7 +548,7 @@ int mbedtls_pk_sign( mbedtls_pk_context *ctx, mbedtls_md_type_t md_alg,
 int mbedtls_pk_sign_restartable( mbedtls_pk_context *ctx,
              mbedtls_md_type_t md_alg,
              const unsigned char *hash, size_t hash_len,
-             unsigned char *sig, size_t *sig_len,
+             unsigned char *sig, size_t sig_size, size_t *sig_len,
              int (*f_rng)(void *, unsigned char *, size_t), void *p_rng,
              mbedtls_pk_restart_ctx *rs_ctx );
 
