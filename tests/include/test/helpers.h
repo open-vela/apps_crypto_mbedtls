@@ -30,7 +30,11 @@
  * directly (without using the MBEDTLS_PRIVATE wrapper). */
 #define MBEDTLS_ALLOW_PRIVATE_ACCESS
 
-#include "mbedtls/build_info.h"
+#if !defined(MBEDTLS_CONFIG_FILE)
+#include "mbedtls/config.h"
+#else
+#include MBEDTLS_CONFIG_FILE
+#endif
 
 #if defined(MBEDTLS_THREADING_C) && defined(MBEDTLS_THREADING_PTHREAD) && \
     defined(MBEDTLS_TEST_HOOKS)
@@ -230,14 +234,5 @@ void mbedtls_test_err_add_check( int high, int low,
 /* Since the library has exactly the desired behavior, this is trivial. */
 int mbedtls_test_read_mpi( mbedtls_mpi *X, int radix, const char *s );
 #endif /* MBEDTLS_BIGNUM_C */
-
-/**
- * \brief   Check value in first parameter.
- *
- * \note    If the check fails, fail the test currently being run.
- */
-#if defined(MBEDTLS_TEST_HOOKS)
-void mbedtls_test_assert_test( int test, const char * file, int line );
-#endif
 
 #endif /* TEST_HELPERS_H */

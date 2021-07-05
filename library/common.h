@@ -23,7 +23,11 @@
 #ifndef MBEDTLS_LIBRARY_COMMON_H
 #define MBEDTLS_LIBRARY_COMMON_H
 
-#include "mbedtls/build_info.h"
+#if defined(MBEDTLS_CONFIG_FILE)
+#include MBEDTLS_CONFIG_FILE
+#else
+#include "mbedtls/config.h"
+#endif
 
 /** Helper to define a function as static except when building invasive tests.
  *

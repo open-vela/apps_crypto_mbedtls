@@ -34,7 +34,6 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include "mbedtls/error.h"
 #if defined(MBEDTLS_PLATFORM_C)
 #include "mbedtls/platform.h"
 #else
@@ -392,10 +391,6 @@ psa_status_t psa_get_and_lock_key_slot( mbedtls_svc_key_id_t key,
         if( status == PSA_ERROR_DOES_NOT_EXIST )
             status = PSA_ERROR_INVALID_HANDLE;
     }
-    else
-        /* Add implicit usage flags. */
-        psa_extend_key_usage_flags( &(*p_slot)->attr.policy.usage );
-
     return( status );
 #else /* MBEDTLS_PSA_CRYPTO_STORAGE_C || MBEDTLS_PSA_CRYPTO_BUILTIN_KEYS */
     return( PSA_ERROR_INVALID_HANDLE );
@@ -412,13 +407,6 @@ psa_status_t psa_unlock_key_slot( psa_key_slot_t *slot )
         slot->lock_count--;
         return( PSA_SUCCESS );
     }
-
-    slot->lock_count = 1;
-
-#if defined(MBEDTLS_TEST_HOOKS)
-    if( *mbedtls_test_hook_assert_test != NULL )
-        ( *mbedtls_test_hook_assert_test )( slot->lock_count > 0, __FILE__, __LINE__  );
-#endif
 
     return( PSA_ERROR_CORRUPTION_DETECTED );
 }

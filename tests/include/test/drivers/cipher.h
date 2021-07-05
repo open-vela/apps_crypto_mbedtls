@@ -20,7 +20,11 @@
 #ifndef PSA_CRYPTO_TEST_DRIVERS_CIPHER_H
 #define PSA_CRYPTO_TEST_DRIVERS_CIPHER_H
 
-#include "mbedtls/build_info.h"
+#if !defined(MBEDTLS_CONFIG_FILE)
+#include "mbedtls/config.h"
+#else
+#include MBEDTLS_CONFIG_FILE
+#endif
 
 #if defined(PSA_CRYPTO_DRIVER_TEST)
 #include <psa/crypto_driver_common.h>
