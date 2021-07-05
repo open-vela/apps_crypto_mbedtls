@@ -19,11 +19,7 @@
 
 #define MBEDTLS_ALLOW_PRIVATE_ACCESS
 
-#if !defined(MBEDTLS_CONFIG_FILE)
-#include "mbedtls/config.h"
-#else
-#include MBEDTLS_CONFIG_FILE
-#endif
+#include "mbedtls/build_info.h"
 
 #include "mbedtls/platform.h"
 #if !defined(MBEDTLS_PLATFORM_C)
@@ -1088,7 +1084,7 @@ int main( int argc, char *argv[] )
                                               curve_info->name );
             TIME_PUBLIC( title, "sign",
                     ret = mbedtls_ecdsa_write_signature( &ecdsa, MBEDTLS_MD_SHA256, buf, curve_info->bit_size,
-                                                tmp, &sig_len, myrand, NULL ) );
+                                                tmp, sizeof( tmp ), &sig_len, myrand, NULL ) );
 
             mbedtls_ecdsa_free( &ecdsa );
         }
@@ -1104,7 +1100,7 @@ int main( int argc, char *argv[] )
 
             if( mbedtls_ecdsa_genkey( &ecdsa, curve_info->grp_id, myrand, NULL ) != 0 ||
                 mbedtls_ecdsa_write_signature( &ecdsa, MBEDTLS_MD_SHA256, buf, curve_info->bit_size,
-                                               tmp, &sig_len, myrand, NULL ) != 0 )
+                                               tmp, sizeof( tmp ), &sig_len, myrand, NULL ) != 0 )
             {
                 mbedtls_exit( 1 );
             }
