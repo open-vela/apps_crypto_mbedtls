@@ -28,7 +28,11 @@
 #ifndef PSA_CRYPTO_INVASIVE_H
 #define PSA_CRYPTO_INVASIVE_H
 
-#include "mbedtls/build_info.h"
+#if defined(MBEDTLS_CONFIG_FILE)
+#include MBEDTLS_CONFIG_FILE
+#else
+#include "mbedtls/config.h"
+#endif
 
 #include "psa/crypto.h"
 #include "common.h"
