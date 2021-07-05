@@ -51,7 +51,7 @@ fi
 : ${PERL:=perl}
 
 guess_config_name() {
-    if git diff --quiet ../include/mbedtls/mbedtls_config.h 2>/dev/null; then
+    if git diff --quiet ../include/mbedtls/config.h 2>/dev/null; then
         echo "default"
     else
         echo "unknown"
@@ -93,7 +93,7 @@ TESTS=0
 FAILS=0
 SKIPS=0
 
-CONFIG_H='../include/mbedtls/mbedtls_config.h'
+CONFIG_H='../include/mbedtls/config.h'
 
 MEMCHECK=0
 FILTER='.*'
@@ -178,7 +178,7 @@ case "$MBEDTLS_TEST_OUTCOME_FILE" in
         ;;
 esac
 
-# Read boolean configuration options from mbedtls_config.h for easy and quick
+# Read boolean configuration options from config.h for easy and quick
 # testing. Skip non-boolean options (with something other than spaces
 # and a comment after "#define SYMBOL"). The variable contains a
 # space-separated list of symbols.
@@ -194,7 +194,7 @@ skip_next_test() {
     SKIP_NEXT="YES"
 }
 
-# skip next test if the flag is not enabled in mbedtls_config.h
+# skip next test if the flag is not enabled in config.h
 requires_config_enabled() {
     case $CONFIGS_ENABLED in
         *" $1 "*) :;;
@@ -202,7 +202,7 @@ requires_config_enabled() {
     esac
 }
 
-# skip next test if the flag is enabled in mbedtls_config.h
+# skip next test if the flag is enabled in config.h
 requires_config_disabled() {
     case $CONFIGS_ENABLED in
         *" $1 "*) SKIP_NEXT="YES";;
@@ -242,17 +242,6 @@ requires_config_value_at_most() {
     fi
 }
 
-requires_config_value_equals() {
-    VAL=$( get_config_value_or_default "$1" )
-    if [ -z "$VAL" ]; then
-        # Should never happen
-        echo "Mbed TLS configuration $1 is not defined"
-        exit 1
-    elif [ "$VAL" -ne "$2" ]; then
-       SKIP_NEXT="YES"
-    fi
-}
-
 # Space-separated list of ciphersuites supported by this build of
 # Mbed TLS.
 P_CIPHERSUITES=" $($P_CLI --help 2>/dev/null |
@@ -268,7 +257,8 @@ requires_ciphersuite_enabled() {
 # maybe_requires_ciphersuite_enabled CMD [RUN_TEST_OPTION...]
 # If CMD (call to a TLS client or server program) requires a specific
 # ciphersuite, arrange to only run the test case if this ciphersuite is
-# enabled.
+# enabled. As an exception, do run the test case if it expects a ciphersuite
+# mismatch.
 maybe_requires_ciphersuite_enabled() {
     case "$1" in
         *\ force_ciphersuite=*) :;;
@@ -278,7 +268,15 @@ maybe_requires_ciphersuite_enabled() {
     ciphersuite="${ciphersuite%%[!-0-9A-Z_a-z]*}"
     shift
 
-    requires_ciphersuite_enabled "$ciphersuite"
+    case "$*" in
+        *"-s SSL - The server has no ciphersuites in common"*)
+            # This test case expects a ciphersuite mismatch, so it doesn't
+            # require the ciphersuite to be enabled.
+            ;;
+        *)
+            requires_ciphersuite_enabled "$ciphersuite"
+            ;;
+    esac
 
     unset ciphersuite
 }
@@ -296,12 +294,6 @@ requires_openssl_with_fallback_scsv() {
     if [ "$OPENSSL_HAS_FBSCSV" = "NO" ]; then
         SKIP_NEXT="YES"
     fi
-}
-
-# skip next test if either IN_CONTENT_LEN or MAX_CONTENT_LEN are below a value
-requires_max_content_len() {
-    requires_config_value_at_least "MBEDTLS_SSL_IN_CONTENT_LEN" $1
-    requires_config_value_at_least "MBEDTLS_SSL_OUT_CONTENT_LEN" $1
 }
 
 # skip next test if GnuTLS isn't available
@@ -383,10 +375,9 @@ requires_not_i686() {
 
 # Calculate the input & output maximum content lengths set in the config
 MAX_CONTENT_LEN=16384
-MAX_IN_LEN=$( get_config_value_or_default "MBEDTLS_SSL_IN_CONTENT_LEN" )
-MAX_OUT_LEN=$( get_config_value_or_default "MBEDTLS_SSL_OUT_CONTENT_LEN" )
+MAX_IN_LEN=$( ../scripts/config.py get MBEDTLS_SSL_IN_CONTENT_LEN || echo "$MAX_CONTENT_LEN")
+MAX_OUT_LEN=$( ../scripts/config.py get MBEDTLS_SSL_OUT_CONTENT_LEN || echo "$MAX_CONTENT_LEN")
 
-# Calculate the maximum content length that fits both
 if [ "$MAX_IN_LEN" -lt "$MAX_CONTENT_LEN" ]; then
     MAX_CONTENT_LEN="$MAX_IN_LEN"
 fi
@@ -2766,6 +2757,20 @@ run_test    "Session resume using cache, DTLS: openssl server" \
 
 # Tests for Max Fragment Length extension
 
+if [ "$MAX_IN_LEN" -lt "4096" ]; then
+    printf '%s defines MBEDTLS_SSL_IN_CONTENT_LEN to be less than 4096. Fragment length tests will fail.\n' "${CONFIG_H}"
+    exit 1
+fi
+
+if [ "$MAX_OUT_LEN" -lt "4096" ]; then
+    printf '%s defines MBEDTLS_SSL_OUT_CONTENT_LEN to be less than 4096. Fragment length tests will fail.\n' "${CONFIG_H}"
+    exit 1
+fi
+
+if [ $MAX_CONTENT_LEN -ne 16384 ]; then
+    echo "Using non-default maximum content length $MAX_CONTENT_LEN"
+fi
+
 requires_config_enabled MBEDTLS_SSL_MAX_FRAGMENT_LENGTH
 run_test    "Max fragment length: enabled, default" \
             "$P_SRV debug_level=3" \
@@ -2830,7 +2835,7 @@ run_test    "Max fragment length: disabled, larger message" \
             -s "1 bytes read"
 
 requires_config_disabled MBEDTLS_SSL_MAX_FRAGMENT_LENGTH
-run_test    "Max fragment length, DTLS: disabled, larger message" \
+run_test    "Max fragment length DTLS: disabled, larger message" \
             "$P_SRV debug_level=3 dtls=1" \
             "$P_CLI debug_level=3 dtls=1 request_size=$(( $MAX_CONTENT_LEN + 1))" \
             1 \
@@ -2840,7 +2845,6 @@ run_test    "Max fragment length, DTLS: disabled, larger message" \
             -S "Maximum outgoing record payload length is 16384" \
             -c "fragment larger than.*maximum "
 
-requires_max_content_len 4096
 requires_config_enabled MBEDTLS_SSL_MAX_FRAGMENT_LENGTH
 run_test    "Max fragment length: used by client" \
             "$P_SRV debug_level=3" \
@@ -2855,7 +2859,6 @@ run_test    "Max fragment length: used by client" \
             -s "server hello, max_fragment_length extension" \
             -c "found max_fragment_length extension"
 
-requires_max_content_len 1024
 requires_config_enabled MBEDTLS_SSL_MAX_FRAGMENT_LENGTH
 run_test    "Max fragment length: client 512, server 1024" \
             "$P_SRV debug_level=3 max_frag_len=1024" \
@@ -2870,7 +2873,6 @@ run_test    "Max fragment length: client 512, server 1024" \
             -s "server hello, max_fragment_length extension" \
             -c "found max_fragment_length extension"
 
-requires_max_content_len 2048
 requires_config_enabled MBEDTLS_SSL_MAX_FRAGMENT_LENGTH
 run_test    "Max fragment length: client 512, server 2048" \
             "$P_SRV debug_level=3 max_frag_len=2048" \
@@ -2885,7 +2887,6 @@ run_test    "Max fragment length: client 512, server 2048" \
             -s "server hello, max_fragment_length extension" \
             -c "found max_fragment_length extension"
 
-requires_max_content_len 4096
 requires_config_enabled MBEDTLS_SSL_MAX_FRAGMENT_LENGTH
 run_test    "Max fragment length: client 512, server 4096" \
             "$P_SRV debug_level=3 max_frag_len=4096" \
@@ -2900,7 +2901,6 @@ run_test    "Max fragment length: client 512, server 4096" \
             -s "server hello, max_fragment_length extension" \
             -c "found max_fragment_length extension"
 
-requires_max_content_len 1024
 requires_config_enabled MBEDTLS_SSL_MAX_FRAGMENT_LENGTH
 run_test    "Max fragment length: client 1024, server 512" \
             "$P_SRV debug_level=3 max_frag_len=512" \
@@ -2915,7 +2915,6 @@ run_test    "Max fragment length: client 1024, server 512" \
             -s "server hello, max_fragment_length extension" \
             -c "found max_fragment_length extension"
 
-requires_max_content_len 2048
 requires_config_enabled MBEDTLS_SSL_MAX_FRAGMENT_LENGTH
 run_test    "Max fragment length: client 1024, server 2048" \
             "$P_SRV debug_level=3 max_frag_len=2048" \
@@ -2930,7 +2929,6 @@ run_test    "Max fragment length: client 1024, server 2048" \
             -s "server hello, max_fragment_length extension" \
             -c "found max_fragment_length extension"
 
-requires_max_content_len 4096
 requires_config_enabled MBEDTLS_SSL_MAX_FRAGMENT_LENGTH
 run_test    "Max fragment length: client 1024, server 4096" \
             "$P_SRV debug_level=3 max_frag_len=4096" \
@@ -2945,7 +2943,6 @@ run_test    "Max fragment length: client 1024, server 4096" \
             -s "server hello, max_fragment_length extension" \
             -c "found max_fragment_length extension"
 
-requires_max_content_len 2048
 requires_config_enabled MBEDTLS_SSL_MAX_FRAGMENT_LENGTH
 run_test    "Max fragment length: client 2048, server 512" \
             "$P_SRV debug_level=3 max_frag_len=512" \
@@ -2960,7 +2957,6 @@ run_test    "Max fragment length: client 2048, server 512" \
             -s "server hello, max_fragment_length extension" \
             -c "found max_fragment_length extension"
 
-requires_max_content_len 2048
 requires_config_enabled MBEDTLS_SSL_MAX_FRAGMENT_LENGTH
 run_test    "Max fragment length: client 2048, server 1024" \
             "$P_SRV debug_level=3 max_frag_len=1024" \
@@ -2975,7 +2971,6 @@ run_test    "Max fragment length: client 2048, server 1024" \
             -s "server hello, max_fragment_length extension" \
             -c "found max_fragment_length extension"
 
-requires_max_content_len 4096
 requires_config_enabled MBEDTLS_SSL_MAX_FRAGMENT_LENGTH
 run_test    "Max fragment length: client 2048, server 4096" \
             "$P_SRV debug_level=3 max_frag_len=4096" \
@@ -2990,7 +2985,6 @@ run_test    "Max fragment length: client 2048, server 4096" \
             -s "server hello, max_fragment_length extension" \
             -c "found max_fragment_length extension"
 
-requires_max_content_len 4096
 requires_config_enabled MBEDTLS_SSL_MAX_FRAGMENT_LENGTH
 run_test    "Max fragment length: client 4096, server 512" \
             "$P_SRV debug_level=3 max_frag_len=512" \
@@ -3005,7 +2999,6 @@ run_test    "Max fragment length: client 4096, server 512" \
             -s "server hello, max_fragment_length extension" \
             -c "found max_fragment_length extension"
 
-requires_max_content_len 4096
 requires_config_enabled MBEDTLS_SSL_MAX_FRAGMENT_LENGTH
 run_test    "Max fragment length: client 4096, server 1024" \
             "$P_SRV debug_level=3 max_frag_len=1024" \
@@ -3020,7 +3013,6 @@ run_test    "Max fragment length: client 4096, server 1024" \
             -s "server hello, max_fragment_length extension" \
             -c "found max_fragment_length extension"
 
-requires_max_content_len 4096
 requires_config_enabled MBEDTLS_SSL_MAX_FRAGMENT_LENGTH
 run_test    "Max fragment length: client 4096, server 2048" \
             "$P_SRV debug_level=3 max_frag_len=2048" \
@@ -3035,7 +3027,6 @@ run_test    "Max fragment length: client 4096, server 2048" \
             -s "server hello, max_fragment_length extension" \
             -c "found max_fragment_length extension"
 
-requires_max_content_len 4096
 requires_config_enabled MBEDTLS_SSL_MAX_FRAGMENT_LENGTH
 run_test    "Max fragment length: used by server" \
             "$P_SRV debug_level=3 max_frag_len=4096" \
@@ -3050,7 +3041,6 @@ run_test    "Max fragment length: used by server" \
             -S "server hello, max_fragment_length extension" \
             -C "found max_fragment_length extension"
 
-requires_max_content_len 4096
 requires_config_enabled MBEDTLS_SSL_MAX_FRAGMENT_LENGTH
 requires_gnutls
 run_test    "Max fragment length: gnutls server" \
@@ -3062,7 +3052,6 @@ run_test    "Max fragment length: gnutls server" \
             -c "client hello, adding max_fragment_length extension" \
             -c "found max_fragment_length extension"
 
-requires_max_content_len 2048
 requires_config_enabled MBEDTLS_SSL_MAX_FRAGMENT_LENGTH
 run_test    "Max fragment length: client, message just fits" \
             "$P_SRV debug_level=3" \
@@ -3079,7 +3068,6 @@ run_test    "Max fragment length: client, message just fits" \
             -c "2048 bytes written in 1 fragments" \
             -s "2048 bytes read"
 
-requires_max_content_len 2048
 requires_config_enabled MBEDTLS_SSL_MAX_FRAGMENT_LENGTH
 run_test    "Max fragment length: client, larger message" \
             "$P_SRV debug_level=3" \
@@ -3097,7 +3085,6 @@ run_test    "Max fragment length: client, larger message" \
             -s "2048 bytes read" \
             -s "297 bytes read"
 
-requires_max_content_len 2048
 requires_config_enabled MBEDTLS_SSL_MAX_FRAGMENT_LENGTH
 run_test    "Max fragment length: DTLS client, larger message" \
             "$P_SRV debug_level=3 dtls=1" \
@@ -3159,7 +3146,7 @@ run_test    "Renegotiation: server-initiated" \
 
 # Checks that no Signature Algorithm with SHA-1 gets negotiated. Negotiating SHA-1 would mean that
 # the server did not parse the Signature Algorithm extension. This test is valid only if an MD
-# algorithm stronger than SHA-1 is enabled in mbedtls_config.h
+# algorithm stronger than SHA-1 is enabled in config.h
 requires_config_enabled MBEDTLS_SSL_RENEGOTIATION
 run_test    "Renegotiation: Signature Algorithms parsing, client-initiated" \
             "$P_SRV debug_level=3 exchanges=2 renegotiation=1 auth_mode=optional" \
@@ -3177,7 +3164,7 @@ run_test    "Renegotiation: Signature Algorithms parsing, client-initiated" \
 
 # Checks that no Signature Algorithm with SHA-1 gets negotiated. Negotiating SHA-1 would mean that
 # the server did not parse the Signature Algorithm extension. This test is valid only if an MD
-# algorithm stronger than SHA-1 is enabled in mbedtls_config.h
+# algorithm stronger than SHA-1 is enabled in config.h
 requires_config_enabled MBEDTLS_SSL_RENEGOTIATION
 run_test    "Renegotiation: Signature Algorithms parsing, server-initiated" \
             "$P_SRV debug_level=3 exchanges=2 renegotiation=1 auth_mode=optional renegotiate=1" \
@@ -3209,7 +3196,6 @@ run_test    "Renegotiation: double" \
 
 requires_config_enabled MBEDTLS_SSL_RENEGOTIATION
 requires_config_enabled MBEDTLS_SSL_MAX_FRAGMENT_LENGTH
-requires_max_content_len 2048
 run_test    "Renegotiation with max fragment length: client 2048, server 512" \
             "$P_SRV debug_level=3 exchanges=2 renegotiation=1 auth_mode=optional renegotiate=1 max_frag_len=512" \
             "$P_CLI debug_level=3 exchanges=2 renegotiation=1 renegotiate=1 max_frag_len=2048 force_ciphersuite=TLS-ECDHE-ECDSA-WITH-AES-128-CCM-8" \
@@ -3894,17 +3880,24 @@ run_test    "Authentication: client no cert, openssl server required" \
             -c "skip write certificate verify" \
             -c "! mbedtls_ssl_handshake returned"
 
-# This script assumes that MBEDTLS_X509_MAX_INTERMEDIATE_CA has its default
-# value, defined here as MAX_IM_CA. Some test cases will be skipped if the
-# library is configured with a different value.
+# The "max_int chain" tests assume that MAX_INTERMEDIATE_CA is set to its
+# default value (8)
 
 MAX_IM_CA='8'
+MAX_IM_CA_CONFIG=$( ../scripts/config.py get MBEDTLS_X509_MAX_INTERMEDIATE_CA)
 
-# The tests for the max_int tests can pass with any number higher than MAX_IM_CA
-# because only a chain of MAX_IM_CA length is tested. Equally, the max_int+1
-# tests can pass with any number less than MAX_IM_CA. However, stricter preconditions
-# are in place so that the semantics are consistent with the test description.
-requires_config_value_equals "MBEDTLS_X509_MAX_INTERMEDIATE_CA" $MAX_IM_CA
+if [ -n "$MAX_IM_CA_CONFIG" ] && [ "$MAX_IM_CA_CONFIG" -ne "$MAX_IM_CA" ]; then
+    cat <<EOF
+${CONFIG_H} contains a value for the configuration of
+MBEDTLS_X509_MAX_INTERMEDIATE_CA that is different from the script's
+test value of ${MAX_IM_CA}.
+
+The tests assume this value and if it changes, the tests in this
+script should also be adjusted.
+EOF
+    exit 1
+fi
+
 requires_full_size_output_buffer
 run_test    "Authentication: server max_int chain, client default" \
             "$P_SRV crt_file=data_files/dir-maxpath/c09.pem \
@@ -3913,7 +3906,6 @@ run_test    "Authentication: server max_int chain, client default" \
             0 \
             -C "X509 - A fatal error occurred"
 
-requires_config_value_equals "MBEDTLS_X509_MAX_INTERMEDIATE_CA" $MAX_IM_CA
 requires_full_size_output_buffer
 run_test    "Authentication: server max_int+1 chain, client default" \
             "$P_SRV crt_file=data_files/dir-maxpath/c10.pem \
@@ -3922,7 +3914,6 @@ run_test    "Authentication: server max_int+1 chain, client default" \
             1 \
             -c "X509 - A fatal error occurred"
 
-requires_config_value_equals "MBEDTLS_X509_MAX_INTERMEDIATE_CA" $MAX_IM_CA
 requires_full_size_output_buffer
 run_test    "Authentication: server max_int+1 chain, client optional" \
             "$P_SRV crt_file=data_files/dir-maxpath/c10.pem \
@@ -3932,7 +3923,6 @@ run_test    "Authentication: server max_int+1 chain, client optional" \
             1 \
             -c "X509 - A fatal error occurred"
 
-requires_config_value_equals "MBEDTLS_X509_MAX_INTERMEDIATE_CA" $MAX_IM_CA
 requires_full_size_output_buffer
 run_test    "Authentication: server max_int+1 chain, client none" \
             "$P_SRV crt_file=data_files/dir-maxpath/c10.pem \
@@ -3942,7 +3932,6 @@ run_test    "Authentication: server max_int+1 chain, client none" \
             0 \
             -C "X509 - A fatal error occurred"
 
-requires_config_value_equals "MBEDTLS_X509_MAX_INTERMEDIATE_CA" $MAX_IM_CA
 requires_full_size_output_buffer
 run_test    "Authentication: client max_int+1 chain, server default" \
             "$P_SRV ca_file=data_files/dir-maxpath/00.crt" \
@@ -3951,7 +3940,6 @@ run_test    "Authentication: client max_int+1 chain, server default" \
             0 \
             -S "X509 - A fatal error occurred"
 
-requires_config_value_equals "MBEDTLS_X509_MAX_INTERMEDIATE_CA" $MAX_IM_CA
 requires_full_size_output_buffer
 run_test    "Authentication: client max_int+1 chain, server optional" \
             "$P_SRV ca_file=data_files/dir-maxpath/00.crt auth_mode=optional" \
@@ -3960,7 +3948,6 @@ run_test    "Authentication: client max_int+1 chain, server optional" \
             1 \
             -s "X509 - A fatal error occurred"
 
-requires_config_value_equals "MBEDTLS_X509_MAX_INTERMEDIATE_CA" $MAX_IM_CA
 requires_full_size_output_buffer
 run_test    "Authentication: client max_int+1 chain, server required" \
             "$P_SRV ca_file=data_files/dir-maxpath/00.crt auth_mode=required" \
@@ -3969,7 +3956,6 @@ run_test    "Authentication: client max_int+1 chain, server required" \
             1 \
             -s "X509 - A fatal error occurred"
 
-requires_config_value_equals "MBEDTLS_X509_MAX_INTERMEDIATE_CA" $MAX_IM_CA
 requires_full_size_output_buffer
 run_test    "Authentication: client max_int chain, server required" \
             "$P_SRV ca_file=data_files/dir-maxpath/00.crt auth_mode=required" \
@@ -4147,7 +4133,6 @@ run_test    "Authentication, CA callback: client badcert, server optional" \
             -C "! mbedtls_ssl_handshake returned" \
             -S "X509 - Certificate verification failed"
 
-requires_config_value_equals "MBEDTLS_X509_MAX_INTERMEDIATE_CA" $MAX_IM_CA
 requires_full_size_output_buffer
 requires_config_enabled MBEDTLS_X509_TRUSTED_CERTIFICATE_CALLBACK
 run_test    "Authentication, CA callback: server max_int chain, client default" \
@@ -4158,7 +4143,6 @@ run_test    "Authentication, CA callback: server max_int chain, client default" 
             -c "use CA callback for X.509 CRT verification" \
             -C "X509 - A fatal error occurred"
 
-requires_config_value_equals "MBEDTLS_X509_MAX_INTERMEDIATE_CA" $MAX_IM_CA
 requires_full_size_output_buffer
 requires_config_enabled MBEDTLS_X509_TRUSTED_CERTIFICATE_CALLBACK
 run_test    "Authentication, CA callback: server max_int+1 chain, client default" \
@@ -4169,7 +4153,6 @@ run_test    "Authentication, CA callback: server max_int+1 chain, client default
             -c "use CA callback for X.509 CRT verification" \
             -c "X509 - A fatal error occurred"
 
-requires_config_value_equals "MBEDTLS_X509_MAX_INTERMEDIATE_CA" $MAX_IM_CA
 requires_full_size_output_buffer
 requires_config_enabled MBEDTLS_X509_TRUSTED_CERTIFICATE_CALLBACK
 run_test    "Authentication, CA callback: server max_int+1 chain, client optional" \
@@ -4181,7 +4164,6 @@ run_test    "Authentication, CA callback: server max_int+1 chain, client optiona
             -c "use CA callback for X.509 CRT verification" \
             -c "X509 - A fatal error occurred"
 
-requires_config_value_equals "MBEDTLS_X509_MAX_INTERMEDIATE_CA" $MAX_IM_CA
 requires_full_size_output_buffer
 requires_config_enabled MBEDTLS_X509_TRUSTED_CERTIFICATE_CALLBACK
 run_test    "Authentication, CA callback: client max_int+1 chain, server optional" \
@@ -4192,7 +4174,6 @@ run_test    "Authentication, CA callback: client max_int+1 chain, server optiona
             -s "use CA callback for X.509 CRT verification" \
             -s "X509 - A fatal error occurred"
 
-requires_config_value_equals "MBEDTLS_X509_MAX_INTERMEDIATE_CA" $MAX_IM_CA
 requires_full_size_output_buffer
 requires_config_enabled MBEDTLS_X509_TRUSTED_CERTIFICATE_CALLBACK
 run_test    "Authentication, CA callback: client max_int+1 chain, server required" \
@@ -4203,7 +4184,6 @@ run_test    "Authentication, CA callback: client max_int+1 chain, server require
             -s "use CA callback for X.509 CRT verification" \
             -s "X509 - A fatal error occurred"
 
-requires_config_value_equals "MBEDTLS_X509_MAX_INTERMEDIATE_CA" $MAX_IM_CA
 requires_full_size_output_buffer
 requires_config_enabled MBEDTLS_X509_TRUSTED_CERTIFICATE_CALLBACK
 run_test    "Authentication, CA callback: client max_int chain, server required" \
@@ -4687,6 +4667,67 @@ run_test    "Version check: all -> 1.2" \
             -s "Protocol is TLSv1.2" \
             -c "Protocol is TLSv1.2"
 
+run_test    "Not supported version check: cli TLS 1.0" \
+            "$P_SRV" \
+            "$G_CLI localhost --priority=NORMAL:-VERS-ALL:+VERS-TLS1.0" \
+            1 \
+            -s "Handshake protocol not within min/max boundaries" \
+            -c "Error in protocol version" \
+            -S "Protocol is TLSv1.0" \
+            -C "Handshake was completed"
+
+run_test    "Not supported version check: cli TLS 1.1" \
+            "$P_SRV" \
+            "$G_CLI localhost --priority=NORMAL:-VERS-ALL:+VERS-TLS1.1" \
+            1 \
+            -s "Handshake protocol not within min/max boundaries" \
+            -c "Error in protocol version" \
+            -S "Protocol is TLSv1.1" \
+            -C "Handshake was completed"
+
+run_test    "Not supported version check: srv max TLS 1.0" \
+            "$G_SRV --priority=NORMAL:-VERS-TLS-ALL:+VERS-TLS1.0" \
+            "$P_CLI" \
+            1 \
+            -s "Error in protocol version" \
+            -c "Handshake protocol not within min/max boundaries" \
+            -S "Version: TLS1.0" \
+            -C "Protocol is TLSv1.0"
+
+run_test    "Not supported version check: srv max TLS 1.1" \
+            "$G_SRV --priority=NORMAL:-VERS-TLS-ALL:+VERS-TLS1.1" \
+            "$P_CLI" \
+            1 \
+            -s "Error in protocol version" \
+            -c "Handshake protocol not within min/max boundaries" \
+            -S "Version: TLS1.1" \
+            -C "Protocol is TLSv1.1"
+
+## ClientHello generated with
+## "openssl s_client -CAfile tests/data_files/test-ca.crt -tls1_1 -connect localhost:4433 -cipher ..."
+## then manually twiddling the ciphersuite list.
+## The ClientHello content is spelled out below as a hex string as
+## "prefix ciphersuite1 ciphersuite2 ciphersuite3 ciphersuite4 suffix".
+## The expected response is an inappropriate_fallback alert.
+
+requires_openssl_with_fallback_scsv
+run_test    "Fallback SCSV: beginning of list" \
+            "$P_SRV debug_level=2" \
+            "$TCP_CLIENT localhost $SRV_PORT '160301003e0100003a03022aafb94308dc22ca1086c65acc00e414384d76b61ecab37df1633b1ae1034dbe000008 5600 0031 0032 0033 0100000900230000000f000101' '15030200020246'" \
+            0 \
+            -s "client only supports ssl smaller than minimum" \
+            -S "received FALLBACK_SCSV" \
+            -S "inapropriate fallback"
+
+requires_openssl_with_fallback_scsv
+run_test    "Fallback SCSV: end of list" \
+            "$P_SRV debug_level=2" \
+            "$TCP_CLIENT localhost $SRV_PORT '160301003e0100003a03022aafb94308dc22ca1086c65acc00e414384d76b61ecab37df1633b1ae1034dbe000008 0031 0032 0033 5600 0100000900230000000f000101' '15030200020246'" \
+            0 \
+            -s "client only supports ssl smaller than minimum" \
+            -S "received FALLBACK_SCSV" \
+            -S "inapropriate fallback"
+
 # Tests for ALPN extension
 
 run_test    "ALPN: none" \
@@ -5152,7 +5193,7 @@ run_test    "PSK callback: psk, no callback" \
             "$P_CLI force_ciphersuite=TLS-PSK-WITH-AES-128-CBC-SHA \
             psk_identity=foo psk=abc123" \
             0 \
-            -S "SSL - The handshake negotiation failed" \
+            -S "SSL - None of the common ciphersuites is usable" \
             -S "SSL - Unknown identity received" \
             -S "SSL - Verification of the message MAC failed"
 
@@ -5166,7 +5207,7 @@ run_test    "PSK callback: opaque psk on client, no callback" \
             -S "skip PMS generation for opaque PSK"\
             -C "session hash for extended master secret"\
             -S "session hash for extended master secret"\
-            -S "SSL - The handshake negotiation failed" \
+            -S "SSL - None of the common ciphersuites is usable" \
             -S "SSL - Unknown identity received" \
             -S "SSL - Verification of the message MAC failed"
 
@@ -5180,7 +5221,7 @@ run_test    "PSK callback: opaque psk on client, no callback, SHA-384" \
             -S "skip PMS generation for opaque PSK"\
             -C "session hash for extended master secret"\
             -S "session hash for extended master secret"\
-            -S "SSL - The handshake negotiation failed" \
+            -S "SSL - None of the common ciphersuites is usable" \
             -S "SSL - Unknown identity received" \
             -S "SSL - Verification of the message MAC failed"
 
@@ -5194,7 +5235,7 @@ run_test    "PSK callback: opaque psk on client, no callback, EMS" \
             -S "skip PMS generation for opaque PSK"\
             -c "session hash for extended master secret"\
             -s "session hash for extended master secret"\
-            -S "SSL - The handshake negotiation failed" \
+            -S "SSL - None of the common ciphersuites is usable" \
             -S "SSL - Unknown identity received" \
             -S "SSL - Verification of the message MAC failed"
 
@@ -5208,7 +5249,7 @@ run_test    "PSK callback: opaque psk on client, no callback, SHA-384, EMS" \
             -S "skip PMS generation for opaque PSK"\
             -c "session hash for extended master secret"\
             -s "session hash for extended master secret"\
-            -S "SSL - The handshake negotiation failed" \
+            -S "SSL - None of the common ciphersuites is usable" \
             -S "SSL - Unknown identity received" \
             -S "SSL - Verification of the message MAC failed"
 
@@ -5222,7 +5263,7 @@ run_test    "PSK callback: raw psk on client, static opaque on server, no callba
             -s "skip PMS generation for opaque PSK"\
             -C "session hash for extended master secret"\
             -S "session hash for extended master secret"\
-            -S "SSL - The handshake negotiation failed" \
+            -S "SSL - None of the common ciphersuites is usable" \
             -S "SSL - Unknown identity received" \
             -S "SSL - Verification of the message MAC failed"
 
@@ -5236,7 +5277,7 @@ run_test    "PSK callback: raw psk on client, static opaque on server, no callba
             -s "skip PMS generation for opaque PSK"\
             -C "session hash for extended master secret"\
             -S "session hash for extended master secret"\
-            -S "SSL - The handshake negotiation failed" \
+            -S "SSL - None of the common ciphersuites is usable" \
             -S "SSL - Unknown identity received" \
             -S "SSL - Verification of the message MAC failed"
 
@@ -5251,7 +5292,7 @@ run_test    "PSK callback: raw psk on client, static opaque on server, no callba
             -s "session hash for extended master secret"\
             -C "skip PMS generation for opaque PSK"\
             -s "skip PMS generation for opaque PSK"\
-            -S "SSL - The handshake negotiation failed" \
+            -S "SSL - None of the common ciphersuites is usable" \
             -S "SSL - Unknown identity received" \
             -S "SSL - Verification of the message MAC failed"
 
@@ -5266,7 +5307,7 @@ run_test    "PSK callback: raw psk on client, static opaque on server, no callba
             -s "session hash for extended master secret"\
             -C "skip PMS generation for opaque PSK"\
             -s "skip PMS generation for opaque PSK"\
-            -S "SSL - The handshake negotiation failed" \
+            -S "SSL - None of the common ciphersuites is usable" \
             -S "SSL - Unknown identity received" \
             -S "SSL - Verification of the message MAC failed"
 
@@ -5280,7 +5321,7 @@ run_test    "PSK callback: raw psk on client, no static PSK on server, opaque PS
             -s "skip PMS generation for opaque PSK"\
             -C "session hash for extended master secret"\
             -S "session hash for extended master secret"\
-            -S "SSL - The handshake negotiation failed" \
+            -S "SSL - None of the common ciphersuites is usable" \
             -S "SSL - Unknown identity received" \
             -S "SSL - Verification of the message MAC failed"
 
@@ -5294,7 +5335,7 @@ run_test    "PSK callback: raw psk on client, no static PSK on server, opaque PS
             -s "skip PMS generation for opaque PSK"\
             -C "session hash for extended master secret"\
             -S "session hash for extended master secret"\
-            -S "SSL - The handshake negotiation failed" \
+            -S "SSL - None of the common ciphersuites is usable" \
             -S "SSL - Unknown identity received" \
             -S "SSL - Verification of the message MAC failed"
 
@@ -5309,7 +5350,7 @@ run_test    "PSK callback: raw psk on client, no static PSK on server, opaque PS
             -s "session hash for extended master secret"\
             -C "skip PMS generation for opaque PSK"\
             -s "skip PMS generation for opaque PSK"\
-            -S "SSL - The handshake negotiation failed" \
+            -S "SSL - None of the common ciphersuites is usable" \
             -S "SSL - Unknown identity received" \
             -S "SSL - Verification of the message MAC failed"
 
@@ -5324,7 +5365,7 @@ run_test    "PSK callback: raw psk on client, no static PSK on server, opaque PS
             -s "session hash for extended master secret"\
             -C "skip PMS generation for opaque PSK"\
             -s "skip PMS generation for opaque PSK"\
-            -S "SSL - The handshake negotiation failed" \
+            -S "SSL - None of the common ciphersuites is usable" \
             -S "SSL - Unknown identity received" \
             -S "SSL - Verification of the message MAC failed"
 
@@ -5338,7 +5379,7 @@ run_test    "PSK callback: raw psk on client, mismatching static raw PSK on serv
             -s "skip PMS generation for opaque PSK"\
             -C "session hash for extended master secret"\
             -S "session hash for extended master secret"\
-            -S "SSL - The handshake negotiation failed" \
+            -S "SSL - None of the common ciphersuites is usable" \
             -S "SSL - Unknown identity received" \
             -S "SSL - Verification of the message MAC failed"
 
@@ -5352,7 +5393,7 @@ run_test    "PSK callback: raw psk on client, mismatching static opaque PSK on s
             -s "skip PMS generation for opaque PSK"\
             -C "session hash for extended master secret"\
             -S "session hash for extended master secret"\
-            -S "SSL - The handshake negotiation failed" \
+            -S "SSL - None of the common ciphersuites is usable" \
             -S "SSL - Unknown identity received" \
             -S "SSL - Verification of the message MAC failed"
 
@@ -5365,7 +5406,7 @@ run_test    "PSK callback: raw psk on client, mismatching static opaque PSK on s
             -C "skip PMS generation for opaque PSK"\
             -C "session hash for extended master secret"\
             -S "session hash for extended master secret"\
-            -S "SSL - The handshake negotiation failed" \
+            -S "SSL - None of the common ciphersuites is usable" \
             -S "SSL - Unknown identity received" \
             -S "SSL - Verification of the message MAC failed"
 
@@ -5378,7 +5419,7 @@ run_test    "PSK callback: raw psk on client, id-matching but wrong raw PSK on s
             -C "skip PMS generation for opaque PSK"\
             -C "session hash for extended master secret"\
             -S "session hash for extended master secret"\
-            -S "SSL - The handshake negotiation failed" \
+            -S "SSL - None of the common ciphersuites is usable" \
             -S "SSL - Unknown identity received" \
             -S "SSL - Verification of the message MAC failed"
 
@@ -5395,7 +5436,7 @@ run_test    "PSK callback: no psk, no callback" \
             "$P_CLI force_ciphersuite=TLS-PSK-WITH-AES-128-CBC-SHA \
             psk_identity=foo psk=abc123" \
             1 \
-            -s "SSL - The handshake negotiation failed" \
+            -s "SSL - None of the common ciphersuites is usable" \
             -S "SSL - Unknown identity received" \
             -S "SSL - Verification of the message MAC failed"
 
@@ -5404,7 +5445,7 @@ run_test    "PSK callback: callback overrides other settings" \
             "$P_CLI force_ciphersuite=TLS-PSK-WITH-AES-128-CBC-SHA \
             psk_identity=foo psk=abc123" \
             1 \
-            -S "SSL - The handshake negotiation failed" \
+            -S "SSL - None of the common ciphersuites is usable" \
             -s "SSL - Unknown identity received" \
             -S "SSL - Verification of the message MAC failed"
 
@@ -5413,7 +5454,7 @@ run_test    "PSK callback: first id matches" \
             "$P_CLI force_ciphersuite=TLS-PSK-WITH-AES-128-CBC-SHA \
             psk_identity=abc psk=dead" \
             0 \
-            -S "SSL - The handshake negotiation failed" \
+            -S "SSL - None of the common ciphersuites is usable" \
             -S "SSL - Unknown identity received" \
             -S "SSL - Verification of the message MAC failed"
 
@@ -5422,7 +5463,7 @@ run_test    "PSK callback: second id matches" \
             "$P_CLI force_ciphersuite=TLS-PSK-WITH-AES-128-CBC-SHA \
             psk_identity=def psk=beef" \
             0 \
-            -S "SSL - The handshake negotiation failed" \
+            -S "SSL - None of the common ciphersuites is usable" \
             -S "SSL - Unknown identity received" \
             -S "SSL - Verification of the message MAC failed"
 
@@ -5431,7 +5472,7 @@ run_test    "PSK callback: no match" \
             "$P_CLI force_ciphersuite=TLS-PSK-WITH-AES-128-CBC-SHA \
             psk_identity=ghi psk=beef" \
             1 \
-            -S "SSL - The handshake negotiation failed" \
+            -S "SSL - None of the common ciphersuites is usable" \
             -s "SSL - Unknown identity received" \
             -S "SSL - Verification of the message MAC failed"
 
@@ -5440,7 +5481,7 @@ run_test    "PSK callback: wrong key" \
             "$P_CLI force_ciphersuite=TLS-PSK-WITH-AES-128-CBC-SHA \
             psk_identity=abc psk=beef" \
             1 \
-            -S "SSL - The handshake negotiation failed" \
+            -S "SSL - None of the common ciphersuites is usable" \
             -S "SSL - Unknown identity received" \
             -s "SSL - Verification of the message MAC failed"
 
@@ -5458,7 +5499,7 @@ run_test    "ECJPAKE: client not configured" \
             -S "ciphersuite mismatch: ecjpake not configured" \
             -S "server hello, ecjpake kkpp extension" \
             -C "found ecjpake_kkpp extension" \
-            -S "SSL - The handshake negotiation failed"
+            -S "None of the common ciphersuites is usable"
 
 requires_config_enabled MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED
 run_test    "ECJPAKE: server not configured" \
@@ -5473,7 +5514,7 @@ run_test    "ECJPAKE: server not configured" \
             -s "ciphersuite mismatch: ecjpake not configured" \
             -S "server hello, ecjpake kkpp extension" \
             -C "found ecjpake_kkpp extension" \
-            -s "SSL - The handshake negotiation failed"
+            -s "None of the common ciphersuites is usable"
 
 requires_config_enabled MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED
 run_test    "ECJPAKE: working, TLS" \
@@ -5489,11 +5530,11 @@ run_test    "ECJPAKE: working, TLS" \
             -S "ciphersuite mismatch: ecjpake not configured" \
             -s "server hello, ecjpake kkpp extension" \
             -c "found ecjpake_kkpp extension" \
-            -S "SSL - The handshake negotiation failed" \
+            -S "None of the common ciphersuites is usable" \
             -S "SSL - Verification of the message MAC failed"
 
 server_needs_more_time 1
-requires_config_enabled MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED
+requires_config_enabled MBEDTLS_KEY_EXCHANGE_ECJPAKE
 run_test    "ECJPAKE: password mismatch, TLS" \
             "$P_SRV debug_level=3 ecjpake_pw=bla" \
             "$P_CLI debug_level=3 ecjpake_pw=bad \
@@ -5502,7 +5543,7 @@ run_test    "ECJPAKE: password mismatch, TLS" \
             -C "re-using cached ecjpake parameters" \
             -s "SSL - Verification of the message MAC failed"
 
-requires_config_enabled MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED
+requires_config_enabled MBEDTLS_KEY_EXCHANGE_ECJPAKE
 run_test    "ECJPAKE: working, DTLS" \
             "$P_SRV debug_level=3 dtls=1 ecjpake_pw=bla" \
             "$P_CLI debug_level=3 dtls=1 ecjpake_pw=bla \
@@ -5511,7 +5552,7 @@ run_test    "ECJPAKE: working, DTLS" \
             -c "re-using cached ecjpake parameters" \
             -S "SSL - Verification of the message MAC failed"
 
-requires_config_enabled MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED
+requires_config_enabled MBEDTLS_KEY_EXCHANGE_ECJPAKE
 run_test    "ECJPAKE: working, DTLS, no cookie" \
             "$P_SRV debug_level=3 dtls=1 ecjpake_pw=bla cookies=0" \
             "$P_CLI debug_level=3 dtls=1 ecjpake_pw=bla \
@@ -5521,7 +5562,7 @@ run_test    "ECJPAKE: working, DTLS, no cookie" \
             -S "SSL - Verification of the message MAC failed"
 
 server_needs_more_time 1
-requires_config_enabled MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED
+requires_config_enabled MBEDTLS_KEY_EXCHANGE_ECJPAKE
 run_test    "ECJPAKE: password mismatch, DTLS" \
             "$P_SRV debug_level=3 dtls=1 ecjpake_pw=bla" \
             "$P_CLI debug_level=3 dtls=1 ecjpake_pw=bad \
@@ -5531,7 +5572,7 @@ run_test    "ECJPAKE: password mismatch, DTLS" \
             -s "SSL - Verification of the message MAC failed"
 
 # for tests with configs/config-thread.h
-requires_config_enabled MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED
+requires_config_enabled MBEDTLS_KEY_EXCHANGE_ECJPAKE
 run_test    "ECJPAKE: working, DTLS, nolog" \
             "$P_SRV dtls=1 ecjpake_pw=bla" \
             "$P_CLI dtls=1 ecjpake_pw=bla \

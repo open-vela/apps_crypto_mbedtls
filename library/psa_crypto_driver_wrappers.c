@@ -737,9 +737,7 @@ psa_status_t psa_driver_wrapper_get_builtin_key(
  * Cipher functions
  */
 psa_status_t psa_driver_wrapper_cipher_encrypt(
-    const psa_key_attributes_t *attributes,
-    const uint8_t *key_buffer,
-    size_t key_buffer_size,
+    psa_key_slot_t *slot,
     psa_algorithm_t alg,
     const uint8_t *input,
     size_t input_length,
@@ -747,20 +745,22 @@ psa_status_t psa_driver_wrapper_cipher_encrypt(
     size_t output_size,
     size_t *output_length )
 {
-    psa_status_t status = PSA_ERROR_CORRUPTION_DETECTED;
-    psa_key_location_t location =
-        PSA_KEY_LIFETIME_GET_LOCATION( attributes->core.lifetime );
+#if defined(PSA_CRYPTO_DRIVER_PRESENT) && defined(PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT)
+    psa_status_t status = PSA_ERROR_INVALID_ARGUMENT;
+    psa_key_location_t location = PSA_KEY_LIFETIME_GET_LOCATION(slot->attr.lifetime);
+    psa_key_attributes_t attributes = {
+      .core = slot->attr
+    };
 
     switch( location )
     {
         case PSA_KEY_LOCATION_LOCAL_STORAGE:
             /* Key is stored in the slot in export representation, so
              * cycle through all known transparent accelerators */
-#if defined(PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT)
 #if defined(PSA_CRYPTO_DRIVER_TEST)
-            status = mbedtls_test_transparent_cipher_encrypt( attributes,
-                                                              key_buffer,
-                                                              key_buffer_size,
+            status = mbedtls_test_transparent_cipher_encrypt( &attributes,
+                                                              slot->key.data,
+                                                              slot->key.bytes,
                                                               alg,
                                                               input,
                                                               input_length,
@@ -771,29 +771,14 @@ psa_status_t psa_driver_wrapper_cipher_encrypt(
             if( status != PSA_ERROR_NOT_SUPPORTED )
                 return( status );
 #endif /* PSA_CRYPTO_DRIVER_TEST */
-#endif /* PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT */
-
-#if defined(MBEDTLS_PSA_BUILTIN_CIPHER)
-            return( mbedtls_psa_cipher_encrypt( attributes,
-                                                key_buffer,
-                                                key_buffer_size,
-                                                alg,
-                                                input,
-                                                input_length,
-                                                output,
-                                                output_size,
-                                                output_length ) );
-#else
+            /* Fell through, meaning no accelerator supports this operation */
             return( PSA_ERROR_NOT_SUPPORTED );
-#endif /* MBEDTLS_PSA_BUILTIN_CIPHER */
-
         /* Add cases for opaque driver here */
-#if defined(PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT)
 #if defined(PSA_CRYPTO_DRIVER_TEST)
         case PSA_CRYPTO_TEST_DRIVER_LOCATION:
-            return( mbedtls_test_opaque_cipher_encrypt( attributes,
-                                                        key_buffer,
-                                                        key_buffer_size,
+            return( mbedtls_test_opaque_cipher_encrypt( &attributes,
+                                                        slot->key.data,
+                                                        slot->key.bytes,
                                                         alg,
                                                         input,
                                                         input_length,
@@ -801,27 +786,25 @@ psa_status_t psa_driver_wrapper_cipher_encrypt(
                                                         output_size,
                                                         output_length ) );
 #endif /* PSA_CRYPTO_DRIVER_TEST */
-#endif /* PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT */
-
         default:
             /* Key is declared with a lifetime not known to us */
-            (void)status;
-            (void)key_buffer;
-            (void)key_buffer_size;
-            (void)alg;
-            (void)input;
-            (void)input_length;
-            (void)output;
-            (void)output_size;
-            (void)output_length;
-            return( PSA_ERROR_INVALID_ARGUMENT );
+            return( status );
     }
+#else /* PSA_CRYPTO_DRIVER_PRESENT */
+    (void) slot;
+    (void) alg;
+    (void) input;
+    (void) input_length;
+    (void) output;
+    (void) output_size;
+    (void) output_length;
+
+    return( PSA_ERROR_NOT_SUPPORTED );
+#endif /* PSA_CRYPTO_DRIVER_PRESENT */
 }
 
 psa_status_t psa_driver_wrapper_cipher_decrypt(
-    const psa_key_attributes_t *attributes,
-    const uint8_t *key_buffer,
-    size_t key_buffer_size,
+    psa_key_slot_t *slot,
     psa_algorithm_t alg,
     const uint8_t *input,
     size_t input_length,
@@ -829,20 +812,22 @@ psa_status_t psa_driver_wrapper_cipher_decrypt(
     size_t output_size,
     size_t *output_length )
 {
-    psa_status_t status = PSA_ERROR_CORRUPTION_DETECTED;
-    psa_key_location_t location =
-        PSA_KEY_LIFETIME_GET_LOCATION( attributes->core.lifetime );
+#if defined(PSA_CRYPTO_DRIVER_PRESENT) && defined(PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT)
+    psa_status_t status = PSA_ERROR_INVALID_ARGUMENT;
+    psa_key_location_t location = PSA_KEY_LIFETIME_GET_LOCATION(slot->attr.lifetime);
+    psa_key_attributes_t attributes = {
+      .core = slot->attr
+    };
 
     switch( location )
     {
         case PSA_KEY_LOCATION_LOCAL_STORAGE:
             /* Key is stored in the slot in export representation, so
              * cycle through all known transparent accelerators */
-#if defined(PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT)
 #if defined(PSA_CRYPTO_DRIVER_TEST)
-            status = mbedtls_test_transparent_cipher_decrypt( attributes,
-                                                              key_buffer,
-                                                              key_buffer_size,
+            status = mbedtls_test_transparent_cipher_decrypt( &attributes,
+                                                              slot->key.data,
+                                                              slot->key.bytes,
                                                               alg,
                                                               input,
                                                               input_length,
@@ -853,29 +838,14 @@ psa_status_t psa_driver_wrapper_cipher_decrypt(
             if( status != PSA_ERROR_NOT_SUPPORTED )
                 return( status );
 #endif /* PSA_CRYPTO_DRIVER_TEST */
-#endif /* PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT */
-
-#if defined(MBEDTLS_PSA_BUILTIN_CIPHER)
-            return( mbedtls_psa_cipher_decrypt( attributes,
-                                                key_buffer,
-                                                key_buffer_size,
-                                                alg,
-                                                input,
-                                                input_length,
-                                                output,
-                                                output_size,
-                                                output_length ) );
-#else
+            /* Fell through, meaning no accelerator supports this operation */
             return( PSA_ERROR_NOT_SUPPORTED );
-#endif /* MBEDTLS_PSA_BUILTIN_CIPHER */
-
         /* Add cases for opaque driver here */
-#if defined(PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT)
 #if defined(PSA_CRYPTO_DRIVER_TEST)
         case PSA_CRYPTO_TEST_DRIVER_LOCATION:
-            return( mbedtls_test_opaque_cipher_decrypt( attributes,
-                                                        key_buffer,
-                                                        key_buffer_size,
+            return( mbedtls_test_opaque_cipher_decrypt( &attributes,
+                                                        slot->key.data,
+                                                        slot->key.bytes,
                                                         alg,
                                                         input,
                                                         input_length,
@@ -883,21 +853,21 @@ psa_status_t psa_driver_wrapper_cipher_decrypt(
                                                         output_size,
                                                         output_length ) );
 #endif /* PSA_CRYPTO_DRIVER_TEST */
-#endif /* PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT */
-
         default:
             /* Key is declared with a lifetime not known to us */
-            (void)status;
-            (void)key_buffer;
-            (void)key_buffer_size;
-            (void)alg;
-            (void)input;
-            (void)input_length;
-            (void)output;
-            (void)output_size;
-            (void)output_length;
-            return( PSA_ERROR_INVALID_ARGUMENT );
+            return( status );
     }
+#else /* PSA_CRYPTO_DRIVER_PRESENT */
+    (void) slot;
+    (void) alg;
+    (void) input;
+    (void) input_length;
+    (void) output;
+    (void) output_size;
+    (void) output_length;
+
+    return( PSA_ERROR_NOT_SUPPORTED );
+#endif /* PSA_CRYPTO_DRIVER_PRESENT */
 }
 
 psa_status_t psa_driver_wrapper_cipher_encrypt_setup(

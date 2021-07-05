@@ -24,7 +24,11 @@
 #ifndef TEST_MACROS_H
 #define TEST_MACROS_H
 
-#include "mbedtls/build_info.h"
+#if !defined(MBEDTLS_CONFIG_FILE)
+#include "mbedtls/config.h"
+#else
+#include MBEDTLS_CONFIG_FILE
+#endif
 
 #include <stdlib.h>
 
