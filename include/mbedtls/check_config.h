@@ -20,11 +20,6 @@
  *  limitations under the License.
  */
 
-/*
- * It is recommended to include this file from your config.h
- * in order to catch dependency issues early.
- */
-
 #ifndef MBEDTLS_CHECK_CONFIG_H
 #define MBEDTLS_CHECK_CONFIG_H
 
@@ -42,7 +37,7 @@
 #error "MBEDTLS_PLATFORM_C is required on Windows"
 #endif
 
-/* Fix the config here. Not convenient to put an #ifdef _WIN32 in config.h as
+/* Fix the config here. Not convenient to put an #ifdef _WIN32 in mbedtls_config.h as
  * it would confuse config.py. */
 #if !defined(MBEDTLS_PLATFORM_SNPRINTF_ALT) && \
     !defined(MBEDTLS_PLATFORM_SNPRINTF_MACRO)
@@ -807,6 +802,14 @@
 
 #if defined(MBEDTLS_ZLIB_SUPPORT) //no-check-names
 #error "MBEDTLS_ZLIB_SUPPORT was removed in Mbed TLS 3.0. See https://github.com/ARMmbed/mbedtls/issues/4031"
+#endif
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1) //no-check-names
+#error "MBEDTLS_SSL_PROTO_TLS1 (TLS v1.0 support) was removed in Mbed TLS 3.0. See https://github.com/ARMmbed/mbedtls/issues/4286"
+#endif
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_1) //no-check-names
+#error "MBEDTLS_SSL_PROTO_TLS1_1 (TLS v1.1 support) was removed in Mbed TLS 3.0. See https://github.com/ARMmbed/mbedtls/issues/4286"
 #endif
 
 #if defined(MBEDTLS_CHECK_PARAMS) //no-check-names
