@@ -29,6 +29,9 @@
  * See README.txt for usage instructions.
  */
 
+#ifndef MBEDTLS_CONFIG_H
+#define MBEDTLS_CONFIG_H
+
 /* System support */
 #define MBEDTLS_HAVE_ASM
 #define MBEDTLS_HAVE_TIME
@@ -83,3 +86,7 @@
 
 /* Miscellaneous options */
 #define MBEDTLS_AES_ROM_TABLES
+
+#include "mbedtls/check_config.h"
+
+#endif /* MBEDTLS_CONFIG_H */
