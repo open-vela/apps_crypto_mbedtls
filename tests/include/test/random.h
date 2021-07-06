@@ -25,7 +25,11 @@
 #ifndef TEST_RANDOM_H
 #define TEST_RANDOM_H
 
-#include "mbedtls/build_info.h"
+#if !defined(MBEDTLS_CONFIG_FILE)
+#include "mbedtls/config.h"
+#else
+#include MBEDTLS_CONFIG_FILE
+#endif
 
 #include <stddef.h>
 #include <stdint.h>
