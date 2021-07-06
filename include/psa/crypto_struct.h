@@ -68,7 +68,11 @@ extern "C" {
 
 /* Include the Mbed TLS configuration file, the way Mbed TLS does it
  * in each of its header files. */
-#include "mbedtls/build_info.h"
+#if !defined(MBEDTLS_CONFIG_FILE)
+#include "mbedtls/config.h"
+#else
+#include MBEDTLS_CONFIG_FILE
+#endif
 
 #include "mbedtls/cmac.h"
 #include "mbedtls/gcm.h"
@@ -392,19 +396,9 @@ static inline psa_key_lifetime_t psa_get_key_lifetime(
     return( attributes->MBEDTLS_PRIVATE(core).MBEDTLS_PRIVATE(lifetime) );
 }
 
-static inline void psa_extend_key_usage_flags( psa_key_usage_t *usage_flags )
+static inline void psa_set_key_usage_flags( psa_key_attributes_t *attributes,
+                                           psa_key_usage_t usage_flags )
 {
-    if( *usage_flags & PSA_KEY_USAGE_SIGN_HASH )
-        *usage_flags |= PSA_KEY_USAGE_SIGN_MESSAGE;
-
-    if( *usage_flags & PSA_KEY_USAGE_VERIFY_HASH )
-        *usage_flags |= PSA_KEY_USAGE_VERIFY_MESSAGE;
-}
-
-static inline void psa_set_key_usage_flags(psa_key_attributes_t *attributes,
-                                           psa_key_usage_t usage_flags)
-{
-    psa_extend_key_usage_flags( &usage_flags );
     attributes->MBEDTLS_PRIVATE(core).MBEDTLS_PRIVATE(policy).MBEDTLS_PRIVATE(usage) = usage_flags;
 }
 
