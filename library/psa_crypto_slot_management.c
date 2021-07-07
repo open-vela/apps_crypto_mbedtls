@@ -412,6 +412,7 @@ psa_status_t psa_unlock_key_slot( psa_key_slot_t *slot )
         return( PSA_SUCCESS );
     }
 
+    MBEDTLS_TEST_HOOK_TEST_ASSERT( slot->lock_count > 0 );
     return( PSA_ERROR_CORRUPTION_DETECTED );
 }
 
