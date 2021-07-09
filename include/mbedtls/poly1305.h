@@ -33,7 +33,11 @@
 #define MBEDTLS_POLY1305_H
 #include "mbedtls/private_access.h"
 
-#include "mbedtls/build_info.h"
+#if !defined(MBEDTLS_CONFIG_FILE)
+#include "mbedtls/config.h"
+#else
+#include MBEDTLS_CONFIG_FILE
+#endif
 
 #include <stdint.h>
 #include <stddef.h>
