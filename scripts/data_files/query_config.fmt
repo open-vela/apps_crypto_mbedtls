@@ -1,5 +1,5 @@
 /*
- *  Query Mbed TLS compile time configurations from mbedtls_config.h
+ *  Query Mbed TLS compile time configurations from config.h
  *
  *  Copyright The Mbed TLS Contributors
  *  SPDX-License-Identifier: Apache-2.0
@@ -17,7 +17,11 @@
  *  limitations under the License.
  */
 
-#include "mbedtls/build_info.h"
+#if !defined(MBEDTLS_CONFIG_FILE)
+#include "mbedtls/config.h"
+#else
+#include MBEDTLS_CONFIG_FILE
+#endif
 
 #include "query_config.h"
 
@@ -30,7 +34,7 @@
 
 /*
  * Include all the headers with public APIs in case they define a macro to its
- * default value when that configuration is not set in the mbedtls_config.h.
+ * default value when that configuration is not set in the config.h.
  */
 #include "mbedtls/aes.h"
 #include "mbedtls/aria.h"
