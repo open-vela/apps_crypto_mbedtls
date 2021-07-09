@@ -1,5 +1,5 @@
 /**
- * \file mbedtls_config.h
+ * \file config.h
  *
  * \brief Configuration options (set of defines)
  *
@@ -24,14 +24,12 @@
  *  limitations under the License.
  */
 
-/**
- * This is an optional version symbol that enables comatibility handling of
- * config files.
- *
- * It is equal to the #MBEDTLS_VERSION_NUMBER of the Mbed TLS version that
- * introduced the config format we want to be compatible with.
- */
-//#define MBEDTLS_CONFIG_VERSION 0x03000000
+#ifndef MBEDTLS_CONFIG_H
+#define MBEDTLS_CONFIG_H
+
+#if defined(_MSC_VER) && !defined(_CRT_SECURE_NO_DEPRECATE)
+#define _CRT_SECURE_NO_DEPRECATE 1
+#endif
 
 /**
  * \name SECTION: System support
@@ -1743,6 +1741,10 @@
  * Uncomment this to enable use of PSA Crypto configuration settings which
  * can be found in include/psa/crypto_config.h.
  *
+ * If you enable this option and write your own configuration file, you must
+ * include mbedtls/config_psa.h in your configuration file. The default
+ * provided mbedtls/config.h contains the necessary inclusion.
+ *
  * This feature is still experimental and is not ready for production since
  * it is not completed.
  */
@@ -3261,3 +3263,20 @@
 //#define MBEDTLS_ECDH_VARIANT_EVEREST_ENABLED
 
 /* \} name SECTION: Customisation configuration options */
+
+/* Target and application specific configurations
+ *
+ * Allow user to override any previous default.
+ *
+ */
+#if defined(MBEDTLS_USER_CONFIG_FILE)
+#include MBEDTLS_USER_CONFIG_FILE
+#endif
+
+#if defined(MBEDTLS_PSA_CRYPTO_CONFIG)
+#include "mbedtls/config_psa.h"
+#endif
+
+#include "mbedtls/check_config.h"
+
+#endif /* MBEDTLS_CONFIG_H */

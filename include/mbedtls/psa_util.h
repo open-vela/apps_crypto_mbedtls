@@ -27,7 +27,11 @@
 #define MBEDTLS_PSA_UTIL_H
 #include "mbedtls/private_access.h"
 
-#include "mbedtls/build_info.h"
+#if !defined(MBEDTLS_CONFIG_FILE)
+#include "mbedtls/config.h"
+#else
+#include MBEDTLS_CONFIG_FILE
+#endif
 
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
 
