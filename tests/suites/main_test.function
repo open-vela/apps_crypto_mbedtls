@@ -241,6 +241,10 @@ int main( int argc, const char *argv[] )
     mbedtls_test_hook_error_add = &mbedtls_test_err_add_check;
 #endif
 
+#if defined(MBEDTLS_TEST_HOOKS)
+    mbedtls_test_hook_test_fail = &mbedtls_test_fail;
+#endif
+
     int ret = mbedtls_test_platform_setup();
     if( ret != 0 )
     {
