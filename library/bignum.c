@@ -2159,7 +2159,7 @@ static void mpi_montred( mbedtls_mpi *A, const mbedtls_mpi *N,
  */
 int mbedtls_mpi_exp_mod( mbedtls_mpi *X, const mbedtls_mpi *A,
                          const mbedtls_mpi *E, const mbedtls_mpi *N,
-                         mbedtls_mpi *_RR )
+                         mbedtls_mpi *prec_RR )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     size_t wbits, wsize, one = 1;
@@ -2226,17 +2226,17 @@ int mbedtls_mpi_exp_mod( mbedtls_mpi *X, const mbedtls_mpi *A,
     /*
      * If 1st call, pre-compute R^2 mod N
      */
-    if( _RR == NULL || _RR->p == NULL )
+    if( prec_RR == NULL || prec_RR->p == NULL )
     {
         MBEDTLS_MPI_CHK( mbedtls_mpi_lset( &RR, 1 ) );
         MBEDTLS_MPI_CHK( mbedtls_mpi_shift_l( &RR, N->n * 2 * biL ) );
         MBEDTLS_MPI_CHK( mbedtls_mpi_mod_mpi( &RR, &RR, N ) );
 
-        if( _RR != NULL )
-            memcpy( _RR, &RR, sizeof( mbedtls_mpi ) );
+        if( prec_RR != NULL )
+            memcpy( prec_RR, &RR, sizeof( mbedtls_mpi ) );
     }
     else
-        memcpy( &RR, _RR, sizeof( mbedtls_mpi ) );
+        memcpy( &RR, prec_RR, sizeof( mbedtls_mpi ) );
 
     /*
      * W[1] = A * R^2 * R^-1 mod N = A * R mod N
@@ -2382,7 +2382,7 @@ cleanup:
 
     mbedtls_mpi_free( &W[1] ); mbedtls_mpi_free( &T ); mbedtls_mpi_free( &Apos );
 
-    if( _RR == NULL || _RR->p == NULL )
+    if( prec_RR == NULL || prec_RR->p == NULL )
         mbedtls_mpi_free( &RR );
 
     return( ret );
