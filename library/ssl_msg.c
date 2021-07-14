@@ -579,7 +579,7 @@ int mbedtls_ssl_encrypt_buf( mbedtls_ssl_context *ssl,
     {
         size_t padding =
             ssl_compute_padding_length( rec->data_len,
-                                        MBEDTLS_SSL_CID_TLS1_3_PADDING_GRANULARITY );
+                                        MBEDTLS_SSL_TLS1_3_PADDING_GRANULARITY );
         if( ssl_build_inner_plaintext( data,
                                        &rec->data_len,
                                        post_avail,
@@ -605,7 +605,7 @@ int mbedtls_ssl_encrypt_buf( mbedtls_ssl_context *ssl,
     {
         size_t padding =
             ssl_compute_padding_length( rec->data_len,
-                                        MBEDTLS_SSL_CID_TLS1_3_PADDING_GRANULARITY );
+                                        MBEDTLS_SSL_CID_PADDING_GRANULARITY );
         /*
          * Wrap plaintext into DTLSInnerPlaintext structure.
          * See ssl_build_inner_plaintext() for more information.
@@ -1147,9 +1147,6 @@ MBEDTLS_STATIC_TESTABLE int mbedtls_ssl_cf_hmac(
         if( offset < max_data_len )
             MD_CHK( mbedtls_md_update( ctx, data + offset, 1 ) );
     }
-
-    /* The context needs to finish() before it starts() again */
-    MD_CHK( mbedtls_md_finish( ctx, aux_out ) );
 
     /* Now compute HASH(okey + inner_hash) */
     MD_CHK( mbedtls_md_starts( ctx ) );
@@ -3112,16 +3109,16 @@ static int ssl_check_dtls_clihlo_cookie(
         in[3] != 0 || in[4] != 0 ||
         in[19] != 0 || in[20] != 0 || in[21] != 0 )
     {
-        return( MBEDTLS_ERR_SSL_DECODE_ERROR );
+        return( MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO );
     }
 
     sid_len = in[59];
     if( sid_len > in_len - 61 )
-        return( MBEDTLS_ERR_SSL_DECODE_ERROR );
+        return( MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO );
 
     cookie_len = in[60 + sid_len];
     if( cookie_len > in_len - 60 )
-        return( MBEDTLS_ERR_SSL_DECODE_ERROR );
+        return( MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO );
 
     if( f_cookie_check( p_cookie, in + sid_len + 61, cookie_len,
                         cli_id, cli_id_len ) == 0 )

@@ -31,9 +31,12 @@
 
 #ifndef MBEDTLS_CHACHA20_H
 #define MBEDTLS_CHACHA20_H
-#include "mbedtls/private_access.h"
 
-#include "mbedtls/build_info.h"
+#if !defined(MBEDTLS_CONFIG_FILE)
+#include "mbedtls/config.h"
+#else
+#include MBEDTLS_CONFIG_FILE
+#endif
 
 #include <stdint.h>
 #include <stddef.h>
@@ -48,9 +51,9 @@ extern "C" {
 
 typedef struct mbedtls_chacha20_context
 {
-    uint32_t MBEDTLS_PRIVATE(state)[16];          /*! The state (before round operations). */
-    uint8_t  MBEDTLS_PRIVATE(keystream8)[64];     /*! Leftover keystream bytes. */
-    size_t MBEDTLS_PRIVATE(keystream_bytes_used); /*! Number of keystream bytes already used. */
+    uint32_t state[16];          /*! The state (before round operations). */
+    uint8_t  keystream8[64];     /*! Leftover keystream bytes. */
+    size_t keystream_bytes_used; /*! Number of keystream bytes already used. */
 }
 mbedtls_chacha20_context;
 
