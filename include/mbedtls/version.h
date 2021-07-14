@@ -20,14 +20,34 @@
  *  limitations under the License.
  */
 /*
- * This set of run-time variables can be used to determine the version number of
- * the Mbed TLS library used. Compile-time version defines for the same can be
- * found in build_info.h
+ * This set of compile-time defines and run-time variables can be used to
+ * determine the version number of the mbed TLS library used.
  */
 #ifndef MBEDTLS_VERSION_H
 #define MBEDTLS_VERSION_H
 
-#include "mbedtls/build_info.h"
+#if !defined(MBEDTLS_CONFIG_FILE)
+#include "mbedtls/config.h"
+#else
+#include MBEDTLS_CONFIG_FILE
+#endif
+
+/**
+ * The version number x.y.z is split into three parts.
+ * Major, Minor, Patchlevel
+ */
+#define MBEDTLS_VERSION_MAJOR  2
+#define MBEDTLS_VERSION_MINOR  26
+#define MBEDTLS_VERSION_PATCH  0
+
+/**
+ * The single version number has the following structure:
+ *    MMNNPP00
+ *    Major version | Minor version | Patch version
+ */
+#define MBEDTLS_VERSION_NUMBER         0x021A0000
+#define MBEDTLS_VERSION_STRING         "2.26.0"
+#define MBEDTLS_VERSION_STRING_FULL    "mbed TLS 2.26.0"
 
 #if defined(MBEDTLS_VERSION_C)
 
@@ -70,7 +90,7 @@ void mbedtls_version_get_string_full( char *string );
  *
  * \note            only checks against defines in the sections "System
  *                  support", "mbed TLS modules" and "mbed TLS feature
- *                  support" in mbedtls_config.h
+ *                  support" in config.h
  *
  * \param feature   The string for the define to check (e.g. "MBEDTLS_AES_C")
  *

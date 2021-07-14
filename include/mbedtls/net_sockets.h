@@ -37,9 +37,12 @@
  */
 #ifndef MBEDTLS_NET_SOCKETS_H
 #define MBEDTLS_NET_SOCKETS_H
-#include "mbedtls/private_access.h"
 
-#include "mbedtls/build_info.h"
+#if !defined(MBEDTLS_CONFIG_FILE)
+#include "mbedtls/config.h"
+#else
+#include MBEDTLS_CONFIG_FILE
+#endif
 
 #include "mbedtls/ssl.h"
 
@@ -81,7 +84,7 @@ extern "C" {
  */
 typedef struct mbedtls_net_context
 {
-    int MBEDTLS_PRIVATE(fd);             /**< The underlying file descriptor                 */
+    int fd;             /**< The underlying file descriptor                 */
 }
 mbedtls_net_context;
 
