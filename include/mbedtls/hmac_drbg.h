@@ -25,9 +25,12 @@
  */
 #ifndef MBEDTLS_HMAC_DRBG_H
 #define MBEDTLS_HMAC_DRBG_H
-#include "mbedtls/private_access.h"
 
-#include "mbedtls/build_info.h"
+#if !defined(MBEDTLS_CONFIG_FILE)
+#include "mbedtls/config.h"
+#else
+#include MBEDTLS_CONFIG_FILE
+#endif
 
 #include "mbedtls/md.h"
 
@@ -47,7 +50,7 @@
  * \name SECTION: Module settings
  *
  * The configuration options you can set for this module are in this section.
- * Either change them in mbedtls_config.h or define them on the compiler command line.
+ * Either change them in config.h or define them on the compiler command line.
  * \{
  */
 
@@ -83,19 +86,19 @@ typedef struct mbedtls_hmac_drbg_context
 {
     /* Working state: the key K is not stored explicitly,
      * but is implied by the HMAC context */
-    mbedtls_md_context_t MBEDTLS_PRIVATE(md_ctx);                    /*!< HMAC context (inc. K)  */
-    unsigned char MBEDTLS_PRIVATE(V)[MBEDTLS_MD_MAX_SIZE];  /*!< V in the spec          */
-    int MBEDTLS_PRIVATE(reseed_counter);                     /*!< reseed counter         */
+    mbedtls_md_context_t md_ctx;                    /*!< HMAC context (inc. K)  */
+    unsigned char V[MBEDTLS_MD_MAX_SIZE];  /*!< V in the spec          */
+    int reseed_counter;                     /*!< reseed counter         */
 
     /* Administrative state */
-    size_t MBEDTLS_PRIVATE(entropy_len);         /*!< entropy bytes grabbed on each (re)seed */
-    int MBEDTLS_PRIVATE(prediction_resistance);  /*!< enable prediction resistance (Automatic
+    size_t entropy_len;         /*!< entropy bytes grabbed on each (re)seed */
+    int prediction_resistance;  /*!< enable prediction resistance (Automatic
                                      reseed before every random generation) */
-    int MBEDTLS_PRIVATE(reseed_interval);        /*!< reseed interval   */
+    int reseed_interval;        /*!< reseed interval   */
 
     /* Callbacks */
-    int (*MBEDTLS_PRIVATE(f_entropy))(void *, unsigned char *, size_t); /*!< entropy function */
-    void *MBEDTLS_PRIVATE(p_entropy);            /*!< context for the entropy function        */
+    int (*f_entropy)(void *, unsigned char *, size_t); /*!< entropy function */
+    void *p_entropy;            /*!< context for the entropy function        */
 
 #if defined(MBEDTLS_THREADING_C)
     /* Invariant: the mutex is initialized if and only if
@@ -106,7 +109,7 @@ typedef struct mbedtls_hmac_drbg_context
      * Note that this invariant may change without notice. Do not rely on it
      * and do not access the mutex directly in application code.
      */
-    mbedtls_threading_mutex_t MBEDTLS_PRIVATE(mutex);
+    mbedtls_threading_mutex_t mutex;
 #endif
 } mbedtls_hmac_drbg_context;
 
@@ -291,8 +294,8 @@ void mbedtls_hmac_drbg_set_reseed_interval( mbedtls_hmac_drbg_context *ctx,
  * \return              \c 0 on success, or an error from the underlying
  *                      hash calculation.
  */
-int mbedtls_hmac_drbg_update( mbedtls_hmac_drbg_context *ctx,
-                              const unsigned char *additional, size_t add_len );
+int mbedtls_hmac_drbg_update_ret( mbedtls_hmac_drbg_context *ctx,
+                       const unsigned char *additional, size_t add_len );
 
 /**
  * \brief               This function reseeds the HMAC_DRBG context, that is
