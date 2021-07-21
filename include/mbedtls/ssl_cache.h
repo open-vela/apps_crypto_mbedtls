@@ -21,9 +21,12 @@
  */
 #ifndef MBEDTLS_SSL_CACHE_H
 #define MBEDTLS_SSL_CACHE_H
-#include "mbedtls/private_access.h"
 
-#include "mbedtls/build_info.h"
+#if !defined(MBEDTLS_CONFIG_FILE)
+#include "mbedtls/config.h"
+#else
+#include MBEDTLS_CONFIG_FILE
+#endif
 
 #include "mbedtls/ssl.h"
 
@@ -35,7 +38,7 @@
  * \name SECTION: Module settings
  *
  * The configuration options you can set for this module are in this section.
- * Either change them in mbedtls_config.h or define them on the compiler command line.
+ * Either change them in config.h or define them on the compiler command line.
  * \{
  */
 
@@ -62,16 +65,16 @@ typedef struct mbedtls_ssl_cache_entry mbedtls_ssl_cache_entry;
 struct mbedtls_ssl_cache_entry
 {
 #if defined(MBEDTLS_HAVE_TIME)
-    mbedtls_time_t MBEDTLS_PRIVATE(timestamp);           /*!< entry timestamp    */
+    mbedtls_time_t timestamp;           /*!< entry timestamp    */
 #endif
 
-    unsigned char MBEDTLS_PRIVATE(session_id)[32];       /*!< session ID         */
-    size_t MBEDTLS_PRIVATE(session_id_len);
+    unsigned char session_id[32];       /*!< session ID         */
+    size_t session_id_len;
 
-    unsigned char *MBEDTLS_PRIVATE(session);             /*!< serialized session */
-    size_t MBEDTLS_PRIVATE(session_len);
+    unsigned char *session;             /*!< serialized session */
+    size_t session_len;
 
-    mbedtls_ssl_cache_entry *MBEDTLS_PRIVATE(next);      /*!< chain pointer      */
+    mbedtls_ssl_cache_entry *next;      /*!< chain pointer      */
 };
 
 /**
@@ -79,11 +82,11 @@ struct mbedtls_ssl_cache_entry
  */
 struct mbedtls_ssl_cache_context
 {
-    mbedtls_ssl_cache_entry *MBEDTLS_PRIVATE(chain);     /*!< start of the chain     */
-    int MBEDTLS_PRIVATE(timeout);                /*!< cache entry timeout    */
-    int MBEDTLS_PRIVATE(max_entries);            /*!< maximum entries        */
+    mbedtls_ssl_cache_entry *chain;     /*!< start of the chain     */
+    int timeout;                /*!< cache entry timeout    */
+    int max_entries;            /*!< maximum entries        */
 #if defined(MBEDTLS_THREADING_C)
-    mbedtls_threading_mutex_t MBEDTLS_PRIVATE(mutex);    /*!< mutex                  */
+    mbedtls_threading_mutex_t mutex;    /*!< mutex                  */
 #endif
 };
 
