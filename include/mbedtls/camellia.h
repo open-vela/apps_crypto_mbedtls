@@ -21,9 +21,12 @@
  */
 #ifndef MBEDTLS_CAMELLIA_H
 #define MBEDTLS_CAMELLIA_H
-#include "mbedtls/private_access.h"
 
-#include "mbedtls/build_info.h"
+#if !defined(MBEDTLS_CONFIG_FILE)
+#include "mbedtls/config.h"
+#else
+#include MBEDTLS_CONFIG_FILE
+#endif
 
 #include <stddef.h>
 #include <stdint.h>
@@ -50,8 +53,8 @@ extern "C" {
  */
 typedef struct mbedtls_camellia_context
 {
-    int MBEDTLS_PRIVATE(nr);                     /*!<  number of rounds  */
-    uint32_t MBEDTLS_PRIVATE(rk)[68];            /*!<  CAMELLIA round keys    */
+    int nr;                     /*!<  number of rounds  */
+    uint32_t rk[68];            /*!<  CAMELLIA round keys    */
 }
 mbedtls_camellia_context;
 
