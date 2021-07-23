@@ -22,6 +22,7 @@
 
 #if defined(MBEDTLS_PSA_CRYPTO_C)
 
+#include "psa_crypto_service_integration.h"
 #include "psa/crypto.h"
 
 #include "psa_crypto_core.h"
@@ -391,10 +392,6 @@ psa_status_t psa_get_and_lock_key_slot( mbedtls_svc_key_id_t key,
         if( status == PSA_ERROR_DOES_NOT_EXIST )
             status = PSA_ERROR_INVALID_HANDLE;
     }
-    else
-        /* Add implicit usage flags. */
-        psa_extend_key_usage_flags( &(*p_slot)->attr.policy.usage );
-
     return( status );
 #else /* MBEDTLS_PSA_CRYPTO_STORAGE_C || MBEDTLS_PSA_CRYPTO_BUILTIN_KEYS */
     return( PSA_ERROR_INVALID_HANDLE );
@@ -411,6 +408,17 @@ psa_status_t psa_unlock_key_slot( psa_key_slot_t *slot )
         slot->lock_count--;
         return( PSA_SUCCESS );
     }
+
+    /*
+     * As the return error code may not be handled in case of multiple errors,
+     * do our best to report if the lock counter is equal to zero: if
+     * available call MBEDTLS_PARAM_FAILED that may terminate execution (if
+     * called as part of the execution of a unit test suite this will stop the
+     * test suite execution).
+     */
+#ifdef MBEDTLS_CHECK_PARAMS
+    MBEDTLS_PARAM_FAILED( slot->lock_count > 0 );
+#endif
 
     return( PSA_ERROR_CORRUPTION_DETECTED );
 }
@@ -458,10 +466,7 @@ psa_status_t psa_validate_key_persistence( psa_key_lifetime_t lifetime )
     {
         /* Persistent keys require storage support */
 #if defined(MBEDTLS_PSA_CRYPTO_STORAGE_C)
-        if( PSA_KEY_LIFETIME_IS_READ_ONLY( lifetime ) )
-            return( PSA_ERROR_INVALID_ARGUMENT );
-        else
-            return( PSA_SUCCESS );
+        return( PSA_SUCCESS );
 #else /* MBEDTLS_PSA_CRYPTO_STORAGE_C */
         return( PSA_ERROR_NOT_SUPPORTED );
 #endif /* !MBEDTLS_PSA_CRYPTO_STORAGE_C */
@@ -551,17 +556,16 @@ void mbedtls_psa_get_stats( mbedtls_psa_stats_t *stats )
             ++stats->empty_slots;
             continue;
         }
-        if( PSA_KEY_LIFETIME_IS_VOLATILE( slot->attr.lifetime ) )
+        if( slot->attr.lifetime == PSA_KEY_LIFETIME_VOLATILE )
             ++stats->volatile_slots;
-        else
+        else if( slot->attr.lifetime == PSA_KEY_LIFETIME_PERSISTENT )
         {
             psa_key_id_t id = MBEDTLS_SVC_KEY_ID_GET_KEY_ID( slot->attr.id );
             ++stats->persistent_slots;
             if( id > stats->max_open_internal_key_id )
                 stats->max_open_internal_key_id = id;
         }
-        if( PSA_KEY_LIFETIME_GET_LOCATION( slot->attr.lifetime ) !=
-            PSA_KEY_LOCATION_LOCAL_STORAGE )
+        else
         {
             psa_key_id_t id = MBEDTLS_SVC_KEY_ID_GET_KEY_ID( slot->attr.id );
             ++stats->external_slots;

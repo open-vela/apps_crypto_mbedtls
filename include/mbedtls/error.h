@@ -22,7 +22,11 @@
 #ifndef MBEDTLS_ERROR_H
 #define MBEDTLS_ERROR_H
 
-#include "mbedtls/build_info.h"
+#if !defined(MBEDTLS_CONFIG_FILE)
+#include "mbedtls/config.h"
+#else
+#include MBEDTLS_CONFIG_FILE
+#endif
 
 #include <stddef.h>
 
@@ -57,9 +61,11 @@
  * ERROR     2  0x006E          0x0001
  * MPI       7  0x0002-0x0010
  * GCM       3  0x0012-0x0014   0x0013-0x0013
+ * BLOWFISH  3  0x0016-0x0018   0x0017-0x0017
  * THREADING 3  0x001A-0x001E
  * AES       5  0x0020-0x0022   0x0021-0x0025
  * CAMELLIA  3  0x0024-0x0026   0x0027-0x0027
+ * XTEA      2  0x0028-0x0028   0x0029-0x0029
  * BASE64    2  0x002A-0x002C
  * OID       1  0x002E-0x002E   0x000B-0x000B
  * PADLOCK   1  0x0030-0x0030
@@ -73,6 +79,9 @@
  * PBKDF2    1  0x007C-0x007C
  * HMAC_DRBG 4                  0x0003-0x0009
  * CCM       3                  0x000D-0x0011
+ * ARC4      1                  0x0019-0x0019
+ * MD2       1                  0x002B-0x002B
+ * MD4       1                  0x002D-0x002D
  * MD5       1                  0x002F-0x002F
  * RIPEMD160 1                  0x0031-0x0031
  * SHA1      1                  0x0035-0x0035 0x0073-0x0073
@@ -97,9 +106,10 @@
  * HKDF      5   1 (Started from top)
  * SSL       5   2 (Started from 0x5F00)
  * CIPHER    6   8 (Started from 0x6080)
- * SSL       6   22 (Started from top, plus 0x6000)
- * SSL       7   20 (Started from 0x7000, gaps at
- *                   0x7380, 0x7900-0x7980, 0x7A80-0x7E80)
+ * SSL       6   23 (Started from top, plus 0x6000, gaps at
+ *                   0x6600)
+ * SSL       7   28 (Started from 0x7080, gaps at
+ *                   0x7300, 0x7500, 0x7580, 0x7800)
  *
  * Module dependent error code (5 bits 0x.00.-0x.F8.)
  */
