@@ -2443,6 +2443,8 @@ component_test_tls13_experimental () {
     make
     msg "test: default config with MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL enabled"
     make test
+    msg "ssl-opt.sh (TLS 1.3 experimental)"
+    if_build_succeeded tests/ssl-opt.sh
 }
 
 component_build_mingw () {
