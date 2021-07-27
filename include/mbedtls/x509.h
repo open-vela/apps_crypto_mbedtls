@@ -21,12 +21,9 @@
  */
 #ifndef MBEDTLS_X509_H
 #define MBEDTLS_X509_H
+#include "mbedtls/private_access.h"
 
-#if !defined(MBEDTLS_CONFIG_FILE)
-#include "mbedtls/config.h"
-#else
-#include MBEDTLS_CONFIG_FILE
-#endif
+#include "mbedtls/build_info.h"
 
 #include "mbedtls/asn1.h"
 #include "mbedtls/pk.h"
@@ -229,8 +226,8 @@ typedef mbedtls_asn1_sequence mbedtls_x509_sequence;
 /** Container for date and time (precision in seconds). */
 typedef struct mbedtls_x509_time
 {
-    int year, mon, day;         /**< Date. */
-    int hour, min, sec;         /**< Time. */
+    int MBEDTLS_PRIVATE(year), MBEDTLS_PRIVATE(mon), MBEDTLS_PRIVATE(day);         /**< Date. */
+    int MBEDTLS_PRIVATE(hour), MBEDTLS_PRIVATE(min), MBEDTLS_PRIVATE(sec);         /**< Time. */
 }
 mbedtls_x509_time;
 

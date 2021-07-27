@@ -26,12 +26,9 @@
  */
 #ifndef MBEDTLS_DES_H
 #define MBEDTLS_DES_H
+#include "mbedtls/private_access.h"
 
-#if !defined(MBEDTLS_CONFIG_FILE)
-#include "mbedtls/config.h"
-#else
-#include MBEDTLS_CONFIG_FILE
-#endif
+#include "mbedtls/build_info.h"
 
 #include <stddef.h>
 #include <stdint.h>
@@ -60,7 +57,7 @@ extern "C" {
  */
 typedef struct mbedtls_des_context
 {
-    uint32_t sk[32];            /*!<  DES subkeys       */
+    uint32_t MBEDTLS_PRIVATE(sk)[32];            /*!<  DES subkeys       */
 }
 mbedtls_des_context;
 
@@ -69,7 +66,7 @@ mbedtls_des_context;
  */
 typedef struct mbedtls_des3_context
 {
-    uint32_t sk[96];            /*!<  3DES subkeys      */
+    uint32_t MBEDTLS_PRIVATE(sk)[96];            /*!<  3DES subkeys      */
 }
 mbedtls_des3_context;
 
