@@ -3054,7 +3054,6 @@ int mbedtls_ecp_gen_key( mbedtls_ecp_group_id grp_id, mbedtls_ecp_keypair *key,
 }
 
 #define ECP_CURVE25519_KEY_SIZE 32
-#define ECP_CURVE448_KEY_SIZE   56
 /*
  * Read a private key.
  */
@@ -3075,12 +3074,12 @@ int mbedtls_ecp_read_key( mbedtls_ecp_group_id grp_id, mbedtls_ecp_keypair *key,
     if( mbedtls_ecp_get_type( &key->grp ) == MBEDTLS_ECP_TYPE_MONTGOMERY )
     {
         /*
-         * Mask the key as mandated by RFC7748 for Curve25519 and Curve448.
+         * If it is Curve25519 curve then mask the key as mandated by RFC7748
          */
         if( grp_id == MBEDTLS_ECP_DP_CURVE25519 )
         {
             if( buflen != ECP_CURVE25519_KEY_SIZE )
-                return( MBEDTLS_ERR_ECP_INVALID_KEY );
+                return MBEDTLS_ERR_ECP_INVALID_KEY;
 
             MBEDTLS_MPI_CHK( mbedtls_mpi_read_binary_le( &key->d, buf, buflen ) );
 
@@ -3101,23 +3100,8 @@ int mbedtls_ecp_read_key( mbedtls_ecp_group_id grp_id, mbedtls_ecp_keypair *key,
                                          ECP_CURVE25519_KEY_SIZE * 8 - 2, 1 )
                     );
         }
-        else if( grp_id == MBEDTLS_ECP_DP_CURVE448 )
-        {
-            if( buflen != ECP_CURVE448_KEY_SIZE )
-                return( MBEDTLS_ERR_ECP_INVALID_KEY );
-
-            MBEDTLS_MPI_CHK( mbedtls_mpi_read_binary_le( &key->d, buf, buflen ) );
-
-            /* Set the two least significant bits to 0 */
-            MBEDTLS_MPI_CHK( mbedtls_mpi_set_bit( &key->d, 0, 0 ) );
-            MBEDTLS_MPI_CHK( mbedtls_mpi_set_bit( &key->d, 1, 0 ) );
-
-            /* Set the most significant bit to 1 */
-            MBEDTLS_MPI_CHK(
-                    mbedtls_mpi_set_bit( &key->d,
-                                         ECP_CURVE448_KEY_SIZE * 8 - 1, 1 )
-                    );
-        }
+        else
+            ret = MBEDTLS_ERR_ECP_FEATURE_UNAVAILABLE;
     }
 
 #endif
@@ -3155,16 +3139,14 @@ int mbedtls_ecp_write_key( mbedtls_ecp_keypair *key,
         if( key->grp.id == MBEDTLS_ECP_DP_CURVE25519 )
         {
             if( buflen < ECP_CURVE25519_KEY_SIZE )
-                return( MBEDTLS_ERR_ECP_BUFFER_TOO_SMALL );
+                return MBEDTLS_ERR_ECP_BUFFER_TOO_SMALL;
 
+            MBEDTLS_MPI_CHK( mbedtls_mpi_write_binary_le( &key->d, buf, buflen ) );
         }
-        else if( key->grp.id == MBEDTLS_ECP_DP_CURVE448 )
-        {
-            if( buflen < ECP_CURVE448_KEY_SIZE )
-                return( MBEDTLS_ERR_ECP_BUFFER_TOO_SMALL );
-        }
-        MBEDTLS_MPI_CHK( mbedtls_mpi_write_binary_le( &key->d, buf, buflen ) );
+        else
+            ret = MBEDTLS_ERR_ECP_FEATURE_UNAVAILABLE;
     }
+
 #endif
 #if defined(MBEDTLS_ECP_SHORT_WEIERSTRASS_ENABLED)
     if( mbedtls_ecp_get_type( &key->grp ) == MBEDTLS_ECP_TYPE_SHORT_WEIERSTRASS )
