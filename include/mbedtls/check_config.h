@@ -456,10 +456,6 @@
 #error "MBEDTLS_PLATFORM_STD_CALLOC defined, but not all prerequisites"
 #endif
 
-#if defined(MBEDTLS_PLATFORM_STD_CALLOC) && !defined(MBEDTLS_PLATFORM_MEMORY)
-#error "MBEDTLS_PLATFORM_STD_CALLOC defined, but not all prerequisites"
-#endif
-
 #if defined(MBEDTLS_PLATFORM_STD_FREE) && !defined(MBEDTLS_PLATFORM_MEMORY)
 #error "MBEDTLS_PLATFORM_STD_FREE defined, but not all prerequisites"
 #endif
@@ -802,14 +798,6 @@
 
 #if defined(MBEDTLS_ZLIB_SUPPORT) //no-check-names
 #error "MBEDTLS_ZLIB_SUPPORT was removed in Mbed TLS 3.0. See https://github.com/ARMmbed/mbedtls/issues/4031"
-#endif
-
-#if defined(MBEDTLS_SSL_PROTO_TLS1) //no-check-names
-#error "MBEDTLS_SSL_PROTO_TLS1 (TLS v1.0 support) was removed in Mbed TLS 3.0. See https://github.com/ARMmbed/mbedtls/issues/4286"
-#endif
-
-#if defined(MBEDTLS_SSL_PROTO_TLS1_1) //no-check-names
-#error "MBEDTLS_SSL_PROTO_TLS1_1 (TLS v1.1 support) was removed in Mbed TLS 3.0. See https://github.com/ARMmbed/mbedtls/issues/4286"
 #endif
 
 #if defined(MBEDTLS_CHECK_PARAMS) //no-check-names
