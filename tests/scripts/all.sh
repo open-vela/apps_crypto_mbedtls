@@ -841,7 +841,7 @@ component_check_changelog () {
 
 component_check_names () {
     msg "Check: declared and exported names (builds the library)" # < 3s
-    tests/scripts/check-names.sh -v
+    tests/scripts/check_names.py -v
 }
 
 component_check_test_cases () {
@@ -2770,12 +2770,15 @@ component_check_python_files () {
     tests/scripts/check-python-files.sh
 }
 
-component_check_generate_test_code () {
-    msg "uint test: generate_test_code.py"
+component_check_test_helpers () {
+    msg "unit test: generate_test_code.py"
     # unittest writes out mundane stuff like number or tests run on stderr.
     # Our convention is to reserve stderr for actual errors, and write
     # harmless info on stdout so it can be suppress with --quiet.
     ./tests/scripts/test_generate_test_code.py 2>&1
+
+    msg "unit test: translate_ciphers.py"
+    python3 -m unittest tests/scripts/translate_ciphers.py 2>&1
 }
 
 ################################################################
