@@ -30,8 +30,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-/** SHA-512 input data was malformed. */
-#define MBEDTLS_ERR_SHA512_BAD_INPUT_DATA                 -0x0075
+#define MBEDTLS_ERR_SHA512_BAD_INPUT_DATA                 -0x0075  /**< SHA-512 input data was malformed. */
 
 #ifdef __cplusplus
 extern "C" {

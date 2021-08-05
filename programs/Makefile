@@ -43,15 +43,11 @@ LOCAL_LDFLAGS += -lws2_32
 ifdef SHARED
 SHARED_SUFFIX=.$(DLEXT)
 endif
+PYTHON ?= python
 else
 DLEXT ?= so
 EXEXT=
 SHARED_SUFFIX=
-endif
-
-ifdef WINDOWS
-PYTHON ?= python
-else
 PYTHON ?= $(shell if type python3 >/dev/null 2>/dev/null; then echo python3; else echo python; fi)
 endif
 
@@ -335,6 +331,10 @@ test/benchmark$(EXEXT): test/benchmark.c $(DEP)
 	echo "  CC    test/benchmark.c"
 	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) test/benchmark.c   $(LOCAL_LDFLAGS) $(LDFLAGS) -o $@
 
+test/cpp_dummy_build.cpp: test/generate_cpp_dummy_build.sh
+	echo "  Gen   test/cpp_dummy_build.cpp"
+	test/generate_cpp_dummy_build.sh
+
 test/cpp_dummy_build$(EXEXT): test/cpp_dummy_build.cpp $(DEP)
 	echo "  CXX   test/cpp_dummy_build.cpp"
 	$(CXX) $(LOCAL_CXXFLAGS) $(CXXFLAGS) test/cpp_dummy_build.cpp   $(LOCAL_LDFLAGS) $(LDFLAGS) -o $@
@@ -395,10 +395,11 @@ clean:
 ifndef WINDOWS
 	rm -f $(EXES)
 	-rm -f ssl/ssl_pthread_server$(EXEXT)
-	-rm -f test/cpp_dummy_build$(EXEXT)
+	-rm -f test/cpp_dummy_build.cpp test/cpp_dummy_build$(EXEXT)
 else
 	if exist *.o del /Q /F *.o
 	if exist *.exe del /Q /F *.exe
+	if exist test\cpp_dummy_build.cpp del /Q /F test\cpp_dummy_build.cpp
 endif
 	$(MAKE) -C fuzz clean
 
