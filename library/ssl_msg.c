@@ -2360,8 +2360,7 @@ void mbedtls_ssl_send_flight_completed( mbedtls_ssl_context *ssl )
  *      (including handshake headers but excluding record headers)
  *   - ssl->out_msg: the record contents (handshake headers + content)
  */
-int mbedtls_ssl_write_handshake_msg_ext( mbedtls_ssl_context *ssl,
-                                         int update_checksum )
+int mbedtls_ssl_write_handshake_msg( mbedtls_ssl_context *ssl )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     const size_t hs_len = ssl->out_msglen - 4;
@@ -2470,7 +2469,7 @@ int mbedtls_ssl_write_handshake_msg_ext( mbedtls_ssl_context *ssl,
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
 
         /* Update running hashes of handshake messages seen */
-        if( hs_type != MBEDTLS_SSL_HS_HELLO_REQUEST && update_checksum != 0 )
+        if( hs_type != MBEDTLS_SSL_HS_HELLO_REQUEST )
             ssl->handshake->update_checksum( ssl, ssl->out_msg, ssl->out_msglen );
     }
 
