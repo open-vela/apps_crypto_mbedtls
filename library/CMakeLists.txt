@@ -24,7 +24,6 @@ set(src_crypto
     chachapoly.c
     cipher.c
     cipher_wrap.c
-    constant_time.c
     cmac.c
     ctr_drbg.c
     des.c
