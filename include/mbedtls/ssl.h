@@ -425,14 +425,8 @@
 
 /* The value of the CID extension is still TBD as of
  * draft-ietf-tls-dtls-connection-id-05
- * (https://tools.ietf.org/html/draft-ietf-tls-dtls-connection-id-05).
- *
- * A future minor revision of Mbed TLS may change the default value of
- * this option to match evolving standards and usage.
- */
-#if !defined(MBEDTLS_TLS_EXT_CID)
+ * (https://tools.ietf.org/html/draft-ietf-tls-dtls-connection-id-05) */
 #define MBEDTLS_TLS_EXT_CID                        254 /* TBD */
-#endif
 
 #define MBEDTLS_TLS_EXT_ECJPAKE_KKPP               256 /* experimental */
 
@@ -1334,24 +1328,10 @@ struct mbedtls_ssl_context
     /*
      * Record layer transformations
      */
-    mbedtls_ssl_transform *MBEDTLS_PRIVATE(transform_in);        /*!<  current transform params (in)
-                                                                  *    This is always a reference,
-                                                                  *    never an owning pointer.        */
-    mbedtls_ssl_transform *MBEDTLS_PRIVATE(transform_out);       /*!<  current transform params (out)
-                                                                  *    This is always a reference,
-                                                                  *    never an owning pointer.        */
-    mbedtls_ssl_transform *MBEDTLS_PRIVATE(transform);           /*!<  negotiated transform params
-                                                                  *    This pointer owns the transform
-                                                                  *    it references.                  */
-    mbedtls_ssl_transform *MBEDTLS_PRIVATE(transform_negotiate); /*!<  transform params in negotiation
-                                                                  *    This pointer owns the transform
-                                                                  *    it references.                  */
-
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-    /*! The application data transform in TLS 1.3.
-     *  This pointer owns the transform it references. */
-    mbedtls_ssl_transform *MBEDTLS_PRIVATE(transform_application);
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+    mbedtls_ssl_transform *MBEDTLS_PRIVATE(transform_in);        /*!<  current transform params (in)   */
+    mbedtls_ssl_transform *MBEDTLS_PRIVATE(transform_out);       /*!<  current transform params (in)   */
+    mbedtls_ssl_transform *MBEDTLS_PRIVATE(transform);           /*!<  negotiated transform params     */
+    mbedtls_ssl_transform *MBEDTLS_PRIVATE(transform_negotiate); /*!<  transform params in negotiation */
 
     /*
      * Timers
