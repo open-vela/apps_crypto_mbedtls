@@ -24,7 +24,11 @@
 #ifndef TEST_CONSTANT_FLOW_H
 #define TEST_CONSTANT_FLOW_H
 
-#include "mbedtls/build_info.h"
+#if !defined(MBEDTLS_CONFIG_FILE)
+#include "mbedtls/config.h"
+#else
+#include MBEDTLS_CONFIG_FILE
+#endif
 
 /*
  * This file defines the two macros
