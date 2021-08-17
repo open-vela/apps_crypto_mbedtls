@@ -3142,53 +3142,6 @@ void mbedtls_ssl_init( mbedtls_ssl_context *ssl )
     memset( ssl, 0, sizeof( mbedtls_ssl_context ) );
 }
 
-static int ssl_conf_version_check( const mbedtls_ssl_context *ssl )
-{
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-    if( mbedtls_ssl_conf_is_tls13_only( ssl->conf ) )
-    {
-        if( ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM )
-        {
-             MBEDTLS_SSL_DEBUG_MSG( 1, ( "DTLS 1.3 is not yet supported" ) );
-             return( MBEDTLS_ERR_SSL_FEATURE_UNAVAILABLE );
-        }
-        MBEDTLS_SSL_DEBUG_MSG( 4, ( "The SSL configuration is tls13 only." ) );
-        return( 0 );
-    }
-#endif
-
-#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
-    if( mbedtls_ssl_conf_is_tls12_only( ssl->conf ) )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 4, ( "The SSL configuration is tls12 only." ) );
-        return( 0 );
-    }
-#endif
-
-#if defined(MBEDTLS_SSL_PROTO_TLS1_2) && defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-    if( mbedtls_ssl_conf_is_hybrid_tls12_tls13( ssl->conf ) )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "Hybrid TLS 1.2 + TLS 1.3 configurations are not yet supported" ) );
-        return( MBEDTLS_ERR_SSL_FEATURE_UNAVAILABLE );
-    }
-#endif
-
-    MBEDTLS_SSL_DEBUG_MSG( 1, ( "The SSL configuration is invalid." ) );
-    return( MBEDTLS_ERR_SSL_BAD_CONFIG );
-}
-
-static int ssl_conf_check(const mbedtls_ssl_context *ssl)
-{
-    int ret;
-    ret = ssl_conf_version_check( ssl );
-    if( ret != 0 )
-        return( ret );
-
-    /* Space for further checks */
-
-    return( 0 );
-}
-
 /*
  * Setup an SSL context
  */
@@ -3201,9 +3154,6 @@ int mbedtls_ssl_setup( mbedtls_ssl_context *ssl,
     size_t out_buf_len = MBEDTLS_SSL_OUT_BUFFER_LEN;
 
     ssl->conf = conf;
-
-    if( ( ret = ssl_conf_check( ssl ) ) != 0 )
-        return( ret );
 
     /*
      * Prepare base structures
@@ -3933,15 +3883,6 @@ void mbedtls_ssl_conf_sig_hashes( mbedtls_ssl_config *conf,
 {
     conf->sig_hashes = hashes;
 }
-
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-/* Configure allowed signature algorithms for use in TLS 1.3 */
-void mbedtls_ssl_conf_sig_algs( mbedtls_ssl_config *conf,
-                                const uint16_t* sig_algs )
-{
-    conf->tls13_sig_algs = sig_algs;
-}
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 #endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
 
 #if defined(MBEDTLS_ECP_C)
@@ -5144,31 +5085,11 @@ int mbedtls_ssl_handshake_step( mbedtls_ssl_context *ssl )
 
 #if defined(MBEDTLS_SSL_CLI_C)
     if( ssl->conf->endpoint == MBEDTLS_SSL_IS_CLIENT )
-    {
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-        if( mbedtls_ssl_conf_is_tls13_only( ssl->conf ) )
-            ret = mbedtls_ssl_handshake_client_step_tls1_3( ssl );
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
-
-#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
-        if( mbedtls_ssl_conf_is_tls12_only( ssl->conf ) )
-            ret = mbedtls_ssl_handshake_client_step( ssl );
-#endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
-    }
+        ret = mbedtls_ssl_handshake_client_step( ssl );
 #endif
 #if defined(MBEDTLS_SSL_SRV_C)
     if( ssl->conf->endpoint == MBEDTLS_SSL_IS_SERVER )
-    {
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-        if( mbedtls_ssl_conf_is_tls13_only( ssl->conf ) )
-            ret = mbedtls_ssl_handshake_server_step_tls1_3( ssl );
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
-
-#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
-        if( mbedtls_ssl_conf_is_tls12_only( ssl->conf ) )
-            ret = mbedtls_ssl_handshake_server_step( ssl );
-#endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
-    }
+        ret = mbedtls_ssl_handshake_server_step( ssl );
 #endif
 
     return( ret );
@@ -6270,37 +6191,6 @@ static int ssl_preset_suiteb_hashes[] = {
     MBEDTLS_MD_SHA384,
     MBEDTLS_MD_NONE
 };
-
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-static uint16_t ssl_preset_default_sig_algs[] = {
-    /* ECDSA algorithms */
-#if defined(MBEDTLS_ECDSA_C)
-#if defined(MBEDTLS_SHA256_C) && defined(MBEDTLS_ECP_DP_SECP256R1_ENABLED)
-    MBEDTLS_TLS13_SIG_ECDSA_SECP256R1_SHA256,
-#endif /* MBEDTLS_SHA256_C && MBEDTLS_ECP_DP_SECP256R1_ENABLED */
-#if defined(MBEDTLS_SHA512_C) && defined(MBEDTLS_ECP_DP_SECP384R1_ENABLED)
-    MBEDTLS_TLS13_SIG_ECDSA_SECP384R1_SHA384,
-#endif /* MBEDTLS_SHA512_C && MBEDTLS_ECP_DP_SECP384R1_ENABLED */
-#if defined(MBEDTLS_SHA512_C) && defined(MBEDTLS_ECP_DP_SECP521R1_ENABLED)
-    MBEDTLS_TLS13_SIG_ECDSA_SECP521R1_SHA512,
-#endif /* MBEDTLS_SHA512_C && MBEDTLS_ECP_DP_SECP521R1_ENABLED */
-#endif /* MBEDTLS_ECDSA_C */
-    MBEDTLS_TLS13_SIG_NONE
-};
-
-static uint16_t ssl_preset_suiteb_sig_algs[] = {
-    /* ECDSA algorithms */
-#if defined(MBEDTLS_ECDSA_C)
-#if defined(MBEDTLS_SHA256_C) && defined(MBEDTLS_ECP_DP_SECP256R1_ENABLED)
-    MBEDTLS_TLS13_SIG_ECDSA_SECP256R1_SHA256,
-#endif /* MBEDTLS_SHA256_C && MBEDTLS_ECP_DP_SECP256R1_ENABLED */
-#if defined(MBEDTLS_SHA512_C) && defined(MBEDTLS_ECP_DP_SECP384R1_ENABLED)
-    MBEDTLS_TLS13_SIG_ECDSA_SECP384R1_SHA384,
-#endif /* MBEDTLS_SHA512_C && MBEDTLS_ECP_DP_SECP384R1_ENABLED */
-#endif /* MBEDTLS_ECDSA_C */
-    MBEDTLS_TLS13_SIG_NONE
-};
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 #endif
 
 #if defined(MBEDTLS_ECP_C)
@@ -6415,9 +6305,6 @@ int mbedtls_ssl_config_defaults( mbedtls_ssl_config *conf,
 
 #if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
             conf->sig_hashes = ssl_preset_suiteb_hashes;
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-            conf->tls13_sig_algs = ssl_preset_suiteb_sig_algs;
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 #endif
 
 #if defined(MBEDTLS_ECP_C)
@@ -6452,10 +6339,7 @@ int mbedtls_ssl_config_defaults( mbedtls_ssl_config *conf,
 
 #if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
             conf->sig_hashes = ssl_preset_default_hashes;
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-            conf->tls13_sig_algs = ssl_preset_default_sig_algs;
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
-#endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
+#endif
 
 #if defined(MBEDTLS_ECP_C)
             conf->curve_list = ssl_preset_default_curves;
