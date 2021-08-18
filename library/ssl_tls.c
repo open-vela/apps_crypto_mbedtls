@@ -664,14 +664,14 @@ typedef int ssl_tls_prf_t(const unsigned char *, size_t, const char *,
  *        - MBEDTLS_SSL_EXPORT_KEYS: ssl->conf->{f,p}_export_keys
  *        - MBEDTLS_DEBUG_C: ssl->conf->{f,p}_dbg
  */
-static int ssl_tls12_populate_transform( mbedtls_ssl_transform *transform,
+static int ssl_populate_transform( mbedtls_ssl_transform *transform,
                                    int ciphersuite,
                                    const unsigned char master[48],
-#if defined(MBEDTLS_SSL_SOME_SUITES_USE_MAC) && \
-    defined(MBEDTLS_SSL_ENCRYPT_THEN_MAC)
+#if defined(MBEDTLS_SSL_SOME_SUITES_USE_MAC)
+#if defined(MBEDTLS_SSL_ENCRYPT_THEN_MAC)
                                    int encrypt_then_mac,
-#endif /* MBEDTLS_SSL_ENCRYPT_THEN_MAC &&
-          MBEDTLS_SSL_SOME_SUITES_USE_MAC */
+#endif /* MBEDTLS_SSL_ENCRYPT_THEN_MAC */
+#endif /* MBEDTLS_SSL_SOME_SUITES_USE_MAC */
                                    ssl_tls_prf_t tls_prf,
                                    const unsigned char randbytes[64],
                                    int minor_ver,
@@ -712,15 +712,6 @@ static int ssl_tls12_populate_transform( mbedtls_ssl_transform *transform,
 #if defined(MBEDTLS_SSL_CONTEXT_SERIALIZATION)
     memcpy( transform->randbytes, randbytes, sizeof( transform->randbytes ) );
 #endif
-
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-    if( minor_ver == MBEDTLS_SSL_MINOR_VERSION_4 )
-    {
-        /* At the moment, we keep TLS <= 1.2 and TLS 1.3 transform
-         * generation separate. This should never happen. */
-        return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
-    }
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
     /*
      * Get various info structures
@@ -814,10 +805,19 @@ static int ssl_tls12_populate_transform( mbedtls_ssl_transform *transform,
          *   sequence number).
          */
         transform->ivlen = 12;
-        if( cipher_info->mode == MBEDTLS_MODE_CHACHAPOLY )
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+        if( minor_ver == MBEDTLS_SSL_MINOR_VERSION_4 )
+        {
             transform->fixed_ivlen = 12;
+        }
         else
-            transform->fixed_ivlen = 4;
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+        {
+            if( cipher_info->mode == MBEDTLS_MODE_CHACHAPOLY )
+                transform->fixed_ivlen = 12;
+            else
+                transform->fixed_ivlen = 4;
+        }
 
         /* Minimum length of encrypted record */
         explicit_ivlen = transform->ivlen - transform->fixed_ivlen;
@@ -1327,22 +1327,22 @@ int mbedtls_ssl_derive_keys( mbedtls_ssl_context *ssl )
     }
 
     /* Populate transform structure */
-    ret = ssl_tls12_populate_transform( ssl->transform_negotiate,
-                                        ssl->session_negotiate->ciphersuite,
-                                        ssl->session_negotiate->master,
-#if defined(MBEDTLS_SSL_SOME_SUITES_USE_MAC) && \
-    defined(MBEDTLS_SSL_ENCRYPT_THEN_MAC)
-                                        ssl->session_negotiate->encrypt_then_mac,
-#endif /* MBEDTLS_SSL_ENCRYPT_THEN_MAC &&
-          MBEDTLS_SSL_SOME_SUITES_USE_MAC */
-                                        ssl->handshake->tls_prf,
-                                        ssl->handshake->randbytes,
-                                        ssl->minor_ver,
-                                        ssl->conf->endpoint,
-                                        ssl );
+    ret = ssl_populate_transform( ssl->transform_negotiate,
+                                  ssl->session_negotiate->ciphersuite,
+                                  ssl->session_negotiate->master,
+#if defined(MBEDTLS_SSL_SOME_SUITES_USE_MAC)
+#if defined(MBEDTLS_SSL_ENCRYPT_THEN_MAC)
+                                  ssl->session_negotiate->encrypt_then_mac,
+#endif /* MBEDTLS_SSL_ENCRYPT_THEN_MAC */
+#endif /* MBEDTLS_SSL_SOME_SUITES_USE_MAC */
+                                  ssl->handshake->tls_prf,
+                                  ssl->handshake->randbytes,
+                                  ssl->minor_ver,
+                                  ssl->conf->endpoint,
+                                  ssl );
     if( ret != 0 )
     {
-        MBEDTLS_SSL_DEBUG_RET( 1, "ssl_tls12_populate_transform", ret );
+        MBEDTLS_SSL_DEBUG_RET( 1, "ssl_populate_transform", ret );
         return( ret );
     }
 
@@ -3142,53 +3142,6 @@ void mbedtls_ssl_init( mbedtls_ssl_context *ssl )
     memset( ssl, 0, sizeof( mbedtls_ssl_context ) );
 }
 
-static int ssl_conf_version_check( const mbedtls_ssl_context *ssl )
-{
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-    if( mbedtls_ssl_conf_is_tls13_only( ssl->conf ) )
-    {
-        if( ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM )
-        {
-             MBEDTLS_SSL_DEBUG_MSG( 1, ( "DTLS 1.3 is not yet supported" ) );
-             return( MBEDTLS_ERR_SSL_FEATURE_UNAVAILABLE );
-        }
-        MBEDTLS_SSL_DEBUG_MSG( 4, ( "The SSL configuration is tls13 only." ) );
-        return( 0 );
-    }
-#endif
-
-#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
-    if( mbedtls_ssl_conf_is_tls12_only( ssl->conf ) )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 4, ( "The SSL configuration is tls12 only." ) );
-        return( 0 );
-    }
-#endif
-
-#if defined(MBEDTLS_SSL_PROTO_TLS1_2) && defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-    if( mbedtls_ssl_conf_is_hybrid_tls12_tls13( ssl->conf ) )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "Hybrid TLS 1.2 + TLS 1.3 configurations are not yet supported" ) );
-        return( MBEDTLS_ERR_SSL_FEATURE_UNAVAILABLE );
-    }
-#endif
-
-    MBEDTLS_SSL_DEBUG_MSG( 1, ( "The SSL configuration is invalid." ) );
-    return( MBEDTLS_ERR_SSL_BAD_CONFIG );
-}
-
-static int ssl_conf_check(const mbedtls_ssl_context *ssl)
-{
-    int ret;
-    ret = ssl_conf_version_check( ssl );
-    if( ret != 0 )
-        return( ret );
-
-    /* Space for further checks */
-
-    return( 0 );
-}
-
 /*
  * Setup an SSL context
  */
@@ -3201,9 +3154,6 @@ int mbedtls_ssl_setup( mbedtls_ssl_context *ssl,
     size_t out_buf_len = MBEDTLS_SSL_OUT_BUFFER_LEN;
 
     ssl->conf = conf;
-
-    if( ( ret = ssl_conf_check( ssl ) ) != 0 )
-        return( ret );
 
     /*
      * Prepare base structures
@@ -3280,9 +3230,9 @@ error:
  * If partial is non-zero, keep data in the input buffer and client ID.
  * (Use when a DTLS client reconnects from the same port.)
  */
-static void ssl_session_reset_msg_layer( mbedtls_ssl_context *ssl,
-                                         int partial )
+int mbedtls_ssl_session_reset_int( mbedtls_ssl_context *ssl, int partial )
 {
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
 #if defined(MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH)
     size_t in_buf_len = ssl->in_buf_len;
     size_t out_buf_len = ssl->out_buf_len;
@@ -3291,65 +3241,16 @@ static void ssl_session_reset_msg_layer( mbedtls_ssl_context *ssl,
     size_t out_buf_len = MBEDTLS_SSL_OUT_BUFFER_LEN;
 #endif
 
-#if !defined(MBEDTLS_SSL_DTLS_CLIENT_PORT_REUSE) || !defined(MBEDTLS_SSL_SRV_C)
-    partial = 0;
+#if !defined(MBEDTLS_SSL_DTLS_CLIENT_PORT_REUSE) ||     \
+    !defined(MBEDTLS_SSL_SRV_C)
+    ((void) partial);
 #endif
+
+    ssl->state = MBEDTLS_SSL_HELLO_REQUEST;
 
     /* Cancel any possibly running timer */
     mbedtls_ssl_set_timer( ssl, 0 );
 
-    mbedtls_ssl_reset_in_out_pointers( ssl );
-
-    /* Reset incoming message parsing */
-    ssl->in_offt    = NULL;
-    ssl->nb_zero    = 0;
-    ssl->in_msgtype = 0;
-    ssl->in_msglen  = 0;
-    ssl->in_hslen   = 0;
-    ssl->keep_current_message = 0;
-    ssl->transform_in  = NULL;
-
-#if defined(MBEDTLS_SSL_PROTO_DTLS)
-    ssl->next_record_offset = 0;
-    ssl->in_epoch = 0;
-#endif
-
-    /* Keep current datagram if partial == 1 */
-    if( partial == 0 )
-    {
-        ssl->in_left = 0;
-        memset( ssl->in_buf, 0, in_buf_len );
-    }
-
-    /* Reset outgoing message writing */
-    ssl->out_msgtype = 0;
-    ssl->out_msglen  = 0;
-    ssl->out_left    = 0;
-    memset( ssl->out_buf, 0, out_buf_len );
-    memset( ssl->cur_out_ctr, 0, sizeof( ssl->cur_out_ctr ) );
-    ssl->transform_out = NULL;
-
-#if defined(MBEDTLS_SSL_DTLS_ANTI_REPLAY)
-    mbedtls_ssl_dtls_replay_reset( ssl );
-#endif
-
-    if( ssl->transform )
-    {
-        mbedtls_ssl_transform_free( ssl->transform );
-        mbedtls_free( ssl->transform );
-        ssl->transform = NULL;
-    }
-}
-
-int mbedtls_ssl_session_reset_int( mbedtls_ssl_context *ssl, int partial )
-{
-    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
-
-    ssl->state = MBEDTLS_SSL_HELLO_REQUEST;
-
-    ssl_session_reset_msg_layer( ssl, partial );
-
-    /* Reset renegotiation state */
 #if defined(MBEDTLS_SSL_RENEGOTIATION)
     ssl->renego_status = MBEDTLS_SSL_INITIAL_HANDSHAKE;
     ssl->renego_records_seen = 0;
@@ -3360,8 +3261,53 @@ int mbedtls_ssl_session_reset_int( mbedtls_ssl_context *ssl, int partial )
 #endif
     ssl->secure_renegotiation = MBEDTLS_SSL_LEGACY_RENEGOTIATION;
 
-    ssl->session_in  = NULL;
+    ssl->in_offt = NULL;
+    mbedtls_ssl_reset_in_out_pointers( ssl );
+
+    ssl->in_msgtype = 0;
+    ssl->in_msglen = 0;
+#if defined(MBEDTLS_SSL_PROTO_DTLS)
+    ssl->next_record_offset = 0;
+    ssl->in_epoch = 0;
+#endif
+#if defined(MBEDTLS_SSL_DTLS_ANTI_REPLAY)
+    mbedtls_ssl_dtls_replay_reset( ssl );
+#endif
+
+    ssl->in_hslen = 0;
+    ssl->nb_zero = 0;
+
+    ssl->keep_current_message = 0;
+
+    ssl->out_msgtype = 0;
+    ssl->out_msglen = 0;
+    ssl->out_left = 0;
+
+    memset( ssl->cur_out_ctr, 0, sizeof( ssl->cur_out_ctr ) );
+
+    ssl->transform_in = NULL;
+    ssl->transform_out = NULL;
+
+    ssl->session_in = NULL;
     ssl->session_out = NULL;
+
+    memset( ssl->out_buf, 0, out_buf_len );
+
+#if defined(MBEDTLS_SSL_DTLS_CLIENT_PORT_REUSE) && defined(MBEDTLS_SSL_SRV_C)
+    if( partial == 0 )
+#endif /* MBEDTLS_SSL_DTLS_CLIENT_PORT_REUSE && MBEDTLS_SSL_SRV_C */
+    {
+        ssl->in_left = 0;
+        memset( ssl->in_buf, 0, in_buf_len );
+    }
+
+    if( ssl->transform )
+    {
+        mbedtls_ssl_transform_free( ssl->transform );
+        mbedtls_free( ssl->transform );
+        ssl->transform = NULL;
+    }
+
     if( ssl->session )
     {
         mbedtls_ssl_session_free( ssl->session );
@@ -5130,68 +5076,20 @@ int mbedtls_ssl_session_load( mbedtls_ssl_session *session,
 /*
  * Perform a single step of the SSL handshake
  */
-static int ssl_prepare_handshake_step( mbedtls_ssl_context *ssl )
-{
-    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
-
-    if( ( ret = mbedtls_ssl_flush_output( ssl ) ) != 0 )
-        return( ret );
-
-#if defined(MBEDTLS_SSL_PROTO_DTLS)
-    if( ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM &&
-        ssl->handshake->retransmit_state == MBEDTLS_SSL_RETRANS_SENDING )
-    {
-        if( ( ret = mbedtls_ssl_flight_transmit( ssl ) ) != 0 )
-            return( ret );
-    }
-#endif /* MBEDTLS_SSL_PROTO_DTLS */
-
-    return( ret );
-}
-
 int mbedtls_ssl_handshake_step( mbedtls_ssl_context *ssl )
 {
-    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+    int ret = MBEDTLS_ERR_SSL_FEATURE_UNAVAILABLE;
 
-    if( ssl            == NULL                       ||
-        ssl->conf      == NULL                       ||
-        ssl->handshake == NULL                       ||
-        ssl->state     == MBEDTLS_SSL_HANDSHAKE_OVER )
-    {
+    if( ssl == NULL || ssl->conf == NULL )
         return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
-    }
-
-    ret = ssl_prepare_handshake_step( ssl );
-    if( ret != 0 )
-        return( ret );
 
 #if defined(MBEDTLS_SSL_CLI_C)
     if( ssl->conf->endpoint == MBEDTLS_SSL_IS_CLIENT )
-    {
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-        if( mbedtls_ssl_conf_is_tls13_only( ssl->conf ) )
-            ret = mbedtls_ssl_handshake_client_step_tls1_3( ssl );
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
-
-#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
-        if( mbedtls_ssl_conf_is_tls12_only( ssl->conf ) )
-            ret = mbedtls_ssl_handshake_client_step( ssl );
-#endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
-    }
+        ret = mbedtls_ssl_handshake_client_step( ssl );
 #endif
 #if defined(MBEDTLS_SSL_SRV_C)
     if( ssl->conf->endpoint == MBEDTLS_SSL_IS_SERVER )
-    {
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-        if( mbedtls_ssl_conf_is_tls13_only( ssl->conf ) )
-            ret = mbedtls_ssl_handshake_server_step_tls1_3( ssl );
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
-
-#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
-        if( mbedtls_ssl_conf_is_tls12_only( ssl->conf ) )
-            ret = mbedtls_ssl_handshake_server_step( ssl );
-#endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
-    }
+        ret = mbedtls_ssl_handshake_server_step( ssl );
 #endif
 
     return( ret );
@@ -5495,13 +5393,6 @@ void mbedtls_ssl_handshake_free( mbedtls_ssl_context *ssl )
     handle_buffer_resizing( ssl, 1, mbedtls_ssl_get_input_buflen( ssl ),
                                     mbedtls_ssl_get_output_buflen( ssl ) );
 #endif
-
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-    mbedtls_free( handshake->transform_earlydata );
-    mbedtls_free( handshake->transform_handshake );
-    handshake->transform_earlydata = NULL;
-    handshake->transform_handshake = NULL;
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 }
 
 void mbedtls_ssl_session_free( mbedtls_ssl_session *session )
@@ -5962,14 +5853,14 @@ static int ssl_context_load( mbedtls_ssl_context *ssl,
     if( (size_t)( end - p ) < sizeof( ssl->transform->randbytes ) )
         return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
 
-    ret = ssl_tls12_populate_transform( ssl->transform,
+    ret = ssl_populate_transform( ssl->transform,
                   ssl->session->ciphersuite,
                   ssl->session->master,
-#if defined(MBEDTLS_SSL_SOME_SUITES_USE_MAC) && \
-    defined(MBEDTLS_SSL_ENCRYPT_THEN_MAC)
+#if defined(MBEDTLS_SSL_SOME_SUITES_USE_MAC)
+#if defined(MBEDTLS_SSL_ENCRYPT_THEN_MAC)
                   ssl->session->encrypt_then_mac,
-#endif /* MBEDTLS_SSL_ENCRYPT_THEN_MAC &&
-          MBEDTLS_SSL_SOME_SUITES_USE_MAC */
+#endif
+#endif /* MBEDTLS_SSL_SOME_SUITES_USE_MAC */
                   ssl_tls12prf_from_cs( ssl->session->ciphersuite ),
                   p, /* currently pointing to randbytes */
                   MBEDTLS_SSL_MINOR_VERSION_3, /* (D)TLS 1.2 is forced */
@@ -6199,11 +6090,6 @@ void mbedtls_ssl_free( mbedtls_ssl_context *ssl )
         mbedtls_free( ssl->transform_negotiate );
         mbedtls_free( ssl->session_negotiate );
     }
-
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-    mbedtls_ssl_transform_free( ssl->transform_application );
-    mbedtls_free( ssl->transform_application );
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
     if( ssl->session )
     {
