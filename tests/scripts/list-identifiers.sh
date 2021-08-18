@@ -1,11 +1,8 @@
 #!/bin/bash
 #
 # Create a file named identifiers containing identifiers from internal header
-# files, based on the --internal flag.
+# files or all header files, based on --internal flag.
 # Outputs the line count of the file to stdout.
-# A very thin wrapper around list_internal_identifiers.py for backwards
-# compatibility.
-# Must be run from Mbed TLS root.
 #
 # Usage: list-identifiers.sh [ -i | --internal ]
 #
@@ -27,7 +24,7 @@
 set -eu
 
 if [ -d include/mbedtls ]; then :; else
-    echo "$0: Must be run from Mbed TLS root" >&2
+    echo "$0: must be run from root" >&2
     exit 1
 fi
 
@@ -50,17 +47,32 @@ done
 
 if [ $INTERNAL ]
 then
-    tests/scripts/list_internal_identifiers.py
-    wc -l identifiers
+    HEADERS=$( ls include/mbedtls/*_internal.h library/*.h | egrep -v 'compat-2\.x\.h' )
 else
-    cat <<EOF
-Sorry, this script has to be called with --internal.
-
-This script exists solely for backwards compatibility with the previous
-iteration of list-identifiers.sh, of which only the --internal option remains in
-use. It is a thin wrapper around list_internal_identifiers.py.
-
-check-names.sh, which used to depend on this script, has been replaced with
-check_names.py and is now self-complete.
-EOF
+    HEADERS=$( ls include/mbedtls/*.h include/psa/*.h library/*.h | egrep -v 'compat-2\.x\.h' )
+    HEADERS="$HEADERS 3rdparty/everest/include/everest/everest.h 3rdparty/everest/include/everest/x25519.h"
 fi
+
+rm -f identifiers
+
+grep '^[^ /#{]' $HEADERS | \
+    sed -e 's/^[^:]*://' | \
+    egrep -v '^(extern "C"|(typedef )?(struct|union|enum)( {)?$|};?$)' \
+    > _decls
+
+if true; then
+sed -n -e 's/.* \**\([a-zA-Z_][a-zA-Z0-9_]*\)(.*/\1/p' \
+       -e 's/.*(\*\(.*\))(.*/\1/p' _decls
+grep -v '(' _decls | sed -e 's/\([a-zA-Z0-9_]*\)[;[].*/\1/' -e 's/.* \**//'
+fi > _identifiers
+
+if [ $( wc -l < _identifiers ) -eq $( wc -l < _decls ) ]; then
+    rm _decls
+    egrep -v '^(u?int(16|32|64)_t)$' _identifiers | sort > identifiers
+    rm _identifiers
+else
+    echo "$0: oops, lost some identifiers" 2>&1
+    exit 1
+fi
+
+wc -l identifiers
