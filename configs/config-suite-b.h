@@ -33,6 +33,9 @@
  * See README.txt for usage instructions.
  */
 
+#ifndef MBEDTLS_CONFIG_H
+#define MBEDTLS_CONFIG_H
+
 /* System support */
 #define MBEDTLS_HAVE_ASM
 #define MBEDTLS_HAVE_TIME
@@ -81,7 +84,8 @@
 #define MBEDTLS_AES_ROM_TABLES
 
 /* Save RAM by adjusting to our exact needs */
-#define MBEDTLS_MPI_MAX_SIZE    48 // 384-bit EC curve = 48 bytes
+#define MBEDTLS_ECP_MAX_BITS   384
+#define MBEDTLS_MPI_MAX_SIZE    48 // 384 bits is 48 bytes
 
 /* Save RAM at the expense of speed, see ecp.h */
 #define MBEDTLS_ECP_WINDOW_SIZE        2
@@ -110,3 +114,7 @@
  */
 #define MBEDTLS_SSL_IN_CONTENT_LEN             1024
 #define MBEDTLS_SSL_OUT_CONTENT_LEN             1024
+
+#include "mbedtls/check_config.h"
+
+#endif /* MBEDTLS_CONFIG_H */

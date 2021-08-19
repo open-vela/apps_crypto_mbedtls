@@ -25,7 +25,11 @@
 #ifndef MBEDTLS_HKDF_H
 #define MBEDTLS_HKDF_H
 
-#include "mbedtls/build_info.h"
+#if !defined(MBEDTLS_CONFIG_FILE)
+#include "mbedtls/config.h"
+#else
+#include MBEDTLS_CONFIG_FILE
+#endif
 
 #include "mbedtls/md.h"
 
@@ -33,8 +37,7 @@
  *  \name HKDF Error codes
  *  \{
  */
-/** Bad input parameters to function. */
-#define MBEDTLS_ERR_HKDF_BAD_INPUT_DATA  -0x5F80
+#define MBEDTLS_ERR_HKDF_BAD_INPUT_DATA  -0x5F80  /**< Bad input parameters to function. */
 /* \} name */
 
 #ifdef __cplusplus
