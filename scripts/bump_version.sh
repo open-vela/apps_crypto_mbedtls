@@ -24,8 +24,6 @@
 #                           [ -v | --verbose ] [ -h | --help ]
 #
 
-set -e
-
 VERSION=""
 SOVERSION=""
 
@@ -81,10 +79,6 @@ then
   exit 1
 fi
 
-[ $VERBOSE ] && echo "Bumping VERSION in CMakeLists.txt"
-sed -e "s/ VERSION [0-9.]\{1,\}/ VERSION $VERSION/g" < CMakeLists.txt > tmp
-mv tmp CMakeLists.txt
-
 [ $VERBOSE ] && echo "Bumping VERSION in library/CMakeLists.txt"
 sed -e "s/ VERSION [0-9.]\{1,\}/ VERSION $VERSION/g" < library/CMakeLists.txt > tmp
 mv tmp library/CMakeLists.txt
@@ -122,10 +116,10 @@ then
   mv tmp library/Makefile
 fi
 
-[ $VERBOSE ] && echo "Bumping VERSION in include/mbedtls/build_info.h"
+[ $VERBOSE ] && echo "Bumping VERSION in include/mbedtls/version.h"
 read MAJOR MINOR PATCH <<<$(IFS="."; echo $VERSION)
 VERSION_NR="$( printf "0x%02X%02X%02X00" $MAJOR $MINOR $PATCH )"
-cat include/mbedtls/build_info.h |                                    \
+cat include/mbedtls/version.h |                                    \
     sed -e "s/_VERSION_MAJOR .\{1,\}/_VERSION_MAJOR  $MAJOR/" |    \
     sed -e "s/_VERSION_MINOR .\{1,\}/_VERSION_MINOR  $MINOR/" |    \
     sed -e "s/_VERSION_PATCH .\{1,\}/_VERSION_PATCH  $PATCH/" |    \
@@ -133,7 +127,7 @@ cat include/mbedtls/build_info.h |                                    \
     sed -e "s/_VERSION_STRING .\{1,\}/_VERSION_STRING         \"$VERSION\"/" |    \
     sed -e "s/_VERSION_STRING_FULL .\{1,\}/_VERSION_STRING_FULL    \"mbed TLS $VERSION\"/" \
     > tmp
-mv tmp include/mbedtls/build_info.h
+mv tmp include/mbedtls/version.h
 
 [ $VERBOSE ] && echo "Bumping version in tests/suites/test_suite_version.data"
 sed -e "s/version:\".\{1,\}/version:\"$VERSION\"/g" < tests/suites/test_suite_version.data > tmp
