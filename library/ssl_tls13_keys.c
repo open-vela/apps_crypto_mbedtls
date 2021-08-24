@@ -113,17 +113,17 @@ static void ssl_tls1_3_hkdf_encode_label(
 #endif
 
     *p++ = 0;
-    *p++ = MBEDTLS_BYTE_0( desired_length );
+    *p++ = (unsigned char)( ( desired_length >> 0 ) & 0xFF );
 
     /* Add label incl. prefix */
-    *p++ = MBEDTLS_BYTE_0( total_label_len );
+    *p++ = (unsigned char)( total_label_len & 0xFF );
     memcpy( p, tls1_3_label_prefix, sizeof(tls1_3_label_prefix) );
     p += sizeof(tls1_3_label_prefix);
     memcpy( p, label, llen );
     p += llen;
 
     /* Add context value */
-    *p++ = MBEDTLS_BYTE_0( clen );
+    *p++ = (unsigned char)( clen & 0xFF );
     if( clen != 0 )
         memcpy( p, ctx, clen );
 
