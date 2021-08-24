@@ -2329,7 +2329,7 @@ static psa_status_t psa_mac_setup( psa_mac_operation_t *operation,
     status = psa_get_and_lock_key_slot_with_policy(
                  key,
                  &slot,
-                 is_sign ? PSA_KEY_USAGE_SIGN_MESSAGE : PSA_KEY_USAGE_VERIFY_MESSAGE,
+                 is_sign ? PSA_KEY_USAGE_SIGN_HASH : PSA_KEY_USAGE_VERIFY_HASH,
                  alg );
     if( status != PSA_SUCCESS )
         goto exit;
@@ -2514,9 +2514,8 @@ static psa_status_t psa_mac_compute_internal( mbedtls_svc_key_id_t key,
     uint8_t operation_mac_size = 0;
 
     status = psa_get_and_lock_key_slot_with_policy(
-                 key,
-                 &slot,
-                 is_sign ? PSA_KEY_USAGE_SIGN_MESSAGE : PSA_KEY_USAGE_VERIFY_MESSAGE,
+                 key, &slot,
+                 is_sign ? PSA_KEY_USAGE_SIGN_HASH : PSA_KEY_USAGE_VERIFY_HASH,
                  alg );
     if( status != PSA_SUCCESS )
         goto exit;
@@ -4507,8 +4506,8 @@ static psa_status_t psa_tls12_prf_psk_to_ms_set_key(
      * uint16 with the value N, and the PSK itself.
      */
 
-    *cur++ = ( data_length >> 8 ) & 0xff;
-    *cur++ = ( data_length >> 0 ) & 0xff;
+    *cur++ = MBEDTLS_BYTE_1( data_length );
+    *cur++ = MBEDTLS_BYTE_0( data_length );
     memset( cur, 0, data_length );
     cur += data_length;
     *cur++ = pms[0];
