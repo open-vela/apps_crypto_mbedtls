@@ -13,11 +13,13 @@ endif()
 set(src_crypto
     aes.c
     aesni.c
+    arc4.c
     aria.c
     asn1parse.c
     asn1write.c
     base64.c
     bignum.c
+    blowfish.c
     camellia.c
     ccm.c
     chacha20.c
@@ -40,6 +42,8 @@ set(src_crypto
     hkdf.c
     hmac_drbg.c
     md.c
+    md2.c
+    md4.c
     md5.c
     memory_buffer_alloc.c
     mps_reader.c
@@ -80,7 +84,10 @@ set(src_crypto
     timing.c
     version.c
     version_features.c
+    xtea.c
 )
+
+list(APPEND src_crypto ${thirdparty_src})
 
 set(src_x509
     x509.c
@@ -104,8 +111,6 @@ set(src_tls
     ssl_ticket.c
     ssl_tls.c
     ssl_tls13_keys.c
-    ssl_tls13_server.c
-    ssl_tls13_client.c
 )
 
 if(CMAKE_COMPILER_IS_GNUCC)
@@ -175,10 +180,6 @@ if(USE_STATIC_MBEDTLS_LIBRARY)
     set_target_properties(${mbedcrypto_static_target} PROPERTIES OUTPUT_NAME mbedcrypto)
     target_link_libraries(${mbedcrypto_static_target} PUBLIC ${libs})
 
-    if(TARGET everest)
-        target_link_libraries(${mbedcrypto_static_target} PUBLIC everest)
-    endif()
-
     add_library(${mbedx509_static_target} STATIC ${src_x509})
     set_target_properties(${mbedx509_static_target} PROPERTIES OUTPUT_NAME mbedx509)
     target_link_libraries(${mbedx509_static_target} PUBLIC ${libs} ${mbedcrypto_static_target})
@@ -190,19 +191,15 @@ endif(USE_STATIC_MBEDTLS_LIBRARY)
 
 if(USE_SHARED_MBEDTLS_LIBRARY)
     add_library(${mbedcrypto_target} SHARED ${src_crypto})
-    set_target_properties(${mbedcrypto_target} PROPERTIES VERSION 3.0.0 SOVERSION 10)
+    set_target_properties(${mbedcrypto_target} PROPERTIES VERSION 2.26.0 SOVERSION 6)
     target_link_libraries(${mbedcrypto_target} PUBLIC ${libs})
 
-    if(TARGET everest)
-        target_link_libraries(${mbedcrypto_target} PUBLIC everest)
-    endif()
-
     add_library(${mbedx509_target} SHARED ${src_x509})
-    set_target_properties(${mbedx509_target} PROPERTIES VERSION 3.0.0 SOVERSION 4)
+    set_target_properties(${mbedx509_target} PROPERTIES VERSION 2.26.0 SOVERSION 1)
     target_link_libraries(${mbedx509_target} PUBLIC ${libs} ${mbedcrypto_target})
 
     add_library(${mbedtls_target} SHARED ${src_tls})
-    set_target_properties(${mbedtls_target} PROPERTIES VERSION 3.0.0 SOVERSION 16)
+    set_target_properties(${mbedtls_target} PROPERTIES VERSION 2.26.0 SOVERSION 13)
     target_link_libraries(${mbedtls_target} PUBLIC ${libs} ${mbedx509_target})
 endif(USE_SHARED_MBEDTLS_LIBRARY)
 
@@ -213,14 +210,15 @@ foreach(target IN LISTS target_libraries)
     # /library needs to be listed explicitly when building .c files outside
     # of /library (which currently means: under /3rdparty).
     target_include_directories(${target}
-        PUBLIC $<BUILD_INTERFACE:${MBEDTLS_DIR}/include/>
-               $<INSTALL_INTERFACE:include/>
-        PRIVATE ${MBEDTLS_DIR}/library/)
-    install(
-        TARGETS ${target}
-        EXPORT MbedTLSTargets
-        DESTINATION ${LIB_INSTALL_DIR}
-        PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ)
+        PUBLIC ${MBEDTLS_DIR}/include/
+        PUBLIC ${thirdparty_inc_public}
+        PRIVATE ${MBEDTLS_DIR}/library/
+        PRIVATE ${thirdparty_inc})
+    target_compile_definitions(${target}
+        PRIVATE ${thirdparty_def})
+    install(TARGETS ${target}
+            DESTINATION ${LIB_INSTALL_DIR}
+            PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ)
 endforeach(target)
 
 set(lib_target "${MBEDTLS_TARGET_PREFIX}lib")
