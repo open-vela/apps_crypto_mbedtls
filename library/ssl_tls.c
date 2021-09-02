@@ -689,7 +689,7 @@ static int ssl_tls12_populate_transform( mbedtls_ssl_transform *transform,
     unsigned char *mac_dec;
     size_t mac_key_len = 0;
     size_t iv_copy_len;
-    size_t keylen;
+    unsigned keylen;
     const mbedtls_ssl_ciphersuite_t *ciphersuite_info;
     const mbedtls_cipher_info_t *cipher_info;
     const mbedtls_md_info_t *md_info;
@@ -789,14 +789,14 @@ static int ssl_tls12_populate_transform( mbedtls_ssl_transform *transform,
      * Determine the appropriate key, IV and MAC length.
      */
 
-    keylen = mbedtls_cipher_info_get_key_bitlen( cipher_info ) / 8;
+    keylen = cipher_info->key_bitlen / 8;
 
 #if defined(MBEDTLS_GCM_C) ||                           \
     defined(MBEDTLS_CCM_C) ||                           \
     defined(MBEDTLS_CHACHAPOLY_C)
-    if( mbedtls_cipher_info_get_mode( cipher_info ) == MBEDTLS_MODE_GCM ||
-        mbedtls_cipher_info_get_mode( cipher_info ) == MBEDTLS_MODE_CCM ||
-        mbedtls_cipher_info_get_mode( cipher_info ) == MBEDTLS_MODE_CHACHAPOLY )
+    if( cipher_info->mode == MBEDTLS_MODE_GCM ||
+        cipher_info->mode == MBEDTLS_MODE_CCM ||
+        cipher_info->mode == MBEDTLS_MODE_CHACHAPOLY )
     {
         size_t explicit_ivlen;
 
@@ -814,7 +814,7 @@ static int ssl_tls12_populate_transform( mbedtls_ssl_transform *transform,
          *   sequence number).
          */
         transform->ivlen = 12;
-        if( mbedtls_cipher_info_get_mode( cipher_info ) == MBEDTLS_MODE_CHACHAPOLY )
+        if( cipher_info->mode == MBEDTLS_MODE_CHACHAPOLY )
             transform->fixed_ivlen = 12;
         else
             transform->fixed_ivlen = 4;
@@ -826,8 +826,8 @@ static int ssl_tls12_populate_transform( mbedtls_ssl_transform *transform,
     else
 #endif /* MBEDTLS_GCM_C || MBEDTLS_CCM_C || MBEDTLS_CHACHAPOLY_C */
 #if defined(MBEDTLS_SSL_SOME_SUITES_USE_MAC)
-    if( mbedtls_cipher_info_get_mode( cipher_info ) == MBEDTLS_MODE_STREAM ||
-        mbedtls_cipher_info_get_mode( cipher_info ) == MBEDTLS_MODE_CBC )
+    if( cipher_info->mode == MBEDTLS_MODE_STREAM ||
+        cipher_info->mode == MBEDTLS_MODE_CBC )
     {
         /* Initialize HMAC contexts */
         if( ( ret = mbedtls_md_setup( &transform->md_ctx_enc, md_info, 1 ) ) != 0 ||
@@ -845,7 +845,7 @@ static int ssl_tls12_populate_transform( mbedtls_ssl_transform *transform,
         transform->ivlen = cipher_info->iv_size;
 
         /* Minimum length */
-        if( mbedtls_cipher_info_get_mode( cipher_info ) == MBEDTLS_MODE_STREAM )
+        if( cipher_info->mode == MBEDTLS_MODE_STREAM )
             transform->minlen = transform->maclen;
         else
         {
@@ -1060,7 +1060,7 @@ static int ssl_tls12_populate_transform( mbedtls_ssl_transform *transform,
     }
 
     if( ( ret = mbedtls_cipher_setkey( &transform->cipher_ctx_enc, key1,
-                               (int) mbedtls_cipher_info_get_key_bitlen( cipher_info ),
+                               cipher_info->key_bitlen,
                                MBEDTLS_ENCRYPT ) ) != 0 )
     {
         MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_cipher_setkey", ret );
@@ -1068,7 +1068,7 @@ static int ssl_tls12_populate_transform( mbedtls_ssl_transform *transform,
     }
 
     if( ( ret = mbedtls_cipher_setkey( &transform->cipher_ctx_dec, key2,
-                               (int) mbedtls_cipher_info_get_key_bitlen( cipher_info ),
+                               cipher_info->key_bitlen,
                                MBEDTLS_DECRYPT ) ) != 0 )
     {
         MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_cipher_setkey", ret );
@@ -1076,7 +1076,7 @@ static int ssl_tls12_populate_transform( mbedtls_ssl_transform *transform,
     }
 
 #if defined(MBEDTLS_CIPHER_MODE_CBC)
-    if( mbedtls_cipher_info_get_mode( cipher_info ) == MBEDTLS_MODE_CBC )
+    if( cipher_info->mode == MBEDTLS_MODE_CBC )
     {
         if( ( ret = mbedtls_cipher_set_padding_mode( &transform->cipher_ctx_enc,
                                              MBEDTLS_PADDING_NONE ) ) != 0 )
@@ -3549,14 +3549,6 @@ void mbedtls_ssl_conf_ciphersuites( mbedtls_ssl_config *conf,
 {
     conf->ciphersuite_list = ciphersuites;
 }
-
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-void mbedtls_ssl_conf_tls13_key_exchange_modes( mbedtls_ssl_config *conf,
-                                                const int kex_modes )
-{
-    conf->tls13_kex_modes = kex_modes & MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_ALL;
-}
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
 void mbedtls_ssl_conf_cert_profile( mbedtls_ssl_config *conf,
@@ -6401,28 +6393,21 @@ int mbedtls_ssl_config_defaults( mbedtls_ssl_config *conf,
 #endif
 
 #if defined(MBEDTLS_DHM_C) && defined(MBEDTLS_SSL_SRV_C)
-    if( endpoint == MBEDTLS_SSL_IS_SERVER )
-    {
-        const unsigned char dhm_p[] =
-            MBEDTLS_DHM_RFC3526_MODP_2048_P_BIN;
-        const unsigned char dhm_g[] =
-            MBEDTLS_DHM_RFC3526_MODP_2048_G_BIN;
+            if( endpoint == MBEDTLS_SSL_IS_SERVER )
+            {
+                const unsigned char dhm_p[] =
+                    MBEDTLS_DHM_RFC3526_MODP_2048_P_BIN;
+                const unsigned char dhm_g[] =
+                    MBEDTLS_DHM_RFC3526_MODP_2048_G_BIN;
 
-        if ( ( ret = mbedtls_ssl_conf_dh_param_bin( conf,
-                                                    dhm_p, sizeof( dhm_p ),
-                                                    dhm_g, sizeof( dhm_g ) ) ) != 0 )
-        {
-            return( ret );
-        }
-    }
+                if ( ( ret = mbedtls_ssl_conf_dh_param_bin( conf,
+                                               dhm_p, sizeof( dhm_p ),
+                                               dhm_g, sizeof( dhm_g ) ) ) != 0 )
+                {
+                    return( ret );
+                }
+            }
 #endif
-
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-    /*
-     * Allow all TLS 1.3 key exchange modes by default.
-     */
-    conf->tls13_kex_modes = MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_ALL;
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
     /*
      * Preset-specific defaults
