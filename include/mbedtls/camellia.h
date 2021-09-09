@@ -21,9 +21,12 @@
  */
 #ifndef MBEDTLS_CAMELLIA_H
 #define MBEDTLS_CAMELLIA_H
-#include "mbedtls/private_access.h"
 
-#include "mbedtls/build_info.h"
+#if !defined(MBEDTLS_CONFIG_FILE)
+#include "mbedtls/config.h"
+#else
+#include MBEDTLS_CONFIG_FILE
+#endif
 
 #include <stddef.h>
 #include <stdint.h>
@@ -33,11 +36,9 @@
 #define MBEDTLS_CAMELLIA_ENCRYPT     1
 #define MBEDTLS_CAMELLIA_DECRYPT     0
 
-/** Bad input data. */
-#define MBEDTLS_ERR_CAMELLIA_BAD_INPUT_DATA -0x0024
+#define MBEDTLS_ERR_CAMELLIA_BAD_INPUT_DATA -0x0024 /**< Bad input data. */
 
-/** Invalid data input length. */
-#define MBEDTLS_ERR_CAMELLIA_INVALID_INPUT_LENGTH -0x0026
+#define MBEDTLS_ERR_CAMELLIA_INVALID_INPUT_LENGTH -0x0026 /**< Invalid data input length. */
 
 #ifdef __cplusplus
 extern "C" {
@@ -52,8 +53,8 @@ extern "C" {
  */
 typedef struct mbedtls_camellia_context
 {
-    int MBEDTLS_PRIVATE(nr);                     /*!<  number of rounds  */
-    uint32_t MBEDTLS_PRIVATE(rk)[68];            /*!<  CAMELLIA round keys    */
+    int nr;                     /*!<  number of rounds  */
+    uint32_t rk[68];            /*!<  CAMELLIA round keys    */
 }
 mbedtls_camellia_context;
 
