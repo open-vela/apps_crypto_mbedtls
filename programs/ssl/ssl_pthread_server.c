@@ -18,7 +18,11 @@
  *  limitations under the License.
  */
 
-#include "mbedtls/build_info.h"
+#if !defined(MBEDTLS_CONFIG_FILE)
+#include "mbedtls/config.h"
+#else
+#include MBEDTLS_CONFIG_FILE
+#endif
 
 #if defined(MBEDTLS_PLATFORM_C)
 #include "mbedtls/platform.h"
@@ -356,23 +360,7 @@ int main( void )
     mbedtls_entropy_init( &entropy );
 
     /*
-     * 1a. Seed the random number generator
-     */
-    mbedtls_printf( "  . Seeding the random number generator..." );
-
-    if( ( ret = mbedtls_ctr_drbg_seed( &ctr_drbg, mbedtls_entropy_func, &entropy,
-                               (const unsigned char *) pers,
-                               strlen( pers ) ) ) != 0 )
-    {
-        mbedtls_printf( " failed: mbedtls_ctr_drbg_seed returned -0x%04x\n",
-                ( unsigned int ) -ret );
-        goto exit;
-    }
-
-    mbedtls_printf( " ok\n" );
-
-    /*
-     * 1b. Load the certificates and private RSA key
+     * 1. Load the certificates and private RSA key
      */
     mbedtls_printf( "\n  . Loading the server cert. and key..." );
     fflush( stdout );
@@ -400,11 +388,26 @@ int main( void )
 
     mbedtls_pk_init( &pkey );
     ret =  mbedtls_pk_parse_key( &pkey, (const unsigned char *) mbedtls_test_srv_key,
-                         mbedtls_test_srv_key_len, NULL, 0,
-                         mbedtls_ctr_drbg_random, &ctr_drbg );
+                         mbedtls_test_srv_key_len, NULL, 0 );
     if( ret != 0 )
     {
         mbedtls_printf( " failed\n  !  mbedtls_pk_parse_key returned %d\n\n", ret );
+        goto exit;
+    }
+
+    mbedtls_printf( " ok\n" );
+
+    /*
+     * 1b. Seed the random number generator
+     */
+    mbedtls_printf( "  . Seeding the random number generator..." );
+
+    if( ( ret = mbedtls_ctr_drbg_seed( &ctr_drbg, mbedtls_entropy_func, &entropy,
+                               (const unsigned char *) pers,
+                               strlen( pers ) ) ) != 0 )
+    {
+        mbedtls_printf( " failed: mbedtls_ctr_drbg_seed returned -0x%04x\n",
+                ( unsigned int ) -ret );
         goto exit;
     }
 
