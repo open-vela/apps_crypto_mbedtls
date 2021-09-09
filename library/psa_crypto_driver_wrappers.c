@@ -380,49 +380,8 @@ psa_status_t psa_driver_wrapper_verify_hash(
     }
 }
 
-/** Calculate the key buffer size required to store the key material of a key
- *  associated with an opaque driver from input key data.
- *
- * \param[in] attributes        The key attributes
- * \param[in] data              The input key data.
- * \param[in] data_length       The input data length.
- * \param[out] key_buffer_size  Minimum buffer size to contain the key material.
- *
- * \retval #PSA_SUCCESS
- * \retval #PSA_ERROR_INVALID_ARGUMENT
- * \retval #PSA_ERROR_NOT_SUPPORTED
- */
-psa_status_t psa_driver_wrapper_get_key_buffer_size_from_key_data(
-    const psa_key_attributes_t *attributes,
-    const uint8_t *data,
-    size_t data_length,
-    size_t *key_buffer_size )
-{
-    psa_key_location_t location =
-        PSA_KEY_LIFETIME_GET_LOCATION( attributes->core.lifetime );
-    psa_key_type_t key_type = attributes->core.type;
-
-    *key_buffer_size = 0;
-    switch( location )
-    {
-#if defined(PSA_CRYPTO_DRIVER_TEST)
-        case PSA_CRYPTO_TEST_DRIVER_LOCATION:
-            *key_buffer_size = mbedtls_test_opaque_size_function( key_type,
-                                     PSA_BYTES_TO_BITS( data_length ) );
-            return( ( *key_buffer_size != 0 ) ?
-                    PSA_SUCCESS : PSA_ERROR_NOT_SUPPORTED );
-#endif /* PSA_CRYPTO_DRIVER_TEST */
-
-        default:
-            (void)key_type;
-            (void)data;
-            (void)data_length;
-            return( PSA_ERROR_INVALID_ARGUMENT );
-    }
-}
-
 /** Get the key buffer size required to store the key material of a key
- *  associated with an opaque driver.
+ *  associated with an opaque driver without storage.
  *
  * \param[in] attributes  The key attributes.
  * \param[out] key_buffer_size  Minimum buffer size to contain the key material
@@ -430,11 +389,11 @@ psa_status_t psa_driver_wrapper_get_key_buffer_size_from_key_data(
  * \retval #PSA_SUCCESS
  *         The minimum size for a buffer to contain the key material has been
  *         returned successfully.
+ * \retval #PSA_ERROR_INVALID_ARGUMENT
+ *         The size in bits of the key is not valid.
  * \retval #PSA_ERROR_NOT_SUPPORTED
  *         The type and/or the size in bits of the key or the combination of
  *         the two is not supported.
- * \retval #PSA_ERROR_INVALID_ARGUMENT
- *         The key is declared with a lifetime not known to us.
  */
 psa_status_t psa_driver_wrapper_get_key_buffer_size(
     const psa_key_attributes_t *attributes,
@@ -459,8 +418,7 @@ psa_status_t psa_driver_wrapper_get_key_buffer_size(
                 return( PSA_SUCCESS );
             }
 #endif /* MBEDTLS_PSA_CRYPTO_BUILTIN_KEYS */
-            *key_buffer_size = mbedtls_test_opaque_size_function( key_type,
-                                                                  key_bits );
+            *key_buffer_size = mbedtls_test_size_function( key_type, key_bits );
             return( ( *key_buffer_size != 0 ) ?
                     PSA_SUCCESS : PSA_ERROR_NOT_SUPPORTED );
 #endif /* PSA_CRYPTO_DRIVER_TEST */
@@ -468,7 +426,7 @@ psa_status_t psa_driver_wrapper_get_key_buffer_size(
         default:
             (void)key_type;
             (void)key_bits;
-            return( PSA_ERROR_INVALID_ARGUMENT );
+            return( PSA_ERROR_NOT_SUPPORTED );
     }
 }
 
@@ -608,18 +566,10 @@ psa_status_t psa_driver_wrapper_import_key(
                                               data, data_length,
                                               key_buffer, key_buffer_size,
                                               key_buffer_length, bits ) );
-        /* Add cases for opaque driver here */
-#if defined(PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT)
-#if defined(PSA_CRYPTO_DRIVER_TEST)
-        case PSA_CRYPTO_TEST_DRIVER_LOCATION:
-            return( mbedtls_test_opaque_import_key(
-                         attributes,
-                         data, data_length,
-                         key_buffer, key_buffer_size,
-                         key_buffer_length, bits ) );
-#endif /* PSA_CRYPTO_DRIVER_TEST */
-#endif /* PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT */
+
         default:
+            /* Importing a key with external storage in not yet supported.
+             * Return in error indicating that the lifetime is not valid. */
             (void)status;
             return( PSA_ERROR_INVALID_ARGUMENT );
     }
@@ -781,39 +731,6 @@ psa_status_t psa_driver_wrapper_get_builtin_key(
             (void) key_buffer_length;
             return( PSA_ERROR_DOES_NOT_EXIST );
     }
-}
-
-psa_status_t psa_driver_wrapper_copy_key(
-    psa_key_attributes_t *attributes,
-    const uint8_t *source_key, size_t source_key_size,
-    uint8_t *target_key_buffer, size_t target_key_buffer_size,
-    size_t *target_key_buffer_length )
-{
-    psa_status_t status = PSA_ERROR_CORRUPTION_DETECTED;
-    psa_key_location_t location =
-        PSA_KEY_LIFETIME_GET_LOCATION( attributes->core.lifetime );
-
-    switch( location )
-    {
-#if defined(PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT)
-#if defined(PSA_CRYPTO_DRIVER_TEST)
-        case PSA_CRYPTO_TEST_DRIVER_LOCATION:
-            return( mbedtls_test_opaque_copy_key( attributes, source_key,
-                                                  source_key_size,
-                                                  target_key_buffer,
-                                                  target_key_buffer_size,
-                                                  target_key_buffer_length) );
-#endif /* PSA_CRYPTO_DRIVER_TEST */
-#endif /* PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT */
-        default:
-            (void)source_key;
-            (void)source_key_size;
-            (void)target_key_buffer;
-            (void)target_key_buffer_size;
-            (void)target_key_buffer_length;
-            status = PSA_ERROR_INVALID_ARGUMENT;
-    }
-    return( status );
 }
 
 /*
