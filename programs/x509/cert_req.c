@@ -17,7 +17,11 @@
  *  limitations under the License.
  */
 
-#include "mbedtls/build_info.h"
+#if !defined(MBEDTLS_CONFIG_FILE)
+#include "mbedtls/config.h"
+#else
+#include MBEDTLS_CONFIG_FILE
+#endif
 
 #if defined(MBEDTLS_PLATFORM_C)
 #include "mbedtls/platform.h"
@@ -96,7 +100,7 @@ int main( void )
     "                          Add NsCertType even if it is empty\n"    \
     "    md=%%s               default: SHA256\n"       \
     "                          possible values:\n"     \
-    "                          MD5, RIPEMD160, SHA1,\n" \
+    "                          MD2, MD4, MD5, RIPEMD160, SHA1,\n" \
     "                          SHA224, SHA256, SHA384, SHA512\n" \
     "\n"
 
@@ -342,8 +346,7 @@ int main( int argc, char *argv[] )
     mbedtls_printf( "  . Loading the private key ..." );
     fflush( stdout );
 
-    ret = mbedtls_pk_parse_keyfile( &key, opt.filename, opt.password,
-                                    mbedtls_ctr_drbg_random, &ctr_drbg );
+    ret = mbedtls_pk_parse_keyfile( &key, opt.filename, opt.password );
 
     if( ret != 0 )
     {

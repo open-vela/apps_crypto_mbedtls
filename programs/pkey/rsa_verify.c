@@ -17,7 +17,11 @@
  *  limitations under the License.
  */
 
-#include "mbedtls/build_info.h"
+#if !defined(MBEDTLS_CONFIG_FILE)
+#include "mbedtls/config.h"
+#else
+#include MBEDTLS_CONFIG_FILE
+#endif
 
 #if defined(MBEDTLS_PLATFORM_C)
 #include "mbedtls/platform.h"
@@ -62,7 +66,7 @@ int main( int argc, char *argv[] )
     unsigned char buf[MBEDTLS_MPI_MAX_SIZE];
     char filename[512];
 
-    mbedtls_rsa_init( &rsa );
+    mbedtls_rsa_init( &rsa, MBEDTLS_RSA_PKCS_V15, 0 );
 
     if( argc != 2 )
     {
@@ -85,15 +89,15 @@ int main( int argc, char *argv[] )
         goto exit;
     }
 
-    if( ( ret = mbedtls_mpi_read_file( &rsa.MBEDTLS_PRIVATE(N), 16, f ) ) != 0 ||
-        ( ret = mbedtls_mpi_read_file( &rsa.MBEDTLS_PRIVATE(E), 16, f ) ) != 0 )
+    if( ( ret = mbedtls_mpi_read_file( &rsa.N, 16, f ) ) != 0 ||
+        ( ret = mbedtls_mpi_read_file( &rsa.E, 16, f ) ) != 0 )
     {
         mbedtls_printf( " failed\n  ! mbedtls_mpi_read_file returned %d\n\n", ret );
         fclose( f );
         goto exit;
     }
 
-    rsa.MBEDTLS_PRIVATE(len) = ( mbedtls_mpi_bitlen( &rsa.MBEDTLS_PRIVATE(N) ) + 7 ) >> 3;
+    rsa.len = ( mbedtls_mpi_bitlen( &rsa.N ) + 7 ) >> 3;
 
     fclose( f );
 
@@ -115,7 +119,7 @@ int main( int argc, char *argv[] )
 
     fclose( f );
 
-    if( i != rsa.MBEDTLS_PRIVATE(len) )
+    if( i != rsa.len )
     {
         mbedtls_printf( "\n  ! Invalid RSA signature format\n\n" );
         goto exit;
@@ -137,7 +141,7 @@ int main( int argc, char *argv[] )
     }
 
     if( ( ret = mbedtls_rsa_pkcs1_verify( &rsa, MBEDTLS_MD_SHA256,
-                                          32, hash, buf ) ) != 0 )
+                                          20, hash, buf ) ) != 0 )
     {
         mbedtls_printf( " failed\n  ! mbedtls_rsa_pkcs1_verify returned -0x%0x\n\n", (unsigned int) -ret );
         goto exit;
