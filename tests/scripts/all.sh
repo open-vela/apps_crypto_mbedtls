@@ -1,4 +1,4 @@
-#! /usr/bin/env bash
+#! /usr/bin/env sh
 
 # all.sh
 #
@@ -34,7 +34,7 @@
 # Warning: the test is destructive. It includes various build modes and
 # configurations, and can and will arbitrarily change the current CMake
 # configuration. The following files must be committed into git:
-#    * include/mbedtls/mbedtls_config.h
+#    * include/mbedtls/config.h
 #    * Makefile, library/Makefile, programs/Makefile, tests/Makefile,
 #      programs/fuzz/Makefile
 # After running this script, the CMake cache will be lost and CMake
@@ -59,15 +59,6 @@
 # This script must be invoked from the toplevel directory of a git
 # working copy of Mbed TLS.
 #
-# The behavior on an error depends on whether --keep-going (alias -k)
-# is in effect.
-#  * Without --keep-going: the script stops on the first error without
-#    cleaning up. This lets you work in the configuration of the failing
-#    component.
-#  * With --keep-going: the script runs all requested components and
-#    reports failures at the end. In particular the script always cleans
-#    up on exit.
-#
 # Note that the output is not saved. You may want to run
 #   script -c tests/scripts/all.sh
 # or
@@ -90,21 +81,28 @@
 #
 # Each component must start by invoking `msg` with a short informative message.
 #
-# Warning: due to the way bash detects errors, the failure of a command
-# inside 'if' or '!' is not detected. Use the 'not' function instead of '!'.
-#
-# Each component is executed in a separate shell process. The component
-# fails if any command in it returns a non-zero status.
-#
 # The framework performs some cleanup tasks after each component. This
 # means that components can assume that the working directory is in a
 # cleaned-up state, and don't need to perform the cleanup themselves.
 # * Run `make clean`.
-# * Restore `include/mbedtls/mbedtls_config.h` from a backup made before running
+# * Restore `include/mbedtks/config.h` from a backup made before running
 #   the component.
 # * Check out `Makefile`, `library/Makefile`, `programs/Makefile`,
 #   `tests/Makefile` and `programs/fuzz/Makefile` from git.
 #   This cleans up after an in-tree use of CMake.
+#
+# Any command that is expected to fail must be protected so that the
+# script keeps running in --keep-going mode despite `set -e`. In keep-going
+# mode, if a protected command fails, this is logged as a failure and the
+# script will exit with a failure status once it has run all components.
+# Commands can be protected in any of the following ways:
+# * `make` is a function which runs the `make` command with protection.
+#   Note that you must write `make VAR=value`, not `VAR=value make`,
+#   because the `VAR=value make` syntax doesn't work with functions.
+# * Put `report_status` before the command to protect it.
+# * Put `if_build_successful` before a command. This protects it, and
+#   additionally skips it if a prior invocation of `make` in the same
+#   component failed.
 #
 # The tests are roughly in order from fastest to slowest. This doesn't
 # have to be exact, but in general you should add slower tests towards
@@ -116,9 +114,8 @@
 #### Initialization and command line parsing
 ################################################################
 
-# Abort on errors (even on the left-hand side of a pipe).
-# Treat uninitialised variables as errors.
-set -e -o pipefail -u
+# Abort on errors (and uninitialised variables)
+set -eu
 
 pre_check_environment () {
     if [ -d library -a -d include -a -d tests ]; then :; else
@@ -128,17 +125,10 @@ pre_check_environment () {
 }
 
 pre_initialize_variables () {
-    CONFIG_H='include/mbedtls/mbedtls_config.h'
+    CONFIG_H='include/mbedtls/config.h'
+    CONFIG_BAK="$CONFIG_H.bak"
     CRYPTO_CONFIG_H='include/psa/crypto_config.h'
-
-    # Files that are clobbered by some jobs will be backed up. Use a different
-    # suffix from auxiliary scripts so that all.sh and auxiliary scripts can
-    # independently decide when to remove the backup file.
-    backup_suffix='.all.bak'
-    # Files clobbered by config.py
-    files_to_back_up="$CONFIG_H $CRYPTO_CONFIG_H"
-    # Files clobbered by in-tree cmake
-    files_to_back_up="$files_to_back_up Makefile library/Makefile programs/Makefile tests/Makefile programs/fuzz/Makefile"
+    CRYPTO_CONFIG_BAK="$CRYPTO_CONFIG_H.bak"
 
     append_outcome=0
     MEMORY=0
@@ -171,14 +161,13 @@ pre_initialize_variables () {
     : ${ARMC5_BIN_DIR:=/usr/bin}
     : ${ARMC6_BIN_DIR:=/usr/bin}
     : ${ARM_NONE_EABI_GCC_PREFIX:=arm-none-eabi-}
-    : ${ARM_LINUX_GNUEABI_GCC_PREFIX:=arm-linux-gnueabi-}
 
     # if MAKEFLAGS is not set add the -j option to speed up invocations of make
     if [ -z "${MAKEFLAGS+set}" ]; then
         export MAKEFLAGS="-j"
     fi
 
-    # Include more verbose output for failing tests run by CMake or make
+    # Include more verbose output for failing tests run by CMake
     export CTEST_OUTPUT_ON_FAILURE=1
 
     # CFLAGS and LDFLAGS for Asan builds that don't use CMake
@@ -186,8 +175,8 @@ pre_initialize_variables () {
 
     # Gather the list of available components. These are the functions
     # defined in this script whose name starts with "component_".
-    # Parse the script with sed. This way we get the functions in the order
-    # they are defined.
+    # Parse the script with sed, because in sh there is no way to list
+    # defined functions.
     ALL_COMPONENTS=$(sed -n 's/^ *component_\([0-9A-Z_a-z]*\) *().*/\1/p' <"$0")
 
     # Exclude components that are not supported on this platform.
@@ -204,8 +193,6 @@ pre_initialize_variables () {
 # Test whether the component $1 is included in the command line patterns.
 is_component_included()
 {
-    # Temporarily disable wildcard expansion so that $COMMAND_LINE_COMPONENTS
-    # only does word splitting.
     set -f
     for pattern in $COMMAND_LINE_COMPONENTS; do
         set +f
@@ -243,15 +230,7 @@ General options:
      --arm-none-eabi-gcc-prefix=<string>
                         Prefix for a cross-compiler for arm-none-eabi
                         (default: "${ARM_NONE_EABI_GCC_PREFIX}")
-     --arm-linux-gnueabi-gcc-prefix=<string>
-                        Prefix for a cross-compiler for arm-linux-gnueabi
-                        (default: "${ARM_LINUX_GNUEABI_GCC_PREFIX}")
      --armcc            Run ARM Compiler builds (on by default).
-     --restore          First clean up the build tree, restoring backed up
-                        files. Do not run any components unless they are
-                        explicitly specified.
-     --error-test       Error test mode: run a failing function in addition
-                        to any specified component. May be repeated.
      --except           Exclude the COMPONENTs listed on the command line,
                         instead of running only those.
      --no-append-outcome    Write a new outcome file and analyze it (default).
@@ -280,11 +259,13 @@ Tool path options:
 EOF
 }
 
-# Cleanup before/after running a component.
-# Remove built files as well as the cmake cache/config.
-# Does not remove generated source files.
+# remove built files as well as the cmake cache/config
 cleanup()
 {
+    if [ -n "${MBEDTLS_ROOT_DIR+set}" ]; then
+        cd "$MBEDTLS_ROOT_DIR"
+    fi
+
     command make clean
 
     # Remove CMake artefacts
@@ -292,39 +273,24 @@ cleanup()
            -iname CMakeFiles -exec rm -rf {} \+ -o \
            \( -iname cmake_install.cmake -o \
               -iname CTestTestfile.cmake -o \
-              -iname CMakeCache.txt \) -exec rm -f {} \+
+              -iname CMakeCache.txt \) -exec rm {} \+
     # Recover files overwritten by in-tree CMake builds
     rm -f include/Makefile include/mbedtls/Makefile programs/*/Makefile
+    git update-index --no-skip-worktree Makefile library/Makefile programs/Makefile tests/Makefile programs/fuzz/Makefile
+    git checkout -- Makefile library/Makefile programs/Makefile tests/Makefile programs/fuzz/Makefile
 
     # Remove any artifacts from the component_test_cmake_as_subdirectory test.
     rm -rf programs/test/cmake_subproject/build
     rm -f programs/test/cmake_subproject/Makefile
     rm -f programs/test/cmake_subproject/cmake_subproject
 
-    # Remove any artifacts from the component_test_cmake_as_package test.
-    rm -rf programs/test/cmake_package/build
-    rm -f programs/test/cmake_package/Makefile
-    rm -f programs/test/cmake_package/cmake_package
+    if [ -f "$CONFIG_BAK" ]; then
+        mv "$CONFIG_BAK" "$CONFIG_H"
+    fi
 
-    # Remove any artifacts from the component_test_cmake_as_installed_package test.
-    rm -rf programs/test/cmake_package_install/build
-    rm -f programs/test/cmake_package_install/Makefile
-    rm -f programs/test/cmake_package_install/cmake_package_install
-
-    # Restore files that may have been clobbered by the job
-    for x in $files_to_back_up; do
-        cp -p "$x$backup_suffix" "$x"
-    done
-}
-
-# Final cleanup when this script exits (except when exiting on a failure
-# in non-keep-going mode).
-final_cleanup () {
-    cleanup
-
-    for x in $files_to_back_up; do
-        rm -f "$x$backup_suffix"
-    done
+    if [ -f "$CRYPTO_CONFIG_BAK" ]; then
+        mv "$CRYPTO_CONFIG_BAK" "$CRYPTO_CONFIG_H"
+    fi
 }
 
 # Executed on exit. May be redefined depending on command line options.
@@ -333,7 +299,7 @@ final_report () {
 }
 
 fatal_signal () {
-    final_cleanup
+    cleanup
     final_report $1
     trap - $1
     kill -$1 $$
@@ -391,11 +357,17 @@ check_tools()
     done
 }
 
+check_headers_in_cpp () {
+    ls include/mbedtls | grep "\.h$" >headers.txt
+    <programs/test/cpp_dummy_build.cpp sed -n 's/"$//; s!^#include "mbedtls/!!p' |
+    sort |
+    diff headers.txt -
+    rm headers.txt
+}
+
 pre_parse_command_line () {
     COMMAND_LINE_COMPONENTS=
     all_except=0
-    error_test=0
-    restore_first=0
     no_armcc=
 
     # Note that legacy options are ignored instead of being omitted from this
@@ -405,11 +377,9 @@ pre_parse_command_line () {
         case "$1" in
             --append-outcome) append_outcome=1;;
             --arm-none-eabi-gcc-prefix) shift; ARM_NONE_EABI_GCC_PREFIX="$1";;
-            --arm-linux-gnueabi-gcc-prefix) shift; ARM_LINUX_GNUEABI_GCC_PREFIX="$1";;
             --armcc) no_armcc=;;
             --armc5-bin-dir) shift; ARMC5_BIN_DIR="$1";;
             --armc6-bin-dir) shift; ARMC6_BIN_DIR="$1";;
-            --error-test) error_test=$((error_test + 1));;
             --except) all_except=1;;
             --force|-f) FORCE=1;;
             --gnutls-cli) shift; GNUTLS_CLI="$1";;
@@ -435,7 +405,6 @@ pre_parse_command_line () {
             --quiet|-q) QUIET=1;;
             --random-seed) unset SEED;;
             --release-test|-r) SEED=$RELEASE_SEED;;
-            --restore) restore_first=1;;
             --seed|-s) shift; SEED="$1";;
             -*)
                 echo >&2 "Unknown option: $1"
@@ -448,7 +417,7 @@ pre_parse_command_line () {
     done
 
     # With no list of components, run everything.
-    if [ -z "$COMMAND_LINE_COMPONENTS" ] && [ $restore_first -eq 0 ]; then
+    if [ -z "$COMMAND_LINE_COMPONENTS" ]; then
         all_except=1
     fi
 
@@ -456,32 +425,6 @@ pre_parse_command_line () {
     # Ignore it if components are listed explicitly on the command line.
     if [ -n "$no_armcc" ] && [ $all_except -eq 1 ]; then
         COMMAND_LINE_COMPONENTS="$COMMAND_LINE_COMPONENTS *_armcc*"
-    fi
-
-    # Error out if an explicitly requested component doesn't exist.
-    if [ $all_except -eq 0 ]; then
-        unsupported=0
-        # Temporarily disable wildcard expansion so that $COMMAND_LINE_COMPONENTS
-        # only does word splitting.
-        set -f
-        for component in $COMMAND_LINE_COMPONENTS; do
-            set +f
-            # If the requested name includes a wildcard character, don't
-            # check it. Accept wildcard patterns that don't match anything.
-            case $component in
-                *[*?\[]*) continue;;
-            esac
-            case " $SUPPORTED_COMPONENTS " in
-                *" $component "*) :;;
-                *)
-                    echo >&2 "Component $component was explicitly requested, but is not known or not supported."
-                    unsupported=$((unsupported + 1));;
-            esac
-        done
-        set +f
-        if [ $unsupported -ne 0 ]; then
-            exit 2
-        fi
     fi
 
     # Build the list of components to run.
@@ -510,8 +453,8 @@ pre_check_git () {
             exit 1
         fi
 
-        if ! git diff --quiet include/mbedtls/mbedtls_config.h; then
-            err_msg "Warning - the configuration file 'include/mbedtls/mbedtls_config.h' has been edited. "
+        if ! git diff --quiet include/mbedtls/config.h; then
+            err_msg "Warning - the configuration file 'include/mbedtls/config.h' has been edited. "
             echo "You can either delete or preserve your work, or force the test by rerunning the"
             echo "script as: $0 --force"
             exit 1
@@ -519,36 +462,9 @@ pre_check_git () {
     fi
 }
 
-pre_restore_files () {
-    # If the makefiles have been generated by a framework such as cmake,
-    # restore them from git. If the makefiles look like modifications from
-    # the ones checked into git, take care not to modify them. Whatever
-    # this function leaves behind is what the script will restore before
-    # each component.
-    case "$(head -n1 Makefile)" in
-        *[Gg]enerated*)
-            git update-index --no-skip-worktree Makefile library/Makefile programs/Makefile tests/Makefile programs/fuzz/Makefile
-            git checkout -- Makefile library/Makefile programs/Makefile tests/Makefile programs/fuzz/Makefile
-            ;;
-    esac
-}
-
-pre_back_up () {
-    for x in $files_to_back_up; do
-        cp -p "$x" "$x$backup_suffix"
-    done
-}
-
 pre_setup_keep_going () {
-    failure_count=0 # Number of failed components
-    last_failure_status=0 # Last failure status in this component
-
-    # See err_trap
-    previous_failure_status=0
-    previous_failed_command=
-    previous_failure_funcall_depth=0
-    unset report_failed_command
-
+    failure_summary=
+    failure_count=0
     start_red=
     end_color=
     if [ -t 1 ]; then
@@ -559,106 +475,76 @@ pre_setup_keep_going () {
                 ;;
         esac
     fi
-
-    # Keep a summary of failures in a file. We'll print it out at the end.
-    failure_summary_file=$PWD/all-sh-failures-$$.log
-    : >"$failure_summary_file"
-
-    # Whether it makes sense to keep a component going after the specified
-    # command fails (test command) or not (configure or build).
-    # This function normally receives the failing simple command
-    # ($BASH_COMMAND) as an argument, but if $report_failed_command is set,
-    # this is passed instead.
-    # This doesn't have to be 100% accurate: all failures are recorded anyway.
-    # False positives result in running things that can't be expected to
-    # work. False negatives result in things not running after something else
-    # failed even though they might have given useful feedback.
-    can_keep_going_after_failure () {
-        case "$1" in
-            "msg "*) false;;
-            "cd "*) false;;
-            *make*[\ /]tests*) false;; # make tests, make CFLAGS=-I../tests, ...
-            *test*) true;; # make test, tests/stuff, env V=v tests/stuff, ...
-            *make*check*) true;;
-            "grep "*) true;;
-            "[ "*) true;;
-            "! "*) true;;
-            *) false;;
+    record_status () {
+        if "$@"; then
+            last_status=0
+        else
+            last_status=$?
+            text="$current_section: $* -> $last_status"
+            failure_summary="$failure_summary
+$text"
+            failure_count=$((failure_count + 1))
+            echo "${start_red}^^^^$text^^^^${end_color}" >&2
+        fi
+    }
+    make () {
+        case "$*" in
+            *test|*check)
+                if [ $build_status -eq 0 ]; then
+                    record_status command make "$@"
+                else
+                    echo "(skipped because the build failed)"
+                fi
+                ;;
+            *)
+                record_status command make "$@"
+                build_status=$last_status
+                ;;
         esac
     }
-
-    # This function runs if there is any error in a component.
-    # It must either exit with a nonzero status, or set
-    # last_failure_status to a nonzero value.
-    err_trap () {
-        # Save $? (status of the failing command). This must be the very
-        # first thing, before $? is overridden.
-        last_failure_status=$?
-        failed_command=${report_failed_command-$BASH_COMMAND}
-
-        if [[ $last_failure_status -eq $previous_failure_status &&
-              "$failed_command" == "$previous_failed_command" &&
-              ${#FUNCNAME[@]} == $((previous_failure_funcall_depth - 1)) ]]
-        then
-            # The same command failed twice in a row, but this time one level
-            # less deep in the function call stack. This happens when the last
-            # command of a function returns a nonzero status, and the function
-            # returns that same status. Ignore the second failure.
-            previous_failure_funcall_depth=${#FUNCNAME[@]}
-            return
-        fi
-        previous_failure_status=$last_failure_status
-        previous_failed_command=$failed_command
-        previous_failure_funcall_depth=${#FUNCNAME[@]}
-
-        text="$current_section: $failed_command -> $last_failure_status"
-        echo "${start_red}^^^^$text^^^^${end_color}" >&2
-        echo "$text" >>"$failure_summary_file"
-
-        # If the command is fatal (configure or build command), stop this
-        # component. Otherwise (test command) keep the component running
-        # (run more tests from the same build).
-        if ! can_keep_going_after_failure "$failed_command"; then
-            exit $last_failure_status
-        fi
-    }
-
     final_report () {
         if [ $failure_count -gt 0 ]; then
             echo
             echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
-            echo "${start_red}FAILED: $failure_count components${end_color}"
-            cat "$failure_summary_file"
+            echo "${start_red}FAILED: $failure_count${end_color}$failure_summary"
             echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+            exit 1
         elif [ -z "${1-}" ]; then
             echo "SUCCESS :)"
         fi
         if [ -n "${1-}" ]; then
             echo "Killed by SIG$1."
         fi
-        rm -f "$failure_summary_file"
-        if [ $failure_count -gt 0 ]; then
-            exit 1
-        fi
     }
 }
 
-# record_status() and if_build_succeeded() are kept temporarily for backward
-# compatibility. Don't use them in new components.
-record_status () {
-    "$@"
-}
 if_build_succeeded () {
-    "$@"
+    if [ $build_status -eq 0 ]; then
+        record_status "$@"
+    fi
 }
 
-# '! true' does not trigger the ERR trap. Arrange to trigger it, with
-# a reasonably informative error message (not just "$@").
-not () {
-    if "$@"; then
-        report_failed_command="! $*"
-        false
-        unset report_failed_command
+# to be used instead of ! for commands run with
+# record_status or if_build_succeeded
+not() {
+    ! "$@"
+}
+
+pre_setup_quiet_redirect () {
+    if [ $QUIET -ne 1 ]; then
+        redirect_out () {
+            "$@"
+        }
+        redirect_err () {
+            "$@"
+        }
+    else
+        redirect_out () {
+            "$@" >/dev/null
+        }
+        redirect_err () {
+            "$@" 2>/dev/null
+        }
     fi
 }
 
@@ -765,14 +651,7 @@ pre_check_tools () {
 }
 
 pre_generate_files() {
-    # since make doesn't have proper dependencies, remove any possibly outdate
-    # file that might be around before generating fresh ones
-    make neat
-    if [ $QUIET -eq 1 ]; then
-        make generated_files >/dev/null
-    else
-        make generated_files
-    fi
+    make generated_files
 }
 
 
@@ -794,24 +673,24 @@ pre_generate_files() {
 
 component_check_recursion () {
     msg "Check: recursion.pl" # < 1s
-    tests/scripts/recursion.pl library/*.c
+    record_status tests/scripts/recursion.pl library/*.c
 }
 
 component_check_generated_files () {
     msg "Check: check-generated-files, files generated with make" # 2s
     make generated_files
-    tests/scripts/check-generated-files.sh
+    record_status tests/scripts/check-generated-files.sh
 
     msg "Check: check-generated-files -u, files present" # 2s
-    tests/scripts/check-generated-files.sh -u
+    record_status tests/scripts/check-generated-files.sh -u
     # Check that the generated files are considered up to date.
-    tests/scripts/check-generated-files.sh
+    record_status tests/scripts/check-generated-files.sh
 
     msg "Check: check-generated-files -u, files absent" # 2s
     command make neat
-    tests/scripts/check-generated-files.sh -u
+    record_status tests/scripts/check-generated-files.sh -u
     # Check that the generated files are considered up to date.
-    tests/scripts/check-generated-files.sh
+    record_status tests/scripts/check-generated-files.sh
 
     # This component ends with the generated files present in the source tree.
     # This is necessary for subsequent components!
@@ -819,18 +698,18 @@ component_check_generated_files () {
 
 component_check_doxy_blocks () {
     msg "Check: doxygen markup outside doxygen blocks" # < 1s
-    tests/scripts/check-doxy-blocks.pl
+    record_status tests/scripts/check-doxy-blocks.pl
 }
 
 component_check_files () {
     msg "Check: file sanity checks (permissions, encodings)" # < 1s
-    tests/scripts/check_files.py
+    record_status tests/scripts/check_files.py
 }
 
 component_check_changelog () {
     msg "Check: changelog entries" # < 1s
     rm -f ChangeLog.new
-    scripts/assemble_changelog.py -o ChangeLog.new
+    record_status scripts/assemble_changelog.py -o ChangeLog.new
     if [ -e ChangeLog.new ]; then
         # Show the diff for information. It isn't an error if the diff is
         # non-empty.
@@ -841,7 +720,7 @@ component_check_changelog () {
 
 component_check_names () {
     msg "Check: declared and exported names (builds the library)" # < 3s
-    tests/scripts/check-names.sh -v
+    record_status tests/scripts/check-names.sh -v
 }
 
 component_check_test_cases () {
@@ -851,13 +730,13 @@ component_check_test_cases () {
     else
         opt=''
     fi
-    tests/scripts/check_test_cases.py $opt
+    record_status tests/scripts/check_test_cases.py $opt
     unset opt
 }
 
 component_check_doxygen_warnings () {
     msg "Check: doxygen warnings (builds the documentation)" # ~ 3s
-    tests/scripts/doxygen.sh
+    record_status tests/scripts/doxygen.sh
 }
 
 
@@ -877,7 +756,7 @@ component_test_default_out_of_box () {
     make test
 
     msg "selftest: make, default config (out-of-box)" # ~10s
-    programs/test/selftest
+    if_build_succeeded programs/test/selftest
 
     export MBEDTLS_TEST_OUTCOME_FILE="$SAVE_MBEDTLS_TEST_OUTCOME_FILE"
     unset SAVE_MBEDTLS_TEST_OUTCOME_FILE
@@ -892,16 +771,16 @@ component_test_default_cmake_gcc_asan () {
     make test
 
     msg "test: selftest (ASan build)" # ~ 10s
-    programs/test/selftest
+    if_build_succeeded programs/test/selftest
 
     msg "test: ssl-opt.sh (ASan build)" # ~ 1 min
-    tests/ssl-opt.sh
+    if_build_succeeded tests/ssl-opt.sh
 
     msg "test: compat.sh (ASan build)" # ~ 6 min
-    tests/compat.sh
+    if_build_succeeded tests/compat.sh
 
     msg "test: context-info.sh (ASan build)" # ~ 15 sec
-    tests/context-info.sh
+    if_build_succeeded tests/context-info.sh
 }
 
 component_test_full_cmake_gcc_asan () {
@@ -914,16 +793,16 @@ component_test_full_cmake_gcc_asan () {
     make test
 
     msg "test: selftest (ASan build)" # ~ 10s
-    programs/test/selftest
+    if_build_succeeded programs/test/selftest
 
     msg "test: ssl-opt.sh (full config, ASan build)"
-    tests/ssl-opt.sh
+    if_build_succeeded tests/ssl-opt.sh
 
     msg "test: compat.sh (full config, ASan build)"
-    tests/compat.sh
+    if_build_succeeded tests/compat.sh
 
     msg "test: context-info.sh (full config, ASan build)" # ~ 15 sec
-    tests/context-info.sh
+    if_build_succeeded tests/context-info.sh
 }
 
 component_test_psa_crypto_key_id_encodes_owner () {
@@ -936,32 +815,6 @@ component_test_psa_crypto_key_id_encodes_owner () {
 
     msg "test: full config - USE_PSA_CRYPTO + PSA_CRYPTO_KEY_ID_ENCODES_OWNER, cmake, gcc, ASan"
     make test
-}
-
-# check_renamed_symbols HEADER LIB
-# Check that if HEADER contains '#define MACRO ...' then MACRO is not a symbol
-# name is LIB.
-check_renamed_symbols () {
-    ! nm "$2" | sed 's/.* //' |
-      grep -x -F "$(sed -n 's/^ *# *define  *\([A-Z_a-z][0-9A-Z_a-z]*\)..*/\1/p' "$1")"
-}
-
-component_build_psa_crypto_spm () {
-    msg "build: full config - USE_PSA_CRYPTO + PSA_CRYPTO_KEY_ID_ENCODES_OWNER + PSA_CRYPTO_SPM, make, gcc"
-    scripts/config.py full
-    scripts/config.py unset MBEDTLS_USE_PSA_CRYPTO
-    scripts/config.py unset MBEDTLS_PSA_CRYPTO_BUILTIN_KEYS
-    scripts/config.py set MBEDTLS_PSA_CRYPTO_KEY_ID_ENCODES_OWNER
-    scripts/config.py set MBEDTLS_PSA_CRYPTO_SPM
-    # We can only compile, not link, since our test and sample programs
-    # aren't equipped for the modified names used when MBEDTLS_PSA_CRYPTO_SPM
-    # is active.
-    make CC=gcc CFLAGS='-Werror -Wall -Wextra -I../tests/include/spe' lib
-
-    # Check that if a symbol is renamed by crypto_spe.h, the non-renamed
-    # version is not present.
-    echo "Checking for renamed symbols in the library"
-    check_renamed_symbols tests/include/spe/crypto_spe.h library/libmbedcrypto.a
 }
 
 component_test_psa_crypto_client () {
@@ -987,7 +840,7 @@ component_test_psa_crypto_rsa_no_genprime() {
 component_test_ref_configs () {
     msg "test/build: ref-configs (ASan build)" # ~ 6 min 20s
     CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
-    tests/scripts/test-ref-configs.pl
+    record_status tests/scripts/test-ref-configs.pl
 }
 
 component_test_no_renegotiation () {
@@ -1000,7 +853,7 @@ component_test_no_renegotiation () {
     make test
 
     msg "test: !MBEDTLS_SSL_RENEGOTIATION - ssl-opt.sh (ASan build)" # ~ 6 min
-    tests/ssl-opt.sh
+    if_build_succeeded tests/ssl-opt.sh
 }
 
 component_test_no_pem_no_fs () {
@@ -1016,7 +869,7 @@ component_test_no_pem_no_fs () {
     make test
 
     msg "test: !MBEDTLS_PEM_PARSE_C !MBEDTLS_FS_IO - ssl-opt.sh (ASan build)" # ~ 6 min
-    tests/ssl-opt.sh
+    if_build_succeeded tests/ssl-opt.sh
 }
 
 component_test_rsa_no_crt () {
@@ -1029,13 +882,13 @@ component_test_rsa_no_crt () {
     make test
 
     msg "test: RSA_NO_CRT - RSA-related part of ssl-opt.sh (ASan build)" # ~ 5s
-    tests/ssl-opt.sh -f RSA
+    if_build_succeeded tests/ssl-opt.sh -f RSA
 
     msg "test: RSA_NO_CRT - RSA-related part of compat.sh (ASan build)" # ~ 3 min
-    tests/compat.sh -t RSA
+    if_build_succeeded tests/compat.sh -t RSA
 
     msg "test: RSA_NO_CRT - RSA-related part of context-info.sh (ASan build)" # ~ 15 sec
-    tests/context-info.sh
+    if_build_succeeded tests/context-info.sh
 }
 
 component_test_no_ctr_drbg_classic () {
@@ -1054,10 +907,10 @@ component_test_no_ctr_drbg_classic () {
     # The SSL tests are slow, so run a small subset, just enough to get
     # confidence that the SSL code copes with HMAC_DRBG.
     msg "test: Full minus CTR_DRBG, classic crypto - ssl-opt.sh (subset)"
-    tests/ssl-opt.sh -f 'Default\|SSL async private.*delay=\|tickets enabled on server'
+    if_build_succeeded tests/ssl-opt.sh -f 'Default\|SSL async private.*delay=\|tickets enabled on server'
 
     msg "test: Full minus CTR_DRBG, classic crypto - compat.sh (subset)"
-    tests/compat.sh -m tls1_2 -t 'ECDSA PSK' -V NO -p OpenSSL
+    if_build_succeeded tests/compat.sh -m tls1_2 -t 'ECDSA PSK' -V NO -p OpenSSL
 }
 
 component_test_no_ctr_drbg_use_psa () {
@@ -1076,10 +929,10 @@ component_test_no_ctr_drbg_use_psa () {
     # The SSL tests are slow, so run a small subset, just enough to get
     # confidence that the SSL code copes with HMAC_DRBG.
     msg "test: Full minus CTR_DRBG, USE_PSA_CRYPTO - ssl-opt.sh (subset)"
-    tests/ssl-opt.sh -f 'Default\|SSL async private.*delay=\|tickets enabled on server'
+    if_build_succeeded tests/ssl-opt.sh -f 'Default\|SSL async private.*delay=\|tickets enabled on server'
 
     msg "test: Full minus CTR_DRBG, USE_PSA_CRYPTO - compat.sh (subset)"
-    tests/compat.sh -m tls1_2 -t 'ECDSA PSK' -V NO -p OpenSSL
+    if_build_succeeded tests/compat.sh -m tls1_2 -t 'ECDSA PSK' -V NO -p OpenSSL
 }
 
 component_test_no_hmac_drbg_classic () {
@@ -1101,12 +954,12 @@ component_test_no_hmac_drbg_classic () {
     # Test SSL with non-deterministic ECDSA. Only test features that
     # might be affected by how ECDSA signature is performed.
     msg "test: Full minus HMAC_DRBG, classic crypto - ssl-opt.sh (subset)"
-    tests/ssl-opt.sh -f 'Default\|SSL async private: sign'
+    if_build_succeeded tests/ssl-opt.sh -f 'Default\|SSL async private: sign'
 
     # To save time, only test one protocol version, since this part of
     # the protocol is identical in (D)TLS up to 1.2.
     msg "test: Full minus HMAC_DRBG, classic crypto - compat.sh (ECDSA)"
-    tests/compat.sh -m tls1_2 -t 'ECDSA'
+    if_build_succeeded tests/compat.sh -m tls1_2 -t 'ECDSA'
 }
 
 component_test_no_hmac_drbg_use_psa () {
@@ -1128,12 +981,12 @@ component_test_no_hmac_drbg_use_psa () {
     # Test SSL with non-deterministic ECDSA. Only test features that
     # might be affected by how ECDSA signature is performed.
     msg "test: Full minus HMAC_DRBG, USE_PSA_CRYPTO - ssl-opt.sh (subset)"
-    tests/ssl-opt.sh -f 'Default\|SSL async private: sign'
+    if_build_succeeded tests/ssl-opt.sh -f 'Default\|SSL async private: sign'
 
     # To save time, only test one protocol version, since this part of
     # the protocol is identical in (D)TLS up to 1.2.
     msg "test: Full minus HMAC_DRBG, USE_PSA_CRYPTO - compat.sh (ECDSA)"
-    tests/compat.sh -m tls1_2 -t 'ECDSA'
+    if_build_succeeded tests/compat.sh -m tls1_2 -t 'ECDSA'
 }
 
 component_test_psa_external_rng_no_drbg_classic () {
@@ -1147,6 +1000,7 @@ component_test_psa_external_rng_no_drbg_classic () {
     scripts/config.py unset MBEDTLS_CTR_DRBG_C
     scripts/config.py unset MBEDTLS_HMAC_DRBG_C
     scripts/config.py unset MBEDTLS_ECDSA_DETERMINISTIC # requires HMAC_DRBG
+    scripts/config.py set MBEDTLS_ECP_NO_INTERNAL_RNG
     # When MBEDTLS_USE_PSA_CRYPTO is disabled and there is no DRBG,
     # the SSL test programs don't have an RNG and can't work. Explicitly
     # make them use the PSA RNG with -DMBEDTLS_TEST_USE_PSA_CRYPTO_RNG.
@@ -1156,7 +1010,7 @@ component_test_psa_external_rng_no_drbg_classic () {
     make test
 
     msg "test: PSA_CRYPTO_EXTERNAL_RNG minus *_DRBG, classic crypto - ssl-opt.sh (subset)"
-    tests/ssl-opt.sh -f 'Default'
+    if_build_succeeded tests/ssl-opt.sh -f 'Default'
 }
 
 component_test_psa_external_rng_no_drbg_use_psa () {
@@ -1169,13 +1023,14 @@ component_test_psa_external_rng_no_drbg_use_psa () {
     scripts/config.py unset MBEDTLS_CTR_DRBG_C
     scripts/config.py unset MBEDTLS_HMAC_DRBG_C
     scripts/config.py unset MBEDTLS_ECDSA_DETERMINISTIC # requires HMAC_DRBG
+    scripts/config.py set MBEDTLS_ECP_NO_INTERNAL_RNG
     make CFLAGS="$ASAN_CFLAGS -O2" LDFLAGS="$ASAN_CFLAGS"
 
     msg "test: PSA_CRYPTO_EXTERNAL_RNG minus *_DRBG, PSA crypto - main suites"
     make test
 
     msg "test: PSA_CRYPTO_EXTERNAL_RNG minus *_DRBG, PSA crypto - ssl-opt.sh (subset)"
-    tests/ssl-opt.sh -f 'Default\|opaque'
+    if_build_succeeded tests/ssl-opt.sh -f 'Default\|opaque'
 }
 
 component_test_psa_external_rng_use_psa_crypto () {
@@ -1190,11 +1045,66 @@ component_test_psa_external_rng_use_psa_crypto () {
     make test
 
     msg "test: full + PSA_CRYPTO_EXTERNAL_RNG + USE_PSA_CRYPTO minus CTR_DRBG"
-    tests/ssl-opt.sh -f 'Default\|opaque'
+    if_build_succeeded tests/ssl-opt.sh -f 'Default\|opaque'
+}
+
+component_test_ecp_no_internal_rng () {
+    msg "build: Default plus ECP_NO_INTERNAL_RNG minus DRBG modules"
+    scripts/config.py set MBEDTLS_ECP_NO_INTERNAL_RNG
+    scripts/config.py unset MBEDTLS_CTR_DRBG_C
+    scripts/config.py unset MBEDTLS_HMAC_DRBG_C
+    scripts/config.py unset MBEDTLS_ECDSA_DETERMINISTIC # requires HMAC_DRBG
+    scripts/config.py unset MBEDTLS_PSA_CRYPTO_C # requires a DRBG
+    scripts/config.py unset MBEDTLS_PSA_CRYPTO_STORAGE_C # requires PSA Crypto
+
+    CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
+    make
+
+    msg "test: ECP_NO_INTERNAL_RNG, no DRBG module"
+    make test
+
+    # no SSL tests as they all depend on having a DRBG
+}
+
+component_test_ecp_restartable_no_internal_rng () {
+    msg "build: Default plus ECP_RESTARTABLE and ECP_NO_INTERNAL_RNG, no DRBG"
+    scripts/config.py set MBEDTLS_ECP_NO_INTERNAL_RNG
+    scripts/config.py set MBEDTLS_ECP_RESTARTABLE
+    scripts/config.py unset MBEDTLS_CTR_DRBG_C
+    scripts/config.py unset MBEDTLS_HMAC_DRBG_C
+    scripts/config.py unset MBEDTLS_ECDSA_DETERMINISTIC # requires HMAC_DRBG
+    scripts/config.py unset MBEDTLS_PSA_CRYPTO_C # requires CTR_DRBG
+    scripts/config.py unset MBEDTLS_PSA_CRYPTO_STORAGE_C # requires PSA Crypto
+
+    CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
+    make
+
+    msg "test: ECP_RESTARTABLE and ECP_NO_INTERNAL_RNG, no DRBG module"
+    make test
+
+    # no SSL tests as they all depend on having a DRBG
+}
+
+component_test_new_ecdh_context () {
+    msg "build: new ECDH context (ASan build)" # ~ 6 min
+    scripts/config.py unset MBEDTLS_ECDH_LEGACY_CONTEXT
+    CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
+    make
+
+    msg "test: new ECDH context - main suites (inc. selftests) (ASan build)" # ~ 50s
+    make test
+
+    msg "test: new ECDH context - ECDH-related part of ssl-opt.sh (ASan build)" # ~ 5s
+    if_build_succeeded tests/ssl-opt.sh -f ECDH
+
+    msg "test: new ECDH context - compat.sh with some ECDH ciphersuites (ASan build)" # ~ 3 min
+    # Exclude some symmetric ciphers that are redundant here to gain time.
+    if_build_succeeded tests/compat.sh -f ECDH -V NO -e 'ARCFOUR\|ARIA\|CAMELLIA\|CHACHA\|DES\|RC4'
 }
 
 component_test_everest () {
     msg "build: Everest ECDH context (ASan build)" # ~ 6 min
+    scripts/config.py unset MBEDTLS_ECDH_LEGACY_CONTEXT
     scripts/config.py set MBEDTLS_ECDH_VARIANT_EVEREST_ENABLED
     CC=clang cmake -D CMAKE_BUILD_TYPE:String=Asan .
     make
@@ -1203,15 +1113,16 @@ component_test_everest () {
     make test
 
     msg "test: Everest ECDH context - ECDH-related part of ssl-opt.sh (ASan build)" # ~ 5s
-    tests/ssl-opt.sh -f ECDH
+    if_build_succeeded tests/ssl-opt.sh -f ECDH
 
     msg "test: Everest ECDH context - compat.sh with some ECDH ciphersuites (ASan build)" # ~ 3 min
     # Exclude some symmetric ciphers that are redundant here to gain time.
-    tests/compat.sh -f ECDH -V NO -e 'ARIA\|CAMELLIA\|CHACHA\|DES'
+    if_build_succeeded tests/compat.sh -f ECDH -V NO -e 'ARCFOUR\|ARIA\|CAMELLIA\|CHACHA\|DES\|RC4'
 }
 
 component_test_everest_curve25519_only () {
     msg "build: Everest ECDH context, only Curve25519" # ~ 6 min
+    scripts/config.py unset MBEDTLS_ECDH_LEGACY_CONTEXT
     scripts/config.py set MBEDTLS_ECDH_VARIANT_EVEREST_ENABLED
     scripts/config.py unset MBEDTLS_ECDSA_C
     scripts/config.py unset MBEDTLS_KEY_EXCHANGE_ECDH_ECDSA_ENABLED
@@ -1237,7 +1148,7 @@ component_test_small_ssl_out_content_len () {
     make
 
     msg "test: small SSL_OUT_CONTENT_LEN - ssl-opt.sh MFL and large packet tests"
-    tests/ssl-opt.sh -f "Max fragment\|Large packet"
+    if_build_succeeded tests/ssl-opt.sh -f "Max fragment\|Large packet"
 }
 
 component_test_small_ssl_in_content_len () {
@@ -1248,7 +1159,7 @@ component_test_small_ssl_in_content_len () {
     make
 
     msg "test: small SSL_IN_CONTENT_LEN - ssl-opt.sh MFL tests"
-    tests/ssl-opt.sh -f "Max fragment"
+    if_build_succeeded tests/ssl-opt.sh -f "Max fragment"
 }
 
 component_test_small_ssl_dtls_max_buffering () {
@@ -1258,7 +1169,7 @@ component_test_small_ssl_dtls_max_buffering () {
     make
 
     msg "test: small MBEDTLS_SSL_DTLS_MAX_BUFFERING #0 - ssl-opt.sh specific reordering test"
-    tests/ssl-opt.sh -f "DTLS reordering: Buffer out-of-order hs msg before reassembling next, free buffered msg"
+    if_build_succeeded tests/ssl-opt.sh -f "DTLS reordering: Buffer out-of-order hs msg before reassembling next, free buffered msg"
 }
 
 component_test_small_mbedtls_ssl_dtls_max_buffering () {
@@ -1268,15 +1179,15 @@ component_test_small_mbedtls_ssl_dtls_max_buffering () {
     make
 
     msg "test: small MBEDTLS_SSL_DTLS_MAX_BUFFERING #1 - ssl-opt.sh specific reordering test"
-    tests/ssl-opt.sh -f "DTLS reordering: Buffer encrypted Finished message, drop for fragmented NewSessionTicket"
+    if_build_succeeded tests/ssl-opt.sh -f "DTLS reordering: Buffer encrypted Finished message, drop for fragmented NewSessionTicket"
 }
 
 component_test_psa_collect_statuses () {
   msg "build+test: psa_collect_statuses" # ~30s
   scripts/config.py full
-  tests/scripts/psa_collect_statuses.py
+  record_status tests/scripts/psa_collect_statuses.py
   # Check that psa_crypto_init() succeeded at least once
-  grep -q '^0:psa_crypto_init:' tests/statuses.log
+  record_status grep -q '^0:psa_crypto_init:' tests/statuses.log
   rm -f tests/statuses.log
 }
 
@@ -1290,16 +1201,16 @@ component_test_full_cmake_clang () {
     make test
 
     msg "test: psa_constant_names (full config, clang)" # ~ 1s
-    tests/scripts/test_psa_constant_names.py
+    record_status tests/scripts/test_psa_constant_names.py
 
     msg "test: ssl-opt.sh default, ECJPAKE, SSL async (full config)" # ~ 1s
-    tests/ssl-opt.sh -f 'Default\|ECJPAKE\|SSL async private'
+    if_build_succeeded tests/ssl-opt.sh -f 'Default\|ECJPAKE\|SSL async private'
 
-    msg "test: compat.sh DES, 3DES & NULL (full config)" # ~ 2 min
-    env OPENSSL_CMD="$OPENSSL_LEGACY" GNUTLS_CLI="$GNUTLS_LEGACY_CLI" GNUTLS_SERV="$GNUTLS_LEGACY_SERV" tests/compat.sh -e '^$' -f 'NULL\|DES'
+    msg "test: compat.sh RC4, DES, 3DES & NULL (full config)" # ~ 2 min
+    if_build_succeeded env OPENSSL_CMD="$OPENSSL_LEGACY" GNUTLS_CLI="$GNUTLS_LEGACY_CLI" GNUTLS_SERV="$GNUTLS_LEGACY_SERV" tests/compat.sh -e '^$' -f 'NULL\|DES\|RC4\|ARCFOUR'
 
     msg "test: compat.sh ARIA + ChachaPoly"
-    env OPENSSL_CMD="$OPENSSL_NEXT" tests/compat.sh -e '^$' -f 'ARIA\|CHACHA'
+    if_build_succeeded env OPENSSL_CMD="$OPENSSL_NEXT" tests/compat.sh -e '^$' -f 'ARIA\|CHACHA'
 }
 
 component_test_memsan_constant_flow () {
@@ -1406,100 +1317,70 @@ component_build_crypto_default () {
   msg "build: make, crypto only"
   scripts/config.py crypto
   make CFLAGS='-O1 -Werror'
-  are_empty_libraries library/libmbedx509.* library/libmbedtls.*
+  if_build_succeeded are_empty_libraries library/libmbedx509.* library/libmbedtls.*
 }
 
 component_build_crypto_full () {
   msg "build: make, crypto only, full config"
   scripts/config.py crypto_full
   make CFLAGS='-O1 -Werror'
-  are_empty_libraries library/libmbedx509.* library/libmbedtls.*
+  if_build_succeeded are_empty_libraries library/libmbedx509.* library/libmbedtls.*
 }
 
 component_build_crypto_baremetal () {
   msg "build: make, crypto only, baremetal config"
   scripts/config.py crypto_baremetal
   make CFLAGS='-O1 -Werror'
-  are_empty_libraries library/libmbedx509.* library/libmbedtls.*
+  if_build_succeeded are_empty_libraries library/libmbedx509.* library/libmbedtls.*
 }
 
 component_test_depends_curves () {
     msg "test/build: curves.pl (gcc)" # ~ 4 min
-    tests/scripts/curves.pl
+    record_status tests/scripts/curves.pl
 }
 
 component_test_depends_curves_psa () {
     msg "test/build: curves.pl with MBEDTLS_USE_PSA_CRYPTO defined (gcc)"
     scripts/config.py set MBEDTLS_USE_PSA_CRYPTO
-    tests/scripts/curves.pl
+    record_status tests/scripts/curves.pl
 }
 
 component_test_depends_hashes () {
     msg "test/build: depends-hashes.pl (gcc)" # ~ 2 min
-    tests/scripts/depends-hashes.pl
+    record_status tests/scripts/depends-hashes.pl
 }
 
 component_test_depends_hashes_psa () {
     msg "test/build: depends-hashes.pl with MBEDTLS_USE_PSA_CRYPTO defined (gcc)"
     scripts/config.py set MBEDTLS_USE_PSA_CRYPTO
-    tests/scripts/depends-hashes.pl
+    record_status tests/scripts/depends-hashes.pl
 }
 
 component_test_depends_pkalgs () {
     msg "test/build: depends-pkalgs.pl (gcc)" # ~ 2 min
-    tests/scripts/depends-pkalgs.pl
+    record_status tests/scripts/depends-pkalgs.pl
 }
 
 component_test_depends_pkalgs_psa () {
     msg "test/build: depends-pkalgs.pl with MBEDTLS_USE_PSA_CRYPTO defined (gcc)"
     scripts/config.py set MBEDTLS_USE_PSA_CRYPTO
-    tests/scripts/depends-pkalgs.pl
+    record_status tests/scripts/depends-pkalgs.pl
 }
 
 component_build_key_exchanges () {
     msg "test/build: key-exchanges (gcc)" # ~ 1 min
-    tests/scripts/key-exchanges.pl
+    record_status tests/scripts/key-exchanges.pl
 }
 
-component_test_make_cxx () {
-    msg "build: Unix make, full, gcc + g++"
-    scripts/config.py full
-    make TEST_CPP=1 lib programs
+component_build_default_make_gcc_and_cxx () {
+    msg "build: Unix make, -Os (gcc)" # ~ 30s
+    make CC=gcc CFLAGS='-Werror -Wall -Wextra -Os'
 
-    msg "test: cpp_dummy_build"
-    programs/test/cpp_dummy_build
-}
+    msg "test: verify header list in cpp_dummy_build.cpp"
+    record_status check_headers_in_cpp
 
-component_build_module_alt () {
-    msg "build: MBEDTLS_XXX_ALT" # ~30s
-    scripts/config.py full
-    # Disable options that are incompatible with some ALT implementations.
-    # aesni.c and padlock.c reference mbedtls_aes_context fields directly.
-    scripts/config.py unset MBEDTLS_AESNI_C
-    scripts/config.py unset MBEDTLS_PADLOCK_C
-    # You can only have one threading implementation: alt or pthread, not both.
-    scripts/config.py unset MBEDTLS_THREADING_PTHREAD
-    # The SpecifiedECDomain parsing code accesses mbedtls_ecp_group fields
-    # directly and assumes the implementation works with partial groups.
-    scripts/config.py unset MBEDTLS_PK_PARSE_EC_EXTENDED
-    # Enable all MBEDTLS_XXX_ALT for whole modules. Do not enable
-    # MBEDTLS_XXX_YYY_ALT which are for single functions.
-    scripts/config.py set-all 'MBEDTLS_([A-Z0-9]*|NIST_KW)_ALT'
-    scripts/config.py unset MBEDTLS_DHM_ALT #incompatible with MBEDTLS_DEBUG_C
-    # We can only compile, not link, since we don't have any implementations
-    # suitable for testing with the dummy alt headers.
-    make CC=gcc CFLAGS='-Werror -Wall -Wextra -I../tests/include/alt-dummy' lib
-}
-
-component_build_dhm_alt () {
-    msg "build: MBEDTLS_DHM_ALT" # ~30s
-    scripts/config.py full
-    scripts/config.py set MBEDTLS_DHM_ALT
-    # debug.c currently references mbedtls_dhm_context fields directly.
-    scripts/config.py unset MBEDTLS_DEBUG_C
-    # We can only compile, not link, since we don't have any implementations
-    # suitable for testing with the dummy alt headers.
-    make CC=gcc CFLAGS='-Werror -Wall -Wextra -I../tests/include/alt-dummy' lib
+    msg "build: Unix make, incremental g++"
+    make TEST_CPP=1
 }
 
 component_test_no_use_psa_crypto_full_cmake_asan() {
@@ -1519,16 +1400,16 @@ component_test_no_use_psa_crypto_full_cmake_asan() {
     make test
 
     msg "test: ssl-opt.sh (full minus MBEDTLS_USE_PSA_CRYPTO)"
-    tests/ssl-opt.sh
+    if_build_succeeded tests/ssl-opt.sh
 
     msg "test: compat.sh default (full minus MBEDTLS_USE_PSA_CRYPTO)"
-    tests/compat.sh
+    if_build_succeeded tests/compat.sh
 
-    msg "test: compat.sh DES & NULL (full minus MBEDTLS_USE_PSA_CRYPTO)"
-    env OPENSSL_CMD="$OPENSSL_LEGACY" GNUTLS_CLI="$GNUTLS_LEGACY_CLI" GNUTLS_SERV="$GNUTLS_LEGACY_SERV" tests/compat.sh -e '3DES\|DES-CBC3' -f 'NULL\|DES'
+    msg "test: compat.sh RC4, DES & NULL (full minus MBEDTLS_USE_PSA_CRYPTO)"
+    if_build_succeeded env OPENSSL_CMD="$OPENSSL_LEGACY" GNUTLS_CLI="$GNUTLS_LEGACY_CLI" GNUTLS_SERV="$GNUTLS_LEGACY_SERV" tests/compat.sh -e '3DES\|DES-CBC3' -f 'NULL\|DES\|RC4\|ARCFOUR'
 
     msg "test: compat.sh ARIA + ChachaPoly (full minus MBEDTLS_USE_PSA_CRYPTO)"
-    env OPENSSL_CMD="$OPENSSL_NEXT" tests/compat.sh -e '^$' -f 'ARIA\|CHACHA'
+    if_build_succeeded env OPENSSL_CMD="$OPENSSL_NEXT" tests/compat.sh -e '^$' -f 'ARIA\|CHACHA'
 }
 
 component_test_psa_crypto_config_basic() {
@@ -1560,8 +1441,33 @@ component_test_psa_crypto_config_basic() {
     scripts/config.py -f include/psa/crypto_config.h unset PSA_WANT_KEY_TYPE_DES
     scripts/config.py unset MBEDTLS_DES_C
 
-    loc_cflags="$ASAN_CFLAGS -DPSA_CRYPTO_DRIVER_TEST_ALL"
-    loc_cflags="${loc_cflags} '-DMBEDTLS_USER_CONFIG_FILE=\"../tests/configs/user-config-for-test.h\"'"
+    # Need to define the correct symbol and include the test driver header path in order to build with the test driver
+    loc_cflags="$ASAN_CFLAGS -DPSA_CRYPTO_DRIVER_TEST"
+    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_KEY_TYPE_AES"
+    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_KEY_TYPE_CAMELLIA"
+    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_KEY_TYPE_ECC_KEY_PAIR"
+    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_KEY_TYPE_RSA_KEY_PAIR"
+    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_CBC_NO_PADDING"
+    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_CBC_PKCS7"
+    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_CTR"
+    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_CFB"
+    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_ECDSA"
+    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_DETERMINISTIC_ECDSA"
+    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_MD2"
+    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_MD4"
+    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_MD5"
+    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_OFB"
+    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_RIPEMD160"
+    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_RSA_PKCS1V15_SIGN"
+    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_RSA_PSS"
+    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_SHA_1"
+    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_SHA_224"
+    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_SHA_256"
+    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_SHA_384"
+    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_SHA_512"
+    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_XTS"
+    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_CMAC"
+    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_HMAC"
     loc_cflags="${loc_cflags} -I../tests/include -O2"
 
     make CC=gcc CFLAGS="$loc_cflags" LDFLAGS="$ASAN_CFLAGS"
@@ -1677,6 +1583,46 @@ component_build_psa_accel_alg_hkdf() {
     make CC=gcc CFLAGS="$ASAN_CFLAGS -DPSA_CRYPTO_DRIVER_TEST -DMBEDTLS_PSA_ACCEL_ALG_HKDF -I../tests/include -O2" LDFLAGS="$ASAN_CFLAGS"
 }
 
+# This should be renamed to test and updated once the accelerator MD2 code is in place and ready to test.
+component_build_psa_accel_alg_md2() {
+    # full plus MBEDTLS_PSA_CRYPTO_CONFIG with PSA_WANT_ALG_MD2 without other hashes
+    msg "build: full + MBEDTLS_PSA_CRYPTO_CONFIG + PSA_WANT_ALG_MD2 - other hashes"
+    scripts/config.py full
+    scripts/config.py set MBEDTLS_PSA_CRYPTO_CONFIG
+    scripts/config.py set MBEDTLS_PSA_CRYPTO_DRIVERS
+    scripts/config.py unset MBEDTLS_USE_PSA_CRYPTO
+    scripts/config.py -f include/psa/crypto_config.h unset PSA_WANT_ALG_MD4
+    scripts/config.py -f include/psa/crypto_config.h unset PSA_WANT_ALG_MD5
+    scripts/config.py -f include/psa/crypto_config.h unset PSA_WANT_ALG_RIPEMD160
+    scripts/config.py -f include/psa/crypto_config.h unset PSA_WANT_ALG_SHA_1
+    scripts/config.py -f include/psa/crypto_config.h unset PSA_WANT_ALG_SHA_224
+    scripts/config.py -f include/psa/crypto_config.h unset PSA_WANT_ALG_SHA_256
+    scripts/config.py -f include/psa/crypto_config.h unset PSA_WANT_ALG_SHA_384
+    scripts/config.py -f include/psa/crypto_config.h unset PSA_WANT_ALG_SHA_512
+    # Need to define the correct symbol and include the test driver header path in order to build with the test driver
+    make CC=gcc CFLAGS="$ASAN_CFLAGS -DPSA_CRYPTO_DRIVER_TEST -DMBEDTLS_PSA_ACCEL_ALG_MD2 -I../tests/include -O2" LDFLAGS="$ASAN_CFLAGS"
+}
+
+# This should be renamed to test and updated once the accelerator MD4 code is in place and ready to test.
+component_build_psa_accel_alg_md4() {
+    # full plus MBEDTLS_PSA_CRYPTO_CONFIG with PSA_WANT_ALG_MD4 without other hashes
+    msg "build: full + MBEDTLS_PSA_CRYPTO_CONFIG + PSA_WANT_ALG_MD4 - other hashes"
+    scripts/config.py full
+    scripts/config.py set MBEDTLS_PSA_CRYPTO_CONFIG
+    scripts/config.py set MBEDTLS_PSA_CRYPTO_DRIVERS
+    scripts/config.py unset MBEDTLS_USE_PSA_CRYPTO
+    scripts/config.py -f include/psa/crypto_config.h unset PSA_WANT_ALG_MD2
+    scripts/config.py -f include/psa/crypto_config.h unset PSA_WANT_ALG_MD5
+    scripts/config.py -f include/psa/crypto_config.h unset PSA_WANT_ALG_RIPEMD160
+    scripts/config.py -f include/psa/crypto_config.h unset PSA_WANT_ALG_SHA_1
+    scripts/config.py -f include/psa/crypto_config.h unset PSA_WANT_ALG_SHA_224
+    scripts/config.py -f include/psa/crypto_config.h unset PSA_WANT_ALG_SHA_256
+    scripts/config.py -f include/psa/crypto_config.h unset PSA_WANT_ALG_SHA_384
+    scripts/config.py -f include/psa/crypto_config.h unset PSA_WANT_ALG_SHA_512
+    # Need to define the correct symbol and include the test driver header path in order to build with the test driver
+    make CC=gcc CFLAGS="$ASAN_CFLAGS -DPSA_CRYPTO_DRIVER_TEST -DMBEDTLS_PSA_ACCEL_ALG_MD4 -I../tests/include -O2" LDFLAGS="$ASAN_CFLAGS"
+}
+
 # This should be renamed to test and updated once the accelerator MD5 code is in place and ready to test.
 component_build_psa_accel_alg_md5() {
     # full plus MBEDTLS_PSA_CRYPTO_CONFIG with PSA_WANT_ALG_MD5 without other hashes
@@ -1685,6 +1631,8 @@ component_build_psa_accel_alg_md5() {
     scripts/config.py set MBEDTLS_PSA_CRYPTO_CONFIG
     scripts/config.py set MBEDTLS_PSA_CRYPTO_DRIVERS
     scripts/config.py unset MBEDTLS_USE_PSA_CRYPTO
+    scripts/config.py -f include/psa/crypto_config.h unset PSA_WANT_ALG_MD2
+    scripts/config.py -f include/psa/crypto_config.h unset PSA_WANT_ALG_MD4
     scripts/config.py -f include/psa/crypto_config.h unset PSA_WANT_ALG_RIPEMD160
     scripts/config.py -f include/psa/crypto_config.h unset PSA_WANT_ALG_SHA_1
     scripts/config.py -f include/psa/crypto_config.h unset PSA_WANT_ALG_SHA_224
@@ -1703,6 +1651,8 @@ component_build_psa_accel_alg_ripemd160() {
     scripts/config.py set MBEDTLS_PSA_CRYPTO_CONFIG
     scripts/config.py set MBEDTLS_PSA_CRYPTO_DRIVERS
     scripts/config.py unset MBEDTLS_USE_PSA_CRYPTO
+    scripts/config.py -f include/psa/crypto_config.h unset PSA_WANT_ALG_MD2
+    scripts/config.py -f include/psa/crypto_config.h unset PSA_WANT_ALG_MD4
     scripts/config.py -f include/psa/crypto_config.h unset PSA_WANT_ALG_MD5
     scripts/config.py -f include/psa/crypto_config.h unset PSA_WANT_ALG_SHA_1
     scripts/config.py -f include/psa/crypto_config.h unset PSA_WANT_ALG_SHA_224
@@ -1721,6 +1671,8 @@ component_build_psa_accel_alg_sha1() {
     scripts/config.py set MBEDTLS_PSA_CRYPTO_CONFIG
     scripts/config.py set MBEDTLS_PSA_CRYPTO_DRIVERS
     scripts/config.py unset MBEDTLS_USE_PSA_CRYPTO
+    scripts/config.py -f include/psa/crypto_config.h unset PSA_WANT_ALG_MD2
+    scripts/config.py -f include/psa/crypto_config.h unset PSA_WANT_ALG_MD4
     scripts/config.py -f include/psa/crypto_config.h unset PSA_WANT_ALG_MD5
     scripts/config.py -f include/psa/crypto_config.h unset PSA_WANT_ALG_RIPEMD160
     scripts/config.py -f include/psa/crypto_config.h unset PSA_WANT_ALG_SHA_224
@@ -1739,6 +1691,8 @@ component_build_psa_accel_alg_sha224() {
     scripts/config.py set MBEDTLS_PSA_CRYPTO_CONFIG
     scripts/config.py set MBEDTLS_PSA_CRYPTO_DRIVERS
     scripts/config.py unset MBEDTLS_USE_PSA_CRYPTO
+    scripts/config.py -f include/psa/crypto_config.h unset PSA_WANT_ALG_MD2
+    scripts/config.py -f include/psa/crypto_config.h unset PSA_WANT_ALG_MD4
     scripts/config.py -f include/psa/crypto_config.h unset PSA_WANT_ALG_MD5
     scripts/config.py -f include/psa/crypto_config.h unset PSA_WANT_ALG_RIPEMD160
     scripts/config.py -f include/psa/crypto_config.h unset PSA_WANT_ALG_SHA_1
@@ -1756,6 +1710,8 @@ component_build_psa_accel_alg_sha256() {
     scripts/config.py set MBEDTLS_PSA_CRYPTO_CONFIG
     scripts/config.py set MBEDTLS_PSA_CRYPTO_DRIVERS
     scripts/config.py unset MBEDTLS_USE_PSA_CRYPTO
+    scripts/config.py -f include/psa/crypto_config.h unset PSA_WANT_ALG_MD2
+    scripts/config.py -f include/psa/crypto_config.h unset PSA_WANT_ALG_MD4
     scripts/config.py -f include/psa/crypto_config.h unset PSA_WANT_ALG_MD5
     scripts/config.py -f include/psa/crypto_config.h unset PSA_WANT_ALG_RIPEMD160
     scripts/config.py -f include/psa/crypto_config.h unset PSA_WANT_ALG_SHA_1
@@ -1774,6 +1730,8 @@ component_build_psa_accel_alg_sha384() {
     scripts/config.py set MBEDTLS_PSA_CRYPTO_CONFIG
     scripts/config.py set MBEDTLS_PSA_CRYPTO_DRIVERS
     scripts/config.py unset MBEDTLS_USE_PSA_CRYPTO
+    scripts/config.py -f include/psa/crypto_config.h unset PSA_WANT_ALG_MD2
+    scripts/config.py -f include/psa/crypto_config.h unset PSA_WANT_ALG_MD4
     scripts/config.py -f include/psa/crypto_config.h unset PSA_WANT_ALG_MD5
     scripts/config.py -f include/psa/crypto_config.h unset PSA_WANT_ALG_RIPEMD160
     scripts/config.py -f include/psa/crypto_config.h unset PSA_WANT_ALG_SHA_1
@@ -1791,6 +1749,8 @@ component_build_psa_accel_alg_sha512() {
     scripts/config.py set MBEDTLS_PSA_CRYPTO_CONFIG
     scripts/config.py set MBEDTLS_PSA_CRYPTO_DRIVERS
     scripts/config.py unset MBEDTLS_USE_PSA_CRYPTO
+    scripts/config.py -f include/psa/crypto_config.h unset PSA_WANT_ALG_MD2
+    scripts/config.py -f include/psa/crypto_config.h unset PSA_WANT_ALG_MD4
     scripts/config.py -f include/psa/crypto_config.h unset PSA_WANT_ALG_MD5
     scripts/config.py -f include/psa/crypto_config.h unset PSA_WANT_ALG_RIPEMD160
     scripts/config.py -f include/psa/crypto_config.h unset PSA_WANT_ALG_SHA_1
@@ -1893,6 +1853,38 @@ component_build_psa_accel_key_type_rsa_public_key() {
     make CC=gcc CFLAGS="$ASAN_CFLAGS -DPSA_CRYPTO_DRIVER_TEST -DMBEDTLS_PSA_ACCEL_KEY_TYPE_RSA_PUBLIC_KEY -I../tests/include -O2" LDFLAGS="$ASAN_CFLAGS"
 }
 
+component_test_check_params_functionality () {
+    msg "build+test: MBEDTLS_CHECK_PARAMS functionality"
+    scripts/config.py full # includes CHECK_PARAMS
+    # Make MBEDTLS_PARAM_FAILED call mbedtls_param_failed().
+    scripts/config.py unset MBEDTLS_CHECK_PARAMS_ASSERT
+    make CC=gcc CFLAGS='-Werror -O1' all test
+}
+
+component_test_check_params_without_platform () {
+    msg "build+test: MBEDTLS_CHECK_PARAMS without MBEDTLS_PLATFORM_C"
+    scripts/config.py full # includes CHECK_PARAMS
+    # Keep MBEDTLS_PARAM_FAILED as assert.
+    scripts/config.py unset MBEDTLS_PLATFORM_EXIT_ALT
+    scripts/config.py unset MBEDTLS_PLATFORM_TIME_ALT
+    scripts/config.py unset MBEDTLS_PLATFORM_FPRINTF_ALT
+    scripts/config.py unset MBEDTLS_PLATFORM_MEMORY
+    scripts/config.py unset MBEDTLS_PLATFORM_NV_SEED_ALT
+    scripts/config.py unset MBEDTLS_PLATFORM_PRINTF_ALT
+    scripts/config.py unset MBEDTLS_PLATFORM_SNPRINTF_ALT
+    scripts/config.py unset MBEDTLS_ENTROPY_NV_SEED
+    scripts/config.py unset MBEDTLS_PLATFORM_C
+    make CC=gcc CFLAGS='-Werror -O1' all test
+}
+
+component_test_check_params_silent () {
+    msg "build+test: MBEDTLS_CHECK_PARAMS with alternative MBEDTLS_PARAM_FAILED()"
+    scripts/config.py full # includes CHECK_PARAMS
+    # Set MBEDTLS_PARAM_FAILED to nothing.
+    sed -i 's/.*\(#define MBEDTLS_PARAM_FAILED( cond )\).*/\1/' "$CONFIG_H"
+    make CC=gcc CFLAGS='-Werror -O1' all test
+}
+
 component_test_no_platform () {
     # Full configuration build, without platform support, file IO and net sockets.
     # This should catch missing mbedtls_printf definitions, and by disabling file
@@ -1978,7 +1970,7 @@ component_test_memory_buffer_allocator () {
 
     msg "test: ssl-opt.sh, MBEDTLS_MEMORY_BUFFER_ALLOC_C"
     # MBEDTLS_MEMORY_BUFFER_ALLOC is slow. Skip tests that tend to time out.
-    tests/ssl-opt.sh -e '^DTLS proxy'
+    if_build_succeeded tests/ssl-opt.sh -e '^DTLS proxy'
 }
 
 component_test_no_max_fragment_length () {
@@ -1989,7 +1981,7 @@ component_test_no_max_fragment_length () {
     make
 
     msg "test: ssl-opt.sh, MFL-related tests"
-    tests/ssl-opt.sh -f "Max fragment length"
+    if_build_succeeded tests/ssl-opt.sh -f "Max fragment length"
 }
 
 component_test_asan_remove_peer_certificate () {
@@ -2002,13 +1994,13 @@ component_test_asan_remove_peer_certificate () {
     make test
 
     msg "test: ssl-opt.sh, !MBEDTLS_SSL_KEEP_PEER_CERTIFICATE"
-    tests/ssl-opt.sh
+    if_build_succeeded tests/ssl-opt.sh
 
     msg "test: compat.sh, !MBEDTLS_SSL_KEEP_PEER_CERTIFICATE"
-    tests/compat.sh
+    if_build_succeeded tests/compat.sh
 
     msg "test: context-info.sh, !MBEDTLS_SSL_KEEP_PEER_CERTIFICATE"
-    tests/context-info.sh
+    if_build_succeeded tests/context-info.sh
 }
 
 component_test_no_max_fragment_length_small_ssl_out_content_len () {
@@ -2020,10 +2012,10 @@ component_test_no_max_fragment_length_small_ssl_out_content_len () {
     make
 
     msg "test: MFL tests (disabled MFL extension case) & large packet tests"
-    tests/ssl-opt.sh -f "Max fragment length\|Large buffer"
+    if_build_succeeded tests/ssl-opt.sh -f "Max fragment length\|Large buffer"
 
     msg "test: context-info.sh (disabled MFL extension case)"
-    tests/context-info.sh
+    if_build_succeeded tests/context-info.sh
 }
 
 component_test_variable_ssl_in_out_buffer_len () {
@@ -2036,10 +2028,10 @@ component_test_variable_ssl_in_out_buffer_len () {
     make test
 
     msg "test: ssl-opt.sh, MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH enabled"
-    tests/ssl-opt.sh
+    if_build_succeeded tests/ssl-opt.sh
 
     msg "test: compat.sh, MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH enabled"
-    tests/compat.sh
+    if_build_succeeded tests/compat.sh
 }
 
 component_test_variable_ssl_in_out_buffer_len_CID () {
@@ -2054,10 +2046,10 @@ component_test_variable_ssl_in_out_buffer_len_CID () {
     make test
 
     msg "test: ssl-opt.sh, MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH and MBEDTLS_SSL_DTLS_CONNECTION_ID enabled"
-    tests/ssl-opt.sh
+    if_build_succeeded tests/ssl-opt.sh
 
     msg "test: compat.sh, MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH and MBEDTLS_SSL_DTLS_CONNECTION_ID enabled"
-    tests/compat.sh
+    if_build_succeeded tests/compat.sh
 }
 
 component_test_ssl_alloc_buffer_and_mfl () {
@@ -2074,12 +2066,13 @@ component_test_ssl_alloc_buffer_and_mfl () {
     make test
 
     msg "test: MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH, MBEDTLS_MEMORY_BUFFER_ALLOC_C, MBEDTLS_MEMORY_DEBUG and MBEDTLS_SSL_MAX_FRAGMENT_LENGTH"
-    tests/ssl-opt.sh -f "Handshake memory usage"
+    if_build_succeeded tests/ssl-opt.sh -f "Handshake memory usage"
 }
 
 component_test_when_no_ciphersuites_have_mac () {
     msg "build: when no ciphersuites have MAC"
     scripts/config.py unset MBEDTLS_CIPHER_NULL_CIPHER
+    scripts/config.py unset MBEDTLS_ARC4_C
     scripts/config.py unset MBEDTLS_CIPHER_MODE_CBC
     scripts/config.py unset MBEDTLS_CMAC_C
     make
@@ -2088,7 +2081,7 @@ component_test_when_no_ciphersuites_have_mac () {
     make test
 
     msg "test ssl-opt.sh: !MBEDTLS_SSL_SOME_MODES_USE_MAC"
-    tests/ssl-opt.sh -f 'Default\|EtM' -e 'without EtM'
+    if_build_succeeded tests/ssl-opt.sh -f 'Default\|EtM' -e 'without EtM'
 }
 
 component_test_no_date_time () {
@@ -2124,7 +2117,7 @@ component_test_malloc_0_null () {
     msg "selftest: malloc(0) returns NULL (ASan+UBSan build)"
     # Just the calloc selftest. "make test" ran the others as part of the
     # test suites.
-    programs/test/selftest calloc
+    if_build_succeeded programs/test/selftest calloc
 
     msg "test ssl-opt.sh: malloc(0) returns NULL (ASan+UBSan build)"
     # Run a subset of the tests. The choice is a balance between coverage
@@ -2132,7 +2125,7 @@ component_test_malloc_0_null () {
     # The current choice is to skip tests whose description includes
     # "proxy", which is an approximation of skipping tests that use the
     # UDP proxy, which tend to be slower and flakier.
-    tests/ssl-opt.sh -e 'proxy'
+    if_build_succeeded tests/ssl-opt.sh -e 'proxy'
 }
 
 component_test_aes_fewer_tables () {
@@ -2214,8 +2207,33 @@ component_test_psa_crypto_drivers () {
     scripts/config.py full
     scripts/config.py set MBEDTLS_PSA_CRYPTO_DRIVERS
     scripts/config.py set MBEDTLS_PSA_CRYPTO_BUILTIN_KEYS
-    loc_cflags="$ASAN_CFLAGS -DPSA_CRYPTO_DRIVER_TEST_ALL"
-    loc_cflags="${loc_cflags} '-DMBEDTLS_USER_CONFIG_FILE=\"../tests/configs/user-config-for-test.h\"'"
+    # Need to define the correct symbol and include the test driver header path in order to build with the test driver
+    loc_cflags="$ASAN_CFLAGS -DPSA_CRYPTO_DRIVER_TEST"
+    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_KEY_TYPE_AES"
+    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_KEY_TYPE_CAMELLIA"
+    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_KEY_TYPE_ECC_KEY_PAIR"
+    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_KEY_TYPE_RSA_KEY_PAIR"
+    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_CBC_NO_PADDING"
+    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_CBC_PKCS7"
+    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_CTR"
+    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_CFB"
+    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_ECDSA"
+    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_DETERMINISTIC_ECDSA"
+    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_MD2"
+    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_MD4"
+    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_MD5"
+    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_OFB"
+    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_RIPEMD160"
+    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_RSA_PKCS1V15_SIGN"
+    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_RSA_PSS"
+    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_SHA_1"
+    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_SHA_224"
+    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_SHA_256"
+    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_SHA_384"
+    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_SHA_512"
+    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_XTS"
+    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_CMAC"
+    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_HMAC"
     loc_cflags="${loc_cflags} -I../tests/include -O2"
 
     make CC=gcc CFLAGS="${loc_cflags}" LDFLAGS="$ASAN_CFLAGS"
@@ -2300,7 +2318,7 @@ component_test_m32_o1 () {
     make test
 
     msg "test ssl-opt.sh, i386, make, gcc-O1"
-    tests/ssl-opt.sh
+    if_build_succeeded tests/ssl-opt.sh
 }
 support_test_m32_o1 () {
     support_test_m32_o0 "$@"
@@ -2308,6 +2326,7 @@ support_test_m32_o1 () {
 
 component_test_m32_everest () {
     msg "build: i386, Everest ECDH context (ASan build)" # ~ 6 min
+    scripts/config.py unset MBEDTLS_ECDH_LEGACY_CONTEXT
     scripts/config.py set MBEDTLS_ECDH_VARIANT_EVEREST_ENABLED
     make CC=gcc CFLAGS="$ASAN_CFLAGS -m32 -O2" LDFLAGS="-m32 $ASAN_CFLAGS"
 
@@ -2315,11 +2334,11 @@ component_test_m32_everest () {
     make test
 
     msg "test: i386, Everest ECDH context - ECDH-related part of ssl-opt.sh (ASan build)" # ~ 5s
-    tests/ssl-opt.sh -f ECDH
+    if_build_succeeded tests/ssl-opt.sh -f ECDH
 
     msg "test: i386, Everest ECDH context - compat.sh with some ECDH ciphersuites (ASan build)" # ~ 3 min
     # Exclude some symmetric ciphers that are redundant here to gain time.
-    tests/compat.sh -f ECDH -V NO -e 'ARIA\|CAMELLIA\|CHACHA\|DES'
+    if_build_succeeded tests/compat.sh -f ECDH -V NO -e 'ARCFOUR\|ARIA\|CAMELLIA\|CHACHA\|DES\|RC4'
 }
 support_test_m32_everest () {
     support_test_m32_o0 "$@"
@@ -2417,7 +2436,7 @@ component_test_no_x509_info () {
     make test
 
     msg "test: ssl-opt.sh, full + MBEDTLS_X509_REMOVE_INFO" # ~ 1 min
-    tests/ssl-opt.sh
+    if_build_succeeded tests/ssl-opt.sh
 }
 
 component_build_arm_none_eabi_gcc () {
@@ -2429,29 +2448,14 @@ component_build_arm_none_eabi_gcc () {
     ${ARM_NONE_EABI_GCC_PREFIX}size library/*.o
 }
 
-component_build_arm_linux_gnueabi_gcc_arm5vte () {
-    msg "build: ${ARM_LINUX_GNUEABI_GCC_PREFIX}gcc -march=arm5vte" # ~ 10s
+component_build_arm_none_eabi_gcc_arm5vte () {
+    msg "build: ${ARM_NONE_EABI_GCC_PREFIX}gcc -march=arm5vte" # ~ 10s
     scripts/config.py baremetal
     # Build for a target platform that's close to what Debian uses
     # for its "armel" distribution (https://wiki.debian.org/ArmEabiPort).
     # See https://github.com/ARMmbed/mbedtls/pull/2169 and comments.
-    # Build everything including programs, see for example
-    # https://github.com/ARMmbed/mbedtls/pull/3449#issuecomment-675313720
-    make CC="${ARM_LINUX_GNUEABI_GCC_PREFIX}gcc" AR="${ARM_LINUX_GNUEABI_GCC_PREFIX}ar" CFLAGS='-Werror -Wall -Wextra -march=armv5te -O1' LDFLAGS='-march=armv5te'
-
-    msg "size: ${ARM_LINUX_GNUEABI_GCC_PREFIX}gcc -march=armv5te -O1"
-    ${ARM_LINUX_GNUEABI_GCC_PREFIX}size library/*.o
-}
-support_build_arm_linux_gnueabi_gcc_arm5vte () {
-    type ${ARM_LINUX_GNUEABI_GCC_PREFIX}gcc >/dev/null 2>&1
-}
-
-component_build_arm_none_eabi_gcc_arm5vte () {
-    msg "build: ${ARM_NONE_EABI_GCC_PREFIX}gcc -march=arm5vte" # ~ 10s
-    scripts/config.py baremetal
-    # This is an imperfect substitute for
-    # component_build_arm_linux_gnueabi_gcc_arm5vte
-    # in case the gcc-arm-linux-gnueabi toolchain is not available
+    # It would be better to build with arm-linux-gnueabi-gcc but
+    # we don't have that on our CI at this time.
     make CC="${ARM_NONE_EABI_GCC_PREFIX}gcc" AR="${ARM_NONE_EABI_GCC_PREFIX}ar" CFLAGS='-std=c99 -Werror -Wall -Wextra -march=armv5te -O1' LDFLAGS='-march=armv5te' SHELL='sh -x' lib
 
     msg "size: ${ARM_NONE_EABI_GCC_PREFIX}gcc -march=armv5te -O1"
@@ -2473,7 +2477,7 @@ component_build_arm_none_eabi_gcc_no_udbl_division () {
     scripts/config.py set MBEDTLS_NO_UDBL_DIVISION
     make CC="${ARM_NONE_EABI_GCC_PREFIX}gcc" AR="${ARM_NONE_EABI_GCC_PREFIX}ar" LD="${ARM_NONE_EABI_GCC_PREFIX}ld" CFLAGS='-std=c99 -Werror -Wall -Wextra' lib
     echo "Checking that software 64-bit division is not required"
-    not grep __aeabi_uldiv library/*.o
+    if_build_succeeded not grep __aeabi_uldiv library/*.o
 }
 
 component_build_arm_none_eabi_gcc_no_64bit_multiplication () {
@@ -2482,7 +2486,7 @@ component_build_arm_none_eabi_gcc_no_64bit_multiplication () {
     scripts/config.py set MBEDTLS_NO_64BIT_MULTIPLICATION
     make CC="${ARM_NONE_EABI_GCC_PREFIX}gcc" AR="${ARM_NONE_EABI_GCC_PREFIX}ar" LD="${ARM_NONE_EABI_GCC_PREFIX}ld" CFLAGS='-std=c99 -Werror -O1 -march=armv6-m -mthumb' lib
     echo "Checking that software 64-bit multiplication is not required"
-    not grep __aeabi_lmul library/*.o
+    if_build_succeeded not grep __aeabi_lmul library/*.o
 }
 
 component_build_armcc () {
@@ -2512,25 +2516,12 @@ component_build_armcc () {
 }
 
 component_test_tls13_experimental () {
-    msg "build: default config with MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL enabled, without padding"
+    msg "build: default config with MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL enabled"
     scripts/config.pl set MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
-    scripts/config.pl set MBEDTLS_SSL_CID_TLS1_3_PADDING_GRANULARITY 1
     CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
     make
-    msg "test: default config with MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL enabled, without padding"
+    msg "test: default config with MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL enabled"
     make test
-}
-
-component_test_tls13_experimental_with_padding () {
-    msg "build: default config with MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL enabled, with padding"
-    scripts/config.pl set MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
-    scripts/config.pl set MBEDTLS_SSL_CID_TLS1_3_PADDING_GRANULARITY 16
-    CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
-    make
-    msg "test: default config with MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL enabled, with padding"
-    make test
-    msg "ssl-opt.sh (TLS 1.3 experimental)"
-    if_build_succeeded tests/ssl-opt.sh
 }
 
 component_build_mingw () {
@@ -2563,13 +2554,13 @@ component_test_memsan () {
     make test
 
     msg "test: ssl-opt.sh (MSan)" # ~ 1 min
-    tests/ssl-opt.sh
+    if_build_succeeded tests/ssl-opt.sh
 
     # Optional part(s)
 
     if [ "$MEMORY" -gt 0 ]; then
         msg "test: compat.sh (MSan)" # ~ 6 min 20s
-        tests/compat.sh
+        if_build_succeeded tests/compat.sh
     fi
 }
 
@@ -2585,17 +2576,17 @@ component_test_valgrind () {
     # seem to receive signals under valgrind on OS X).
     if [ "$MEMORY" -gt 0 ]; then
         msg "test: ssl-opt.sh --memcheck (Release)"
-        tests/ssl-opt.sh --memcheck
+        if_build_succeeded tests/ssl-opt.sh --memcheck
     fi
 
     if [ "$MEMORY" -gt 1 ]; then
         msg "test: compat.sh --memcheck (Release)"
-        tests/compat.sh --memcheck
+        if_build_succeeded tests/compat.sh --memcheck
     fi
 
     if [ "$MEMORY" -gt 0 ]; then
         msg "test: context-info.sh --memcheck (Release)"
-        tests/context-info.sh --memcheck
+        if_build_succeeded tests/context-info.sh --memcheck
     fi
 }
 
@@ -2614,13 +2605,15 @@ component_test_cmake_out_of_source () {
     # "No such file or directory", which would indicate that some required
     # file is missing (ssl-opt.sh tolerates the absence of some files so
     # may exit with status 0 but emit errors).
-    ./tests/ssl-opt.sh -f 'Fallback SCSV: beginning of list' 2>ssl-opt.err
-    cat ssl-opt.err >&2
-    # If ssl-opt.err is non-empty, record an error and keep going.
-    [ ! -s ssl-opt.err ]
-    rm ssl-opt.err
+    if_build_succeeded ./tests/ssl-opt.sh -f 'Fallback SCSV: beginning of list' 2>ssl-opt.err
+    if [ -s ssl-opt.err ]; then
+        cat ssl-opt.err >&2
+        record_status [ ! -s ssl-opt.err ]
+        rm ssl-opt.err
+    fi
     cd "$MBEDTLS_ROOT_DIR"
     rm -rf "$OUT_OF_SOURCE_DIR"
+    unset MBEDTLS_ROOT_DIR
 }
 
 component_test_cmake_as_subdirectory () {
@@ -2630,33 +2623,7 @@ component_test_cmake_as_subdirectory () {
     cd programs/test/cmake_subproject
     cmake .
     make
-    ./cmake_subproject
-
-    cd "$MBEDTLS_ROOT_DIR"
-    unset MBEDTLS_ROOT_DIR
-}
-
-component_test_cmake_as_package () {
-    msg "build: cmake 'as-package' build"
-    MBEDTLS_ROOT_DIR="$PWD"
-
-    cd programs/test/cmake_package
-    cmake .
-    make
-    ./cmake_package
-
-    cd "$MBEDTLS_ROOT_DIR"
-    unset MBEDTLS_ROOT_DIR
-}
-
-component_test_cmake_as_package_install () {
-    msg "build: cmake 'as-installed-package' build"
-    MBEDTLS_ROOT_DIR="$PWD"
-
-    cd programs/test/cmake_package_install
-    cmake .
-    make
-    ./cmake_package_install
+    if_build_succeeded ./cmake_subproject
 
     cd "$MBEDTLS_ROOT_DIR"
     unset MBEDTLS_ROOT_DIR
@@ -2681,9 +2648,9 @@ component_test_zeroize () {
         for compiler in clang gcc; do
             msg "test: $compiler $optimization_flag, mbedtls_platform_zeroize()"
             make programs CC="$compiler" DEBUG=1 CFLAGS="$optimization_flag"
-            gdb -ex "$gdb_disable_aslr" -x tests/scripts/test_zeroize.gdb -nw -batch -nx 2>&1 | tee test_zeroize.log
-            grep "The buffer was correctly zeroized" test_zeroize.log
-            not grep -i "error" test_zeroize.log
+            if_build_succeeded gdb -ex "$gdb_disable_aslr" -x tests/scripts/test_zeroize.gdb -nw -batch -nx 2>&1 | tee test_zeroize.log
+            if_build_succeeded grep "The buffer was correctly zeroized" test_zeroize.log
+            if_build_succeeded not grep -i "error" test_zeroize.log
             rm -f test_zeroize.log
             make clean
         done
@@ -2694,7 +2661,7 @@ component_test_zeroize () {
 
 component_check_python_files () {
     msg "Lint: Python scripts"
-    tests/scripts/check-python-files.sh
+    record_status tests/scripts/check-python-files.sh
 }
 
 component_check_generate_test_code () {
@@ -2702,7 +2669,7 @@ component_check_generate_test_code () {
     # unittest writes out mundane stuff like number or tests run on stderr.
     # Our convention is to reserve stderr for actual errors, and write
     # harmless info on stdout so it can be suppress with --quiet.
-    ./tests/scripts/test_generate_test_code.py 2>&1
+    record_status ./tests/scripts/test_generate_test_code.py 2>&1
 }
 
 ################################################################
@@ -2711,7 +2678,7 @@ component_check_generate_test_code () {
 
 post_report () {
     msg "Done, cleaning up"
-    final_cleanup
+    cleanup
 
     final_report
 }
@@ -2722,71 +2689,26 @@ post_report () {
 #### Run all the things
 ################################################################
 
-# Function invoked by --error-test to test error reporting.
-pseudo_component_error_test () {
-    msg "Testing error reporting $error_test_i"
-    if [ $KEEP_GOING -ne 0 ]; then
-        echo "Expect three failing commands."
-    fi
-    # If the component doesn't run in a subshell, changing error_test_i to an
-    # invalid integer will cause an error in the loop that runs this function.
-    error_test_i=this_should_not_be_used_since_the_component_runs_in_a_subshell
-    # Expected error: 'grep non_existent /dev/null -> 1'
-    grep non_existent /dev/null
-    # Expected error: '! grep -q . tests/scripts/all.sh -> 1'
-    not grep -q . "$0"
-    # Expected error: 'make unknown_target -> 2'
-    make unknown_target
-    false "this should not be executed"
-}
-
 # Run one component and clean up afterwards.
 run_component () {
+    # Back up the configuration in case the component modifies it.
+    # The cleanup function will restore it.
+    cp -p "$CONFIG_H" "$CONFIG_BAK"
+    cp -p "$CRYPTO_CONFIG_H" "$CRYPTO_CONFIG_BAK"
     current_component="$1"
     export MBEDTLS_TEST_CONFIGURATION="$current_component"
 
     # Unconditionally create a seedfile that's sufficiently long.
     # Do this before each component, because a previous component may
     # have messed it up or shortened it.
-    local dd_cmd
-    dd_cmd=(dd if=/dev/urandom of=./tests/seedfile bs=64 count=1)
-    case $OSTYPE in
-        linux*|freebsd*|openbsd*|darwin*) dd_cmd+=(status=none)
-    esac
-    "${dd_cmd[@]}"
+    redirect_err dd if=/dev/urandom of=./tests/seedfile bs=64 count=1
 
-    # Run the component in a subshell, with error trapping and output
-    # redirection set up based on the relevant options.
-    if [ $KEEP_GOING -eq 1 ]; then
-        # We want to keep running if the subshell fails, so 'set -e' must
-        # be off when the subshell runs.
-        set +e
+    # Run the component code.
+    if [ $QUIET -eq 1 ]; then
+        # msg() is silenced, so just print the component name here
+        echo "${current_component#component_}"
     fi
-    (
-        if [ $QUIET -eq 1 ]; then
-            # msg() will be silenced, so just print the component name here.
-            echo "${current_component#component_}"
-            exec >/dev/null
-        fi
-        if [ $KEEP_GOING -eq 1 ]; then
-            # Keep "set -e" off, and run an ERR trap instead to record failures.
-            set -E
-            trap err_trap ERR
-        fi
-        # The next line is what runs the component
-        "$@"
-        if [ $KEEP_GOING -eq 1 ]; then
-            trap - ERR
-            exit $last_failure_status
-        fi
-    )
-    component_status=$?
-    if [ $KEEP_GOING -eq 1 ]; then
-        set -e
-        if [ $component_status -ne 0 ]; then
-            failure_count=$((failure_count + 1))
-        fi
-    fi
+    redirect_out "$@"
 
     # Restore the build tree to a clean state.
     cleanup
@@ -2799,13 +2721,16 @@ pre_initialize_variables
 pre_parse_command_line "$@"
 
 pre_check_git
-pre_restore_files
-pre_back_up
 
 build_status=0
 if [ $KEEP_GOING -eq 1 ]; then
     pre_setup_keep_going
+else
+    record_status () {
+        "$@"
+    }
 fi
+pre_setup_quiet_redirect
 pre_prepare_outcome_file
 pre_print_configuration
 pre_check_tools
@@ -2813,10 +2738,6 @@ cleanup
 pre_generate_files
 
 # Run the requested tests.
-for ((error_test_i=1; error_test_i <= error_test; error_test_i++)); do
-    run_component pseudo_component_error_test
-done
-unset error_test_i
 for component in $RUN_COMPONENTS; do
     run_component "component_$component"
 done

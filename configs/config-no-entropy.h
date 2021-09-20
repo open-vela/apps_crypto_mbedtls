@@ -29,6 +29,9 @@
  * See README.txt for usage instructions.
  */
 
+#ifndef MBEDTLS_CONFIG_H
+#define MBEDTLS_CONFIG_H
+
 /* System support */
 #define MBEDTLS_HAVE_ASM
 #define MBEDTLS_HAVE_TIME
@@ -46,6 +49,8 @@
 #define MBEDTLS_PKCS1_V21
 #define MBEDTLS_SELF_TEST
 #define MBEDTLS_VERSION_FEATURES
+#define MBEDTLS_X509_CHECK_KEY_USAGE
+#define MBEDTLS_X509_CHECK_EXTENDED_KEY_USAGE
 
 /* mbed TLS modules */
 #define MBEDTLS_AES_C
@@ -83,3 +88,7 @@
 
 /* Miscellaneous options */
 #define MBEDTLS_AES_ROM_TABLES
+
+#include "mbedtls/check_config.h"
+
+#endif /* MBEDTLS_CONFIG_H */
