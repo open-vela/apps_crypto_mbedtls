@@ -28,9 +28,12 @@
 
 #ifndef MBEDTLS_ARIA_H
 #define MBEDTLS_ARIA_H
-#include "mbedtls/private_access.h"
 
-#include "mbedtls/build_info.h"
+#if !defined(MBEDTLS_CONFIG_FILE)
+#include "mbedtls/config.h"
+#else
+#include MBEDTLS_CONFIG_FILE
+#endif
 
 #include <stddef.h>
 #include <stdint.h>
@@ -44,11 +47,9 @@
 #define MBEDTLS_ARIA_MAX_ROUNDS  16 /**< Maxiumum number of rounds in ARIA. */
 #define MBEDTLS_ARIA_MAX_KEYSIZE 32 /**< Maximum size of an ARIA key in bytes. */
 
-/** Bad input data. */
-#define MBEDTLS_ERR_ARIA_BAD_INPUT_DATA -0x005C
+#define MBEDTLS_ERR_ARIA_BAD_INPUT_DATA -0x005C /**< Bad input data. */
 
-/** Invalid data input length. */
-#define MBEDTLS_ERR_ARIA_INVALID_INPUT_LENGTH -0x005E
+#define MBEDTLS_ERR_ARIA_INVALID_INPUT_LENGTH -0x005E /**< Invalid data input length. */
 
 #ifdef __cplusplus
 extern "C" {
@@ -63,9 +64,9 @@ extern "C" {
  */
 typedef struct mbedtls_aria_context
 {
-    unsigned char MBEDTLS_PRIVATE(nr);           /*!< The number of rounds (12, 14 or 16) */
+    unsigned char nr;           /*!< The number of rounds (12, 14 or 16) */
     /*! The ARIA round keys. */
-    uint32_t MBEDTLS_PRIVATE(rk)[MBEDTLS_ARIA_MAX_ROUNDS + 1][MBEDTLS_ARIA_BLOCKSIZE / 4];
+    uint32_t rk[MBEDTLS_ARIA_MAX_ROUNDS + 1][MBEDTLS_ARIA_BLOCKSIZE / 4];
 }
 mbedtls_aria_context;
 
