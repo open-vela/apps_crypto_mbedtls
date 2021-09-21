@@ -128,20 +128,6 @@ cleanup:
     return( ret );
 }
 
-int mbedtls_ecjpake_set_point_format( mbedtls_ecjpake_context *ctx,
-                                      int point_format )
-{
-    switch( point_format )
-    {
-        case MBEDTLS_ECP_PF_UNCOMPRESSED:
-        case MBEDTLS_ECP_PF_COMPRESSED:
-            ctx->point_format = point_format;
-            return( 0 );
-        default:
-            return( MBEDTLS_ERR_ECP_BAD_INPUT_DATA );
-    }
-}
-
 /*
  * Check if context is ready for use
  */
@@ -180,7 +166,10 @@ static int ecjpake_write_len_point( unsigned char **p,
     if( ret != 0 )
         return( ret );
 
-    MBEDTLS_PUT_UINT32_BE( len, *p, 0 );
+    (*p)[0] = (unsigned char)( ( len >> 24 ) & 0xFF );
+    (*p)[1] = (unsigned char)( ( len >> 16 ) & 0xFF );
+    (*p)[2] = (unsigned char)( ( len >>  8 ) & 0xFF );
+    (*p)[3] = (unsigned char)( ( len       ) & 0xFF );
 
     *p += 4 + len;
 
@@ -220,8 +209,10 @@ static int ecjpake_hash( const mbedtls_md_info_t *md_info,
     if( end - p < 4 )
         return( MBEDTLS_ERR_ECP_BUFFER_TOO_SMALL );
 
-    MBEDTLS_PUT_UINT32_BE( id_len, p, 0 );
-    p += 4;
+    *p++ = (unsigned char)( ( id_len >> 24 ) & 0xFF );
+    *p++ = (unsigned char)( ( id_len >> 16 ) & 0xFF );
+    *p++ = (unsigned char)( ( id_len >>  8 ) & 0xFF );
+    *p++ = (unsigned char)( ( id_len       ) & 0xFF );
 
     if( end < p || (size_t)( end - p ) < id_len )
         return( MBEDTLS_ERR_ECP_BUFFER_TOO_SMALL );
@@ -361,7 +352,7 @@ static int ecjpake_zkp_write( const mbedtls_md_info_t *md_info,
         goto cleanup;
     }
 
-    *(*p)++ = MBEDTLS_BYTE_0( len );
+    *(*p)++ = (unsigned char)( len & 0xFF );
     MBEDTLS_MPI_CHK( mbedtls_mpi_write_binary( &h, *p, len ) ); /* r */
     *p += len;
 
@@ -957,28 +948,6 @@ static const unsigned char ecjpake_test_pms[] = {
     0xb4, 0x38, 0xf7, 0x19, 0xd3, 0xc4, 0xf3, 0x51
 };
 
-/*
- * PRNG for test - !!!INSECURE NEVER USE IN PRODUCTION!!!
- *
- * This is the linear congruential generator from numerical recipes,
- * except we only use the low byte as the output. See
- * https://en.wikipedia.org/wiki/Linear_congruential_generator#Parameters_in_common_use
- */
-static int self_test_rng( void *ctx, unsigned char *out, size_t len )
-{
-    static uint32_t state = 42;
-
-    (void) ctx;
-
-    for( size_t i = 0; i < len; i++ )
-    {
-        state = state * 1664525u + 1013904223u;
-        out[i] = (unsigned char) state;
-    }
-
-    return( 0 );
-}
-
 /* Load my private keys and generate the corresponding public keys */
 static int ecjpake_test_load( mbedtls_ecjpake_context *ctx,
                               const unsigned char *xm1, size_t len1,
@@ -989,9 +958,9 @@ static int ecjpake_test_load( mbedtls_ecjpake_context *ctx,
     MBEDTLS_MPI_CHK( mbedtls_mpi_read_binary( &ctx->xm1, xm1, len1 ) );
     MBEDTLS_MPI_CHK( mbedtls_mpi_read_binary( &ctx->xm2, xm2, len2 ) );
     MBEDTLS_MPI_CHK( mbedtls_ecp_mul( &ctx->grp, &ctx->Xm1, &ctx->xm1,
-                                      &ctx->grp.G, self_test_rng, NULL ) );
+                                      &ctx->grp.G, NULL, NULL ) );
     MBEDTLS_MPI_CHK( mbedtls_ecp_mul( &ctx->grp, &ctx->Xm2, &ctx->xm2,
-                                      &ctx->grp.G, self_test_rng, NULL ) );
+                                      &ctx->grp.G, NULL, NULL ) );
 
 cleanup:
     return( ret );
