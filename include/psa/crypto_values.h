@@ -893,7 +893,7 @@
  * algorithm parametrized with any supported hash.
  *
  * That is, suppose that `PSA_xxx_SIGNATURE` is one of the following macros:
- * - #PSA_ALG_RSA_PKCS1V15_SIGN, #PSA_ALG_RSA_PSS,
+ * - #PSA_ALG_RSA_PKCS1V15_SIGN, #PSA_ALG_RSA_PSS, #PSA_ALG_RSA_PSS_ANY_SALT,
  * - #PSA_ALG_ECDSA, #PSA_ALG_DETERMINISTIC_ECDSA.
  * Then you may create and use a key as follows:
  * - Set the key usage field using #PSA_ALG_ANY_HASH, for example:
@@ -1348,6 +1348,7 @@
     (((alg) & ~PSA_ALG_HASH_MASK) == PSA_ALG_RSA_PKCS1V15_SIGN_BASE)
 
 #define PSA_ALG_RSA_PSS_BASE               ((psa_algorithm_t)0x06000300)
+#define PSA_ALG_RSA_PSS_ANY_SALT_BASE      ((psa_algorithm_t)0x06001300)
 /** RSA PSS signature with hashing.
  *
  * This is the signature scheme defined by RFC 8017
@@ -1368,8 +1369,71 @@
  */
 #define PSA_ALG_RSA_PSS(hash_alg)                               \
     (PSA_ALG_RSA_PSS_BASE | ((hash_alg) & PSA_ALG_HASH_MASK))
-#define PSA_ALG_IS_RSA_PSS(alg)                                 \
+
+/** RSA PSS signature with hashing with relaxed verification.
+ *
+ * This algorithm has the same behavior as #PSA_ALG_RSA_PSS when signing,
+ * but allows an arbitrary salt length (including \c 0) when verifying a
+ * signature.
+ *
+ * \param hash_alg      A hash algorithm (\c PSA_ALG_XXX value such that
+ *                      #PSA_ALG_IS_HASH(\p hash_alg) is true).
+ *                      This includes #PSA_ALG_ANY_HASH
+ *                      when specifying the algorithm in a usage policy.
+ *
+ * \return              The corresponding RSA PSS signature algorithm.
+ * \return              Unspecified if \p hash_alg is not a supported
+ *                      hash algorithm.
+ */
+#define PSA_ALG_RSA_PSS_ANY_SALT(hash_alg)                      \
+    (PSA_ALG_RSA_PSS_ANY_SALT_BASE | ((hash_alg) & PSA_ALG_HASH_MASK))
+
+/** Whether the specified algorithm is RSA PSS with standard salt.
+ *
+ * \param alg           An algorithm value or an algorithm policy wildcard.
+ *
+ * \return              1 if \p alg is of the form
+ *                      #PSA_ALG_RSA_PSS(\c hash_alg),
+ *                      where \c hash_alg is a hash algorithm or
+ *                      #PSA_ALG_ANY_HASH. 0 otherwise.
+ *                      This macro may return either 0 or 1 if \p alg is not
+ *                      a supported algorithm identifier or policy.
+ */
+#define PSA_ALG_IS_RSA_PSS_STANDARD_SALT(alg)                   \
     (((alg) & ~PSA_ALG_HASH_MASK) == PSA_ALG_RSA_PSS_BASE)
+
+/** Whether the specified algorithm is RSA PSS with any salt.
+ *
+ * \param alg           An algorithm value or an algorithm policy wildcard.
+ *
+ * \return              1 if \p alg is of the form
+ *                      #PSA_ALG_RSA_PSS_ANY_SALT_BASE(\c hash_alg),
+ *                      where \c hash_alg is a hash algorithm or
+ *                      #PSA_ALG_ANY_HASH. 0 otherwise.
+ *                      This macro may return either 0 or 1 if \p alg is not
+ *                      a supported algorithm identifier or policy.
+ */
+#define PSA_ALG_IS_RSA_PSS_ANY_SALT(alg)                                \
+    (((alg) & ~PSA_ALG_HASH_MASK) == PSA_ALG_RSA_PSS_ANY_SALT_BASE)
+
+/** Whether the specified algorithm is RSA PSS.
+ *
+ * This includes any of the RSA PSS algorithm variants, regardless of the
+ * constraints on salt length.
+ *
+ * \param alg           An algorithm value or an algorithm policy wildcard.
+ *
+ * \return              1 if \p alg is of the form
+ *                      #PSA_ALG_RSA_PSS(\c hash_alg) or
+ *                      #PSA_ALG_RSA_PSS_ANY_SALT_BASE(\c hash_alg),
+ *                      where \c hash_alg is a hash algorithm or
+ *                      #PSA_ALG_ANY_HASH. 0 otherwise.
+ *                      This macro may return either 0 or 1 if \p alg is not
+ *                      a supported algorithm identifier or policy.
+ */
+#define PSA_ALG_IS_RSA_PSS(alg)                                 \
+    (PSA_ALG_IS_RSA_PSS_STANDARD_SALT(alg) ||                   \
+     PSA_ALG_IS_RSA_PSS_ANY_SALT(alg))
 
 #define PSA_ALG_ECDSA_BASE                      ((psa_algorithm_t)0x06000600)
 /** ECDSA signature with hashing.
@@ -1533,7 +1597,20 @@
  * Hash-and-sign algorithms are asymmetric (public-key) signature algorithms
  * structured in two parts: first the calculation of a hash in a way that
  * does not depend on the key, then the calculation of a signature from the
- * hash value and the key.
+ * hash value and the key. Hash-and-sign algorithms encode the hash
+ * used for the hashing step, and you can call #PSA_ALG_SIGN_GET_HASH
+ * to extract this algorithm.
+ *
+ * Thus, for a hash-and-sign algorithm,
+ * `psa_sign_message(key, alg, input, ...)` is equivalent to
+ * ```
+ * psa_hash_compute(PSA_ALG_SIGN_GET_HASH(alg), input, ..., hash, ...);
+ * psa_sign_hash(key, alg, hash, ..., signature, ...);
+ * ```
+ * Most usefully, separating the hash from the signature allows the hash
+ * to be calculated in multiple steps with psa_hash_setup(), psa_hash_update()
+ * and psa_hash_finish(). Likewise psa_verify_message() is equivalent to
+ * calculating the hash and then calling psa_verify_hash().
  *
  * \param alg An algorithm identifier (value of type #psa_algorithm_t).
  *
@@ -1542,9 +1619,8 @@
  *         algorithm identifier.
  */
 #define PSA_ALG_IS_HASH_AND_SIGN(alg)                                   \
-    (PSA_ALG_IS_RSA_PSS(alg) || PSA_ALG_IS_RSA_PKCS1V15_SIGN(alg) ||    \
-     PSA_ALG_IS_ECDSA(alg) || PSA_ALG_IS_HASH_EDDSA(alg) ||             \
-     PSA_ALG_IS_VENDOR_HASH_AND_SIGN(alg))
+    (PSA_ALG_IS_SIGN_HASH(alg) &&                                       \
+     ((alg) & PSA_ALG_HASH_MASK) != 0)
 
 /** Whether the specified algorithm is a signature algorithm that can be used
  * with psa_sign_message() and psa_verify_message().
@@ -1558,10 +1634,16 @@
  *         supported algorithm identifier.
  */
 #define PSA_ALG_IS_SIGN_MESSAGE(alg)                                    \
-    (PSA_ALG_IS_HASH_AND_SIGN(alg) || (alg) == PSA_ALG_PURE_EDDSA )
+    (PSA_ALG_IS_SIGN_HASH(alg) || (alg) == PSA_ALG_PURE_EDDSA )
 
 /** Whether the specified algorithm is a signature algorithm that can be used
  * with psa_sign_hash() and psa_verify_hash().
+ *
+ * This encompasses all strict hash-and-sign algorithms categorized by
+ * PSA_ALG_IS_HASH_AND_SIGN(), as well as algorithms that follow the
+ * paradigm more loosely:
+ * - #PSA_ALG_RSA_PKCS1V15_SIGN_RAW (expects its input to be an encoded hash)
+ * - #PSA_ALG_ECDSA_ANY (doesn't specify what kind of hash the input is)
  *
  * \param alg An algorithm identifier (value of type psa_algorithm_t).
  *
@@ -1572,8 +1654,9 @@
  *         supported algorithm identifier.
  */
 #define PSA_ALG_IS_SIGN_HASH(alg)                                       \
-    (PSA_ALG_IS_HASH_AND_SIGN(alg) || (alg) == PSA_ALG_ED25519PH ||     \
-    (alg) == PSA_ALG_ED448PH)
+    (PSA_ALG_IS_RSA_PSS(alg) || PSA_ALG_IS_RSA_PKCS1V15_SIGN(alg) ||    \
+     PSA_ALG_IS_ECDSA(alg) || PSA_ALG_IS_HASH_EDDSA(alg) ||             \
+     PSA_ALG_IS_VENDOR_HASH_AND_SIGN(alg))
 
 /** Get the hash used by a hash-and-sign signature algorithm.
  *
@@ -1595,7 +1678,6 @@
  */
 #define PSA_ALG_SIGN_GET_HASH(alg)                                     \
     (PSA_ALG_IS_HASH_AND_SIGN(alg) ?                                   \
-     ((alg) & PSA_ALG_HASH_MASK) == 0 ? /*"raw" algorithm*/ 0 :        \
      ((alg) & PSA_ALG_HASH_MASK) | PSA_ALG_CATEGORY_HASH :             \
      0)
 
