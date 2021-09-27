@@ -77,14 +77,6 @@ else
     O_LEGACY_CLI=false
 fi
 
-if [ -n "${OPENSSL_NEXT:-}" ]; then
-    O_NEXT_SRV="$OPENSSL_NEXT s_server -www -cert data_files/server5.crt -key data_files/server5.key"
-    O_NEXT_CLI="echo 'GET / HTTP/1.0' | $OPENSSL_NEXT s_client"
-else
-    O_NEXT_SRV=false
-    O_NEXT_CLI=false
-fi
-
 if [ -n "${GNUTLS_NEXT_SERV:-}" ]; then
     G_NEXT_SRV="$GNUTLS_NEXT_SERV --x509certfile data_files/server5.crt --x509keyfile data_files/server5.key"
 else
@@ -350,95 +342,6 @@ requires_openssl_legacy() {
         fi
     fi
     if [ "$OPENSSL_LEGACY_AVAILABLE" = "NO" ]; then
-        SKIP_NEXT="YES"
-    fi
-}
-
-requires_openssl_next() {
-    if [ -z "${OPENSSL_NEXT_AVAILABLE:-}" ]; then
-        if which "${OPENSSL_NEXT:-}" >/dev/null 2>&1; then
-            OPENSSL_NEXT_AVAILABLE="YES"
-        else
-            OPENSSL_NEXT_AVAILABLE="NO"
-        fi
-    fi
-    if [ "$OPENSSL_NEXT_AVAILABLE" = "NO" ]; then
-        SKIP_NEXT="YES"
-    fi
-}
-
-# skip next test if tls1_3 is not available
-requires_openssl_tls1_3() {
-    requires_openssl_next
-    if [ "$OPENSSL_NEXT_AVAILABLE" = "NO" ]; then
-        OPENSSL_TLS1_3_AVAILABLE="NO"
-    fi
-    if [ -z "${OPENSSL_TLS1_3_AVAILABLE:-}" ]; then
-        if $OPENSSL_NEXT s_client -help 2>&1 | grep tls1_3 >/dev/null
-        then
-            OPENSSL_TLS1_3_AVAILABLE="YES"
-        else
-            OPENSSL_TLS1_3_AVAILABLE="NO"
-        fi
-    fi
-    if [ "$OPENSSL_TLS1_3_AVAILABLE" = "NO" ]; then
-        SKIP_NEXT="YES"
-    fi
-}
-
-# skip next test if tls1_3 is not available
-requires_gnutls_tls1_3() {
-    requires_gnutls_next
-    if [ "$GNUTLS_NEXT_AVAILABLE" = "NO" ]; then
-        GNUTLS_TLS1_3_AVAILABLE="NO"
-    fi
-    if [ -z "${GNUTLS_TLS1_3_AVAILABLE:-}" ]; then
-        if $GNUTLS_NEXT_CLI -l 2>&1 | grep VERS-TLS1.3 >/dev/null
-        then
-            GNUTLS_TLS1_3_AVAILABLE="YES"
-        else
-            GNUTLS_TLS1_3_AVAILABLE="NO"
-        fi
-    fi
-    if [ "$GNUTLS_TLS1_3_AVAILABLE" = "NO" ]; then
-        SKIP_NEXT="YES"
-    fi
-}
-
-# Check %NO_TICKETS option
-requires_gnutls_next_no_ticket() {
-    requires_gnutls_next
-    if [ "$GNUTLS_NEXT_AVAILABLE" = "NO" ]; then
-        GNUTLS_NO_TICKETS_AVAILABLE="NO"
-    fi
-    if [ -z "${GNUTLS_NO_TICKETS_AVAILABLE:-}" ]; then
-        if $GNUTLS_NEXT_CLI --priority-list 2>&1 | grep NO_TICKETS >/dev/null
-        then
-            GNUTLS_NO_TICKETS_AVAILABLE="YES"
-        else
-            GNUTLS_NO_TICKETS_AVAILABLE="NO"
-        fi
-    fi
-    if [ "$GNUTLS_NO_TICKETS_AVAILABLE" = "NO" ]; then
-        SKIP_NEXT="YES"
-    fi
-}
-
-# Check %DISABLE_TLS13_COMPAT_MODE option
-requires_gnutls_next_disable_tls13_compat() {
-    requires_gnutls_next
-    if [ "$GNUTLS_NEXT_AVAILABLE" = "NO" ]; then
-        GNUTLS_DISABLE_TLS13_COMPAT_MODE_AVAILABLE="NO"
-    fi
-    if [ -z "${GNUTLS_DISABLE_TLS13_COMPAT_MODE_AVAILABLE:-}" ]; then
-        if $GNUTLS_NEXT_CLI --priority-list 2>&1 | grep DISABLE_TLS13_COMPAT_MODE >/dev/null
-        then
-            GNUTLS_DISABLE_TLS13_COMPAT_MODE_AVAILABLE="YES"
-        else
-            GNUTLS_DISABLE_TLS13_COMPAT_MODE_AVAILABLE="NO"
-        fi
-    fi
-    if [ "$GNUTLS_DISABLE_TLS13_COMPAT_MODE_AVAILABLE" = "NO" ]; then
         SKIP_NEXT="YES"
     fi
 }
@@ -1548,40 +1451,6 @@ run_test    "SHA-1 explicitly allowed in client certificate" \
 run_test    "SHA-256 allowed by default in client certificate" \
             "$P_SRV auth_mode=required allow_sha1=0" \
             "$P_CLI key_file=data_files/cli-rsa.key crt_file=data_files/cli-rsa-sha256.crt" \
-            0
-
-# Dummy TLS 1.3 test
-# Currently only checking that passing TLS 1.3 key exchange modes to
-# ssl_client2/ssl_server2 example programs works.
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
-run_test    "TLS 1.3, key exchange mode parameter passing: PSK only" \
-            "$P_SRV tls13_kex_modes=psk" \
-            "$P_CLI tls13_kex_modes=psk" \
-            0
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
-run_test    "TLS 1.3, key exchange mode parameter passing: PSK-ephemeral only" \
-            "$P_SRV tls13_kex_modes=psk_ephemeral" \
-            "$P_CLI tls13_kex_modes=psk_ephemeral" \
-            0
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
-run_test    "TLS 1.3, key exchange mode parameter passing: Pure-ephemeral only" \
-            "$P_SRV tls13_kex_modes=ephemeral" \
-            "$P_CLI tls13_kex_modes=ephemeral" \
-            0
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
-run_test    "TLS 1.3, key exchange mode parameter passing: All ephemeral" \
-            "$P_SRV tls13_kex_modes=ephemeral_all" \
-            "$P_CLI tls13_kex_modes=ephemeral_all" \
-            0
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
-run_test    "TLS 1.3, key exchange mode parameter passing: All PSK" \
-            "$P_SRV tls13_kex_modes=psk_all" \
-            "$P_CLI tls13_kex_modes=psk_all" \
-            0
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
-run_test    "TLS 1.3, key exchange mode parameter passing: All" \
-            "$P_SRV tls13_kex_modes=all" \
-            "$P_CLI tls13_kex_modes=all" \
             0
 
 # Tests for datagram packing
@@ -8617,26 +8486,6 @@ run_test    "export keys functionality" \
             -s "EAP-TLS key material is:"\
             -c "EAP-TLS IV is:" \
             -s "EAP-TLS IV is:"
-
-# openssl feature tests: check if tls1.3 exists.
-requires_openssl_tls1_3
-run_test    "TLS1.3: Test openssl tls1_3 feature" \
-            "$O_NEXT_SRV -tls1_3 -msg" \
-            "$O_NEXT_CLI -tls1_3 -msg" \
-            0 \
-            -c "TLS 1.3" \
-            -s "TLS 1.3"
-
-# gnutls feature tests: check if TLS 1.3 is supported as well as the NO_TICKETS and DISABLE_TLS13_COMPAT_MODE options.
-requires_gnutls_tls1_3
-requires_gnutls_next_no_ticket
-requires_gnutls_next_disable_tls13_compat
-run_test    "TLS1.3: Test gnutls tls1_3 feature" \
-            "$G_NEXT_SRV --priority=NORMAL:-VERS-ALL:+VERS-TLS1.3:%NO_TICKETS:%DISABLE_TLS13_COMPAT_MODE" \
-            "$G_NEXT_CLI localhost --priority=NORMAL:-VERS-ALL:+VERS-TLS1.3:%NO_TICKETS:%DISABLE_TLS13_COMPAT_MODE -V" \
-            0 \
-            -s "Version: TLS1.3" \
-            -c "Version: TLS1.3"
 
 # TLS1.3 test cases
 # TODO: remove or rewrite this test case if #4832 is resolved.
