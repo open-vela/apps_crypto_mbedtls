@@ -1,5 +1,5 @@
-/*
- *  TLS 1.3 client-side functions
+/**
+ *  Constant-time functions
  *
  *  Copyright The Mbed TLS Contributors
  *  SPDX-License-Identifier: Apache-2.0
@@ -15,24 +15,16 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
- *
- *  This file is part of mbed TLS ( https://tls.mbed.org )
  */
 
 #include "common.h"
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+#include <stddef.h>
 
-#if defined(MBEDTLS_SSL_CLI_C)
+int mbedtls_ssl_safer_memcmp( const void *a, const void *b, size_t n );
 
-#include "ssl_misc.h"
+int mbedtls_constant_time_memcmp( const void *v1, const void *v2, size_t len );
 
-int mbedtls_ssl_handshake_client_step_tls1_3( mbedtls_ssl_context *ssl )
-{
-    ((void) ssl);
-    return( MBEDTLS_ERR_SSL_FEATURE_UNAVAILABLE );
-}
+unsigned char mbedtls_nist_kw_safer_memcmp( const void *a, const void *b, size_t n );
 
-#endif /* MBEDTLS_SSL_CLI_C */
-
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+int mbedtls_safer_memcmp( const void *a, const void *b, size_t n );
