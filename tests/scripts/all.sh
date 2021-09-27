@@ -2565,8 +2565,6 @@ component_test_tls13_experimental () {
     make
     msg "test: default config with MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL enabled, without padding"
     make test
-    msg "ssl-opt.sh (TLS 1.3 experimental)"
-    if_build_succeeded tests/ssl-opt.sh
 }
 
 component_test_tls13_experimental_with_padding () {
@@ -2576,31 +2574,6 @@ component_test_tls13_experimental_with_padding () {
     CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
     make
     msg "test: default config with MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL enabled, with padding"
-    make test
-    msg "ssl-opt.sh (TLS 1.3 experimental)"
-    if_build_succeeded tests/ssl-opt.sh
-}
-
-component_test_tls13_experimental_with_ecp_restartable () {
-    msg "build: default config with MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL enabled, with ecp_restartable"
-    scripts/config.py set MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
-    scripts/config.py set MBEDTLS_ECP_RESTARTABLE
-    CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
-    make
-    msg "test: default config with MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL enabled, with ecp_restartable"
-    make test
-    msg "ssl-opt.sh (TLS 1.3 experimental)"
-    if_build_succeeded tests/ssl-opt.sh
-}
-
-component_test_tls13_experimental_with_everest () {
-    msg "build: default config with MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL enabled, with Everest"
-    scripts/config.py set MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
-    scripts/config.py set MBEDTLS_ECDH_VARIANT_EVEREST_ENABLED
-    scripts/config.py unset MBEDTLS_ECP_RESTARTABLE
-    CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
-    make
-    msg "test: default config with MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL enabled, with Everest"
     make test
     msg "ssl-opt.sh (TLS 1.3 experimental)"
     if_build_succeeded tests/ssl-opt.sh
@@ -2770,15 +2743,12 @@ component_check_python_files () {
     tests/scripts/check-python-files.sh
 }
 
-component_check_test_helpers () {
-    msg "unit test: generate_test_code.py"
+component_check_generate_test_code () {
+    msg "uint test: generate_test_code.py"
     # unittest writes out mundane stuff like number or tests run on stderr.
     # Our convention is to reserve stderr for actual errors, and write
     # harmless info on stdout so it can be suppress with --quiet.
     ./tests/scripts/test_generate_test_code.py 2>&1
-
-    msg "unit test: translate_ciphers.py"
-    python3 -m unittest tests/scripts/translate_ciphers.py 2>&1
 }
 
 ################################################################
