@@ -170,37 +170,6 @@
 #define MBEDTLS_ERR_SSL_BAD_CONFIG                        -0x5E80
 
 /*
- * TLS 1.3 NamedGroup values
- *
- * From RF 8446
- *    enum {
- *         // Elliptic Curve Groups (ECDHE)
- *         secp256r1(0x0017), secp384r1(0x0018), secp521r1(0x0019),
- *         x25519(0x001D), x448(0x001E),
- *         // Finite Field Groups (DHE)
- *         ffdhe2048(0x0100), ffdhe3072(0x0101), ffdhe4096(0x0102),
- *         ffdhe6144(0x0103), ffdhe8192(0x0104),
- *         // Reserved Code Points
- *         ffdhe_private_use(0x01FC..0x01FF),
- *         ecdhe_private_use(0xFE00..0xFEFF),
- *         (0xFFFF)
- *     } NamedGroup;
- *
- */
-/* Elliptic Curve Groups (ECDHE) */
-#define MBEDTLS_SSL_TLS13_NAMED_GROUP_SECP256R1     0x0017
-#define MBEDTLS_SSL_TLS13_NAMED_GROUP_SECP384R1     0x0018
-#define MBEDTLS_SSL_TLS13_NAMED_GROUP_SECP521R1     0x0019
-#define MBEDTLS_SSL_TLS13_NAMED_GROUP_X25519        0x001D
-#define MBEDTLS_SSL_TLS13_NAMED_GROUP_X448          0x001E
-/* Finite Field Groups (DHE) */
-#define MBEDTLS_SSL_TLS13_NAMED_GROUP_FFDHE2048     0x0100
-#define MBEDTLS_SSL_TLS13_NAMED_GROUP_FFDHE3072     0x0101
-#define MBEDTLS_SSL_TLS13_NAMED_GROUP_FFDHE4096     0x0102
-#define MBEDTLS_SSL_TLS13_NAMED_GROUP_FFDHE6144     0x0103
-#define MBEDTLS_SSL_TLS13_NAMED_GROUP_FFDHE8192     0x0104
-
-/*
  * TLS 1.3 Key Exchange Modes
  *
  * Mbed TLS internal identifiers for use with the SSL configuration API
@@ -592,9 +561,6 @@ union mbedtls_ssl_premaster_secret
 };
 
 #define MBEDTLS_PREMASTER_SIZE     sizeof( union mbedtls_ssl_premaster_secret )
-
-/* Length of in_ctr buffer in mbedtls_ssl_session */
-#define MBEDTLS_SSL_COUNTER_LEN 8
 
 #ifdef __cplusplus
 extern "C" {
@@ -1529,19 +1495,6 @@ struct mbedtls_ssl_context
     int MBEDTLS_PRIVATE(keep_current_message);   /*!< drop or reuse current message
                                      on next call to record layer? */
 
-    /* The following three variables indicate if and, if yes,
-     * what kind of alert is pending to be sent.
-     */
-    unsigned char MBEDTLS_PRIVATE(send_alert);   /*!< Determines if a fatal alert
-                                                should be sent. Values:
-                                                - \c 0 , no alert is to be sent.
-                                                - \c 1 , alert is to be sent. */
-    unsigned char MBEDTLS_PRIVATE(alert_type);   /*!< Type of alert if send_alert
-                                                 != 0 */
-    int MBEDTLS_PRIVATE(alert_reason);           /*!< The error code to be returned
-                                                 to the user once the fatal alert
-                                                 has been sent. */
-
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
     uint8_t MBEDTLS_PRIVATE(disable_datagram_packing);  /*!< Disable packing multiple records
                                         *   within a single datagram.  */
@@ -1568,7 +1521,7 @@ struct mbedtls_ssl_context
     size_t MBEDTLS_PRIVATE(out_buf_len);         /*!< length of output buffer          */
 #endif
 
-    unsigned char MBEDTLS_PRIVATE(cur_out_ctr)[MBEDTLS_SSL_COUNTER_LEN]; /*!<  Outgoing record sequence  number. */
+    unsigned char MBEDTLS_PRIVATE(cur_out_ctr)[8]; /*!<  Outgoing record sequence  number. */
 
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
     uint16_t MBEDTLS_PRIVATE(mtu);               /*!< path mtu, used to fragment outgoing messages */
