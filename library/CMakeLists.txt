@@ -24,7 +24,6 @@ set(src_crypto
     chachapoly.c
     cipher.c
     cipher_wrap.c
-    constant_time.c
     cmac.c
     ctr_drbg.c
     des.c
@@ -107,6 +106,7 @@ set(src_tls
     ssl_tls13_keys.c
     ssl_tls13_server.c
     ssl_tls13_client.c
+    ssl_tls13_generic.c
 )
 
 if(CMAKE_COMPILER_IS_GNUCC)
