@@ -593,9 +593,6 @@ union mbedtls_ssl_premaster_secret
 
 #define MBEDTLS_PREMASTER_SIZE     sizeof( union mbedtls_ssl_premaster_secret )
 
-/* Length of in_ctr buffer in mbedtls_ssl_session */
-#define MBEDTLS_SSL_IN_CTR_LEN 8
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -1528,6 +1525,19 @@ struct mbedtls_ssl_context
 
     int MBEDTLS_PRIVATE(keep_current_message);   /*!< drop or reuse current message
                                      on next call to record layer? */
+
+    /* The following three variables indicate if and, if yes,
+     * what kind of alert is pending to be sent.
+     */
+    unsigned char MBEDTLS_PRIVATE(send_alert);   /*!< Determines if a fatal alert
+                                                should be sent. Values:
+                                                - \c 0 , no alert is to be sent.
+                                                - \c 1 , alert is to be sent. */
+    unsigned char MBEDTLS_PRIVATE(alert_type);   /*!< Type of alert if send_alert
+                                                 != 0 */
+    int MBEDTLS_PRIVATE(alert_reason);           /*!< The error code to be returned
+                                                 to the user once the fatal alert
+                                                 has been sent. */
 
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
     uint8_t MBEDTLS_PRIVATE(disable_datagram_packing);  /*!< Disable packing multiple records
