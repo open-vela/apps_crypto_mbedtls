@@ -841,7 +841,7 @@ component_check_changelog () {
 
 component_check_names () {
     msg "Check: declared and exported names (builds the library)" # < 3s
-    tests/scripts/check_names.py -v
+    tests/scripts/check-names.sh -v
 }
 
 component_check_test_cases () {
