@@ -1718,15 +1718,13 @@
  * will still continue to work as usual, so enabling this option should not
  * break backwards compatibility.
  *
- * \warning The PSA Crypto API is in beta stage. While you're welcome to
- * experiment using it, incompatible API changes are still possible, and some
- * parts may not have reached the same quality as the rest of Mbed TLS yet.
+ * \note See docs/use-psa-crypto.md for a complete description of what this
+ * option currently does, and of parts that are not affected by it so far.
  *
- * \warning This option enables new Mbed TLS APIs that are dependent on the
- * PSA Crypto API, so can't come with the same stability guarantees as the
- * rest of the Mbed TLS APIs. You're welcome to experiment with them, but for
- * now, access to these APIs is opt-in (via enabling the present option), in
- * order to clearly differentiate them from the stable Mbed TLS APIs.
+ * \warning This option enables new Mbed TLS APIs which are currently
+ * considered experimental and may change in incompatible ways at any time.
+ * That is, the APIs enabled by this option are not covered by the usual
+ * promises of API stability.
  *
  * Requires: MBEDTLS_PSA_CRYPTO_C.
  *
@@ -2592,10 +2590,6 @@
  *
  * Enable the Platform Security Architecture cryptography API.
  *
- * \warning The PSA Crypto API is still beta status. While you're welcome to
- * experiment using it, incompatible API changes are still possible, and some
- * parts may not have reached the same quality as the rest of Mbed TLS yet.
- *
  * Module:  library/psa_crypto.c
  *
  * Requires: either MBEDTLS_CTR_DRBG_C and MBEDTLS_ENTROPY_C,
@@ -3193,6 +3187,17 @@
 
 //#define MBEDTLS_PSK_MAX_LEN               32 /**< Max size of TLS pre-shared keys, in bytes (default 256 bits) */
 //#define MBEDTLS_SSL_COOKIE_TIMEOUT        60 /**< Default expiration delay of DTLS cookies, in seconds if HAVE_TIME, or in number of cookies issued */
+
+/** \def MBEDTLS_TLS_EXT_CID
+ *
+ * At the time of writing, the CID extension has not been assigned its
+ * final value. Set this configuration option to make Mbed TLS use a
+ * different value.
+ *
+ * A future minor revision of Mbed TLS may change the default value of
+ * this option to match evolving standards and usage.
+ */
+//#define MBEDTLS_TLS_EXT_CID                        254
 
 /**
  * Complete list of ciphersuites to use, in order of preference.
