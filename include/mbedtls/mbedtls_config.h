@@ -1718,13 +1718,15 @@
  * will still continue to work as usual, so enabling this option should not
  * break backwards compatibility.
  *
- * \note See docs/use-psa-crypto.md for a complete description of what this
- * option currently does, and of parts that are not affected by it so far.
+ * \warning The PSA Crypto API is in beta stage. While you're welcome to
+ * experiment using it, incompatible API changes are still possible, and some
+ * parts may not have reached the same quality as the rest of Mbed TLS yet.
  *
- * \warning This option enables new Mbed TLS APIs which are currently
- * considered experimental and may change in incompatible ways at any time.
- * That is, the APIs enabled by this option are not covered by the usual
- * promises of API stability.
+ * \warning This option enables new Mbed TLS APIs that are dependent on the
+ * PSA Crypto API, so can't come with the same stability guarantees as the
+ * rest of the Mbed TLS APIs. You're welcome to experiment with them, but for
+ * now, access to these APIs is opt-in (via enabling the present option), in
+ * order to clearly differentiate them from the stable Mbed TLS APIs.
  *
  * Requires: MBEDTLS_PSA_CRYPTO_C.
  *
@@ -2590,6 +2592,10 @@
  *
  * Enable the Platform Security Architecture cryptography API.
  *
+ * \warning The PSA Crypto API is still beta status. While you're welcome to
+ * experiment using it, incompatible API changes are still possible, and some
+ * parts may not have reached the same quality as the rest of Mbed TLS yet.
+ *
  * Module:  library/psa_crypto.c
  *
  * Requires: either MBEDTLS_CTR_DRBG_C and MBEDTLS_ENTROPY_C,
@@ -3173,7 +3179,7 @@
  * Maximum number of heap-allocated bytes for the purpose of
  * DTLS handshake message reassembly and future message buffering.
  *
- * This should be at least 9/8 * MBEDTLS_SSL_IN_CONTENT_LEN
+ * This should be at least 9/8 * MBEDTLSSL_IN_CONTENT_LEN
  * to account for a reassembled handshake message of maximum size,
  * together with its reassembly bitmap.
  *
