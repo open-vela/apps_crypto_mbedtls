@@ -479,8 +479,7 @@ psa_status_t psa_validate_key_persistence( psa_key_lifetime_t lifetime )
 
 psa_status_t psa_open_key( mbedtls_svc_key_id_t key, psa_key_handle_t *handle )
 {
-#if defined(MBEDTLS_PSA_CRYPTO_STORAGE_C) || \
-    defined(MBEDTLS_PSA_CRYPTO_BUILTIN_KEYS)
+#if defined(MBEDTLS_PSA_CRYPTO_STORAGE_C)
     psa_status_t status;
     psa_key_slot_t *slot;
 
@@ -498,11 +497,11 @@ psa_status_t psa_open_key( mbedtls_svc_key_id_t key, psa_key_handle_t *handle )
 
     return( psa_unlock_key_slot( slot ) );
 
-#else /* MBEDTLS_PSA_CRYPTO_STORAGE_C || MBEDTLS_PSA_CRYPTO_BUILTIN_KEYS */
+#else /* defined(MBEDTLS_PSA_CRYPTO_STORAGE_C) */
     (void) key;
     *handle = PSA_KEY_HANDLE_INIT;
     return( PSA_ERROR_NOT_SUPPORTED );
-#endif /* MBEDTLS_PSA_CRYPTO_STORAGE_C || MBEDTLS_PSA_CRYPTO_BUILTIN_KEYS */
+#endif /* !defined(MBEDTLS_PSA_CRYPTO_STORAGE_C) */
 }
 
 psa_status_t psa_close_key( psa_key_handle_t handle )
