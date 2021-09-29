@@ -587,6 +587,7 @@ static int ssl_use_opaque_psk( mbedtls_ssl_context const *ssl )
 #endif /* MBEDTLS_USE_PSA_CRYPTO &&
           MBEDTLS_KEY_EXCHANGE_PSK_ENABLED */
 
+#if defined(MBEDTLS_SSL_EXPORT_KEYS)
 static mbedtls_tls_prf_types tls_prf_get_type( mbedtls_ssl_tls_prf_cb *tls_prf )
 {
 #if defined(MBEDTLS_SSL_PROTO_TLS1_2)
@@ -607,6 +608,7 @@ static mbedtls_tls_prf_types tls_prf_get_type( mbedtls_ssl_tls_prf_cb *tls_prf )
 #endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
     return( MBEDTLS_SSL_TLS_PRF_NONE );
 }
+#endif /* MBEDTLS_SSL_EXPORT_KEYS */
 
 int  mbedtls_ssl_tls_prf( const mbedtls_tls_prf_types prf,
                           const unsigned char *secret, size_t slen,
@@ -658,9 +660,8 @@ typedef int ssl_tls_prf_t(const unsigned char *, size_t, const char *,
  * - [in] randbytes: buffer holding ServerHello.random + ClientHello.random
  * - [in] minor_ver: SSL/TLS minor version
  * - [in] endpoint: client or server
- * - [in] ssl: used for:
- *        - ssl->conf->{f,p}_export_keys
- *      [in] optionally used for:
+ * - [in] ssl: optionally used for:
+ *        - MBEDTLS_SSL_EXPORT_KEYS: ssl->conf->{f,p}_export_keys
  *        - MBEDTLS_DEBUG_C: ssl->conf->{f,p}_dbg
  */
 static int ssl_tls12_populate_transform( mbedtls_ssl_transform *transform,
@@ -693,9 +694,9 @@ static int ssl_tls12_populate_transform( mbedtls_ssl_transform *transform,
     const mbedtls_cipher_info_t *cipher_info;
     const mbedtls_md_info_t *md_info;
 
-#if !defined(MBEDTLS_DEBUG_C) && \
-    !defined(MBEDTLS_SSL_DTLS_CONNECTION_ID)
-    ssl = NULL; /* make sure we don't use it except for these cases */
+#if !defined(MBEDTLS_SSL_EXPORT_KEYS) && \
+    !defined(MBEDTLS_DEBUG_C)
+    ssl = NULL; /* make sure we don't use it except for those cases */
     (void) ssl;
 #endif
 
@@ -959,6 +960,7 @@ static int ssl_tls12_populate_transform( mbedtls_ssl_transform *transform,
     ((void) mac_dec);
     ((void) mac_enc);
 
+#if defined(MBEDTLS_SSL_EXPORT_KEYS)
     if( ssl->f_export_keys != NULL )
     {
         ssl->f_export_keys( ssl->p_export_keys,
@@ -968,6 +970,7 @@ static int ssl_tls12_populate_transform( mbedtls_ssl_transform *transform,
                             randbytes,
                             tls_prf_get_type( tls_prf ) );
     }
+#endif
 
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
 
@@ -4226,6 +4229,7 @@ void mbedtls_ssl_conf_session_tickets_cb( mbedtls_ssl_config *conf,
 #endif
 #endif /* MBEDTLS_SSL_SESSION_TICKETS */
 
+#if defined(MBEDTLS_SSL_EXPORT_KEYS)
 void mbedtls_ssl_set_export_keys_cb( mbedtls_ssl_context *ssl,
                                      mbedtls_ssl_export_keys_t *f_export_keys,
                                      void *p_export_keys )
@@ -4233,6 +4237,7 @@ void mbedtls_ssl_set_export_keys_cb( mbedtls_ssl_context *ssl,
     ssl->f_export_keys = f_export_keys;
     ssl->p_export_keys = p_export_keys;
 }
+#endif
 
 #if defined(MBEDTLS_SSL_ASYNC_PRIVATE)
 void mbedtls_ssl_conf_async_private_cb(

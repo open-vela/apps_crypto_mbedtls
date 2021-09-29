@@ -2083,18 +2083,6 @@ component_test_variable_ssl_in_out_buffer_len_CID () {
     tests/compat.sh
 }
 
-component_test_CID_no_debug() {
-    msg "build: Connection ID enabled, debug disabled"
-    scripts/config.py unset MBEDTLS_DEBUG_C
-    scripts/config.py set MBEDTLS_SSL_DTLS_CONNECTION_ID
-
-    CC=gcc cmake .
-    make
-
-    msg "test: Connection ID enabled, debug disabled"
-    make test
-}
-
 component_test_ssl_alloc_buffer_and_mfl () {
     msg "build: default config with memory buffer allocator and MFL extension"
     scripts/config.py set MBEDTLS_MEMORY_BUFFER_ALLOC_C
@@ -2577,6 +2565,8 @@ component_test_tls13_experimental () {
     make
     msg "test: default config with MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL enabled, without padding"
     make test
+    msg "ssl-opt.sh (TLS 1.3 experimental)"
+    if_build_succeeded tests/ssl-opt.sh
 }
 
 component_test_tls13_experimental_with_padding () {
@@ -2586,6 +2576,31 @@ component_test_tls13_experimental_with_padding () {
     CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
     make
     msg "test: default config with MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL enabled, with padding"
+    make test
+    msg "ssl-opt.sh (TLS 1.3 experimental)"
+    if_build_succeeded tests/ssl-opt.sh
+}
+
+component_test_tls13_experimental_with_ecp_restartable () {
+    msg "build: default config with MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL enabled, with ecp_restartable"
+    scripts/config.py set MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+    scripts/config.py set MBEDTLS_ECP_RESTARTABLE
+    CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
+    make
+    msg "test: default config with MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL enabled, with ecp_restartable"
+    make test
+    msg "ssl-opt.sh (TLS 1.3 experimental)"
+    if_build_succeeded tests/ssl-opt.sh
+}
+
+component_test_tls13_experimental_with_everest () {
+    msg "build: default config with MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL enabled, with Everest"
+    scripts/config.py set MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+    scripts/config.py set MBEDTLS_ECDH_VARIANT_EVEREST_ENABLED
+    scripts/config.py unset MBEDTLS_ECP_RESTARTABLE
+    CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
+    make
+    msg "test: default config with MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL enabled, with Everest"
     make test
     msg "ssl-opt.sh (TLS 1.3 experimental)"
     if_build_succeeded tests/ssl-opt.sh
