@@ -170,6 +170,37 @@
 #define MBEDTLS_ERR_SSL_BAD_CONFIG                        -0x5E80
 
 /*
+ * TLS 1.3 NamedGroup values
+ *
+ * From RF 8446
+ *    enum {
+ *         // Elliptic Curve Groups (ECDHE)
+ *         secp256r1(0x0017), secp384r1(0x0018), secp521r1(0x0019),
+ *         x25519(0x001D), x448(0x001E),
+ *         // Finite Field Groups (DHE)
+ *         ffdhe2048(0x0100), ffdhe3072(0x0101), ffdhe4096(0x0102),
+ *         ffdhe6144(0x0103), ffdhe8192(0x0104),
+ *         // Reserved Code Points
+ *         ffdhe_private_use(0x01FC..0x01FF),
+ *         ecdhe_private_use(0xFE00..0xFEFF),
+ *         (0xFFFF)
+ *     } NamedGroup;
+ *
+ */
+/* Elliptic Curve Groups (ECDHE) */
+#define MBEDTLS_SSL_TLS13_NAMED_GROUP_SECP256R1     0x0017
+#define MBEDTLS_SSL_TLS13_NAMED_GROUP_SECP384R1     0x0018
+#define MBEDTLS_SSL_TLS13_NAMED_GROUP_SECP521R1     0x0019
+#define MBEDTLS_SSL_TLS13_NAMED_GROUP_X25519        0x001D
+#define MBEDTLS_SSL_TLS13_NAMED_GROUP_X448          0x001E
+/* Finite Field Groups (DHE) */
+#define MBEDTLS_SSL_TLS13_NAMED_GROUP_FFDHE2048     0x0100
+#define MBEDTLS_SSL_TLS13_NAMED_GROUP_FFDHE3072     0x0101
+#define MBEDTLS_SSL_TLS13_NAMED_GROUP_FFDHE4096     0x0102
+#define MBEDTLS_SSL_TLS13_NAMED_GROUP_FFDHE6144     0x0103
+#define MBEDTLS_SSL_TLS13_NAMED_GROUP_FFDHE8192     0x0104
+
+/*
  * TLS 1.3 Key Exchange Modes
  *
  * Mbed TLS internal identifiers for use with the SSL configuration API
@@ -1108,6 +1139,7 @@ typedef enum
 }
 mbedtls_tls_prf_types;
 
+#if defined(MBEDTLS_SSL_EXPORT_KEYS)
 typedef enum
 {
     MBEDTLS_SSL_KEY_EXPORT_TLS12_MASTER_SECRET = 0,
@@ -1143,6 +1175,7 @@ typedef void mbedtls_ssl_export_keys_t( void *p_expkey,
                                         const unsigned char client_random[32],
                                         const unsigned char server_random[32],
                                         mbedtls_tls_prf_types tls_prf_type );
+#endif /* MBEDTLS_SSL_EXPORT_KEYS */
 
 /**
  * SSL/TLS configuration to be shared between mbedtls_ssl_context structures.
@@ -1584,9 +1617,11 @@ struct mbedtls_ssl_context
                             *   and #MBEDTLS_SSL_CID_DISABLED. */
 #endif /* MBEDTLS_SSL_DTLS_CONNECTION_ID */
 
+#if defined(MBEDTLS_SSL_EXPORT_KEYS)
     /** Callback to export key block and master secret                      */
     mbedtls_ssl_export_keys_t *MBEDTLS_PRIVATE(f_export_keys);
     void *MBEDTLS_PRIVATE(p_export_keys);            /*!< context for key export callback    */
+#endif
 };
 
 /**
@@ -2159,6 +2194,7 @@ void mbedtls_ssl_conf_session_tickets_cb( mbedtls_ssl_config *conf,
         void *p_ticket );
 #endif /* MBEDTLS_SSL_SESSION_TICKETS && MBEDTLS_SSL_SRV_C */
 
+#if defined(MBEDTLS_SSL_EXPORT_KEYS)
 /**
  * \brief   Configure a key export callback.
  *          (Default: none.)
@@ -2180,6 +2216,7 @@ void mbedtls_ssl_conf_session_tickets_cb( mbedtls_ssl_config *conf,
 void mbedtls_ssl_set_export_keys_cb( mbedtls_ssl_context *ssl,
                                      mbedtls_ssl_export_keys_t *f_export_keys,
                                      void *p_export_keys );
+#endif /* MBEDTLS_SSL_EXPORT_KEYS */
 
 #if defined(MBEDTLS_SSL_ASYNC_PRIVATE)
 /**
