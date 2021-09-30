@@ -1322,6 +1322,11 @@ if [ -n "${OPENSSL_LEGACY:-}" ]; then
     O_LEGACY_CLI="$O_LEGACY_CLI -connect localhost:+SRV_PORT"
 fi
 
+if [ -n "${OPENSSL_NEXT:-}" ]; then
+    O_NEXT_SRV="$O_NEXT_SRV -accept $SRV_PORT"
+    O_NEXT_CLI="$O_NEXT_CLI -connect localhost:+SRV_PORT"
+fi
+
 if [ -n "${GNUTLS_NEXT_SERV:-}" ]; then
     G_NEXT_SRV="$G_NEXT_SRV -p $SRV_PORT"
 fi
@@ -1436,21 +1441,6 @@ run_test    "Opaque key for client authentication" \
             0 \
             -c "key type: Opaque" \
             -s "Verifying peer X.509 certificate... ok" \
-            -S "error" \
-            -C "error"
-
-# Test using an opaque private key for server authentication
-requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
-requires_config_enabled MBEDTLS_X509_CRT_PARSE_C
-requires_config_enabled MBEDTLS_ECDSA_C
-requires_config_enabled MBEDTLS_SHA256_C
-run_test    "Opaque key for server authentication" \
-            "$P_SRV auth_mode=required key_opaque=1" \
-            "$P_CLI crt_file=data_files/server5.crt \
-             key_file=data_files/server5.key" \
-            0 \
-            -c "Verifying peer X.509 certificate... ok" \
-            -s "key type: Opaque" \
             -S "error" \
             -C "error"
 
@@ -8670,11 +8660,53 @@ run_test    "TLS1.3: Not supported version check: tls1_2 and tls1_3" \
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
 run_test    "TLS1.3: handshake dispatch test: tls1_3 only" \
-            "$P_SRV min_version=tls1_3 max_version=tls1_3" \
-            "$P_CLI min_version=tls1_3 max_version=tls1_3" \
+            "$P_SRV debug_level=2 min_version=tls1_3 max_version=tls1_3" \
+            "$P_CLI debug_level=2 min_version=tls1_3 max_version=tls1_3" \
             1 \
-            -s "SSL - The requested feature is not available" \
-            -c "SSL - The requested feature is not available"
+            -s "tls1_3 server state: 0"     \
+            -c "tls1_3 client state: 0"
+
+requires_openssl_tls1_3
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+run_test    "TLS1.3: Test client hello msg work - openssl" \
+            "$O_NEXT_SRV -tls1_3 -msg" \
+            "$P_CLI debug_level=2 min_version=tls1_3 max_version=tls1_3" \
+            1 \
+            -c "SSL - The requested feature is not available" \
+            -s "ServerHello"                \
+            -c "tls1_3 client state: 0"     \
+            -c "tls1_3 client state: 2"     \
+            -c "tls1_3 client state: 19"    \
+            -c "tls1_3 client state: 5"     \
+            -c "tls1_3 client state: 3"     \
+            -c "tls1_3 client state: 9"     \
+            -c "tls1_3 client state: 13"    \
+            -c "tls1_3 client state: 7"     \
+            -c "tls1_3 client state: 20"    \
+            -c "tls1_3 client state: 11"    \
+            -c "tls1_3 client state: 14"    \
+            -c "tls1_3 client state: 15"
+
+requires_gnutls_tls1_3
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+run_test    "TLS1.3: Test client hello msg work - gnutls" \
+            "$G_NEXT_SRV --priority=NORMAL:-VERS-ALL:+VERS-TLS1.3 --debug=4" \
+            "$P_CLI debug_level=2 min_version=tls1_3 max_version=tls1_3" \
+            1 \
+            -c "SSL - The requested feature is not available" \
+            -s "SERVER HELLO was queued"    \
+            -c "tls1_3 client state: 0"     \
+            -c "tls1_3 client state: 2"     \
+            -c "tls1_3 client state: 19"    \
+            -c "tls1_3 client state: 5"     \
+            -c "tls1_3 client state: 3"     \
+            -c "tls1_3 client state: 9"     \
+            -c "tls1_3 client state: 13"    \
+            -c "tls1_3 client state: 7"     \
+            -c "tls1_3 client state: 20"    \
+            -c "tls1_3 client state: 11"    \
+            -c "tls1_3 client state: 14"    \
+            -c "tls1_3 client state: 15"
 
 # Test heap memory usage after handshake
 requires_config_enabled MBEDTLS_MEMORY_DEBUG
