@@ -175,7 +175,7 @@ pre_initialize_variables () {
 
     # if MAKEFLAGS is not set add the -j option to speed up invocations of make
     if [ -z "${MAKEFLAGS+set}" ]; then
-        export MAKEFLAGS="-j"
+        export MAKEFLAGS="-j$(all_sh_nproc)"
     fi
 
     # Include more verbose output for failing tests run by CMake or make
@@ -342,6 +342,18 @@ fatal_signal () {
 trap 'fatal_signal HUP' HUP
 trap 'fatal_signal INT' INT
 trap 'fatal_signal TERM' TERM
+
+# Number of processors on this machine. Used as the default setting
+# for parallel make.
+all_sh_nproc ()
+{
+    {
+        nproc || # Linux
+        sysctl -n hw.ncpuonline || # NetBSD, OpenBSD
+        sysctl -n hw.ncpu || # FreeBSD
+        echo 1
+    } 2>/dev/null
+}
 
 msg()
 {
@@ -2275,7 +2287,7 @@ component_build_mbedtls_config_file () {
 }
 
 component_test_m32_o0 () {
-    # Build without optimization, to not use the i386 specific inline assembly.
+    # Build once with -O0, to compile out the i386 specific inline assembly
     msg "build: i386, make, gcc -O0 (ASan build)" # ~ 30s
     scripts/config.py full
     make CC=gcc CFLAGS="$ASAN_CFLAGS -m32 -O0" LDFLAGS="-m32 $ASAN_CFLAGS"
@@ -2290,17 +2302,16 @@ support_test_m32_o0 () {
     esac
 }
 
-component_test_m32_o2 () {
-    # Build with optimization, to use the i386 specific inline assembly
-    # and go faster for tests.
-    msg "build: i386, make, gcc -O2 (ASan build)" # ~ 30s
+component_test_m32_o1 () {
+    # Build again with -O1, to compile in the i386 specific inline assembly
+    msg "build: i386, make, gcc -O1 (ASan build)" # ~ 30s
     scripts/config.py full
-    make CC=gcc CFLAGS="$ASAN_CFLAGS -m32 -O2" LDFLAGS="-m32 $ASAN_CFLAGS"
+    make CC=gcc CFLAGS="$ASAN_CFLAGS -m32 -O1" LDFLAGS="-m32 $ASAN_CFLAGS"
 
-    msg "test: i386, make, gcc -O2 (ASan build)"
+    msg "test: i386, make, gcc -O1 (ASan build)"
     make test
 
-    msg "test ssl-opt.sh, i386, make, gcc-O2"
+    msg "test ssl-opt.sh, i386, make, gcc-O1"
     tests/ssl-opt.sh
 }
 support_test_m32_o1 () {
@@ -2412,7 +2423,7 @@ component_test_no_x509_info () {
     scripts/config.pl full
     scripts/config.pl unset MBEDTLS_MEMORY_BACKTRACE # too slow for tests
     scripts/config.pl set MBEDTLS_X509_REMOVE_INFO
-    make CFLAGS='-Werror -O2'
+    make CFLAGS='-Werror -O1'
 
     msg "test: full + MBEDTLS_X509_REMOVE_INFO" # ~ 10s
     make test
