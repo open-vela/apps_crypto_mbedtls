@@ -56,6 +56,12 @@ extern "C" {
 #define PSA_WANT_ALG_RSA_PKCS1V15_SIGN_RAW PSA_WANT_ALG_RSA_PKCS1V15_SIGN
 #endif
 
+#if defined(PSA_WANT_ALG_RSA_PSS_ANY_SALT) && !defined(PSA_WANT_ALG_RSA_PSS)
+#define PSA_WANT_ALG_RSA_PSS PSA_WANT_ALG_RSA_PSS_ANY_SALT
+#elif !defined(PSA_WANT_ALG_RSA_PSS_ANY_SALT) && defined(PSA_WANT_ALG_RSA_PSS)
+#define PSA_WANT_ALG_RSA_PSS_ANY_SALT PSA_WANT_ALG_RSA_PSS
+#endif
+
 
 
 /****************************************************************/
@@ -586,7 +592,7 @@ extern "C" {
 #define MBEDTLS_PSA_BUILTIN_ALG_RSA_PKCS1V15_SIGN 1
 #define PSA_WANT_ALG_RSA_PKCS1V15_SIGN 1
 #define PSA_WANT_ALG_RSA_PKCS1V15_SIGN_RAW 1
-#endif /* MBEDTLSS_PKCS1_V15 */
+#endif /* MBEDTLS_PKCS1_V15 */
 #if defined(MBEDTLS_PKCS1_V21)
 #define MBEDTLS_PSA_BUILTIN_ALG_RSA_OAEP 1
 #define PSA_WANT_ALG_RSA_OAEP 1
