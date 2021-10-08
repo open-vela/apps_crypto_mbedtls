@@ -593,9 +593,6 @@ union mbedtls_ssl_premaster_secret
 
 #define MBEDTLS_PREMASTER_SIZE     sizeof( union mbedtls_ssl_premaster_secret )
 
-/* Length in number of bytes of the TLS sequence number */
-#define MBEDTLS_SSL_SEQUENCE_NUMBER_LEN 8
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -626,6 +623,7 @@ typedef enum
     MBEDTLS_SSL_SERVER_HELLO_VERIFY_REQUEST_SENT,
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
     MBEDTLS_SSL_ENCRYPTED_EXTENSIONS,
+    MBEDTLS_SSL_CLIENT_CERTIFICATE_VERIFY,
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 }
 mbedtls_ssl_states;
@@ -1529,6 +1527,19 @@ struct mbedtls_ssl_context
     int MBEDTLS_PRIVATE(keep_current_message);   /*!< drop or reuse current message
                                      on next call to record layer? */
 
+    /* The following three variables indicate if and, if yes,
+     * what kind of alert is pending to be sent.
+     */
+    unsigned char MBEDTLS_PRIVATE(send_alert);   /*!< Determines if a fatal alert
+                                                should be sent. Values:
+                                                - \c 0 , no alert is to be sent.
+                                                - \c 1 , alert is to be sent. */
+    unsigned char MBEDTLS_PRIVATE(alert_type);   /*!< Type of alert if send_alert
+                                                 != 0 */
+    int MBEDTLS_PRIVATE(alert_reason);           /*!< The error code to be returned
+                                                 to the user once the fatal alert
+                                                 has been sent. */
+
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
     uint8_t MBEDTLS_PRIVATE(disable_datagram_packing);  /*!< Disable packing multiple records
                                         *   within a single datagram.  */
@@ -1555,7 +1566,7 @@ struct mbedtls_ssl_context
     size_t MBEDTLS_PRIVATE(out_buf_len);         /*!< length of output buffer          */
 #endif
 
-    unsigned char MBEDTLS_PRIVATE(cur_out_ctr)[MBEDTLS_SSL_SEQUENCE_NUMBER_LEN]; /*!<  Outgoing record sequence  number. */
+    unsigned char MBEDTLS_PRIVATE(cur_out_ctr)[8]; /*!<  Outgoing record sequence  number. */
 
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
     uint16_t MBEDTLS_PRIVATE(mtu);               /*!< path mtu, used to fragment outgoing messages */
