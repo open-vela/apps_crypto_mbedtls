@@ -178,7 +178,7 @@ pre_initialize_variables () {
         export MAKEFLAGS="-j"
     fi
 
-    # Include more verbose output for failing tests run by CMake
+    # Include more verbose output for failing tests run by CMake or make
     export CTEST_OUTPUT_ON_FAILURE=1
 
     # CFLAGS and LDFLAGS for Asan builds that don't use CMake
@@ -841,7 +841,7 @@ component_check_changelog () {
 
 component_check_names () {
     msg "Check: declared and exported names (builds the library)" # < 3s
-    tests/scripts/check-names.sh -v
+    tests/scripts/check_names.py -v
 }
 
 component_check_test_cases () {
@@ -1283,7 +1283,7 @@ component_test_psa_collect_statuses () {
 component_test_full_cmake_clang () {
     msg "build: cmake, full config, clang" # ~ 50s
     scripts/config.py full
-    CC=clang cmake -D CMAKE_BUILD_TYPE:String=Check -D ENABLE_TESTING=On .
+    CC=clang cmake -D CMAKE_BUILD_TYPE:String=Release -D ENABLE_TESTING=On .
     make
 
     msg "test: main suites (full config, clang)" # ~ 5s
@@ -1560,31 +1560,8 @@ component_test_psa_crypto_config_basic() {
     scripts/config.py -f include/psa/crypto_config.h unset PSA_WANT_KEY_TYPE_DES
     scripts/config.py unset MBEDTLS_DES_C
 
-    # Need to define the correct symbol and include the test driver header path in order to build with the test driver
-    loc_cflags="$ASAN_CFLAGS -DPSA_CRYPTO_DRIVER_TEST"
-    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_KEY_TYPE_AES"
-    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_KEY_TYPE_CAMELLIA"
-    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_KEY_TYPE_ECC_KEY_PAIR"
-    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_KEY_TYPE_RSA_KEY_PAIR"
-    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_CBC_NO_PADDING"
-    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_CBC_PKCS7"
-    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_CTR"
-    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_CFB"
-    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_ECDSA"
-    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_DETERMINISTIC_ECDSA"
-    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_MD5"
-    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_OFB"
-    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_RIPEMD160"
-    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_RSA_PKCS1V15_SIGN"
-    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_RSA_PSS"
-    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_SHA_1"
-    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_SHA_224"
-    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_SHA_256"
-    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_SHA_384"
-    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_SHA_512"
-    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_XTS"
-    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_CMAC"
-    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_HMAC"
+    loc_cflags="$ASAN_CFLAGS -DPSA_CRYPTO_DRIVER_TEST_ALL"
+    loc_cflags="${loc_cflags} '-DMBEDTLS_USER_CONFIG_FILE=\"../tests/configs/user-config-for-test.h\"'"
     loc_cflags="${loc_cflags} -I../tests/include -O2"
 
     make CC=gcc CFLAGS="$loc_cflags" LDFLAGS="$ASAN_CFLAGS"
@@ -1949,7 +1926,8 @@ component_build_no_std_function () {
     scripts/config.py set MBEDTLS_PLATFORM_NO_STD_FUNCTIONS
     scripts/config.py unset MBEDTLS_ENTROPY_NV_SEED
     scripts/config.py unset MBEDTLS_PLATFORM_NV_SEED_ALT
-    make CC=gcc CFLAGS='-Werror -Wall -Wextra -Os'
+    CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Check .
+    make
 }
 
 component_build_no_ssl_srv () {
@@ -2117,7 +2095,7 @@ component_test_when_no_ciphersuites_have_mac () {
 component_test_no_date_time () {
     msg "build: default config without MBEDTLS_HAVE_TIME_DATE"
     scripts/config.py unset MBEDTLS_HAVE_TIME_DATE
-    CC=gcc cmake
+    CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Check .
     make
 
     msg "test: !MBEDTLS_HAVE_TIME_DATE - main suites"
@@ -2237,31 +2215,8 @@ component_test_psa_crypto_drivers () {
     scripts/config.py full
     scripts/config.py set MBEDTLS_PSA_CRYPTO_DRIVERS
     scripts/config.py set MBEDTLS_PSA_CRYPTO_BUILTIN_KEYS
-    # Need to define the correct symbol and include the test driver header path in order to build with the test driver
-    loc_cflags="$ASAN_CFLAGS -DPSA_CRYPTO_DRIVER_TEST"
-    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_KEY_TYPE_AES"
-    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_KEY_TYPE_CAMELLIA"
-    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_KEY_TYPE_ECC_KEY_PAIR"
-    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_KEY_TYPE_RSA_KEY_PAIR"
-    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_CBC_NO_PADDING"
-    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_CBC_PKCS7"
-    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_CTR"
-    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_CFB"
-    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_ECDSA"
-    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_DETERMINISTIC_ECDSA"
-    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_MD5"
-    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_OFB"
-    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_RIPEMD160"
-    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_RSA_PKCS1V15_SIGN"
-    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_RSA_PSS"
-    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_SHA_1"
-    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_SHA_224"
-    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_SHA_256"
-    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_SHA_384"
-    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_SHA_512"
-    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_XTS"
-    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_CMAC"
-    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_HMAC"
+    loc_cflags="$ASAN_CFLAGS -DPSA_CRYPTO_DRIVER_TEST_ALL"
+    loc_cflags="${loc_cflags} '-DMBEDTLS_USER_CONFIG_FILE=\"../tests/configs/user-config-for-test.h\"'"
     loc_cflags="${loc_cflags} -I../tests/include -O2"
 
     make CC=gcc CFLAGS="${loc_cflags}" LDFLAGS="$ASAN_CFLAGS"
@@ -2321,7 +2276,8 @@ component_build_mbedtls_config_file () {
 }
 
 component_test_m32_o0 () {
-    # Build once with -O0, to compile out the i386 specific inline assembly
+    # Build without optimization, so as to use portable C code (in a 32-bit
+    # build) and not the i386-specific inline assembly.
     msg "build: i386, make, gcc -O0 (ASan build)" # ~ 30s
     scripts/config.py full
     make CC=gcc CFLAGS="$ASAN_CFLAGS -m32 -O0" LDFLAGS="-m32 $ASAN_CFLAGS"
@@ -2336,19 +2292,20 @@ support_test_m32_o0 () {
     esac
 }
 
-component_test_m32_o1 () {
-    # Build again with -O1, to compile in the i386 specific inline assembly
-    msg "build: i386, make, gcc -O1 (ASan build)" # ~ 30s
+component_test_m32_o2 () {
+    # Build with optimization, to use the i386 specific inline assembly
+    # and go faster for tests.
+    msg "build: i386, make, gcc -O2 (ASan build)" # ~ 30s
     scripts/config.py full
-    make CC=gcc CFLAGS="$ASAN_CFLAGS -m32 -O1" LDFLAGS="-m32 $ASAN_CFLAGS"
+    make CC=gcc CFLAGS="$ASAN_CFLAGS -m32 -O2" LDFLAGS="-m32 $ASAN_CFLAGS"
 
-    msg "test: i386, make, gcc -O1 (ASan build)"
+    msg "test: i386, make, gcc -O2 (ASan build)"
     make test
 
-    msg "test ssl-opt.sh, i386, make, gcc-O1"
+    msg "test ssl-opt.sh, i386, make, gcc-O2"
     tests/ssl-opt.sh
 }
-support_test_m32_o1 () {
+support_test_m32_o2 () {
     support_test_m32_o0 "$@"
 }
 
@@ -2457,7 +2414,7 @@ component_test_no_x509_info () {
     scripts/config.pl full
     scripts/config.pl unset MBEDTLS_MEMORY_BACKTRACE # too slow for tests
     scripts/config.pl set MBEDTLS_X509_REMOVE_INFO
-    make CFLAGS='-Werror -O1'
+    make CFLAGS='-Werror -O2'
 
     msg "test: full + MBEDTLS_X509_REMOVE_INFO" # ~ 10s
     make test
@@ -2677,7 +2634,7 @@ component_test_cmake_out_of_source () {
     MBEDTLS_ROOT_DIR="$PWD"
     mkdir "$OUT_OF_SOURCE_DIR"
     cd "$OUT_OF_SOURCE_DIR"
-    cmake "$MBEDTLS_ROOT_DIR"
+    cmake -D CMAKE_BUILD_TYPE:String=Check "$MBEDTLS_ROOT_DIR"
     make
 
     msg "test: cmake 'out-of-source' build"
