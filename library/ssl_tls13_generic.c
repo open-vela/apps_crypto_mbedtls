@@ -28,44 +28,6 @@
 
 #include "ssl_misc.h"
 
-int mbedtls_ssl_tls1_3_fetch_handshake_msg( mbedtls_ssl_context *ssl,
-                                            unsigned hs_type,
-                                            unsigned char **buf,
-                                            size_t *buflen )
-{
-    int ret;
-
-    if( ( ret = mbedtls_ssl_read_record( ssl, 0 ) ) != 0 )
-    {
-        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_read_record", ret );
-        goto cleanup;
-    }
-
-    if( ssl->in_msgtype != MBEDTLS_SSL_MSG_HANDSHAKE ||
-        ssl->in_msg[0]  != hs_type )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "Receive unexpected handshake message." ) );
-        MBEDTLS_SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_UNEXPECTED_MESSAGE,
-                                      MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
-        ret = MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE;
-        goto cleanup;
-    }
-
-    /*
-     * Jump handshake header (4 bytes, see Section 4 of RFC 8446).
-     *    ...
-     *    HandshakeType msg_type;
-     *    uint24 length;
-     *    ...
-     */
-    *buf    = ssl->in_msg   + 4;
-    *buflen = ssl->in_hslen - 4;
-
-cleanup:
-
-    return( ret );
-}
-
 int mbedtls_ssl_tls13_start_handshake_msg( mbedtls_ssl_context *ssl,
                                            unsigned hs_type,
                                            unsigned char **buf,
@@ -102,6 +64,15 @@ int mbedtls_ssl_tls13_finish_handshake_msg( mbedtls_ssl_context *ssl,
 
 cleanup:
     return( ret );
+}
+
+void mbedtls_ssl_tls1_3_add_hs_msg_to_checksum( mbedtls_ssl_context *ssl,
+                                                unsigned hs_type,
+                                                unsigned char const *msg,
+                                                size_t msg_len )
+{
+    mbedtls_ssl_tls13_add_hs_hdr_to_checksum( ssl, hs_type, msg_len );
+    ssl->handshake->update_checksum( ssl, msg, msg_len );
 }
 
 void mbedtls_ssl_tls13_add_hs_hdr_to_checksum( mbedtls_ssl_context *ssl,

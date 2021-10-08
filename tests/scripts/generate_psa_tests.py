@@ -133,7 +133,7 @@ class Information:
         return constructors
 
 
-def test_case_for_key_type_not_supported_invalid_arg(
+def test_case_for_key_type_not_supported(
         verb: str, key_type: str, bits: int,
         dependencies: List[str],
         *args: str,
@@ -148,15 +148,10 @@ def test_case_for_key_type_not_supported_invalid_arg(
     adverb = 'not' if dependencies else 'never'
     if param_descr:
         adverb = param_descr + ' ' + adverb
-    if (verb == "generate") and ("PUBLIC" in short_key_type):
-        tc.set_description('PSA {} {} {}-bit invalid argument'
-                           .format(verb, short_key_type, bits))
-        tc.set_function(verb + '_invalid_arg')
-    else:
-        tc.set_description('PSA {} {} {}-bit {} supported'
-                           .format(verb, short_key_type, bits, adverb))
-        tc.set_function(verb + '_not_supported')
+    tc.set_description('PSA {} {} {}-bit {} supported'
+                       .format(verb, short_key_type, bits, adverb))
     tc.set_dependencies(dependencies)
+    tc.set_function(verb + '_not_supported')
     tc.set_arguments([key_type] + list(args))
     return tc
 
@@ -197,7 +192,7 @@ class NotSupported:
         else:
             generate_dependencies = import_dependencies
         for bits in kt.sizes_to_test():
-            yield test_case_for_key_type_not_supported_invalid_arg(
+            yield test_case_for_key_type_not_supported(
                 'import', kt.expression, bits,
                 finish_family_dependencies(import_dependencies, bits),
                 test_case.hex_string(kt.key_material(bits)),
@@ -208,7 +203,7 @@ class NotSupported:
                 # supported or not depending on implementation capabilities,
                 # only generate the test case once.
                 continue
-            yield test_case_for_key_type_not_supported_invalid_arg(
+            yield test_case_for_key_type_not_supported(
                 'generate', kt.expression, bits,
                 finish_family_dependencies(generate_dependencies, bits),
                 str(bits),
