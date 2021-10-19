@@ -36,7 +36,6 @@
 #include "ssl_misc.h"
 #include "mbedtls/error.h"
 #include "mbedtls/platform_util.h"
-#include "mbedtls/constant_time.h"
 
 #include <string.h>
 
@@ -166,10 +165,7 @@ int mbedtls_ssl_cookie_write( void *p_ctx,
     t = ctx->serial++;
 #endif
 
-    (*p)[0] = (unsigned char)( t >> 24 );
-    (*p)[1] = (unsigned char)( t >> 16 );
-    (*p)[2] = (unsigned char)( t >>  8 );
-    (*p)[3] = (unsigned char)( t       );
+    MBEDTLS_PUT_UINT32_BE(t, *p, 0);
     *p += 4;
 
 #if defined(MBEDTLS_THREADING_C)
@@ -227,7 +223,7 @@ int mbedtls_ssl_cookie_check( void *p_ctx,
     if( ret != 0 )
         return( ret );
 
-    if( mbedtls_cf_memcmp( cookie + 4, ref_hmac, sizeof( ref_hmac ) ) != 0 )
+    if( mbedtls_ssl_safer_memcmp( cookie + 4, ref_hmac, sizeof( ref_hmac ) ) != 0 )
         return( -1 );
 
 #if defined(MBEDTLS_HAVE_TIME)
