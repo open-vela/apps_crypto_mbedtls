@@ -138,14 +138,16 @@ int mbedtls_ssl_ticket_setup( mbedtls_ssl_ticket_context *ctx,
     ctx->ticket_lifetime = lifetime;
 
     cipher_info = mbedtls_cipher_info_from_type( cipher);
+    if( cipher_info == NULL )
+        return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
 
-    if( mbedtls_cipher_info_get_mode( cipher_info ) != MBEDTLS_MODE_GCM &&
-        mbedtls_cipher_info_get_mode( cipher_info ) != MBEDTLS_MODE_CCM )
+    if( cipher_info->mode != MBEDTLS_MODE_GCM &&
+        cipher_info->mode != MBEDTLS_MODE_CCM )
     {
         return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
     }
 
-    if( mbedtls_cipher_info_get_key_bitlen( cipher_info ) > 8 * MAX_KEY_BYTES )
+    if( cipher_info->key_bitlen > 8 * MAX_KEY_BYTES )
         return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
 
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
@@ -243,7 +245,8 @@ int mbedtls_ssl_ticket_write( void *p_ticket,
     {
          goto cleanup;
     }
-    MBEDTLS_PUT_UINT16_BE( clear_len, state_len_bytes, 0 );
+    state_len_bytes[0] = ( clear_len >> 8 ) & 0xff;
+    state_len_bytes[1] = ( clear_len      ) & 0xff;
 
     /* Encrypt and authenticate */
     if( ( ret = mbedtls_cipher_auth_encrypt_ext( &key->ctx,
