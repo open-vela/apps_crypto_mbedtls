@@ -760,7 +760,6 @@ def main(args):
         return
     # List in a cmake list format (i.e. ';'-separated)
     if options.list_for_cmake:
-        filenames = []
         print(';'.join(generator.filename_for(name)
                        for name in sorted(generator.TARGETS)), end='')
         return
