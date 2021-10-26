@@ -307,6 +307,10 @@
       + ( MBEDTLS_SSL_CID_OUT_LEN_MAX ) )
 #endif
 
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+#define MBEDTLS_TLS1_3_MD_MAX_SIZE         MBEDTLS_MD_MAX_SIZE
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+
 #if defined(MBEDTLS_SSL_MAX_FRAGMENT_LENGTH)
 /**
  * \brief          Return the maximum fragment length (payload, in bytes) for
@@ -409,6 +413,32 @@ static inline int mbedtls_ssl_chk_buf_ptr( const uint8_t *cur,
         }                                                                \
     } while( 0 )
 
+/**
+ * \brief        This macro checks if the remaining length in an input buffer is
+ *               greater or equal than a needed length. If it is not the case, it
+ *               returns #MBEDTLS_ERR_SSL_DECODE_ERROR error and pends a
+ *               #MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR alert message.
+ *
+ *               This is a function-like macro. It is guaranteed to evaluate each
+ *               argument exactly once.
+ *
+ * \param cur    Pointer to the current position in the buffer.
+ * \param end    Pointer to one past the end of the buffer.
+ * \param need   Needed length in bytes.
+ *
+ */
+#define MBEDTLS_SSL_CHK_BUF_READ_PTR( cur, end, need )                          \
+    do {                                                                        \
+        if( mbedtls_ssl_chk_buf_ptr( ( cur ), ( end ), ( need ) ) != 0 )        \
+        {                                                                       \
+            MBEDTLS_SSL_DEBUG_MSG( 1,                                           \
+                                   ( "missing input data in %s", __func__ ) );  \
+            MBEDTLS_SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR,   \
+                                          MBEDTLS_ERR_SSL_DECODE_ERROR );       \
+            return( MBEDTLS_ERR_SSL_DECODE_ERROR );                             \
+        }                                                                       \
+    } while( 0 )
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -486,6 +516,9 @@ struct mbedtls_ssl_handshake_params
     /*
      * Handshake specific crypto variables
      */
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+    int tls1_3_kex_modes; /*!< key exchange modes for TLS 1.3 */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_2) && \
     defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
@@ -573,8 +606,8 @@ struct mbedtls_ssl_handshake_params
                                               flight being received          */
     mbedtls_ssl_transform *alt_transform_out;   /*!<  Alternative transform for
                                               resending messages             */
-    unsigned char alt_out_ctr[8];       /*!<  Alternative record epoch/counter
-                                              for resending messages         */
+    unsigned char alt_out_ctr[MBEDTLS_SSL_SEQUENCE_NUMBER_LEN]; /*!<  Alternative record epoch/counter
+                                                                      for resending messages         */
 
 #if defined(MBEDTLS_SSL_DTLS_CONNECTION_ID)
     /* The state of CID configuration in this handshake. */
@@ -675,6 +708,13 @@ struct mbedtls_ssl_handshake_params
     int extensions_present;             /*!< extension presence; Each bitfield
                                              represents an extension and defined
                                              as \c MBEDTLS_SSL_EXT_XXX */
+
+    union
+    {
+        unsigned char early    [MBEDTLS_TLS1_3_MD_MAX_SIZE];
+        unsigned char handshake[MBEDTLS_TLS1_3_MD_MAX_SIZE];
+        unsigned char app      [MBEDTLS_TLS1_3_MD_MAX_SIZE];
+    } tls1_3_master_secrets;
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
 #if defined(MBEDTLS_SSL_SESSION_TICKETS)
@@ -866,14 +906,14 @@ static inline int mbedtls_ssl_transform_uses_aead(
 
 typedef struct
 {
-    uint8_t ctr[8];         /* In TLS:  The implicit record sequence number.
-                             * In DTLS: The 2-byte epoch followed by
-                             *          the 6-byte sequence number.
-                             * This is stored as a raw big endian byte array
-                             * as opposed to a uint64_t because we rarely
-                             * need to perform arithmetic on this, but do
-                             * need it as a Byte array for the purpose of
-                             * MAC computations.                             */
+    uint8_t ctr[MBEDTLS_SSL_SEQUENCE_NUMBER_LEN];  /* In TLS:  The implicit record sequence number.
+                                                    * In DTLS: The 2-byte epoch followed by
+                                                    *          the 6-byte sequence number.
+                                                    * This is stored as a raw big endian byte array
+                                                    * as opposed to a uint64_t because we rarely
+                                                    * need to perform arithmetic on this, but do
+                                                    * need it as a Byte array for the purpose of
+                                                    * MAC computations.                             */
     uint8_t type;           /* The record content type.                      */
     uint8_t ver[2];         /* SSL/TLS version as present on the wire.
                              * Convert to internal presentation of versions
@@ -955,6 +995,14 @@ void mbedtls_ssl_transform_free( mbedtls_ssl_transform *transform );
  * \param ssl       SSL context
  */
 void mbedtls_ssl_handshake_free( mbedtls_ssl_context *ssl );
+
+/* set inbound transform of ssl context */
+void mbedtls_ssl_set_inbound_transform( mbedtls_ssl_context *ssl,
+                                        mbedtls_ssl_transform *transform );
+
+/* set outbound transform of ssl context */
+void mbedtls_ssl_set_outbound_transform( mbedtls_ssl_context *ssl,
+                                         mbedtls_ssl_transform *transform );
 
 int mbedtls_ssl_handshake_client_step( mbedtls_ssl_context *ssl );
 int mbedtls_ssl_handshake_server_step( mbedtls_ssl_context *ssl );
@@ -1415,6 +1463,53 @@ static inline int mbedtls_ssl_conf_tls13_some_psk_enabled( mbedtls_ssl_context *
                    MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_ALL ) );
 }
 
+/**
+ * Given a list of key exchange modes, check if at least one of them is
+ * supported.
+ *
+ * \param[in] ssl  SSL context
+ * \param kex_modes_mask  Mask of the key exchange modes to check
+ *
+ * \return 0 if at least one of the key exchange modes is supported,
+ *         !=0 otherwise.
+ */
+static inline unsigned mbedtls_ssl_tls1_3_check_kex_modes( mbedtls_ssl_context *ssl,
+                                                           int kex_modes_mask )
+{
+    return( ( ssl->handshake->tls1_3_kex_modes & kex_modes_mask ) == 0 );
+}
+
+static inline int mbedtls_ssl_tls1_3_psk_enabled( mbedtls_ssl_context *ssl )
+{
+    return( ! mbedtls_ssl_tls1_3_check_kex_modes( ssl,
+                   MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK ) );
+}
+
+static inline int mbedtls_ssl_tls1_3_psk_ephemeral_enabled(
+                                                    mbedtls_ssl_context *ssl )
+{
+    return( ! mbedtls_ssl_tls1_3_check_kex_modes( ssl,
+                   MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_EPHEMERAL ) );
+}
+
+static inline int mbedtls_ssl_tls1_3_ephemeral_enabled( mbedtls_ssl_context *ssl )
+{
+    return( ! mbedtls_ssl_tls1_3_check_kex_modes( ssl,
+                   MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_EPHEMERAL ) );
+}
+
+static inline int mbedtls_ssl_tls1_3_some_ephemeral_enabled( mbedtls_ssl_context *ssl )
+{
+    return( ! mbedtls_ssl_tls1_3_check_kex_modes( ssl,
+                   MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_EPHEMERAL_ALL ) );
+}
+
+static inline int mbedtls_ssl_tls1_3_some_psk_enabled( mbedtls_ssl_context *ssl )
+{
+    return( ! mbedtls_ssl_tls1_3_check_kex_modes( ssl,
+                   MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_ALL ) );
+}
+
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
 /**
@@ -1490,6 +1585,14 @@ static inline void mbedtls_ssl_handshake_set_state( mbedtls_ssl_context *ssl,
 }
 
 /*
+ * Fetch TLS 1.3 handshake message header
+ */
+int mbedtls_ssl_tls1_3_fetch_handshake_msg( mbedtls_ssl_context *ssl,
+                                            unsigned hs_type,
+                                            unsigned char **buf,
+                                            size_t *buf_len );
+
+/*
  * Write TLS 1.3 handshake message header
  */
 int mbedtls_ssl_tls13_start_handshake_msg( mbedtls_ssl_context *ssl,
@@ -1502,12 +1605,18 @@ int mbedtls_ssl_tls13_start_handshake_msg( mbedtls_ssl_context *ssl,
 int mbedtls_ssl_tls13_finish_handshake_msg( mbedtls_ssl_context *ssl,
                                             size_t buf_len,
                                             size_t msg_len );
-/*
- * Update checksum with handshake header
- */
+
 void mbedtls_ssl_tls13_add_hs_hdr_to_checksum( mbedtls_ssl_context *ssl,
                                                unsigned hs_type,
                                                size_t total_hs_len );
+
+/*
+ * Update checksum of handshake messages.
+ */
+void mbedtls_ssl_tls1_3_add_hs_msg_to_checksum( mbedtls_ssl_context *ssl,
+                                                unsigned hs_type,
+                                                unsigned char const *msg,
+                                                size_t msg_len );
 
 #if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
 /*
@@ -1521,5 +1630,12 @@ int mbedtls_ssl_tls13_write_sig_alg_ext( mbedtls_ssl_context *ssl,
 #endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
 
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+
+/* Get handshake transcript */
+int mbedtls_ssl_get_handshake_transcript( mbedtls_ssl_context *ssl,
+                                          const mbedtls_md_type_t md,
+                                          unsigned char *dst,
+                                          size_t dst_len,
+                                          size_t *olen );
 
 #endif /* ssl_misc.h */
