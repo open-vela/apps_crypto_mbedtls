@@ -175,10 +175,10 @@ pre_initialize_variables () {
 
     # if MAKEFLAGS is not set add the -j option to speed up invocations of make
     if [ -z "${MAKEFLAGS+set}" ]; then
-        export MAKEFLAGS="-j$(all_sh_nproc)"
+        export MAKEFLAGS="-j"
     fi
 
-    # Include more verbose output for failing tests run by CMake or make
+    # Include more verbose output for failing tests run by CMake
     export CTEST_OUTPUT_ON_FAILURE=1
 
     # CFLAGS and LDFLAGS for Asan builds that don't use CMake
@@ -292,8 +292,7 @@ cleanup()
            -iname CMakeFiles -exec rm -rf {} \+ -o \
            \( -iname cmake_install.cmake -o \
               -iname CTestTestfile.cmake -o \
-              -iname CMakeCache.txt -o \
-              -path './cmake/*.cmake' \) -exec rm -f {} \+
+              -iname CMakeCache.txt \) -exec rm -f {} \+
     # Recover files overwritten by in-tree CMake builds
     rm -f include/Makefile include/mbedtls/Makefile programs/*/Makefile
 
@@ -343,18 +342,6 @@ fatal_signal () {
 trap 'fatal_signal HUP' HUP
 trap 'fatal_signal INT' INT
 trap 'fatal_signal TERM' TERM
-
-# Number of processors on this machine. Used as the default setting
-# for parallel make.
-all_sh_nproc ()
-{
-    {
-        nproc || # Linux
-        sysctl -n hw.ncpuonline || # NetBSD, OpenBSD
-        sysctl -n hw.ncpu || # FreeBSD
-        echo 1
-    } 2>/dev/null
-}
 
 msg()
 {
@@ -999,16 +986,7 @@ component_test_psa_crypto_rsa_no_genprime() {
 
 component_test_ref_configs () {
     msg "test/build: ref-configs (ASan build)" # ~ 6 min 20s
-    # test-ref-configs works by overwriting mbedtls_config.h; this makes cmake
-    # want to re-generate generated files that depend on it, quite correctly.
-    # However this doesn't work as the generation script expects a specific
-    # format for mbedtls_config.h, which the other files don't follow. Also,
-    # cmake can't know this, but re-generation is actually not necessary as
-    # the generated files only depend on the list of available options, not
-    # whether they're on or off. So, disable cmake's (over-sensitive here)
-    # dependency resolution for generated files and just rely on them being
-    # present (thanks to pre_generate_files) by turning GEN_FILES off.
-    CC=gcc cmake -D GEN_FILES=Off -D CMAKE_BUILD_TYPE:String=Asan .
+    CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
     tests/scripts/test-ref-configs.pl
 }
 
@@ -1582,8 +1560,31 @@ component_test_psa_crypto_config_basic() {
     scripts/config.py -f include/psa/crypto_config.h unset PSA_WANT_KEY_TYPE_DES
     scripts/config.py unset MBEDTLS_DES_C
 
-    loc_cflags="$ASAN_CFLAGS -DPSA_CRYPTO_DRIVER_TEST_ALL"
-    loc_cflags="${loc_cflags} '-DMBEDTLS_USER_CONFIG_FILE=\"../tests/configs/user-config-for-test.h\"'"
+    # Need to define the correct symbol and include the test driver header path in order to build with the test driver
+    loc_cflags="$ASAN_CFLAGS -DPSA_CRYPTO_DRIVER_TEST"
+    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_KEY_TYPE_AES"
+    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_KEY_TYPE_CAMELLIA"
+    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_KEY_TYPE_ECC_KEY_PAIR"
+    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_KEY_TYPE_RSA_KEY_PAIR"
+    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_CBC_NO_PADDING"
+    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_CBC_PKCS7"
+    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_CTR"
+    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_CFB"
+    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_ECDSA"
+    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_DETERMINISTIC_ECDSA"
+    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_MD5"
+    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_OFB"
+    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_RIPEMD160"
+    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_RSA_PKCS1V15_SIGN"
+    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_RSA_PSS"
+    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_SHA_1"
+    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_SHA_224"
+    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_SHA_256"
+    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_SHA_384"
+    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_SHA_512"
+    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_XTS"
+    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_CMAC"
+    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_HMAC"
     loc_cflags="${loc_cflags} -I../tests/include -O2"
 
     make CC=gcc CFLAGS="$loc_cflags" LDFLAGS="$ASAN_CFLAGS"
@@ -2236,8 +2237,31 @@ component_test_psa_crypto_drivers () {
     scripts/config.py full
     scripts/config.py set MBEDTLS_PSA_CRYPTO_DRIVERS
     scripts/config.py set MBEDTLS_PSA_CRYPTO_BUILTIN_KEYS
-    loc_cflags="$ASAN_CFLAGS -DPSA_CRYPTO_DRIVER_TEST_ALL"
-    loc_cflags="${loc_cflags} '-DMBEDTLS_USER_CONFIG_FILE=\"../tests/configs/user-config-for-test.h\"'"
+    # Need to define the correct symbol and include the test driver header path in order to build with the test driver
+    loc_cflags="$ASAN_CFLAGS -DPSA_CRYPTO_DRIVER_TEST"
+    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_KEY_TYPE_AES"
+    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_KEY_TYPE_CAMELLIA"
+    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_KEY_TYPE_ECC_KEY_PAIR"
+    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_KEY_TYPE_RSA_KEY_PAIR"
+    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_CBC_NO_PADDING"
+    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_CBC_PKCS7"
+    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_CTR"
+    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_CFB"
+    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_ECDSA"
+    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_DETERMINISTIC_ECDSA"
+    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_MD5"
+    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_OFB"
+    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_RIPEMD160"
+    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_RSA_PKCS1V15_SIGN"
+    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_RSA_PSS"
+    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_SHA_1"
+    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_SHA_224"
+    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_SHA_256"
+    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_SHA_384"
+    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_SHA_512"
+    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_XTS"
+    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_CMAC"
+    loc_cflags="${loc_cflags} -DMBEDTLS_PSA_ACCEL_ALG_HMAC"
     loc_cflags="${loc_cflags} -I../tests/include -O2"
 
     make CC=gcc CFLAGS="${loc_cflags}" LDFLAGS="$ASAN_CFLAGS"

@@ -626,8 +626,6 @@ has_mem_err() {
 # Wait for process $2 named $3 to be listening on port $1. Print error to $4.
 if type lsof >/dev/null 2>/dev/null; then
     wait_app_start() {
-        newline='
-'
         START_TIME=$(date +%s)
         if [ "$DTLS" -eq 1 ]; then
             proto=UDP
@@ -635,15 +633,7 @@ if type lsof >/dev/null 2>/dev/null; then
             proto=TCP
         fi
         # Make a tight loop, server normally takes less than 1s to start.
-        while true; do
-              SERVER_PIDS=$(lsof -a -n -b -i "$proto:$1" -F p)
-              # When we use a proxy, it will be listening on the same port we
-              # are checking for as well as the server and lsof will list both.
-              # If multiple PIDs are returned, each one will be on a separate
-              # line, each prepended with 'p'.
-             case ${newline}${SERVER_PIDS}${newline} in
-                  *${newline}p${2}${newline}*) break;;
-              esac
+        while ! lsof -a -n -b -i "$proto:$1" -p "$2" >/dev/null 2>/dev/null; do
               if [ $(( $(date +%s) - $START_TIME )) -gt $DOG_DELAY ]; then
                   echo "$3 START TIMEOUT"
                   echo "$3 START TIMEOUT" >> $4
@@ -763,7 +753,7 @@ wait_client_done() {
 # check if the given command uses dtls and sets global variable DTLS
 detect_dtls() {
     case "$1" in
-        *dtls=1*|*-dtls*|*-u*) DTLS=1;;
+        *dtls=1*|-dtls|-u) DTLS=1;;
         *) DTLS=0;;
     esac
 }
@@ -1319,24 +1309,22 @@ SRV_DELAY_SECONDS=0
 
 # fix commands to use this port, force IPv4 while at it
 # +SRV_PORT will be replaced by either $SRV_PORT or $PXY_PORT later
-# Note: Using 'localhost' rather than 127.0.0.1 here is unwise, as on many
-# machines that will resolve to ::1, and we don't want ipv6 here.
 P_SRV="$P_SRV server_addr=127.0.0.1 server_port=$SRV_PORT"
 P_CLI="$P_CLI server_addr=127.0.0.1 server_port=+SRV_PORT"
 P_PXY="$P_PXY server_addr=127.0.0.1 server_port=$SRV_PORT listen_addr=127.0.0.1 listen_port=$PXY_PORT ${SEED:+"seed=$SEED"}"
 O_SRV="$O_SRV -accept $SRV_PORT"
-O_CLI="$O_CLI -connect 127.0.0.1:+SRV_PORT"
+O_CLI="$O_CLI -connect localhost:+SRV_PORT"
 G_SRV="$G_SRV -p $SRV_PORT"
 G_CLI="$G_CLI -p +SRV_PORT"
 
 if [ -n "${OPENSSL_LEGACY:-}" ]; then
     O_LEGACY_SRV="$O_LEGACY_SRV -accept $SRV_PORT -dhparam data_files/dhparams.pem"
-    O_LEGACY_CLI="$O_LEGACY_CLI -connect 127.0.0.1:+SRV_PORT"
+    O_LEGACY_CLI="$O_LEGACY_CLI -connect localhost:+SRV_PORT"
 fi
 
 if [ -n "${OPENSSL_NEXT:-}" ]; then
     O_NEXT_SRV="$O_NEXT_SRV -accept $SRV_PORT"
-    O_NEXT_CLI="$O_NEXT_CLI -connect 127.0.0.1:+SRV_PORT"
+    O_NEXT_CLI="$O_NEXT_CLI -connect localhost:+SRV_PORT"
 fi
 
 if [ -n "${GNUTLS_NEXT_SERV:-}" ]; then
@@ -1452,6 +1440,38 @@ run_test    "Opaque key for client authentication" \
              key_file=data_files/server5.key" \
             0 \
             -c "key type: Opaque" \
+            -s "Verifying peer X.509 certificate... ok" \
+            -S "error" \
+            -C "error"
+
+# Test using an opaque private key for server authentication
+requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
+requires_config_enabled MBEDTLS_X509_CRT_PARSE_C
+requires_config_enabled MBEDTLS_ECDSA_C
+requires_config_enabled MBEDTLS_SHA256_C
+run_test    "Opaque key for server authentication" \
+            "$P_SRV auth_mode=required key_opaque=1" \
+            "$P_CLI crt_file=data_files/server5.crt \
+             key_file=data_files/server5.key" \
+            0 \
+            -c "Verifying peer X.509 certificate... ok" \
+            -s "key types: RSA - Opaque" \
+            -S "error" \
+            -C "error"
+
+# Test using an opaque private key for client/server authentication
+requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
+requires_config_enabled MBEDTLS_X509_CRT_PARSE_C
+requires_config_enabled MBEDTLS_ECDSA_C
+requires_config_enabled MBEDTLS_SHA256_C
+run_test    "Opaque key for client/server authentication" \
+            "$P_SRV auth_mode=required key_opaque=1" \
+            "$P_CLI key_opaque=1 crt_file=data_files/server5.crt \
+             key_file=data_files/server5.key" \
+            0 \
+            -c "key type: Opaque" \
+            -c "Verifying peer X.509 certificate... ok" \
+            -s "key types: RSA - Opaque" \
             -s "Verifying peer X.509 certificate... ok" \
             -S "error" \
             -C "error"
@@ -2706,13 +2726,10 @@ run_test    "Session resume using tickets, DTLS: openssl server" \
             -c "parse new session ticket" \
             -c "a session has been resumed"
 
-# For reasons that aren't fully understood, this test randomly fails with high
-# probability with OpenSSL 1.0.2g on the CI, see #5012.
-requires_openssl_next
 run_test    "Session resume using tickets, DTLS: openssl client" \
             "$P_SRV dtls=1 debug_level=3 tickets=1" \
-            "( $O_NEXT_CLI -dtls -sess_out $SESSION; \
-               $O_NEXT_CLI -dtls -sess_in $SESSION; \
+            "( $O_CLI -dtls -sess_out $SESSION; \
+               $O_CLI -dtls -sess_in $SESSION; \
                rm -f $SESSION )" \
             0 \
             -s "found session ticket extension" \
@@ -2909,13 +2926,10 @@ run_test    "Session resume using cache, DTLS: session copy" \
             -s "a session has been resumed" \
             -c "a session has been resumed"
 
-# For reasons that aren't fully understood, this test randomly fails with high
-# probability with OpenSSL 1.0.2g on the CI, see #5012.
-requires_openssl_next
 run_test    "Session resume using cache, DTLS: openssl client" \
             "$P_SRV dtls=1 debug_level=3 tickets=0" \
-            "( $O_NEXT_CLI -dtls -sess_out $SESSION; \
-               $O_NEXT_CLI -dtls -sess_in $SESSION; \
+            "( $O_CLI -dtls -sess_out $SESSION; \
+               $O_CLI -dtls -sess_in $SESSION; \
                rm -f $SESSION )" \
             0 \
             -s "found session ticket extension" \
@@ -8686,10 +8700,9 @@ run_test    "TLS1.3: handshake dispatch test: tls1_3 only" \
 
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
-requires_config_disabled MBEDTLS_USE_PSA_CRYPTO
 run_test    "TLS1.3: Test client hello msg work - openssl" \
             "$O_NEXT_SRV -tls1_3 -msg" \
-            "$P_CLI debug_level=3 min_version=tls1_3 max_version=tls1_3" \
+            "$P_CLI debug_level=2 min_version=tls1_3 max_version=tls1_3" \
             1 \
             -c "SSL - The requested feature is not available" \
             -s "ServerHello"                \
@@ -8704,18 +8717,13 @@ run_test    "TLS1.3: Test client hello msg work - openssl" \
             -c "tls1_3 client state: 20"    \
             -c "tls1_3 client state: 11"    \
             -c "tls1_3 client state: 14"    \
-            -c "tls1_3 client state: 15"    \
-            -c "<= ssl_tls1_3_process_server_hello" \
-            -c "server hello, chosen ciphersuite: ( 1301 ) - TLS1-3-AES-128-GCM-SHA256" \
-            -c "ECDH curve: x25519"         \
-            -c "=> ssl_tls1_3_process_server_hello"
+            -c "tls1_3 client state: 15"
 
 requires_gnutls_tls1_3
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
-requires_config_disabled MBEDTLS_USE_PSA_CRYPTO
 run_test    "TLS1.3: Test client hello msg work - gnutls" \
             "$G_NEXT_SRV --priority=NORMAL:-VERS-ALL:+VERS-TLS1.3 --debug=4" \
-            "$P_CLI debug_level=3 min_version=tls1_3 max_version=tls1_3" \
+            "$P_CLI debug_level=2 min_version=tls1_3 max_version=tls1_3" \
             1 \
             -c "SSL - The requested feature is not available" \
             -s "SERVER HELLO was queued"    \
@@ -8730,12 +8738,7 @@ run_test    "TLS1.3: Test client hello msg work - gnutls" \
             -c "tls1_3 client state: 20"    \
             -c "tls1_3 client state: 11"    \
             -c "tls1_3 client state: 14"    \
-            -c "tls1_3 client state: 15"    \
-            -c "<= ssl_tls1_3_process_server_hello" \
-            -c "server hello, chosen ciphersuite: ( 1301 ) - TLS1-3-AES-128-GCM-SHA256" \
-            -c "ECDH curve: x25519"         \
-            -c "=> ssl_tls1_3_process_server_hello"
-
+            -c "tls1_3 client state: 15"
 
 # Test heap memory usage after handshake
 requires_config_enabled MBEDTLS_MEMORY_DEBUG
