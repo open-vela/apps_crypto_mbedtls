@@ -270,9 +270,7 @@ int main( void )
     mbedtls_printf( "...\n  . Receiving and decrypting the ciphertext" );
     fflush( stdout );
 
-    ret = mbedtls_aes_setkey_dec( &aes, buf, 256 );
-    if( ret != 0 )
-        goto exit;
+    mbedtls_aes_setkey_dec( &aes, buf, 256 );
 
     memset( buf, 0, sizeof( buf ) );
 
@@ -282,9 +280,7 @@ int main( void )
         goto exit;
     }
 
-    ret = mbedtls_aes_crypt_ecb( &aes, MBEDTLS_AES_DECRYPT, buf, buf );
-    if( ret != 0 )
-        goto exit;
+    mbedtls_aes_crypt_ecb( &aes, MBEDTLS_AES_DECRYPT, buf, buf );
     buf[16] = '\0';
     mbedtls_printf( "\n  . Plaintext is \"%s\"\n\n", (char *) buf );
 
