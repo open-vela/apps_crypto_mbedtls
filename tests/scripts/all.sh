@@ -1596,6 +1596,19 @@ component_test_psa_crypto_config_no_driver() {
     make test
 }
 
+component_test_psa_crypto_config_chachapoly_disabled() {
+    # full minus MBEDTLS_CHACHAPOLY_C without PSA_WANT_ALG_GCM and PSA_WANT_ALG_CHACHA20_POLY1305
+    msg "build: full minus MBEDTLS_CHACHAPOLY_C without PSA_WANT_ALG_GCM and PSA_WANT_ALG_CHACHA20_POLY1305"
+    scripts/config.py full
+    scripts/config.py unset MBEDTLS_CHACHAPOLY_C
+    scripts/config.py -f include/psa/crypto_config.h unset PSA_WANT_ALG_GCM
+    scripts/config.py -f include/psa/crypto_config.h unset PSA_WANT_ALG_CHACHA20_POLY1305
+    make CC=gcc CFLAGS="$ASAN_CFLAGS -O2" LDFLAGS="$ASAN_CFLAGS"
+
+    msg "test: full minus MBEDTLS_CHACHAPOLY_C without PSA_WANT_ALG_GCM and PSA_WANT_ALG_CHACHA20_POLY1305"
+    make test
+}
+
 # This should be renamed to test and updated once the accelerator ECDSA code is in place and ready to test.
 component_build_psa_accel_alg_ecdsa() {
     # full plus MBEDTLS_PSA_CRYPTO_CONFIG with PSA_WANT_ALG_ECDSA
@@ -2070,6 +2083,18 @@ component_test_variable_ssl_in_out_buffer_len_CID () {
 
     msg "test: compat.sh, MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH and MBEDTLS_SSL_DTLS_CONNECTION_ID enabled"
     tests/compat.sh
+}
+
+component_test_CID_no_debug() {
+    msg "build: Connection ID enabled, debug disabled"
+    scripts/config.py unset MBEDTLS_DEBUG_C
+    scripts/config.py set MBEDTLS_SSL_DTLS_CONNECTION_ID
+
+    CC=gcc cmake .
+    make
+
+    msg "test: Connection ID enabled, debug disabled"
+    make test
 }
 
 component_test_ssl_alloc_buffer_and_mfl () {
