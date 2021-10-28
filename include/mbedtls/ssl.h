@@ -486,7 +486,6 @@
 #define MBEDTLS_SSL_HS_SERVER_HELLO             2
 #define MBEDTLS_SSL_HS_HELLO_VERIFY_REQUEST     3
 #define MBEDTLS_SSL_HS_NEW_SESSION_TICKET       4
-#define MBEDTLS_SSL_HS_ENCRYPTED_EXTENSIONS     8 // NEW IN TLS 1.3
 #define MBEDTLS_SSL_HS_CERTIFICATE             11
 #define MBEDTLS_SSL_HS_SERVER_KEY_EXCHANGE     12
 #define MBEDTLS_SSL_HS_CERTIFICATE_REQUEST     13
@@ -593,9 +592,6 @@ union mbedtls_ssl_premaster_secret
 };
 
 #define MBEDTLS_PREMASTER_SIZE     sizeof( union mbedtls_ssl_premaster_secret )
-
-/* Length in number of bytes of the TLS sequence number */
-#define MBEDTLS_SSL_SEQUENCE_NUMBER_LEN 8
 
 #ifdef __cplusplus
 extern "C" {
@@ -1570,7 +1566,7 @@ struct mbedtls_ssl_context
     size_t MBEDTLS_PRIVATE(out_buf_len);         /*!< length of output buffer          */
 #endif
 
-    unsigned char MBEDTLS_PRIVATE(cur_out_ctr)[MBEDTLS_SSL_SEQUENCE_NUMBER_LEN]; /*!<  Outgoing record sequence  number. */
+    unsigned char MBEDTLS_PRIVATE(cur_out_ctr)[8]; /*!<  Outgoing record sequence  number. */
 
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
     uint16_t MBEDTLS_PRIVATE(mtu);               /*!< path mtu, used to fragment outgoing messages */

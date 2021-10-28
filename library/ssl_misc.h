@@ -307,11 +307,6 @@
       + ( MBEDTLS_SSL_CID_OUT_LEN_MAX ) )
 #endif
 
-#define MBEDTLS_TLS1_3_MD_MAX_SIZE         MBEDTLS_MD_MAX_SIZE
-
-#define MBEDTLS_CLIENT_HELLO_RANDOM_LEN 32
-#define MBEDTLS_SERVER_HELLO_RANDOM_LEN 32
-
 #if defined(MBEDTLS_SSL_MAX_FRAGMENT_LENGTH)
 /**
  * \brief          Return the maximum fragment length (payload, in bytes) for
@@ -483,27 +478,6 @@ struct mbedtls_ssl_key_set
 };
 typedef struct mbedtls_ssl_key_set mbedtls_ssl_key_set;
 
-typedef struct
-{
-    unsigned char binder_key                  [ MBEDTLS_TLS1_3_MD_MAX_SIZE ];
-    unsigned char client_early_traffic_secret [ MBEDTLS_TLS1_3_MD_MAX_SIZE ];
-    unsigned char early_exporter_master_secret[ MBEDTLS_TLS1_3_MD_MAX_SIZE ];
-} mbedtls_ssl_tls1_3_early_secrets;
-
-typedef struct
-{
-    unsigned char client_handshake_traffic_secret[ MBEDTLS_TLS1_3_MD_MAX_SIZE ];
-    unsigned char server_handshake_traffic_secret[ MBEDTLS_TLS1_3_MD_MAX_SIZE ];
-} mbedtls_ssl_tls1_3_handshake_secrets;
-
-typedef struct
-{
-    unsigned char client_application_traffic_secret_N[ MBEDTLS_TLS1_3_MD_MAX_SIZE ];
-    unsigned char server_application_traffic_secret_N[ MBEDTLS_TLS1_3_MD_MAX_SIZE ];
-    unsigned char exporter_master_secret             [ MBEDTLS_TLS1_3_MD_MAX_SIZE ];
-    unsigned char resumption_master_secret           [ MBEDTLS_TLS1_3_MD_MAX_SIZE ];
-} mbedtls_ssl_tls1_3_application_secrets;
-
 /*
  * This structure contains the parameters only needed during handshake.
  */
@@ -599,8 +573,8 @@ struct mbedtls_ssl_handshake_params
                                               flight being received          */
     mbedtls_ssl_transform *alt_transform_out;   /*!<  Alternative transform for
                                               resending messages             */
-    unsigned char alt_out_ctr[MBEDTLS_SSL_SEQUENCE_NUMBER_LEN]; /*!<  Alternative record epoch/counter
-                                                                      for resending messages         */
+    unsigned char alt_out_ctr[8];       /*!<  Alternative record epoch/counter
+                                              for resending messages         */
 
 #if defined(MBEDTLS_SSL_DTLS_CONNECTION_ID)
     /* The state of CID configuration in this handshake. */
@@ -689,9 +663,7 @@ struct mbedtls_ssl_handshake_params
 
     size_t pmslen;                      /*!<  premaster length        */
 
-    unsigned char randbytes[MBEDTLS_CLIENT_HELLO_RANDOM_LEN +
-                            MBEDTLS_SERVER_HELLO_RANDOM_LEN];
-                                        /*!<  random bytes            */
+    unsigned char randbytes[64];        /*!<  random bytes            */
     unsigned char premaster[MBEDTLS_PREMASTER_SIZE];
                                         /*!<  premaster secret        */
 
@@ -703,15 +675,6 @@ struct mbedtls_ssl_handshake_params
     int extensions_present;             /*!< extension presence; Each bitfield
                                              represents an extension and defined
                                              as \c MBEDTLS_SSL_EXT_XXX */
-
-    union
-    {
-        unsigned char early    [MBEDTLS_TLS1_3_MD_MAX_SIZE];
-        unsigned char handshake[MBEDTLS_TLS1_3_MD_MAX_SIZE];
-        unsigned char app      [MBEDTLS_TLS1_3_MD_MAX_SIZE];
-    } tls1_3_master_secrets;
-
-    mbedtls_ssl_tls1_3_handshake_secrets tls13_hs_secrets;
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
 #if defined(MBEDTLS_SSL_SESSION_TICKETS)
@@ -856,9 +819,7 @@ struct mbedtls_ssl_transform
     /* We need the Hello random bytes in order to re-derive keys from the
      * Master Secret and other session info,
      * see ssl_tls12_populate_transform() */
-    unsigned char randbytes[MBEDTLS_SERVER_HELLO_RANDOM_LEN +
-                            MBEDTLS_CLIENT_HELLO_RANDOM_LEN];
-                            /*!< ServerHello.random+ClientHello.random */
+    unsigned char randbytes[64]; /*!< ServerHello.random+ClientHello.random */
 #endif /* MBEDTLS_SSL_CONTEXT_SERIALIZATION */
 };
 
@@ -905,14 +866,14 @@ static inline int mbedtls_ssl_transform_uses_aead(
 
 typedef struct
 {
-    uint8_t ctr[MBEDTLS_SSL_SEQUENCE_NUMBER_LEN];  /* In TLS:  The implicit record sequence number.
-                                                    * In DTLS: The 2-byte epoch followed by
-                                                    *          the 6-byte sequence number.
-                                                    * This is stored as a raw big endian byte array
-                                                    * as opposed to a uint64_t because we rarely
-                                                    * need to perform arithmetic on this, but do
-                                                    * need it as a Byte array for the purpose of
-                                                    * MAC computations.                             */
+    uint8_t ctr[8];         /* In TLS:  The implicit record sequence number.
+                             * In DTLS: The 2-byte epoch followed by
+                             *          the 6-byte sequence number.
+                             * This is stored as a raw big endian byte array
+                             * as opposed to a uint64_t because we rarely
+                             * need to perform arithmetic on this, but do
+                             * need it as a Byte array for the purpose of
+                             * MAC computations.                             */
     uint8_t type;           /* The record content type.                      */
     uint8_t ver[2];         /* SSL/TLS version as present on the wire.
                              * Convert to internal presentation of versions
@@ -994,14 +955,6 @@ void mbedtls_ssl_transform_free( mbedtls_ssl_transform *transform );
  * \param ssl       SSL context
  */
 void mbedtls_ssl_handshake_free( mbedtls_ssl_context *ssl );
-
-/* set inbound transform of ssl context */
-void mbedtls_ssl_set_inbound_transform( mbedtls_ssl_context *ssl,
-                                        mbedtls_ssl_transform *transform );
-
-/* set outbound transform of ssl context */
-void mbedtls_ssl_set_outbound_transform( mbedtls_ssl_context *ssl,
-                                         mbedtls_ssl_transform *transform );
 
 int mbedtls_ssl_handshake_client_step( mbedtls_ssl_context *ssl );
 int mbedtls_ssl_handshake_server_step( mbedtls_ssl_context *ssl );
@@ -1551,30 +1504,18 @@ int mbedtls_ssl_tls13_start_handshake_msg( mbedtls_ssl_context *ssl,
                                            unsigned hs_type,
                                            unsigned char **buf,
                                            size_t *buflen );
-
-/*
- * Handler of TLS 1.3 server certificate message
- */
-int mbedtls_ssl_tls13_process_certificate( mbedtls_ssl_context *ssl );
-
 /*
  * Write TLS 1.3 handshake message tail
  */
 int mbedtls_ssl_tls13_finish_handshake_msg( mbedtls_ssl_context *ssl,
                                             size_t buf_len,
                                             size_t msg_len );
-
+/*
+ * Update checksum with handshake header
+ */
 void mbedtls_ssl_tls13_add_hs_hdr_to_checksum( mbedtls_ssl_context *ssl,
                                                unsigned hs_type,
                                                size_t total_hs_len );
-
-/*
- * Update checksum of handshake messages.
- */
-void mbedtls_ssl_tls1_3_add_hs_msg_to_checksum( mbedtls_ssl_context *ssl,
-                                                unsigned hs_type,
-                                                unsigned char const *msg,
-                                                size_t msg_len );
 
 #if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
 /*
@@ -1588,12 +1529,5 @@ int mbedtls_ssl_tls13_write_sig_alg_ext( mbedtls_ssl_context *ssl,
 #endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
 
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
-
-/* Get handshake transcript */
-int mbedtls_ssl_get_handshake_transcript( mbedtls_ssl_context *ssl,
-                                          const mbedtls_md_type_t md,
-                                          unsigned char *dst,
-                                          size_t dst_len,
-                                          size_t *olen );
 
 #endif /* ssl_misc.h */
