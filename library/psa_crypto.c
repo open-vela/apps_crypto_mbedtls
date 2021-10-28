@@ -201,8 +201,6 @@ psa_status_t mbedtls_to_psa_error( int ret )
 
         case MBEDTLS_ERR_GCM_AUTH_FAILED:
             return( PSA_ERROR_INVALID_SIGNATURE );
-        case MBEDTLS_ERR_GCM_BUFFER_TOO_SMALL:
-            return( PSA_ERROR_BUFFER_TOO_SMALL );
         case MBEDTLS_ERR_GCM_BAD_INPUT:
             return( PSA_ERROR_INVALID_ARGUMENT );
 
@@ -3623,35 +3621,34 @@ static psa_status_t psa_aead_check_nonce_length( psa_algorithm_t alg,
 {
     psa_algorithm_t base_alg = psa_aead_get_base_algorithm( alg );
 
-    switch(base_alg)
-    {
 #if defined(PSA_WANT_ALG_GCM)
-        case PSA_ALG_GCM:
-            /* Not checking max nonce size here as GCM spec allows almost
-            * arbitrarily large nonces. Please note that we do not generally
-            * recommend the usage of nonces of greater length than
-            * PSA_AEAD_NONCE_MAX_SIZE, as large nonces are hashed to a shorter
-            * size, which can then lead to collisions if you encrypt a very
-            * large number of messages.*/
-            if( nonce_length != 0 )
-                return( PSA_SUCCESS );
-            break;
+    if( base_alg == PSA_ALG_GCM )
+    {
+        /* Not checking max nonce size here as GCM spec allows almost
+         * arbitrarily large nonces. Please note that we do not generally
+         * recommend the usage of nonces of greater length than
+         * PSA_AEAD_NONCE_MAX_SIZE, as large nonces are hashed to a shorter
+         * size, which can then lead to collisions if you encrypt a very
+         * large number of messages.*/
+        if( nonce_length != 0 )
+            return( PSA_SUCCESS );
+    }
 #endif /* PSA_WANT_ALG_GCM */
 #if defined(PSA_WANT_ALG_CCM)
-        case PSA_ALG_CCM:
-            if( nonce_length >= 7 && nonce_length <= 13 )
-                return( PSA_SUCCESS );
-            break;
+    if( base_alg == PSA_ALG_CCM )
+    {
+        if( nonce_length >= 7 && nonce_length <= 13 )
+            return( PSA_SUCCESS );
+    }
+    else
 #endif /* PSA_WANT_ALG_CCM */
 #if defined(PSA_WANT_ALG_CHACHA20_POLY1305)
-        case PSA_ALG_CHACHA20_POLY1305:
-            if( nonce_length == 12 )
-                return( PSA_SUCCESS );
-            break;
-#endif /* PSA_WANT_ALG_CHACHA20_POLY1305 */
-        default:
-            break;
+    if( base_alg == PSA_ALG_CHACHA20_POLY1305 )
+    {
+        if( nonce_length == 12 )
+            return( PSA_SUCCESS );
     }
+#endif /* PSA_WANT_ALG_CHACHA20_POLY1305 */
 
     return( PSA_ERROR_NOT_SUPPORTED );
 }
@@ -3871,6 +3868,15 @@ psa_status_t psa_aead_generate_nonce( psa_aead_operation_t *operation,
         goto exit;
     }
 
+    /* For CCM, this size may not be correct according to the PSA
+     * specification. The PSA Crypto 1.0.1 specification states:
+     *
+     * CCM encodes the plaintext length pLen in L octets, with L the smallest
+     * integer >= 2 where pLen < 2^(8L). The nonce length is then 15 - L bytes.
+     *
+     * However this restriction that L has to be the smallest integer is not
+     * applied in practice, and it is not implementable here since the
+     * plaintext length may or may not be known at this time. */
     required_nonce_size = PSA_AEAD_NONCE_LENGTH( operation->key_type,
                                                  operation->alg );
     if( nonce_size < required_nonce_size )
@@ -3953,40 +3959,40 @@ psa_status_t psa_aead_set_lengths( psa_aead_operation_t *operation,
         goto exit;
     }
 
-    switch(operation->alg)
-    {
 #if defined(PSA_WANT_ALG_GCM)
-        case PSA_ALG_GCM:
-            /* Lengths can only be too large for GCM if size_t is bigger than 32
-            * bits. Without the guard this code will generate warnings on 32bit
-            * builds. */
+    if( operation->alg == PSA_ALG_GCM )
+    {
+        /* Lengths can only be too large for GCM if size_t is bigger than 32
+         * bits. Without the guard this code will generate warnings on 32bit
+         * builds. */
 #if SIZE_MAX > UINT32_MAX
-            if( (( uint64_t ) ad_length ) >> 61 != 0 ||
-                (( uint64_t ) plaintext_length ) > 0xFFFFFFFE0ull )
-            {
-                status = PSA_ERROR_INVALID_ARGUMENT;
-                goto exit;
-            }
+        if( (( uint64_t ) ad_length ) >> 61 != 0 ||
+            (( uint64_t ) plaintext_length ) > 0xFFFFFFFE0ull )
+        {
+            status = PSA_ERROR_INVALID_ARGUMENT;
+            goto exit;
+        }
 #endif
-            break;
+    }
+    else
 #endif /* PSA_WANT_ALG_GCM */
 #if defined(PSA_WANT_ALG_CCM)
-        case PSA_ALG_CCM:
-            if( ad_length > 0xFF00 )
-            {
-                status = PSA_ERROR_INVALID_ARGUMENT;
-                goto exit;
-            }
-            break;
+    if( operation->alg == PSA_ALG_CCM )
+    {
+        if( ad_length > 0xFF00 )
+        {
+            status = PSA_ERROR_INVALID_ARGUMENT;
+            goto exit;
+        }
+    }
+    else
 #endif /* PSA_WANT_ALG_CCM */
 #if defined(PSA_WANT_ALG_CHACHA20_POLY1305)
-        case PSA_ALG_CHACHA20_POLY1305:
-            /* No length restrictions for ChaChaPoly. */
-            break;
-#endif /* PSA_WANT_ALG_CHACHA20_POLY1305 */
-        default:
-            break;
+    if( operation->alg == PSA_ALG_CHACHA20_POLY1305 )
+    {
+        /* No length restrictions for ChaChaPoly. */
     }
+#endif /* PSA_WANT_ALG_CHACHA20_POLY1305 */
 
     status = psa_driver_wrapper_aead_set_lengths( operation, ad_length,
                                                   plaintext_length );
@@ -4033,6 +4039,13 @@ psa_status_t psa_aead_update_ad( psa_aead_operation_t *operation,
 
         operation->ad_remaining -= input_length;
     }
+#if defined(PSA_WANT_ALG_CCM)
+    else if( operation->alg == PSA_ALG_CCM )
+    {
+        status = PSA_ERROR_BAD_STATE;
+        goto exit;
+    }
+#endif /* PSA_WANT_ALG_CCM */
 
     status = psa_driver_wrapper_aead_update_ad( operation, input,
                                                 input_length );
@@ -4090,6 +4103,13 @@ psa_status_t psa_aead_update( psa_aead_operation_t *operation,
 
         operation->body_remaining -= input_length;
     }
+#if defined(PSA_WANT_ALG_CCM)
+    else if( operation->alg == PSA_ALG_CCM )
+    {
+        status = PSA_ERROR_BAD_STATE;
+        goto exit;
+    }
+#endif /* PSA_WANT_ALG_CCM */
 
     status = psa_driver_wrapper_aead_update( operation, input, input_length,
                                              output, output_size,
@@ -5704,10 +5724,6 @@ psa_status_t psa_generate_key( const psa_key_attributes_t *attributes,
     /* Reject any attempt to create a zero-length key so that we don't
      * risk tripping up later, e.g. on a malloc(0) that returns NULL. */
     if( psa_get_key_bits( attributes ) == 0 )
-        return( PSA_ERROR_INVALID_ARGUMENT );
-
-    /* Reject any attempt to create a public key. */
-    if( PSA_KEY_TYPE_IS_PUBLIC_KEY(attributes->core.type) )
         return( PSA_ERROR_INVALID_ARGUMENT );
 
     status = psa_start_key_creation( PSA_KEY_CREATION_GENERATE, attributes,
