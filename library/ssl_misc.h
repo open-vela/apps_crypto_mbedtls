@@ -307,9 +307,10 @@
       + ( MBEDTLS_SSL_CID_OUT_LEN_MAX ) )
 #endif
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
 #define MBEDTLS_TLS1_3_MD_MAX_SIZE         MBEDTLS_MD_MAX_SIZE
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+
+#define MBEDTLS_CLIENT_HELLO_RANDOM_LEN 32
+#define MBEDTLS_SERVER_HELLO_RANDOM_LEN 32
 
 #if defined(MBEDTLS_SSL_MAX_FRAGMENT_LENGTH)
 /**
@@ -413,6 +414,32 @@ static inline int mbedtls_ssl_chk_buf_ptr( const uint8_t *cur,
         }                                                                \
     } while( 0 )
 
+/**
+ * \brief        This macro checks if the remaining length in an input buffer is
+ *               greater or equal than a needed length. If it is not the case, it
+ *               returns #MBEDTLS_ERR_SSL_DECODE_ERROR error and pends a
+ *               #MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR alert message.
+ *
+ *               This is a function-like macro. It is guaranteed to evaluate each
+ *               argument exactly once.
+ *
+ * \param cur    Pointer to the current position in the buffer.
+ * \param end    Pointer to one past the end of the buffer.
+ * \param need   Needed length in bytes.
+ *
+ */
+#define MBEDTLS_SSL_CHK_BUF_READ_PTR( cur, end, need )                          \
+    do {                                                                        \
+        if( mbedtls_ssl_chk_buf_ptr( ( cur ), ( end ), ( need ) ) != 0 )        \
+        {                                                                       \
+            MBEDTLS_SSL_DEBUG_MSG( 1,                                           \
+                                   ( "missing input data in %s", __func__ ) );  \
+            MBEDTLS_SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR,   \
+                                          MBEDTLS_ERR_SSL_DECODE_ERROR );       \
+            return( MBEDTLS_ERR_SSL_DECODE_ERROR );                             \
+        }                                                                       \
+    } while( 0 )
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -482,6 +509,27 @@ struct mbedtls_ssl_key_set
 };
 typedef struct mbedtls_ssl_key_set mbedtls_ssl_key_set;
 
+typedef struct
+{
+    unsigned char binder_key                  [ MBEDTLS_TLS1_3_MD_MAX_SIZE ];
+    unsigned char client_early_traffic_secret [ MBEDTLS_TLS1_3_MD_MAX_SIZE ];
+    unsigned char early_exporter_master_secret[ MBEDTLS_TLS1_3_MD_MAX_SIZE ];
+} mbedtls_ssl_tls1_3_early_secrets;
+
+typedef struct
+{
+    unsigned char client_handshake_traffic_secret[ MBEDTLS_TLS1_3_MD_MAX_SIZE ];
+    unsigned char server_handshake_traffic_secret[ MBEDTLS_TLS1_3_MD_MAX_SIZE ];
+} mbedtls_ssl_tls1_3_handshake_secrets;
+
+typedef struct
+{
+    unsigned char client_application_traffic_secret_N[ MBEDTLS_TLS1_3_MD_MAX_SIZE ];
+    unsigned char server_application_traffic_secret_N[ MBEDTLS_TLS1_3_MD_MAX_SIZE ];
+    unsigned char exporter_master_secret             [ MBEDTLS_TLS1_3_MD_MAX_SIZE ];
+    unsigned char resumption_master_secret           [ MBEDTLS_TLS1_3_MD_MAX_SIZE ];
+} mbedtls_ssl_tls1_3_application_secrets;
+
 /*
  * This structure contains the parameters only needed during handshake.
  */
@@ -490,6 +538,9 @@ struct mbedtls_ssl_handshake_params
     /*
      * Handshake specific crypto variables
      */
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+    int tls1_3_kex_modes; /*!< key exchange modes for TLS 1.3 */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_2) && \
     defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
@@ -667,7 +718,9 @@ struct mbedtls_ssl_handshake_params
 
     size_t pmslen;                      /*!<  premaster length        */
 
-    unsigned char randbytes[64];        /*!<  random bytes            */
+    unsigned char randbytes[MBEDTLS_CLIENT_HELLO_RANDOM_LEN +
+                            MBEDTLS_SERVER_HELLO_RANDOM_LEN];
+                                        /*!<  random bytes            */
     unsigned char premaster[MBEDTLS_PREMASTER_SIZE];
                                         /*!<  premaster secret        */
 
@@ -686,6 +739,8 @@ struct mbedtls_ssl_handshake_params
         unsigned char handshake[MBEDTLS_TLS1_3_MD_MAX_SIZE];
         unsigned char app      [MBEDTLS_TLS1_3_MD_MAX_SIZE];
     } tls1_3_master_secrets;
+
+    mbedtls_ssl_tls1_3_handshake_secrets tls13_hs_secrets;
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
 #if defined(MBEDTLS_SSL_SESSION_TICKETS)
@@ -830,7 +885,9 @@ struct mbedtls_ssl_transform
     /* We need the Hello random bytes in order to re-derive keys from the
      * Master Secret and other session info,
      * see ssl_tls12_populate_transform() */
-    unsigned char randbytes[64]; /*!< ServerHello.random+ClientHello.random */
+    unsigned char randbytes[MBEDTLS_SERVER_HELLO_RANDOM_LEN +
+                            MBEDTLS_CLIENT_HELLO_RANDOM_LEN];
+                            /*!< ServerHello.random+ClientHello.random */
 #endif /* MBEDTLS_SSL_CONTEXT_SERIALIZATION */
 };
 
@@ -1434,6 +1491,53 @@ static inline int mbedtls_ssl_conf_tls13_some_psk_enabled( mbedtls_ssl_context *
                    MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_ALL ) );
 }
 
+/**
+ * Given a list of key exchange modes, check if at least one of them is
+ * supported.
+ *
+ * \param[in] ssl  SSL context
+ * \param kex_modes_mask  Mask of the key exchange modes to check
+ *
+ * \return 0 if at least one of the key exchange modes is supported,
+ *         !=0 otherwise.
+ */
+static inline unsigned mbedtls_ssl_tls1_3_check_kex_modes( mbedtls_ssl_context *ssl,
+                                                           int kex_modes_mask )
+{
+    return( ( ssl->handshake->tls1_3_kex_modes & kex_modes_mask ) == 0 );
+}
+
+static inline int mbedtls_ssl_tls1_3_psk_enabled( mbedtls_ssl_context *ssl )
+{
+    return( ! mbedtls_ssl_tls1_3_check_kex_modes( ssl,
+                   MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK ) );
+}
+
+static inline int mbedtls_ssl_tls1_3_psk_ephemeral_enabled(
+                                                    mbedtls_ssl_context *ssl )
+{
+    return( ! mbedtls_ssl_tls1_3_check_kex_modes( ssl,
+                   MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_EPHEMERAL ) );
+}
+
+static inline int mbedtls_ssl_tls1_3_ephemeral_enabled( mbedtls_ssl_context *ssl )
+{
+    return( ! mbedtls_ssl_tls1_3_check_kex_modes( ssl,
+                   MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_EPHEMERAL ) );
+}
+
+static inline int mbedtls_ssl_tls1_3_some_ephemeral_enabled( mbedtls_ssl_context *ssl )
+{
+    return( ! mbedtls_ssl_tls1_3_check_kex_modes( ssl,
+                   MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_EPHEMERAL_ALL ) );
+}
+
+static inline int mbedtls_ssl_tls1_3_some_psk_enabled( mbedtls_ssl_context *ssl )
+{
+    return( ! mbedtls_ssl_tls1_3_check_kex_modes( ssl,
+                   MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_ALL ) );
+}
+
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
 /**
@@ -1523,6 +1627,12 @@ int mbedtls_ssl_tls13_start_handshake_msg( mbedtls_ssl_context *ssl,
                                            unsigned hs_type,
                                            unsigned char **buf,
                                            size_t *buflen );
+
+/*
+ * Handler of TLS 1.3 server certificate message
+ */
+int mbedtls_ssl_tls13_process_certificate( mbedtls_ssl_context *ssl );
+
 /*
  * Write TLS 1.3 handshake message tail
  */
