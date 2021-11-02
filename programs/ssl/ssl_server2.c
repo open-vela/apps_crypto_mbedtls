@@ -65,10 +65,6 @@ int main( void )
 #include <windows.h>
 #endif
 
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
-#include "test/psa_crypto_helpers.h"
-#endif
-
 /* Size of memory to be allocated for the heap, when using the library's memory
  * management and MBEDTLS_MEMORY_BUFFER_ALLOC_C is enabled. */
 #define MEMORY_HEAP_SIZE        120000
@@ -84,7 +80,6 @@ int main( void )
 #define DFL_CA_PATH             ""
 #define DFL_CRT_FILE            ""
 #define DFL_KEY_FILE            ""
-#define DFL_KEY_OPAQUE          0
 #define DFL_KEY_PWD             ""
 #define DFL_CRT_FILE2           ""
 #define DFL_KEY_FILE2           ""
@@ -205,13 +200,6 @@ int main( void )
 #else
 #define USAGE_IO ""
 #endif /* MBEDTLS_X509_CRT_PARSE_C */
-#if defined(MBEDTLS_USE_PSA_CRYPTO) && defined(MBEDTLS_X509_CRT_PARSE_C)
-#define USAGE_KEY_OPAQUE \
-    "    key_opaque=%%d       Handle your private keys as if they were opaque\n" \
-    "                        default: 0 (disabled)\n"
-#else
-#define USAGE_KEY_OPAQUE ""
-#endif
 
 #if defined(MBEDTLS_SSL_ASYNC_PRIVATE)
 #define USAGE_SSL_ASYNC \
@@ -488,7 +476,6 @@ int main( void )
     "    cert_req_ca_list=%%d default: 1 (send ca list)\n"  \
     "                        options: 1 (send ca list), 0 (don't send)\n" \
     USAGE_IO                                                \
-    USAGE_KEY_OPAQUE                                        \
     "\n"                                                    \
     USAGE_PSK                                               \
     USAGE_CA_CALLBACK                                       \
@@ -573,7 +560,6 @@ struct options
     const char *ca_path;        /* the path with the CA certificate(s) reside */
     const char *crt_file;       /* the file with the server certificate     */
     const char *key_file;       /* the file with the server key             */
-    int key_opaque;             /* handle private key as if it were opaque  */
     const char *key_pwd;        /* the password for the server key          */
     const char *crt_file2;      /* the file with the 2nd server certificate */
     const char *key_file2;      /* the file with the 2nd server key         */
@@ -1322,10 +1308,6 @@ int main( int argc, char *argv[] )
     mbedtls_pk_context pkey;
     mbedtls_x509_crt srvcert2;
     mbedtls_pk_context pkey2;
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
-    psa_key_id_t key_slot = 0; /* invalid key slot */
-    psa_key_id_t key_slot2 = 0; /* invalid key slot */
-#endif
     int key_cert_init = 0, key_cert_init2 = 0;
 #if defined(MBEDTLS_SSL_ASYNC_PRIVATE)
     ssl_async_key_context_t ssl_async_keys;
@@ -1500,7 +1482,6 @@ int main( int argc, char *argv[] )
     opt.ca_path             = DFL_CA_PATH;
     opt.crt_file            = DFL_CRT_FILE;
     opt.key_file            = DFL_KEY_FILE;
-    opt.key_opaque          = DFL_KEY_OPAQUE;
     opt.key_pwd             = DFL_KEY_PWD;
     opt.crt_file2           = DFL_CRT_FILE2;
     opt.key_file2           = DFL_KEY_FILE2;
@@ -1632,10 +1613,6 @@ int main( int argc, char *argv[] )
             opt.key_file = q;
         else if( strcmp( p, "key_pwd" ) == 0 )
             opt.key_pwd = q;
-#if defined(MBEDTLS_USE_PSA_CRYPTO) && defined(MBEDTLS_X509_CRT_PARSE_C)
-        else if( strcmp( p, "key_opaque" ) == 0 )
-            opt.key_opaque = atoi( q );
-#endif
         else if( strcmp( p, "crt_file2" ) == 0 )
             opt.crt_file2 = q;
         else if( strcmp( p, "key_file2" ) == 0 )
@@ -2491,34 +2468,7 @@ int main( int argc, char *argv[] )
 #endif /* MBEDTLS_ECDSA_C */
     }
 
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
-    if( opt.key_opaque != 0 )
-    {
-        if ( mbedtls_pk_get_type( &pkey ) == MBEDTLS_PK_ECKEY )
-        {
-            if( ( ret = mbedtls_pk_wrap_as_opaque( &pkey, &key_slot,
-                                                PSA_ALG_ANY_HASH ) ) != 0 )
-            {
-                mbedtls_printf( " failed\n  !  "
-                                "mbedtls_pk_wrap_as_opaque returned -0x%x\n\n", (unsigned int)  -ret );
-                goto exit;
-            }
-        }
-
-        if ( mbedtls_pk_get_type( &pkey2 ) == MBEDTLS_PK_ECKEY )
-        {
-            if( ( ret = mbedtls_pk_wrap_as_opaque( &pkey2, &key_slot2,
-                                                PSA_ALG_ANY_HASH ) ) != 0 )
-            {
-                mbedtls_printf( " failed\n  !  "
-                                "mbedtls_pk_wrap_as_opaque returned -0x%x\n\n", (unsigned int)  -ret );
-                goto exit;
-            }
-        }
-    }
-#endif /* MBEDTLS_USE_PSA_CRYPTO */
-
-    mbedtls_printf( " ok (key types: %s - %s)\n", mbedtls_pk_get_name( &pkey ), mbedtls_pk_get_name( &pkey2 ) );
+    mbedtls_printf( " ok\n" );
 #endif /* MBEDTLS_X509_CRT_PARSE_C */
 
 #if defined(MBEDTLS_DHM_C) && defined(MBEDTLS_FS_IO)
@@ -3960,10 +3910,6 @@ exit:
     mbedtls_pk_free( &pkey );
     mbedtls_x509_crt_free( &srvcert2 );
     mbedtls_pk_free( &pkey2 );
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
-    psa_destroy_key( key_slot );
-    psa_destroy_key( key_slot2 );
-#endif
 #endif
 #if defined(MBEDTLS_SSL_ASYNC_PRIVATE)
     for( i = 0; (size_t) i < ssl_async_keys.slots_used; i++ )
@@ -4007,6 +3953,10 @@ exit:
 #endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED &&
           MBEDTLS_USE_PSA_CRYPTO */
 
+    mbedtls_ssl_free( &ssl );
+    mbedtls_ssl_config_free( &conf );
+    rng_free( &rng );
+
 #if defined(MBEDTLS_SSL_CACHE_C)
     mbedtls_ssl_cache_free( &cache );
 #endif
@@ -4017,33 +3967,16 @@ exit:
     mbedtls_ssl_cookie_free( &cookie_ctx );
 #endif
 
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
-    const char* message = mbedtls_test_helper_is_psa_leaking();
-    if( message )
-    {
-        if( ret == 0 )
-            ret = 1;
-        mbedtls_printf( "PSA memory leak detected: %s\n",  message);
-    }
-#endif
-
-    /* For builds with MBEDTLS_TEST_USE_PSA_CRYPTO_RNG psa crypto
-     * resources are freed by rng_free(). */
-#if defined(MBEDTLS_USE_PSA_CRYPTO) && \
-    !defined(MBEDTLS_TEST_USE_PSA_CRYPTO_RNG)
-    mbedtls_psa_crypto_free( );
-#endif
-
-    mbedtls_ssl_free( &ssl );
-    mbedtls_ssl_config_free( &conf );
-    rng_free( &rng );
-
     mbedtls_free( buf );
 
 #if defined(MBEDTLS_SSL_CONTEXT_SERIALIZATION)
     if( context_buf != NULL )
         mbedtls_platform_zeroize( context_buf, context_buf_len );
     mbedtls_free( context_buf );
+#endif
+
+#if defined(MBEDTLS_USE_PSA_CRYPTO)
+    mbedtls_psa_crypto_free( );
 #endif
 
 #if defined(MBEDTLS_TEST_HOOKS)

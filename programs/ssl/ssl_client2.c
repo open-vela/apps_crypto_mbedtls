@@ -21,10 +21,6 @@
 
 #include "ssl_test_lib.h"
 
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
-#include "test/psa_crypto_helpers.h"
-#endif
-
 #if defined(MBEDTLS_SSL_TEST_IMPOSSIBLE)
 int main( void )
 {
@@ -1687,7 +1683,7 @@ int main( int argc, char *argv[] )
     if( opt.key_opaque != 0 )
     {
         if( ( ret = mbedtls_pk_wrap_as_opaque( &pkey, &key_slot,
-                                               PSA_ALG_ANY_HASH ) ) != 0 )
+                                               PSA_ALG_SHA_256 ) ) != 0 )
         {
             mbedtls_printf( " failed\n  !  "
                             "mbedtls_pk_wrap_as_opaque returned -0x%x\n\n", (unsigned int)  -ret );
@@ -3049,23 +3045,6 @@ exit:
 #endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED &&
           MBEDTLS_USE_PSA_CRYPTO */
 
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
-    const char* message = mbedtls_test_helper_is_psa_leaking();
-    if( message )
-    {
-        if( ret == 0 )
-            ret = 1;
-        mbedtls_printf( "PSA memory leak detected: %s\n",  message);
-    }
-#endif /* MBEDTLS_USE_PSA_CRYPTO */
-
-    /* For builds with MBEDTLS_TEST_USE_PSA_CRYPTO_RNG psa crypto
-     * resources are freed by rng_free(). */
-#if defined(MBEDTLS_USE_PSA_CRYPTO) && \
-    !defined(MBEDTLS_TEST_USE_PSA_CRYPTO_RNG)
-    mbedtls_psa_crypto_free( );
-#endif
-
     mbedtls_ssl_session_free( &saved_session );
     mbedtls_ssl_free( &ssl );
     mbedtls_ssl_config_free( &conf );
@@ -3077,6 +3056,10 @@ exit:
     if( context_buf != NULL )
         mbedtls_platform_zeroize( context_buf, context_buf_len );
     mbedtls_free( context_buf );
+#endif
+
+#if defined(MBEDTLS_USE_PSA_CRYPTO)
+    mbedtls_psa_crypto_free( );
 #endif
 
 #if defined(MBEDTLS_TEST_HOOKS)
