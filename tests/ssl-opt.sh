@@ -552,32 +552,6 @@ record_outcome() {
     fi
 }
 
-# True if the presence of the given pattern in a log definitely indicates
-# that the test has failed. False if the presence is inconclusive.
-#
-# Inputs:
-# * $1: pattern found in the logs
-# * $TIMES_LEFT: >0 if retrying is an option
-#
-# Outputs:
-# * $outcome: set to a retry reason if the pattern is inconclusive,
-#             unchanged otherwise.
-# * Return value: 1 if the pattern is inconclusive,
-#                 0 if the failure is definitive.
-log_pattern_presence_is_conclusive() {
-    # If we've run out of attempts, then don't retry no matter what.
-    if [ $TIMES_LEFT -eq 0 ]; then
-        return 0
-    fi
-    case $1 in
-        "resend")
-            # An undesired resend may have been caused by the OS dropping or
-            # delaying a packet at an inopportune time.
-            outcome="RETRY(resend)"
-            return 1;;
-    esac
-}
-
 # fail <message>
 fail() {
     record_outcome "FAIL" "$1"
@@ -652,8 +626,6 @@ has_mem_err() {
 # Wait for process $2 named $3 to be listening on port $1. Print error to $4.
 if type lsof >/dev/null 2>/dev/null; then
     wait_app_start() {
-        newline='
-'
         START_TIME=$(date +%s)
         if [ "$DTLS" -eq 1 ]; then
             proto=UDP
@@ -661,15 +633,7 @@ if type lsof >/dev/null 2>/dev/null; then
             proto=TCP
         fi
         # Make a tight loop, server normally takes less than 1s to start.
-        while true; do
-              SERVER_PIDS=$(lsof -a -n -b -i "$proto:$1" -F p)
-              # When we use a proxy, it will be listening on the same port we
-              # are checking for as well as the server and lsof will list both.
-              # If multiple PIDs are returned, each one will be on a separate
-              # line, each prepended with 'p'.
-             case ${newline}${SERVER_PIDS}${newline} in
-                  *${newline}p${2}${newline}*) break;;
-              esac
+        while ! lsof -a -n -b -i "$proto:$1" -p "$2" >/dev/null 2>/dev/null; do
               if [ $(( $(date +%s) - $START_TIME )) -gt $DOG_DELAY ]; then
                   echo "$3 START TIMEOUT"
                   echo "$3 START TIMEOUT" >> $4
@@ -831,12 +795,68 @@ skip_handshake_stage_check() {
     SKIP_HANDSHAKE_CHECK="YES"
 }
 
-# Analyze the commands that will be used in a test.
-#
-# Analyze and possibly instrument $PXY_CMD, $CLI_CMD, $SRV_CMD to pass
-# extra arguments or go through wrappers.
-# Set $DTLS (0=TLS, 1=DTLS).
-analyze_test_commands() {
+# Usage: run_test name [-p proxy_cmd] srv_cmd cli_cmd cli_exit [option [...]]
+# Options:  -s pattern  pattern that must be present in server output
+#           -c pattern  pattern that must be present in client output
+#           -u pattern  lines after pattern must be unique in client output
+#           -f call shell function on client output
+#           -S pattern  pattern that must be absent in server output
+#           -C pattern  pattern that must be absent in client output
+#           -U pattern  lines after pattern must be unique in server output
+#           -F call shell function on server output
+#           -g call shell function on server and client output
+run_test() {
+    NAME="$1"
+    shift 1
+
+    if is_excluded "$NAME"; then
+        SKIP_NEXT="NO"
+        # There was no request to run the test, so don't record its outcome.
+        return
+    fi
+
+    print_name "$NAME"
+
+    # Do we only run numbered tests?
+    if [ -n "$RUN_TEST_NUMBER" ]; then
+        case ",$RUN_TEST_NUMBER," in
+            *",$TESTS,"*) :;;
+            *) SKIP_NEXT="YES";;
+        esac
+    fi
+
+    # does this test use a proxy?
+    if [ "X$1" = "X-p" ]; then
+        PXY_CMD="$2"
+        shift 2
+    else
+        PXY_CMD=""
+    fi
+
+    # get commands and client output
+    SRV_CMD="$1"
+    CLI_CMD="$2"
+    CLI_EXPECT="$3"
+    shift 3
+
+    # Check if test uses files
+    case "$SRV_CMD $CLI_CMD" in
+        *data_files/*)
+            requires_config_enabled MBEDTLS_FS_IO;;
+    esac
+
+    # If the client or serve requires a ciphersuite, check that it's enabled.
+    maybe_requires_ciphersuite_enabled "$SRV_CMD" "$@"
+    maybe_requires_ciphersuite_enabled "$CLI_CMD" "$@"
+
+    # should we skip?
+    if [ "X$SKIP_NEXT" = "XYES" ]; then
+        SKIP_NEXT="NO"
+        record_outcome "SKIP"
+        SKIPS=$(( $SKIPS + 1 ))
+        return
+    fi
+
     # update DTLS variable
     detect_dtls "$SRV_CMD"
 
@@ -890,29 +910,48 @@ analyze_test_commands() {
             CLI_CMD="valgrind --leak-check=full $CLI_CMD"
         fi
     fi
-}
 
-# Check for failure conditions after a test case.
-#
-# Inputs from run_test:
-# * positional parameters: test options (see run_test documentation)
-# * $CLI_EXIT: client return code
-# * $CLI_EXPECT: expected client return code
-# * $SRV_RET: server return code
-# * $CLI_OUT, $SRV_OUT, $PXY_OUT: files containing client/server/proxy logs
-# * $TIMES_LEFT: if nonzero, a RETRY outcome is allowed
-#
-# Outputs:
-# * $outcome: one of PASS/RETRY*/FAIL
-check_test_failure() {
-    outcome=FAIL
+    TIMES_LEFT=2
+    while [ $TIMES_LEFT -gt 0 ]; do
+        TIMES_LEFT=$(( $TIMES_LEFT - 1 ))
 
-    if [ $TIMES_LEFT -gt 0 ] &&
-       grep '===CLIENT_TIMEOUT===' $CLI_OUT >/dev/null
-    then
-        outcome="RETRY(client-timeout)"
-        return
-    fi
+        # run the commands
+        if [ -n "$PXY_CMD" ]; then
+            printf "# %s\n%s\n" "$NAME" "$PXY_CMD" > $PXY_OUT
+            $PXY_CMD >> $PXY_OUT 2>&1 &
+            PXY_PID=$!
+            wait_proxy_start "$PXY_PORT" "$PXY_PID"
+        fi
+
+        check_osrv_dtls
+        printf '# %s\n%s\n' "$NAME" "$SRV_CMD" > $SRV_OUT
+        provide_input | $SRV_CMD >> $SRV_OUT 2>&1 &
+        SRV_PID=$!
+        wait_server_start "$SRV_PORT" "$SRV_PID"
+
+        printf '# %s\n%s\n' "$NAME" "$CLI_CMD" > $CLI_OUT
+        eval "$CLI_CMD" >> $CLI_OUT 2>&1 &
+        wait_client_done
+
+        sleep 0.05
+
+        # terminate the server (and the proxy)
+        kill $SRV_PID
+        wait $SRV_PID
+        SRV_RET=$?
+
+        if [ -n "$PXY_CMD" ]; then
+            kill $PXY_PID >/dev/null 2>&1
+            wait $PXY_PID
+        fi
+
+        # retry only on timeouts
+        if grep '===CLIENT_TIMEOUT===' $CLI_OUT >/dev/null; then
+            printf "RETRY "
+        else
+            TIMES_LEFT=0
+        fi
+    done
 
     # check if the client and server went at least to the handshake stage
     # (useful to avoid tests with only negative assertions and non-zero
@@ -975,18 +1014,14 @@ check_test_failure() {
 
             "-S")
                 if grep -v '^==' $SRV_OUT | grep -v 'Serious error when reading debug info' | grep "$2" >/dev/null; then
-                    if log_pattern_presence_is_conclusive "$2"; then
-                        fail "pattern '$2' MUST NOT be present in the Server output"
-                    fi
+                    fail "pattern '$2' MUST NOT be present in the Server output"
                     return
                 fi
                 ;;
 
             "-C")
                 if grep -v '^==' $CLI_OUT | grep -v 'Serious error when reading debug info' | grep "$2" >/dev/null; then
-                    if log_pattern_presence_is_conclusive "$2"; then
-                        fail "pattern '$2' MUST NOT be present in the Client output"
-                    fi
+                    fail "pattern '$2' MUST NOT be present in the Client output"
                     return
                 fi
                 ;;
@@ -1050,131 +1085,6 @@ check_test_failure() {
     fi
 
     # if we're here, everything is ok
-    outcome=PASS
-}
-
-# Run the current test case: start the server and if applicable the proxy, run
-# the client, wait for all processes to finish or time out.
-#
-# Inputs:
-# * $NAME: test case name
-# * $CLI_CMD, $SRV_CMD, $PXY_CMD: commands to run
-# * $CLI_OUT, $SRV_OUT, $PXY_OUT: files to contain client/server/proxy logs
-#
-# Outputs:
-# * $CLI_EXIT: client return code
-# * $SRV_RET: server return code
-do_run_test_once() {
-    # run the commands
-    if [ -n "$PXY_CMD" ]; then
-        printf "# %s\n%s\n" "$NAME" "$PXY_CMD" > $PXY_OUT
-        $PXY_CMD >> $PXY_OUT 2>&1 &
-        PXY_PID=$!
-        wait_proxy_start "$PXY_PORT" "$PXY_PID"
-    fi
-
-    check_osrv_dtls
-    printf '# %s\n%s\n' "$NAME" "$SRV_CMD" > $SRV_OUT
-    provide_input | $SRV_CMD >> $SRV_OUT 2>&1 &
-    SRV_PID=$!
-    wait_server_start "$SRV_PORT" "$SRV_PID"
-
-    printf '# %s\n%s\n' "$NAME" "$CLI_CMD" > $CLI_OUT
-    eval "$CLI_CMD" >> $CLI_OUT 2>&1 &
-    wait_client_done
-
-    sleep 0.05
-
-    # terminate the server (and the proxy)
-    kill $SRV_PID
-    wait $SRV_PID
-    SRV_RET=$?
-
-    if [ -n "$PXY_CMD" ]; then
-        kill $PXY_PID >/dev/null 2>&1
-        wait $PXY_PID
-    fi
-}
-
-# Usage: run_test name [-p proxy_cmd] srv_cmd cli_cmd cli_exit [option [...]]
-# Options:  -s pattern  pattern that must be present in server output
-#           -c pattern  pattern that must be present in client output
-#           -u pattern  lines after pattern must be unique in client output
-#           -f call shell function on client output
-#           -S pattern  pattern that must be absent in server output
-#           -C pattern  pattern that must be absent in client output
-#           -U pattern  lines after pattern must be unique in server output
-#           -F call shell function on server output
-#           -g call shell function on server and client output
-run_test() {
-    NAME="$1"
-    shift 1
-
-    if is_excluded "$NAME"; then
-        SKIP_NEXT="NO"
-        # There was no request to run the test, so don't record its outcome.
-        return
-    fi
-
-    print_name "$NAME"
-
-    # Do we only run numbered tests?
-    if [ -n "$RUN_TEST_NUMBER" ]; then
-        case ",$RUN_TEST_NUMBER," in
-            *",$TESTS,"*) :;;
-            *) SKIP_NEXT="YES";;
-        esac
-    fi
-
-    # does this test use a proxy?
-    if [ "X$1" = "X-p" ]; then
-        PXY_CMD="$2"
-        shift 2
-    else
-        PXY_CMD=""
-    fi
-
-    # get commands and client output
-    SRV_CMD="$1"
-    CLI_CMD="$2"
-    CLI_EXPECT="$3"
-    shift 3
-
-    # Check if test uses files
-    case "$SRV_CMD $CLI_CMD" in
-        *data_files/*)
-            requires_config_enabled MBEDTLS_FS_IO;;
-    esac
-
-    # If the client or serve requires a ciphersuite, check that it's enabled.
-    maybe_requires_ciphersuite_enabled "$SRV_CMD" "$@"
-    maybe_requires_ciphersuite_enabled "$CLI_CMD" "$@"
-
-    # should we skip?
-    if [ "X$SKIP_NEXT" = "XYES" ]; then
-        SKIP_NEXT="NO"
-        record_outcome "SKIP"
-        SKIPS=$(( $SKIPS + 1 ))
-        return
-    fi
-
-    analyze_test_commands "$@"
-
-    TIMES_LEFT=2
-    while [ $TIMES_LEFT -gt 0 ]; do
-        TIMES_LEFT=$(( $TIMES_LEFT - 1 ))
-
-        do_run_test_once
-
-        check_test_failure "$@"
-        case $outcome in
-            PASS) break;;
-            RETRY*) printf "$outcome ";;
-            FAIL) return;;
-        esac
-    done
-
-    # If we get this far, the test case passed.
     record_outcome "PASS"
     if [ "$PRESERVE_LOGS" -gt 0 ]; then
         mv $SRV_OUT o-srv-${TESTS}.log
@@ -1527,53 +1437,12 @@ requires_config_enabled MBEDTLS_X509_CRT_PARSE_C
 requires_config_enabled MBEDTLS_ECDSA_C
 requires_config_enabled MBEDTLS_SHA256_C
 run_test    "Opaque key for client authentication" \
-            "$P_SRV auth_mode=required crt_file=data_files/server5.crt \
-             key_file=data_files/server5.key" \
+            "$P_SRV auth_mode=required" \
             "$P_CLI key_opaque=1 crt_file=data_files/server5.crt \
              key_file=data_files/server5.key" \
             0 \
             -c "key type: Opaque" \
-            -c "Ciphersuite is TLS-ECDHE-ECDSA" \
             -s "Verifying peer X.509 certificate... ok" \
-            -s "Ciphersuite is TLS-ECDHE-ECDSA" \
-            -S "error" \
-            -C "error"
-
-# Test using an opaque private key for server authentication
-requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
-requires_config_enabled MBEDTLS_X509_CRT_PARSE_C
-requires_config_enabled MBEDTLS_ECDSA_C
-requires_config_enabled MBEDTLS_SHA256_C
-run_test    "Opaque key for server authentication" \
-            "$P_SRV auth_mode=required key_opaque=1 crt_file=data_files/server5.crt \
-             key_file=data_files/server5.key" \
-            "$P_CLI crt_file=data_files/server5.crt \
-             key_file=data_files/server5.key" \
-            0 \
-            -c "Verifying peer X.509 certificate... ok" \
-            -c "Ciphersuite is TLS-ECDHE-ECDSA" \
-            -s "key types: Opaque - invalid PK" \
-            -s "Ciphersuite is TLS-ECDHE-ECDSA" \
-            -S "error" \
-            -C "error"
-
-# Test using an opaque private key for client/server authentication
-requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
-requires_config_enabled MBEDTLS_X509_CRT_PARSE_C
-requires_config_enabled MBEDTLS_ECDSA_C
-requires_config_enabled MBEDTLS_SHA256_C
-run_test    "Opaque key for client/server authentication" \
-            "$P_SRV auth_mode=required key_opaque=1 crt_file=data_files/server5.crt \
-             key_file=data_files/server5.key" \
-            "$P_CLI key_opaque=1 crt_file=data_files/server5.crt \
-             key_file=data_files/server5.key" \
-            0 \
-            -c "key type: Opaque" \
-            -c "Verifying peer X.509 certificate... ok" \
-            -c "Ciphersuite is TLS-ECDHE-ECDSA" \
-            -s "key types: Opaque - invalid PK" \
-            -s "Verifying peer X.509 certificate... ok" \
-            -s "Ciphersuite is TLS-ECDHE-ECDSA" \
             -S "error" \
             -C "error"
 
@@ -8752,6 +8621,7 @@ run_test    "DTLS proxy: 3d, gnutls server, fragmentation, nbio" \
             -s "Extra-header:" \
             -c "Extra-header:"
 
+requires_config_enabled MBEDTLS_SSL_EXPORT_KEYS
 run_test    "export keys functionality" \
             "$P_SRV eap_tls=1 debug_level=3" \
             "$P_CLI eap_tls=1 debug_level=3" \
@@ -8763,7 +8633,6 @@ run_test    "export keys functionality" \
 
 # openssl feature tests: check if tls1.3 exists.
 requires_openssl_tls1_3
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
 run_test    "TLS1.3: Test openssl tls1_3 feature" \
             "$O_NEXT_SRV -tls1_3 -msg" \
             "$O_NEXT_CLI -tls1_3 -msg" \
@@ -8775,9 +8644,8 @@ run_test    "TLS1.3: Test openssl tls1_3 feature" \
 requires_gnutls_tls1_3
 requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
 run_test    "TLS1.3: Test gnutls tls1_3 feature" \
-            "$G_NEXT_SRV --priority=NORMAL:-VERS-ALL:+VERS-TLS1.3:+CIPHER-ALL:%NO_TICKETS:%DISABLE_TLS13_COMPAT_MODE --disable-client-cert " \
+            "$G_NEXT_SRV --priority=NORMAL:-VERS-ALL:+VERS-TLS1.3:%NO_TICKETS:%DISABLE_TLS13_COMPAT_MODE" \
             "$G_NEXT_CLI localhost --priority=NORMAL:-VERS-ALL:+VERS-TLS1.3:%NO_TICKETS:%DISABLE_TLS13_COMPAT_MODE -V" \
             0 \
             -s "Version: TLS1.3" \
@@ -8808,10 +8676,9 @@ run_test    "TLS1.3: handshake dispatch test: tls1_3 only" \
 
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
-requires_config_disabled MBEDTLS_USE_PSA_CRYPTO
 run_test    "TLS1.3: Test client hello msg work - openssl" \
-            "$O_NEXT_SRV -tls1_3 -msg -no_middlebox" \
-            "$P_CLI debug_level=3 min_version=tls1_3 max_version=tls1_3" \
+            "$O_NEXT_SRV -tls1_3 -msg" \
+            "$P_CLI debug_level=2 min_version=tls1_3 max_version=tls1_3" \
             1 \
             -c "SSL - The requested feature is not available" \
             -s "ServerHello"                \
@@ -8826,23 +8693,13 @@ run_test    "TLS1.3: Test client hello msg work - openssl" \
             -c "tls1_3 client state: 20"    \
             -c "tls1_3 client state: 11"    \
             -c "tls1_3 client state: 14"    \
-            -c "tls1_3 client state: 15"    \
-            -c "<= ssl_tls1_3_process_server_hello" \
-            -c "server hello, chosen ciphersuite: ( 1301 ) - TLS1-3-AES-128-GCM-SHA256" \
-            -c "ECDH curve: x25519"         \
-            -c "=> ssl_tls1_3_process_server_hello" \
-            -c "<= parse encrypted extensions"      \
-            -c "Certificate verification flags clear" \
-            -c "<= parse certificate verify"
+            -c "tls1_3 client state: 15"
 
 requires_gnutls_tls1_3
-requires_gnutls_next_no_ticket
-requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
-requires_config_disabled MBEDTLS_USE_PSA_CRYPTO
 run_test    "TLS1.3: Test client hello msg work - gnutls" \
-            "$G_NEXT_SRV --debug=4 --priority=NORMAL:-VERS-ALL:+VERS-TLS1.3:+CIPHER-ALL:%NO_TICKETS:%DISABLE_TLS13_COMPAT_MODE --disable-client-cert" \
-            "$P_CLI debug_level=3 min_version=tls1_3 max_version=tls1_3" \
+            "$G_NEXT_SRV --priority=NORMAL:-VERS-ALL:+VERS-TLS1.3 --debug=4" \
+            "$P_CLI debug_level=2 min_version=tls1_3 max_version=tls1_3" \
             1 \
             -c "SSL - The requested feature is not available" \
             -s "SERVER HELLO was queued"    \
@@ -8857,14 +8714,7 @@ run_test    "TLS1.3: Test client hello msg work - gnutls" \
             -c "tls1_3 client state: 20"    \
             -c "tls1_3 client state: 11"    \
             -c "tls1_3 client state: 14"    \
-            -c "tls1_3 client state: 15"    \
-            -c "<= ssl_tls1_3_process_server_hello" \
-            -c "server hello, chosen ciphersuite: ( 1301 ) - TLS1-3-AES-128-GCM-SHA256" \
-            -c "ECDH curve: x25519"         \
-            -c "=> ssl_tls1_3_process_server_hello" \
-            -c "<= parse encrypted extensions"      \
-            -c "Certificate verification flags clear" \
-            -c "<= parse certificate verify"
+            -c "tls1_3 client state: 15"
 
 # Test heap memory usage after handshake
 requires_config_enabled MBEDTLS_MEMORY_DEBUG

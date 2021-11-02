@@ -3036,16 +3036,14 @@ static int ssl_prepare_server_key_exchange( mbedtls_ssl_context *ssl,
          * } ServerECDHParams;
          */
         const mbedtls_ecp_curve_info **curve = NULL;
-        const uint16_t *group_list = mbedtls_ssl_get_groups( ssl );
+        const mbedtls_ecp_group_id *gid;
         int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
         size_t len = 0;
 
         /* Match our preference list against the offered curves */
-        if( group_list == NULL )
-            return( MBEDTLS_ERR_SSL_BAD_CONFIG );
-        for( ; *group_list != 0; group_list++ )
+        for( gid = ssl->conf->curve_list; *gid != MBEDTLS_ECP_DP_NONE; gid++ )
             for( curve = ssl->handshake->curves; *curve != NULL; curve++ )
-                if( (*curve)->tls_id == *group_list )
+                if( (*curve)->grp_id == *gid )
                     goto curve_matching_done;
 
 curve_matching_done:
