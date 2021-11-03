@@ -290,13 +290,9 @@ int main( void )
     mbedtls_printf( "...\n  . Encrypting and sending the ciphertext" );
     fflush( stdout );
 
-    ret = mbedtls_aes_setkey_enc( &aes, buf, 256 );
-    if( ret != 0 )
-        goto exit;
+    mbedtls_aes_setkey_enc( &aes, buf, 256 );
     memcpy( buf, PLAINTEXT, 16 );
-    ret = mbedtls_aes_crypt_ecb( &aes, MBEDTLS_AES_ENCRYPT, buf, buf );
-    if( ret != 0 )
-        goto exit;
+    mbedtls_aes_crypt_ecb( &aes, MBEDTLS_AES_ENCRYPT, buf, buf );
 
     if( ( ret = mbedtls_net_send( &client_fd, buf, 16 ) ) != 16 )
     {
