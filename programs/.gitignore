@@ -56,7 +56,6 @@ ssl/ssl_server
 ssl/ssl_server2
 test/benchmark
 test/cpp_dummy_build
-test/cpp_dummy_build.cpp
 test/ecp-bench
 test/query_compile_time_config
 test/selftest
@@ -69,7 +68,6 @@ x509/cert_app
 x509/cert_req
 x509/cert_write
 x509/crl_app
-x509/load_roots
 x509/req_app
 
 # Generated data files
