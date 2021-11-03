@@ -70,27 +70,6 @@ extern const struct mbedtls_ssl_tls1_3_labels_struct mbedtls_ssl_tls1_3_labels;
 #define MBEDTLS_SSL_TLS1_3_KEY_SCHEDULE_MAX_CONTEXT_LEN  \
     MBEDTLS_MD_MAX_SIZE
 
-typedef struct
-{
-    unsigned char binder_key                  [ MBEDTLS_MD_MAX_SIZE ];
-    unsigned char client_early_traffic_secret [ MBEDTLS_MD_MAX_SIZE ];
-    unsigned char early_exporter_master_secret[ MBEDTLS_MD_MAX_SIZE ];
-} mbedtls_ssl_tls1_3_early_secrets;
-
-typedef struct
-{
-    unsigned char client_handshake_traffic_secret[ MBEDTLS_MD_MAX_SIZE ];
-    unsigned char server_handshake_traffic_secret[ MBEDTLS_MD_MAX_SIZE ];
-} mbedtls_ssl_tls1_3_handshake_secrets;
-
-typedef struct
-{
-    unsigned char client_application_traffic_secret_N[ MBEDTLS_MD_MAX_SIZE ];
-    unsigned char server_application_traffic_secret_N[ MBEDTLS_MD_MAX_SIZE ];
-    unsigned char exporter_master_secret             [ MBEDTLS_MD_MAX_SIZE ];
-    unsigned char resumption_master_secret           [ MBEDTLS_MD_MAX_SIZE ];
-} mbedtls_ssl_tls1_3_application_secrets;
-
 /* Maximum desired length for expanded key material generated
  * by HKDF-Expand-Label.
  *
@@ -497,5 +476,93 @@ int mbedtls_ssl_tls1_3_create_psk_binder( mbedtls_ssl_context *ssl,
                                int psk_type,
                                unsigned char const *transcript,
                                unsigned char *result );
+
+/**
+ * \bref Setup an SSL transform structure representing the
+ *       record protection mechanism used by TLS 1.3
+ *
+ * \param transform    The SSL transform structure to be created. This must have
+ *                     been initialized through mbedtls_ssl_transform_init() and
+ *                     not used in any other way prior to calling this function.
+ *                     In particular, this function does not clean up the
+ *                     transform structure prior to installing the new keys.
+ * \param endpoint     Indicates whether the transform is for the client
+ *                     (value #MBEDTLS_SSL_IS_CLIENT) or the server
+ *                     (value #MBEDTLS_SSL_IS_SERVER).
+ * \param ciphersuite  The numerical identifier for the ciphersuite to use.
+ *                     This must be one of the identifiers listed in
+ *                     ssl_ciphersuites.h.
+ * \param traffic_keys The key material to use. No reference is stored in
+ *                     the SSL transform being generated, and the caller
+ *                     should destroy the key material afterwards.
+ * \param ssl          (Debug-only) The SSL context to use for debug output
+ *                     in case of failure. This parameter is only needed if
+ *                     #MBEDTLS_DEBUG_C is set, and is ignored otherwise.
+ *
+ * \return             \c 0 on success. In this case, \p transform is ready to
+ *                     be used with mbedtls_ssl_transform_decrypt() and
+ *                     mbedtls_ssl_transform_encrypt().
+ * \return             A negative error code on failure.
+ */
+int mbedtls_ssl_tls13_populate_transform( mbedtls_ssl_transform *transform,
+                                          int endpoint,
+                                          int ciphersuite,
+                                          mbedtls_ssl_key_set const *traffic_keys,
+                                          mbedtls_ssl_context *ssl );
+
+/*
+ * TLS 1.3 key schedule evolutions
+ *
+ *   Early -> Handshake -> Application
+ *
+ * Small wrappers around mbedtls_ssl_tls1_3_evolve_secret().
+ */
+
+/**
+ * \brief Begin TLS 1.3 key schedule by calculating early secret.
+ *
+ *        The TLS 1.3 key schedule can be viewed as a simple state machine
+ *        with states Initial -> Early -> Handshake -> Application, and
+ *        this function represents the Initial -> Early transition.
+ *
+ * \param ssl  The SSL context to operate on.
+ *
+ * \returns    \c 0 on success.
+ * \returns    A negative error code on failure.
+ */
+int mbedtls_ssl_tls1_3_key_schedule_stage_early( mbedtls_ssl_context *ssl );
+
+/**
+ * \brief Transition into handshake stage of TLS 1.3 key schedule.
+ *
+ *        The TLS 1.3 key schedule can be viewed as a simple state machine
+ *        with states Initial -> Early -> Handshake -> Application, and
+ *        this function represents the Early -> Handshake transition.
+ *
+ *        In the handshake stage, mbedtls_ssl_tls13_generate_handshake_keys()
+ *        can be used to derive the handshake traffic keys.
+ *
+ * \param ssl  The SSL context to operate on. This must be in key schedule
+ *             stage \c Early.
+ *
+ * \returns    \c 0 on success.
+ * \returns    A negative error code on failure.
+ */
+int mbedtls_ssl_tls13_key_schedule_stage_handshake( mbedtls_ssl_context *ssl );
+
+/**
+ * \brief Compute TLS 1.3 handshake traffic keys.
+ *
+ * \param ssl  The SSL context to operate on. This must be in
+ *             key schedule stage \c Handshake, see
+ *             mbedtls_ssl_tls13_key_schedule_stage_handshake().
+ * \param traffic_keys The address at which to store the handshake traffic key
+ *                     keys. This must be writable but may be uninitialized.
+ *
+ * \returns    \c 0 on success.
+ * \returns    A negative error code on failure.
+ */
+int mbedtls_ssl_tls13_generate_handshake_keys( mbedtls_ssl_context *ssl,
+                                               mbedtls_ssl_key_set *traffic_keys );
 
 #endif /* MBEDTLS_SSL_TLS1_3_KEYS_H */
