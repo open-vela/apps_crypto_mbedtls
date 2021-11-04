@@ -292,8 +292,7 @@ cleanup()
            -iname CMakeFiles -exec rm -rf {} \+ -o \
            \( -iname cmake_install.cmake -o \
               -iname CTestTestfile.cmake -o \
-              -iname CMakeCache.txt -o \
-              -path './cmake/*.cmake' \) -exec rm -f {} \+
+              -iname CMakeCache.txt \) -exec rm -f {} \+
     # Recover files overwritten by in-tree CMake builds
     rm -f include/Makefile include/mbedtls/Makefile programs/*/Makefile
 
@@ -999,16 +998,7 @@ component_test_psa_crypto_rsa_no_genprime() {
 
 component_test_ref_configs () {
     msg "test/build: ref-configs (ASan build)" # ~ 6 min 20s
-    # test-ref-configs works by overwriting mbedtls_config.h; this makes cmake
-    # want to re-generate generated files that depend on it, quite correctly.
-    # However this doesn't work as the generation script expects a specific
-    # format for mbedtls_config.h, which the other files don't follow. Also,
-    # cmake can't know this, but re-generation is actually not necessary as
-    # the generated files only depend on the list of available options, not
-    # whether they're on or off. So, disable cmake's (over-sensitive here)
-    # dependency resolution for generated files and just rely on them being
-    # present (thanks to pre_generate_files) by turning GEN_FILES off.
-    CC=gcc cmake -D GEN_FILES=Off -D CMAKE_BUILD_TYPE:String=Asan .
+    CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
     tests/scripts/test-ref-configs.pl
 }
 
@@ -1305,7 +1295,7 @@ component_test_psa_collect_statuses () {
 component_test_full_cmake_clang () {
     msg "build: cmake, full config, clang" # ~ 50s
     scripts/config.py full
-    CC=clang cmake -D CMAKE_BUILD_TYPE:String=Release -D ENABLE_TESTING=On .
+    CC=clang cmake -D CMAKE_BUILD_TYPE:String=Check -D ENABLE_TESTING=On .
     make
 
     msg "test: main suites (full config, clang)" # ~ 5s
@@ -1961,8 +1951,7 @@ component_build_no_std_function () {
     scripts/config.py set MBEDTLS_PLATFORM_NO_STD_FUNCTIONS
     scripts/config.py unset MBEDTLS_ENTROPY_NV_SEED
     scripts/config.py unset MBEDTLS_PLATFORM_NV_SEED_ALT
-    CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Check .
-    make
+    make CC=gcc CFLAGS='-Werror -Wall -Wextra -Os'
 }
 
 component_build_no_ssl_srv () {
@@ -1995,7 +1984,7 @@ component_test_memory_buffer_allocator_backtrace () {
     scripts/config.py set MBEDTLS_PLATFORM_MEMORY
     scripts/config.py set MBEDTLS_MEMORY_BACKTRACE
     scripts/config.py set MBEDTLS_MEMORY_DEBUG
-    CC=gcc cmake -DCMAKE_BUILD_TYPE:String=Release .
+    CC=gcc cmake .
     make
 
     msg "test: MBEDTLS_MEMORY_BUFFER_ALLOC_C and MBEDTLS_MEMORY_BACKTRACE"
@@ -2006,7 +1995,7 @@ component_test_memory_buffer_allocator () {
     msg "build: default config with memory buffer allocator"
     scripts/config.py set MBEDTLS_MEMORY_BUFFER_ALLOC_C
     scripts/config.py set MBEDTLS_PLATFORM_MEMORY
-    CC=gcc cmake -DCMAKE_BUILD_TYPE:String=Release .
+    CC=gcc cmake .
     make
 
     msg "test: MBEDTLS_MEMORY_BUFFER_ALLOC_C"
@@ -2115,7 +2104,7 @@ component_test_ssl_alloc_buffer_and_mfl () {
     scripts/config.py set MBEDTLS_MEMORY_DEBUG
     scripts/config.py set MBEDTLS_SSL_MAX_FRAGMENT_LENGTH
     scripts/config.py set MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH
-    CC=gcc cmake -DCMAKE_BUILD_TYPE:String=Release .
+    CC=gcc cmake .
     make
 
     msg "test: MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH, MBEDTLS_MEMORY_BUFFER_ALLOC_C, MBEDTLS_MEMORY_DEBUG and MBEDTLS_SSL_MAX_FRAGMENT_LENGTH"
@@ -2142,7 +2131,7 @@ component_test_when_no_ciphersuites_have_mac () {
 component_test_no_date_time () {
     msg "build: default config without MBEDTLS_HAVE_TIME_DATE"
     scripts/config.py unset MBEDTLS_HAVE_TIME_DATE
-    CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Check .
+    CC=gcc cmake
     make
 
     msg "test: !MBEDTLS_HAVE_TIME_DATE - main suites"
@@ -2323,8 +2312,7 @@ component_build_mbedtls_config_file () {
 }
 
 component_test_m32_o0 () {
-    # Build without optimization, so as to use portable C code (in a 32-bit
-    # build) and not the i386-specific inline assembly.
+    # Build once with -O0, to compile out the i386 specific inline assembly
     msg "build: i386, make, gcc -O0 (ASan build)" # ~ 30s
     scripts/config.py full
     make CC=gcc CFLAGS="$ASAN_CFLAGS -m32 -O0" LDFLAGS="-m32 $ASAN_CFLAGS"
@@ -2339,20 +2327,19 @@ support_test_m32_o0 () {
     esac
 }
 
-component_test_m32_o2 () {
-    # Build with optimization, to use the i386 specific inline assembly
-    # and go faster for tests.
-    msg "build: i386, make, gcc -O2 (ASan build)" # ~ 30s
+component_test_m32_o1 () {
+    # Build again with -O1, to compile in the i386 specific inline assembly
+    msg "build: i386, make, gcc -O1 (ASan build)" # ~ 30s
     scripts/config.py full
-    make CC=gcc CFLAGS="$ASAN_CFLAGS -m32 -O2" LDFLAGS="-m32 $ASAN_CFLAGS"
+    make CC=gcc CFLAGS="$ASAN_CFLAGS -m32 -O1" LDFLAGS="-m32 $ASAN_CFLAGS"
 
-    msg "test: i386, make, gcc -O2 (ASan build)"
+    msg "test: i386, make, gcc -O1 (ASan build)"
     make test
 
-    msg "test ssl-opt.sh, i386, make, gcc-O2"
+    msg "test ssl-opt.sh, i386, make, gcc-O1"
     tests/ssl-opt.sh
 }
-support_test_m32_o2 () {
+support_test_m32_o1 () {
     support_test_m32_o0 "$@"
 }
 
@@ -2461,7 +2448,7 @@ component_test_no_x509_info () {
     scripts/config.pl full
     scripts/config.pl unset MBEDTLS_MEMORY_BACKTRACE # too slow for tests
     scripts/config.pl set MBEDTLS_X509_REMOVE_INFO
-    make CFLAGS='-Werror -O2'
+    make CFLAGS='-Werror -O1'
 
     msg "test: full + MBEDTLS_X509_REMOVE_INFO" # ~ 10s
     make test
@@ -2681,7 +2668,7 @@ component_test_cmake_out_of_source () {
     MBEDTLS_ROOT_DIR="$PWD"
     mkdir "$OUT_OF_SOURCE_DIR"
     cd "$OUT_OF_SOURCE_DIR"
-    cmake -D CMAKE_BUILD_TYPE:String=Check "$MBEDTLS_ROOT_DIR"
+    cmake "$MBEDTLS_ROOT_DIR"
     make
 
     msg "test: cmake 'out-of-source' build"
@@ -2767,6 +2754,26 @@ component_test_zeroize () {
     done
 
     unset gdb_disable_aslr
+}
+
+component_test_psa_compliance () {
+    msg "build: make, default config (out-of-box), libmbedcrypto.a only"
+    make -C library libmbedcrypto.a
+
+    msg "unit test: test_psa_compliance.py"
+    ./tests/scripts/test_psa_compliance.py
+}
+
+support_test_psa_compliance () {
+    # psa-compliance-tests only supports CMake >= 3.10.0
+    ver="$(cmake --version)"
+    ver="${ver#cmake version }"
+    ver_major="${ver%%.*}"
+
+    ver="${ver#*.}"
+    ver_minor="${ver%%.*}"
+
+    [ "$ver_major" -eq 3 ] && [ "$ver_minor" -ge 10 ]
 }
 
 component_check_python_files () {
