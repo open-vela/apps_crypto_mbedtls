@@ -137,35 +137,36 @@ static int ssl_tls13_parse_supported_versions_ext( mbedtls_ssl_context *ssl,
  * 'elliptic_curves' and only contained elliptic curve groups.
  */
 static int ssl_tls13_write_named_group_list_ecdhe( mbedtls_ssl_context *ssl,
-                                                   unsigned char *buf,
-                                                   unsigned char *end,
-                                                   size_t *olen )
+                                            unsigned char *buf,
+                                            unsigned char *end,
+                                            size_t *olen )
 {
     unsigned char *p = buf;
 
     *olen = 0;
 
-    const uint16_t *group_list = mbedtls_ssl_get_groups( ssl );
-
-    if( group_list == NULL )
+    if( ssl->conf->curve_list == NULL )
         return( MBEDTLS_ERR_SSL_BAD_CONFIG );
 
-    for ( ; *group_list != 0; group_list++ )
+    for ( const mbedtls_ecp_group_id *grp_id = ssl->conf->curve_list;
+          *grp_id != MBEDTLS_ECP_DP_NONE;
+          grp_id++ )
     {
         const mbedtls_ecp_curve_info *info;
-        info = mbedtls_ecp_curve_info_from_tls_id( *group_list );
+        info = mbedtls_ecp_curve_info_from_grp_id( *grp_id );
         if( info == NULL )
             continue;
 
-        if( !mbedtls_ssl_tls13_named_group_is_ecdhe( *group_list ) )
+        if( !mbedtls_ssl_tls13_named_group_is_ecdhe( info->tls_id ) )
             continue;
 
         MBEDTLS_SSL_CHK_BUF_PTR( p, end, 2);
-        MBEDTLS_PUT_UINT16_BE( *group_list, p, 0 );
+        MBEDTLS_PUT_UINT16_BE( info->tls_id, p, 0 );
         p += 2;
 
         MBEDTLS_SSL_DEBUG_MSG( 3, ( "NamedGroup: %s ( %x )",
-                                    info->name, *group_list ) );
+                  mbedtls_ecp_curve_info_from_tls_id( info->tls_id )->name,
+                  info->tls_id ) );
     }
 
     *olen = p - buf;
@@ -320,19 +321,20 @@ static int ssl_tls13_get_default_group_id( mbedtls_ssl_context *ssl,
 
 
 #if defined(MBEDTLS_ECDH_C)
-    const uint16_t *group_list = mbedtls_ssl_get_groups( ssl );
     /* Pick first available ECDHE group compatible with TLS 1.3 */
-    if( group_list == NULL )
+    if( ssl->conf->curve_list == NULL )
         return( MBEDTLS_ERR_SSL_BAD_CONFIG );
 
-    for ( ; *group_list != 0; group_list++ )
+    for ( const mbedtls_ecp_group_id *grp_id = ssl->conf->curve_list;
+          *grp_id != MBEDTLS_ECP_DP_NONE;
+          grp_id++ )
     {
         const mbedtls_ecp_curve_info *info;
-        info = mbedtls_ecp_curve_info_from_tls_id( *group_list );
+        info = mbedtls_ecp_curve_info_from_grp_id( *grp_id );
         if( info != NULL &&
-            mbedtls_ssl_tls13_named_group_is_ecdhe( *group_list ) )
+            mbedtls_ssl_tls13_named_group_is_ecdhe( info->tls_id ) )
         {
-            *group_id = *group_list;
+            *group_id = info->tls_id;
             return( 0 );
         }
     }
@@ -1582,7 +1584,12 @@ static int ssl_tls1_3_process_server_certificate( mbedtls_ssl_context *ssl )
  */
 static int ssl_tls1_3_process_certificate_verify( mbedtls_ssl_context *ssl )
 {
-    MBEDTLS_SSL_DEBUG_MSG( 1, ( "%s hasn't been implemented", __func__ ) );
+    int ret;
+
+    ret = mbedtls_ssl_tls13_process_certificate_verify( ssl );
+    if( ret != 0 )
+        return( ret );
+
     mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_SERVER_FINISHED );
     return( 0 );
 }
