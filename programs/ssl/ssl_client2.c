@@ -678,7 +678,7 @@ int main( int argc, char *argv[] )
 #endif
 
 #if defined(MBEDTLS_ECP_C)
-    uint16_t group_list[CURVE_LIST_SIZE];
+    mbedtls_ecp_group_id curve_list[CURVE_LIST_SIZE];
     const mbedtls_ecp_curve_info *curve_cur;
 #endif
 #if defined(MBEDTLS_SSL_DTLS_SRTP)
@@ -1452,7 +1452,7 @@ int main( int argc, char *argv[] )
 
         if( strcmp( p, "none" ) == 0 )
         {
-            group_list[0] = 0;
+            curve_list[0] = MBEDTLS_ECP_DP_NONE;
         }
         else if( strcmp( p, "default" ) != 0 )
         {
@@ -1469,7 +1469,7 @@ int main( int argc, char *argv[] )
 
                 if( ( curve_cur = mbedtls_ecp_curve_info_from_name( q ) ) != NULL )
                 {
-                    group_list[i++] = curve_cur->tls_id;
+                    curve_list[i++] = curve_cur->grp_id;
                 }
                 else
                 {
@@ -1495,7 +1495,7 @@ int main( int argc, char *argv[] )
                 goto exit;
             }
 
-            group_list[i] = 0;
+            curve_list[i] = MBEDTLS_ECP_DP_NONE;
         }
     }
 #endif /* MBEDTLS_ECP_C */
@@ -1889,7 +1889,7 @@ int main( int argc, char *argv[] )
     if( opt.curves != NULL &&
         strcmp( opt.curves, "default" ) != 0 )
     {
-        mbedtls_ssl_conf_groups( &conf, group_list );
+        mbedtls_ssl_conf_curves( &conf, curve_list );
     }
 #endif
 
