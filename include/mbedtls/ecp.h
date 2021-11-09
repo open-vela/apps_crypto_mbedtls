@@ -130,8 +130,10 @@ typedef enum
 
 /**
  * The number of supported curves, plus one for #MBEDTLS_ECP_DP_NONE.
+ *
+ * \note Montgomery curves are currently excluded.
  */
-#define MBEDTLS_ECP_DP_MAX     14
+#define MBEDTLS_ECP_DP_MAX     12
 
 /*
  * Curve types
