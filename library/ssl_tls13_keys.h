@@ -22,27 +22,25 @@
 /* This requires MBEDTLS_SSL_TLS1_3_LABEL( idx, name, string ) to be defined at
  * the point of use. See e.g. the definition of mbedtls_ssl_tls1_3_labels_union
  * below. */
-#define MBEDTLS_SSL_TLS1_3_LABEL_LIST                                             \
-    MBEDTLS_SSL_TLS1_3_LABEL( finished    , "finished"                          ) \
-    MBEDTLS_SSL_TLS1_3_LABEL( resumption  , "resumption"                        ) \
-    MBEDTLS_SSL_TLS1_3_LABEL( traffic_upd , "traffic upd"                       ) \
-    MBEDTLS_SSL_TLS1_3_LABEL( exporter    , "exporter"                          ) \
-    MBEDTLS_SSL_TLS1_3_LABEL( key         , "key"                               ) \
-    MBEDTLS_SSL_TLS1_3_LABEL( iv          , "iv"                                ) \
-    MBEDTLS_SSL_TLS1_3_LABEL( c_hs_traffic, "c hs traffic"                      ) \
-    MBEDTLS_SSL_TLS1_3_LABEL( c_ap_traffic, "c ap traffic"                      ) \
-    MBEDTLS_SSL_TLS1_3_LABEL( c_e_traffic , "c e traffic"                       ) \
-    MBEDTLS_SSL_TLS1_3_LABEL( s_hs_traffic, "s hs traffic"                      ) \
-    MBEDTLS_SSL_TLS1_3_LABEL( s_ap_traffic, "s ap traffic"                      ) \
-    MBEDTLS_SSL_TLS1_3_LABEL( s_e_traffic , "s e traffic"                       ) \
-    MBEDTLS_SSL_TLS1_3_LABEL( e_exp_master, "e exp master"                      ) \
-    MBEDTLS_SSL_TLS1_3_LABEL( res_master  , "res master"                        ) \
-    MBEDTLS_SSL_TLS1_3_LABEL( exp_master  , "exp master"                        ) \
-    MBEDTLS_SSL_TLS1_3_LABEL( ext_binder  , "ext binder"                        ) \
-    MBEDTLS_SSL_TLS1_3_LABEL( res_binder  , "res binder"                        ) \
-    MBEDTLS_SSL_TLS1_3_LABEL( derived     , "derived"                           ) \
-    MBEDTLS_SSL_TLS1_3_LABEL( client_cv   , "TLS 1.3, client CertificateVerify" ) \
-    MBEDTLS_SSL_TLS1_3_LABEL( server_cv   , "TLS 1.3, server CertificateVerify" )
+#define MBEDTLS_SSL_TLS1_3_LABEL_LIST                               \
+    MBEDTLS_SSL_TLS1_3_LABEL( finished    , "finished"     ) \
+    MBEDTLS_SSL_TLS1_3_LABEL( resumption  , "resumption"   ) \
+    MBEDTLS_SSL_TLS1_3_LABEL( traffic_upd , "traffic upd"  ) \
+    MBEDTLS_SSL_TLS1_3_LABEL( exporter    , "exporter"     ) \
+    MBEDTLS_SSL_TLS1_3_LABEL( key         , "key"          ) \
+    MBEDTLS_SSL_TLS1_3_LABEL( iv          , "iv"           ) \
+    MBEDTLS_SSL_TLS1_3_LABEL( c_hs_traffic, "c hs traffic" ) \
+    MBEDTLS_SSL_TLS1_3_LABEL( c_ap_traffic, "c ap traffic" ) \
+    MBEDTLS_SSL_TLS1_3_LABEL( c_e_traffic , "c e traffic"  ) \
+    MBEDTLS_SSL_TLS1_3_LABEL( s_hs_traffic, "s hs traffic" ) \
+    MBEDTLS_SSL_TLS1_3_LABEL( s_ap_traffic, "s ap traffic" ) \
+    MBEDTLS_SSL_TLS1_3_LABEL( s_e_traffic , "s e traffic"  ) \
+    MBEDTLS_SSL_TLS1_3_LABEL( e_exp_master, "e exp master" ) \
+    MBEDTLS_SSL_TLS1_3_LABEL( res_master  , "res master"   ) \
+    MBEDTLS_SSL_TLS1_3_LABEL( exp_master  , "exp master"   ) \
+    MBEDTLS_SSL_TLS1_3_LABEL( ext_binder  , "ext binder"   ) \
+    MBEDTLS_SSL_TLS1_3_LABEL( res_binder  , "res binder"   ) \
+    MBEDTLS_SSL_TLS1_3_LABEL( derived     , "derived"      )
 
 #define MBEDTLS_SSL_TLS1_3_LABEL( name, string )       \
     const unsigned char name    [ sizeof(string) - 1 ];
@@ -59,12 +57,9 @@ struct mbedtls_ssl_tls1_3_labels_struct
 
 extern const struct mbedtls_ssl_tls1_3_labels_struct mbedtls_ssl_tls1_3_labels;
 
-#define MBEDTLS_SSL_TLS1_3_LBL_LEN( LABEL )  \
-    sizeof(mbedtls_ssl_tls1_3_labels.LABEL)
-
 #define MBEDTLS_SSL_TLS1_3_LBL_WITH_LEN( LABEL )  \
     mbedtls_ssl_tls1_3_labels.LABEL,              \
-    MBEDTLS_SSL_TLS1_3_LBL_LEN( LABEL )
+    sizeof(mbedtls_ssl_tls1_3_labels.LABEL)
 
 #define MBEDTLS_SSL_TLS1_3_KEY_SCHEDULE_MAX_LABEL_LEN  \
     sizeof( union mbedtls_ssl_tls1_3_labels_union )
@@ -74,6 +69,27 @@ extern const struct mbedtls_ssl_tls1_3_labels_struct mbedtls_ssl_tls1_3_labels;
  * be approximated from above by the maximum hash size. */
 #define MBEDTLS_SSL_TLS1_3_KEY_SCHEDULE_MAX_CONTEXT_LEN  \
     MBEDTLS_MD_MAX_SIZE
+
+typedef struct
+{
+    unsigned char binder_key                  [ MBEDTLS_MD_MAX_SIZE ];
+    unsigned char client_early_traffic_secret [ MBEDTLS_MD_MAX_SIZE ];
+    unsigned char early_exporter_master_secret[ MBEDTLS_MD_MAX_SIZE ];
+} mbedtls_ssl_tls1_3_early_secrets;
+
+typedef struct
+{
+    unsigned char client_handshake_traffic_secret[ MBEDTLS_MD_MAX_SIZE ];
+    unsigned char server_handshake_traffic_secret[ MBEDTLS_MD_MAX_SIZE ];
+} mbedtls_ssl_tls1_3_handshake_secrets;
+
+typedef struct
+{
+    unsigned char client_application_traffic_secret_N[ MBEDTLS_MD_MAX_SIZE ];
+    unsigned char server_application_traffic_secret_N[ MBEDTLS_MD_MAX_SIZE ];
+    unsigned char exporter_master_secret             [ MBEDTLS_MD_MAX_SIZE ];
+    unsigned char resumption_master_secret           [ MBEDTLS_MD_MAX_SIZE ];
+} mbedtls_ssl_tls1_3_application_secrets;
 
 /* Maximum desired length for expanded key material generated
  * by HKDF-Expand-Label.
@@ -536,38 +552,5 @@ int mbedtls_ssl_tls13_populate_transform( mbedtls_ssl_transform *transform,
  * \returns    A negative error code on failure.
  */
 int mbedtls_ssl_tls1_3_key_schedule_stage_early( mbedtls_ssl_context *ssl );
-
-/**
- * \brief Transition into handshake stage of TLS 1.3 key schedule.
- *
- *        The TLS 1.3 key schedule can be viewed as a simple state machine
- *        with states Initial -> Early -> Handshake -> Application, and
- *        this function represents the Early -> Handshake transition.
- *
- *        In the handshake stage, mbedtls_ssl_tls13_generate_handshake_keys()
- *        can be used to derive the handshake traffic keys.
- *
- * \param ssl  The SSL context to operate on. This must be in key schedule
- *             stage \c Early.
- *
- * \returns    \c 0 on success.
- * \returns    A negative error code on failure.
- */
-int mbedtls_ssl_tls13_key_schedule_stage_handshake( mbedtls_ssl_context *ssl );
-
-/**
- * \brief Compute TLS 1.3 handshake traffic keys.
- *
- * \param ssl  The SSL context to operate on. This must be in
- *             key schedule stage \c Handshake, see
- *             mbedtls_ssl_tls13_key_schedule_stage_handshake().
- * \param traffic_keys The address at which to store the handshake traffic key
- *                     keys. This must be writable but may be uninitialized.
- *
- * \returns    \c 0 on success.
- * \returns    A negative error code on failure.
- */
-int mbedtls_ssl_tls13_generate_handshake_keys( mbedtls_ssl_context *ssl,
-                                               mbedtls_ssl_key_set *traffic_keys );
 
 #endif /* MBEDTLS_SSL_TLS1_3_KEYS_H */
