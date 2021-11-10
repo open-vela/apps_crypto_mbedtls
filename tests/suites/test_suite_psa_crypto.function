@@ -1422,7 +1422,7 @@ void asymmetric_signature_key_policy( int policy_usage_arg,
     else
         TEST_EQUAL( status, PSA_ERROR_NOT_PERMITTED );
 
-    if( PSA_ALG_IS_SIGN_HASH( exercise_alg ) &&
+    if( PSA_ALG_IS_HASH_AND_SIGN( exercise_alg ) &&
         PSA_ALG_IS_HASH( PSA_ALG_SIGN_GET_HASH( exercise_alg ) ) )
     {
         status = psa_sign_message( key, exercise_alg,
@@ -2857,40 +2857,6 @@ void cipher_encrypt_fail( int alg_arg,
     TEST_EQUAL( status, expected_status );
 
 exit:
-    mbedtls_free( output );
-    psa_destroy_key( key );
-    PSA_DONE( );
-}
-/* END_CASE */
-
-/* BEGIN_CASE */
-void cipher_encrypt_validate_iv_length( int alg, int key_type, data_t* key_data,
-                               data_t *input, int iv_length,
-                               int expected_result )
-{
-    mbedtls_svc_key_id_t key = MBEDTLS_SVC_KEY_ID_INIT;
-    psa_cipher_operation_t operation = PSA_CIPHER_OPERATION_INIT;
-    psa_key_attributes_t attributes = PSA_KEY_ATTRIBUTES_INIT;
-    size_t output_buffer_size = 0;
-    unsigned char *output = NULL;
-
-    output_buffer_size = PSA_CIPHER_ENCRYPT_OUTPUT_SIZE( key_type, alg, input->len );
-    ASSERT_ALLOC( output, output_buffer_size );
-
-    PSA_ASSERT( psa_crypto_init( ) );
-
-    psa_set_key_usage_flags( &attributes, PSA_KEY_USAGE_ENCRYPT );
-    psa_set_key_algorithm( &attributes, alg );
-    psa_set_key_type( &attributes, key_type );
-
-    PSA_ASSERT( psa_import_key( &attributes, key_data->x, key_data->len,
-                                &key ) );
-    PSA_ASSERT( psa_cipher_encrypt_setup( &operation, key, alg ) );
-    TEST_EQUAL( expected_result, psa_cipher_set_iv( &operation, output,
-                                                    iv_length ) );
-
-exit:
-    psa_cipher_abort( &operation );
     mbedtls_free( output );
     psa_destroy_key( key );
     PSA_DONE( );
