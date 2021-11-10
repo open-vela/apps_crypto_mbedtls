@@ -22,25 +22,27 @@
 /* This requires MBEDTLS_SSL_TLS1_3_LABEL( idx, name, string ) to be defined at
  * the point of use. See e.g. the definition of mbedtls_ssl_tls1_3_labels_union
  * below. */
-#define MBEDTLS_SSL_TLS1_3_LABEL_LIST                               \
-    MBEDTLS_SSL_TLS1_3_LABEL( finished    , "finished"     ) \
-    MBEDTLS_SSL_TLS1_3_LABEL( resumption  , "resumption"   ) \
-    MBEDTLS_SSL_TLS1_3_LABEL( traffic_upd , "traffic upd"  ) \
-    MBEDTLS_SSL_TLS1_3_LABEL( exporter    , "exporter"     ) \
-    MBEDTLS_SSL_TLS1_3_LABEL( key         , "key"          ) \
-    MBEDTLS_SSL_TLS1_3_LABEL( iv          , "iv"           ) \
-    MBEDTLS_SSL_TLS1_3_LABEL( c_hs_traffic, "c hs traffic" ) \
-    MBEDTLS_SSL_TLS1_3_LABEL( c_ap_traffic, "c ap traffic" ) \
-    MBEDTLS_SSL_TLS1_3_LABEL( c_e_traffic , "c e traffic"  ) \
-    MBEDTLS_SSL_TLS1_3_LABEL( s_hs_traffic, "s hs traffic" ) \
-    MBEDTLS_SSL_TLS1_3_LABEL( s_ap_traffic, "s ap traffic" ) \
-    MBEDTLS_SSL_TLS1_3_LABEL( s_e_traffic , "s e traffic"  ) \
-    MBEDTLS_SSL_TLS1_3_LABEL( e_exp_master, "e exp master" ) \
-    MBEDTLS_SSL_TLS1_3_LABEL( res_master  , "res master"   ) \
-    MBEDTLS_SSL_TLS1_3_LABEL( exp_master  , "exp master"   ) \
-    MBEDTLS_SSL_TLS1_3_LABEL( ext_binder  , "ext binder"   ) \
-    MBEDTLS_SSL_TLS1_3_LABEL( res_binder  , "res binder"   ) \
-    MBEDTLS_SSL_TLS1_3_LABEL( derived     , "derived"      )
+#define MBEDTLS_SSL_TLS1_3_LABEL_LIST                                             \
+    MBEDTLS_SSL_TLS1_3_LABEL( finished    , "finished"                          ) \
+    MBEDTLS_SSL_TLS1_3_LABEL( resumption  , "resumption"                        ) \
+    MBEDTLS_SSL_TLS1_3_LABEL( traffic_upd , "traffic upd"                       ) \
+    MBEDTLS_SSL_TLS1_3_LABEL( exporter    , "exporter"                          ) \
+    MBEDTLS_SSL_TLS1_3_LABEL( key         , "key"                               ) \
+    MBEDTLS_SSL_TLS1_3_LABEL( iv          , "iv"                                ) \
+    MBEDTLS_SSL_TLS1_3_LABEL( c_hs_traffic, "c hs traffic"                      ) \
+    MBEDTLS_SSL_TLS1_3_LABEL( c_ap_traffic, "c ap traffic"                      ) \
+    MBEDTLS_SSL_TLS1_3_LABEL( c_e_traffic , "c e traffic"                       ) \
+    MBEDTLS_SSL_TLS1_3_LABEL( s_hs_traffic, "s hs traffic"                      ) \
+    MBEDTLS_SSL_TLS1_3_LABEL( s_ap_traffic, "s ap traffic"                      ) \
+    MBEDTLS_SSL_TLS1_3_LABEL( s_e_traffic , "s e traffic"                       ) \
+    MBEDTLS_SSL_TLS1_3_LABEL( e_exp_master, "e exp master"                      ) \
+    MBEDTLS_SSL_TLS1_3_LABEL( res_master  , "res master"                        ) \
+    MBEDTLS_SSL_TLS1_3_LABEL( exp_master  , "exp master"                        ) \
+    MBEDTLS_SSL_TLS1_3_LABEL( ext_binder  , "ext binder"                        ) \
+    MBEDTLS_SSL_TLS1_3_LABEL( res_binder  , "res binder"                        ) \
+    MBEDTLS_SSL_TLS1_3_LABEL( derived     , "derived"                           ) \
+    MBEDTLS_SSL_TLS1_3_LABEL( client_cv   , "TLS 1.3, client CertificateVerify" ) \
+    MBEDTLS_SSL_TLS1_3_LABEL( server_cv   , "TLS 1.3, server CertificateVerify" )
 
 #define MBEDTLS_SSL_TLS1_3_LABEL( name, string )       \
     const unsigned char name    [ sizeof(string) - 1 ];
@@ -57,9 +59,12 @@ struct mbedtls_ssl_tls1_3_labels_struct
 
 extern const struct mbedtls_ssl_tls1_3_labels_struct mbedtls_ssl_tls1_3_labels;
 
+#define MBEDTLS_SSL_TLS1_3_LBL_LEN( LABEL )  \
+    sizeof(mbedtls_ssl_tls1_3_labels.LABEL)
+
 #define MBEDTLS_SSL_TLS1_3_LBL_WITH_LEN( LABEL )  \
     mbedtls_ssl_tls1_3_labels.LABEL,              \
-    sizeof(mbedtls_ssl_tls1_3_labels.LABEL)
+    MBEDTLS_SSL_TLS1_3_LBL_LEN( LABEL )
 
 #define MBEDTLS_SSL_TLS1_3_KEY_SCHEDULE_MAX_LABEL_LEN  \
     sizeof( union mbedtls_ssl_tls1_3_labels_union )
@@ -564,5 +569,67 @@ int mbedtls_ssl_tls13_key_schedule_stage_handshake( mbedtls_ssl_context *ssl );
  */
 int mbedtls_ssl_tls13_generate_handshake_keys( mbedtls_ssl_context *ssl,
                                                mbedtls_ssl_key_set *traffic_keys );
+
+/**
+ * \brief Transition into application stage of TLS 1.3 key schedule.
+ *
+ *        The TLS 1.3 key schedule can be viewed as a simple state machine
+ *        with states Initial -> Early -> Handshake -> Application, and
+ *        this function represents the Handshake -> Application transition.
+ *
+ *        In the handshake stage, mbedtls_ssl_tls13_generate_application_keys()
+ *        can be used to derive the handshake traffic keys.
+ *
+ * \param ssl  The SSL context to operate on. This must be in key schedule
+ *             stage \c Handshake.
+ *
+ * \returns    \c 0 on success.
+ * \returns    A negative error code on failure.
+ */
+int mbedtls_ssl_tls13_key_schedule_stage_application(
+    mbedtls_ssl_context *ssl );
+
+/**
+ * \brief Compute TLS 1.3 application traffic keys.
+ *
+ * \param ssl  The SSL context to operate on. This must be in
+ *             key schedule stage \c Application, see
+ *             mbedtls_ssl_tls13_key_schedule_stage_application().
+ * \param traffic_keys The address at which to store the application traffic key
+ *                     keys. This must be writable but may be uninitialized.
+ *
+ * \returns    \c 0 on success.
+ * \returns    A negative error code on failure.
+ */
+int mbedtls_ssl_tls13_generate_application_keys(
+    mbedtls_ssl_context* ssl, mbedtls_ssl_key_set *traffic_keys );
+
+/**
+ * \brief Calculate the verify_data value for the client or server TLS 1.3
+ * Finished message.
+ *
+ * \param ssl  The SSL context to operate on. This must be in
+ *             key schedule stage \c Handshake, see
+ *             mbedtls_ssl_tls13_key_schedule_stage_application().
+ * \param dst        The address at which to write the verify_data value.
+ * \param dst_len    The size of \p dst in bytes.
+ * \param actual_len The address at which to store the amount of data
+ *                   actually written to \p dst upon success.
+ * \param which      The message to calculate the `verify_data` for:
+ *                   - #MBEDTLS_SSL_IS_CLIENT for the Client's Finished message
+ *                   - #MBEDTLS_SSL_IS_SERVER for the Server's Finished message
+ *
+ * \note       Both client and server call this function twice, once to
+ *             generate their own Finished message, and once to verify the
+ *             peer's Finished message.
+
+ * \returns    \c 0 on success.
+ * \returns    A negative error code on failure.
+ */
+int mbedtls_ssl_tls13_calculate_verify_data( mbedtls_ssl_context *ssl,
+                                             unsigned char *dst,
+                                             size_t dst_len,
+                                             size_t *actual_len,
+                                             int which );
 
 #endif /* MBEDTLS_SSL_TLS1_3_KEYS_H */
