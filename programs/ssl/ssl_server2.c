@@ -65,10 +65,6 @@ int main( void )
 #include <windows.h>
 #endif
 
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
-#include "test/psa_crypto_helpers.h"
-#endif
-
 /* Size of memory to be allocated for the heap, when using the library's memory
  * management and MBEDTLS_MEMORY_BUFFER_ALLOC_C is enabled. */
 #define MEMORY_HEAP_SIZE        120000
@@ -1344,7 +1340,7 @@ int main( int argc, char *argv[] )
     sni_entry *sni_info = NULL;
 #endif
 #if defined(MBEDTLS_ECP_C)
-    mbedtls_ecp_group_id curve_list[CURVE_LIST_SIZE];
+    uint16_t group_list[CURVE_LIST_SIZE];
     const mbedtls_ecp_curve_info * curve_cur;
 #endif
 #if defined(MBEDTLS_SSL_ALPN)
@@ -2200,7 +2196,7 @@ int main( int argc, char *argv[] )
 
         if( strcmp( p, "none" ) == 0 )
         {
-            curve_list[0] = MBEDTLS_ECP_DP_NONE;
+            group_list[0] = 0;
         }
         else if( strcmp( p, "default" ) != 0 )
         {
@@ -2217,7 +2213,7 @@ int main( int argc, char *argv[] )
 
                 if( ( curve_cur = mbedtls_ecp_curve_info_from_name( q ) ) != NULL )
                 {
-                    curve_list[i++] = curve_cur->grp_id;
+                    group_list[i++] = curve_cur->tls_id;
                 }
                 else
                 {
@@ -2243,7 +2239,7 @@ int main( int argc, char *argv[] )
                 goto exit;
             }
 
-            curve_list[i] = MBEDTLS_ECP_DP_NONE;
+            group_list[i] = 0;
         }
     }
 #endif /* MBEDTLS_ECP_C */
@@ -2907,7 +2903,7 @@ int main( int argc, char *argv[] )
     if( opt.curves != NULL &&
         strcmp( opt.curves, "default" ) != 0 )
     {
-        mbedtls_ssl_conf_curves( &conf, curve_list );
+        mbedtls_ssl_conf_groups( &conf, group_list );
     }
 #endif
 
@@ -3951,35 +3947,9 @@ exit:
     mbedtls_net_free( &client_fd );
     mbedtls_net_free( &listen_fd );
 
-    mbedtls_ssl_free( &ssl );
-    mbedtls_ssl_config_free( &conf );
-
-#if defined(MBEDTLS_SSL_CACHE_C)
-    mbedtls_ssl_cache_free( &cache );
+#if defined(MBEDTLS_DHM_C) && defined(MBEDTLS_FS_IO)
+    mbedtls_dhm_free( &dhm );
 #endif
-#if defined(MBEDTLS_SSL_SESSION_TICKETS)
-    mbedtls_ssl_ticket_free( &ticket_ctx );
-#endif
-#if defined(MBEDTLS_SSL_COOKIE_C)
-    mbedtls_ssl_cookie_free( &cookie_ctx );
-#endif
-
-#if defined(MBEDTLS_SSL_CONTEXT_SERIALIZATION)
-    if( context_buf != NULL )
-        mbedtls_platform_zeroize( context_buf, context_buf_len );
-    mbedtls_free( context_buf );
-#endif
-
-#if defined(SNI_OPTION)
-    sni_free( sni_info );
-#endif
-
-#if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
-    ret = psk_free( psk_info );
-    if( ( ret != 0 ) && ( opt.query_config_mode == DFL_QUERY_CONFIG_MODE ) )
-        mbedtls_printf( "Failed to list of opaque PSKs - error was %d\n", ret );
-#endif
-
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
     mbedtls_x509_crt_free( &cacert );
     mbedtls_x509_crt_free( &srvcert );
@@ -3991,11 +3961,6 @@ exit:
     psa_destroy_key( key_slot2 );
 #endif
 #endif
-
-#if defined(MBEDTLS_DHM_C) && defined(MBEDTLS_FS_IO)
-    mbedtls_dhm_free( &dhm );
-#endif
-
 #if defined(MBEDTLS_SSL_ASYNC_PRIVATE)
     for( i = 0; (size_t) i < ssl_async_keys.slots_used; i++ )
     {
@@ -4006,6 +3971,17 @@ exit:
             ssl_async_keys.slots[i].pk = NULL;
         }
     }
+#endif
+#if defined(SNI_OPTION)
+    sni_free( sni_info );
+#endif
+#if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
+    ret = psk_free( psk_info );
+    if( ( ret != 0 ) && ( opt.query_config_mode == DFL_QUERY_CONFIG_MODE ) )
+        mbedtls_printf( "Failed to list of opaque PSKs - error was %d\n", ret );
+#endif
+#if defined(MBEDTLS_DHM_C) && defined(MBEDTLS_FS_IO)
+    mbedtls_dhm_free( &dhm );
 #endif
 
 #if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED) && \
@@ -4027,26 +4003,31 @@ exit:
 #endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED &&
           MBEDTLS_USE_PSA_CRYPTO */
 
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
-    const char* message = mbedtls_test_helper_is_psa_leaking();
-    if( message )
-    {
-        if( ret == 0 )
-            ret = 1;
-        mbedtls_printf( "PSA memory leak detected: %s\n",  message);
-    }
-#endif
-
-    /* For builds with MBEDTLS_TEST_USE_PSA_CRYPTO_RNG psa crypto
-     * resources are freed by rng_free(). */
-#if defined(MBEDTLS_USE_PSA_CRYPTO) && \
-    !defined(MBEDTLS_TEST_USE_PSA_CRYPTO_RNG)
-    mbedtls_psa_crypto_free( );
-#endif
-
+    mbedtls_ssl_free( &ssl );
+    mbedtls_ssl_config_free( &conf );
     rng_free( &rng );
 
+#if defined(MBEDTLS_SSL_CACHE_C)
+    mbedtls_ssl_cache_free( &cache );
+#endif
+#if defined(MBEDTLS_SSL_SESSION_TICKETS)
+    mbedtls_ssl_ticket_free( &ticket_ctx );
+#endif
+#if defined(MBEDTLS_SSL_COOKIE_C)
+    mbedtls_ssl_cookie_free( &cookie_ctx );
+#endif
+
     mbedtls_free( buf );
+
+#if defined(MBEDTLS_SSL_CONTEXT_SERIALIZATION)
+    if( context_buf != NULL )
+        mbedtls_platform_zeroize( context_buf, context_buf_len );
+    mbedtls_free( context_buf );
+#endif
+
+#if defined(MBEDTLS_USE_PSA_CRYPTO)
+    mbedtls_psa_crypto_free( );
+#endif
 
 #if defined(MBEDTLS_TEST_HOOKS)
     /* Let test hooks detect errors such as resource leaks.
