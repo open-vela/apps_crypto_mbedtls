@@ -798,14 +798,6 @@ static int ssl_tls13_write_client_hello_body( mbedtls_ssl_context *ssl,
 
 #endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
 
-#if defined(MBEDTLS_SSL_SERVER_NAME_INDICATION)
-    /* Write server name extension */
-    ret = mbedtls_ssl_write_hostname_ext( ssl, p, end, &output_len );
-    if( ret != 0 )
-        return( ret );
-    p += output_len;
-#endif /* MBEDTLS_SSL_SERVER_NAME_INDICATION */
-
     /* Add more extensions here */
 
     /* Write the length of the list of extensions. */
@@ -1590,12 +1582,7 @@ static int ssl_tls1_3_process_server_certificate( mbedtls_ssl_context *ssl )
  */
 static int ssl_tls1_3_process_certificate_verify( mbedtls_ssl_context *ssl )
 {
-    int ret;
-
-    ret = mbedtls_ssl_tls13_process_certificate_verify( ssl );
-    if( ret != 0 )
-        return( ret );
-
+    MBEDTLS_SSL_DEBUG_MSG( 1, ( "%s hasn't been implemented", __func__ ) );
     mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_SERVER_FINISHED );
     return( 0 );
 }
@@ -1605,12 +1592,27 @@ static int ssl_tls1_3_process_certificate_verify( mbedtls_ssl_context *ssl )
  */
 static int ssl_tls1_3_process_server_finished( mbedtls_ssl_context *ssl )
 {
-    int ret;
+    MBEDTLS_SSL_DEBUG_MSG( 1, ( "%s hasn't been implemented", __func__ ) );
+    mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CLIENT_CERTIFICATE );
+    return( 0 );
+}
 
-    ret = mbedtls_ssl_tls13_process_finished_message( ssl );
-    if( ret != 0 )
-        return( ret );
+/*
+ * Handler for MBEDTLS_SSL_CLIENT_CERTIFICATE
+ */
+static int ssl_tls1_3_write_client_certificate( mbedtls_ssl_context *ssl )
+{
+    MBEDTLS_SSL_DEBUG_MSG( 1, ( "%s hasn't been implemented", __func__ ) );
+    mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CLIENT_CERTIFICATE_VERIFY );
+    return( 0 );
+}
 
+/*
+ * Handler for MBEDTLS_SSL_CLIENT_CERTIFICATE_VERIFY
+ */
+static int ssl_tls1_3_write_client_certificate_verify( mbedtls_ssl_context *ssl )
+{
+    MBEDTLS_SSL_DEBUG_MSG( 1, ( "%s hasn't been implemented", __func__ ) );
     mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CLIENT_FINISHED );
     return( 0 );
 }
@@ -1686,6 +1688,14 @@ int mbedtls_ssl_tls13_handshake_client_step( mbedtls_ssl_context *ssl )
 
         case MBEDTLS_SSL_SERVER_FINISHED:
             ret = ssl_tls1_3_process_server_finished( ssl );
+            break;
+
+        case MBEDTLS_SSL_CLIENT_CERTIFICATE:
+            ret = ssl_tls1_3_write_client_certificate( ssl );
+            break;
+
+        case MBEDTLS_SSL_CLIENT_CERTIFICATE_VERIFY:
+            ret = ssl_tls1_3_write_client_certificate_verify( ssl );
             break;
 
         case MBEDTLS_SSL_CLIENT_FINISHED:
