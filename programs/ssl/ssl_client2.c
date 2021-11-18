@@ -21,6 +21,10 @@
 
 #include "ssl_test_lib.h"
 
+#if defined(MBEDTLS_USE_PSA_CRYPTO)
+#include "test/psa_crypto_helpers.h"
+#endif
+
 #if defined(MBEDTLS_SSL_TEST_IMPOSSIBLE)
 int main( void )
 {
@@ -562,6 +566,24 @@ static int my_verify( void *data, mbedtls_x509_crt *crt,
     return( 0 );
 }
 #endif /* MBEDTLS_X509_CRT_PARSE_C */
+
+#if defined(MBEDTLS_ECP_C) && defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+static uint16_t ssl_tls13_sig_algs_for_test[] = {
+#if defined(MBEDTLS_SHA256_C) && defined(MBEDTLS_ECDSA_C) && defined(MBEDTLS_ECP_DP_SECP256R1_ENABLED)
+    MBEDTLS_TLS13_SIG_ECDSA_SECP256R1_SHA256,
+#endif
+#if defined(MBEDTLS_SHA512_C) && defined(MBEDTLS_ECDSA_C) && defined(MBEDTLS_ECP_DP_SECP384R1_ENABLED)
+    MBEDTLS_TLS13_SIG_ECDSA_SECP384R1_SHA384,
+#endif
+#if defined(MBEDTLS_SHA512_C) && defined(MBEDTLS_ECDSA_C) && defined(MBEDTLS_ECP_DP_SECP521R1_ENABLED)
+    MBEDTLS_TLS13_SIG_ECDSA_SECP521R1_SHA512,
+#endif
+#if defined(MBEDTLS_X509_RSASSA_PSS_SUPPORT)
+    MBEDTLS_TLS13_SIG_RSA_PSS_RSAE_SHA256,
+#endif
+    MBEDTLS_TLS13_SIG_NONE
+};
+#endif /* MBEDTLS_ECP_C && MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
 #if defined(MBEDTLS_SSL_DTLS_CONNECTION_ID)
 int report_cid_usage( mbedtls_ssl_context *ssl,
@@ -1726,6 +1748,10 @@ int main( int argc, char *argv[] )
 
     memset( peer_crt_info, 0, sizeof( peer_crt_info ) );
 #endif /* MBEDTLS_X509_CRT_PARSE_C */
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
+    mbedtls_ssl_conf_sig_algs( &conf, ssl_tls13_sig_algs_for_test );
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
 
 #if defined(MBEDTLS_SSL_DTLS_CONNECTION_ID)
     if( opt.cid_enabled == 1 || opt.cid_enabled_renego == 1 )
@@ -3015,6 +3041,19 @@ exit:
 
     mbedtls_net_free( &server_fd );
 
+    mbedtls_ssl_free( &ssl );
+    mbedtls_ssl_config_free( &conf );
+    mbedtls_ssl_session_free( &saved_session );
+
+    if( session_data != NULL )
+        mbedtls_platform_zeroize( session_data, session_data_len );
+    mbedtls_free( session_data );
+#if defined(MBEDTLS_SSL_CONTEXT_SERIALIZATION)
+    if( context_buf != NULL )
+        mbedtls_platform_zeroize( context_buf, context_buf_len );
+    mbedtls_free( context_buf );
+#endif
+
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
     mbedtls_x509_crt_free( &clicert );
     mbedtls_x509_crt_free( &cacert );
@@ -3045,22 +3084,24 @@ exit:
 #endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED &&
           MBEDTLS_USE_PSA_CRYPTO */
 
-    mbedtls_ssl_session_free( &saved_session );
-    mbedtls_ssl_free( &ssl );
-    mbedtls_ssl_config_free( &conf );
-    rng_free( &rng );
-    if( session_data != NULL )
-        mbedtls_platform_zeroize( session_data, session_data_len );
-    mbedtls_free( session_data );
-#if defined(MBEDTLS_SSL_CONTEXT_SERIALIZATION)
-    if( context_buf != NULL )
-        mbedtls_platform_zeroize( context_buf, context_buf_len );
-    mbedtls_free( context_buf );
-#endif
-
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
+    const char* message = mbedtls_test_helper_is_psa_leaking();
+    if( message )
+    {
+        if( ret == 0 )
+            ret = 1;
+        mbedtls_printf( "PSA memory leak detected: %s\n",  message);
+    }
+#endif /* MBEDTLS_USE_PSA_CRYPTO */
+
+    /* For builds with MBEDTLS_TEST_USE_PSA_CRYPTO_RNG psa crypto
+     * resources are freed by rng_free(). */
+#if defined(MBEDTLS_USE_PSA_CRYPTO) && \
+    !defined(MBEDTLS_TEST_USE_PSA_CRYPTO_RNG)
     mbedtls_psa_crypto_free( );
 #endif
+
+    rng_free( &rng );
 
 #if defined(MBEDTLS_TEST_HOOKS)
     if( test_hooks_failure_detected( ) )
