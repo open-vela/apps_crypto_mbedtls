@@ -3658,13 +3658,15 @@ static psa_status_t psa_aead_check_nonce_length( psa_algorithm_t alg,
         case PSA_ALG_CHACHA20_POLY1305:
             if( nonce_length == 12 )
                 return( PSA_SUCCESS );
+            else if( nonce_length == 8 )
+                return( PSA_ERROR_NOT_SUPPORTED );
             break;
 #endif /* PSA_WANT_ALG_CHACHA20_POLY1305 */
         default:
-            break;
+            return( PSA_ERROR_NOT_SUPPORTED );
     }
 
-    return( PSA_ERROR_NOT_SUPPORTED );
+    return( PSA_ERROR_INVALID_ARGUMENT );
 }
 
 psa_status_t psa_aead_encrypt( mbedtls_svc_key_id_t key,
@@ -4762,6 +4764,9 @@ psa_status_t psa_key_derivation_output_key( const psa_key_attributes_t *attribut
      * risk tripping up later, e.g. on a malloc(0) that returns NULL. */
     if( psa_get_key_bits( attributes ) == 0 )
         return( PSA_ERROR_INVALID_ARGUMENT );
+
+    if( operation->alg == PSA_ALG_NONE )
+        return( PSA_ERROR_BAD_STATE );
 
     if( ! operation->can_output_key )
         return( PSA_ERROR_NOT_PERMITTED );
