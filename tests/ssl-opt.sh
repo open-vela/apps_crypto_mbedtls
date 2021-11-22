@@ -8809,12 +8809,10 @@ run_test    "TLS1.3: handshake dispatch test: tls1_3 only" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
 requires_config_disabled MBEDTLS_USE_PSA_CRYPTO
-run_test    "TLS1.3: Test client hello msg work - openssl" \
-            "$O_NEXT_SRV -tls1_3 -msg -no_middlebox" \
+run_test    "TLS1.3: minimal feature sets - openssl" \
+            "$O_NEXT_SRV -msg -tls1_3 -no_middlebox -num_tickets 0 -no_resume_ephemeral -no_cache" \
             "$P_CLI debug_level=3 min_version=tls1_3 max_version=tls1_3" \
-            1 \
-            -c "SSL - The requested feature is not available" \
-            -s "ServerHello"                \
+            0 \
             -c "tls1_3 client state: 0"     \
             -c "tls1_3 client state: 2"     \
             -c "tls1_3 client state: 19"    \
@@ -8822,8 +8820,6 @@ run_test    "TLS1.3: Test client hello msg work - openssl" \
             -c "tls1_3 client state: 3"     \
             -c "tls1_3 client state: 9"     \
             -c "tls1_3 client state: 13"    \
-            -c "tls1_3 client state: 7"     \
-            -c "tls1_3 client state: 20"    \
             -c "tls1_3 client state: 11"    \
             -c "tls1_3 client state: 14"    \
             -c "tls1_3 client state: 15"    \
@@ -8835,18 +8831,19 @@ run_test    "TLS1.3: Test client hello msg work - openssl" \
             -c "Certificate verification flags clear" \
             -c "=> parse certificate verify"          \
             -c "<= parse certificate verify"          \
-            -c "mbedtls_ssl_tls13_process_certificate_verify() returned 0"
+            -c "mbedtls_ssl_tls13_process_certificate_verify() returned 0" \
+            -c "<= parse finished message" \
+            -c "HTTP/1.0 200 ok"
 
 requires_gnutls_tls1_3
 requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
 requires_config_disabled MBEDTLS_USE_PSA_CRYPTO
-run_test    "TLS1.3: Test client hello msg work - gnutls" \
+run_test    "TLS1.3: minimal feature sets - gnutls" \
             "$G_NEXT_SRV --debug=4 --priority=NORMAL:-VERS-ALL:+VERS-TLS1.3:+CIPHER-ALL:%NO_TICKETS:%DISABLE_TLS13_COMPAT_MODE --disable-client-cert" \
             "$P_CLI debug_level=3 min_version=tls1_3 max_version=tls1_3" \
-            1 \
-            -c "SSL - The requested feature is not available" \
+            0 \
             -s "SERVER HELLO was queued"    \
             -c "tls1_3 client state: 0"     \
             -c "tls1_3 client state: 2"     \
@@ -8855,8 +8852,6 @@ run_test    "TLS1.3: Test client hello msg work - gnutls" \
             -c "tls1_3 client state: 3"     \
             -c "tls1_3 client state: 9"     \
             -c "tls1_3 client state: 13"    \
-            -c "tls1_3 client state: 7"     \
-            -c "tls1_3 client state: 20"    \
             -c "tls1_3 client state: 11"    \
             -c "tls1_3 client state: 14"    \
             -c "tls1_3 client state: 15"    \
@@ -8868,7 +8863,10 @@ run_test    "TLS1.3: Test client hello msg work - gnutls" \
             -c "Certificate verification flags clear" \
             -c "=> parse certificate verify"          \
             -c "<= parse certificate verify"          \
-            -c "mbedtls_ssl_tls13_process_certificate_verify() returned 0"
+            -c "mbedtls_ssl_tls13_process_certificate_verify() returned 0" \
+            -c "<= parse finished message" \
+            -c "HTTP/1.0 200 OK"
+
 
 # Test heap memory usage after handshake
 requires_config_enabled MBEDTLS_MEMORY_DEBUG
