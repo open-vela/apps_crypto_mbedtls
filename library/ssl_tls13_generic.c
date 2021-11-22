@@ -320,11 +320,6 @@ static int ssl_tls13_parse_certificate_verify( mbedtls_ssl_context *ssl,
     unsigned char verify_hash[MBEDTLS_MD_MAX_SIZE];
     size_t verify_hash_len;
 
-    void const *opts_ptr = NULL;
-#if defined(MBEDTLS_X509_RSASSA_PSS_SUPPORT)
-    mbedtls_pk_rsassa_pss_options opts;
-#endif /* MBEDTLS_X509_RSASSA_PSS_SUPPORT */
-
     /*
      * struct {
      *     SignatureScheme algorithm;
@@ -373,13 +368,6 @@ static int ssl_tls13_parse_certificate_verify( mbedtls_ssl_context *ssl,
             md_alg = MBEDTLS_MD_SHA512;
             sig_alg = MBEDTLS_PK_ECDSA;
             break;
-#if defined(MBEDTLS_X509_RSASSA_PSS_SUPPORT)
-        case MBEDTLS_TLS13_SIG_RSA_PSS_RSAE_SHA256:
-            MBEDTLS_SSL_DEBUG_MSG( 4, ( "Certificate Verify: using RSA" ) );
-            md_alg = MBEDTLS_MD_SHA256;
-            sig_alg = MBEDTLS_PK_RSASSA_PSS;
-            break;
-#endif /* MBEDTLS_X509_RSASSA_PSS_SUPPORT */
         default:
             MBEDTLS_SSL_DEBUG_MSG( 1, ( "Certificate Verify: Unknown signature algorithm." ) );
             goto error;
@@ -438,21 +426,8 @@ static int ssl_tls13_parse_certificate_verify( mbedtls_ssl_context *ssl,
     }
 
     MBEDTLS_SSL_DEBUG_BUF( 3, "verify hash", verify_hash, verify_hash_len );
-#if defined(MBEDTLS_X509_RSASSA_PSS_SUPPORT)
-    if( sig_alg == MBEDTLS_PK_RSASSA_PSS )
-    {
-        const mbedtls_md_info_t* md_info;
-        opts.mgf1_hash_id = md_alg;
-        if( ( md_info = mbedtls_md_info_from_type( md_alg ) ) == NULL )
-        {
-            return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
-        }
-        opts.expected_salt_len = mbedtls_md_get_size( md_info );
-        opts_ptr = (const void*) &opts;
-    }
-#endif /* MBEDTLS_X509_RSASSA_PSS_SUPPORT */
 
-    if( ( ret = mbedtls_pk_verify_ext( sig_alg, opts_ptr,
+    if( ( ret = mbedtls_pk_verify_ext( sig_alg, NULL,
                                        &ssl->session_negotiate->peer_cert->pk,
                                        md_alg, verify_hash, verify_hash_len,
                                        p, signature_len ) ) == 0 )
@@ -1126,25 +1101,6 @@ cleanup:
 
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= write finished message" ) );
     return( ret );
-}
-
-void mbedtls_ssl_tls13_handshake_wrapup( mbedtls_ssl_context *ssl )
-{
-
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "=> handshake wrapup" ) );
-
-    /*
-     * Free the previous session and switch to the current one.
-     */
-    if( ssl->session )
-    {
-        mbedtls_ssl_session_free( ssl->session );
-        mbedtls_free( ssl->session );
-    }
-    ssl->session = ssl->session_negotiate;
-    ssl->session_negotiate = NULL;
-
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "<= handshake wrapup" ) );
 }
 
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
