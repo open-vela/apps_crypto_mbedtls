@@ -39,6 +39,7 @@
 #include "mbedtls/error.h"
 #include "mbedtls/platform_util.h"
 #include "mbedtls/version.h"
+#include "mbedtls/constant_time.h"
 
 #include <string.h>
 
@@ -2885,7 +2886,7 @@ int mbedtls_ssl_parse_finished( mbedtls_ssl_context *ssl )
         return( MBEDTLS_ERR_SSL_DECODE_ERROR );
     }
 
-    if( mbedtls_ssl_safer_memcmp( ssl->in_msg + mbedtls_ssl_hs_hdr_len( ssl ),
+    if( mbedtls_ct_memcmp( ssl->in_msg + mbedtls_ssl_hs_hdr_len( ssl ),
                       buf, hash_len ) != 0 )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad finished message" ) );
@@ -6370,12 +6371,6 @@ static uint16_t ssl_preset_default_sig_algs[] = {
     MBEDTLS_TLS13_SIG_ECDSA_SECP521R1_SHA512,
 #endif /* MBEDTLS_SHA512_C && MBEDTLS_ECP_DP_SECP521R1_ENABLED */
 #endif /* MBEDTLS_ECDSA_C */
-
-    /* RSA algorithms */
-#if defined(MBEDTLS_X509_RSASSA_PSS_SUPPORT)
-    MBEDTLS_TLS13_SIG_RSA_PSS_RSAE_SHA256,
-#endif
-
     MBEDTLS_TLS13_SIG_NONE
 };
 
@@ -6389,12 +6384,6 @@ static uint16_t ssl_preset_suiteb_sig_algs[] = {
     MBEDTLS_TLS13_SIG_ECDSA_SECP384R1_SHA384,
 #endif /* MBEDTLS_SHA512_C && MBEDTLS_ECP_DP_SECP384R1_ENABLED */
 #endif /* MBEDTLS_ECDSA_C */
-
-    /* RSA algorithms */
-#if defined(MBEDTLS_X509_RSASSA_PSS_SUPPORT)
-    MBEDTLS_TLS13_SIG_RSA_PSS_RSAE_SHA256,
-#endif
-
     MBEDTLS_TLS13_SIG_NONE
 };
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
