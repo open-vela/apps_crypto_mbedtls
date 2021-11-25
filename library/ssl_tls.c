@@ -6376,7 +6376,6 @@ static uint16_t ssl_preset_default_sig_algs[] = {
 #if defined(MBEDTLS_X509_RSASSA_PSS_SUPPORT)
     MBEDTLS_TLS13_SIG_RSA_PSS_RSAE_SHA256,
 #endif
-    MBEDTLS_TLS13_SIG_RSA_PKCS1_SHA256,
 
     MBEDTLS_TLS13_SIG_NONE
 };
@@ -6396,7 +6395,6 @@ static uint16_t ssl_preset_suiteb_sig_algs[] = {
 #if defined(MBEDTLS_X509_RSASSA_PSS_SUPPORT)
     MBEDTLS_TLS13_SIG_RSA_PSS_RSAE_SHA256,
 #endif
-    MBEDTLS_TLS13_SIG_RSA_PKCS1_SHA256,
 
     MBEDTLS_TLS13_SIG_NONE
 };
