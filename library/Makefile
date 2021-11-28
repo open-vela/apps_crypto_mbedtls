@@ -84,7 +84,6 @@ OBJS_CRYPTO= \
 	     cipher.o \
 	     cipher_wrap.o \
 	     cmac.o \
-	     constant_time.o \
 	     ctr_drbg.o \
 	     des.o \
 	     dhm.o \
@@ -186,14 +185,6 @@ endif
 static: libmbedcrypto.a libmbedx509.a libmbedtls.a
 
 shared: libmbedcrypto.$(DLEXT) libmbedx509.$(DLEXT) libmbedtls.$(DLEXT)
-
-# Windows builds under Mingw can fail if make tries to create archives in the same
-# directory at the same time - see https://bugs.launchpad.net/gcc-arm-embedded/+bug/1848002.
-# This forces builds of the .a files to be serialised.
-ifdef WINDOWS
-libmbedtls.a: | libmbedx509.a
-libmbedx509.a: | libmbedcrypto.a
-endif
 
 # tls
 libmbedtls.a: $(OBJS_TLS)
