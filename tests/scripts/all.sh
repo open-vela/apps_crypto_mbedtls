@@ -2277,7 +2277,6 @@ component_test_make_shared () {
     msg "build/test: make shared" # ~ 40s
     make SHARED=1 all check
     ldd programs/util/strerror | grep libmbedcrypto
-    programs/test/dlopen_demo.sh
 }
 
 component_test_cmake_shared () {
@@ -2286,7 +2285,6 @@ component_test_cmake_shared () {
     make
     ldd programs/util/strerror | grep libmbedcrypto
     make test
-    programs/test/dlopen_demo.sh
 }
 
 test_build_opt () {
@@ -2678,36 +2676,6 @@ component_test_valgrind () {
     fi
 }
 
-support_test_cmake_out_of_source () {
-    distrib_id=""
-    distrib_ver=""
-    distrib_ver_minor=""
-    distrib_ver_major=""
-
-    # Attempt to parse lsb-release to find out distribution and version. If not
-    # found this should fail safe (test is supported).
-    if [[ -f /etc/lsb-release ]]; then
-
-        while read -r lsb_line; do
-            case "$lsb_line" in
-                "DISTRIB_ID"*) distrib_id=${lsb_line/#DISTRIB_ID=};;
-                "DISTRIB_RELEASE"*) distrib_ver=${lsb_line/#DISTRIB_RELEASE=};;
-            esac
-        done < /etc/lsb-release
-
-        distrib_ver_major="${distrib_ver%%.*}"
-        distrib_ver="${distrib_ver#*.}"
-        distrib_ver_minor="${distrib_ver%%.*}"
-    fi
-
-    # Running the out of source CMake test on Ubuntu 16.04 using more than one
-    # processor (as the CI does) can create a race condition whereby the build
-    # fails to see a generated file, despite that file actually having been
-    # generated. This problem appears to go away with 18.04 or newer, so make
-    # the out of source tests unsupported on Ubuntu 16.04.
-    [ "$distrib_id" != "Ubuntu" ] || [ "$distrib_ver_major" -gt 16 ]
-}
-
 component_test_cmake_out_of_source () {
     msg "build: cmake 'out-of-source' build"
     MBEDTLS_ROOT_DIR="$PWD"
@@ -2799,26 +2767,6 @@ component_test_zeroize () {
     done
 
     unset gdb_disable_aslr
-}
-
-component_test_psa_compliance () {
-    msg "build: make, default config (out-of-box), libmbedcrypto.a only"
-    make -C library libmbedcrypto.a
-
-    msg "unit test: test_psa_compliance.py"
-    ./tests/scripts/test_psa_compliance.py
-}
-
-support_test_psa_compliance () {
-    # psa-compliance-tests only supports CMake >= 3.10.0
-    ver="$(cmake --version)"
-    ver="${ver#cmake version }"
-    ver_major="${ver%%.*}"
-
-    ver="${ver#*.}"
-    ver_minor="${ver%%.*}"
-
-    [ "$ver_major" -eq 3 ] && [ "$ver_minor" -ge 10 ]
 }
 
 component_check_python_files () {
