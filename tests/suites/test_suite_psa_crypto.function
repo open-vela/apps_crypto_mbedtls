@@ -2907,9 +2907,6 @@ void cipher_encrypt_alg_without_iv( int alg_arg,
     mbedtls_svc_key_id_t key = MBEDTLS_SVC_KEY_ID_INIT;
     psa_key_type_t key_type = key_type_arg;
     psa_algorithm_t alg = alg_arg;
-    psa_cipher_operation_t operation = PSA_CIPHER_OPERATION_INIT;
-    uint8_t iv[1] = { 0x5a };
-    size_t iv_length;
     unsigned char *output = NULL;
     size_t output_buffer_size = 0;
     size_t output_length = 0;
@@ -2926,14 +2923,6 @@ void cipher_encrypt_alg_without_iv( int alg_arg,
 
     PSA_ASSERT( psa_import_key( &attributes, key_data->x, key_data->len,
                                 &key ) );
-
-    PSA_ASSERT( psa_cipher_encrypt_setup( &operation, key, alg ) );
-    TEST_EQUAL( psa_cipher_set_iv( &operation, iv, sizeof( iv ) ),
-                PSA_ERROR_BAD_STATE );
-    PSA_ASSERT( psa_cipher_encrypt_setup( &operation, key, alg ) );
-    TEST_EQUAL( psa_cipher_generate_iv( &operation, iv, sizeof( iv ),
-                                        &iv_length ),
-                PSA_ERROR_BAD_STATE );
 
     PSA_ASSERT( psa_cipher_encrypt( key, alg, input->x, input->len, output,
                                     output_buffer_size, &output_length ) );
@@ -5945,7 +5934,7 @@ void derive_input( int alg_arg,
     if( output_key_type != PSA_KEY_TYPE_NONE )
     {
         psa_reset_key_attributes( &attributes );
-        psa_set_key_type( &attributes, output_key_type );
+        psa_set_key_type( &attributes, PSA_KEY_TYPE_RAW_DATA );
         psa_set_key_bits( &attributes, 8 );
         actual_output_status =
             psa_key_derivation_output_key( &attributes, &operation,
