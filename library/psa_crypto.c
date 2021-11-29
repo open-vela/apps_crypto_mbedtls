@@ -103,9 +103,9 @@ static int key_type_is_raw_bytes( psa_key_type_t type )
 
 typedef struct
 {
-    mbedtls_psa_random_context_t rng;
     unsigned initialized : 1;
     unsigned rng_state : 2;
+    mbedtls_psa_random_context_t rng;
 } psa_global_data_t;
 
 static psa_global_data_t global_data;
@@ -3658,13 +3658,15 @@ static psa_status_t psa_aead_check_nonce_length( psa_algorithm_t alg,
         case PSA_ALG_CHACHA20_POLY1305:
             if( nonce_length == 12 )
                 return( PSA_SUCCESS );
+            else if( nonce_length == 8 )
+                return( PSA_ERROR_NOT_SUPPORTED );
             break;
 #endif /* PSA_WANT_ALG_CHACHA20_POLY1305 */
         default:
-            break;
+            return( PSA_ERROR_NOT_SUPPORTED );
     }
 
-    return( PSA_ERROR_NOT_SUPPORTED );
+    return( PSA_ERROR_INVALID_ARGUMENT );
 }
 
 psa_status_t psa_aead_encrypt( mbedtls_svc_key_id_t key,
@@ -3866,7 +3868,6 @@ psa_status_t psa_aead_generate_nonce( psa_aead_operation_t *operation,
                                       size_t *nonce_length )
 {
     psa_status_t status = PSA_ERROR_CORRUPTION_DETECTED;
-    uint8_t local_nonce[PSA_AEAD_NONCE_MAX_SIZE];
     size_t required_nonce_size;
 
     *nonce_length = 0;
@@ -3891,24 +3892,15 @@ psa_status_t psa_aead_generate_nonce( psa_aead_operation_t *operation,
         goto exit;
     }
 
-    if( required_nonce_size > sizeof( local_nonce ) )
-    {
-        status = PSA_ERROR_GENERIC_ERROR;
-        goto exit;
-    }
-
-    status = psa_generate_random( local_nonce, required_nonce_size );
+    status = psa_generate_random( nonce, required_nonce_size );
     if( status != PSA_SUCCESS )
         goto exit;
 
-    status = psa_aead_set_nonce( operation, local_nonce, required_nonce_size );
+    status = psa_aead_set_nonce( operation, nonce, required_nonce_size );
 
 exit:
     if( status == PSA_SUCCESS )
-    {
-        memcpy( nonce, local_nonce, required_nonce_size );
         *nonce_length = required_nonce_size;
-    }
     else
         psa_aead_abort( operation );
 
@@ -4772,6 +4764,9 @@ psa_status_t psa_key_derivation_output_key( const psa_key_attributes_t *attribut
      * risk tripping up later, e.g. on a malloc(0) that returns NULL. */
     if( psa_get_key_bits( attributes ) == 0 )
         return( PSA_ERROR_INVALID_ARGUMENT );
+
+    if( operation->alg == PSA_ALG_NONE )
+        return( PSA_ERROR_BAD_STATE );
 
     if( ! operation->can_output_key )
         return( PSA_ERROR_NOT_PERMITTED );
