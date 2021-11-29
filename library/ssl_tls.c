@@ -39,6 +39,7 @@
 #include "mbedtls/error.h"
 #include "mbedtls/platform_util.h"
 #include "mbedtls/version.h"
+#include "mbedtls/constant_time.h"
 
 #include <string.h>
 
@@ -182,10 +183,6 @@ int mbedtls_ssl_session_copy( mbedtls_ssl_session *dst,
 {
     mbedtls_ssl_session_free( dst );
     memcpy( dst, src, sizeof( mbedtls_ssl_session ) );
-
-#if defined(MBEDTLS_SSL_SESSION_TICKETS) && defined(MBEDTLS_SSL_CLI_C)
-    dst->ticket = NULL;
-#endif
 
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
 
@@ -2889,7 +2886,7 @@ int mbedtls_ssl_parse_finished( mbedtls_ssl_context *ssl )
         return( MBEDTLS_ERR_SSL_DECODE_ERROR );
     }
 
-    if( mbedtls_ssl_safer_memcmp( ssl->in_msg + mbedtls_ssl_hs_hdr_len( ssl ),
+    if( mbedtls_ct_memcmp( ssl->in_msg + mbedtls_ssl_hs_hdr_len( ssl ),
                       buf, hash_len ) != 0 )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad finished message" ) );
@@ -5555,8 +5552,13 @@ void mbedtls_ssl_handshake_free( mbedtls_ssl_context *ssl )
     psa_destroy_key( handshake->ecdh_psa_privkey );
 #endif /* MBEDTLS_ECDH_C && MBEDTLS_USE_PSA_CRYPTO */
 
-    mbedtls_platform_zeroize( handshake,
-                              sizeof( mbedtls_ssl_handshake_params ) );
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+    mbedtls_ssl_transform_free( handshake->transform_handshake );
+    mbedtls_ssl_transform_free( handshake->transform_earlydata );
+    mbedtls_free( handshake->transform_earlydata );
+    mbedtls_free( handshake->transform_handshake );
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+
 
 #if defined(MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH)
     /* If the buffers are too big - reallocate. Because of the way Mbed TLS
@@ -5567,12 +5569,9 @@ void mbedtls_ssl_handshake_free( mbedtls_ssl_context *ssl )
                                     mbedtls_ssl_get_output_buflen( ssl ) );
 #endif
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-    mbedtls_free( handshake->transform_earlydata );
-    mbedtls_free( handshake->transform_handshake );
-    handshake->transform_earlydata = NULL;
-    handshake->transform_handshake = NULL;
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+    /* mbedtls_platform_zeroize MUST be last one in this function */
+    mbedtls_platform_zeroize( handshake,
+                              sizeof( mbedtls_ssl_handshake_params ) );
 }
 
 void mbedtls_ssl_session_free( mbedtls_ssl_session *session )
@@ -6372,6 +6371,12 @@ static uint16_t ssl_preset_default_sig_algs[] = {
     MBEDTLS_TLS13_SIG_ECDSA_SECP521R1_SHA512,
 #endif /* MBEDTLS_SHA512_C && MBEDTLS_ECP_DP_SECP521R1_ENABLED */
 #endif /* MBEDTLS_ECDSA_C */
+
+    /* RSA algorithms */
+#if defined(MBEDTLS_X509_RSASSA_PSS_SUPPORT)
+    MBEDTLS_TLS13_SIG_RSA_PSS_RSAE_SHA256,
+#endif
+
     MBEDTLS_TLS13_SIG_NONE
 };
 
@@ -6385,6 +6390,12 @@ static uint16_t ssl_preset_suiteb_sig_algs[] = {
     MBEDTLS_TLS13_SIG_ECDSA_SECP384R1_SHA384,
 #endif /* MBEDTLS_SHA512_C && MBEDTLS_ECP_DP_SECP384R1_ENABLED */
 #endif /* MBEDTLS_ECDSA_C */
+
+    /* RSA algorithms */
+#if defined(MBEDTLS_X509_RSASSA_PSS_SUPPORT)
+    MBEDTLS_TLS13_SIG_RSA_PSS_RSAE_SHA256,
+#endif
+
     MBEDTLS_TLS13_SIG_NONE
 };
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
