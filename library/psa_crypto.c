@@ -3658,15 +3658,13 @@ static psa_status_t psa_aead_check_nonce_length( psa_algorithm_t alg,
         case PSA_ALG_CHACHA20_POLY1305:
             if( nonce_length == 12 )
                 return( PSA_SUCCESS );
-            else if( nonce_length == 8 )
-                return( PSA_ERROR_NOT_SUPPORTED );
             break;
 #endif /* PSA_WANT_ALG_CHACHA20_POLY1305 */
         default:
-            return( PSA_ERROR_NOT_SUPPORTED );
+            break;
     }
 
-    return( PSA_ERROR_INVALID_ARGUMENT );
+    return( PSA_ERROR_NOT_SUPPORTED );
 }
 
 psa_status_t psa_aead_encrypt( mbedtls_svc_key_id_t key,
