@@ -1422,7 +1422,7 @@ void asymmetric_signature_key_policy( int policy_usage_arg,
     else
         TEST_EQUAL( status, PSA_ERROR_NOT_PERMITTED );
 
-    if( PSA_ALG_IS_SIGN_HASH( exercise_alg ) &&
+    if( PSA_ALG_IS_HASH_AND_SIGN( exercise_alg ) &&
         PSA_ALG_IS_HASH( PSA_ALG_SIGN_GET_HASH( exercise_alg ) ) )
     {
         status = psa_sign_message( key, exercise_alg,
@@ -2864,40 +2864,6 @@ exit:
 /* END_CASE */
 
 /* BEGIN_CASE */
-void cipher_encrypt_validate_iv_length( int alg, int key_type, data_t* key_data,
-                               data_t *input, int iv_length,
-                               int expected_result )
-{
-    mbedtls_svc_key_id_t key = MBEDTLS_SVC_KEY_ID_INIT;
-    psa_cipher_operation_t operation = PSA_CIPHER_OPERATION_INIT;
-    psa_key_attributes_t attributes = PSA_KEY_ATTRIBUTES_INIT;
-    size_t output_buffer_size = 0;
-    unsigned char *output = NULL;
-
-    output_buffer_size = PSA_CIPHER_ENCRYPT_OUTPUT_SIZE( key_type, alg, input->len );
-    ASSERT_ALLOC( output, output_buffer_size );
-
-    PSA_ASSERT( psa_crypto_init( ) );
-
-    psa_set_key_usage_flags( &attributes, PSA_KEY_USAGE_ENCRYPT );
-    psa_set_key_algorithm( &attributes, alg );
-    psa_set_key_type( &attributes, key_type );
-
-    PSA_ASSERT( psa_import_key( &attributes, key_data->x, key_data->len,
-                                &key ) );
-    PSA_ASSERT( psa_cipher_encrypt_setup( &operation, key, alg ) );
-    TEST_EQUAL( expected_result, psa_cipher_set_iv( &operation, output,
-                                                    iv_length ) );
-
-exit:
-    psa_cipher_abort( &operation );
-    mbedtls_free( output );
-    psa_destroy_key( key );
-    PSA_DONE( );
-}
-/* END_CASE */
-
-/* BEGIN_CASE */
 void cipher_encrypt_alg_without_iv( int alg_arg,
                                     int key_type_arg,
                                     data_t *key_data,
@@ -4073,12 +4039,13 @@ void aead_multipart_generate_nonce( int key_type_arg, data_t *key_data,
         TEST_EQUAL( actual_nonce_length, PSA_AEAD_NONCE_LENGTH( key_type,
                                                                 alg ) );
 
-    TEST_ASSERT( actual_nonce_length < PSA_AEAD_NONCE_MAX_SIZE );
+    TEST_ASSERT( actual_nonce_length <= PSA_AEAD_NONCE_MAX_SIZE );
 
     if( expected_status == PSA_SUCCESS )
     {
-
         /* Ensure we can still complete operation. */
+        PSA_ASSERT( psa_aead_set_lengths( &operation, additional_data->len,
+                                          input_data->len ) );
 
         PSA_ASSERT( psa_aead_update_ad( &operation, additional_data->x,
                                         additional_data->len ) );
@@ -4191,6 +4158,8 @@ void aead_multipart_set_nonce( int key_type_arg, data_t *key_data,
     if( expected_status == PSA_SUCCESS )
     {
         /* Ensure we can still complete operation. */
+        PSA_ASSERT( psa_aead_set_lengths( &operation, additional_data->len,
+                                          input_data->len ) );
 
         PSA_ASSERT( psa_aead_update_ad( &operation, additional_data->x,
                                         additional_data->len ) );
@@ -4268,6 +4237,9 @@ void aead_multipart_update_buffer_test( int key_type_arg, data_t *key_data,
     }
 
     PSA_ASSERT( status );
+
+    PSA_ASSERT( psa_aead_set_lengths( &operation, additional_data->len,
+                                      input_data->len ) );
 
     PSA_ASSERT( psa_aead_set_nonce( &operation, nonce->x, nonce->len ) );
 
@@ -4357,6 +4329,9 @@ void aead_multipart_finish_buffer_test( int key_type_arg, data_t *key_data,
 
     PSA_ASSERT( psa_aead_set_nonce( &operation, nonce->x, nonce->len ) );
 
+    PSA_ASSERT( psa_aead_set_lengths( &operation, additional_data->len,
+                                      input_data->len ) );
+
     PSA_ASSERT( psa_aead_update_ad( &operation, additional_data->x,
                                     additional_data->len ) );
 
@@ -4441,6 +4416,17 @@ void aead_multipart_verify( int key_type_arg, data_t *key_data,
     PSA_ASSERT( status );
 
     PSA_ASSERT( psa_aead_set_nonce( &operation, nonce->x, nonce->len ) );
+
+    status = psa_aead_set_lengths( &operation, additional_data->len,
+                                      input_data->len );
+
+    if( status != PSA_SUCCESS )
+    {
+        /* Invalid tag lengths are detected in CCM at this point, as they
+         * would be written into the first block. */
+        TEST_EQUAL( status, expected_status );
+        goto exit;
+    }
 
     PSA_ASSERT( psa_aead_update_ad( &operation, additional_data->x,
                                     additional_data->len ) );
@@ -5934,7 +5920,7 @@ void derive_input( int alg_arg,
     if( output_key_type != PSA_KEY_TYPE_NONE )
     {
         psa_reset_key_attributes( &attributes );
-        psa_set_key_type( &attributes, output_key_type );
+        psa_set_key_type( &attributes, PSA_KEY_TYPE_RAW_DATA );
         psa_set_key_bits( &attributes, 8 );
         actual_output_status =
             psa_key_derivation_output_key( &attributes, &operation,
