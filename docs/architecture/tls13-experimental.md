@@ -133,23 +133,17 @@ MVP definition
 
   (1) This is just for comparison.
 
-  (2) The MVP sends only one shared secret corresponding to the configured
-      preferred group. This could end up with connection failure if the
-      server does not support our preferred curve, as the MVP does not implement
-      HelloRetryRequest. The preferred group is the group of the first curve in
-      the list of allowed curves as defined by the configuration. The allowed
-      curves are by default ordered as follows: `x25519`, `secp256r1`,
-      `secp384r1` and finally `secp521r1`. Note that, in the absence of an
-      application profile standard specifying otherwise, section 9.1 of the
-      specification rather promotes curve `secp256r1` to be supported over
-      curve `x25519`. The MVP would, however, rather keep the preference order
-      currently promoted by Mbed TLS as this applies to TLS 1.2 as well, and
-      changing the order only for TLS1.3 would be potentially difficult.
-      In the unlikely event a server does not support curve `x25519` but does
-      support curve `secp256r1`, curve `secp256r1` can be set as the preferred
-      curve through the `mbedtls_ssl_conf_curves()` API.
+  (2) The MVP sends one shared secret corresponding to the configured preferred
+      group. The preferred group is the group of the first curve in the list of
+      allowed curves as defined by the configuration. The allowed curves are
+      by default ordered as follow: `secp256r1`, `x25519`, `secp384r1`
+      and finally `secp521r1`. This default order is aligned with the
+      list of mandatory-to-implement groups (in absence of an application
+      profile standard specifying otherwise) defined in section 9.1 of the
+      specification. The list of allowed curves can be changed through the
+      `mbedtls_ssl_conf_curves()` API.
 
-  (3) The MVP proposes only TLS 1.3 and does not support version negotiation.
+  (3) The MVP proposes only TLS 1.3 and does not support version negociation.
       Out-of-protocol fallback is supported though if the Mbed TLS library
       has been built to support both TLS 1.3 and TLS 1.2: just set the
       maximum of the minor version of the SSL configuration to
@@ -218,7 +212,7 @@ MVP definition
   (1) Some support has already been upstreamed but it is incomplete.
   (2) Key exchange configuration options for TLS 1.3 will likely to be
       organized around the notion of key exchange mode along the line
-      of the MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_NONE/PSK/PSK_EPHEMERAL/EPHEMERAL
+      of the MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_NONE/PSK/PSK_EPHEMERAL/EPHEMERAL
       runtime configuration macros.
 
 - Quality considerations
