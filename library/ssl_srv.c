@@ -34,8 +34,6 @@
 #include "mbedtls/debug.h"
 #include "mbedtls/error.h"
 #include "mbedtls/platform_util.h"
-#include "constant_time_internal.h"
-#include "mbedtls/constant_time.h"
 
 #include <string.h>
 
@@ -198,7 +196,7 @@ static int ssl_parse_renegotiation_info( mbedtls_ssl_context *ssl,
         /* Check verify-data in constant-time. The length OTOH is no secret */
         if( len    != 1 + ssl->verify_data_len ||
             buf[0] !=     ssl->verify_data_len ||
-            mbedtls_ct_memcmp( buf + 1, ssl->peer_verify_data,
+            mbedtls_ssl_safer_memcmp( buf + 1, ssl->peer_verify_data,
                           ssl->verify_data_len ) != 0 )
         {
             MBEDTLS_SSL_DEBUG_MSG( 1, ( "non-matching renegotiation info" ) );
@@ -1222,8 +1220,7 @@ read_record_header:
             return( MBEDTLS_ERR_SSL_ILLEGAL_PARAMETER );
         }
 
-        memcpy( &ssl->cur_out_ctr[2], ssl->in_ctr + 2,
-                sizeof( ssl->cur_out_ctr ) - 2 );
+        memcpy( ssl->cur_out_ctr + 2, ssl->in_ctr + 2, 6 );
 
 #if defined(MBEDTLS_SSL_DTLS_ANTI_REPLAY)
         if( mbedtls_ssl_dtls_replay_check( ssl ) != 0 )
@@ -3038,16 +3035,14 @@ static int ssl_prepare_server_key_exchange( mbedtls_ssl_context *ssl,
          * } ServerECDHParams;
          */
         const mbedtls_ecp_curve_info **curve = NULL;
-        const uint16_t *group_list = mbedtls_ssl_get_groups( ssl );
+        const mbedtls_ecp_group_id *gid;
         int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
         size_t len = 0;
 
         /* Match our preference list against the offered curves */
-        if( group_list == NULL )
-            return( MBEDTLS_ERR_SSL_BAD_CONFIG );
-        for( ; *group_list != 0; group_list++ )
+        for( gid = ssl->conf->curve_list; *gid != MBEDTLS_ECP_DP_NONE; gid++ )
             for( curve = ssl->handshake->curves; *curve != NULL; curve++ )
-                if( (*curve)->tls_id == *group_list )
+                if( (*curve)->grp_id == *gid )
                     goto curve_matching_done;
 
 curve_matching_done:
@@ -3571,7 +3566,16 @@ static int ssl_parse_encrypted_pms( mbedtls_ssl_context *ssl,
     diff |= peer_pms[1] ^ ver[1];
 
     /* mask = diff ? 0xff : 0x00 using bit operations to avoid branches */
-    mask = mbedtls_ct_uint_mask( diff );
+    /* MSVC has a warning about unary minus on unsigned, but this is
+     * well-defined and precisely what we want to do here */
+#if defined(_MSC_VER)
+#pragma warning( push )
+#pragma warning( disable : 4146 )
+#endif
+    mask = - ( ( diff | - diff ) >> ( sizeof( unsigned int ) * 8 - 1 ) );
+#if defined(_MSC_VER)
+#pragma warning( pop )
+#endif
 
     /*
      * Protection against Bleichenbacher's attack: invalid PKCS#1 v1.5 padding
@@ -3654,7 +3658,7 @@ static int ssl_parse_client_psk_identity( mbedtls_ssl_context *ssl, unsigned cha
         /* Identity is not a big secret since clients send it in the clear,
          * but treat it carefully anyway, just in case */
         if( n != ssl->conf->psk_identity_len ||
-            mbedtls_ct_memcmp( ssl->conf->psk_identity, *p, n ) != 0 )
+            mbedtls_ssl_safer_memcmp( ssl->conf->psk_identity, *p, n ) != 0 )
         {
             ret = MBEDTLS_ERR_SSL_UNKNOWN_IDENTITY;
         }
