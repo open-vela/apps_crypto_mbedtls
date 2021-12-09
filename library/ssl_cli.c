@@ -33,9 +33,11 @@
 #include "ssl_misc.h"
 #include "mbedtls/debug.h"
 #include "mbedtls/error.h"
+#include "mbedtls/constant_time.h"
 
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
 #include "mbedtls/psa_util.h"
+#include "psa/crypto.h"
 #endif /* MBEDTLS_USE_PSA_CRYPTO */
 
 #include <string.h>
@@ -89,10 +91,10 @@ static int ssl_conf_has_static_raw_psk( mbedtls_ssl_config const *conf )
 #endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
 
 #if defined(MBEDTLS_SSL_SERVER_NAME_INDICATION)
-static int ssl_write_hostname_ext( mbedtls_ssl_context *ssl,
-                                   unsigned char *buf,
-                                   const unsigned char *end,
-                                   size_t *olen )
+int mbedtls_ssl_write_hostname_ext( mbedtls_ssl_context *ssl,
+                                    unsigned char *buf,
+                                    const unsigned char *end,
+                                    size_t *olen )
 {
     unsigned char *p = buf;
     size_t hostname_len;
@@ -309,27 +311,32 @@ static int ssl_write_supported_elliptic_curves_ext( mbedtls_ssl_context *ssl,
     unsigned char *elliptic_curve_list = p + 6;
     size_t elliptic_curve_len = 0;
     const mbedtls_ecp_curve_info *info;
-    const mbedtls_ecp_group_id *grp_id;
-
+    const uint16_t *group_list = mbedtls_ssl_get_groups( ssl );
     *olen = 0;
+
+    /* Check there is room for header */
+    MBEDTLS_SSL_CHK_BUF_PTR( p, end, 6 );
 
     MBEDTLS_SSL_DEBUG_MSG( 3,
         ( "client hello, adding supported_elliptic_curves extension" ) );
 
-    if( ssl->conf->curve_list == NULL )
+    if( group_list == NULL )
         return( MBEDTLS_ERR_SSL_BAD_CONFIG );
 
-    for( grp_id = ssl->conf->curve_list;
-         *grp_id != MBEDTLS_ECP_DP_NONE;
-         grp_id++ )
+    for( ; *group_list != 0; group_list++ )
     {
-        info = mbedtls_ecp_curve_info_from_grp_id( *grp_id );
+        info = mbedtls_ecp_curve_info_from_tls_id( *group_list );
         if( info == NULL )
         {
             MBEDTLS_SSL_DEBUG_MSG( 1,
                 ( "invalid curve in ssl configuration" ) );
             return( MBEDTLS_ERR_SSL_BAD_CONFIG );
         }
+
+        /* Check there is room for another curve */
+        MBEDTLS_SSL_CHK_BUF_PTR( elliptic_curve_list, end, elliptic_curve_len + 2 );
+
+        MBEDTLS_PUT_UINT16_BE( *group_list, elliptic_curve_list, elliptic_curve_len );
         elliptic_curve_len += 2;
 
         if( elliptic_curve_len > MBEDTLS_SSL_MAX_CURVE_LIST_LEN )
@@ -343,19 +350,6 @@ static int ssl_write_supported_elliptic_curves_ext( mbedtls_ssl_context *ssl,
     /* Empty elliptic curve list, this is a configuration error. */
     if( elliptic_curve_len == 0 )
         return( MBEDTLS_ERR_SSL_BAD_CONFIG );
-
-    MBEDTLS_SSL_CHK_BUF_PTR( p, end, 6 + elliptic_curve_len );
-
-    elliptic_curve_len = 0;
-
-    for( grp_id = ssl->conf->curve_list;
-         *grp_id != MBEDTLS_ECP_DP_NONE;
-         grp_id++ )
-    {
-        info = mbedtls_ecp_curve_info_from_grp_id( *grp_id );
-        elliptic_curve_list[elliptic_curve_len++] = MBEDTLS_BYTE_1( info->tls_id );
-        elliptic_curve_list[elliptic_curve_len++] = MBEDTLS_BYTE_0( info->tls_id );
-    }
 
     MBEDTLS_PUT_UINT16_BE( MBEDTLS_TLS_EXT_SUPPORTED_ELLIPTIC_CURVES, p, 0 );
     p += 2;
@@ -1176,10 +1170,10 @@ static int ssl_write_client_hello( mbedtls_ssl_context *ssl )
     MBEDTLS_SSL_CHK_BUF_PTR( p, end, 2 );
 
 #if defined(MBEDTLS_SSL_SERVER_NAME_INDICATION)
-    if( ( ret = ssl_write_hostname_ext( ssl, p + 2 + ext_len,
-                                        end, &olen ) ) != 0 )
+    if( ( ret = mbedtls_ssl_write_hostname_ext( ssl, p + 2 + ext_len,
+                                                end, &olen ) ) != 0 )
     {
-        MBEDTLS_SSL_DEBUG_RET( 1, "ssl_write_hostname_ext", ret );
+        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_write_hostname_ext", ret );
         return( ret );
     }
     ext_len += olen;
@@ -1364,9 +1358,9 @@ static int ssl_parse_renegotiation_info( mbedtls_ssl_context *ssl,
         /* Check verify-data in constant-time. The length OTOH is no secret */
         if( len    != 1 + ssl->verify_data_len * 2 ||
             buf[0] !=     ssl->verify_data_len * 2 ||
-            mbedtls_ssl_safer_memcmp( buf + 1,
+            mbedtls_ct_memcmp( buf + 1,
                           ssl->own_verify_data, ssl->verify_data_len ) != 0 ||
-            mbedtls_ssl_safer_memcmp( buf + 1 + ssl->verify_data_len,
+            mbedtls_ct_memcmp( buf + 1 + ssl->verify_data_len,
                           ssl->peer_verify_data, ssl->verify_data_len ) != 0 )
         {
             MBEDTLS_SSL_DEBUG_MSG( 1, ( "non-matching renegotiation info" ) );
@@ -3089,7 +3083,11 @@ start_processing:
     if( mbedtls_ssl_ciphersuite_uses_server_signature( ciphersuite_info ) )
     {
         size_t sig_len, hashlen;
-        unsigned char hash[64];
+#if defined(MBEDTLS_USE_PSA_CRYPTO)
+        unsigned char hash[PSA_HASH_MAX_SIZE];
+#else
+        unsigned char hash[MBEDTLS_MD_MAX_SIZE];
+#endif
         mbedtls_md_type_t md_alg = MBEDTLS_MD_NONE;
         mbedtls_pk_type_t pk_alg = MBEDTLS_PK_NONE;
         unsigned char *params = ssl->in_msg + mbedtls_ssl_hs_hdr_len( ssl );
