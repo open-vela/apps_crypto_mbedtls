@@ -654,9 +654,7 @@ int mbedtls_ssl_tls13_calculate_verify_data( mbedtls_ssl_context* ssl,
     unsigned char transcript[MBEDTLS_TLS1_3_MD_MAX_SIZE];
     size_t transcript_len;
 
-    unsigned char *base_key = NULL;
-    mbedtls_ssl_tls13_handshake_secrets *tls13_hs_secrets =
-                                            &ssl->handshake->tls13_hs_secrets;
+    unsigned char const *base_key = NULL;
 
     mbedtls_md_type_t const md_type = ssl->handshake->ciphersuite_info->mac;
     const mbedtls_md_info_t* const md_info =
@@ -666,10 +664,7 @@ int mbedtls_ssl_tls13_calculate_verify_data( mbedtls_ssl_context* ssl,
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> mbedtls_ssl_tls13_calculate_verify_data" ) );
 
     if( dst_len < md_size )
-    {
-        ret = MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL;
-        goto exit;
-    }
+        return( MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL );
 
     ret = mbedtls_ssl_get_handshake_transcript( ssl, md_type,
                                                 transcript, sizeof( transcript ),
@@ -682,9 +677,9 @@ int mbedtls_ssl_tls13_calculate_verify_data( mbedtls_ssl_context* ssl,
     MBEDTLS_SSL_DEBUG_BUF( 4, "handshake hash", transcript, transcript_len );
 
     if( from == MBEDTLS_SSL_IS_CLIENT )
-        base_key = tls13_hs_secrets->client_handshake_traffic_secret;
+        base_key = ssl->handshake->tls13_hs_secrets.client_handshake_traffic_secret;
     else
-        base_key = tls13_hs_secrets->server_handshake_traffic_secret;
+        base_key = ssl->handshake->tls13_hs_secrets.server_handshake_traffic_secret;
 
     ret = ssl_tls13_calc_finished_core( md_type, base_key, transcript, dst );
     if( ret != 0 )
@@ -695,17 +690,7 @@ int mbedtls_ssl_tls13_calculate_verify_data( mbedtls_ssl_context* ssl,
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= mbedtls_ssl_tls13_calculate_verify_data" ) );
 
 exit:
-    /* Erase handshake secrets */
-    if( from == MBEDTLS_SSL_IS_CLIENT )
-    {
-        mbedtls_platform_zeroize( base_key,
-                sizeof( tls13_hs_secrets->client_handshake_traffic_secret ) );
-    }
-    else
-    {
-        mbedtls_platform_zeroize( base_key,
-                sizeof( tls13_hs_secrets->server_handshake_traffic_secret ) );
-    }
+
     mbedtls_platform_zeroize( transcript, sizeof( transcript ) );
     return( ret );
 }
@@ -1179,9 +1164,6 @@ int mbedtls_ssl_tls13_generate_application_keys(
                                    handshake->tls13_master_secrets.app,
                                    transcript, transcript_len,
                                    app_secrets );
-    /* Erase master secrets */
-    mbedtls_platform_zeroize( &ssl->handshake->tls13_master_secrets,
-                              sizeof( ssl->handshake->tls13_master_secrets ) );
     if( ret != 0 )
     {
         MBEDTLS_SSL_DEBUG_RET( 1,
@@ -1243,9 +1225,7 @@ int mbedtls_ssl_tls13_generate_application_keys(
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= derive application traffic keys" ) );
 
  cleanup:
-    /* randbytes is not used again */
-    mbedtls_platform_zeroize( ssl->handshake->randbytes,
-                              sizeof( ssl->handshake->randbytes ) );
+
     mbedtls_platform_zeroize( transcript, sizeof( transcript ) );
     return( ret );
 }
