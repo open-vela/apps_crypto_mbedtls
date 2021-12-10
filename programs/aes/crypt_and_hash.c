@@ -365,11 +365,7 @@ int main( int argc, char *argv[] )
             goto exit;
         }
 
-        if( mbedtls_md_hmac_starts( &md_ctx, digest, 32 ) != 0 )
-        {
-            mbedtls_fprintf( stderr, "mbedtls_md_hmac_starts() returned error\n" );
-            goto exit;
-        }
+        mbedtls_md_hmac_starts( &md_ctx, digest, 32 );
 
         /*
          * Encrypt and write the ciphertext.
@@ -391,11 +387,7 @@ int main( int argc, char *argv[] )
                 goto exit;
             }
 
-            if( mbedtls_md_hmac_update( &md_ctx, output, olen ) != 0 )
-            {
-                mbedtls_fprintf( stderr, "mbedtls_md_hmac_update() returned error\n" );
-                goto exit;
-            }
+            mbedtls_md_hmac_update( &md_ctx, output, olen );
 
             if( fwrite( output, 1, olen, fout ) != olen )
             {
@@ -409,11 +401,7 @@ int main( int argc, char *argv[] )
             mbedtls_fprintf( stderr, "mbedtls_cipher_finish() returned error\n" );
             goto exit;
         }
-        if( mbedtls_md_hmac_update( &md_ctx, output, olen ) != 0 )
-        {
-            mbedtls_fprintf( stderr, "mbedtls_md_hmac_update() returned error\n" );
-            goto exit;
-        }
+        mbedtls_md_hmac_update( &md_ctx, output, olen );
 
         if( fwrite( output, 1, olen, fout ) != olen )
         {
@@ -424,11 +412,7 @@ int main( int argc, char *argv[] )
         /*
          * Finally write the HMAC.
          */
-        if( mbedtls_md_hmac_finish( &md_ctx, digest ) != 0 )
-        {
-            mbedtls_fprintf( stderr, "mbedtls_md_hmac_finish() returned error\n" );
-            goto exit;
-        }
+        mbedtls_md_hmac_finish( &md_ctx, digest );
 
         if( fwrite( digest, 1, mbedtls_md_get_size( md_info ), fout ) != mbedtls_md_get_size( md_info ) )
         {
@@ -497,26 +481,10 @@ int main( int argc, char *argv[] )
 
         for( i = 0; i < 8192; i++ )
         {
-            if( mbedtls_md_starts( &md_ctx ) != 0 )
-            {
-                mbedtls_fprintf( stderr, "mbedtls_md_starts() returned error\n" );
-                goto exit;
-            }
-            if( mbedtls_md_update( &md_ctx, digest, 32 ) != 0 )
-            {
-                mbedtls_fprintf( stderr, "mbedtls_md_update() returned error\n" );
-                goto exit;
-            }
-            if( mbedtls_md_update( &md_ctx, key, keylen ) != 0 )
-            {
-                mbedtls_fprintf( stderr, "mbedtls_md_update() returned error\n" );
-                goto exit;
-            }
-            if( mbedtls_md_finish( &md_ctx, digest ) != 0 )
-            {
-                mbedtls_fprintf( stderr, "mbedtls_md_finish() returned error\n" );
-                goto exit;
-            }
+            mbedtls_md_starts( &md_ctx );
+            mbedtls_md_update( &md_ctx, digest, 32 );
+            mbedtls_md_update( &md_ctx, key, keylen );
+            mbedtls_md_finish( &md_ctx, digest );
         }
 
         if( mbedtls_cipher_setkey( &cipher_ctx,
@@ -540,11 +508,7 @@ int main( int argc, char *argv[] )
             goto exit;
         }
 
-        if( mbedtls_md_hmac_starts( &md_ctx, digest, 32 ) != 0 )
-        {
-            mbedtls_fprintf( stderr, "mbedtls_md_hmac_starts() returned error\n" );
-            goto exit;
-        }
+        mbedtls_md_hmac_starts( &md_ctx, digest, 32 );
 
         /*
          * Decrypt and write the plaintext.
@@ -561,11 +525,7 @@ int main( int argc, char *argv[] )
                 goto exit;
             }
 
-            if( mbedtls_md_hmac_update( &md_ctx, buffer, ilen ) != 0 )
-            {
-                mbedtls_fprintf( stderr, "mbedtls_md_hmac_update() returned error\n" );
-                goto exit;
-            }
+            mbedtls_md_hmac_update( &md_ctx, buffer, ilen );
             if( mbedtls_cipher_update( &cipher_ctx, buffer, ilen, output,
                                        &olen ) != 0 )
             {
@@ -583,11 +543,7 @@ int main( int argc, char *argv[] )
         /*
          * Verify the message authentication code.
          */
-        if( mbedtls_md_hmac_finish( &md_ctx, digest ) != 0 )
-        {
-            mbedtls_fprintf( stderr, "mbedtls_md_hmac_finish() returned error\n" );
-            goto exit;
-        }
+        mbedtls_md_hmac_finish( &md_ctx, digest );
 
         if( fread( buffer, 1, mbedtls_md_get_size( md_info ), fin ) != mbedtls_md_get_size( md_info ) )
         {
@@ -610,11 +566,7 @@ int main( int argc, char *argv[] )
         /*
          * Write the final block of data
          */
-        if( mbedtls_cipher_finish( &cipher_ctx, output, &olen ) != 0 )
-        {
-            mbedtls_fprintf( stderr, "mbedtls_cipher_finish() returned error\n" );
-            goto exit;
-        }
+        mbedtls_cipher_finish( &cipher_ctx, output, &olen );
 
         if( fwrite( output, 1, olen, fout ) != olen )
         {
