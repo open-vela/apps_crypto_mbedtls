@@ -21,7 +21,7 @@
 
 #include "common.h"
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
 
 #if defined(MBEDTLS_SSL_CLI_C)
 
@@ -34,7 +34,6 @@
 #include "ssl_misc.h"
 #include "ecdh_misc.h"
 #include "ssl_tls13_keys.h"
-#include "ssl_debug_helpers_generated.h"
 
 /* Write extensions */
 
@@ -724,18 +723,8 @@ static int ssl_tls13_write_client_hello_body( mbedtls_ssl_context *ssl,
      * ( also known as ossification ). Otherwise, it MUST be set as a zero-length
      * vector ( i.e., a zero-valued single byte length field ).
      */
-#if defined(MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE)
-    MBEDTLS_SSL_CHK_BUF_PTR( p, end, ssl->session_negotiate->id_len + 1 );
-    *p++ = (unsigned char)ssl->session_negotiate->id_len;
-    memcpy( p, ssl->session_negotiate->id, ssl->session_negotiate->id_len );
-    p += ssl->session_negotiate->id_len;
-
-    MBEDTLS_SSL_DEBUG_BUF( 3, "session id", ssl->session_negotiate->id,
-                              ssl->session_negotiate->id_len );
-#else
     MBEDTLS_SSL_CHK_BUF_PTR( p, end, 1 );
     *p++ = 0; /* session id length set to zero */
-#endif /* MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE */
 
     /* Write cipher_suites */
     ret = ssl_tls13_write_client_hello_cipher_suites( ssl, p, end, &output_len );
@@ -853,24 +842,6 @@ static int ssl_tls13_prepare_client_hello( mbedtls_ssl_context *ssl )
         MBEDTLS_SSL_DEBUG_RET( 1, "f_rng", ret );
         return( ret );
     }
-
-#if defined(MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE)
-    /*
-     * Create a session identifier for the purpose of middlebox compatibility
-     * only if one has not been created already.
-     */
-    if( ssl->session_negotiate->id_len == 0 )
-    {
-        /* Creating a session id with 32 byte length */
-        if( ( ret = ssl->conf->f_rng( ssl->conf->p_rng,
-                                      ssl->session_negotiate->id, 32 ) ) != 0 )
-        {
-            MBEDTLS_SSL_DEBUG_RET( 1, "creating session id failed", ret );
-            return( ret );
-        }
-        ssl->session_negotiate->id_len = 32;
-    }
-#endif /* MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE */
 
     return( 0 );
 }
@@ -1629,7 +1600,6 @@ static int ssl_tls13_process_certificate_verify( mbedtls_ssl_context *ssl )
     return( 0 );
 }
 #endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
-
 /*
  * Handler for MBEDTLS_SSL_SERVER_FINISHED
  */
@@ -1641,34 +1611,10 @@ static int ssl_tls13_process_server_finished( mbedtls_ssl_context *ssl )
     if( ret != 0 )
         return( ret );
 
-#if defined(MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE)
-    mbedtls_ssl_handshake_set_state(
-        ssl,
-        MBEDTLS_SSL_CLIENT_CCS_AFTER_SERVER_FINISHED );
-#else
+    mbedtls_ssl_set_outbound_transform( ssl, ssl->handshake->transform_handshake );
     mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CLIENT_FINISHED );
-#endif
-
     return( 0 );
 }
-
-/*
- * Handler for MBEDTLS_SSL_CLIENT_CCS_AFTER_SERVER_FINISHED
- */
-#if defined(MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE)
-static int ssl_tls13_write_change_cipher_spec( mbedtls_ssl_context *ssl )
-{
-    int ret;
-
-    ret = mbedtls_ssl_tls13_write_change_cipher_spec( ssl );
-    if( ret != 0 )
-        return( ret );
-
-    mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CLIENT_FINISHED );
-
-    return( 0 );
-}
-#endif /* MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE */
 
 /*
  * Handler for MBEDTLS_SSL_CLIENT_FINISHED
@@ -1676,8 +1622,6 @@ static int ssl_tls13_write_change_cipher_spec( mbedtls_ssl_context *ssl )
 static int ssl_tls13_write_client_finished( mbedtls_ssl_context *ssl )
 {
     int ret;
-
-    mbedtls_ssl_set_outbound_transform( ssl, ssl->handshake->transform_handshake );
 
     ret = mbedtls_ssl_tls13_write_finished_message( ssl );
     if( ret != 0 )
@@ -1718,9 +1662,7 @@ int mbedtls_ssl_tls13_handshake_client_step( mbedtls_ssl_context *ssl )
 {
     int ret = 0;
 
-    MBEDTLS_SSL_DEBUG_MSG( 2, ( "tls13 client state: %s(%d)",
-                                mbedtls_ssl_states_str( ssl->state ),
-                                ssl->state ) );
+    MBEDTLS_SSL_DEBUG_MSG( 2, ( "tls13 client state: %d", ssl->state ) );
 
     switch( ssl->state )
     {
@@ -1771,15 +1713,6 @@ int mbedtls_ssl_tls13_handshake_client_step( mbedtls_ssl_context *ssl )
             ret = ssl_tls13_handshake_wrapup( ssl );
             break;
 
-        /*
-         * Injection of dummy-CCS's for middlebox compatibility
-         */
-#if defined(MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE)
-        case MBEDTLS_SSL_CLIENT_CCS_AFTER_SERVER_FINISHED:
-            ret = ssl_tls13_write_change_cipher_spec( ssl );
-            break;
-#endif /* MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE */
-
         default:
             MBEDTLS_SSL_DEBUG_MSG( 1, ( "invalid state %d", ssl->state ) );
             return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
@@ -1790,4 +1723,4 @@ int mbedtls_ssl_tls13_handshake_client_step( mbedtls_ssl_context *ssl )
 
 #endif /* MBEDTLS_SSL_CLI_C */
 
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */

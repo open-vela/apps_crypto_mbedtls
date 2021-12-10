@@ -728,7 +728,7 @@ int mbedtls_ecdh_calc_secret( mbedtls_ecdh_context *ctx, size_t *olen,
 #endif
 }
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
 
 static int ecdh_tls13_make_params_internal( mbedtls_ecdh_context_mbed *ctx,
                                             size_t *out_len, int point_format,
@@ -861,6 +861,6 @@ int mbedtls_ecdh_tls13_read_public( mbedtls_ecdh_context *ctx,
 #endif
 }
 
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
 #endif /* MBEDTLS_ECDH_C */
