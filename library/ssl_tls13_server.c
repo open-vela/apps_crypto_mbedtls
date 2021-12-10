@@ -26,14 +26,11 @@
 #include "mbedtls/debug.h"
 
 #include "ssl_misc.h"
-#include "ssl_debug_helpers_generated.h"
 
 int mbedtls_ssl_tls13_handshake_server_step( mbedtls_ssl_context *ssl )
 {
     ((void) ssl);
-    MBEDTLS_SSL_DEBUG_MSG( 2, ( "tls13 server state: %s(%d)",
-                                mbedtls_ssl_states_str( ssl->state ),
-                                ssl->state ) );
+    MBEDTLS_SSL_DEBUG_MSG( 2, ( "tls13 server state: %d", ssl->state ) );
 
     return( MBEDTLS_ERR_SSL_FEATURE_UNAVAILABLE );
 }
