@@ -45,7 +45,6 @@ fi
 : ${P_SRV:=../programs/ssl/ssl_server2}
 : ${P_CLI:=../programs/ssl/ssl_client2}
 : ${P_PXY:=../programs/test/udp_proxy}
-: ${P_QUERY:=../programs/test/query_compile_time_config}
 : ${OPENSSL_CMD:=openssl} # OPENSSL would conflict with the build system
 : ${GNUTLS_CLI:=gnutls-cli}
 : ${GNUTLS_SERV:=gnutls-serv}
@@ -195,7 +194,10 @@ esac
 # testing. Skip non-boolean options (with something other than spaces
 # and a comment after "#define SYMBOL"). The variable contains a
 # space-separated list of symbols.
-CONFIGS_ENABLED=" $(echo `$P_QUERY -l` )"
+CONFIGS_ENABLED=" $(<"$CONFIG_H" \
+                    sed -n 's!^ *#define  *\([A-Za-z][0-9A-Z_a-z]*\) *\(/*\)*!\1!p' |
+                    tr '\n' ' ')"
+
 # Skip next test; use this macro to skip tests which are legitimate
 # in theory and expected to be re-introduced at some point, but
 # aren't expected to succeed at the moment due to problems outside
@@ -208,7 +210,6 @@ skip_next_test() {
 requires_config_enabled() {
     case $CONFIGS_ENABLED in
         *" $1 "*) :;;
-        *" $1="*) :;;
         *) SKIP_NEXT="YES";;
     esac
 }
@@ -217,7 +218,6 @@ requires_config_enabled() {
 requires_config_disabled() {
     case $CONFIGS_ENABLED in
         *" $1 "*) SKIP_NEXT="YES";;
-        *" $1="*) SKIP_NEXT="YES";;
     esac
 }
 
