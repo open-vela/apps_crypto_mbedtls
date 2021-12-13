@@ -1175,12 +1175,6 @@ int mbedtls_cipher_check_tag( mbedtls_cipher_context_t *ctx,
     }
 #endif /* MBEDTLS_USE_PSA_CRYPTO */
 
-    /* Status to return on a non-authenticated algorithm. It would make sense
-     * to return MBEDTLS_ERR_CIPHER_INVALID_CONTEXT or perhaps
-     * MBEDTLS_ERR_CIPHER_BAD_INPUT_DATA, but at the time I write this our
-     * unit tests assume 0. */
-    ret = 0;
-
 #if defined(MBEDTLS_GCM_C)
     if( MBEDTLS_MODE_GCM == ctx->cipher_info->mode )
     {
@@ -1201,7 +1195,9 @@ int mbedtls_cipher_check_tag( mbedtls_cipher_context_t *ctx,
 
         /* Check the tag in "constant-time" */
         if( mbedtls_ct_memcmp( tag, check_tag, tag_len ) != 0 )
-            ret = MBEDTLS_ERR_CIPHER_AUTH_FAILED;
+            return( MBEDTLS_ERR_CIPHER_AUTH_FAILED );
+
+        return( 0 );
     }
 #endif /* MBEDTLS_GCM_C */
 
@@ -1221,12 +1217,13 @@ int mbedtls_cipher_check_tag( mbedtls_cipher_context_t *ctx,
 
         /* Check the tag in "constant-time" */
         if( mbedtls_ct_memcmp( tag, check_tag, tag_len ) != 0 )
-            ret = MBEDTLS_ERR_CIPHER_AUTH_FAILED;
+            return( MBEDTLS_ERR_CIPHER_AUTH_FAILED );
+
+        return( 0 );
     }
 #endif /* MBEDTLS_CHACHAPOLY_C */
 
-    mbedtls_platform_zeroize( check_tag, tag_len );
-    return( ret );
+    return( 0 );
 }
 #endif /* MBEDTLS_GCM_C || MBEDTLS_CHACHAPOLY_C */
 
