@@ -449,8 +449,6 @@ psa_status_t mbedtls_psa_cipher_encrypt(
     const uint8_t *key_buffer,
     size_t key_buffer_size,
     psa_algorithm_t alg,
-    const uint8_t *iv,
-    size_t iv_length,
     const uint8_t *input,
     size_t input_length,
     uint8_t *output,
@@ -459,7 +457,7 @@ psa_status_t mbedtls_psa_cipher_encrypt(
 {
     psa_status_t status = PSA_ERROR_CORRUPTION_DETECTED;
     mbedtls_psa_cipher_operation_t operation = MBEDTLS_PSA_CIPHER_OPERATION_INIT;
-    size_t update_output_length, finish_output_length;
+    size_t olength, accumulated_length;
 
     status = mbedtls_psa_cipher_encrypt_setup( &operation, attributes,
                                                key_buffer, key_buffer_size,
@@ -467,27 +465,33 @@ psa_status_t mbedtls_psa_cipher_encrypt(
     if( status != PSA_SUCCESS )
         goto exit;
 
-    if( iv_length > 0 )
+    accumulated_length = 0;
+    if( operation.iv_length > 0 )
     {
-        status = mbedtls_psa_cipher_set_iv( &operation, iv, iv_length );
+        status = mbedtls_psa_cipher_set_iv( &operation,
+                                            output, operation.iv_length );
         if( status != PSA_SUCCESS )
             goto exit;
+
+        accumulated_length = operation.iv_length;
     }
 
     status = mbedtls_psa_cipher_update( &operation, input, input_length,
-                                        output, output_size,
-                                        &update_output_length );
+                                        output + operation.iv_length,
+                                        output_size - operation.iv_length,
+                                        &olength );
     if( status != PSA_SUCCESS )
         goto exit;
 
-    status = mbedtls_psa_cipher_finish( &operation,
-                                        output + update_output_length,
-                                        output_size - update_output_length,
-                                        &finish_output_length );
+    accumulated_length += olength;
+
+    status = mbedtls_psa_cipher_finish( &operation, output + accumulated_length,
+                                        output_size - accumulated_length,
+                                        &olength );
     if( status != PSA_SUCCESS )
         goto exit;
 
-    *output_length = update_output_length + finish_output_length;
+    *output_length = accumulated_length + olength;
 
 exit:
     if( status == PSA_SUCCESS )
