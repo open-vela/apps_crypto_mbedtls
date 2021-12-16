@@ -45,6 +45,7 @@ fi
 : ${P_SRV:=../programs/ssl/ssl_server2}
 : ${P_CLI:=../programs/ssl/ssl_client2}
 : ${P_PXY:=../programs/test/udp_proxy}
+: ${P_QUERY:=../programs/test/query_compile_time_config}
 : ${OPENSSL_CMD:=openssl} # OPENSSL would conflict with the build system
 : ${GNUTLS_CLI:=gnutls-cli}
 : ${GNUTLS_SERV:=gnutls-serv}
@@ -194,10 +195,7 @@ esac
 # testing. Skip non-boolean options (with something other than spaces
 # and a comment after "#define SYMBOL"). The variable contains a
 # space-separated list of symbols.
-CONFIGS_ENABLED=" $(<"$CONFIG_H" \
-                    sed -n 's!^ *#define  *\([A-Za-z][0-9A-Z_a-z]*\) *\(/*\)*!\1!p' |
-                    tr '\n' ' ')"
-
+CONFIGS_ENABLED=" $(echo `$P_QUERY -l` )"
 # Skip next test; use this macro to skip tests which are legitimate
 # in theory and expected to be re-introduced at some point, but
 # aren't expected to succeed at the moment due to problems outside
@@ -209,7 +207,7 @@ skip_next_test() {
 # skip next test if the flag is not enabled in mbedtls_config.h
 requires_config_enabled() {
     case $CONFIGS_ENABLED in
-        *" $1 "*) :;;
+        *" $1"[\ =]*) :;;
         *) SKIP_NEXT="YES";;
     esac
 }
@@ -217,7 +215,7 @@ requires_config_enabled() {
 # skip next test if the flag is enabled in mbedtls_config.h
 requires_config_disabled() {
     case $CONFIGS_ENABLED in
-        *" $1 "*) SKIP_NEXT="YES";;
+        *" $1"[\ =]*) SKIP_NEXT="YES";;
     esac
 }
 
@@ -1697,32 +1695,32 @@ run_test    "SHA-256 allowed by default in client certificate" \
 # Dummy TLS 1.3 test
 # Currently only checking that passing TLS 1.3 key exchange modes to
 # ssl_client2/ssl_server2 example programs works.
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 run_test    "TLS 1.3, key exchange mode parameter passing: PSK only" \
             "$P_SRV tls13_kex_modes=psk" \
             "$P_CLI tls13_kex_modes=psk" \
             0
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 run_test    "TLS 1.3, key exchange mode parameter passing: PSK-ephemeral only" \
             "$P_SRV tls13_kex_modes=psk_ephemeral" \
             "$P_CLI tls13_kex_modes=psk_ephemeral" \
             0
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 run_test    "TLS 1.3, key exchange mode parameter passing: Pure-ephemeral only" \
             "$P_SRV tls13_kex_modes=ephemeral" \
             "$P_CLI tls13_kex_modes=ephemeral" \
             0
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 run_test    "TLS 1.3, key exchange mode parameter passing: All ephemeral" \
             "$P_SRV tls13_kex_modes=ephemeral_all" \
             "$P_CLI tls13_kex_modes=ephemeral_all" \
             0
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 run_test    "TLS 1.3, key exchange mode parameter passing: All PSK" \
             "$P_SRV tls13_kex_modes=psk_all" \
             "$P_CLI tls13_kex_modes=psk_all" \
             0
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 run_test    "TLS 1.3, key exchange mode parameter passing: All" \
             "$P_SRV tls13_kex_modes=all" \
             "$P_CLI tls13_kex_modes=all" \
@@ -8790,7 +8788,7 @@ run_test    "TLS 1.3: Test gnutls tls1_3 feature" \
 # TLS1.3 test cases
 # TODO: remove or rewrite this test case if #4832 is resolved.
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 skip_handshake_stage_check
 run_test    "TLS 1.3: Not supported version check: tls12 and tls13" \
             "$P_SRV debug_level=1 min_version=tls12 max_version=tls13" \
@@ -8802,7 +8800,7 @@ run_test    "TLS 1.3: Not supported version check: tls12 and tls13" \
             -c "Hybrid TLS 1.2 + TLS 1.3 configurations are not yet supported"
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 run_test    "TLS 1.3: handshake dispatch test: tls13 only" \
             "$P_SRV debug_level=2 min_version=tls13 max_version=tls13" \
             "$P_CLI debug_level=2 min_version=tls13 max_version=tls13" \
@@ -8811,7 +8809,7 @@ run_test    "TLS 1.3: handshake dispatch test: tls13 only" \
             -c "tls13 client state: MBEDTLS_SSL_HELLO_REQUEST"
 
 requires_openssl_tls1_3
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_DEBUG_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
@@ -8844,7 +8842,7 @@ run_test    "TLS 1.3: minimal feature sets - openssl" \
 
 requires_gnutls_tls1_3
 requires_gnutls_next_no_ticket
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_DEBUG_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
@@ -8876,7 +8874,7 @@ run_test    "TLS 1.3: minimal feature sets - gnutls" \
             -c "<= parse finished message" \
             -c "HTTP/1.0 200 OK"
 
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_DEBUG_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
 skip_handshake_stage_check
@@ -8890,7 +8888,7 @@ run_test    "TLS 1.3:Not supported version check:gnutls: srv max TLS 1.0" \
             -S "Version: TLS1.0" \
             -C "Protocol is TLSv1.0"
 
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_DEBUG_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
 skip_handshake_stage_check
@@ -8904,7 +8902,7 @@ run_test    "TLS 1.3:Not supported version check:gnutls: srv max TLS 1.1" \
             -S "Version: TLS1.1" \
             -C "Protocol is TLSv1.1"
 
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_DEBUG_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
 skip_handshake_stage_check
@@ -8918,7 +8916,7 @@ run_test    "TLS 1.3:Not supported version check:gnutls: srv max TLS 1.2" \
             -S "Version: TLS1.2" \
             -C "Protocol is TLSv1.2"
 
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_DEBUG_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
 skip_handshake_stage_check
@@ -8932,7 +8930,7 @@ run_test    "TLS 1.3:Not supported version check:openssl: srv max TLS 1.0" \
             -S "Version: TLS1.0" \
             -C "Protocol  : TLSv1.0"
 
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_DEBUG_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
 skip_handshake_stage_check
@@ -8946,7 +8944,7 @@ run_test    "TLS 1.3:Not supported version check:openssl: srv max TLS 1.1" \
             -S "Version: TLS1.1" \
             -C "Protocol  : TLSv1.1"
 
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_DEBUG_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
 skip_handshake_stage_check
@@ -8961,7 +8959,7 @@ run_test    "TLS 1.3:Not supported version check:openssl: srv max TLS 1.2" \
             -C "Protocol  : TLSv1.2"
 
 requires_openssl_tls1_3
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_DEBUG_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
@@ -8974,7 +8972,7 @@ run_test    "TLS 1.3: CertificateRequest check - openssl" \
 
 requires_gnutls_tls1_3
 requires_gnutls_next_no_ticket
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_DEBUG_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
@@ -8985,7 +8983,7 @@ run_test    "TLS 1.3: CertificateRequest check - gnutls" \
             1 \
             -c "CertificateRequest not supported"
 
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_DEBUG_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
@@ -9001,7 +8999,7 @@ run_test    "TLS 1.3: HelloRetryRequest check - openssl" \
 
 requires_gnutls_tls1_3
 requires_gnutls_next_no_ticket
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_DEBUG_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
@@ -9021,7 +9019,7 @@ do
 done
 
 requires_openssl_tls1_3
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_disabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_DEBUG_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
@@ -9033,7 +9031,7 @@ run_test    "TLS 1.3 m->O both peers do not support middlebox compatibility" \
             -c "HTTP/1.0 200 ok"
 
 requires_openssl_tls1_3
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_disabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_DEBUG_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
@@ -9047,7 +9045,7 @@ run_test    "TLS 1.3 m->O server with middlebox compat support, not client" \
 requires_gnutls_tls1_3
 requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_disabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_DEBUG_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
@@ -9060,7 +9058,7 @@ run_test    "TLS 1.3 m->G both peers do not support middlebox compatibility" \
 
 requires_gnutls_tls1_3
 requires_gnutls_next_no_ticket
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_disabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_DEBUG_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
