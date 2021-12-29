@@ -191,7 +191,6 @@
 
 /* Elliptic Curve Groups (ECDHE) */
 #define MBEDTLS_SSL_IANA_TLS_GROUP_NONE               0
-#define MBEDTLS_SSL_IANA_TLS_GROUP_SECT163K1     0x0001 /* RFC 4492 */
 #define MBEDTLS_SSL_IANA_TLS_GROUP_SECP192K1     0x0012
 #define MBEDTLS_SSL_IANA_TLS_GROUP_SECP192R1     0x0013
 #define MBEDTLS_SSL_IANA_TLS_GROUP_SECP224K1     0x0014
@@ -381,7 +380,7 @@
 #define MBEDTLS_SSL_CID_TLS1_3_PADDING_GRANULARITY 16
 #endif
 
-/** \} name SECTION: Module settings */
+/* \} name SECTION: Module settings */
 
 /*
  * Length of the verify data for secure renegotiation
