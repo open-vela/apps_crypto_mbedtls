@@ -73,5 +73,4 @@ int mbedtls_platform_set_time( mbedtls_time_t (*time_func)( mbedtls_time_t* time
 }
 #endif
 
-/** \} name SECTION: Module settings */
 #endif /* platform_time.h */
