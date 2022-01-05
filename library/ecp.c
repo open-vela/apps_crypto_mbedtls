@@ -1093,11 +1093,9 @@ cleanup:
  * Reduce a mbedtls_mpi mod p in-place, to use after mbedtls_mpi_sub_mpi
  * N->s < 0 is a very fast test, which fails only if N is 0
  */
-#define MOD_SUB( N )                                                          \
-    do {                                                                      \
-        while( (N)->s < 0 && mbedtls_mpi_cmp_int( (N), 0 ) != 0 )             \
-            MBEDTLS_MPI_CHK( mbedtls_mpi_add_mpi( (N), (N), &grp->P ) );      \
-    } while( 0 )
+#define MOD_SUB( N )                                                    \
+    while( (N).s < 0 && mbedtls_mpi_cmp_int( &(N), 0 ) != 0 )           \
+        MBEDTLS_MPI_CHK( mbedtls_mpi_add_mpi( &(N), &(N), &grp->P ) )
 
 #if ( defined(MBEDTLS_ECP_SHORT_WEIERSTRASS_ENABLED) && \
       !( defined(MBEDTLS_ECP_NO_FALLBACK) && \
@@ -1113,7 +1111,7 @@ static inline int mbedtls_mpi_sub_mod( const mbedtls_ecp_group *grp,
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     MBEDTLS_MPI_CHK( mbedtls_mpi_sub_mpi( X, A, B ) );
-    MOD_SUB( X );
+    MOD_SUB( *X );
 cleanup:
     return( ret );
 }
@@ -1124,9 +1122,9 @@ cleanup:
  * We known P, N and the result are positive, so sub_abs is correct, and
  * a bit faster.
  */
-#define MOD_ADD( N )                                                   \
-    while( mbedtls_mpi_cmp_mpi( (N), &grp->P ) >= 0 )                  \
-        MBEDTLS_MPI_CHK( mbedtls_mpi_sub_abs( (N), (N), &grp->P ) )
+#define MOD_ADD( N )                                                    \
+    while( mbedtls_mpi_cmp_mpi( &(N), &grp->P ) >= 0 )                  \
+        MBEDTLS_MPI_CHK( mbedtls_mpi_sub_abs( &(N), &(N), &grp->P ) )
 
 static inline int mbedtls_mpi_add_mod( const mbedtls_ecp_group *grp,
                                        mbedtls_mpi *X,
@@ -1135,39 +1133,10 @@ static inline int mbedtls_mpi_add_mod( const mbedtls_ecp_group *grp,
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     MBEDTLS_MPI_CHK( mbedtls_mpi_add_mpi( X, A, B ) );
-    MOD_ADD( X );
+    MOD_ADD( *X );
 cleanup:
     return( ret );
 }
-
-static inline int mbedtls_mpi_mul_int_mod( const mbedtls_ecp_group *grp,
-                                           mbedtls_mpi *X,
-                                           const mbedtls_mpi *A,
-                                           mbedtls_mpi_uint c )
-{
-    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
-
-    MBEDTLS_MPI_CHK( mbedtls_mpi_mul_int( X, A, c ) );
-    MOD_ADD( X );
-cleanup:
-    return( ret );
-}
-
-static inline int mbedtls_mpi_sub_int_mod( const mbedtls_ecp_group *grp,
-                                           mbedtls_mpi *X,
-                                           const mbedtls_mpi *A,
-                                           mbedtls_mpi_uint c )
-{
-    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
-
-    MBEDTLS_MPI_CHK( mbedtls_mpi_sub_int( X, A, c ) );
-    MOD_SUB( X );
-cleanup:
-    return( ret );
-}
-
-#define MPI_ECP_SUB_INT( X, A, c )             \
-    MBEDTLS_MPI_CHK( mbedtls_mpi_sub_int_mod( grp, X, A, c ) )
 
 #if defined(MBEDTLS_ECP_SHORT_WEIERSTRASS_ENABLED) && \
     !( defined(MBEDTLS_ECP_NO_FALLBACK) && \
@@ -1179,35 +1148,11 @@ static inline int mbedtls_mpi_shift_l_mod( const mbedtls_ecp_group *grp,
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     MBEDTLS_MPI_CHK( mbedtls_mpi_shift_l( X, count ) );
-    MOD_ADD( X );
+    MOD_ADD( *X );
 cleanup:
     return( ret );
 }
 #endif /* All functions referencing mbedtls_mpi_shift_l_mod() are alt-implemented without fallback */
-
-#define MPI_ECP_ADD( X, A, B )                                      \
-    MBEDTLS_MPI_CHK( mbedtls_mpi_add_mod( grp, X, A, B ) )
-
-#define MPI_ECP_SUB( X, A, B )                                      \
-    MBEDTLS_MPI_CHK( mbedtls_mpi_sub_mod( grp, X, A, B ) )
-
-#define MPI_ECP_MUL( X, A, B )                                      \
-    MBEDTLS_MPI_CHK( mbedtls_mpi_mul_mod( grp, X, A, B ) )
-
-#define MPI_ECP_SQR( X, A )                                         \
-    MBEDTLS_MPI_CHK( mbedtls_mpi_mul_mod( grp, X, A, A ) )
-
-#define MPI_ECP_MUL_INT( X, A, c )                                  \
-    MBEDTLS_MPI_CHK( mbedtls_mpi_mul_int_mod( grp, X, A, c ) )
-
-#define MPI_ECP_INV( dst, src )                                     \
-    MBEDTLS_MPI_CHK( mbedtls_mpi_inv_mod( (dst), (src), &grp->P ) )
-
-#define MPI_ECP_MOV( X, A )                                         \
-    MBEDTLS_MPI_CHK( mbedtls_mpi_copy( X, A ) )
-
-#define MPI_ECP_SHIFT_L( X, count )                                 \
-    MBEDTLS_MPI_CHK( mbedtls_mpi_shift_l_mod( grp, X, count ) )
 
 #if defined(MBEDTLS_ECP_SHORT_WEIERSTRASS_ENABLED)
 /*
@@ -1236,20 +1181,30 @@ static int ecp_normalize_jac( const mbedtls_ecp_group *grp, mbedtls_ecp_point *p
     return( MBEDTLS_ERR_ECP_FEATURE_UNAVAILABLE );
 #else
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
-    mbedtls_mpi T;
-    mbedtls_mpi_init( &T );
+    mbedtls_mpi Zi, ZZi;
+    mbedtls_mpi_init( &Zi ); mbedtls_mpi_init( &ZZi );
 
-    MPI_ECP_INV( &T,       &pt->Z );          /* T   <-          1 / Z   */
-    MPI_ECP_MUL( &pt->Y,   &pt->Y,     &T );  /* Y'  <- Y*T    = Y / Z   */
-    MPI_ECP_SQR( &T,       &T             );  /* T   <- T^2    = 1 / Z^2 */
-    MPI_ECP_MUL( &pt->X,   &pt->X,     &T );  /* X   <- X  * T = X / Z^2 */
-    MPI_ECP_MUL( &pt->Y,   &pt->Y,     &T );  /* Y'' <- Y' * T = Y / Z^3 */
+    /*
+     * X = X / Z^2  mod p
+     */
+    MBEDTLS_MPI_CHK( mbedtls_mpi_inv_mod( &Zi,      &pt->Z,     &grp->P ) );
+    MBEDTLS_MPI_CHK( mbedtls_mpi_mul_mod( grp, &ZZi,     &Zi,        &Zi     ) );
+    MBEDTLS_MPI_CHK( mbedtls_mpi_mul_mod( grp, &pt->X,   &pt->X,     &ZZi    ) );
 
+    /*
+     * Y = Y / Z^3  mod p
+     */
+    MBEDTLS_MPI_CHK( mbedtls_mpi_mul_mod( grp, &pt->Y,   &pt->Y,     &ZZi    ) );
+    MBEDTLS_MPI_CHK( mbedtls_mpi_mul_mod( grp, &pt->Y,   &pt->Y,     &Zi     ) );
+
+    /*
+     * Z = 1
+     */
     MBEDTLS_MPI_CHK( mbedtls_mpi_lset( &pt->Z, 1 ) );
 
 cleanup:
 
-    mbedtls_mpi_free( &T );
+    mbedtls_mpi_free( &Zi ); mbedtls_mpi_free( &ZZi );
 
     return( ret );
 #endif /* !defined(MBEDTLS_ECP_NO_FALLBACK) || !defined(MBEDTLS_ECP_NORMALIZE_JAC_ALT) */
@@ -1282,7 +1237,7 @@ static int ecp_normalize_jac_many( const mbedtls_ecp_group *grp,
 #else
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     size_t i;
-    mbedtls_mpi *c, t;
+    mbedtls_mpi *c, u, Zi, ZZi;
 
     if( ( c = mbedtls_calloc( T_size, sizeof( mbedtls_mpi ) ) ) == NULL )
         return( MBEDTLS_ERR_ECP_ALLOC_FAILED );
@@ -1290,52 +1245,44 @@ static int ecp_normalize_jac_many( const mbedtls_ecp_group *grp,
     for( i = 0; i < T_size; i++ )
         mbedtls_mpi_init( &c[i] );
 
-    mbedtls_mpi_init( &t );
+    mbedtls_mpi_init( &u ); mbedtls_mpi_init( &Zi ); mbedtls_mpi_init( &ZZi );
 
     /*
      * c[i] = Z_0 * ... * Z_i
      */
-    MPI_ECP_MOV( &c[0], &T[0]->Z );
+    MBEDTLS_MPI_CHK( mbedtls_mpi_copy( &c[0], &T[0]->Z ) );
     for( i = 1; i < T_size; i++ )
     {
-        MPI_ECP_MUL( &c[i], &c[i-1], &T[i]->Z );
+        MBEDTLS_MPI_CHK( mbedtls_mpi_mul_mod( grp, &c[i], &c[i-1], &T[i]->Z ) );
     }
 
     /*
-     * c[n] = 1 / (Z_0 * ... * Z_n) mod P
+     * u = 1 / (Z_0 * ... * Z_n) mod P
      */
-    MPI_ECP_INV( &c[T_size-1], &c[T_size-1] );
+    MBEDTLS_MPI_CHK( mbedtls_mpi_inv_mod( &u, &c[T_size-1], &grp->P ) );
 
     for( i = T_size - 1; ; i-- )
     {
-        /* At the start of iteration i (note that i decrements), we have
-         * - c[j] = Z_0 * .... * Z_j        for j  < i,
-         * - c[j] = 1 / (Z_0 * .... * Z_j)  for j == i,
-         *
-         * This is maintained via
-         * - c[i-1] <- c[i] * Z_i
-         *
-         * We also derive 1/Z_i = c[i] * c[i-1] for i>0 and use that
-         * to do the actual normalization. For i==0, we already have
-         * c[0] = 1 / Z_0.
+        /*
+         * Zi = 1 / Z_i mod p
+         * u = 1 / (Z_0 * ... * Z_i) mod P
          */
-
-        if( i > 0 )
-        {
-            /* Compute 1/Z_i and establish invariant for the next iteration. */
-            MPI_ECP_MUL( &t,      &c[i], &c[i-1]  );
-            MPI_ECP_MUL( &c[i-1], &c[i], &T[i]->Z );
+        if( i == 0 ) {
+            MBEDTLS_MPI_CHK( mbedtls_mpi_copy( &Zi, &u ) );
         }
         else
         {
-            MPI_ECP_MOV( &t, &c[0] );
+            MBEDTLS_MPI_CHK( mbedtls_mpi_mul_mod( grp, &Zi, &u, &c[i-1]  ) );
+            MBEDTLS_MPI_CHK( mbedtls_mpi_mul_mod( grp, &u,  &u, &T[i]->Z ) );
         }
 
-        /* Now t holds 1 / Z_i; normalize as in ecp_normalize_jac() */
-        MPI_ECP_MUL( &T[i]->Y, &T[i]->Y, &t );
-        MPI_ECP_SQR( &t,       &t           );
-        MPI_ECP_MUL( &T[i]->X, &T[i]->X, &t );
-        MPI_ECP_MUL( &T[i]->Y, &T[i]->Y, &t );
+        /*
+         * proceed as in normalize()
+         */
+        MBEDTLS_MPI_CHK( mbedtls_mpi_mul_mod( grp, &ZZi,     &Zi,      &Zi  ) );
+        MBEDTLS_MPI_CHK( mbedtls_mpi_mul_mod( grp, &T[i]->X, &T[i]->X, &ZZi ) );
+        MBEDTLS_MPI_CHK( mbedtls_mpi_mul_mod( grp, &T[i]->Y, &T[i]->Y, &ZZi ) );
+        MBEDTLS_MPI_CHK( mbedtls_mpi_mul_mod( grp, &T[i]->Y, &T[i]->Y, &Zi  ) );
 
         /*
          * Post-precessing: reclaim some memory by shrinking coordinates
@@ -1353,7 +1300,7 @@ static int ecp_normalize_jac_many( const mbedtls_ecp_group *grp,
 
 cleanup:
 
-    mbedtls_mpi_free( &t );
+    mbedtls_mpi_free( &u ); mbedtls_mpi_free( &Zi ); mbedtls_mpi_free( &ZZi );
     for( i = 0; i < T_size; i++ )
         mbedtls_mpi_free( &c[i] );
     mbedtls_free( c );
@@ -1402,8 +1349,7 @@ cleanup:
  *             3M + 6S + 1a     otherwise
  */
 static int ecp_double_jac( const mbedtls_ecp_group *grp, mbedtls_ecp_point *R,
-                           const mbedtls_ecp_point *P,
-                           mbedtls_mpi tmp[4] )
+                           const mbedtls_ecp_point *P )
 {
 #if defined(MBEDTLS_SELF_TEST)
     dbl_count++;
@@ -1418,63 +1364,67 @@ static int ecp_double_jac( const mbedtls_ecp_group *grp, mbedtls_ecp_point *R,
     return( MBEDTLS_ERR_ECP_FEATURE_UNAVAILABLE );
 #else
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+    mbedtls_mpi M, S, T, U;
+
+    mbedtls_mpi_init( &M ); mbedtls_mpi_init( &S ); mbedtls_mpi_init( &T ); mbedtls_mpi_init( &U );
 
     /* Special case for A = -3 */
     if( grp->A.p == NULL )
     {
         /* M = 3(X + Z^2)(X - Z^2) */
-        MPI_ECP_SQR(     &tmp[1],  &P->Z                );
-        MPI_ECP_ADD(     &tmp[2],  &P->X,  &tmp[1]      );
-        MPI_ECP_SUB(     &tmp[3],  &P->X,  &tmp[1]      );
-        MPI_ECP_MUL(     &tmp[1],  &tmp[2],     &tmp[3] );
-        MPI_ECP_MUL_INT( &tmp[0],  &tmp[1],     3       );
+        MBEDTLS_MPI_CHK( mbedtls_mpi_mul_mod( grp, &S,  &P->Z,  &P->Z   ) );
+        MBEDTLS_MPI_CHK( mbedtls_mpi_add_mod( grp, &T,  &P->X,  &S      ) );
+        MBEDTLS_MPI_CHK( mbedtls_mpi_sub_mod( grp, &U,  &P->X,  &S      ) );
+        MBEDTLS_MPI_CHK( mbedtls_mpi_mul_mod( grp, &S,  &T,     &U      ) );
+        MBEDTLS_MPI_CHK( mbedtls_mpi_mul_int( &M,  &S,     3       ) ); MOD_ADD( M );
     }
     else
     {
         /* M = 3.X^2 */
-        MPI_ECP_SQR(     &tmp[1],  &P->X  );
-        MPI_ECP_MUL_INT( &tmp[0],  &tmp[1],  3 );
+        MBEDTLS_MPI_CHK( mbedtls_mpi_mul_mod( grp, &S,  &P->X,  &P->X   ) );
+        MBEDTLS_MPI_CHK( mbedtls_mpi_mul_int( &M,  &S,     3       ) ); MOD_ADD( M );
 
         /* Optimize away for "koblitz" curves with A = 0 */
         if( mbedtls_mpi_cmp_int( &grp->A, 0 ) != 0 )
         {
             /* M += A.Z^4 */
-            MPI_ECP_SQR( &tmp[1],  &P->Z                );
-            MPI_ECP_SQR( &tmp[2],  &tmp[1]              );
-            MPI_ECP_MUL( &tmp[1],  &tmp[2],     &grp->A );
-            MPI_ECP_ADD( &tmp[0],  &tmp[0],     &tmp[1] );
+            MBEDTLS_MPI_CHK( mbedtls_mpi_mul_mod( grp, &S,  &P->Z,  &P->Z   ) );
+            MBEDTLS_MPI_CHK( mbedtls_mpi_mul_mod( grp, &T,  &S,     &S      ) );
+            MBEDTLS_MPI_CHK( mbedtls_mpi_mul_mod( grp, &S,  &T,     &grp->A ) );
+            MBEDTLS_MPI_CHK( mbedtls_mpi_add_mod( grp, &M,  &M,     &S      ) );
         }
     }
 
     /* S = 4.X.Y^2 */
-    MPI_ECP_SQR(     &tmp[2],  &P->Y     );
-    MPI_ECP_SHIFT_L( &tmp[2],  1         );
-    MPI_ECP_MUL(     &tmp[1],  &P->X, &tmp[2] );
-    MPI_ECP_SHIFT_L( &tmp[1],  1         );
+    MBEDTLS_MPI_CHK( mbedtls_mpi_mul_mod( grp, &T,  &P->Y,  &P->Y   ) );
+    MBEDTLS_MPI_CHK( mbedtls_mpi_shift_l_mod( grp, &T,  1               ) );
+    MBEDTLS_MPI_CHK( mbedtls_mpi_mul_mod( grp, &S,  &P->X,  &T      ) );
+    MBEDTLS_MPI_CHK( mbedtls_mpi_shift_l_mod( grp, &S,  1               ) );
 
     /* U = 8.Y^4 */
-    MPI_ECP_SQR(     &tmp[3],  &tmp[2] );
-    MPI_ECP_SHIFT_L( &tmp[3],  1       );
+    MBEDTLS_MPI_CHK( mbedtls_mpi_mul_mod( grp, &U,  &T,     &T      ) );
+    MBEDTLS_MPI_CHK( mbedtls_mpi_shift_l_mod( grp, &U,  1               ) );
 
     /* T = M^2 - 2.S */
-    MPI_ECP_SQR( &tmp[2],  &tmp[0]     );
-    MPI_ECP_SUB( &tmp[2],  &tmp[2], &tmp[1] );
-    MPI_ECP_SUB( &tmp[2],  &tmp[2], &tmp[1] );
+    MBEDTLS_MPI_CHK( mbedtls_mpi_mul_mod( grp, &T,  &M,     &M      ) );
+    MBEDTLS_MPI_CHK( mbedtls_mpi_sub_mod( grp, &T,  &T,     &S      ) );
+    MBEDTLS_MPI_CHK( mbedtls_mpi_sub_mod( grp, &T,  &T,     &S      ) );
 
     /* S = M(S - T) - U */
-    MPI_ECP_SUB( &tmp[1],  &tmp[1],     &tmp[2] );
-    MPI_ECP_MUL( &tmp[1],  &tmp[1],     &tmp[0] );
-    MPI_ECP_SUB( &tmp[1],  &tmp[1],     &tmp[3] );
+    MBEDTLS_MPI_CHK( mbedtls_mpi_sub_mod( grp, &S,  &S,     &T      ) );
+    MBEDTLS_MPI_CHK( mbedtls_mpi_mul_mod( grp, &S,  &S,     &M      ) );
+    MBEDTLS_MPI_CHK( mbedtls_mpi_sub_mod( grp, &S,  &S,     &U      ) );
 
     /* U = 2.Y.Z */
-    MPI_ECP_MUL(     &tmp[3],  &P->Y,  &P->Z   );
-    MPI_ECP_SHIFT_L( &tmp[3],  1               );
+    MBEDTLS_MPI_CHK( mbedtls_mpi_mul_mod( grp, &U,  &P->Y,  &P->Z   ) );
+    MBEDTLS_MPI_CHK( mbedtls_mpi_shift_l_mod( grp, &U,  1               ) );
 
-    MBEDTLS_MPI_CHK( mbedtls_mpi_copy( &R->X, &tmp[2] ) );
-    MBEDTLS_MPI_CHK( mbedtls_mpi_copy( &R->Y, &tmp[1] ) );
-    MBEDTLS_MPI_CHK( mbedtls_mpi_copy( &R->Z, &tmp[3] ) );
+    MBEDTLS_MPI_CHK( mbedtls_mpi_copy( &R->X, &T ) );
+    MBEDTLS_MPI_CHK( mbedtls_mpi_copy( &R->Y, &S ) );
+    MBEDTLS_MPI_CHK( mbedtls_mpi_copy( &R->Z, &U ) );
 
 cleanup:
+    mbedtls_mpi_free( &M ); mbedtls_mpi_free( &S ); mbedtls_mpi_free( &T ); mbedtls_mpi_free( &U );
 
     return( ret );
 #endif /* !defined(MBEDTLS_ECP_NO_FALLBACK) || !defined(MBEDTLS_ECP_DOUBLE_JAC_ALT) */
@@ -1499,8 +1449,7 @@ cleanup:
  * Cost: 1A := 8M + 3S
  */
 static int ecp_add_mixed( const mbedtls_ecp_group *grp, mbedtls_ecp_point *R,
-                          const mbedtls_ecp_point *P, const mbedtls_ecp_point *Q,
-                          mbedtls_mpi tmp[4] )
+                          const mbedtls_ecp_point *P, const mbedtls_ecp_point *Q )
 {
 #if defined(MBEDTLS_SELF_TEST)
     add_count++;
@@ -1515,13 +1464,7 @@ static int ecp_add_mixed( const mbedtls_ecp_group *grp, mbedtls_ecp_point *R,
     return( MBEDTLS_ERR_ECP_FEATURE_UNAVAILABLE );
 #else
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
-
-    /* NOTE: Aliasing between input and output is allowed, so one has to make
-     *       sure that at the point X,Y,Z are written, {P,Q}->{X,Y,Z} are no
-     *       longer read from. */
-    mbedtls_mpi * const X = &R->X;
-    mbedtls_mpi * const Y = &R->Y;
-    mbedtls_mpi * const Z = &R->Z;
+    mbedtls_mpi T1, T2, T3, T4, X, Y, Z;
 
     /*
      * Trivial cases: P == 0 or Q == 0 (case 1)
@@ -1538,19 +1481,22 @@ static int ecp_add_mixed( const mbedtls_ecp_group *grp, mbedtls_ecp_point *R,
     if( Q->Z.p != NULL && mbedtls_mpi_cmp_int( &Q->Z, 1 ) != 0 )
         return( MBEDTLS_ERR_ECP_BAD_INPUT_DATA );
 
-    MPI_ECP_SQR( &tmp[0], &P->Z         );
-    MPI_ECP_MUL( &tmp[1], &tmp[0], &P->Z );
-    MPI_ECP_MUL( &tmp[0], &tmp[0], &Q->X );
-    MPI_ECP_MUL( &tmp[1], &tmp[1], &Q->Y );
-    MPI_ECP_SUB( &tmp[0], &tmp[0], &P->X );
-    MPI_ECP_SUB( &tmp[1], &tmp[1], &P->Y );
+    mbedtls_mpi_init( &T1 ); mbedtls_mpi_init( &T2 ); mbedtls_mpi_init( &T3 ); mbedtls_mpi_init( &T4 );
+    mbedtls_mpi_init( &X ); mbedtls_mpi_init( &Y ); mbedtls_mpi_init( &Z );
+
+    MBEDTLS_MPI_CHK( mbedtls_mpi_mul_mod( grp, &T1,  &P->Z,  &P->Z ) );
+    MBEDTLS_MPI_CHK( mbedtls_mpi_mul_mod( grp, &T2,  &T1,    &P->Z ) );
+    MBEDTLS_MPI_CHK( mbedtls_mpi_mul_mod( grp, &T1,  &T1,    &Q->X ) );
+    MBEDTLS_MPI_CHK( mbedtls_mpi_mul_mod( grp, &T2,  &T2,    &Q->Y ) );
+    MBEDTLS_MPI_CHK( mbedtls_mpi_sub_mod( grp, &T1,  &T1,    &P->X ) );
+    MBEDTLS_MPI_CHK( mbedtls_mpi_sub_mod( grp, &T2,  &T2,    &P->Y ) );
 
     /* Special cases (2) and (3) */
-    if( mbedtls_mpi_cmp_int( &tmp[0], 0 ) == 0 )
+    if( mbedtls_mpi_cmp_int( &T1, 0 ) == 0 )
     {
-        if( mbedtls_mpi_cmp_int( &tmp[1], 0 ) == 0 )
+        if( mbedtls_mpi_cmp_int( &T2, 0 ) == 0 )
         {
-            ret = ecp_double_jac( grp, R, P, tmp );
+            ret = ecp_double_jac( grp, R, P );
             goto cleanup;
         }
         else
@@ -1560,26 +1506,28 @@ static int ecp_add_mixed( const mbedtls_ecp_group *grp, mbedtls_ecp_point *R,
         }
     }
 
-    /* {P,Q}->Z no longer used, so OK to write to Z even if there's aliasing. */
-    MPI_ECP_MUL( Z,        &P->Z,    &tmp[0] );
-    MPI_ECP_SQR( &tmp[2],  &tmp[0]           );
-    MPI_ECP_MUL( &tmp[3],  &tmp[2],  &tmp[0] );
-    MPI_ECP_MUL( &tmp[2],  &tmp[2],  &P->X   );
+    MBEDTLS_MPI_CHK( mbedtls_mpi_mul_mod( grp, &Z,   &P->Z,  &T1   ) );
+    MBEDTLS_MPI_CHK( mbedtls_mpi_mul_mod( grp, &T3,  &T1,    &T1   ) );
+    MBEDTLS_MPI_CHK( mbedtls_mpi_mul_mod( grp, &T4,  &T3,    &T1   ) );
+    MBEDTLS_MPI_CHK( mbedtls_mpi_mul_mod( grp, &T3,  &T3,    &P->X ) );
+    MBEDTLS_MPI_CHK( mbedtls_mpi_copy( &T1, &T3 ) );
+    MBEDTLS_MPI_CHK( mbedtls_mpi_shift_l_mod( grp, &T1,  1     ) );
+    MBEDTLS_MPI_CHK( mbedtls_mpi_mul_mod( grp, &X,   &T2,    &T2   ) );
+    MBEDTLS_MPI_CHK( mbedtls_mpi_sub_mod( grp, &X,   &X,     &T1   ) );
+    MBEDTLS_MPI_CHK( mbedtls_mpi_sub_mod( grp, &X,   &X,     &T4   ) );
+    MBEDTLS_MPI_CHK( mbedtls_mpi_sub_mod( grp, &T3,  &T3,    &X    ) );
+    MBEDTLS_MPI_CHK( mbedtls_mpi_mul_mod( grp, &T3,  &T3,    &T2   ) );
+    MBEDTLS_MPI_CHK( mbedtls_mpi_mul_mod( grp, &T4,  &T4,    &P->Y ) );
+    MBEDTLS_MPI_CHK( mbedtls_mpi_sub_mod( grp, &Y,   &T3,    &T4   ) );
 
-    MPI_ECP_MOV( &tmp[0], &tmp[2] );
-    MPI_ECP_SHIFT_L( &tmp[0], 1 );
-
-    /* {P,Q}->X no longer used, so OK to write to X even if there's aliasing. */
-    MPI_ECP_SQR( X,        &tmp[1]           );
-    MPI_ECP_SUB( X,        X,        &tmp[0] );
-    MPI_ECP_SUB( X,        X,        &tmp[3] );
-    MPI_ECP_SUB( &tmp[2],  &tmp[2],  X       );
-    MPI_ECP_MUL( &tmp[2],  &tmp[2],  &tmp[1] );
-    MPI_ECP_MUL( &tmp[3],  &tmp[3],  &P->Y   );
-    /* {P,Q}->Y no longer used, so OK to write to Y even if there's aliasing. */
-    MPI_ECP_SUB( Y,     &tmp[2],     &tmp[3] );
+    MBEDTLS_MPI_CHK( mbedtls_mpi_copy( &R->X, &X ) );
+    MBEDTLS_MPI_CHK( mbedtls_mpi_copy( &R->Y, &Y ) );
+    MBEDTLS_MPI_CHK( mbedtls_mpi_copy( &R->Z, &Z ) );
 
 cleanup:
+
+    mbedtls_mpi_free( &T1 ); mbedtls_mpi_free( &T2 ); mbedtls_mpi_free( &T3 ); mbedtls_mpi_free( &T4 );
+    mbedtls_mpi_free( &X ); mbedtls_mpi_free( &Y ); mbedtls_mpi_free( &Z );
 
     return( ret );
 #endif /* !defined(MBEDTLS_ECP_NO_FALLBACK) || !defined(MBEDTLS_ECP_ADD_MIXED_ALT) */
@@ -1604,28 +1552,26 @@ static int ecp_randomize_jac( const mbedtls_ecp_group *grp, mbedtls_ecp_point *p
     return( MBEDTLS_ERR_ECP_FEATURE_UNAVAILABLE );
 #else
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
-    mbedtls_mpi l;
+    mbedtls_mpi l, ll;
 
-    mbedtls_mpi_init( &l );
+    mbedtls_mpi_init( &l ); mbedtls_mpi_init( &ll );
 
     /* Generate l such that 1 < l < p */
     MBEDTLS_MPI_CHK( mbedtls_mpi_random( &l, 2, &grp->P, f_rng, p_rng ) );
 
     /* Z = l * Z */
-    MPI_ECP_MUL( &pt->Z,   &pt->Z,     &l );
-
-    /* Y = l * Z */
-    MPI_ECP_MUL( &pt->Y,   &pt->Y,     &l );
+    MBEDTLS_MPI_CHK( mbedtls_mpi_mul_mod( grp, &pt->Z,   &pt->Z,     &l  ) );
 
     /* X = l^2 * X */
-    MPI_ECP_SQR( &l,       &l             );
-    MPI_ECP_MUL( &pt->X,   &pt->X,     &l );
+    MBEDTLS_MPI_CHK( mbedtls_mpi_mul_mod( grp, &ll,      &l,         &l  ) );
+    MBEDTLS_MPI_CHK( mbedtls_mpi_mul_mod( grp, &pt->X,   &pt->X,     &ll ) );
 
     /* Y = l^3 * Y */
-    MPI_ECP_MUL( &pt->Y,   &pt->Y,     &l );
+    MBEDTLS_MPI_CHK( mbedtls_mpi_mul_mod( grp, &ll,      &ll,        &l  ) );
+    MBEDTLS_MPI_CHK( mbedtls_mpi_mul_mod( grp, &pt->Y,   &pt->Y,     &ll ) );
 
 cleanup:
-    mbedtls_mpi_free( &l );
+    mbedtls_mpi_free( &l ); mbedtls_mpi_free( &ll );
 
     if( ret == MBEDTLS_ERR_MPI_NOT_ACCEPTABLE )
         ret = MBEDTLS_ERR_ECP_RANDOM_FAILED;
@@ -1768,13 +1714,6 @@ static int ecp_precompute_comb( const mbedtls_ecp_group *grp,
     const unsigned char T_size = 1U << ( w - 1 );
     mbedtls_ecp_point *cur, *TT[COMB_MAX_PRE - 1];
 
-    mbedtls_mpi tmp[4];
-
-    mbedtls_mpi_init( &tmp[0] );
-    mbedtls_mpi_init( &tmp[1] );
-    mbedtls_mpi_init( &tmp[2] );
-    mbedtls_mpi_init( &tmp[3] );
-
 #if defined(MBEDTLS_ECP_RESTARTABLE)
     if( rs_ctx != NULL && rs_ctx->rsm != NULL )
     {
@@ -1825,7 +1764,7 @@ dbl:
         if( j % d == 0 )
             MBEDTLS_MPI_CHK( mbedtls_ecp_copy( cur, T + ( i >> 1 ) ) );
 
-        MBEDTLS_MPI_CHK( ecp_double_jac( grp, cur, cur, tmp ) );
+        MBEDTLS_MPI_CHK( ecp_double_jac( grp, cur, cur ) );
     }
 
 #if defined(MBEDTLS_ECP_RESTARTABLE)
@@ -1862,7 +1801,7 @@ add:
     {
         j = i;
         while( j-- )
-            MBEDTLS_MPI_CHK( ecp_add_mixed( grp, &T[i + j], &T[j], &T[i], tmp ) );
+            MBEDTLS_MPI_CHK( ecp_add_mixed( grp, &T[i + j], &T[j], &T[i] ) );
     }
 
 #if defined(MBEDTLS_ECP_RESTARTABLE)
@@ -1884,12 +1823,6 @@ norm_add:
     MBEDTLS_MPI_CHK( ecp_normalize_jac_many( grp, TT, j ) );
 
 cleanup:
-
-    mbedtls_mpi_free( &tmp[0] );
-    mbedtls_mpi_free( &tmp[1] );
-    mbedtls_mpi_free( &tmp[2] );
-    mbedtls_mpi_free( &tmp[3] );
-
 #if defined(MBEDTLS_ECP_RESTARTABLE)
     if( rs_ctx != NULL && rs_ctx->rsm != NULL &&
         ret == MBEDTLS_ERR_ECP_IN_PROGRESS )
@@ -1946,14 +1879,9 @@ static int ecp_mul_comb_core( const mbedtls_ecp_group *grp, mbedtls_ecp_point *R
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     mbedtls_ecp_point Txi;
-    mbedtls_mpi tmp[4];
     size_t i;
 
     mbedtls_ecp_point_init( &Txi );
-    mbedtls_mpi_init( &tmp[0] );
-    mbedtls_mpi_init( &tmp[1] );
-    mbedtls_mpi_init( &tmp[2] );
-    mbedtls_mpi_init( &tmp[3] );
 
 #if !defined(MBEDTLS_ECP_RESTARTABLE)
     (void) rs_ctx;
@@ -1989,19 +1917,14 @@ static int ecp_mul_comb_core( const mbedtls_ecp_group *grp, mbedtls_ecp_point *R
         MBEDTLS_ECP_BUDGET( MBEDTLS_ECP_OPS_DBL + MBEDTLS_ECP_OPS_ADD );
         --i;
 
-        MBEDTLS_MPI_CHK( ecp_double_jac( grp, R, R, tmp ) );
+        MBEDTLS_MPI_CHK( ecp_double_jac( grp, R, R ) );
         MBEDTLS_MPI_CHK( ecp_select_comb( grp, &Txi, T, T_size, x[i] ) );
-        MBEDTLS_MPI_CHK( ecp_add_mixed( grp, R, R, &Txi, tmp ) );
+        MBEDTLS_MPI_CHK( ecp_add_mixed( grp, R, R, &Txi ) );
     }
 
 cleanup:
 
     mbedtls_ecp_point_free( &Txi );
-
-    mbedtls_mpi_free( &tmp[0] );
-    mbedtls_mpi_free( &tmp[1] );
-    mbedtls_mpi_free( &tmp[2] );
-    mbedtls_mpi_free( &tmp[3] );
 
 #if defined(MBEDTLS_ECP_RESTARTABLE)
     if( rs_ctx != NULL && rs_ctx->rsm != NULL &&
@@ -2335,8 +2258,8 @@ static int ecp_normalize_mxz( const mbedtls_ecp_group *grp, mbedtls_ecp_point *P
     return( MBEDTLS_ERR_ECP_FEATURE_UNAVAILABLE );
 #else
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
-    MPI_ECP_INV( &P->Z, &P->Z );
-    MPI_ECP_MUL( &P->X, &P->X, &P->Z );
+    MBEDTLS_MPI_CHK( mbedtls_mpi_inv_mod( &P->Z, &P->Z, &grp->P ) );
+    MBEDTLS_MPI_CHK( mbedtls_mpi_mul_mod( grp, &P->X, &P->X, &P->Z ) );
     MBEDTLS_MPI_CHK( mbedtls_mpi_lset( &P->Z, 1 ) );
 
 cleanup:
@@ -2370,8 +2293,8 @@ static int ecp_randomize_mxz( const mbedtls_ecp_group *grp, mbedtls_ecp_point *P
     /* Generate l such that 1 < l < p */
     MBEDTLS_MPI_CHK( mbedtls_mpi_random( &l, 2, &grp->P, f_rng, p_rng ) );
 
-    MPI_ECP_MUL( &P->X, &P->X, &l );
-    MPI_ECP_MUL( &P->Z, &P->Z, &l );
+    MBEDTLS_MPI_CHK( mbedtls_mpi_mul_mod( grp, &P->X, &P->X, &l ) );
+    MBEDTLS_MPI_CHK( mbedtls_mpi_mul_mod( grp, &P->Z, &P->Z, &l ) );
 
 cleanup:
     mbedtls_mpi_free( &l );
@@ -2400,8 +2323,7 @@ cleanup:
 static int ecp_double_add_mxz( const mbedtls_ecp_group *grp,
                                mbedtls_ecp_point *R, mbedtls_ecp_point *S,
                                const mbedtls_ecp_point *P, const mbedtls_ecp_point *Q,
-                               const mbedtls_mpi *d,
-                               mbedtls_mpi T[4] )
+                               const mbedtls_mpi *d )
 {
 #if defined(MBEDTLS_ECP_DOUBLE_ADD_MXZ_ALT)
     if( mbedtls_internal_ecp_grp_capable( grp ) )
@@ -2412,27 +2334,35 @@ static int ecp_double_add_mxz( const mbedtls_ecp_group *grp,
     return( MBEDTLS_ERR_ECP_FEATURE_UNAVAILABLE );
 #else
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+    mbedtls_mpi A, AA, B, BB, E, C, D, DA, CB;
 
-    MPI_ECP_ADD( &T[0], &P->X,   &P->Z );
-    MPI_ECP_SUB( &T[1], &P->X,   &P->Z );
-    MPI_ECP_ADD( &T[2], &Q->X,   &Q->Z );
-    MPI_ECP_SUB( &T[3], &Q->X,   &Q->Z );
-    MPI_ECP_MUL( &T[3], &T[3],   &T[0] );
-    MPI_ECP_MUL( &T[2], &T[2],   &T[1] );
-    MPI_ECP_SQR( &T[0], &T[0]          );
-    MPI_ECP_SQR( &T[1], &T[1]          );
-    MPI_ECP_MUL( &R->X, &T[0],   &T[1] );
-    MPI_ECP_SUB( &T[0], &T[0],   &T[1] );
-    MPI_ECP_MUL( &R->Z, &grp->A, &T[0] );
-    MPI_ECP_ADD( &R->Z, &T[1],   &R->Z );
-    MPI_ECP_ADD( &S->X, &T[3],   &T[2] );
-    MPI_ECP_SQR( &S->X, &S->X          );
-    MPI_ECP_SUB( &S->Z, &T[3],   &T[2] );
-    MPI_ECP_SQR( &S->Z, &S->Z          );
-    MPI_ECP_MUL( &S->Z, d,       &S->Z );
-    MPI_ECP_MUL( &R->Z, &T[0],   &R->Z );
+    mbedtls_mpi_init( &A ); mbedtls_mpi_init( &AA ); mbedtls_mpi_init( &B );
+    mbedtls_mpi_init( &BB ); mbedtls_mpi_init( &E ); mbedtls_mpi_init( &C );
+    mbedtls_mpi_init( &D ); mbedtls_mpi_init( &DA ); mbedtls_mpi_init( &CB );
+
+    MBEDTLS_MPI_CHK( mbedtls_mpi_add_mod( grp, &A,    &P->X,   &P->Z ) );
+    MBEDTLS_MPI_CHK( mbedtls_mpi_mul_mod( grp, &AA,   &A,      &A    ) );
+    MBEDTLS_MPI_CHK( mbedtls_mpi_sub_mod( grp, &B,    &P->X,   &P->Z ) );
+    MBEDTLS_MPI_CHK( mbedtls_mpi_mul_mod( grp, &BB,   &B,      &B    ) );
+    MBEDTLS_MPI_CHK( mbedtls_mpi_sub_mod( grp, &E,    &AA,     &BB   ) );
+    MBEDTLS_MPI_CHK( mbedtls_mpi_add_mod( grp, &C,    &Q->X,   &Q->Z ) );
+    MBEDTLS_MPI_CHK( mbedtls_mpi_sub_mod( grp, &D,    &Q->X,   &Q->Z ) );
+    MBEDTLS_MPI_CHK( mbedtls_mpi_mul_mod( grp, &DA,   &D,      &A    ) );
+    MBEDTLS_MPI_CHK( mbedtls_mpi_mul_mod( grp, &CB,   &C,      &B    ) );
+    MBEDTLS_MPI_CHK( mbedtls_mpi_add_mod( grp, &S->X, &DA,     &CB   ) );
+    MBEDTLS_MPI_CHK( mbedtls_mpi_mul_mod( grp, &S->X, &S->X,   &S->X ) );
+    MBEDTLS_MPI_CHK( mbedtls_mpi_sub_mod( grp, &S->Z, &DA,     &CB   ) );
+    MBEDTLS_MPI_CHK( mbedtls_mpi_mul_mod( grp, &S->Z, &S->Z,   &S->Z ) );
+    MBEDTLS_MPI_CHK( mbedtls_mpi_mul_mod( grp, &S->Z, d,       &S->Z ) );
+    MBEDTLS_MPI_CHK( mbedtls_mpi_mul_mod( grp, &R->X, &AA,     &BB   ) );
+    MBEDTLS_MPI_CHK( mbedtls_mpi_mul_mod( grp, &R->Z, &grp->A, &E    ) );
+    MBEDTLS_MPI_CHK( mbedtls_mpi_add_mod( grp, &R->Z, &BB,     &R->Z ) );
+    MBEDTLS_MPI_CHK( mbedtls_mpi_mul_mod( grp, &R->Z, &E,      &R->Z ) );
 
 cleanup:
+    mbedtls_mpi_free( &A ); mbedtls_mpi_free( &AA ); mbedtls_mpi_free( &B );
+    mbedtls_mpi_free( &BB ); mbedtls_mpi_free( &E ); mbedtls_mpi_free( &C );
+    mbedtls_mpi_free( &D ); mbedtls_mpi_free( &DA ); mbedtls_mpi_free( &CB );
 
     return( ret );
 #endif /* !defined(MBEDTLS_ECP_NO_FALLBACK) || !defined(MBEDTLS_ECP_DOUBLE_ADD_MXZ_ALT) */
@@ -2452,13 +2382,7 @@ static int ecp_mul_mxz( mbedtls_ecp_group *grp, mbedtls_ecp_point *R,
     unsigned char b;
     mbedtls_ecp_point RP;
     mbedtls_mpi PX;
-    mbedtls_mpi tmp[4];
     mbedtls_ecp_point_init( &RP ); mbedtls_mpi_init( &PX );
-
-    mbedtls_mpi_init( &tmp[0] );
-    mbedtls_mpi_init( &tmp[1] );
-    mbedtls_mpi_init( &tmp[2] );
-    mbedtls_mpi_init( &tmp[3] );
 
     if( f_rng == NULL )
         return( MBEDTLS_ERR_ECP_BAD_INPUT_DATA );
@@ -2473,7 +2397,7 @@ static int ecp_mul_mxz( mbedtls_ecp_group *grp, mbedtls_ecp_point *R,
     mbedtls_mpi_free( &R->Y );
 
     /* RP.X might be sligtly larger than P, so reduce it */
-    MOD_ADD( &RP.X );
+    MOD_ADD( RP.X );
 
     /* Randomize coordinates of the starting point */
     MBEDTLS_MPI_CHK( ecp_randomize_mxz( grp, &RP, f_rng, p_rng ) );
@@ -2492,7 +2416,7 @@ static int ecp_mul_mxz( mbedtls_ecp_group *grp, mbedtls_ecp_point *R,
          */
         MBEDTLS_MPI_CHK( mbedtls_mpi_safe_cond_swap( &R->X, &RP.X, b ) );
         MBEDTLS_MPI_CHK( mbedtls_mpi_safe_cond_swap( &R->Z, &RP.Z, b ) );
-        MBEDTLS_MPI_CHK( ecp_double_add_mxz( grp, R, &RP, R, &RP, &PX, tmp ) );
+        MBEDTLS_MPI_CHK( ecp_double_add_mxz( grp, R, &RP, R, &RP, &PX ) );
         MBEDTLS_MPI_CHK( mbedtls_mpi_safe_cond_swap( &R->X, &RP.X, b ) );
         MBEDTLS_MPI_CHK( mbedtls_mpi_safe_cond_swap( &R->Z, &RP.Z, b ) );
     }
@@ -2513,11 +2437,6 @@ static int ecp_mul_mxz( mbedtls_ecp_group *grp, mbedtls_ecp_point *R,
 
 cleanup:
     mbedtls_ecp_point_free( &RP ); mbedtls_mpi_free( &PX );
-
-    mbedtls_mpi_free( &tmp[0] );
-    mbedtls_mpi_free( &tmp[1] );
-    mbedtls_mpi_free( &tmp[2] );
-    mbedtls_mpi_free( &tmp[3] );
 
     return( ret );
 }
@@ -2647,21 +2566,21 @@ static int ecp_check_pubkey_sw( const mbedtls_ecp_group *grp, const mbedtls_ecp_
      * YY = Y^2
      * RHS = X (X^2 + A) + B = X^3 + A X + B
      */
-    MPI_ECP_SQR( &YY,  &pt->Y );
-    MPI_ECP_SQR( &RHS, &pt->X );
+    MBEDTLS_MPI_CHK( mbedtls_mpi_mul_mod( grp, &YY,  &pt->Y,   &pt->Y  ) );
+    MBEDTLS_MPI_CHK( mbedtls_mpi_mul_mod( grp, &RHS, &pt->X,   &pt->X  ) );
 
     /* Special case for A = -3 */
     if( grp->A.p == NULL )
     {
-        MPI_ECP_SUB_INT( &RHS, &RHS, 3 );
+        MBEDTLS_MPI_CHK( mbedtls_mpi_sub_int( &RHS, &RHS, 3       ) );  MOD_SUB( RHS );
     }
     else
     {
-        MPI_ECP_ADD( &RHS, &RHS, &grp->A );
+        MBEDTLS_MPI_CHK( mbedtls_mpi_add_mod( grp, &RHS, &RHS, &grp->A ) );
     }
 
-    MPI_ECP_MUL( &RHS, &RHS, &pt->X  );
-    MPI_ECP_ADD( &RHS, &RHS, &grp->B );
+    MBEDTLS_MPI_CHK( mbedtls_mpi_mul_mod( grp, &RHS, &RHS,     &pt->X  ) );
+    MBEDTLS_MPI_CHK( mbedtls_mpi_add_mod( grp, &RHS, &RHS,     &grp->B ) );
 
     if( mbedtls_mpi_cmp_mpi( &YY, &RHS ) != 0 )
         ret = MBEDTLS_ERR_ECP_INVALID_KEY;
@@ -2725,7 +2644,6 @@ int mbedtls_ecp_muladd_restartable(
     mbedtls_ecp_point mP;
     mbedtls_ecp_point *pmP = &mP;
     mbedtls_ecp_point *pR = R;
-    mbedtls_mpi tmp[4];
 #if defined(MBEDTLS_ECP_INTERNAL_ALT)
     char is_grp_capable = 0;
 #endif
@@ -2740,11 +2658,6 @@ int mbedtls_ecp_muladd_restartable(
         return( MBEDTLS_ERR_ECP_FEATURE_UNAVAILABLE );
 
     mbedtls_ecp_point_init( &mP );
-
-    mbedtls_mpi_init( &tmp[0] );
-    mbedtls_mpi_init( &tmp[1] );
-    mbedtls_mpi_init( &tmp[2] );
-    mbedtls_mpi_init( &tmp[3] );
 
     ECP_RS_ENTER( ma );
 
@@ -2786,7 +2699,7 @@ mul2:
 add:
 #endif
     MBEDTLS_ECP_BUDGET( MBEDTLS_ECP_OPS_ADD );
-    MBEDTLS_MPI_CHK( ecp_add_mixed( grp, pR, pmP, pR, tmp ) );
+    MBEDTLS_MPI_CHK( ecp_add_mixed( grp, pR, pmP, pR ) );
 #if defined(MBEDTLS_ECP_RESTARTABLE)
     if( rs_ctx != NULL && rs_ctx->ma != NULL )
         rs_ctx->ma->state = ecp_rsma_norm;
@@ -2802,12 +2715,6 @@ norm:
 #endif
 
 cleanup:
-
-    mbedtls_mpi_free( &tmp[0] );
-    mbedtls_mpi_free( &tmp[1] );
-    mbedtls_mpi_free( &tmp[2] );
-    mbedtls_mpi_free( &tmp[3] );
-
 #if defined(MBEDTLS_ECP_INTERNAL_ALT)
     if( is_grp_capable )
         mbedtls_internal_ecp_free( grp );
