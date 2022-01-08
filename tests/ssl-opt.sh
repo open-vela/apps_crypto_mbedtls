@@ -543,18 +543,16 @@ print_name() {
 
 # record_outcome <outcome> [<failure-reason>]
 # The test name must be in $NAME.
-# Use $TEST_SUITE_NAME as the test suite name if set.
 record_outcome() {
     echo "$1"
     if [ -n "$MBEDTLS_TEST_OUTCOME_FILE" ]; then
         printf '%s;%s;%s;%s;%s;%s\n' \
                "$MBEDTLS_TEST_PLATFORM" "$MBEDTLS_TEST_CONFIGURATION" \
-               "${TEST_SUITE_NAME:-ssl-opt}" "$NAME" \
+               "ssl-opt" "$NAME" \
                "$1" "${2-}" \
                >>"$MBEDTLS_TEST_OUTCOME_FILE"
     fi
 }
-unset TEST_SUITE_NAME
 
 # True if the presence of the given pattern in a log definitely indicates
 # that the test has failed. False if the presence is inconclusive.
@@ -4091,21 +4089,6 @@ run_test    "Authentication: client badcert, server required" \
 # We don't check that the client receives the alert because it might
 # detect that its write end of the connection is closed and abort
 # before reading the alert message.
-
-run_test    "Authentication: client cert self-signed and trusted, server required" \
-            "$P_SRV debug_level=3 auth_mode=required ca_file=data_files/server5-selfsigned.crt" \
-            "$P_CLI debug_level=3 crt_file=data_files/server5-selfsigned.crt \
-             key_file=data_files/server5.key" \
-            0 \
-            -S "skip write certificate request" \
-            -C "skip parse certificate request" \
-            -c "got a certificate request" \
-            -C "skip write certificate" \
-            -C "skip write certificate verify" \
-            -S "skip parse certificate verify" \
-            -S "x509_verify_cert() returned" \
-            -S "! The certificate is not correctly signed" \
-            -S "X509 - Certificate verification failed"
 
 run_test    "Authentication: client cert not trusted, server required" \
             "$P_SRV debug_level=3 auth_mode=required" \
@@ -9030,13 +9013,10 @@ run_test    "TLS 1.3: HelloRetryRequest check - gnutls" \
             -c "Last error was: -0x6E00 - SSL - The handshake negotiation failed" \
             -s "HELLO RETRY REQUEST was queued"
 
-for i in opt-testcases/*.sh
+for i in $(ls opt-testcases/*.sh)
 do
-    TEST_SUITE_NAME=${i##*/}
-    TEST_SUITE_NAME=${TEST_SUITE_NAME%.*}
-    . "$i"
+    . $i
 done
-unset TEST_SUITE_NAME
 
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
