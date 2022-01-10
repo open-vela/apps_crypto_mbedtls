@@ -47,9 +47,9 @@ LOCAL_CFLAGS += -fPIC -fpic
 endif
 endif
 
-SOEXT_TLS=so.16
+SOEXT_TLS=so.17
 SOEXT_X509=so.4
-SOEXT_CRYPTO=so.10
+SOEXT_CRYPTO=so.11
 
 # Set AR_DASH= (empty string) to use an ar implementation that does not accept
 # the - prefix for command line options (e.g. llvm-ar)
@@ -290,7 +290,7 @@ libmbedcrypto.dll: $(OBJS_CRYPTO)
 .PHONY: generated_files
 GENERATED_FILES = \
 	error.c version_features.c \
-	ssl_debug_helpers_generated.c ssl_debug_helpers_generated.h
+	ssl_debug_helpers_generated.c
 generated_files: $(GENERATED_FILES)
 
 error.c: ../scripts/generate_errors.pl
@@ -300,10 +300,9 @@ error.c:
 	echo "  Gen   $@"
 	$(PERL) ../scripts/generate_errors.pl
 
-ssl_debug_helpers_generated.c: | ssl_debug_helpers_generated.h
-ssl_debug_helpers_generated.h: ../scripts/generate_ssl_debug_helpers.py
-ssl_debug_helpers_generated.h: $(filter-out %config%,$(wildcard ../include/mbedtls/*.h))
-ssl_debug_helpers_generated.h:
+ssl_debug_helpers_generated.c: ../scripts/generate_ssl_debug_helpers.py
+ssl_debug_helpers_generated.c: $(filter-out %config%,$(wildcard ../include/mbedtls/*.h))
+ssl_debug_helpers_generated.c:
 	echo "  Gen   $@"
 	$(PYTHON) ../scripts/generate_ssl_debug_helpers.py --mbedtls-root .. .
 
