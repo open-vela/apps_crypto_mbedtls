@@ -117,8 +117,9 @@ check()
 
 check scripts/generate_errors.pl library/error.c
 check scripts/generate_query_config.pl programs/test/query_config.c
+check scripts/generate_driver_wrappers.py library/psa_crypto_driver_wrappers.c
 check scripts/generate_features.pl library/version_features.c
-check scripts/generate_ssl_debug_helpers.py library/ssl_debug_helpers_generated.h library/ssl_debug_helpers_generated.c
+check scripts/generate_ssl_debug_helpers.py library/ssl_debug_helpers_generated.c
 # generate_visualc_files enumerates source files (library/*.c). It doesn't
 # care about their content, but the files must exist. So it must run after
 # the step that creates or updates these files.
