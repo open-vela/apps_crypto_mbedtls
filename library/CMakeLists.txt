@@ -147,7 +147,6 @@ if(GEN_FILES)
 
     add_custom_command(
         OUTPUT
-            ${CMAKE_CURRENT_BINARY_DIR}/ssl_debug_helpers_generated.h
             ${CMAKE_CURRENT_BINARY_DIR}/ssl_debug_helpers_generated.c
         COMMAND
             ${MBEDTLS_PYTHON_EXECUTABLE}
@@ -158,11 +157,25 @@ if(GEN_FILES)
             ${CMAKE_CURRENT_SOURCE_DIR}/../scripts/generate_ssl_debug_helpers.py
             ${error_headers}
     )
+
+    add_custom_command(
+        OUTPUT
+            ${CMAKE_CURRENT_BINARY_DIR}/psa_crypto_driver_wrappers.c
+        COMMAND
+            ${MBEDTLS_PYTHON_EXECUTABLE}
+                ${CMAKE_CURRENT_SOURCE_DIR}/../scripts/generate_driver_wrappers.py
+                ${CMAKE_CURRENT_BINARY_DIR}
+        DEPENDS
+            ${CMAKE_CURRENT_SOURCE_DIR}/../scripts/generate_driver_wrappers.py
+            ${CMAKE_CURRENT_SOURCE_DIR}/../scripts/data_files/driver_templates/psa_crypto_driver_wrappers.c.jinja
+    )
+
+
 else()
     link_to_source(error.c)
     link_to_source(version_features.c)
     link_to_source(ssl_debug_helpers_generated.c)
-    link_to_source(ssl_debug_helpers_generated.h)
+    link_to_source(psa_crypto_driver_wrappers.c)
 endif()
 
 if(CMAKE_COMPILER_IS_GNUCC)
@@ -247,7 +260,7 @@ endif(USE_STATIC_MBEDTLS_LIBRARY)
 
 if(USE_SHARED_MBEDTLS_LIBRARY)
     add_library(${mbedcrypto_target} SHARED ${src_crypto})
-    set_target_properties(${mbedcrypto_target} PROPERTIES VERSION 3.0.0 SOVERSION 10)
+    set_target_properties(${mbedcrypto_target} PROPERTIES VERSION 3.1.0 SOVERSION 11)
     target_link_libraries(${mbedcrypto_target} PUBLIC ${libs})
 
     if(TARGET everest)
@@ -255,11 +268,11 @@ if(USE_SHARED_MBEDTLS_LIBRARY)
     endif()
 
     add_library(${mbedx509_target} SHARED ${src_x509})
-    set_target_properties(${mbedx509_target} PROPERTIES VERSION 3.0.0 SOVERSION 4)
+    set_target_properties(${mbedx509_target} PROPERTIES VERSION 3.1.0 SOVERSION 4)
     target_link_libraries(${mbedx509_target} PUBLIC ${libs} ${mbedcrypto_target})
 
     add_library(${mbedtls_target} SHARED ${src_tls})
-    set_target_properties(${mbedtls_target} PROPERTIES VERSION 3.0.0 SOVERSION 16)
+    set_target_properties(${mbedtls_target} PROPERTIES VERSION 3.1.0 SOVERSION 17)
     target_link_libraries(${mbedtls_target} PUBLIC ${libs} ${mbedx509_target})
 endif(USE_SHARED_MBEDTLS_LIBRARY)
 
