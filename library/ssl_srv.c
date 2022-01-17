@@ -34,8 +34,6 @@
 #include "mbedtls/debug.h"
 #include "mbedtls/error.h"
 #include "mbedtls/platform_util.h"
-#include "constant_time_internal.h"
-#include "mbedtls/constant_time.h"
 
 #include <string.h>
 
@@ -198,7 +196,7 @@ static int ssl_parse_renegotiation_info( mbedtls_ssl_context *ssl,
         /* Check verify-data in constant-time. The length OTOH is no secret */
         if( len    != 1 + ssl->verify_data_len ||
             buf[0] !=     ssl->verify_data_len ||
-            mbedtls_ct_memcmp( buf + 1, ssl->peer_verify_data,
+            mbedtls_ssl_safer_memcmp( buf + 1, ssl->peer_verify_data,
                           ssl->verify_data_len ) != 0 )
         {
             MBEDTLS_SSL_DEBUG_MSG( 1, ( "non-matching renegotiation info" ) );
@@ -317,48 +315,9 @@ static int ssl_parse_signature_algorithms_ext( mbedtls_ssl_context *ssl,
 
 #if defined(MBEDTLS_ECDH_C) || defined(MBEDTLS_ECDSA_C) || \
     defined(MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED)
-/*
- * Function for parsing a supported groups (TLS 1.3) or supported elliptic
- * curves (TLS 1.2) extension.
- *
- * The "extension_data" field of a supported groups extension contains a
- * "NamedGroupList" value (TLS 1.3 RFC8446):
- *      enum {
- *          secp256r1(0x0017), secp384r1(0x0018), secp521r1(0x0019),
- *          x25519(0x001D), x448(0x001E),
- *          ffdhe2048(0x0100), ffdhe3072(0x0101), ffdhe4096(0x0102),
- *          ffdhe6144(0x0103), ffdhe8192(0x0104),
- *          ffdhe_private_use(0x01FC..0x01FF),
- *          ecdhe_private_use(0xFE00..0xFEFF),
- *          (0xFFFF)
- *      } NamedGroup;
- *      struct {
- *          NamedGroup named_group_list<2..2^16-1>;
- *      } NamedGroupList;
- *
- * The "extension_data" field of a supported elliptic curves extension contains
- * a "NamedCurveList" value (TLS 1.2 RFC 8422):
- * enum {
- *      deprecated(1..22),
- *      secp256r1 (23), secp384r1 (24), secp521r1 (25),
- *      x25519(29), x448(30),
- *      reserved (0xFE00..0xFEFF),
- *      deprecated(0xFF01..0xFF02),
- *      (0xFFFF)
- *  } NamedCurve;
- * struct {
- *      NamedCurve named_curve_list<2..2^16-1>
- *  } NamedCurveList;
- *
- * The TLS 1.3 supported groups extension was defined to be a compatible
- * generalization of the TLS 1.2 supported elliptic curves extension. They both
- * share the same extension identifier.
- *
- * DHE groups are not supported yet.
- */
-static int ssl_parse_supported_groups_ext( mbedtls_ssl_context *ssl,
-                                           const unsigned char *buf,
-                                           size_t len )
+static int ssl_parse_supported_elliptic_curves( mbedtls_ssl_context *ssl,
+                                                const unsigned char *buf,
+                                                size_t len )
 {
     size_t list_size, our_size;
     const unsigned char *p;
@@ -1685,10 +1644,10 @@ read_record_header:
 
 #if defined(MBEDTLS_ECDH_C) || defined(MBEDTLS_ECDSA_C) || \
     defined(MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED)
-            case MBEDTLS_TLS_EXT_SUPPORTED_GROUPS:
+            case MBEDTLS_TLS_EXT_SUPPORTED_ELLIPTIC_CURVES:
                 MBEDTLS_SSL_DEBUG_MSG( 3, ( "found supported elliptic curves extension" ) );
 
-                ret = ssl_parse_supported_groups_ext( ssl, ext + 4, ext_size );
+                ret = ssl_parse_supported_elliptic_curves( ssl, ext + 4, ext_size );
                 if( ret != 0 )
                     return( ret );
                 break;
@@ -3137,11 +3096,7 @@ curve_matching_done:
     {
         size_t dig_signed_len = ssl->out_msg + ssl->out_msglen - dig_signed;
         size_t hashlen = 0;
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
-        unsigned char hash[PSA_HASH_MAX_SIZE];
-#else
         unsigned char hash[MBEDTLS_MD_MAX_SIZE];
-#endif
         int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
 
         /*
@@ -3614,7 +3569,16 @@ static int ssl_parse_encrypted_pms( mbedtls_ssl_context *ssl,
     diff |= peer_pms[1] ^ ver[1];
 
     /* mask = diff ? 0xff : 0x00 using bit operations to avoid branches */
-    mask = mbedtls_ct_uint_mask( diff );
+    /* MSVC has a warning about unary minus on unsigned, but this is
+     * well-defined and precisely what we want to do here */
+#if defined(_MSC_VER)
+#pragma warning( push )
+#pragma warning( disable : 4146 )
+#endif
+    mask = - ( ( diff | - diff ) >> ( sizeof( unsigned int ) * 8 - 1 ) );
+#if defined(_MSC_VER)
+#pragma warning( pop )
+#endif
 
     /*
      * Protection against Bleichenbacher's attack: invalid PKCS#1 v1.5 padding
@@ -3697,7 +3661,7 @@ static int ssl_parse_client_psk_identity( mbedtls_ssl_context *ssl, unsigned cha
         /* Identity is not a big secret since clients send it in the clear,
          * but treat it carefully anyway, just in case */
         if( n != ssl->conf->psk_identity_len ||
-            mbedtls_ct_memcmp( ssl->conf->psk_identity, *p, n ) != 0 )
+            mbedtls_ssl_safer_memcmp( ssl->conf->psk_identity, *p, n ) != 0 )
         {
             ret = MBEDTLS_ERR_SSL_UNKNOWN_IDENTITY;
         }
