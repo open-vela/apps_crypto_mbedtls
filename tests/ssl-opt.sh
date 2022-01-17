@@ -2764,6 +2764,202 @@ run_test    "Session resume using tickets: openssl client" \
             -s "session successfully restored from ticket" \
             -s "a session has been resumed"
 
+run_test    "Session resume using tickets: AES-128-GCM" \
+            "$P_SRV debug_level=3 tickets=1 ticket_aead=AES-128-GCM" \
+            "$P_CLI debug_level=3 tickets=1 reconnect=1" \
+            0 \
+            -c "client hello, adding session ticket extension" \
+            -s "found session ticket extension" \
+            -s "server hello, adding session ticket extension" \
+            -c "found session_ticket extension" \
+            -c "parse new session ticket" \
+            -S "session successfully restored from cache" \
+            -s "session successfully restored from ticket" \
+            -s "a session has been resumed" \
+            -c "a session has been resumed"
+
+run_test    "Session resume using tickets: AES-192-GCM" \
+            "$P_SRV debug_level=3 tickets=1 ticket_aead=AES-192-GCM" \
+            "$P_CLI debug_level=3 tickets=1 reconnect=1" \
+            0 \
+            -c "client hello, adding session ticket extension" \
+            -s "found session ticket extension" \
+            -s "server hello, adding session ticket extension" \
+            -c "found session_ticket extension" \
+            -c "parse new session ticket" \
+            -S "session successfully restored from cache" \
+            -s "session successfully restored from ticket" \
+            -s "a session has been resumed" \
+            -c "a session has been resumed"
+
+run_test    "Session resume using tickets: AES-128-CCM" \
+            "$P_SRV debug_level=3 tickets=1 ticket_aead=AES-128-CCM" \
+            "$P_CLI debug_level=3 tickets=1 reconnect=1" \
+            0 \
+            -c "client hello, adding session ticket extension" \
+            -s "found session ticket extension" \
+            -s "server hello, adding session ticket extension" \
+            -c "found session_ticket extension" \
+            -c "parse new session ticket" \
+            -S "session successfully restored from cache" \
+            -s "session successfully restored from ticket" \
+            -s "a session has been resumed" \
+            -c "a session has been resumed"
+
+run_test    "Session resume using tickets: AES-192-CCM" \
+            "$P_SRV debug_level=3 tickets=1 ticket_aead=AES-192-CCM" \
+            "$P_CLI debug_level=3 tickets=1 reconnect=1" \
+            0 \
+            -c "client hello, adding session ticket extension" \
+            -s "found session ticket extension" \
+            -s "server hello, adding session ticket extension" \
+            -c "found session_ticket extension" \
+            -c "parse new session ticket" \
+            -S "session successfully restored from cache" \
+            -s "session successfully restored from ticket" \
+            -s "a session has been resumed" \
+            -c "a session has been resumed"
+
+run_test    "Session resume using tickets: AES-256-CCM" \
+            "$P_SRV debug_level=3 tickets=1 ticket_aead=AES-256-CCM" \
+            "$P_CLI debug_level=3 tickets=1 reconnect=1" \
+            0 \
+            -c "client hello, adding session ticket extension" \
+            -s "found session ticket extension" \
+            -s "server hello, adding session ticket extension" \
+            -c "found session_ticket extension" \
+            -c "parse new session ticket" \
+            -S "session successfully restored from cache" \
+            -s "session successfully restored from ticket" \
+            -s "a session has been resumed" \
+            -c "a session has been resumed"
+
+run_test    "Session resume using tickets: CAMELLIA-128-CCM" \
+            "$P_SRV debug_level=3 tickets=1 ticket_aead=CAMELLIA-128-CCM" \
+            "$P_CLI debug_level=3 tickets=1 reconnect=1" \
+            0 \
+            -c "client hello, adding session ticket extension" \
+            -s "found session ticket extension" \
+            -s "server hello, adding session ticket extension" \
+            -c "found session_ticket extension" \
+            -c "parse new session ticket" \
+            -S "session successfully restored from cache" \
+            -s "session successfully restored from ticket" \
+            -s "a session has been resumed" \
+            -c "a session has been resumed"
+
+run_test    "Session resume using tickets: CAMELLIA-192-CCM" \
+            "$P_SRV debug_level=3 tickets=1 ticket_aead=CAMELLIA-192-CCM" \
+            "$P_CLI debug_level=3 tickets=1 reconnect=1" \
+            0 \
+            -c "client hello, adding session ticket extension" \
+            -s "found session ticket extension" \
+            -s "server hello, adding session ticket extension" \
+            -c "found session_ticket extension" \
+            -c "parse new session ticket" \
+            -S "session successfully restored from cache" \
+            -s "session successfully restored from ticket" \
+            -s "a session has been resumed" \
+            -c "a session has been resumed"
+
+run_test    "Session resume using tickets: CAMELLIA-256-CCM" \
+            "$P_SRV debug_level=3 tickets=1 ticket_aead=CAMELLIA-256-CCM" \
+            "$P_CLI debug_level=3 tickets=1 reconnect=1" \
+            0 \
+            -c "client hello, adding session ticket extension" \
+            -s "found session ticket extension" \
+            -s "server hello, adding session ticket extension" \
+            -c "found session_ticket extension" \
+            -c "parse new session ticket" \
+            -S "session successfully restored from cache" \
+            -s "session successfully restored from ticket" \
+            -s "a session has been resumed" \
+            -c "a session has been resumed"
+
+run_test    "Session resume using tickets: ARIA-128-GCM" \
+            "$P_SRV debug_level=3 tickets=1 ticket_aead=ARIA-128-GCM" \
+            "$P_CLI debug_level=3 tickets=1 reconnect=1" \
+            0 \
+            -c "client hello, adding session ticket extension" \
+            -s "found session ticket extension" \
+            -s "server hello, adding session ticket extension" \
+            -c "found session_ticket extension" \
+            -c "parse new session ticket" \
+            -S "session successfully restored from cache" \
+            -s "session successfully restored from ticket" \
+            -s "a session has been resumed" \
+            -c "a session has been resumed"
+
+run_test    "Session resume using tickets: ARIA-192-GCM" \
+            "$P_SRV debug_level=3 tickets=1 ticket_aead=ARIA-192-GCM" \
+            "$P_CLI debug_level=3 tickets=1 reconnect=1" \
+            0 \
+            -c "client hello, adding session ticket extension" \
+            -s "found session ticket extension" \
+            -s "server hello, adding session ticket extension" \
+            -c "found session_ticket extension" \
+            -c "parse new session ticket" \
+            -S "session successfully restored from cache" \
+            -s "session successfully restored from ticket" \
+            -s "a session has been resumed" \
+            -c "a session has been resumed"
+
+run_test    "Session resume using tickets: ARIA-256-GCM" \
+            "$P_SRV debug_level=3 tickets=1 ticket_aead=ARIA-256-GCM" \
+            "$P_CLI debug_level=3 tickets=1 reconnect=1" \
+            0 \
+            -c "client hello, adding session ticket extension" \
+            -s "found session ticket extension" \
+            -s "server hello, adding session ticket extension" \
+            -c "found session_ticket extension" \
+            -c "parse new session ticket" \
+            -S "session successfully restored from cache" \
+            -s "session successfully restored from ticket" \
+            -s "a session has been resumed" \
+            -c "a session has been resumed"
+
+run_test    "Session resume using tickets: ARIA-128-CCM" \
+            "$P_SRV debug_level=3 tickets=1 ticket_aead=ARIA-128-CCM" \
+            "$P_CLI debug_level=3 tickets=1 reconnect=1" \
+            0 \
+            -c "client hello, adding session ticket extension" \
+            -s "found session ticket extension" \
+            -s "server hello, adding session ticket extension" \
+            -c "found session_ticket extension" \
+            -c "parse new session ticket" \
+            -S "session successfully restored from cache" \
+            -s "session successfully restored from ticket" \
+            -s "a session has been resumed" \
+            -c "a session has been resumed"
+
+run_test    "Session resume using tickets: ARIA-192-CCM" \
+            "$P_SRV debug_level=3 tickets=1 ticket_aead=ARIA-192-CCM" \
+            "$P_CLI debug_level=3 tickets=1 reconnect=1" \
+            0 \
+            -c "client hello, adding session ticket extension" \
+            -s "found session ticket extension" \
+            -s "server hello, adding session ticket extension" \
+            -c "found session_ticket extension" \
+            -c "parse new session ticket" \
+            -S "session successfully restored from cache" \
+            -s "session successfully restored from ticket" \
+            -s "a session has been resumed" \
+            -c "a session has been resumed"
+
+run_test    "Session resume using tickets: ARIA-256-CCM" \
+            "$P_SRV debug_level=3 tickets=1 ticket_aead=ARIA-256-CCM" \
+            "$P_CLI debug_level=3 tickets=1 reconnect=1" \
+            0 \
+            -c "client hello, adding session ticket extension" \
+            -s "found session ticket extension" \
+            -s "server hello, adding session ticket extension" \
+            -c "found session_ticket extension" \
+            -c "parse new session ticket" \
+            -S "session successfully restored from cache" \
+            -s "session successfully restored from ticket" \
+            -s "a session has been resumed" \
+            -c "a session has been resumed"
+
 # Tests for Session Tickets with DTLS
 
 run_test    "Session resume using tickets, DTLS: basic" \
@@ -6585,7 +6781,7 @@ run_test    "Force a non ECC ciphersuite in the client side" \
             "$P_SRV debug_level=3" \
             "$P_CLI debug_level=3 force_ciphersuite=TLS-RSA-WITH-AES-128-CBC-SHA256" \
             0 \
-            -C "client hello, adding supported_groups extension" \
+            -C "client hello, adding supported_elliptic_curves extension" \
             -C "client hello, adding supported_point_formats extension" \
             -S "found supported elliptic curves extension" \
             -S "found supported point formats extension"
@@ -6609,7 +6805,7 @@ run_test    "Force an ECC ciphersuite in the client side" \
             "$P_SRV debug_level=3" \
             "$P_CLI debug_level=3 force_ciphersuite=TLS-ECDHE-ECDSA-WITH-AES-128-CBC-SHA256" \
             0 \
-            -c "client hello, adding supported_groups extension" \
+            -c "client hello, adding supported_elliptic_curves extension" \
             -c "client hello, adding supported_point_formats extension" \
             -s "found supported elliptic curves extension" \
             -s "found supported point formats extension"
