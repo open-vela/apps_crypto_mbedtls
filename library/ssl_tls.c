@@ -1066,7 +1066,7 @@ static int ssl_tls12_populate_transform( mbedtls_ssl_transform *transform,
         goto end;
     }
 
-    psa_set_key_usage_flags( &attributes, PSA_KEY_USAGE_ENCRYPT | PSA_KEY_USAGE_DECRYPT );
+    psa_set_key_usage_flags( &attributes, PSA_KEY_USAGE_ENCRYPT );
     psa_set_key_algorithm( &attributes, alg );
 
     transform->psa_alg = alg;
@@ -1080,6 +1080,9 @@ static int ssl_tls12_populate_transform( mbedtls_ssl_transform *transform,
         ret = psa_status_to_mbedtls( status );
         goto end;
     }
+
+    psa_set_key_usage_flags( &attributes, PSA_KEY_USAGE_DECRYPT );
+
     if( ( status = psa_import_key( &attributes,
                              key2,
                              PSA_BITS_TO_BYTES( key_bits ),
