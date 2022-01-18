@@ -1,71 +1,19 @@
-TLS 1.3 Experimental Developments
-=================================
+TLS 1.3 support
+===============
 
 Overview
 --------
 
-Mbed TLS doesn't support the TLS 1.3 protocol yet, but a prototype is in development.
-Stable parts of this prototype that can be independently tested are being successively
-upstreamed under the guard of the following macro:
+Mbed TLS provides a minimum viable implementation of the TLS 1.3 protocol
+defined in the "MVP definition" section below. The TLS 1.3 support enablement
+is controlled by the MBEDTLS_SSL_PROTO_TLS1_3 configuration option.
 
-```
-MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
-```
-
-This macro will likely be renamed to `MBEDTLS_SSL_PROTO_TLS1_3` once a minimal viable
-implementation of the TLS 1.3 protocol is available.
-
-See the [documentation of `MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL`](../../include/mbedtls/mbedtls_config.h)
-for more information.
-
-Status
-------
-
-The following lists which parts of the TLS 1.3 prototype have already been upstreamed
-together with their level of testing:
-
-* TLS 1.3 record protection mechanisms
-
-  The record protection routines `mbedtls_ssl_{encrypt|decrypt}_buf()` have been extended
-  to support the modified TLS 1.3 record protection mechanism, including modified computation
-  of AAD, IV, and the introduction of a flexible padding.
-
-  Those record protection routines have unit tests in `test_suite_ssl` alongside the
-  tests for the other record protection routines.
-
-  TODO: Add some test vectors from RFC 8448.
-
-- The HKDF key derivation function on which the TLS 1.3 key schedule is based,
-  is already present as an independent module controlled by `MBEDTLS_HKDF_C`
-  independently of the development of the TLS 1.3 prototype.
-
-- The TLS 1.3-specific HKDF-based key derivation functions (see RFC 8446):
-  * HKDF-Expand-Label
-  * Derive-Secret
-  - Secret evolution
-  * The traffic {Key,IV} generation from secret
-  Those functions are implemented in `library/ssl_tls13_keys.c` and
-  tested in `test_suite_ssl` using test vectors from RFC 8448 and
-  https://tls13.ulfheim.net/.
-
-- New TLS Message Processing Stack (MPS)
-
-  The TLS 1.3 prototype is developed alongside a rewrite of the TLS messaging layer,
-  encompassing low-level details such as record parsing, handshake reassembly, and
-  DTLS retransmission state machine.
-
-  MPS has the following components:
-  - Layer 1 (Datagram handling)
-  - Layer 2 (Record handling)
-  - Layer 3 (Message handling)
-  - Layer 4 (Retransmission State Machine)
-  - Reader  (Abstracted pointer arithmetic and reassembly logic for incoming data)
-  - Writer  (Abstracted pointer arithmetic and fragmentation logic for outgoing data)
-
-  Of those components, the following have been upstreamed
-  as part of `MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL`:
-
-  - Reader ([`library/mps_reader.h`](../../library/mps_reader.h))
+The development of the TLS 1.3 protocol is based on the TLS 1.3 prototype
+located at https://github.com/hannestschofenig/mbedtls. The prototype is
+itself based on a version of the development branch that we aim to keep as
+recent as possible (ideally the head) by merging regularly commits of the
+development branch into the prototype. The section "Prototype upstreaming
+status" below describes what remains to be upstreamed.
 
 
 MVP definition
@@ -133,17 +81,23 @@ MVP definition
 
   (1) This is just for comparison.
 
-  (2) The MVP sends one shared secret corresponding to the configured preferred
-      group. The preferred group is the group of the first curve in the list of
-      allowed curves as defined by the configuration. The allowed curves are
-      by default ordered as follow: `secp256r1`, `x25519`, `secp384r1`
-      and finally `secp521r1`. This default order is aligned with the
-      list of mandatory-to-implement groups (in absence of an application
-      profile standard specifying otherwise) defined in section 9.1 of the
-      specification. The list of allowed curves can be changed through the
-      `mbedtls_ssl_conf_curves()` API.
+  (2) The MVP sends only one shared secret corresponding to the configured
+      preferred group. This could end up with connection failure if the
+      server does not support our preferred curve, as the MVP does not implement
+      HelloRetryRequest. The preferred group is the group of the first curve in
+      the list of allowed curves as defined by the configuration. The allowed
+      curves are by default ordered as follows: `x25519`, `secp256r1`,
+      `secp384r1` and finally `secp521r1`. Note that, in the absence of an
+      application profile standard specifying otherwise, section 9.1 of the
+      specification rather promotes curve `secp256r1` to be supported over
+      curve `x25519`. The MVP would, however, rather keep the preference order
+      currently promoted by Mbed TLS as this applies to TLS 1.2 as well, and
+      changing the order only for TLS1.3 would be potentially difficult.
+      In the unlikely event a server does not support curve `x25519` but does
+      support curve `secp256r1`, curve `secp256r1` can be set as the preferred
+      curve through the `mbedtls_ssl_conf_curves()` API.
 
-  (3) The MVP proposes only TLS 1.3 and does not support version negociation.
+  (3) The MVP proposes only TLS 1.3 and does not support version negotiation.
       Out-of-protocol fallback is supported though if the Mbed TLS library
       has been built to support both TLS 1.3 and TLS 1.2: just set the
       maximum of the minor version of the SSL configuration to
@@ -212,7 +166,7 @@ MVP definition
   (1) Some support has already been upstreamed but it is incomplete.
   (2) Key exchange configuration options for TLS 1.3 will likely to be
       organized around the notion of key exchange mode along the line
-      of the MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_NONE/PSK/PSK_EPHEMERAL/EPHEMERAL
+      of the MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_NONE/PSK/PSK_EPHEMERAL/EPHEMERAL
       runtime configuration macros.
 
 - Quality considerations
@@ -224,6 +178,41 @@ MVP definition
     MVP: TLS 1.2 or 1.1 server, server sending an HelloRetryRequest message in
     response to the MVP ClientHello, server sending a CertificateRequest
     message ...
+
+
+Prototype upstreaming status
+----------------------------
+
+The following summarizes which parts of the TLS 1.3 prototype remain to be
+upstreamed:
+
+- Ephemeral only handshake on client side: client authentication,
+  HelloRetryRequest support, version negotiation.
+
+- Ephemeral only handshake server side.
+
+- Pre-shared keys, session resumption and 0-RTT data (both client and server
+  side).
+
+- New TLS Message Processing Stack (MPS)
+
+  The TLS 1.3 prototype is developed alongside a rewrite of the TLS messaging layer,
+  encompassing low-level details such as record parsing, handshake reassembly, and
+  DTLS retransmission state machine.
+
+  MPS has the following components:
+  - Layer 1 (Datagram handling)
+  - Layer 2 (Record handling)
+  - Layer 3 (Message handling)
+  - Layer 4 (Retransmission State Machine)
+  - Reader  (Abstracted pointer arithmetic and reassembly logic for incoming data)
+  - Writer  (Abstracted pointer arithmetic and fragmentation logic for outgoing data)
+
+  Of those components, the following have been upstreamed
+  as part of `MBEDTLS_SSL_PROTO_TLS1_3`:
+
+  - Reader ([`library/mps_reader.h`](../../library/mps_reader.h))
+
 
 Coding rules checklist for TLS 1.3
 ----------------------------------
