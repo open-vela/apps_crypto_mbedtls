@@ -9225,6 +9225,7 @@ run_test    "TLS 1.3: HelloRetryRequest check - openssl" \
             "$P_CLI debug_level=4 force_version=tls13" \
             0 \
             -c "received HelloRetryRequest message" \
+            -c "<= ssl_tls13_process_server_hello:is_hrr = 1" \
             -c "tls13 client state: MBEDTLS_SSL_CLIENT_HELLO(1)" \
             -c "HTTP/1.0 200 ok"
 
@@ -9240,6 +9241,7 @@ run_test    "TLS 1.3: HelloRetryRequest check - gnutls" \
             "$P_CLI debug_level=4 force_version=tls13" \
             1 \
             -c "received HelloRetryRequest message" \
+            -c "<= ssl_tls13_process_server_hello:is_hrr = 1" \
             -c "tls13 client state: MBEDTLS_SSL_CLIENT_HELLO(1)" \
             -c "Last error was: -0x6E00 - SSL - The handshake negotiation failed" \
             -s "HELLO RETRY REQUEST was queued"
