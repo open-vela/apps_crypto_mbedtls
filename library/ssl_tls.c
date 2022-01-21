@@ -333,7 +333,7 @@ static void handle_buffer_resizing( mbedtls_ssl_context *ssl, int downsizing,
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
 
 static psa_status_t setup_psa_key_derivation( psa_key_derivation_operation_t* derivation,
-                                              mbedtls_svc_key_id_t key,
+                                              psa_key_id_t key,
                                               psa_algorithm_t alg,
                                               const unsigned char* seed, size_t seed_length,
                                               const unsigned char* label, size_t label_length,
@@ -393,7 +393,7 @@ static int tls_prf_generic( mbedtls_md_type_t md_type,
 {
     psa_status_t status;
     psa_algorithm_t alg;
-    mbedtls_svc_key_id_t master_key = MBEDTLS_SVC_KEY_ID_INIT;
+    psa_key_id_t master_key = MBEDTLS_SVC_KEY_ID_INIT;
     psa_key_derivation_operation_t derivation =
         PSA_KEY_DERIVATION_OPERATION_INIT;
 
@@ -1223,7 +1223,7 @@ static int ssl_compute_master( mbedtls_ssl_handshake_params *handshake,
         /* Perform PSK-to-MS expansion in a single step. */
         psa_status_t status;
         psa_algorithm_t alg;
-        mbedtls_svc_key_id_t psk;
+        psa_key_id_t psk;
         psa_key_derivation_operation_t derivation =
             PSA_KEY_DERIVATION_OPERATION_INIT;
         mbedtls_md_type_t hash_alg = handshake->ciphersuite_info->mac;
@@ -3890,7 +3890,7 @@ int mbedtls_ssl_set_hs_psk( mbedtls_ssl_context *ssl,
 
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
 int mbedtls_ssl_conf_psk_opaque( mbedtls_ssl_config *conf,
-                                 mbedtls_svc_key_id_t psk,
+                                 psa_key_id_t psk,
                                  const unsigned char *psk_identity,
                                  size_t psk_identity_len )
 {
@@ -3915,7 +3915,7 @@ int mbedtls_ssl_conf_psk_opaque( mbedtls_ssl_config *conf,
 }
 
 int mbedtls_ssl_set_hs_psk_opaque( mbedtls_ssl_context *ssl,
-                                   mbedtls_svc_key_id_t psk )
+                                   psa_key_id_t psk )
 {
     if( ( mbedtls_svc_key_id_is_null( psk ) ) ||
         ( ssl->handshake == NULL ) )
@@ -3944,9 +3944,6 @@ int mbedtls_ssl_conf_dh_param_bin( mbedtls_ssl_config *conf,
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
 
-    mbedtls_mpi_free( &conf->dhm_P );
-    mbedtls_mpi_free( &conf->dhm_G );
-
     if( ( ret = mbedtls_mpi_read_binary( &conf->dhm_P, dhm_P, P_len ) ) != 0 ||
         ( ret = mbedtls_mpi_read_binary( &conf->dhm_G, dhm_G, G_len ) ) != 0 )
     {
@@ -3961,9 +3958,6 @@ int mbedtls_ssl_conf_dh_param_bin( mbedtls_ssl_config *conf,
 int mbedtls_ssl_conf_dh_param_ctx( mbedtls_ssl_config *conf, mbedtls_dhm_context *dhm_ctx )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
-
-    mbedtls_mpi_free( &conf->dhm_P );
-    mbedtls_mpi_free( &conf->dhm_G );
 
     if( ( ret = mbedtls_dhm_get_value( dhm_ctx, MBEDTLS_DHM_PARAM_P,
                                        &conf->dhm_P ) ) != 0 ||
@@ -7194,130 +7188,5 @@ int mbedtls_ssl_get_handshake_transcript( mbedtls_ssl_context *ssl,
     return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
 }
 #endif /* !MBEDTLS_USE_PSA_CRYPTO */
-
-#if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED) || \
-    defined(MBEDTLS_ECDH_C) || defined(MBEDTLS_ECDSA_C) || \
-    defined(MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED)
-/*
- * Function for writing a supported groups (TLS 1.3) or supported elliptic
- * curves (TLS 1.2) extension.
- *
- * The "extension_data" field of a supported groups extension contains a
- * "NamedGroupList" value (TLS 1.3 RFC8446):
- *      enum {
- *          secp256r1(0x0017), secp384r1(0x0018), secp521r1(0x0019),
- *          x25519(0x001D), x448(0x001E),
- *          ffdhe2048(0x0100), ffdhe3072(0x0101), ffdhe4096(0x0102),
- *          ffdhe6144(0x0103), ffdhe8192(0x0104),
- *          ffdhe_private_use(0x01FC..0x01FF),
- *          ecdhe_private_use(0xFE00..0xFEFF),
- *          (0xFFFF)
- *      } NamedGroup;
- *      struct {
- *          NamedGroup named_group_list<2..2^16-1>;
- *      } NamedGroupList;
- *
- * The "extension_data" field of a supported elliptic curves extension contains
- * a "NamedCurveList" value (TLS 1.2 RFC 8422):
- * enum {
- *      deprecated(1..22),
- *      secp256r1 (23), secp384r1 (24), secp521r1 (25),
- *      x25519(29), x448(30),
- *      reserved (0xFE00..0xFEFF),
- *      deprecated(0xFF01..0xFF02),
- *      (0xFFFF)
- *  } NamedCurve;
- * struct {
- *      NamedCurve named_curve_list<2..2^16-1>
- *  } NamedCurveList;
- *
- * The TLS 1.3 supported groups extension was defined to be a compatible
- * generalization of the TLS 1.2 supported elliptic curves extension. They both
- * share the same extension identifier.
- *
- * DHE groups are not supported yet.
- */
-int mbedtls_ssl_write_supported_groups_ext( mbedtls_ssl_context *ssl,
-                                            unsigned char *buf,
-                                            const unsigned char *end,
-                                            size_t *out_len )
-{
-    unsigned char *p = buf ;
-    unsigned char *named_group_list; /* Start of named_group_list */
-    size_t named_group_list_len;     /* Length of named_group_list */
-    const uint16_t *group_list = mbedtls_ssl_get_groups( ssl );
-
-    *out_len = 0;
-
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "client hello, adding supported_groups extension" ) );
-
-    /* Check if we have space for header and length fields:
-     * - extension_type            (2 bytes)
-     * - extension_data_length     (2 bytes)
-     * - named_group_list_length   (2 bytes)
-     */
-    MBEDTLS_SSL_CHK_BUF_PTR( p, end, 6 );
-    p += 6;
-
-    named_group_list = p;
-
-    if( group_list == NULL )
-        return( MBEDTLS_ERR_SSL_BAD_CONFIG );
-
-    for( ; *group_list != 0; group_list++ )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "got supported group(%04x)", *group_list ) );
-
-#if defined(MBEDTLS_ECP_C)
-        if( ( mbedtls_ssl_conf_is_tls13_enabled( ssl->conf ) &&
-              mbedtls_ssl_tls13_named_group_is_ecdhe( *group_list ) ) ||
-            ( mbedtls_ssl_conf_is_tls12_enabled( ssl->conf ) &&
-              mbedtls_ssl_tls12_named_group_is_ecdhe( *group_list ) ) )
-        {
-            const mbedtls_ecp_curve_info *curve_info;
-            curve_info = mbedtls_ecp_curve_info_from_tls_id( *group_list );
-            if( curve_info == NULL )
-                continue;
-            MBEDTLS_SSL_CHK_BUF_PTR( p, end, 2 );
-            MBEDTLS_PUT_UINT16_BE( *group_list, p, 0 );
-            p += 2;
-            MBEDTLS_SSL_DEBUG_MSG( 3, ( "NamedGroup: %s ( %x )",
-                                curve_info->name, *group_list ) );
-        }
-#endif /* MBEDTLS_ECP_C */
-        /* Add DHE groups here */
-
-    }
-
-    /* Length of named_group_list */
-    named_group_list_len = p - named_group_list;
-    if( named_group_list_len == 0 )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "No group available." ) );
-        return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
-    }
-
-    /* Write extension_type */
-    MBEDTLS_PUT_UINT16_BE( MBEDTLS_TLS_EXT_SUPPORTED_GROUPS, buf, 0 );
-    /* Write extension_data_length */
-    MBEDTLS_PUT_UINT16_BE( named_group_list_len + 2, buf, 2 );
-    /* Write length of named_group_list */
-    MBEDTLS_PUT_UINT16_BE( named_group_list_len, buf, 4 );
-
-    MBEDTLS_SSL_DEBUG_BUF( 3, "Supported groups extension",
-                           buf + 4, named_group_list_len + 2 );
-
-    *out_len = p - buf;
-
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
-    ssl->handshake->extensions_present |= MBEDTLS_SSL_EXT_SUPPORTED_GROUPS;
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
-
-    return( 0 );
-}
-
-#endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED ||
-          MBEDTLS_ECDH_C || MBEDTLS_ECDSA_C ||
-          MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED */
 
 #endif /* MBEDTLS_SSL_TLS_C */
