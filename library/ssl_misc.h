@@ -1265,7 +1265,7 @@ static inline psa_key_id_t mbedtls_ssl_get_opaque_psk(
  * \return                     PSA_SUCCESS on success or PSA_ERROR_NOT_SUPPORTED if
  *                             conversion is not supported.
  */
-psa_status_t tls_mbedtls_cipher_to_psa( mbedtls_cipher_type_t mbedtls_cipher_type,
+psa_status_t mbedtls_ssl_cipher_to_psa( mbedtls_cipher_type_t mbedtls_cipher_type,
                                     size_t taglen,
                                     psa_algorithm_t *alg,
                                     psa_key_type_t *key_type,
