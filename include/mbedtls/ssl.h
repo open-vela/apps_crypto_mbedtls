@@ -505,7 +505,6 @@
 #define MBEDTLS_SSL_HS_CERTIFICATE_VERIFY      15
 #define MBEDTLS_SSL_HS_CLIENT_KEY_EXCHANGE     16
 #define MBEDTLS_SSL_HS_FINISHED                20
-#define MBEDTLS_SSL_HS_MESSAGE_HASH           254
 
 /*
  * TLS extensions
@@ -644,7 +643,6 @@ typedef enum
     MBEDTLS_SSL_CLIENT_CERTIFICATE_VERIFY,
 #if defined(MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE)
     MBEDTLS_SSL_CLIENT_CCS_AFTER_SERVER_FINISHED,
-    MBEDTLS_SSL_CLIENT_CCS_BEFORE_2ND_CLIENT_HELLO,
 #endif /* MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE */
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 }
@@ -1615,6 +1613,7 @@ struct mbedtls_ssl_context
     /*
      * PKI layer
      */
+    int MBEDTLS_PRIVATE(client_auth);                    /*!<  flag for client auth.   */
 
     /*
      * User settings
