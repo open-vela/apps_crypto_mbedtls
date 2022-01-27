@@ -543,18 +543,16 @@ print_name() {
 
 # record_outcome <outcome> [<failure-reason>]
 # The test name must be in $NAME.
-# Use $TEST_SUITE_NAME as the test suite name if set.
 record_outcome() {
     echo "$1"
     if [ -n "$MBEDTLS_TEST_OUTCOME_FILE" ]; then
         printf '%s;%s;%s;%s;%s;%s\n' \
                "$MBEDTLS_TEST_PLATFORM" "$MBEDTLS_TEST_CONFIGURATION" \
-               "${TEST_SUITE_NAME:-ssl-opt}" "$NAME" \
+               "ssl-opt" "$NAME" \
                "$1" "${2-}" \
                >>"$MBEDTLS_TEST_OUTCOME_FILE"
     fi
 }
-unset TEST_SUITE_NAME
 
 # True if the presence of the given pattern in a log definitely indicates
 # that the test has failed. False if the presence is inconclusive.
@@ -1572,7 +1570,7 @@ run_test    "Opaque key for server authentication" \
             0 \
             -c "Verifying peer X.509 certificate... ok" \
             -c "Ciphersuite is TLS-ECDHE-ECDSA" \
-            -s "key types: Opaque, none" \
+            -s "key types: Opaque - invalid PK" \
             -s "Ciphersuite is TLS-ECDHE-ECDSA" \
             -S "error" \
             -C "error"
@@ -1591,7 +1589,7 @@ run_test    "Opaque key for client/server authentication" \
             -c "key type: Opaque" \
             -c "Verifying peer X.509 certificate... ok" \
             -c "Ciphersuite is TLS-ECDHE-ECDSA" \
-            -s "key types: Opaque, none" \
+            -s "key types: Opaque - invalid PK" \
             -s "Verifying peer X.509 certificate... ok" \
             -s "Ciphersuite is TLS-ECDHE-ECDSA" \
             -S "error" \
@@ -9195,9 +9193,7 @@ run_test    "TLS 1.3: CertificateRequest check - openssl" \
             "$O_NEXT_SRV -msg -tls1_3 -num_tickets 0 -no_resume_ephemeral -no_cache -Verify 10" \
             "$P_CLI debug_level=4 force_version=tls13 " \
             1 \
-            -c "=> parse certificate request" \
-            -c "got a certificate request" \
-            -c "<= parse certificate request"
+            -c "CertificateRequest not supported"
 
 requires_gnutls_tls1_3
 requires_gnutls_next_no_ticket
@@ -9210,9 +9206,7 @@ run_test    "TLS 1.3: CertificateRequest check - gnutls" \
             "$G_NEXT_SRV --debug=4 --priority=NORMAL:-VERS-ALL:+VERS-TLS1.3:+CIPHER-ALL:%NO_TICKETS" \
             "$P_CLI debug_level=3 min_version=tls13 max_version=tls13" \
             1 \
-            -c "=> parse certificate request" \
-            -c "got a certificate request" \
-            -c "<= parse certificate request"
+            -c "CertificateRequest not supported"
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
@@ -9276,13 +9270,10 @@ run_test    "TLS 1.3: HelloRetryRequest check, ciphersuite TLS_AES_256_GCM_SHA38
             -c "tls13 client state: MBEDTLS_SSL_CLIENT_HELLO" \
             -c "HTTP/1.0 200 OK"
 
-for i in opt-testcases/*.sh
+for i in $(ls opt-testcases/*.sh)
 do
-    TEST_SUITE_NAME=${i##*/}
-    TEST_SUITE_NAME=${TEST_SUITE_NAME%.*}
-    . "$i"
+    . $i
 done
-unset TEST_SUITE_NAME
 
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
