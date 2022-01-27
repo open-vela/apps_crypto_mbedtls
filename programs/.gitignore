@@ -38,7 +38,9 @@ pkey/rsa_sign
 pkey/rsa_sign_pss
 pkey/rsa_verify
 pkey/rsa_verify_pss
+psa/aead_cipher_psa
 psa/crypto_examples
+psa/hmac_md_psa
 psa/key_ladder_demo
 psa/psa_constant_names
 random/gen_entropy
@@ -57,7 +59,6 @@ ssl/ssl_server2
 test/benchmark
 test/cpp_dummy_build
 test/cpp_dummy_build.cpp
-test/dlopen
 test/ecp-bench
 test/query_compile_time_config
 test/selftest
