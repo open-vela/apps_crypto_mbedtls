@@ -17,12 +17,6 @@ LOCAL_LDFLAGS = ${MBEDTLS_TEST_OBJS} 		\
 		-lmbedx509$(SHARED_SUFFIX)	\
 		-lmbedcrypto$(SHARED_SUFFIX)
 
-ifeq ($(shell uname -s),Linux)
-DLOPEN_LDFLAGS ?= -ldl
-else
-DLOPEN_LDFLAGS ?=
-endif
-
 include ../3rdparty/Makefile.inc
 LOCAL_CFLAGS+=$(THIRDPARTY_INCLUDES)
 
@@ -61,18 +55,6 @@ else
 PYTHON ?= $(shell if type python3 >/dev/null 2>/dev/null; then echo python3; else echo python; fi)
 endif
 
-# Only build the dlopen test in shared library builds, and not when building
-# for Windows.
-ifdef BUILD_DLOPEN
-# Don't override the value
-else ifdef WINDOWS_BUILD
-BUILD_DLOPEN =
-else ifdef SHARED
-BUILD_DLOPEN = y
-else
-BUILD_DLOPEN =
-endif
-
 ## The following assignment is the list of base names of applications that
 ## will be built on Windows. Extra Linux/Unix/POSIX-only applications can
 ## be declared by appending with `APPS += ...` afterwards.
@@ -102,7 +84,9 @@ APPS = \
 	pkey/rsa_sign_pss \
 	pkey/rsa_verify \
 	pkey/rsa_verify_pss \
+	psa/aead_cipher_psa \
 	psa/crypto_examples \
+	psa/hmac_md_psa \
 	psa/key_ladder_demo \
 	psa/psa_constant_names \
 	random/gen_entropy \
@@ -134,10 +118,6 @@ APPS = \
 
 ifdef PTHREAD
 APPS +=	ssl/ssl_pthread_server
-endif
-
-ifdef BUILD_DLOPEN
-APPS +=	test/dlopen
 endif
 
 ifdef TEST_CPP
@@ -283,6 +263,18 @@ pkey/rsa_encrypt$(EXEXT): pkey/rsa_encrypt.c $(DEP)
 	echo "  CC    pkey/rsa_encrypt.c"
 	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) pkey/rsa_encrypt.c    $(LOCAL_LDFLAGS) $(LDFLAGS) -o $@
 
+psa/aead_cipher_psa$(EXEXT): psa/aead_cipher_psa.c $(DEP)
+	echo "  CC    psa/aead_cipher_psa.c"
+	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) psa/aead_cipher_psa.c    $(LOCAL_LDFLAGS) $(LDFLAGS) -o $@
+
+psa/crypto_examples$(EXEXT): psa/crypto_examples.c $(DEP)
+	echo "  CC    psa/crypto_examples.c"
+	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) psa/crypto_examples.c    $(LOCAL_LDFLAGS) $(LDFLAGS) -o $@
+
+psa/hmac_md_psa$(EXEXT): psa/hmac_md_psa.c $(DEP)
+	echo "  CC    psa/hmac_md_psa.c"
+	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) psa/hmac_md_psa.c    $(LOCAL_LDFLAGS) $(LDFLAGS) -o $@
+
 psa/key_ladder_demo$(EXEXT): psa/key_ladder_demo.c $(DEP)
 	echo "  CC    psa/key_ladder_demo.c"
 	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) psa/key_ladder_demo.c    $(LOCAL_LDFLAGS) $(LDFLAGS) -o $@
@@ -366,15 +358,6 @@ test/cpp_dummy_build$(EXEXT): test/cpp_dummy_build.cpp $(DEP)
 	echo "  CXX   test/cpp_dummy_build.cpp"
 	$(CXX) $(LOCAL_CXXFLAGS) $(CXXFLAGS) test/cpp_dummy_build.cpp   $(LOCAL_LDFLAGS) $(LDFLAGS) -o $@
 
-ifdef BUILD_DLOPEN
-test/dlopen$(EXEXT): test/dlopen.c $(DEP)
-	echo "  CC    test/dlopen.c"
-# Do not link any test objects (that would bring in a static dependency on
-# libmbedcrypto at least). Do not link with libmbed* (that would defeat the
-# purpose of testing dynamic loading).
-	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) test/dlopen.c $(LDFLAGS) $(DLOPEN_LDFLAGS) -o $@
-endif
-
 test/query_config.o: test/query_config.c test/query_config.h $(DEP)
 	echo "  CC    test/query_config.c"
 	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) -c test/query_config.c -o $@
@@ -427,16 +410,11 @@ x509/req_app$(EXEXT): x509/req_app.c $(DEP)
 	echo "  CC    x509/req_app.c"
 	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) x509/req_app.c    $(LOCAL_LDFLAGS) $(LDFLAGS) -o $@
 
-psa/crypto_examples$(EXEXT): psa/crypto_examples.c $(DEP)
-	echo "  CC    psa/crypto_examples.c"
-	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) psa/crypto_examples.c    $(LOCAL_LDFLAGS) $(LDFLAGS) -o $@
-
 clean:
 ifndef WINDOWS
 	rm -f $(EXES)
 	-rm -f ssl/ssl_pthread_server$(EXEXT)
 	-rm -f test/cpp_dummy_build.cpp test/cpp_dummy_build$(EXEXT)
-	-rm -f test/dlopen$(EXEXT)
 else
 	if exist *.o del /Q /F *.o
 	if exist *.exe del /Q /F *.exe
