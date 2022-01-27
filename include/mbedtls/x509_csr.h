@@ -154,7 +154,8 @@ void mbedtls_x509_csr_init( mbedtls_x509_csr *csr );
 void mbedtls_x509_csr_free( mbedtls_x509_csr *csr );
 #endif /* MBEDTLS_X509_CSR_PARSE_C */
 
-/** \} name Structures and functions for X.509 Certificate Signing Requests (CSR) */
+/* \} name */
+/* \} addtogroup x509_module */
 
 #if defined(MBEDTLS_X509_CSR_WRITE_C)
 /**
@@ -295,8 +296,6 @@ int mbedtls_x509write_csr_pem( mbedtls_x509write_csr *ctx, unsigned char *buf, s
                        void *p_rng );
 #endif /* MBEDTLS_PEM_WRITE_C */
 #endif /* MBEDTLS_X509_CSR_WRITE_C */
-
-/** \} addtogroup x509_module */
 
 #ifdef __cplusplus
 }
