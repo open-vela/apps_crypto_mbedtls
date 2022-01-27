@@ -9193,9 +9193,7 @@ run_test    "TLS 1.3: CertificateRequest check - openssl" \
             "$O_NEXT_SRV -msg -tls1_3 -num_tickets 0 -no_resume_ephemeral -no_cache -Verify 10" \
             "$P_CLI debug_level=4 force_version=tls13 " \
             1 \
-            -c "=> parse certificate request" \
-            -c "got a certificate request" \
-            -c "<= parse certificate request"
+            -c "CertificateRequest not supported"
 
 requires_gnutls_tls1_3
 requires_gnutls_next_no_ticket
@@ -9208,9 +9206,7 @@ run_test    "TLS 1.3: CertificateRequest check - gnutls" \
             "$G_NEXT_SRV --debug=4 --priority=NORMAL:-VERS-ALL:+VERS-TLS1.3:+CIPHER-ALL:%NO_TICKETS" \
             "$P_CLI debug_level=3 min_version=tls13 max_version=tls13" \
             1 \
-            -c "=> parse certificate request" \
-            -c "got a certificate request" \
-            -c "<= parse certificate request"
+            -c "CertificateRequest not supported"
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
