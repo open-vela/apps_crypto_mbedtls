@@ -3400,8 +3400,8 @@ error:
  * If partial is non-zero, keep data in the input buffer and client ID.
  * (Use when a DTLS client reconnects from the same port.)
  */
-static void ssl_session_reset_msg_layer( mbedtls_ssl_context *ssl,
-                                         int partial )
+void mbedtls_ssl_session_reset_msg_layer( mbedtls_ssl_context *ssl,
+                                          int partial )
 {
 #if defined(MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH)
     size_t in_buf_len = ssl->in_buf_len;
@@ -3453,12 +3453,32 @@ static void ssl_session_reset_msg_layer( mbedtls_ssl_context *ssl,
     mbedtls_ssl_dtls_replay_reset( ssl );
 #endif
 
+#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
     if( ssl->transform )
     {
         mbedtls_ssl_transform_free( ssl->transform );
         mbedtls_free( ssl->transform );
         ssl->transform = NULL;
     }
+#endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
+    mbedtls_ssl_transform_free( ssl->transform_application );
+    mbedtls_free( ssl->transform_application );
+    ssl->transform_application = NULL;
+
+    if( ssl->handshake != NULL )
+    {
+        mbedtls_ssl_transform_free( ssl->handshake->transform_earlydata );
+        mbedtls_free( ssl->handshake->transform_earlydata );
+        ssl->handshake->transform_earlydata = NULL;
+
+        mbedtls_ssl_transform_free( ssl->handshake->transform_handshake );
+        mbedtls_free( ssl->handshake->transform_handshake );
+        ssl->handshake->transform_handshake = NULL;
+    }
+
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 }
 
 int mbedtls_ssl_session_reset_int( mbedtls_ssl_context *ssl, int partial )
@@ -3467,7 +3487,7 @@ int mbedtls_ssl_session_reset_int( mbedtls_ssl_context *ssl, int partial )
 
     ssl->state = MBEDTLS_SSL_HELLO_REQUEST;
 
-    ssl_session_reset_msg_layer( ssl, partial );
+    mbedtls_ssl_session_reset_msg_layer( ssl, partial );
 
     /* Reset renegotiation state */
 #if defined(MBEDTLS_SSL_RENEGOTIATION)
@@ -5579,14 +5599,7 @@ void mbedtls_ssl_handshake_free( mbedtls_ssl_context *ssl )
         mbedtls_free( (void*) handshake->sig_algs );
     handshake->sig_algs = NULL;
 #endif /* MBEDTLS_DEPRECATED_REMOVED */
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
-    if( ssl->handshake->certificate_request_context )
-    {
-        mbedtls_free( (void*) handshake->certificate_request_context );
-    }
-    handshake->certificate_request_context = NULL;
-    handshake->certificate_request_context_len = 0;
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
+
 #endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
 
 #if defined(MBEDTLS_SSL_ASYNC_PRIVATE)
@@ -5676,11 +5689,14 @@ void mbedtls_ssl_handshake_free( mbedtls_ssl_context *ssl )
     mbedtls_pk_free( &handshake->peer_pubkey );
 #endif /* MBEDTLS_X509_CRT_PARSE_C && !MBEDTLS_SSL_KEEP_PEER_CERTIFICATE */
 
-#if defined(MBEDTLS_SSL_PROTO_DTLS)
+#if defined(MBEDTLS_SSL_PROTO_DTLS) || defined(MBEDTLS_SSL_PROTO_TLS1_3)
     mbedtls_free( handshake->verify_cookie );
+#endif /* MBEDTLS_SSL_PROTO_DTLS || MBEDTLS_SSL_PROTO_TLS1_3 */
+
+#if defined(MBEDTLS_SSL_PROTO_DTLS)
     mbedtls_ssl_flight_free( handshake->flight );
     mbedtls_ssl_buffering_free( ssl );
-#endif
+#endif /* MBEDTLS_SSL_PROTO_DTLS */
 
 #if defined(MBEDTLS_ECDH_C) &&                  \
     defined(MBEDTLS_USE_PSA_CRYPTO)
@@ -7391,6 +7407,7 @@ int mbedtls_ssl_get_handshake_transcript( mbedtls_ssl_context *ssl,
     }
     return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
 }
+
 #endif /* !MBEDTLS_USE_PSA_CRYPTO */
 
 #if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED) || \
