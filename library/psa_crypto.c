@@ -3719,14 +3719,6 @@ static psa_status_t psa_aead_check_nonce_length( psa_algorithm_t alg,
     return( PSA_ERROR_INVALID_ARGUMENT );
 }
 
-static psa_status_t psa_aead_check_algorithm( psa_algorithm_t alg )
-{
-    if( !PSA_ALG_IS_AEAD( alg ) || PSA_ALG_IS_WILDCARD( alg ) )
-        return( PSA_ERROR_INVALID_ARGUMENT );
-
-    return( PSA_SUCCESS );
-}
-
 psa_status_t psa_aead_encrypt( mbedtls_svc_key_id_t key,
                                psa_algorithm_t alg,
                                const uint8_t *nonce,
@@ -3744,9 +3736,8 @@ psa_status_t psa_aead_encrypt( mbedtls_svc_key_id_t key,
 
     *ciphertext_length = 0;
 
-    status = psa_aead_check_algorithm( alg );
-    if( status != PSA_SUCCESS )
-        return( status );
+    if( !PSA_ALG_IS_AEAD( alg ) || PSA_ALG_IS_WILDCARD( alg ) )
+        return( PSA_ERROR_NOT_SUPPORTED );
 
     status = psa_get_and_lock_key_slot_with_policy(
                  key, &slot, PSA_KEY_USAGE_ENCRYPT, alg );
@@ -3795,9 +3786,8 @@ psa_status_t psa_aead_decrypt( mbedtls_svc_key_id_t key,
 
     *plaintext_length = 0;
 
-    status = psa_aead_check_algorithm( alg );
-    if( status != PSA_SUCCESS )
-        return( status );
+    if( !PSA_ALG_IS_AEAD( alg ) || PSA_ALG_IS_WILDCARD( alg ) )
+        return( PSA_ERROR_NOT_SUPPORTED );
 
     status = psa_get_and_lock_key_slot_with_policy(
                  key, &slot, PSA_KEY_USAGE_DECRYPT, alg );
@@ -3829,47 +3819,6 @@ exit:
     return( status );
 }
 
-static psa_status_t psa_validate_tag_length( psa_aead_operation_t *operation,
-                                             psa_algorithm_t alg ) {
-    uint8_t tag_len = 0;
-    if( psa_driver_get_tag_len( operation, &tag_len ) != PSA_SUCCESS )
-    {
-        return( PSA_ERROR_INVALID_ARGUMENT );
-    }
-
-    switch( PSA_ALG_AEAD_WITH_SHORTENED_TAG( alg, 0 ) )
-    {
-#if defined(MBEDTLS_PSA_BUILTIN_ALG_CCM)
-        case PSA_ALG_AEAD_WITH_SHORTENED_TAG( PSA_ALG_CCM, 0 ):
-            /* CCM allows the following tag lengths: 4, 6, 8, 10, 12, 14, 16.*/
-            if( tag_len < 4 || tag_len > 16 || tag_len % 2 )
-                return( PSA_ERROR_INVALID_ARGUMENT );
-            break;
-#endif /* MBEDTLS_PSA_BUILTIN_ALG_CCM */
-
-#if defined(MBEDTLS_PSA_BUILTIN_ALG_GCM)
-        case PSA_ALG_AEAD_WITH_SHORTENED_TAG( PSA_ALG_GCM, 0 ):
-            /* GCM allows the following tag lengths: 4, 8, 12, 13, 14, 15, 16. */
-            if( tag_len != 4 && tag_len != 8 && ( tag_len < 12 || tag_len > 16 ) )
-                return( PSA_ERROR_INVALID_ARGUMENT );
-            break;
-#endif /* MBEDTLS_PSA_BUILTIN_ALG_GCM */
-
-#if defined(MBEDTLS_PSA_BUILTIN_ALG_CHACHA20_POLY1305)
-        case PSA_ALG_AEAD_WITH_SHORTENED_TAG( PSA_ALG_CHACHA20_POLY1305, 0 ):
-            /* We only support the default tag length. */
-            if( tag_len != 16 )
-                return( PSA_ERROR_INVALID_ARGUMENT );
-            break;
-#endif /* MBEDTLS_PSA_BUILTIN_ALG_CHACHA20_POLY1305 */
-
-        default:
-            (void) tag_len;
-            return( PSA_ERROR_NOT_SUPPORTED );
-    }
-    return( PSA_SUCCESS );
-}
-
 /* Set the key for a multipart authenticated operation. */
 static psa_status_t psa_aead_setup( psa_aead_operation_t *operation,
                                     int is_encrypt,
@@ -3881,9 +3830,11 @@ static psa_status_t psa_aead_setup( psa_aead_operation_t *operation,
     psa_key_slot_t *slot = NULL;
     psa_key_usage_t key_usage = 0;
 
-    status = psa_aead_check_algorithm( alg );
-    if( status != PSA_SUCCESS )
+    if( !PSA_ALG_IS_AEAD( alg ) || PSA_ALG_IS_WILDCARD( alg ) )
+    {
+        status = PSA_ERROR_INVALID_ARGUMENT;
         goto exit;
+    }
 
     if( operation->id != 0 )
     {
@@ -3925,9 +3876,6 @@ static psa_status_t psa_aead_setup( psa_aead_operation_t *operation,
                                                         slot->key.bytes,
                                                         alg );
     if( status != PSA_SUCCESS )
-        goto exit;
-
-    if( ( status = psa_validate_tag_length( operation, alg ) ) != PSA_SUCCESS )
         goto exit;
 
     operation->key_type = psa_get_key_type( &attributes );
