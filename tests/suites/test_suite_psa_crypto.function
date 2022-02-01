@@ -4117,6 +4117,7 @@ exit:
 void aead_multipart_set_nonce( int key_type_arg, data_t *key_data,
                                int alg_arg,
                                int nonce_length_arg,
+                               int set_lengths_method_arg,
                                data_t *additional_data,
                                data_t *input_data,
                                int expected_status_arg )
@@ -4139,6 +4140,7 @@ void aead_multipart_set_nonce( int key_type_arg, data_t *key_data,
     size_t tag_length = 0;
     uint8_t tag_buffer[PSA_AEAD_TAG_MAX_SIZE];
     size_t index = 0;
+    set_lengths_method_t set_lengths_method = set_lengths_method_arg;
 
     PSA_ASSERT( psa_crypto_init( ) );
 
@@ -4196,26 +4198,40 @@ void aead_multipart_set_nonce( int key_type_arg, data_t *key_data,
         }
     }
 
+    if( set_lengths_method == SET_LENGTHS_BEFORE_NONCE )
+    {
+        PSA_ASSERT( psa_aead_set_lengths( &operation, additional_data->len,
+                                          input_data->len ) );
+    }
+
     status = psa_aead_set_nonce( &operation, nonce_buffer, nonce_length );
 
     TEST_EQUAL( status, expected_status );
 
     if( expected_status == PSA_SUCCESS )
     {
-        /* Ensure we can still complete operation. */
-        PSA_ASSERT( psa_aead_set_lengths( &operation, additional_data->len,
-                                          input_data->len ) );
+        if( set_lengths_method == SET_LENGTHS_AFTER_NONCE )
+        {
+            PSA_ASSERT( psa_aead_set_lengths( &operation, additional_data->len,
+                                              input_data->len ) );
+        }
+        if( operation.alg == PSA_ALG_CCM && set_lengths_method == DO_NOT_SET_LENGTHS )
+            expected_status = PSA_ERROR_BAD_STATE;
 
-        PSA_ASSERT( psa_aead_update_ad( &operation, additional_data->x,
-                                        additional_data->len ) );
+        /* Ensure we can still complete operation, unless it's CCM and we didn't set lengths. */
+        TEST_EQUAL( psa_aead_update_ad( &operation, additional_data->x,
+                                        additional_data->len ),
+                    expected_status );
 
-        PSA_ASSERT( psa_aead_update( &operation, input_data->x, input_data->len,
+        TEST_EQUAL( psa_aead_update( &operation, input_data->x, input_data->len,
                                      output, output_size,
-                                     &ciphertext_length ) );
+                                     &ciphertext_length ),
+                    expected_status );
 
-        PSA_ASSERT( psa_aead_finish( &operation, ciphertext, ciphertext_size,
+        TEST_EQUAL( psa_aead_finish( &operation, ciphertext, ciphertext_size,
                                      &ciphertext_length, tag_buffer,
-                                     PSA_AEAD_TAG_MAX_SIZE, &tag_length ) );
+                                     PSA_AEAD_TAG_MAX_SIZE, &tag_length ),
+                    expected_status );
     }
 
 exit:
@@ -4409,6 +4425,7 @@ void aead_multipart_verify( int key_type_arg, data_t *key_data,
                             data_t *input_data,
                             data_t *tag,
                             int tag_usage_arg,
+                            int expected_setup_status_arg,
                             int expected_status_arg )
 {
     mbedtls_svc_key_id_t key = MBEDTLS_SVC_KEY_ID_INIT;
@@ -4418,6 +4435,7 @@ void aead_multipart_verify( int key_type_arg, data_t *key_data,
     psa_key_attributes_t attributes = PSA_KEY_ATTRIBUTES_INIT;
     psa_status_t status = PSA_ERROR_GENERIC_ERROR;
     psa_status_t expected_status = expected_status_arg;
+    psa_status_t expected_setup_status = expected_setup_status_arg;
     unsigned char *plaintext = NULL;
     unsigned char *finish_plaintext = NULL;
     size_t plaintext_size = 0;
@@ -4457,6 +4475,10 @@ void aead_multipart_verify( int key_type_arg, data_t *key_data,
         MBEDTLS_TEST_PSA_SKIP_IF_ALT_AES_192( key_type, key_data->len * 8 );
         MBEDTLS_TEST_PSA_SKIP_IF_ALT_GCM_NOT_12BYTES_NONCE( alg, nonce->len );
     }
+    TEST_EQUAL( status, expected_setup_status );
+
+    if( status != PSA_SUCCESS )
+        goto exit;
 
     PSA_ASSERT( status );
 
@@ -4464,17 +4486,7 @@ void aead_multipart_verify( int key_type_arg, data_t *key_data,
 
     status = psa_aead_set_lengths( &operation, additional_data->len,
                                       input_data->len );
-
-    if( status != PSA_SUCCESS )
-    {
-        /* Invalid tag lengths are detected in CCM at this point, as they
-         * would be written into the first block. They should really be
-         * detected in psa_aead_encrypt/decrypt_setup, and will be fixed
-         * to do so in the future, until that point, this is a
-         * workaround.*/
-        TEST_EQUAL( status, expected_status );
-        goto exit;
-    }
+    PSA_ASSERT( status );
 
     PSA_ASSERT( psa_aead_update_ad( &operation, additional_data->x,
                                     additional_data->len ) );
@@ -4781,6 +4793,208 @@ void aead_multipart_state_test( int key_type_arg, data_t *key_data,
 
     psa_aead_abort( &operation );
 
+    /* Test for generating nonce after calling set lengths */
+
+    PSA_ASSERT( psa_aead_encrypt_setup( &operation, key, alg ) );
+
+    PSA_ASSERT( psa_aead_set_lengths( &operation, additional_data->len,
+                                      input_data->len ) );
+
+    PSA_ASSERT( psa_aead_generate_nonce( &operation, nonce_buffer,
+                                         PSA_AEAD_NONCE_MAX_SIZE,
+                                         &nonce_length ) );
+
+    psa_aead_abort( &operation );
+
+    /* Test for generating nonce after calling set lengths with UINT32_MAX ad_data length */
+
+    PSA_ASSERT( psa_aead_encrypt_setup( &operation, key, alg ) );
+
+    if( operation.alg == PSA_ALG_CCM )
+    {
+        TEST_EQUAL( psa_aead_set_lengths( &operation, UINT32_MAX,
+                                          input_data->len ),
+                    PSA_ERROR_INVALID_ARGUMENT );
+        TEST_EQUAL( psa_aead_generate_nonce( &operation, nonce_buffer,
+                                             PSA_AEAD_NONCE_MAX_SIZE,
+                                             &nonce_length ),
+                    PSA_ERROR_BAD_STATE );
+    }
+    else
+    {
+        PSA_ASSERT( psa_aead_set_lengths( &operation, UINT32_MAX,
+                                          input_data->len ) );
+        PSA_ASSERT( psa_aead_generate_nonce( &operation, nonce_buffer,
+                                             PSA_AEAD_NONCE_MAX_SIZE,
+                                             &nonce_length ) );
+    }
+
+    psa_aead_abort( &operation );
+
+    /* Test for generating nonce after calling set lengths with SIZE_MAX ad_data length */
+#if SIZE_MAX > UINT32_MAX
+    PSA_ASSERT( psa_aead_encrypt_setup( &operation, key, alg ) );
+
+    if( operation.alg == PSA_ALG_CCM || operation.alg == PSA_ALG_GCM )
+    {
+        TEST_EQUAL( psa_aead_set_lengths( &operation, SIZE_MAX,
+                                          input_data->len ),
+                    PSA_ERROR_INVALID_ARGUMENT );
+        TEST_EQUAL( psa_aead_generate_nonce( &operation, nonce_buffer,
+                                             PSA_AEAD_NONCE_MAX_SIZE,
+                                             &nonce_length ),
+                    PSA_ERROR_BAD_STATE );
+    }
+    else
+    {
+        PSA_ASSERT( psa_aead_set_lengths( &operation, SIZE_MAX,
+                                          input_data->len ) );
+        PSA_ASSERT( psa_aead_generate_nonce( &operation, nonce_buffer,
+                                             PSA_AEAD_NONCE_MAX_SIZE,
+                                             &nonce_length ) );
+    }
+
+    psa_aead_abort( &operation );
+#endif
+
+    /* Test for calling set lengths with a UINT32_MAX ad_data length, after generating nonce */
+
+    PSA_ASSERT( psa_aead_encrypt_setup( &operation, key, alg ) );
+
+    PSA_ASSERT( psa_aead_generate_nonce( &operation, nonce_buffer,
+                                         PSA_AEAD_NONCE_MAX_SIZE,
+                                         &nonce_length ) );
+
+    if( operation.alg == PSA_ALG_CCM )
+    {
+        TEST_EQUAL( psa_aead_set_lengths( &operation, UINT32_MAX,
+                                          input_data->len ),
+                    PSA_ERROR_INVALID_ARGUMENT );
+    }
+    else
+    {
+        PSA_ASSERT( psa_aead_set_lengths( &operation, UINT32_MAX,
+                                          input_data->len ) );
+    }
+
+    psa_aead_abort( &operation );
+
+    /* ------------------------------------------------------- */
+    /* Test for setting nonce after calling set lengths */
+
+    PSA_ASSERT( psa_aead_encrypt_setup( &operation, key, alg ) );
+
+    PSA_ASSERT( psa_aead_set_lengths( &operation, additional_data->len,
+                                      input_data->len ) );
+
+    PSA_ASSERT( psa_aead_set_nonce( &operation, nonce->x, nonce->len ) );
+
+    psa_aead_abort( &operation );
+
+    /* Test for setting nonce after calling set lengths with UINT32_MAX ad_data length */
+
+    PSA_ASSERT( psa_aead_encrypt_setup( &operation, key, alg ) );
+
+    if( operation.alg == PSA_ALG_CCM )
+    {
+        TEST_EQUAL( psa_aead_set_lengths( &operation, UINT32_MAX,
+                                          input_data->len ),
+                    PSA_ERROR_INVALID_ARGUMENT );
+        TEST_EQUAL( psa_aead_set_nonce( &operation, nonce->x, nonce->len ),
+                    PSA_ERROR_BAD_STATE );
+    }
+    else
+    {
+        PSA_ASSERT( psa_aead_set_lengths( &operation, UINT32_MAX,
+                                          input_data->len ) );
+        PSA_ASSERT( psa_aead_set_nonce( &operation, nonce->x, nonce->len ) );
+    }
+
+    psa_aead_abort( &operation );
+
+    /* Test for setting nonce after calling set lengths with SIZE_MAX ad_data length */
+#if SIZE_MAX > UINT32_MAX
+    PSA_ASSERT( psa_aead_encrypt_setup( &operation, key, alg ) );
+
+    if( operation.alg == PSA_ALG_CCM || operation.alg == PSA_ALG_GCM )
+    {
+        TEST_EQUAL( psa_aead_set_lengths( &operation, SIZE_MAX,
+                                          input_data->len ),
+                    PSA_ERROR_INVALID_ARGUMENT );
+        TEST_EQUAL( psa_aead_set_nonce( &operation, nonce->x, nonce->len ),
+                    PSA_ERROR_BAD_STATE );
+    }
+    else
+    {
+        PSA_ASSERT( psa_aead_set_lengths( &operation, SIZE_MAX,
+                                          input_data->len ) );
+        PSA_ASSERT( psa_aead_set_nonce( &operation, nonce->x, nonce->len ) );
+    }
+
+    psa_aead_abort( &operation );
+#endif
+
+    /* Test for calling set lengths with an ad_data length of UINT32_MAX, after setting nonce */
+
+    PSA_ASSERT( psa_aead_encrypt_setup( &operation, key, alg ) );
+
+    PSA_ASSERT( psa_aead_set_nonce( &operation, nonce->x, nonce->len ) );
+
+    if( operation.alg == PSA_ALG_CCM )
+    {
+        TEST_EQUAL( psa_aead_set_lengths( &operation, UINT32_MAX,
+                                          input_data->len ),
+                    PSA_ERROR_INVALID_ARGUMENT );
+    }
+    else
+    {
+        PSA_ASSERT( psa_aead_set_lengths( &operation, UINT32_MAX,
+                                          input_data->len ) );
+    }
+
+    psa_aead_abort( &operation );
+
+    /* Test for setting nonce after calling set lengths with plaintext length of SIZE_MAX */
+#if SIZE_MAX > UINT32_MAX
+    PSA_ASSERT( psa_aead_encrypt_setup( &operation, key, alg ) );
+
+    if( operation.alg == PSA_ALG_GCM )
+    {
+        TEST_EQUAL( psa_aead_set_lengths( &operation, additional_data->len,
+                                          SIZE_MAX ),
+                    PSA_ERROR_INVALID_ARGUMENT );
+        TEST_EQUAL( psa_aead_set_nonce( &operation, nonce->x, nonce->len ),
+                    PSA_ERROR_BAD_STATE );
+    }
+    else if ( operation.alg != PSA_ALG_CCM )
+    {
+        PSA_ASSERT( psa_aead_set_lengths( &operation, additional_data->len,
+                                          SIZE_MAX ) );
+        PSA_ASSERT( psa_aead_set_nonce( &operation, nonce->x, nonce->len ) );
+    }
+
+    psa_aead_abort( &operation );
+
+    /* Test for calling set lengths with an plaintext length of SIZE_MAX, after setting nonce */
+    PSA_ASSERT( psa_aead_encrypt_setup( &operation, key, alg ) );
+
+    PSA_ASSERT( psa_aead_set_nonce( &operation, nonce->x, nonce->len ) );
+
+    if( operation.alg == PSA_ALG_GCM )
+    {
+        TEST_EQUAL( psa_aead_set_lengths( &operation, additional_data->len,
+                                          SIZE_MAX ),
+                    PSA_ERROR_INVALID_ARGUMENT );
+    }
+    else if ( operation.alg != PSA_ALG_CCM )
+    {
+        PSA_ASSERT( psa_aead_set_lengths( &operation, additional_data->len,
+                                          SIZE_MAX ) );
+    }
+
+    psa_aead_abort( &operation );
+#endif
+
     /* ------------------------------------------------------- */
 
     PSA_ASSERT( psa_aead_encrypt_setup( &operation, key, alg ) );
@@ -4820,19 +5034,28 @@ void aead_multipart_state_test( int key_type_arg, data_t *key_data,
 
     psa_aead_abort( &operation );
 
-    /* Test for setting lengths after already starting data. */
+    /* Test for setting lengths after setting nonce + already starting data. */
 
     PSA_ASSERT( psa_aead_encrypt_setup( &operation, key, alg ) );
 
     PSA_ASSERT( psa_aead_set_nonce( &operation, nonce->x, nonce->len ) );
 
-    PSA_ASSERT( psa_aead_update_ad( &operation, additional_data->x,
-                                    additional_data->len ) );
+    if( operation.alg == PSA_ALG_CCM )
+    {
 
-    TEST_EQUAL( psa_aead_set_lengths( &operation, additional_data->len,
-                                      input_data->len ),
-                PSA_ERROR_BAD_STATE );
+        TEST_EQUAL( psa_aead_update_ad( &operation, additional_data->x,
+                                        additional_data->len ),
+                    PSA_ERROR_BAD_STATE );
+    }
+    else
+    {
+        PSA_ASSERT( psa_aead_update_ad( &operation, additional_data->x,
+                                        additional_data->len ) );
 
+        TEST_EQUAL( psa_aead_set_lengths( &operation, additional_data->len,
+                                          input_data->len ),
+                    PSA_ERROR_BAD_STATE );
+    }
     psa_aead_abort( &operation );
 
     /* ------------------------------------------------------- */
@@ -4841,14 +5064,133 @@ void aead_multipart_state_test( int key_type_arg, data_t *key_data,
 
     PSA_ASSERT( psa_aead_set_nonce( &operation, nonce->x, nonce->len ) );
 
-    PSA_ASSERT( psa_aead_update( &operation, input_data->x,
-                                 input_data->len, output_data,
-                                 output_size, &output_length ) );
+    if( operation.alg == PSA_ALG_CCM )
+    {
+        TEST_EQUAL( psa_aead_update( &operation, input_data->x,
+                                     input_data->len, output_data,
+                                     output_size, &output_length ),
+                    PSA_ERROR_BAD_STATE );
 
-    TEST_EQUAL( psa_aead_set_lengths( &operation, additional_data->len,
-                                      input_data->len ),
-                PSA_ERROR_BAD_STATE );
+    }
+    else
+    {
+        PSA_ASSERT( psa_aead_update( &operation, input_data->x,
+                                     input_data->len, output_data,
+                                     output_size, &output_length ) );
 
+        TEST_EQUAL( psa_aead_set_lengths( &operation, additional_data->len,
+                                          input_data->len ),
+                    PSA_ERROR_BAD_STATE );
+    }
+    psa_aead_abort( &operation );
+
+    /* ------------------------------------------------------- */
+
+    PSA_ASSERT( psa_aead_encrypt_setup( &operation, key, alg ) );
+
+    PSA_ASSERT( psa_aead_set_nonce( &operation, nonce->x, nonce->len ) );
+
+    if( operation.alg == PSA_ALG_CCM )
+    {
+        PSA_ASSERT( psa_aead_finish( &operation, final_data,
+                                     finish_output_size,
+                                     &output_part_length,
+                                     tag_buffer, tag_length,
+                                     &tag_size ) );
+    }
+    else
+    {
+        PSA_ASSERT( psa_aead_finish( &operation, final_data,
+                                     finish_output_size,
+                                     &output_part_length,
+                                     tag_buffer, tag_length,
+                                     &tag_size ) );
+
+        TEST_EQUAL( psa_aead_set_lengths( &operation, additional_data->len,
+                                          input_data->len ),
+                    PSA_ERROR_BAD_STATE );
+    }
+    psa_aead_abort( &operation );
+
+    /* Test for setting lengths after generating nonce + already starting data. */
+
+    PSA_ASSERT( psa_aead_encrypt_setup( &operation, key, alg ) );
+
+    PSA_ASSERT( psa_aead_generate_nonce( &operation, nonce_buffer,
+                                         PSA_AEAD_NONCE_MAX_SIZE,
+                                         &nonce_length ) );
+    if( operation.alg == PSA_ALG_CCM )
+    {
+
+        TEST_EQUAL( psa_aead_update_ad( &operation, additional_data->x,
+                                        additional_data->len ),
+                    PSA_ERROR_BAD_STATE );
+    }
+    else
+    {
+        PSA_ASSERT( psa_aead_update_ad( &operation, additional_data->x,
+                                        additional_data->len ) );
+
+        TEST_EQUAL( psa_aead_set_lengths( &operation, additional_data->len,
+                                          input_data->len ),
+                    PSA_ERROR_BAD_STATE );
+    }
+    psa_aead_abort( &operation );
+
+    /* ------------------------------------------------------- */
+
+    PSA_ASSERT( psa_aead_encrypt_setup( &operation, key, alg ) );
+
+    PSA_ASSERT( psa_aead_generate_nonce( &operation, nonce_buffer,
+                                         PSA_AEAD_NONCE_MAX_SIZE,
+                                         &nonce_length ) );
+    if( operation.alg == PSA_ALG_CCM )
+    {
+        TEST_EQUAL( psa_aead_update( &operation, input_data->x,
+                                     input_data->len, output_data,
+                                     output_size, &output_length ),
+                    PSA_ERROR_BAD_STATE );
+
+    }
+    else
+    {
+        PSA_ASSERT( psa_aead_update( &operation, input_data->x,
+                                     input_data->len, output_data,
+                                     output_size, &output_length ) );
+
+        TEST_EQUAL( psa_aead_set_lengths( &operation, additional_data->len,
+                                          input_data->len ),
+                    PSA_ERROR_BAD_STATE );
+    }
+    psa_aead_abort( &operation );
+
+    /* ------------------------------------------------------- */
+
+    PSA_ASSERT( psa_aead_encrypt_setup( &operation, key, alg ) );
+
+    PSA_ASSERT( psa_aead_generate_nonce( &operation, nonce_buffer,
+                                         PSA_AEAD_NONCE_MAX_SIZE,
+                                         &nonce_length ) );
+    if( operation.alg == PSA_ALG_CCM )
+    {
+        PSA_ASSERT( psa_aead_finish( &operation, final_data,
+                                     finish_output_size,
+                                     &output_part_length,
+                                     tag_buffer, tag_length,
+                                     &tag_size ) );
+    }
+    else
+    {
+        PSA_ASSERT( psa_aead_finish( &operation, final_data,
+                                     finish_output_size,
+                                     &output_part_length,
+                                     tag_buffer, tag_length,
+                                     &tag_size ) );
+
+        TEST_EQUAL( psa_aead_set_lengths( &operation, additional_data->len,
+                                          input_data->len ),
+                    PSA_ERROR_BAD_STATE );
+    }
     psa_aead_abort( &operation );
 
     /* Test for not sending any additional data or data after setting non zero
@@ -5004,14 +5346,16 @@ void aead_multipart_state_test( int key_type_arg, data_t *key_data,
 
     PSA_ASSERT( psa_aead_set_nonce( &operation, nonce->x, nonce->len ) );
 
-    PSA_ASSERT( psa_aead_update( &operation, input_data->x,
-                                 input_data->len, output_data,
-                                 output_size, &output_length ) );
+    if( operation.alg != PSA_ALG_CCM )
+    {
+        PSA_ASSERT( psa_aead_update( &operation, input_data->x,
+                                     input_data->len, output_data,
+                                     output_size, &output_length ) );
 
-    TEST_EQUAL( psa_aead_update_ad( &operation, additional_data->x,
-                                    additional_data->len ),
-                PSA_ERROR_BAD_STATE );
-
+        TEST_EQUAL( psa_aead_update_ad( &operation, additional_data->x,
+                                        additional_data->len ),
+                    PSA_ERROR_BAD_STATE );
+    }
     psa_aead_abort( &operation );
 
     /* Test calling finish on decryption. */
