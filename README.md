@@ -59,10 +59,7 @@ The source code of Mbed TLS includes some files that are automatically generated
 The following tools are required:
 
 * Perl, for some library source files and for Visual Studio build files.
-* Python 3 and some Python packages, for some library source files, sample programs and test data. To install the necessary packages, run
-    ```
-    python -m pip install -r scripts/basic.requirements.txt
-    ```
+* Python 3, for some sample programs and test data.
 * A C compiler for the host platform, for some test data.
 
 If you are cross-compiling, you must set the `CC` environment variable to a C compiler for the host platform when generating the configuration-independent files.
@@ -251,14 +248,6 @@ Mbed TLS can be ported to many different architectures, OS's and platforms. Befo
 -   [Porting Mbed TLS to a new environment or OS](https://tls.mbed.org/kb/how-to/how-do-i-port-mbed-tls-to-a-new-environment-OS)
 -   [What external dependencies does Mbed TLS rely on?](https://tls.mbed.org/kb/development/what-external-dependencies-does-mbedtls-rely-on)
 -   [How do I configure Mbed TLS](https://tls.mbed.org/kb/compiling-and-building/how-do-i-configure-mbedtls)
-
-Mbed TLS is mostly written in portable C99; however, it has a few platform requirements that go beyond the standard, but are met by most modern architectures:
-
-- Bytes must be 8 bits.
-- All-bits-zero must be a valid representation of a null pointer.
-- Signed integers must be represented using two's complement.
-- `int` and `size_t` must be at least 32 bits wide.
-- The types `uint8_t`, `uint16_t`, `uint32_t` and their signed equivalents must be available.
 
 PSA cryptography API
 --------------------
