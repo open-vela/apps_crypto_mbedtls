@@ -873,8 +873,6 @@ psa_status_t psa_driver_wrapper_cipher_encrypt(
     const uint8_t *key_buffer,
     size_t key_buffer_size,
     psa_algorithm_t alg,
-    const uint8_t *iv,
-    size_t iv_length,
     const uint8_t *input,
     size_t input_length,
     uint8_t *output,
@@ -896,8 +894,6 @@ psa_status_t psa_driver_wrapper_cipher_encrypt(
                                                               key_buffer,
                                                               key_buffer_size,
                                                               alg,
-                                                              iv,
-                                                              iv_length,
                                                               input,
                                                               input_length,
                                                               output,
@@ -914,8 +910,6 @@ psa_status_t psa_driver_wrapper_cipher_encrypt(
                                                 key_buffer,
                                                 key_buffer_size,
                                                 alg,
-                                                iv,
-                                                iv_length,
                                                 input,
                                                 input_length,
                                                 output,
@@ -933,8 +927,6 @@ psa_status_t psa_driver_wrapper_cipher_encrypt(
                                                         key_buffer,
                                                         key_buffer_size,
                                                         alg,
-                                                        iv,
-                                                        iv_length,
                                                         input,
                                                         input_length,
                                                         output,
@@ -949,8 +941,6 @@ psa_status_t psa_driver_wrapper_cipher_encrypt(
             (void)key_buffer;
             (void)key_buffer_size;
             (void)alg;
-            (void)iv;
-            (void)iv_length;
             (void)input;
             (void)input_length;
             (void)output;
@@ -1613,22 +1603,6 @@ psa_status_t psa_driver_wrapper_aead_decrypt(
             (void)status;
             return( PSA_ERROR_INVALID_ARGUMENT );
     }
-}
-
-psa_status_t psa_driver_get_tag_len( psa_aead_operation_t *operation,
-                                     uint8_t *tag_len )
-{
-    if( operation == NULL || tag_len == NULL )
-        return( PSA_ERROR_INVALID_ARGUMENT );
-
-#if defined(PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT)
-#if defined(PSA_CRYPTO_DRIVER_TEST)
-    *tag_len = operation->ctx.transparent_test_driver_ctx.tag_length;
-    return ( PSA_SUCCESS );
-#endif
-#endif
-    *tag_len = operation->ctx.mbedtls_ctx.tag_length;
-    return ( PSA_SUCCESS );
 }
 
 psa_status_t psa_driver_wrapper_aead_encrypt_setup(

@@ -386,12 +386,6 @@ int mbedtls_cipher_set_iv( mbedtls_cipher_context_t *ctx,
 #if defined(MBEDTLS_CHACHA20_C)
     if ( ctx->cipher_info->type == MBEDTLS_CIPHER_CHACHA20 )
     {
-        /* Even though the actual_iv_size is overwritten with a correct value
-         * of 12 from the cipher info, return an error to indicate that
-         * the input iv_len is wrong. */
-        if( iv_len != 12 )
-            return( MBEDTLS_ERR_CIPHER_BAD_INPUT_DATA );
-
         if ( 0 != mbedtls_chacha20_starts( (mbedtls_chacha20_context*)ctx->cipher_ctx,
                                            iv,
                                            0U ) ) /* Initial counter value */
@@ -399,11 +393,6 @@ int mbedtls_cipher_set_iv( mbedtls_cipher_context_t *ctx,
             return( MBEDTLS_ERR_CIPHER_BAD_INPUT_DATA );
         }
     }
-#if defined(MBEDTLS_CHACHAPOLY_C)
-    if ( ctx->cipher_info->type == MBEDTLS_CIPHER_CHACHA20_POLY1305 &&
-         iv_len != 12 )
-        return( MBEDTLS_ERR_CIPHER_BAD_INPUT_DATA );
-#endif
 #endif
 
 #if defined(MBEDTLS_GCM_C)
@@ -1186,12 +1175,6 @@ int mbedtls_cipher_check_tag( mbedtls_cipher_context_t *ctx,
     }
 #endif /* MBEDTLS_USE_PSA_CRYPTO */
 
-    /* Status to return on a non-authenticated algorithm. It would make sense
-     * to return MBEDTLS_ERR_CIPHER_INVALID_CONTEXT or perhaps
-     * MBEDTLS_ERR_CIPHER_BAD_INPUT_DATA, but at the time I write this our
-     * unit tests assume 0. */
-    ret = 0;
-
 #if defined(MBEDTLS_GCM_C)
     if( MBEDTLS_MODE_GCM == ctx->cipher_info->mode )
     {
@@ -1212,10 +1195,9 @@ int mbedtls_cipher_check_tag( mbedtls_cipher_context_t *ctx,
 
         /* Check the tag in "constant-time" */
         if( mbedtls_ct_memcmp( tag, check_tag, tag_len ) != 0 )
-        {
-            ret = MBEDTLS_ERR_CIPHER_AUTH_FAILED;
-            goto exit;
-        }
+            return( MBEDTLS_ERR_CIPHER_AUTH_FAILED );
+
+        return( 0 );
     }
 #endif /* MBEDTLS_GCM_C */
 
@@ -1235,16 +1217,13 @@ int mbedtls_cipher_check_tag( mbedtls_cipher_context_t *ctx,
 
         /* Check the tag in "constant-time" */
         if( mbedtls_ct_memcmp( tag, check_tag, tag_len ) != 0 )
-        {
-            ret = MBEDTLS_ERR_CIPHER_AUTH_FAILED;
-            goto exit;
-        }
+            return( MBEDTLS_ERR_CIPHER_AUTH_FAILED );
+
+        return( 0 );
     }
 #endif /* MBEDTLS_CHACHAPOLY_C */
 
-exit:
-    mbedtls_platform_zeroize( check_tag, tag_len );
-    return( ret );
+    return( 0 );
 }
 #endif /* MBEDTLS_GCM_C || MBEDTLS_CHACHAPOLY_C */
 
