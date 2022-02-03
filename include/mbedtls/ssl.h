@@ -250,7 +250,7 @@
  */
 #define MBEDTLS_SSL_MAJOR_VERSION_3             3
 #define MBEDTLS_SSL_MINOR_VERSION_3             3   /*!< TLS v1.2 */
-#define MBEDTLS_SSL_MINOR_VERSION_4             4   /*!< TLS v1.3 (experimental) */
+#define MBEDTLS_SSL_MINOR_VERSION_4             4   /*!< TLS v1.3 */
 
 #define MBEDTLS_SSL_TRANSPORT_STREAM            0   /*!< TLS      */
 #define MBEDTLS_SSL_TRANSPORT_DATAGRAM          1   /*!< DTLS     */
@@ -638,10 +638,13 @@ typedef enum
     MBEDTLS_SSL_HANDSHAKE_OVER,
     MBEDTLS_SSL_SERVER_NEW_SESSION_TICKET,
     MBEDTLS_SSL_SERVER_HELLO_VERIFY_REQUEST_SENT,
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
     MBEDTLS_SSL_ENCRYPTED_EXTENSIONS,
     MBEDTLS_SSL_CLIENT_CERTIFICATE_VERIFY,
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+#if defined(MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE)
+    MBEDTLS_SSL_CLIENT_CCS_AFTER_SERVER_FINISHED,
+#endif /* MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 }
 mbedtls_ssl_states;
 
@@ -1108,6 +1111,17 @@ mbedtls_dtls_srtp_info;
  */
 struct mbedtls_ssl_session
 {
+#if defined(MBEDTLS_SSL_MAX_FRAGMENT_LENGTH)
+    unsigned char MBEDTLS_PRIVATE(mfl_code);     /*!< MaxFragmentLength negotiated by peer */
+#endif /* MBEDTLS_SSL_MAX_FRAGMENT_LENGTH */
+
+    unsigned char MBEDTLS_PRIVATE(exported);
+
+    /* This field is temporarily duplicated with mbedtls_ssl_context.minor_ver.
+     * Once runtime negotiation of TLS 1.2 and TLS 1.3 is implemented, it needs
+     * to be studied whether one of them can be removed. */
+    unsigned char MBEDTLS_PRIVATE(minor_ver);    /*!< The TLS version used in the session. */
+
 #if defined(MBEDTLS_HAVE_TIME)
     mbedtls_time_t MBEDTLS_PRIVATE(start);       /*!< starting time      */
 #endif
@@ -1116,13 +1130,6 @@ struct mbedtls_ssl_session
     size_t MBEDTLS_PRIVATE(id_len);              /*!< session id length  */
     unsigned char MBEDTLS_PRIVATE(id)[32];       /*!< session identifier */
     unsigned char MBEDTLS_PRIVATE(master)[48];   /*!< the master secret  */
-
-    unsigned char MBEDTLS_PRIVATE(exported);
-
-    /* This field is temporarily duplicated with mbedtls_ssl_context.minor_ver.
-     * Once runtime negotiation of TLS 1.2 and TLS 1.3 is implemented, it needs
-     * to be studied whether one of them can be removed. */
-    unsigned char MBEDTLS_PRIVATE(minor_ver);    /*!< The TLS version used in the session. */
 
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
 #if defined(MBEDTLS_SSL_KEEP_PEER_CERTIFICATE)
@@ -1143,15 +1150,11 @@ struct mbedtls_ssl_session
     uint32_t MBEDTLS_PRIVATE(ticket_lifetime);   /*!< ticket lifetime hint    */
 #endif /* MBEDTLS_SSL_SESSION_TICKETS && MBEDTLS_SSL_CLI_C */
 
-#if defined(MBEDTLS_SSL_MAX_FRAGMENT_LENGTH)
-    unsigned char MBEDTLS_PRIVATE(mfl_code);     /*!< MaxFragmentLength negotiated by peer */
-#endif /* MBEDTLS_SSL_MAX_FRAGMENT_LENGTH */
-
 #if defined(MBEDTLS_SSL_ENCRYPT_THEN_MAC)
     int MBEDTLS_PRIVATE(encrypt_then_mac);       /*!< flag for EtM activation                */
 #endif
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
     mbedtls_ssl_tls13_application_secrets MBEDTLS_PRIVATE(app_secrets);
 #endif
 };
@@ -1172,14 +1175,14 @@ mbedtls_tls_prf_types;
 typedef enum
 {
     MBEDTLS_SSL_KEY_EXPORT_TLS12_MASTER_SECRET = 0,
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
     MBEDTLS_SSL_KEY_EXPORT_TLS1_3_CLIENT_EARLY_SECRET,
     MBEDTLS_SSL_KEY_EXPORT_TLS1_3_EARLY_EXPORTER_SECRET,
     MBEDTLS_SSL_KEY_EXPORT_TLS1_3_CLIENT_HANDSHAKE_TRAFFIC_SECRET,
     MBEDTLS_SSL_KEY_EXPORT_TLS1_3_SERVER_HANDSHAKE_TRAFFIC_SECRET,
     MBEDTLS_SSL_KEY_EXPORT_TLS1_3_CLIENT_APPLICATION_TRAFFIC_SECRET,
     MBEDTLS_SSL_KEY_EXPORT_TLS1_3_SERVER_APPLICATION_TRAFFIC_SECRET,
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 } mbedtls_ssl_key_export_type;
 
 /**
@@ -1210,7 +1213,62 @@ typedef void mbedtls_ssl_export_keys_t( void *p_expkey,
  */
 struct mbedtls_ssl_config
 {
-    /* Group items by size (largest first) to minimize padding overhead */
+    /* Group items mostly by size. This helps to reduce memory wasted to
+     * padding. It also helps to keep smaller fields early in the structure,
+     * so that elements tend to be in the 128-element direct access window
+     * on Arm Thumb, which reduces the code size. */
+
+    unsigned char MBEDTLS_PRIVATE(max_major_ver);    /*!< max. major version used            */
+    unsigned char MBEDTLS_PRIVATE(max_minor_ver);    /*!< max. minor version used            */
+    unsigned char MBEDTLS_PRIVATE(min_major_ver);    /*!< min. major version used            */
+    unsigned char MBEDTLS_PRIVATE(min_minor_ver);    /*!< min. minor version used            */
+
+    /*
+     * Flags (could be bit-fields to save RAM, but separate bytes make
+     * the code smaller on architectures with an instruction for direct
+     * byte access).
+     */
+
+    uint8_t MBEDTLS_PRIVATE(endpoint);      /*!< 0: client, 1: server               */
+    uint8_t MBEDTLS_PRIVATE(transport);     /*!< 0: stream (TLS), 1: datagram (DTLS)    */
+    uint8_t MBEDTLS_PRIVATE(authmode);      /*!< MBEDTLS_SSL_VERIFY_XXX             */
+    /* needed even with renego disabled for LEGACY_BREAK_HANDSHAKE          */
+    uint8_t MBEDTLS_PRIVATE(allow_legacy_renegotiation); /*!< MBEDTLS_LEGACY_XXX   */
+#if defined(MBEDTLS_SSL_MAX_FRAGMENT_LENGTH)
+    uint8_t MBEDTLS_PRIVATE(mfl_code);      /*!< desired fragment length indicator
+                                                 (MBEDTLS_SSL_MAX_FRAG_LEN_XXX) */
+#endif
+#if defined(MBEDTLS_SSL_ENCRYPT_THEN_MAC)
+    uint8_t MBEDTLS_PRIVATE(encrypt_then_mac); /*!< negotiate encrypt-then-mac?    */
+#endif
+#if defined(MBEDTLS_SSL_EXTENDED_MASTER_SECRET)
+    uint8_t MBEDTLS_PRIVATE(extended_ms);   /*!< negotiate extended master secret?  */
+#endif
+#if defined(MBEDTLS_SSL_DTLS_ANTI_REPLAY)
+    uint8_t MBEDTLS_PRIVATE(anti_replay);   /*!< detect and prevent replay?         */
+#endif
+#if defined(MBEDTLS_SSL_RENEGOTIATION)
+    uint8_t MBEDTLS_PRIVATE(disable_renegotiation); /*!< disable renegotiation?     */
+#endif
+#if defined(MBEDTLS_SSL_SESSION_TICKETS)
+    uint8_t MBEDTLS_PRIVATE(session_tickets);   /*!< use session tickets?           */
+#endif
+#if defined(MBEDTLS_SSL_SRV_C)
+    uint8_t MBEDTLS_PRIVATE(cert_req_ca_list);  /*!< enable sending CA list in
+                                                     Certificate Request messages? */
+    uint8_t MBEDTLS_PRIVATE(respect_cli_pref);  /*!< pick the ciphersuite according to
+                                                     the client's preferences rather
+                                                     than ours? */
+#endif
+#if defined(MBEDTLS_SSL_DTLS_CONNECTION_ID)
+    uint8_t MBEDTLS_PRIVATE(ignore_unexpected_cid); /*!< Should DTLS record with
+                                                     *   unexpected CID
+                                                     *   lead to failure? */
+#endif /* MBEDTLS_SSL_DTLS_CONNECTION_ID */
+#if defined(MBEDTLS_SSL_DTLS_SRTP)
+    uint8_t MBEDTLS_PRIVATE(dtls_srtp_mki_support); /* support having mki_value
+                                                       in the use_srtp extension? */
+#endif
 
     /*
      * Pointers
@@ -1219,10 +1277,10 @@ struct mbedtls_ssl_config
     /** Allowed ciphersuites for (D)TLS 1.2 (0-terminated)                  */
     const int *MBEDTLS_PRIVATE(ciphersuite_list);
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
     /** Allowed TLS 1.3 key exchange modes.                                 */
     int MBEDTLS_PRIVATE(tls13_kex_modes);
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
     /** Callback for printing debug output                                  */
     void (*MBEDTLS_PRIVATE(f_dbg))(void *, int, const char *, int, const char *);
@@ -1303,9 +1361,9 @@ struct mbedtls_ssl_config
 #if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
     const int *MBEDTLS_PRIVATE(sig_hashes);          /*!< allowed signature hashes           */
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
     const uint16_t *MBEDTLS_PRIVATE(tls13_sig_algs); /*!< allowed signature algorithms for TLS 1.3 */
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 #endif
 
 #if defined(MBEDTLS_ECP_C) && !defined(MBEDTLS_DEPRECATED_REMOVED)
@@ -1365,7 +1423,7 @@ struct mbedtls_ssl_config
 #endif /* MBEDTLS_SSL_DTLS_SRTP */
 
     /*
-     * Numerical settings (int then char)
+     * Numerical settings (int)
      */
 
     uint32_t MBEDTLS_PRIVATE(read_timeout);          /*!< timeout for mbedtls_ssl_read (ms)  */
@@ -1387,55 +1445,6 @@ struct mbedtls_ssl_config
 
 #if defined(MBEDTLS_DHM_C) && defined(MBEDTLS_SSL_CLI_C)
     unsigned int MBEDTLS_PRIVATE(dhm_min_bitlen);    /*!< min. bit length of the DHM prime   */
-#endif
-
-    unsigned char MBEDTLS_PRIVATE(max_major_ver);    /*!< max. major version used            */
-    unsigned char MBEDTLS_PRIVATE(max_minor_ver);    /*!< max. minor version used            */
-    unsigned char MBEDTLS_PRIVATE(min_major_ver);    /*!< min. major version used            */
-    unsigned char MBEDTLS_PRIVATE(min_minor_ver);    /*!< min. minor version used            */
-
-    /*
-     * Flags (bitfields)
-     */
-
-    unsigned int MBEDTLS_PRIVATE(endpoint) : 1;      /*!< 0: client, 1: server               */
-    unsigned int MBEDTLS_PRIVATE(transport) : 1;     /*!< stream (TLS) or datagram (DTLS)    */
-    unsigned int MBEDTLS_PRIVATE(authmode) : 2;      /*!< MBEDTLS_SSL_VERIFY_XXX             */
-    /* needed even with renego disabled for LEGACY_BREAK_HANDSHAKE          */
-    unsigned int MBEDTLS_PRIVATE(allow_legacy_renegotiation) : 2 ; /*!< MBEDTLS_LEGACY_XXX   */
-#if defined(MBEDTLS_SSL_MAX_FRAGMENT_LENGTH)
-    unsigned int MBEDTLS_PRIVATE(mfl_code) : 3;      /*!< desired fragment length            */
-#endif
-#if defined(MBEDTLS_SSL_ENCRYPT_THEN_MAC)
-    unsigned int MBEDTLS_PRIVATE(encrypt_then_mac) : 1 ; /*!< negotiate encrypt-then-mac?    */
-#endif
-#if defined(MBEDTLS_SSL_EXTENDED_MASTER_SECRET)
-    unsigned int MBEDTLS_PRIVATE(extended_ms) : 1;   /*!< negotiate extended master secret?  */
-#endif
-#if defined(MBEDTLS_SSL_DTLS_ANTI_REPLAY)
-    unsigned int MBEDTLS_PRIVATE(anti_replay) : 1;   /*!< detect and prevent replay?         */
-#endif
-#if defined(MBEDTLS_SSL_RENEGOTIATION)
-    unsigned int MBEDTLS_PRIVATE(disable_renegotiation) : 1; /*!< disable renegotiation?     */
-#endif
-#if defined(MBEDTLS_SSL_SESSION_TICKETS)
-    unsigned int MBEDTLS_PRIVATE(session_tickets) : 1;   /*!< use session tickets?           */
-#endif
-#if defined(MBEDTLS_SSL_SRV_C)
-    unsigned int MBEDTLS_PRIVATE(cert_req_ca_list) : 1;  /*!< enable sending CA list in
-                                          Certificate Request messages?     */
-    unsigned int MBEDTLS_PRIVATE(respect_cli_pref) : 1;  /*!< pick the ciphersuite according to
-                                          the client's preferences rather
-                                          than ours                         */
-#endif
-#if defined(MBEDTLS_SSL_DTLS_CONNECTION_ID)
-    unsigned int MBEDTLS_PRIVATE(ignore_unexpected_cid) : 1; /*!< Determines whether DTLS
-                                             *   record with unexpected CID
-                                             *   should lead to failure.    */
-#endif /* MBEDTLS_SSL_DTLS_CONNECTION_ID */
-#if defined(MBEDTLS_SSL_DTLS_SRTP)
-    unsigned int MBEDTLS_PRIVATE(dtls_srtp_mki_support) : 1; /* support having mki_value
-                                               in the use_srtp extension     */
 #endif
 };
 
@@ -1502,11 +1511,11 @@ struct mbedtls_ssl_context
                                                                   *    This pointer owns the transform
                                                                   *    it references.                  */
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
     /*! The application data transform in TLS 1.3.
      *  This pointer owns the transform it references. */
     mbedtls_ssl_transform *MBEDTLS_PRIVATE(transform_application);
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
     /*
      * Timers
@@ -2744,7 +2753,7 @@ int mbedtls_ssl_session_save( const mbedtls_ssl_session *session,
 void mbedtls_ssl_conf_ciphersuites( mbedtls_ssl_config *conf,
                                     const int *ciphersuites );
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
 /**
  * \brief Set the supported key exchange modes for TLS 1.3 connections.
  *
@@ -2789,7 +2798,7 @@ void mbedtls_ssl_conf_ciphersuites( mbedtls_ssl_config *conf,
 
 void mbedtls_ssl_conf_tls13_key_exchange_modes( mbedtls_ssl_config* conf,
                                                 const int kex_modes );
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
 #if defined(MBEDTLS_SSL_DTLS_CONNECTION_ID)
 #define MBEDTLS_SSL_UNEXPECTED_CID_IGNORE 0
@@ -3290,7 +3299,7 @@ void mbedtls_ssl_conf_groups( mbedtls_ssl_config *conf,
 void mbedtls_ssl_conf_sig_hashes( mbedtls_ssl_config *conf,
                                   const int *hashes );
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
 /**
  * \brief          Configure allowed signature algorithms for use in TLS 1.3
  *
@@ -3302,7 +3311,7 @@ void mbedtls_ssl_conf_sig_hashes( mbedtls_ssl_config *conf,
  */
 void mbedtls_ssl_conf_sig_algs( mbedtls_ssl_config *conf,
                                 const uint16_t* sig_algs );
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 #endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
 
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
