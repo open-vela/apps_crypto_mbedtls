@@ -358,6 +358,13 @@ psa_status_t mbedtls_psa_aead_encrypt_setup(
 {
     psa_status_t status = PSA_ERROR_CORRUPTION_DETECTED;
 
+#if defined(MBEDTLS_PSA_BUILTIN_ALG_CCM)
+    if( operation->alg == PSA_ALG_CCM )
+    {
+        return( PSA_ERROR_NOT_SUPPORTED );
+    }
+#endif /* MBEDTLS_PSA_BUILTIN_ALG_CCM */
+
     status = psa_aead_setup( operation, attributes, key_buffer,
                              key_buffer_size, alg );
 
@@ -377,6 +384,13 @@ psa_status_t mbedtls_psa_aead_decrypt_setup(
     psa_algorithm_t alg )
 {
     psa_status_t status = PSA_ERROR_CORRUPTION_DETECTED;
+
+#if defined(MBEDTLS_PSA_BUILTIN_ALG_CCM)
+    if( operation->alg == PSA_ALG_CCM )
+    {
+        return( PSA_ERROR_NOT_SUPPORTED );
+    }
+#endif /* MBEDTLS_PSA_BUILTIN_ALG_CCM */
 
     status = psa_aead_setup( operation, attributes, key_buffer,
                              key_buffer_size, alg );
@@ -407,18 +421,6 @@ psa_status_t mbedtls_psa_aead_set_nonce(
     }
     else
 #endif /* MBEDTLS_PSA_BUILTIN_ALG_GCM */
-#if defined(MBEDTLS_PSA_BUILTIN_ALG_CCM)
-    if( operation->alg == PSA_ALG_CCM )
-    {
-        status = mbedtls_to_psa_error(
-                   mbedtls_ccm_starts( &operation->ctx.ccm,
-                                       operation->is_encrypt ?
-                                       MBEDTLS_CCM_ENCRYPT : MBEDTLS_CCM_DECRYPT,
-                                       nonce,
-                                       nonce_length ) );
-    }
-    else
-#endif /* MBEDTLS_PSA_BUILTIN_ALG_CCM */
 #if defined(MBEDTLS_PSA_BUILTIN_ALG_CHACHA20_POLY1305)
     if( operation->alg == PSA_ALG_CHACHA20_POLY1305 )
     {
@@ -458,21 +460,11 @@ psa_status_t mbedtls_psa_aead_set_lengths(
     size_t ad_length,
     size_t plaintext_length )
 {
-#if defined(MBEDTLS_PSA_BUILTIN_ALG_CCM)
-    if( operation->alg == PSA_ALG_CCM )
-    {
-        return( mbedtls_to_psa_error(
-                         mbedtls_ccm_set_lengths( &operation->ctx.ccm,
-                                                 ad_length,
-                                                 plaintext_length,
-                                                 operation->tag_length ) ) );
-
-    }
-#else /* MBEDTLS_PSA_BUILTIN_ALG_CCM */
+    /* Nothing here yet, work is currently done in PSA Core, however support
+     * for CCM will require this function. */
     ( void ) operation;
     ( void ) ad_length;
     ( void ) plaintext_length;
-#endif /* MBEDTLS_PSA_BUILTIN_ALG_CCM */
 
     return ( PSA_SUCCESS );
 }
@@ -493,14 +485,6 @@ psa_status_t mbedtls_psa_aead_update_ad(
     }
     else
 #endif /* MBEDTLS_PSA_BUILTIN_ALG_GCM */
-#if defined(MBEDTLS_PSA_BUILTIN_ALG_CCM)
-    if( operation->alg == PSA_ALG_CCM )
-    {
-        status = mbedtls_to_psa_error(
-            mbedtls_ccm_update_ad( &operation->ctx.ccm, input, input_length ) );
-    }
-    else
-#endif /* MBEDTLS_PSA_BUILTIN_ALG_CCM */
 #if defined(MBEDTLS_PSA_BUILTIN_ALG_CHACHA20_POLY1305)
     if( operation->alg == PSA_ALG_CHACHA20_POLY1305 )
     {
@@ -548,20 +532,6 @@ psa_status_t mbedtls_psa_aead_update(
     }
     else
 #endif /* MBEDTLS_PSA_BUILTIN_ALG_GCM */
-#if defined(MBEDTLS_PSA_BUILTIN_ALG_CCM)
-    if( operation->alg == PSA_ALG_CCM )
-    {
-        if( output_size < input_length )
-            return( PSA_ERROR_BUFFER_TOO_SMALL );
-
-        status = mbedtls_to_psa_error(
-           mbedtls_ccm_update( &operation->ctx.ccm,
-                               input, input_length,
-                               output, output_size,
-                               &update_output_length ) );
-    }
-    else
-#endif /* MBEDTLS_PSA_BUILTIN_ALG_CCM */
 #if defined(MBEDTLS_PSA_BUILTIN_ALG_CHACHA20_POLY1305)
     if( operation->alg == PSA_ALG_CHACHA20_POLY1305 )
     {
@@ -617,20 +587,6 @@ psa_status_t mbedtls_psa_aead_finish(
     }
     else
 #endif /* MBEDTLS_PSA_BUILTIN_ALG_GCM */
-#if defined(MBEDTLS_PSA_BUILTIN_ALG_CCM)
-    if( operation->alg == PSA_ALG_CCM )
-    {
-        /* tag must be big enough to store a tag of size passed into set
-         * lengths. */
-        if( tag_size < operation->tag_length )
-            return( PSA_ERROR_BUFFER_TOO_SMALL );
-
-        status = mbedtls_to_psa_error(
-                           mbedtls_ccm_finish( &operation->ctx.ccm,
-                                               tag, operation->tag_length ) );
-    }
-    else
-#endif /* MBEDTLS_PSA_BUILTIN_ALG_CCM */
 #if defined(MBEDTLS_PSA_BUILTIN_ALG_CHACHA20_POLY1305)
     if( operation->alg == PSA_ALG_CHACHA20_POLY1305 )
     {
