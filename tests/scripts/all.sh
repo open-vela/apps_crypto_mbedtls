@@ -940,8 +940,9 @@ component_test_full_cmake_gcc_asan () {
 }
 
 component_test_psa_crypto_key_id_encodes_owner () {
-    msg "build: full config + PSA_CRYPTO_KEY_ID_ENCODES_OWNER, cmake, gcc, ASan"
+    msg "build: full config - USE_PSA_CRYPTO + PSA_CRYPTO_KEY_ID_ENCODES_OWNER, cmake, gcc, ASan"
     scripts/config.py full
+    scripts/config.py unset MBEDTLS_USE_PSA_CRYPTO
     scripts/config.py set MBEDTLS_PSA_CRYPTO_KEY_ID_ENCODES_OWNER
     CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
     make
@@ -959,8 +960,9 @@ check_renamed_symbols () {
 }
 
 component_build_psa_crypto_spm () {
-    msg "build: full config + PSA_CRYPTO_KEY_ID_ENCODES_OWNER + PSA_CRYPTO_SPM, make, gcc"
+    msg "build: full config - USE_PSA_CRYPTO + PSA_CRYPTO_KEY_ID_ENCODES_OWNER + PSA_CRYPTO_SPM, make, gcc"
     scripts/config.py full
+    scripts/config.py unset MBEDTLS_USE_PSA_CRYPTO
     scripts/config.py unset MBEDTLS_PSA_CRYPTO_BUILTIN_KEYS
     scripts/config.py set MBEDTLS_PSA_CRYPTO_KEY_ID_ENCODES_OWNER
     scripts/config.py set MBEDTLS_PSA_CRYPTO_SPM
@@ -1529,7 +1531,6 @@ component_test_no_use_psa_crypto_full_cmake_asan() {
     scripts/config.py set MBEDTLS_ECP_RESTARTABLE  # not using PSA, so enable restartable ECC
     scripts/config.py unset MBEDTLS_PSA_CRYPTO_C
     scripts/config.py unset MBEDTLS_USE_PSA_CRYPTO
-    scripts/config.py unset MBEDTLS_SSL_PROTO_TLS1_3
     scripts/config.py unset MBEDTLS_PSA_ITS_FILE_C
     scripts/config.py unset MBEDTLS_PSA_CRYPTO_SE_C
     scripts/config.py unset MBEDTLS_PSA_CRYPTO_STORAGE_C
@@ -1865,8 +1866,8 @@ component_build_psa_accel_alg_hkdf() {
     scripts/config.py set MBEDTLS_PSA_CRYPTO_DRIVERS
     scripts/config.py unset MBEDTLS_USE_PSA_CRYPTO
     scripts/config.py unset MBEDTLS_HKDF_C
-    # Make sure to unset TLS1_3 since it requires HKDF_C and will not build properly without it.
-    scripts/config.py unset MBEDTLS_SSL_PROTO_TLS1_3
+    # Make sure to unset TLS1_3_EXPERIMENTAL since it requires HKDF_C and will not build properly without it.
+    scripts/config.py unset MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
     # Need to define the correct symbol and include the test driver header path in order to build with the test driver
     make CC=gcc CFLAGS="$ASAN_CFLAGS -DPSA_CRYPTO_DRIVER_TEST -DMBEDTLS_PSA_ACCEL_ALG_HKDF -I../tests/include -O2" LDFLAGS="$ASAN_CFLAGS"
 }
@@ -2722,69 +2723,52 @@ component_build_armcc () {
     armc6_build_test "--target=aarch64-arm-none-eabi -march=armv8.2-a"
 }
 
-component_test_tls13 () {
-    msg "build: default config with MBEDTLS_SSL_PROTO_TLS1_3 enabled, without padding"
-    scripts/config.py set MBEDTLS_SSL_PROTO_TLS1_3
-    scripts/config.py set MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
-    scripts/config.py set MBEDTLS_SSL_CID_TLS1_3_PADDING_GRANULARITY 1
+component_test_tls13_experimental () {
+    msg "build: default config with MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL enabled, without padding"
+    scripts/config.pl set MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+    scripts/config.pl set MBEDTLS_SSL_CID_TLS1_3_PADDING_GRANULARITY 1
     CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
     make
-    msg "test: default config with MBEDTLS_SSL_PROTO_TLS1_3 enabled, without padding"
+    msg "test: default config with MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL enabled, without padding"
     make test
-    msg "ssl-opt.sh (TLS 1.3)"
+    msg "ssl-opt.sh (TLS 1.3 experimental)"
     if_build_succeeded tests/ssl-opt.sh
 }
 
-component_test_tls13_no_compatibility_mode () {
-    msg "build: default config with MBEDTLS_SSL_PROTO_TLS1_3 enabled, without padding"
-    scripts/config.py set   MBEDTLS_SSL_PROTO_TLS1_3
-    scripts/config.py unset MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
-    scripts/config.py set   MBEDTLS_SSL_CID_TLS1_3_PADDING_GRANULARITY 1
+component_test_tls13_experimental_with_padding () {
+    msg "build: default config with MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL enabled, with padding"
+    scripts/config.pl set MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+    scripts/config.pl set MBEDTLS_SSL_CID_TLS1_3_PADDING_GRANULARITY 16
     CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
     make
-    msg "test: default config with MBEDTLS_SSL_PROTO_TLS1_3 enabled, without padding"
+    msg "test: default config with MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL enabled, with padding"
     make test
-    msg "ssl-opt.sh (TLS 1.3 no compatibility mode)"
+    msg "ssl-opt.sh (TLS 1.3 experimental)"
     if_build_succeeded tests/ssl-opt.sh
 }
 
-component_test_tls13_with_padding () {
-    msg "build: default config with MBEDTLS_SSL_PROTO_TLS1_3 enabled, with padding"
-    scripts/config.py set MBEDTLS_SSL_PROTO_TLS1_3
-    scripts/config.py set MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
-    scripts/config.py set MBEDTLS_SSL_CID_TLS1_3_PADDING_GRANULARITY 16
-    CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
-    make
-    msg "test: default config with MBEDTLS_SSL_PROTO_TLS1_3 enabled, with padding"
-    make test
-    msg "ssl-opt.sh (TLS 1.3 with padding)"
-    if_build_succeeded tests/ssl-opt.sh
-}
-
-component_test_tls13_with_ecp_restartable () {
-    msg "build: default config with MBEDTLS_SSL_PROTO_TLS1_3 enabled, with ecp_restartable"
-    scripts/config.py set MBEDTLS_SSL_PROTO_TLS1_3
-    scripts/config.py set MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
+component_test_tls13_experimental_with_ecp_restartable () {
+    msg "build: default config with MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL enabled, with ecp_restartable"
+    scripts/config.py set MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
     scripts/config.py set MBEDTLS_ECP_RESTARTABLE
     CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
     make
-    msg "test: default config with MBEDTLS_SSL_PROTO_TLS1_3 enabled, with ecp_restartable"
+    msg "test: default config with MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL enabled, with ecp_restartable"
     make test
-    msg "ssl-opt.sh (TLS 1.3 with ecp_restartable)"
+    msg "ssl-opt.sh (TLS 1.3 experimental)"
     if_build_succeeded tests/ssl-opt.sh
 }
 
-component_test_tls13_with_everest () {
-    msg "build: default config with MBEDTLS_SSL_PROTO_TLS1_3 enabled, with Everest"
-    scripts/config.py set MBEDTLS_SSL_PROTO_TLS1_3
-    scripts/config.py set MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
+component_test_tls13_experimental_with_everest () {
+    msg "build: default config with MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL enabled, with Everest"
+    scripts/config.py set MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
     scripts/config.py set MBEDTLS_ECDH_VARIANT_EVEREST_ENABLED
     scripts/config.py unset MBEDTLS_ECP_RESTARTABLE
     CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
     make
-    msg "test: default config with MBEDTLS_SSL_PROTO_TLS1_3 enabled, with Everest"
+    msg "test: default config with MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL enabled, with Everest"
     make test
-    msg "ssl-opt.sh (TLS 1.3 with everest)"
+    msg "ssl-opt.sh (TLS 1.3 experimental)"
     if_build_succeeded tests/ssl-opt.sh
 }
 
@@ -2852,36 +2836,6 @@ component_test_valgrind () {
         msg "test: context-info.sh --memcheck (Release)"
         tests/context-info.sh --memcheck
     fi
-}
-
-support_test_cmake_out_of_source () {
-    distrib_id=""
-    distrib_ver=""
-    distrib_ver_minor=""
-    distrib_ver_major=""
-
-    # Attempt to parse lsb-release to find out distribution and version. If not
-    # found this should fail safe (test is supported).
-    if [[ -f /etc/lsb-release ]]; then
-
-        while read -r lsb_line; do
-            case "$lsb_line" in
-                "DISTRIB_ID"*) distrib_id=${lsb_line/#DISTRIB_ID=};;
-                "DISTRIB_RELEASE"*) distrib_ver=${lsb_line/#DISTRIB_RELEASE=};;
-            esac
-        done < /etc/lsb-release
-
-        distrib_ver_major="${distrib_ver%%.*}"
-        distrib_ver="${distrib_ver#*.}"
-        distrib_ver_minor="${distrib_ver%%.*}"
-    fi
-
-    # Running the out of source CMake test on Ubuntu 16.04 using more than one
-    # processor (as the CI does) can create a race condition whereby the build
-    # fails to see a generated file, despite that file actually having been
-    # generated. This problem appears to go away with 18.04 or newer, so make
-    # the out of source tests unsupported on Ubuntu 16.04.
-    [ "$distrib_id" != "Ubuntu" ] || [ "$distrib_ver_major" -gt 16 ]
 }
 
 component_test_cmake_out_of_source () {
