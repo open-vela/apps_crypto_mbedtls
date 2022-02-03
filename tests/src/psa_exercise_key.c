@@ -764,7 +764,6 @@ int mbedtls_test_psa_exported_key_sanity_check(
 #endif /* MBEDTLS_ECP_C */
 
     {
-        (void) exported;
         TEST_ASSERT( ! "Sanity check not implemented for this key type" );
     }
 
