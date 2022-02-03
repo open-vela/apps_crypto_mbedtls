@@ -1,7 +1,6 @@
 /*
  *  Function signatures for functionality that can be provided by
  *  cryptographic accelerators.
- *  Warning: This file will be auto-generated in the future.
  */
 /*  Copyright The Mbed TLS Contributors
  *  SPDX-License-Identifier: Apache-2.0
@@ -119,6 +118,8 @@ psa_status_t psa_driver_wrapper_cipher_encrypt(
     const uint8_t *key_buffer,
     size_t key_buffer_size,
     psa_algorithm_t alg,
+    const uint8_t *iv,
+    size_t iv_length,
     const uint8_t *input,
     size_t input_length,
     uint8_t *output,
