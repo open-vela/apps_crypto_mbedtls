@@ -2531,9 +2531,7 @@ int main( int argc, char *argv[] )
     }
 #endif /* MBEDTLS_USE_PSA_CRYPTO */
 
-    mbedtls_printf( " ok (key types: %s, %s)\n",
-                    key_cert_init ? mbedtls_pk_get_name( &pkey ) : "none",
-                    key_cert_init2 ? mbedtls_pk_get_name( &pkey2 ) : "none" );
+    mbedtls_printf( " ok (key types: %s - %s)\n", mbedtls_pk_get_name( &pkey ), mbedtls_pk_get_name( &pkey2 ) );
 #endif /* MBEDTLS_X509_CRT_PARSE_C */
 
 #if defined(MBEDTLS_DHM_C) && defined(MBEDTLS_FS_IO)
