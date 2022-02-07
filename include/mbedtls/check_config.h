@@ -149,6 +149,10 @@
 #error "MBEDTLS_PK_PARSE_C defined, but not all prerequesites"
 #endif
 
+#if defined(MBEDTLS_PKCS5_C) && !defined(MBEDTLS_MD_C)
+#error "MBEDTLS_PKCS5_C defined, but not all prerequesites"
+#endif
+
 #if defined(MBEDTLS_ENTROPY_C) && (!defined(MBEDTLS_SHA512_C) &&      \
                                     !defined(MBEDTLS_SHA256_C))
 #error "MBEDTLS_ENTROPY_C defined, but not all prerequisites"
@@ -559,11 +563,6 @@
 #if defined(MBEDTLS_PSA_ITS_FILE_C) && \
     !defined(MBEDTLS_FS_IO)
 #error "MBEDTLS_PSA_ITS_FILE_C defined, but not all prerequisites"
-#endif
-
-#if defined(MBEDTLS_PSA_CRYPTO_KEY_ID_ENCODES_OWNER) && \
-    defined(MBEDTLS_USE_PSA_CRYPTO)
-#error "MBEDTLS_PSA_CRYPTO_KEY_ID_ENCODES_OWNER defined, but it cannot coexist with MBEDTLS_USE_PSA_CRYPTO."
 #endif
 
 #if defined(MBEDTLS_RSA_C) && ( !defined(MBEDTLS_BIGNUM_C) ||         \
