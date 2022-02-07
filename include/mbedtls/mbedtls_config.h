@@ -256,7 +256,7 @@
  */
 //#define MBEDTLS_DEPRECATED_REMOVED
 
-/* \} name SECTION: System support */
+/** \} name SECTION: System support */
 
 /**
  * \name SECTION: mbed TLS feature support
@@ -519,6 +519,29 @@
  * Uncomment this macro to use less memory for Camellia.
  */
 //#define MBEDTLS_CAMELLIA_SMALL_MEMORY
+
+/**
+ * \def MBEDTLS_CHECK_RETURN_WARNING
+ *
+ * If this macro is defined, emit a compile-time warning if application code
+ * calls a function without checking its return value, but the return value
+ * should generally be checked in portable applications.
+ *
+ * This is only supported on platforms where #MBEDTLS_CHECK_RETURN is
+ * implemented. Otherwise this option has no effect.
+ *
+ * Uncomment to get warnings on using fallible functions without checking
+ * their return value.
+ *
+ * \note  This feature is a work in progress.
+ *        Warnings will be added to more functions in the future.
+ *
+ * \note  A few functions are considered critical, and ignoring the return
+ *        value of these functions will trigger a warning even if this
+ *        macro is not defined. To completely disable return value check
+ *        warnings, define #MBEDTLS_CHECK_RETURN with an empty expansion.
+ */
+//#define MBEDTLS_CHECK_RETURN_WARNING
 
 /**
  * \def MBEDTLS_CIPHER_MODE_CBC
@@ -1058,7 +1081,7 @@
  * which is currently hard-coded to be int32_t.
  *
  * Note that this option is meant for internal use only and may be removed
- * without notice. It is incompatible with MBEDTLS_USE_PSA_CRYPTO.
+ * without notice.
  */
 //#define MBEDTLS_PSA_CRYPTO_KEY_ID_ENCODES_OWNER
 
@@ -1464,23 +1487,41 @@
 #define MBEDTLS_SSL_PROTO_TLS1_2
 
 /**
- * \def MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+ * \def MBEDTLS_SSL_PROTO_TLS1_3
  *
- * This macro is used to selectively enable experimental parts
- * of the code that contribute to the ongoing development of
- * the prototype TLS 1.3 and DTLS 1.3 implementation, and provide
- * no other purpose.
+ * Enable support for TLS 1.3.
  *
- * \warning TLS 1.3 and DTLS 1.3 aren't yet supported in Mbed TLS,
- *          and no feature exposed through this macro is part of the
- *          public API. In particular, features under the control
- *          of this macro are experimental and don't come with any
- *          stability guarantees.
+ * \note The support for TLS 1.3 is not comprehensive yet, in particular
+ *       pre-shared keys are not supported.
+ *       See docs/architecture/tls13-support.md for a description of the TLS
+ *       1.3 support that this option enables.
  *
- * Uncomment this macro to enable experimental and partial
- * functionality specific to TLS 1.3.
+ * Uncomment this macro to enable the support for TLS 1.3.
+ *
  */
-//#define MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+//#define MBEDTLS_SSL_PROTO_TLS1_3
+
+/**
+ * \def MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
+ *
+ * Enable TLS 1.3 middlebox compatibility mode.
+ *
+ * As specified in Section D.4 of RFC 8446, TLS 1.3 offers a compatibility
+ * mode to make a TLS 1.3 connection more likely to pass through middle boxes
+ * expecting TLS 1.2 traffic.
+ *
+ * Turning on the compatibility mode comes at the cost of a few added bytes
+ * on the wire, but it doesn't affect compatibility with TLS 1.3 implementations
+ * that don't use it. Therefore, unless transmission bandwidth is critical and
+ * you know that middlebox compatibility issues won't occur, it is therefore
+ * recommended to set this option.
+ *
+ * Comment to disable compatibility mode for TLS 1.3. If
+ * MBEDTLS_SSL_PROTO_TLS1_3 is not enabled, this option does not have any
+ * effect on the build.
+ *
+ */
+//#define MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 
 /**
  * \def MBEDTLS_SSL_PROTO_DTLS
@@ -1597,16 +1638,6 @@
  * Comment this macro to disable support for SSL session tickets
  */
 #define MBEDTLS_SSL_SESSION_TICKETS
-
-/**
- * \def MBEDTLS_SSL_EXPORT_KEYS
- *
- * Enable support for exporting key block and master secret.
- * This is required for certain users of TLS, e.g. EAP-TLS.
- *
- * Comment this macro to disable support for key export
- */
-#define MBEDTLS_SSL_EXPORT_KEYS
 
 /**
  * \def MBEDTLS_SSL_SERVER_NAME_INDICATION
@@ -1798,7 +1829,7 @@
  * Comment this macro to disallow using RSASSA-PSS in certificates.
  */
 #define MBEDTLS_X509_RSASSA_PSS_SUPPORT
-/* \} name SECTION: mbed TLS feature support */
+/** \} name SECTION: mbed TLS feature support */
 
 /**
  * \name SECTION: mbed TLS modules
@@ -2990,7 +3021,7 @@
  */
 #define MBEDTLS_X509_CSR_WRITE_C
 
-/* \} name SECTION: mbed TLS modules */
+/** \} name SECTION: mbed TLS modules */
 
 /**
  * \name SECTION: Module configuration options
@@ -3066,6 +3097,29 @@
 //#define MBEDTLS_PLATFORM_VSNPRINTF_MACRO    vsnprintf /**< Default vsnprintf macro to use, can be undefined */
 //#define MBEDTLS_PLATFORM_NV_SEED_READ_MACRO   mbedtls_platform_std_nv_seed_read /**< Default nv_seed_read function to use, can be undefined */
 //#define MBEDTLS_PLATFORM_NV_SEED_WRITE_MACRO  mbedtls_platform_std_nv_seed_write /**< Default nv_seed_write function to use, can be undefined */
+
+/** \def MBEDTLS_CHECK_RETURN
+ *
+ * This macro is used at the beginning of the declaration of a function
+ * to indicate that its return value should be checked. It should
+ * instruct the compiler to emit a warning or an error if the function
+ * is called without checking its return value.
+ *
+ * There is a default implementation for popular compilers in platform_util.h.
+ * You can override the default implementation by defining your own here.
+ *
+ * If the implementation here is empty, this will effectively disable the
+ * checking of functions' return values.
+ */
+//#define MBEDTLS_CHECK_RETURN __attribute__((__warn_unused_result__))
+
+/** \def MBEDTLS_IGNORE_RETURN
+ *
+ * This macro requires one argument, which should be a C function call.
+ * If that function call would cause a #MBEDTLS_CHECK_RETURN warning, this
+ * warning is suppressed.
+ */
+//#define MBEDTLS_IGNORE_RETURN( result ) ((void) !(result))
 
 /* PSA options */
 /**
@@ -3265,4 +3319,4 @@
  */
 //#define MBEDTLS_ECDH_VARIANT_EVEREST_ENABLED
 
-/* \} name SECTION: Customisation configuration options */
+/** \} name SECTION: Customisation configuration options */
