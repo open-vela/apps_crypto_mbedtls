@@ -239,9 +239,9 @@ static int ssl_parse_renegotiation_info( mbedtls_ssl_context *ssl,
  * This needs to be done at a later stage.
  *
  */
-static int ssl_parse_signature_algorithms_ext( mbedtls_ssl_context *ssl,
-                                               const unsigned char *buf,
-                                               size_t len )
+static int ssl_parse_sig_alg_ext( mbedtls_ssl_context *ssl,
+                                  const unsigned char *buf,
+                                  size_t len )
 {
     size_t sig_alg_list_size;
 
@@ -296,7 +296,8 @@ static int ssl_parse_signature_algorithms_ext( mbedtls_ssl_context *ssl,
             continue;
         }
 
-        if( mbedtls_ssl_check_sig_hash( ssl, md_cur ) == 0 )
+        if( mbedtls_ssl_sig_alg_is_offered(
+                ssl, MBEDTLS_GET_UINT16_BE( p, 0 ) ) )
         {
             mbedtls_ssl_sig_hash_set_add( &ssl->handshake->hash_algs, sig_cur, md_cur );
             MBEDTLS_SSL_DEBUG_MSG( 3, ( "client hello v3, signature_algorithm ext:"
@@ -317,9 +318,48 @@ static int ssl_parse_signature_algorithms_ext( mbedtls_ssl_context *ssl,
 
 #if defined(MBEDTLS_ECDH_C) || defined(MBEDTLS_ECDSA_C) || \
     defined(MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED)
-static int ssl_parse_supported_elliptic_curves( mbedtls_ssl_context *ssl,
-                                                const unsigned char *buf,
-                                                size_t len )
+/*
+ * Function for parsing a supported groups (TLS 1.3) or supported elliptic
+ * curves (TLS 1.2) extension.
+ *
+ * The "extension_data" field of a supported groups extension contains a
+ * "NamedGroupList" value (TLS 1.3 RFC8446):
+ *      enum {
+ *          secp256r1(0x0017), secp384r1(0x0018), secp521r1(0x0019),
+ *          x25519(0x001D), x448(0x001E),
+ *          ffdhe2048(0x0100), ffdhe3072(0x0101), ffdhe4096(0x0102),
+ *          ffdhe6144(0x0103), ffdhe8192(0x0104),
+ *          ffdhe_private_use(0x01FC..0x01FF),
+ *          ecdhe_private_use(0xFE00..0xFEFF),
+ *          (0xFFFF)
+ *      } NamedGroup;
+ *      struct {
+ *          NamedGroup named_group_list<2..2^16-1>;
+ *      } NamedGroupList;
+ *
+ * The "extension_data" field of a supported elliptic curves extension contains
+ * a "NamedCurveList" value (TLS 1.2 RFC 8422):
+ * enum {
+ *      deprecated(1..22),
+ *      secp256r1 (23), secp384r1 (24), secp521r1 (25),
+ *      x25519(29), x448(30),
+ *      reserved (0xFE00..0xFEFF),
+ *      deprecated(0xFF01..0xFF02),
+ *      (0xFFFF)
+ *  } NamedCurve;
+ * struct {
+ *      NamedCurve named_curve_list<2..2^16-1>
+ *  } NamedCurveList;
+ *
+ * The TLS 1.3 supported groups extension was defined to be a compatible
+ * generalization of the TLS 1.2 supported elliptic curves extension. They both
+ * share the same extension identifier.
+ *
+ * DHE groups are not supported yet.
+ */
+static int ssl_parse_supported_groups_ext( mbedtls_ssl_context *ssl,
+                                           const unsigned char *buf,
+                                           size_t len )
 {
     size_t list_size, our_size;
     const unsigned char *p;
@@ -1635,7 +1675,7 @@ read_record_header:
             case MBEDTLS_TLS_EXT_SIG_ALG:
                 MBEDTLS_SSL_DEBUG_MSG( 3, ( "found signature_algorithms extension" ) );
 
-                ret = ssl_parse_signature_algorithms_ext( ssl, ext + 4, ext_size );
+                ret = ssl_parse_sig_alg_ext( ssl, ext + 4, ext_size );
                 if( ret != 0 )
                     return( ret );
 
@@ -1646,10 +1686,10 @@ read_record_header:
 
 #if defined(MBEDTLS_ECDH_C) || defined(MBEDTLS_ECDSA_C) || \
     defined(MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED)
-            case MBEDTLS_TLS_EXT_SUPPORTED_ELLIPTIC_CURVES:
+            case MBEDTLS_TLS_EXT_SUPPORTED_GROUPS:
                 MBEDTLS_SSL_DEBUG_MSG( 3, ( "found supported elliptic curves extension" ) );
 
-                ret = ssl_parse_supported_elliptic_curves( ssl, ext + 4, ext_size );
+                ret = ssl_parse_supported_groups_ext( ssl, ext + 4, ext_size );
                 if( ret != 0 )
                     return( ret );
                 break;
@@ -1763,12 +1803,16 @@ read_record_header:
      */
     if( sig_hash_alg_ext_present == 0 )
     {
-        mbedtls_md_type_t md_default = MBEDTLS_MD_SHA1;
+        uint16_t sig_algs[] = { MBEDTLS_SSL_SIG_ALG(MBEDTLS_SSL_HASH_SHA1) };
+        mbedtls_md_type_t md_default = MBEDTLS_MD_NONE;
+        for( i = 0; i < sizeof( sig_algs ) / sizeof( sig_algs[0] ) ; i++ )
+        {
+            if( mbedtls_ssl_sig_alg_is_offered( ssl, sig_algs[ i ] ) )
+                md_default = MBEDTLS_MD_SHA1;
+        }
 
-        if( mbedtls_ssl_check_sig_hash( ssl, md_default ) != 0 )
-            md_default = MBEDTLS_MD_NONE;
-
-        mbedtls_ssl_sig_hash_set_const_hash( &ssl->handshake->hash_algs, md_default );
+        mbedtls_ssl_sig_hash_set_const_hash( &ssl->handshake->hash_algs,
+                                             md_default );
     }
 
 #endif /* MBEDTLS_SSL_PROTO_TLS1_2 &&
@@ -1991,7 +2035,13 @@ static void ssl_write_encrypt_then_mac_ext( mbedtls_ssl_context *ssl,
 {
     unsigned char *p = buf;
     const mbedtls_ssl_ciphersuite_t *suite = NULL;
+#if defined(MBEDTLS_USE_PSA_CRYPTO)
+    psa_key_type_t key_type;
+    psa_algorithm_t alg;
+    size_t key_bits;
+#else
     const mbedtls_cipher_info_t *cipher = NULL;
+#endif /* MBEDTLS_USE_PSA_CRYPTO */
 
     if( ssl->session_negotiate->encrypt_then_mac == MBEDTLS_SSL_ETM_DISABLED )
     {
@@ -2007,8 +2057,14 @@ static void ssl_write_encrypt_then_mac_ext( mbedtls_ssl_context *ssl,
      */
     if( ( suite = mbedtls_ssl_ciphersuite_from_id(
                     ssl->session_negotiate->ciphersuite ) ) == NULL ||
+#if defined(MBEDTLS_USE_PSA_CRYPTO)
+        ( mbedtls_ssl_cipher_to_psa( suite->cipher, 0, &alg,
+                            &key_type, &key_bits ) != PSA_SUCCESS ) ||
+        alg != PSA_ALG_CBC_NO_PADDING )
+#else
         ( cipher = mbedtls_cipher_info_from_type( suite->cipher ) ) == NULL ||
         cipher->mode != MBEDTLS_MODE_CBC )
+#endif /* MBEDTLS_USE_PSA_CRYPTO */
     {
         *olen = 0;
         return;
@@ -2754,26 +2810,24 @@ static int ssl_write_certificate_request( mbedtls_ssl_context *ssl )
      */
     if( ssl->minor_ver == MBEDTLS_SSL_MINOR_VERSION_3 )
     {
-        const int *cur;
-
         /*
          * Supported signature algorithms
          */
-        for( cur = ssl->conf->sig_hashes; *cur != MBEDTLS_MD_NONE; cur++ )
-        {
-            unsigned char hash = mbedtls_ssl_hash_from_md_alg( *cur );
+        const uint16_t *sig_alg = mbedtls_ssl_get_sig_algs( ssl );
+        if( sig_alg == NULL )
+            return( MBEDTLS_ERR_SSL_BAD_CONFIG );
 
-            if( MBEDTLS_SSL_HASH_NONE == hash || mbedtls_ssl_set_calc_verify_md( ssl, hash ) )
+        for( ; *sig_alg != MBEDTLS_TLS1_3_SIG_NONE; sig_alg++ )
+        {
+            unsigned char hash = MBEDTLS_BYTE_1( *sig_alg );
+
+            if( mbedtls_ssl_set_calc_verify_md( ssl, hash ) )
+                continue;
+            if( ! mbedtls_ssl_sig_alg_is_supported( ssl, *sig_alg ) )
                 continue;
 
-#if defined(MBEDTLS_RSA_C)
-            p[2 + sa_len++] = hash;
-            p[2 + sa_len++] = MBEDTLS_SSL_SIG_RSA;
-#endif
-#if defined(MBEDTLS_ECDSA_C)
-            p[2 + sa_len++] = hash;
-            p[2 + sa_len++] = MBEDTLS_SSL_SIG_ECDSA;
-#endif
+            MBEDTLS_PUT_UINT16_BE( *sig_alg, p, sa_len );
+            sa_len += 2;
         }
 
         MBEDTLS_PUT_UINT16_BE( sa_len, p, 0 );
