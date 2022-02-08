@@ -267,6 +267,8 @@
 /* Maximum size in bytes of list in supported elliptic curve ext., RFC 4492 */
 #define MBEDTLS_SSL_MAX_CURVE_LIST_LEN         65535
 
+#define MBEDTLS_RECEIVED_SIG_ALGS_SIZE         20
+
 /*
  * Check that we obey the standard's message size bounds
  */
@@ -591,14 +593,14 @@ struct mbedtls_ssl_handshake_params
     int tls13_kex_modes; /*!< key exchange modes for TLS 1.3 */
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
-#if defined(MBEDTLS_SSL_CLI_C)
-    /*!<  Number of Hello Retry Request messages received from the server.  */
-    int hello_retry_request_count;
-#endif /* MBEDTLS_SSL_CLI_C */
-
 #if defined(MBEDTLS_SSL_PROTO_TLS1_2) && \
     defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
     mbedtls_ssl_sig_hash_set_t hash_algs;             /*!<  Set of suitable sig-hash pairs */
+#endif
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3) && \
+    defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
+    uint16_t received_sig_algs[MBEDTLS_RECEIVED_SIG_ALGS_SIZE];
 #endif
 
 #if !defined(MBEDTLS_DEPRECATED_REMOVED)
@@ -692,18 +694,14 @@ struct mbedtls_ssl_handshake_params
 
     } buffering;
 
-#if defined(MBEDTLS_SSL_PROTO_DTLS) || defined(MBEDTLS_SSL_PROTO_TLS1_3)
-    unsigned char *verify_cookie;       /*!<  Cli: HelloVerifyRequest cookie
-                                         *    for dtls / tls 1.3
-                                         *    Srv: unused                    */
-    unsigned char verify_cookie_len;    /*!<  Cli: cookie length for
-                                         *    dtls / tls 1.3
-                                         *    Srv: flag for sending a cookie */
-#endif /* MBEDTLS_SSL_PROTO_DTLS || MBEDTLS_SSL_PROTO_TLS1_3 */
-
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
     unsigned int out_msg_seq;           /*!<  Outgoing handshake sequence number */
     unsigned int in_msg_seq;            /*!<  Incoming handshake sequence number */
+
+    unsigned char *verify_cookie;       /*!<  Cli: HelloVerifyRequest cookie
+                                              Srv: unused                    */
+    unsigned char verify_cookie_len;    /*!<  Cli: cookie length
+                                              Srv: flag for sending a cookie */
 
     uint32_t retransmit_timeout;        /*!<  Current value of timeout       */
     mbedtls_ssl_flight_item *flight;    /*!<  Current outgoing flight        */
@@ -768,12 +766,6 @@ struct mbedtls_ssl_handshake_params
                                 * but can be overwritten by the HRR. */
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
-#if defined(MBEDTLS_SSL_CLI_C)
-    uint8_t client_auth;       /*!< used to check if CertificateRequest has been
-                                    received from server side. If CertificateRequest
-                                    has been received, Certificate and CertificateVerify
-                                    should be sent to server */
-#endif /* MBEDTLS_SSL_CLI_C */
     /*
      * State-local variables used during the processing
      * of a specific handshake state.
@@ -816,6 +808,11 @@ struct mbedtls_ssl_handshake_params
     int extensions_present;             /*!< extension presence; Each bitfield
                                              represents an extension and defined
                                              as \c MBEDTLS_SSL_EXT_XXX */
+
+#if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
+    unsigned char certificate_request_context_len;
+    unsigned char *certificate_request_context;
+#endif
 
     union
     {
@@ -1457,8 +1454,6 @@ void mbedtls_ssl_update_out_pointers( mbedtls_ssl_context *ssl,
 void mbedtls_ssl_update_in_pointers( mbedtls_ssl_context *ssl );
 
 int mbedtls_ssl_session_reset_int( mbedtls_ssl_context *ssl, int partial );
-void mbedtls_ssl_session_reset_msg_layer( mbedtls_ssl_context *ssl,
-                                          int partial );
 
 /*
  * Send pending alert
@@ -1738,8 +1733,6 @@ void mbedtls_ssl_tls13_add_hs_msg_to_checksum( mbedtls_ssl_context *ssl,
                                                unsigned char const *msg,
                                                size_t msg_len );
 
-int mbedtls_ssl_reset_transcript_for_hrr( mbedtls_ssl_context *ssl );
-
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
 #if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
@@ -1749,6 +1742,12 @@ int mbedtls_ssl_reset_transcript_for_hrr( mbedtls_ssl_context *ssl );
 int mbedtls_ssl_write_sig_alg_ext( mbedtls_ssl_context *ssl, unsigned char *buf,
                                    const unsigned char *end, size_t *out_len );
 
+/*
+ * Parse TLS 1.3 Signature Algorithm extension
+ */
+int mbedtls_ssl_tls13_parse_sig_alg_ext( mbedtls_ssl_context *ssl,
+                                         const unsigned char *buf,
+                                         const unsigned char *end );
 #endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
 
 /* Get handshake transcript */
