@@ -92,6 +92,9 @@ const mbedtls_cipher_info_t *mbedtls_cipher_info_from_psa(
             case PSA_ALG_CBC_PKCS7:
                 mode = MBEDTLS_MODE_CBC;
                 break;
+            case PSA_ALG_CCM_STAR_NO_TAG:
+                mode = MBEDTLS_MODE_CCM_STAR_NO_TAG;
+                break;
             case PSA_ALG_AEAD_WITH_SHORTENED_TAG( PSA_ALG_CCM, 0 ):
                 mode = MBEDTLS_MODE_CCM;
                 break;
@@ -114,6 +117,9 @@ const mbedtls_cipher_info_t *mbedtls_cipher_info_from_psa(
     {
         case PSA_KEY_TYPE_AES:
             cipher_id_tmp = MBEDTLS_CIPHER_ID_AES;
+            break;
+        case PSA_KEY_TYPE_ARIA:
+            cipher_id_tmp = MBEDTLS_CIPHER_ID_ARIA;
             break;
         case PSA_KEY_TYPE_DES:
             /* key_bits is 64 for Single-DES, 128 for two-key Triple-DES,
