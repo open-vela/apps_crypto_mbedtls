@@ -52,14 +52,14 @@ static const int ciphersuite_preference[] =
 #if defined(MBEDTLS_SSL_CIPHERSUITES)
     MBEDTLS_SSL_CIPHERSUITES,
 #else
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
     /* TLS 1.3 ciphersuites */
     MBEDTLS_TLS1_3_AES_128_GCM_SHA256,
     MBEDTLS_TLS1_3_AES_256_GCM_SHA384,
     MBEDTLS_TLS1_3_CHACHA20_POLY1305_SHA256,
     MBEDTLS_TLS1_3_AES_128_CCM_SHA256,
     MBEDTLS_TLS1_3_AES_128_CCM_8_SHA256,
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
     /* Chacha-Poly ephemeral suites */
     MBEDTLS_TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256,
@@ -292,7 +292,7 @@ static const int ciphersuite_preference[] =
 
 static const mbedtls_ssl_ciphersuite_t ciphersuite_definitions[] =
 {
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
 #if defined(MBEDTLS_AES_C)
 #if defined(MBEDTLS_GCM_C)
 #if defined(MBEDTLS_SHA384_C)
@@ -336,7 +336,7 @@ static const mbedtls_ssl_ciphersuite_t ciphersuite_definitions[] =
       MBEDTLS_SSL_MAJOR_VERSION_3, MBEDTLS_SSL_MINOR_VERSION_4,
       0 },
 #endif /* MBEDTLS_CHACHAPOLY_C && MBEDTLS_SHA256_C */
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
 #if defined(MBEDTLS_CHACHAPOLY_C) && \
     defined(MBEDTLS_SHA256_C) && \
@@ -2062,6 +2062,19 @@ int mbedtls_ssl_get_ciphersuite_id( const char *ciphersuite_name )
         return( 0 );
 
     return( cur->id );
+}
+
+size_t mbedtls_ssl_ciphersuite_get_cipher_key_bitlen( const mbedtls_ssl_ciphersuite_t *info )
+{
+#if defined(MBEDTLS_CIPHER_C)
+    const mbedtls_cipher_info_t * const cipher_info =
+      mbedtls_cipher_info_from_type( info->cipher );
+
+    return( mbedtls_cipher_info_get_key_bitlen( cipher_info ) );
+#else
+    (void)info;
+    return( 0 );
+#endif
 }
 
 #if defined(MBEDTLS_PK_C)
