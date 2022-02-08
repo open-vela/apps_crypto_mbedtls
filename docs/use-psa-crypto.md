@@ -12,8 +12,9 @@ Compile-time: enabling `MBEDTLS_USE_PSA_CRYPTO` requires
 `MBEDTLS_ECP_RESTARTABLE` and
 `MBEDTLS_PSA_CRYPTO_KEY_ID_ENCODES_OWNER` to be disabled.
 
-Effect: `MBEDTLS_USE_PSA_CRYPTO` has no effect on TLS 1.3 for which PSA
-cryptography is mandatory.
+Effect: `MBEDTLS_USE_PSA_CRYPTO` currently has no effect on TLS 1.3 (which is
+itself experimental and only partially supported so far): TLS 1.3 always uses
+the legacy APIs even when this option is set.
 
 Stability: any API that's only available when `MBEDTLS_USE_PSA_CRYPTO` is
 defined is considered experimental and may change in incompatible ways at any
@@ -59,10 +60,9 @@ this is supported on both sides, it's currently only tested client-side);
 - `mbedtls_x509write_csr_set_key()` to generate a CSR (certificate signature
   request).
 
-In the TLS and X.509 API, there are two other functions which accept a key or
-keypair as a PK context: `mbedtls_x509write_crt_set_subject_key()` and
-`mbedtls_x509write_crt_set_issuer_key()`. Use of opaque contexts here probably
-works but is so far untested.
+In the TLS and X.509 API, there's one other function which accepts a keypair
+as a PK context: `mbedtls_x509write_crt_set_issuer_key()`. Use of opaque
+contexts here probably works but is so far untested.
 
 ### PSA-held (opaque) keys for TLS pre-shared keys (PSK)
 
@@ -155,6 +155,11 @@ Parts that are not covered yet
 ==============================
 
 This is only a high-level overview, grouped by theme
+
+TLS: 1.3 experimental support
+-----------------------------
+
+No part of the experimental support for TLS 1.3 is covered at the moment.
 
 TLS: key exchanges / asymmetric crypto
 --------------------------------------

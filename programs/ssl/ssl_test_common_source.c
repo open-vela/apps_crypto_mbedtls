@@ -24,6 +24,7 @@
  *  limitations under the License.
  */
 
+#if defined(MBEDTLS_SSL_EXPORT_KEYS)
 void eap_tls_key_derivation( void *p_expkey,
                              mbedtls_ssl_key_export_type secret_type,
                              const unsigned char *secret,
@@ -138,6 +139,8 @@ void dtls_srtp_key_derivation( void *p_expkey,
     keys->tls_prf_type = tls_prf_type;
 }
 #endif /* MBEDTLS_SSL_DTLS_SRTP */
+
+#endif /* MBEDTLS_SSL_EXPORT_KEYS */
 
 int ssl_check_record( mbedtls_ssl_context const *ssl,
                       unsigned char const *buf, size_t len )
@@ -262,34 +265,24 @@ int send_cb( void *ctx, unsigned char const *buf, size_t len )
 }
 
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
-#if defined(MBEDTLS_ECDSA_C) && defined(MBEDTLS_RSA_C)
-#define MBEDTLS_SSL_SIG_ALG( hash ) (( hash << 8 ) | MBEDTLS_SSL_SIG_ECDSA), \
-                                    (( hash << 8 ) | MBEDTLS_SSL_SIG_RSA),
-#elif defined(MBEDTLS_ECDSA_C)
-#define MBEDTLS_SSL_SIG_ALG( hash ) (( hash << 8 ) | MBEDTLS_SSL_SIG_ECDSA),
-#elif defined(MBEDTLS_RSA_C)
-#define MBEDTLS_SSL_SIG_ALG( hash ) (( hash << 8 ) | MBEDTLS_SSL_SIG_RSA),
-#else
-#define MBEDTLS_SSL_SIG_ALG( hash )
-#endif
-uint16_t ssl_sig_algs_for_test[] = {
+int ssl_sig_hashes_for_test[] = {
 #if defined(MBEDTLS_SHA512_C)
-    MBEDTLS_SSL_SIG_ALG( MBEDTLS_SSL_HASH_SHA512 )
+    MBEDTLS_MD_SHA512,
 #endif
 #if defined(MBEDTLS_SHA384_C)
-    MBEDTLS_SSL_SIG_ALG( MBEDTLS_SSL_HASH_SHA384 )
+    MBEDTLS_MD_SHA384,
 #endif
 #if defined(MBEDTLS_SHA256_C)
-    MBEDTLS_SSL_SIG_ALG( MBEDTLS_SSL_HASH_SHA256 )
+    MBEDTLS_MD_SHA256,
 #endif
 #if defined(MBEDTLS_SHA224_C)
-    MBEDTLS_SSL_SIG_ALG( MBEDTLS_SSL_HASH_SHA224 )
+    MBEDTLS_MD_SHA224,
 #endif
 #if defined(MBEDTLS_SHA1_C)
     /* Allow SHA-1 as we use it extensively in tests. */
-    MBEDTLS_SSL_SIG_ALG( MBEDTLS_SSL_HASH_SHA1 )
+    MBEDTLS_MD_SHA1,
 #endif
-    MBEDTLS_TLS1_3_SIG_NONE
+    MBEDTLS_MD_NONE
 };
 #endif /* MBEDTLS_X509_CRT_PARSE_C */
 
