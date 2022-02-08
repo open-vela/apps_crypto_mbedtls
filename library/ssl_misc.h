@@ -768,6 +768,12 @@ struct mbedtls_ssl_handshake_params
                                 * but can be overwritten by the HRR. */
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
+#if defined(MBEDTLS_SSL_CLI_C)
+    int client_auth;           /*!< used to check if CertificateRequest has been
+                                    received from server side. If CertificateReqeust
+                                    has been received, Certificate and CertificateVerify
+                                    should be sent to server */
+#endif /* MBEDTLS_SSL_CLI_C */
     /*
      * State-local variables used during the processing
      * of a specific handshake state.
@@ -937,16 +943,9 @@ struct mbedtls_ssl_transform
 
 #endif /* MBEDTLS_SSL_SOME_SUITES_USE_MAC */
 
-    int minor_ver;
-
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
-    mbedtls_svc_key_id_t psa_key_enc;           /*!<  psa encryption key      */
-    mbedtls_svc_key_id_t psa_key_dec;           /*!<  psa decryption key      */
-    psa_algorithm_t psa_alg;                    /*!<  psa algorithm           */
-#else
     mbedtls_cipher_context_t cipher_ctx_enc;    /*!<  encryption context      */
     mbedtls_cipher_context_t cipher_ctx_dec;    /*!<  decryption context      */
-#endif /* MBEDTLS_USE_PSA_CRYPTO */
+    int minor_ver;
 
 #if defined(MBEDTLS_SSL_DTLS_CONNECTION_ID)
     uint8_t in_cid_len;
@@ -1281,7 +1280,6 @@ static inline mbedtls_svc_key_id_t mbedtls_ssl_get_opaque_psk(
 
     return( MBEDTLS_SVC_KEY_ID_INIT );
 }
-
 #endif /* MBEDTLS_USE_PSA_CRYPTO */
 
 #endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
@@ -1849,18 +1847,15 @@ static inline const void *mbedtls_ssl_get_sig_algs(
                                                 const mbedtls_ssl_context *ssl )
 {
 #if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
-
 #if !defined(MBEDTLS_DEPRECATED_REMOVED)
     if( ssl->handshake != NULL && ssl->handshake->sig_algs != NULL )
         return( ssl->handshake->sig_algs );
 #endif
     return( ssl->conf->sig_algs );
-
-#else /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
+#endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
 
     ((void) ssl);
     return( NULL );
-#endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
 }
 
 #if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
@@ -2019,60 +2014,5 @@ static inline int mbedtls_ssl_sig_alg_is_supported(
 #define MBEDTLS_SSL_SIG_ALG( hash )
 #endif /* MBEDTLS_ECDSA_C && MBEDTLS_RSA_C */
 #endif /* MBEDTLS_SSL_PROTO_TLS1_2 && MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
-/* Corresponding PSA algorithm for MBEDTLS_CIPHER_NULL.
- * Same value is used fo PSA_ALG_CATEGORY_CIPHER, hence it is
- * guaranteed to not be a valid PSA algorithm identifier.
- */
-#define MBEDTLS_SSL_NULL_CIPHER 0x04000000
-
-/**
- * \brief       Translate mbedtls cipher type/taglen pair to psa:
- *              algorithm, key type and key size.
- *
- * \param  mbedtls_cipher_type [in] given mbedtls cipher type
- * \param  taglen              [in] given tag length
- *                                  0 - default tag length
- * \param  alg                 [out] corresponding PSA alg
- *                                   There is no corresponding PSA
- *                                   alg for MBEDTLS_CIPHER_NULL, so
- *                                   in this case MBEDTLS_SSL_NULL_CIPHER
- *                                   is returned via this parameter
- * \param  key_type            [out] corresponding PSA key type
- * \param  key_size            [out] corresponding PSA key size
- *
- * \return                     PSA_SUCCESS on success or PSA_ERROR_NOT_SUPPORTED if
- *                             conversion is not supported.
- */
-psa_status_t mbedtls_ssl_cipher_to_psa( mbedtls_cipher_type_t mbedtls_cipher_type,
-                                    size_t taglen,
-                                    psa_algorithm_t *alg,
-                                    psa_key_type_t *key_type,
-                                    size_t *key_size );
-
-/**
- * \brief       Convert given PSA status to mbedtls error code.
- *
- * \param  status      [in] given PSA status
- *
- * \return             corresponding mbedtls error code
- */
-static inline int psa_ssl_status_to_mbedtls( psa_status_t status )
-{
-    switch( status )
-    {
-        case PSA_SUCCESS:
-            return( 0 );
-        case PSA_ERROR_INSUFFICIENT_MEMORY:
-            return( MBEDTLS_ERR_CIPHER_ALLOC_FAILED );
-        case PSA_ERROR_NOT_SUPPORTED:
-            return( MBEDTLS_ERR_CIPHER_FEATURE_UNAVAILABLE );
-        case PSA_ERROR_INVALID_SIGNATURE:
-            return( MBEDTLS_ERR_SSL_INVALID_MAC );
-        default:
-            return( MBEDTLS_ERR_PLATFORM_HW_ACCEL_FAILED );
-    }
-}
-#endif /* MBEDTLS_USE_PSA_CRYPTO */
 
 #endif /* ssl_misc.h */
