@@ -1,7 +1,6 @@
 set(executables
     generic_sum
     hello
-    md_hmac_demo
 )
 
 foreach(exe IN LISTS executables)
