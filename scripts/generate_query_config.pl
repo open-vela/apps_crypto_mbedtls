@@ -14,8 +14,7 @@
 # information is used to automatically generate the body of the query_config()
 # function by using the template in scripts/data_files/query_config.fmt.
 #
-# Usage: scripts/generate_query_config.pl without arguments, or
-# generate_query_config.pl config_file template_file output_file
+# Usage: ./scripts/generate_query_config.pl without arguments
 #
 # Copyright The Mbed TLS Contributors
 # SPDX-License-Identifier: Apache-2.0
@@ -34,24 +33,15 @@
 
 use strict;
 
-my ($config_file, $query_config_format_file, $query_config_file);
+my $config_file = "./include/mbedtls/mbedtls_config.h";
 
-if( @ARGV ) {
-    die "Invalid number of arguments - usage: $0 [CONFIG_FILE TEMPLATE_FILE OUTPUT_FILE]" if scalar @ARGV != 3;
-    ($config_file, $query_config_format_file, $query_config_file) = @ARGV;
+my $query_config_format_file = "./scripts/data_files/query_config.fmt";
+my $query_config_file = "./programs/test/query_config.c";
 
-    -f $config_file or die "No such file: $config_file";
-    -f $query_config_format_file or die "No such file: $query_config_format_file";
-} else {
-    $config_file = "./include/mbedtls/mbedtls_config.h";
-    $query_config_format_file = "./scripts/data_files/query_config.fmt";
-    $query_config_file = "./programs/test/query_config.c";
-
-    unless( -f $config_file && -f $query_config_format_file ) {
-        chdir '..' or die;
-        -f $config_file && -f $query_config_format_file
-          or die "No arguments supplied, must be run from project root or a first-level subdirectory\n";
-    }
+unless( -f $config_file && -f $query_config_format_file ) {
+    chdir '..' or die;
+    -f $config_file && -f $query_config_format_file
+      or die "Without arguments, must be run from root or a subdirectory\n";
 }
 
 # Excluded macros from the generated query_config.c. For example, macros that
@@ -68,7 +58,6 @@ open(CONFIG_FILE, "$config_file") or die "Opening config file '$config_file': $!
 # This variable will contain the string to replace in the CHECK_CONFIG of the
 # format file
 my $config_check = "";
-my $list_config = "";
 
 while (my $line = <CONFIG_FILE>) {
     if ($line =~ /^(\/\/)?\s*#\s*define\s+(MBEDTLS_\w+).*/) {
@@ -85,11 +74,6 @@ while (my $line = <CONFIG_FILE>) {
         $config_check .= "    }\n";
         $config_check .= "#endif /* $name */\n";
         $config_check .= "\n";
-
-        $list_config .= "#if defined($name)\n";
-        $list_config .= "    OUTPUT_MACRO_NAME_VALUE($name);\n";
-        $list_config .= "#endif /* $name */\n";
-        $list_config .= "\n";
     }
 }
 
@@ -101,7 +85,6 @@ close(FORMAT_FILE);
 
 # Replace the body of the query_config() function with the code we just wrote
 $query_config_format =~ s/CHECK_CONFIG/$config_check/g;
-$query_config_format =~ s/LIST_CONFIG/$list_config/g;
 
 # Rewrite the query_config.c file
 open(QUERY_CONFIG_FILE, ">$query_config_file") or die "Opening destination file '$query_config_file': $!";
