@@ -1195,12 +1195,8 @@ run_test_psa() {
                 "$P_SRV debug_level=3 force_version=tls12" \
                 "$P_CLI debug_level=3 force_version=tls12 force_ciphersuite=$1" \
                 0 \
-                -c "Successfully setup PSA-based decryption cipher context" \
-                -c "Successfully setup PSA-based encryption cipher context" \
                 -c "PSA calc verify" \
                 -c "calc PSA finished" \
-                -s "Successfully setup PSA-based decryption cipher context" \
-                -s "Successfully setup PSA-based encryption cipher context" \
                 -s "PSA calc verify" \
                 -s "calc PSA finished" \
                 -C "Failed to setup PSA-based cipher context"\
@@ -1218,12 +1214,8 @@ run_test_psa_force_curve() {
                 "$P_SRV debug_level=4 force_version=tls12 curves=$1" \
                 "$P_CLI debug_level=4 force_version=tls12 force_ciphersuite=TLS-ECDHE-RSA-WITH-AES-128-GCM-SHA256 curves=$1" \
                 0 \
-                -c "Successfully setup PSA-based decryption cipher context" \
-                -c "Successfully setup PSA-based encryption cipher context" \
                 -c "PSA calc verify" \
                 -c "calc PSA finished" \
-                -s "Successfully setup PSA-based decryption cipher context" \
-                -s "Successfully setup PSA-based encryption cipher context" \
                 -s "PSA calc verify" \
                 -s "calc PSA finished" \
                 -C "Failed to setup PSA-based cipher context"\
@@ -1570,7 +1562,7 @@ run_test    "Opaque key for server authentication" \
             0 \
             -c "Verifying peer X.509 certificate... ok" \
             -c "Ciphersuite is TLS-ECDHE-ECDSA" \
-            -s "key types: Opaque - invalid PK" \
+            -s "key types: Opaque, none" \
             -s "Ciphersuite is TLS-ECDHE-ECDSA" \
             -S "error" \
             -C "error"
@@ -1589,7 +1581,7 @@ run_test    "Opaque key for client/server authentication" \
             -c "key type: Opaque" \
             -c "Verifying peer X.509 certificate... ok" \
             -c "Ciphersuite is TLS-ECDHE-ECDSA" \
-            -s "key types: Opaque - invalid PK" \
+            -s "key types: Opaque, none" \
             -s "Verifying peer X.509 certificate... ok" \
             -s "Ciphersuite is TLS-ECDHE-ECDSA" \
             -S "error" \
@@ -2703,21 +2695,6 @@ run_test    "CBC Record splitting: TLS 1.2, no splitting" \
 
 run_test    "Session resume using tickets: basic" \
             "$P_SRV debug_level=3 tickets=1" \
-            "$P_CLI debug_level=3 tickets=1 reconnect=1" \
-            0 \
-            -c "client hello, adding session ticket extension" \
-            -s "found session ticket extension" \
-            -s "server hello, adding session ticket extension" \
-            -c "found session_ticket extension" \
-            -c "parse new session ticket" \
-            -S "session successfully restored from cache" \
-            -s "session successfully restored from ticket" \
-            -s "a session has been resumed" \
-            -c "a session has been resumed"
-
-requires_config_disabled MBEDTLS_USE_PSA_CRYPTO
-run_test    "Session resume using tickets: manual rotation" \
-            "$P_SRV debug_level=3 tickets=1 ticket_rotate=1" \
             "$P_CLI debug_level=3 tickets=1 reconnect=1" \
             0 \
             -c "client hello, adding session ticket extension" \
@@ -9208,9 +9185,7 @@ run_test    "TLS 1.3: CertificateRequest check - openssl" \
             "$O_NEXT_SRV -msg -tls1_3 -num_tickets 0 -no_resume_ephemeral -no_cache -Verify 10" \
             "$P_CLI debug_level=4 force_version=tls13 " \
             1 \
-            -c "=> parse certificate request" \
-            -c "got a certificate request" \
-            -c "<= parse certificate request"
+            -c "CertificateRequest not supported"
 
 requires_gnutls_tls1_3
 requires_gnutls_next_no_ticket
@@ -9223,9 +9198,7 @@ run_test    "TLS 1.3: CertificateRequest check - gnutls" \
             "$G_NEXT_SRV --debug=4 --priority=NORMAL:-VERS-ALL:+VERS-TLS1.3:+CIPHER-ALL:%NO_TICKETS" \
             "$P_CLI debug_level=3 min_version=tls13 max_version=tls13" \
             1 \
-            -c "=> parse certificate request" \
-            -c "got a certificate request" \
-            -c "<= parse certificate request"
+            -c "CertificateRequest not supported"
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
@@ -9233,13 +9206,29 @@ requires_config_enabled MBEDTLS_DEBUG_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_disabled MBEDTLS_USE_PSA_CRYPTO
 requires_openssl_tls1_3
-run_test    "TLS 1.3: HelloRetryRequest check - openssl" \
+run_test    "TLS 1.3: HelloRetryRequest check, ciphersuite TLS_AES_128_GCM_SHA256 - openssl" \
+            "$O_NEXT_SRV -ciphersuites TLS_AES_128_GCM_SHA256  -sigalgs ecdsa_secp256r1_sha256 -groups P-256 -msg -tls1_3 -num_tickets 0 -no_resume_ephemeral -no_cache" \
+            "$P_CLI debug_level=4 force_version=tls13" \
+            0 \
+            -c "received HelloRetryRequest message" \
+            -c "<= ssl_tls13_process_server_hello ( HelloRetryRequest )" \
+            -c "tls13 client state: MBEDTLS_SSL_CLIENT_HELLO" \
+            -c "HTTP/1.0 200 ok"
+
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
+requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
+requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
+requires_config_disabled MBEDTLS_USE_PSA_CRYPTO
+requires_openssl_tls1_3
+run_test    "TLS 1.3: HelloRetryRequest check, ciphersuite TLS_AES_256_GCM_SHA384 - openssl" \
             "$O_NEXT_SRV -ciphersuites TLS_AES_256_GCM_SHA384  -sigalgs ecdsa_secp256r1_sha256 -groups P-256 -msg -tls1_3 -num_tickets 0 -no_resume_ephemeral -no_cache" \
             "$P_CLI debug_level=4 force_version=tls13" \
-            1 \
+            0 \
             -c "received HelloRetryRequest message" \
-            -c "HRR not supported" \
-            -c "Last error was: -0x6E00 - SSL - The handshake negotiation failed"
+            -c "<= ssl_tls13_process_server_hello ( HelloRetryRequest )" \
+            -c "tls13 client state: MBEDTLS_SSL_CLIENT_HELLO" \
+            -c "HTTP/1.0 200 ok"
 
 requires_gnutls_tls1_3
 requires_gnutls_next_no_ticket
@@ -9248,14 +9237,30 @@ requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_DEBUG_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_disabled MBEDTLS_USE_PSA_CRYPTO
-run_test    "TLS 1.3: HelloRetryRequest check - gnutls" \
-            "$G_NEXT_SRV -d 4 --priority=NONE:+GROUP-SECP256R1:+AES-256-GCM:+SHA384:+AEAD:+SIGN-ECDSA-SECP256R1-SHA256:+VERS-TLS1.3:%NO_TICKETS" \
+run_test    "TLS 1.3: HelloRetryRequest check, ciphersuite TLS_AES_128_GCM_SHA256 - gnutls" \
+            "$G_NEXT_SRV -d 4 --priority=NONE:+GROUP-SECP256R1:+AES-128-GCM:+SHA256:+AEAD:+SIGN-ECDSA-SECP256R1-SHA256:+VERS-TLS1.3:%NO_TICKETS --disable-client-cert" \
             "$P_CLI debug_level=4 force_version=tls13" \
-            1 \
+            0 \
             -c "received HelloRetryRequest message" \
-            -c "HRR not supported" \
-            -c "Last error was: -0x6E00 - SSL - The handshake negotiation failed" \
-            -s "HELLO RETRY REQUEST was queued"
+            -c "<= ssl_tls13_process_server_hello ( HelloRetryRequest )" \
+            -c "tls13 client state: MBEDTLS_SSL_CLIENT_HELLO" \
+            -c "HTTP/1.0 200 OK"
+
+requires_gnutls_tls1_3
+requires_gnutls_next_no_ticket
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
+requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
+requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
+requires_config_disabled MBEDTLS_USE_PSA_CRYPTO
+run_test    "TLS 1.3: HelloRetryRequest check, ciphersuite TLS_AES_256_GCM_SHA384 - gnutls" \
+            "$G_NEXT_SRV -d 4 --priority=NONE:+GROUP-SECP256R1:+AES-256-GCM:+SHA384:+AEAD:+SIGN-ECDSA-SECP256R1-SHA256:+VERS-TLS1.3:%NO_TICKETS --disable-client-cert" \
+            "$P_CLI debug_level=4 force_version=tls13" \
+            0 \
+            -c "received HelloRetryRequest message" \
+            -c "<= ssl_tls13_process_server_hello ( HelloRetryRequest )" \
+            -c "tls13 client state: MBEDTLS_SSL_CLIENT_HELLO" \
+            -c "HTTP/1.0 200 OK"
 
 for i in $(ls opt-testcases/*.sh)
 do

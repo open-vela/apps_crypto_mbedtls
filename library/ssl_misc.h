@@ -27,8 +27,9 @@
 #include "mbedtls/ssl.h"
 #include "mbedtls/cipher.h"
 
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
+#if defined(MBEDTLS_USE_PSA_CRYPTO) || defined(MBEDTLS_SSL_PROTO_TLS1_3)
 #include "psa/crypto.h"
+#include "mbedtls/psa_util.h"
 #endif
 
 #if defined(MBEDTLS_MD5_C)
@@ -266,8 +267,6 @@
 
 /* Maximum size in bytes of list in supported elliptic curve ext., RFC 4492 */
 #define MBEDTLS_SSL_MAX_CURVE_LIST_LEN         65535
-
-#define MBEDTLS_RECEIVED_SIG_ALGS_SIZE         20
 
 /*
  * Check that we obey the standard's message size bounds
@@ -593,14 +592,14 @@ struct mbedtls_ssl_handshake_params
     int tls13_kex_modes; /*!< key exchange modes for TLS 1.3 */
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
+#if defined(MBEDTLS_SSL_CLI_C)
+    /*!<  Number of Hello Retry Request messages received from the server.  */
+    int hello_retry_request_count;
+#endif /* MBEDTLS_SSL_CLI_C */
+
 #if defined(MBEDTLS_SSL_PROTO_TLS1_2) && \
     defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
     mbedtls_ssl_sig_hash_set_t hash_algs;             /*!<  Set of suitable sig-hash pairs */
-#endif
-
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3) && \
-    defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
-    uint16_t received_sig_algs[MBEDTLS_RECEIVED_SIG_ALGS_SIZE];
 #endif
 
 #if !defined(MBEDTLS_DEPRECATED_REMOVED)
@@ -620,13 +619,13 @@ struct mbedtls_ssl_handshake_params
 #if defined(MBEDTLS_ECDH_C) || defined(MBEDTLS_ECDSA_C)
     mbedtls_ecdh_context ecdh_ctx;              /*!<  ECDH key exchange       */
 
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
+#if defined(MBEDTLS_USE_PSA_CRYPTO) || defined(MBEDTLS_SSL_PROTO_TLS1_3)
     psa_key_type_t ecdh_psa_type;
     uint16_t ecdh_bits;
     mbedtls_svc_key_id_t ecdh_psa_privkey;
     unsigned char ecdh_psa_peerkey[MBEDTLS_PSA_MAX_EC_PUBKEY_LENGTH];
     size_t ecdh_psa_peerkey_len;
-#endif /* MBEDTLS_USE_PSA_CRYPTO */
+#endif /* MBEDTLS_USE_PSA_CRYPTO || MBEDTLS_SSL_PROTO_TLS1_3 */
 #endif /* MBEDTLS_ECDH_C || MBEDTLS_ECDSA_C */
 
 #if defined(MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED)
@@ -694,14 +693,18 @@ struct mbedtls_ssl_handshake_params
 
     } buffering;
 
+#if defined(MBEDTLS_SSL_PROTO_DTLS) || defined(MBEDTLS_SSL_PROTO_TLS1_3)
+    unsigned char *verify_cookie;       /*!<  Cli: HelloVerifyRequest cookie
+                                         *    for dtls / tls 1.3
+                                         *    Srv: unused                    */
+    unsigned char verify_cookie_len;    /*!<  Cli: cookie length for
+                                         *    dtls / tls 1.3
+                                         *    Srv: flag for sending a cookie */
+#endif /* MBEDTLS_SSL_PROTO_DTLS || MBEDTLS_SSL_PROTO_TLS1_3 */
+
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
     unsigned int out_msg_seq;           /*!<  Outgoing handshake sequence number */
     unsigned int in_msg_seq;            /*!<  Incoming handshake sequence number */
-
-    unsigned char *verify_cookie;       /*!<  Cli: HelloVerifyRequest cookie
-                                              Srv: unused                    */
-    unsigned char verify_cookie_len;    /*!<  Cli: cookie length
-                                              Srv: flag for sending a cookie */
 
     uint32_t retransmit_timeout;        /*!<  Current value of timeout       */
     mbedtls_ssl_flight_item *flight;    /*!<  Current outgoing flight        */
@@ -766,12 +769,6 @@ struct mbedtls_ssl_handshake_params
                                 * but can be overwritten by the HRR. */
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
-#if defined(MBEDTLS_SSL_CLI_C)
-    uint8_t client_auth;       /*!< used to check if CertificateRequest has been
-                                    received from server side. If CertificateRequest
-                                    has been received, Certificate and CertificateVerify
-                                    should be sent to server */
-#endif /* MBEDTLS_SSL_CLI_C */
     /*
      * State-local variables used during the processing
      * of a specific handshake state.
@@ -814,11 +811,6 @@ struct mbedtls_ssl_handshake_params
     int extensions_present;             /*!< extension presence; Each bitfield
                                              represents an extension and defined
                                              as \c MBEDTLS_SSL_EXT_XXX */
-
-#if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
-    unsigned char certificate_request_context_len;
-    unsigned char *certificate_request_context;
-#endif
 
     union
     {
@@ -946,9 +938,16 @@ struct mbedtls_ssl_transform
 
 #endif /* MBEDTLS_SSL_SOME_SUITES_USE_MAC */
 
+    int minor_ver;
+
+#if defined(MBEDTLS_USE_PSA_CRYPTO)
+    mbedtls_svc_key_id_t psa_key_enc;           /*!<  psa encryption key      */
+    mbedtls_svc_key_id_t psa_key_dec;           /*!<  psa decryption key      */
+    psa_algorithm_t psa_alg;                    /*!<  psa algorithm           */
+#else
     mbedtls_cipher_context_t cipher_ctx_enc;    /*!<  encryption context      */
     mbedtls_cipher_context_t cipher_ctx_dec;    /*!<  decryption context      */
-    int minor_ver;
+#endif /* MBEDTLS_USE_PSA_CRYPTO */
 
 #if defined(MBEDTLS_SSL_DTLS_CONNECTION_ID)
     uint8_t in_cid_len;
@@ -1283,6 +1282,7 @@ static inline mbedtls_svc_key_id_t mbedtls_ssl_get_opaque_psk(
 
     return( MBEDTLS_SVC_KEY_ID_INIT );
 }
+
 #endif /* MBEDTLS_USE_PSA_CRYPTO */
 
 #endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
@@ -1460,6 +1460,8 @@ void mbedtls_ssl_update_out_pointers( mbedtls_ssl_context *ssl,
 void mbedtls_ssl_update_in_pointers( mbedtls_ssl_context *ssl );
 
 int mbedtls_ssl_session_reset_int( mbedtls_ssl_context *ssl, int partial );
+void mbedtls_ssl_session_reset_msg_layer( mbedtls_ssl_context *ssl,
+                                          int partial );
 
 /*
  * Send pending alert
@@ -1739,6 +1741,8 @@ void mbedtls_ssl_tls13_add_hs_msg_to_checksum( mbedtls_ssl_context *ssl,
                                                unsigned char const *msg,
                                                size_t msg_len );
 
+int mbedtls_ssl_reset_transcript_for_hrr( mbedtls_ssl_context *ssl );
+
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
 #if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
@@ -1748,12 +1752,6 @@ void mbedtls_ssl_tls13_add_hs_msg_to_checksum( mbedtls_ssl_context *ssl,
 int mbedtls_ssl_write_sig_alg_ext( mbedtls_ssl_context *ssl, unsigned char *buf,
                                    const unsigned char *end, size_t *out_len );
 
-/*
- * Parse TLS 1.3 Signature Algorithm extension
- */
-int mbedtls_ssl_tls13_parse_sig_alg_ext( mbedtls_ssl_context *ssl,
-                                         const unsigned char *buf,
-                                         const unsigned char *end );
 #endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
 
 /* Get handshake transcript */
@@ -1852,15 +1850,18 @@ static inline const void *mbedtls_ssl_get_sig_algs(
                                                 const mbedtls_ssl_context *ssl )
 {
 #if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
+
 #if !defined(MBEDTLS_DEPRECATED_REMOVED)
     if( ssl->handshake != NULL && ssl->handshake->sig_algs != NULL )
         return( ssl->handshake->sig_algs );
 #endif
     return( ssl->conf->sig_algs );
-#endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
+
+#else /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
 
     ((void) ssl);
     return( NULL );
+#endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
 }
 
 #if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
@@ -2019,5 +2020,62 @@ static inline int mbedtls_ssl_sig_alg_is_supported(
 #define MBEDTLS_SSL_SIG_ALG( hash )
 #endif /* MBEDTLS_ECDSA_C && MBEDTLS_RSA_C */
 #endif /* MBEDTLS_SSL_PROTO_TLS1_2 && MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
+#if defined(MBEDTLS_USE_PSA_CRYPTO)
+/* Corresponding PSA algorithm for MBEDTLS_CIPHER_NULL.
+ * Same value is used fo PSA_ALG_CATEGORY_CIPHER, hence it is
+ * guaranteed to not be a valid PSA algorithm identifier.
+ */
+#define MBEDTLS_SSL_NULL_CIPHER 0x04000000
+
+/**
+ * \brief       Translate mbedtls cipher type/taglen pair to psa:
+ *              algorithm, key type and key size.
+ *
+ * \param  mbedtls_cipher_type [in] given mbedtls cipher type
+ * \param  taglen              [in] given tag length
+ *                                  0 - default tag length
+ * \param  alg                 [out] corresponding PSA alg
+ *                                   There is no corresponding PSA
+ *                                   alg for MBEDTLS_CIPHER_NULL, so
+ *                                   in this case MBEDTLS_SSL_NULL_CIPHER
+ *                                   is returned via this parameter
+ * \param  key_type            [out] corresponding PSA key type
+ * \param  key_size            [out] corresponding PSA key size
+ *
+ * \return                     PSA_SUCCESS on success or PSA_ERROR_NOT_SUPPORTED if
+ *                             conversion is not supported.
+ */
+psa_status_t mbedtls_ssl_cipher_to_psa( mbedtls_cipher_type_t mbedtls_cipher_type,
+                                    size_t taglen,
+                                    psa_algorithm_t *alg,
+                                    psa_key_type_t *key_type,
+                                    size_t *key_size );
+#endif /* MBEDTLS_USE_PSA_CRYPTO */
+
+#if defined(MBEDTLS_USE_PSA_CRYPTO) || defined(MBEDTLS_SSL_PROTO_TLS1_3)
+/**
+ * \brief       Convert given PSA status to mbedtls error code.
+ *
+ * \param  status      [in] given PSA status
+ *
+ * \return             corresponding mbedtls error code
+ */
+static inline int psa_ssl_status_to_mbedtls( psa_status_t status )
+{
+    switch( status )
+    {
+        case PSA_SUCCESS:
+            return( 0 );
+        case PSA_ERROR_INSUFFICIENT_MEMORY:
+            return( MBEDTLS_ERR_CIPHER_ALLOC_FAILED );
+        case PSA_ERROR_NOT_SUPPORTED:
+            return( MBEDTLS_ERR_CIPHER_FEATURE_UNAVAILABLE );
+        case PSA_ERROR_INVALID_SIGNATURE:
+            return( MBEDTLS_ERR_SSL_INVALID_MAC );
+        default:
+            return( MBEDTLS_ERR_PLATFORM_HW_ACCEL_FAILED );
+    }
+}
+#endif /* MBEDTLS_USE_PSA_CRYPTO || MBEDTLS_SSL_PROTO_TLS1_3 */
 
 #endif /* ssl_misc.h */
