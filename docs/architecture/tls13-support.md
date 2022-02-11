@@ -126,11 +126,8 @@ MVP definition
 
   The TLS 1.3 MVP is compatible with all TLS 1.2 configuration options in the
   sense that when enabling the TLS 1.3 MVP in the library there is no need to
-  modify the configuration for TLS 1.2. The MBEDTLS_USE_PSA_CRYPTO configuration
-  option is an exception though, the TLS 1.3 MVP is not compatible with it.
-
-  Mbed TLS SSL/TLS related features are not supported or not applicable to the
-  TLS 1.3 MVP:
+  modify the configuration for TLS 1.2. Mbed TLS SSL/TLS related features are
+  not supported or not applicable to the TLS 1.3 MVP:
 
   | Mbed TLS configuration option            | Support |
   | ---------------------------------------- | ------- |
@@ -164,7 +161,7 @@ MVP definition
   | MBEDTLS_KEY_EXCHANGE_ECDH_RSA_ENABLED    | n/a     |
   | MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED     | n/a     |
   |                                          |         |
-  | MBEDTLS_USE_PSA_CRYPTO                   | no  (3) |
+  | MBEDTLS_USE_PSA_CRYPTO                   | no      |
 
   (1) Some support has already been upstreamed but it is incomplete.
   (2) Key exchange configuration options for TLS 1.3 will likely to be
