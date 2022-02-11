@@ -692,11 +692,9 @@ int main( int argc, char *argv[] )
     const char *pers = "ssl_client2";
 
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
-#if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
     mbedtls_svc_key_id_t slot = MBEDTLS_SVC_KEY_ID_INIT;
     psa_algorithm_t alg = 0;
     psa_key_attributes_t key_attributes;
-#endif
     psa_status_t status;
 #endif
 
@@ -1401,7 +1399,6 @@ int main( int argc, char *argv[] )
         }
 
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
-#if defined (MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
         if( opt.psk_opaque != 0 )
         {
             /* Ensure that the chosen ciphersuite is PSK-only; we must know
@@ -1423,7 +1420,6 @@ int main( int argc, char *argv[] )
 #endif /* MBEDTLS_SHA384_C */
                 alg = PSA_ALG_TLS12_PSK_TO_MS(PSA_ALG_SHA_256);
         }
-#endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
 #endif /* MBEDTLS_USE_PSA_CRYPTO */
     }
 
@@ -1707,8 +1703,7 @@ int main( int argc, char *argv[] )
     }
 #endif /* MBEDTLS_USE_PSA_CRYPTO */
 
-    mbedtls_printf( " ok (key type: %s)\n",
-                    strlen( opt.key_file ) ? mbedtls_pk_get_name( &pkey ) : "none" );
+    mbedtls_printf( " ok (key type: %s)\n", mbedtls_pk_get_name( &pkey ) );
 #endif /* MBEDTLS_X509_CRT_PARSE_C */
 
     /*
@@ -1734,7 +1729,7 @@ int main( int argc, char *argv[] )
     {
         crt_profile_for_test.allowed_mds |= MBEDTLS_X509_ID_FLAG( MBEDTLS_MD_SHA1 );
         mbedtls_ssl_conf_cert_profile( &conf, &crt_profile_for_test );
-        mbedtls_ssl_conf_sig_algs( &conf, ssl_sig_algs_for_test );
+        mbedtls_ssl_conf_sig_hashes( &conf, ssl_sig_hashes_for_test );
     }
 
     if( opt.context_crt_cb == 0 )
@@ -2149,19 +2144,9 @@ int main( int argc, char *argv[] )
         }
     }
 
-    {
-        int suite_id = mbedtls_ssl_get_ciphersuite_id_from_ssl( &ssl );
-        const mbedtls_ssl_ciphersuite_t *ciphersuite_info;
-        ciphersuite_info = mbedtls_ssl_ciphersuite_from_id( suite_id );
-
-        mbedtls_printf( " ok\n    [ Protocol is %s ]\n"
-                             "    [ Ciphersuite is %s ]\n"
-                             "    [ Key size is %u ]\n",
-          mbedtls_ssl_get_version( &ssl ),
-          mbedtls_ssl_ciphersuite_get_name( ciphersuite_info ),
-          (unsigned int)
-            mbedtls_ssl_ciphersuite_get_cipher_key_bitlen( ciphersuite_info ) );
-    }
+    mbedtls_printf( " ok\n    [ Protocol is %s ]\n    [ Ciphersuite is %s ]\n",
+                    mbedtls_ssl_get_version( &ssl ),
+                    mbedtls_ssl_get_ciphersuite( &ssl ) );
 
     if( ( ret = mbedtls_ssl_get_record_expansion( &ssl ) ) >= 0 )
         mbedtls_printf( "    [ Record expansion is %d ]\n", ret );
