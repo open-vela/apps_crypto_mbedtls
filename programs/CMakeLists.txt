@@ -1,5 +1,4 @@
 add_subdirectory(aes)
-add_subdirectory(cipher)
 if (NOT WIN32)
     add_subdirectory(fuzz)
 endif()
