@@ -438,6 +438,7 @@ void pk_rsa_verify_ext_test_vec( data_t * message_str, int digest,
     void *options;
     size_t hash_len;
 
+    USE_PSA_INIT( );
     mbedtls_pk_init( &pk );
 
     memset( hash_result, 0x00, sizeof( hash_result ) );
@@ -481,6 +482,7 @@ void pk_rsa_verify_ext_test_vec( data_t * message_str, int digest,
 
 exit:
     mbedtls_pk_free( &pk );
+    USE_PSA_DONE( );
 }
 /* END_CASE */
 
