@@ -380,7 +380,7 @@
 #define MBEDTLS_SSL_CID_TLS1_3_PADDING_GRANULARITY 16
 #endif
 
-/* \} name SECTION: Module settings */
+/** \} name SECTION: Module settings */
 
 /*
  * Length of the verify data for secure renegotiation
@@ -505,6 +505,7 @@
 #define MBEDTLS_SSL_HS_CERTIFICATE_VERIFY      15
 #define MBEDTLS_SSL_HS_CLIENT_KEY_EXCHANGE     16
 #define MBEDTLS_SSL_HS_FINISHED                20
+#define MBEDTLS_SSL_HS_MESSAGE_HASH           254
 
 /*
  * TLS extensions
@@ -643,6 +644,7 @@ typedef enum
     MBEDTLS_SSL_CLIENT_CERTIFICATE_VERIFY,
 #if defined(MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE)
     MBEDTLS_SSL_CLIENT_CCS_AFTER_SERVER_FINISHED,
+    MBEDTLS_SSL_CLIENT_CCS_BEFORE_2ND_CLIENT_HELLO,
 #endif /* MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE */
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 }
@@ -1359,11 +1361,11 @@ struct mbedtls_ssl_config
 #endif /* MBEDTLS_SSL_ASYNC_PRIVATE */
 
 #if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
-    const int *MBEDTLS_PRIVATE(sig_hashes);          /*!< allowed signature hashes           */
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
-    const uint16_t *MBEDTLS_PRIVATE(tls13_sig_algs); /*!< allowed signature algorithms for TLS 1.3 */
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
+#if !defined(MBEDTLS_DEPRECATED_REMOVED)
+    const int *MBEDTLS_PRIVATE(sig_hashes);         /*!< allowed signature hashes           */
+#endif
+    const uint16_t *MBEDTLS_PRIVATE(sig_algs);      /*!< allowed signature algorithms       */
 #endif
 
 #if defined(MBEDTLS_ECP_C) && !defined(MBEDTLS_DEPRECATED_REMOVED)
@@ -3267,6 +3269,7 @@ void mbedtls_ssl_conf_groups( mbedtls_ssl_config *conf,
                               const uint16_t *groups );
 
 #if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
+#if !defined(MBEDTLS_DEPRECATED_REMOVED) && defined(MBEDTLS_SSL_PROTO_TLS1_2)
 /**
  * \brief          Set the allowed hashes for signatures during the handshake.
  *
@@ -3296,10 +3299,10 @@ void mbedtls_ssl_conf_groups( mbedtls_ssl_config *conf,
  * \param hashes   Ordered list of allowed signature hashes,
  *                 terminated by \c MBEDTLS_MD_NONE.
  */
-void mbedtls_ssl_conf_sig_hashes( mbedtls_ssl_config *conf,
-                                  const int *hashes );
+void MBEDTLS_DEPRECATED mbedtls_ssl_conf_sig_hashes( mbedtls_ssl_config *conf,
+                                                     const int *hashes );
+#endif /* !MBEDTLS_DEPRECATED_REMOVED && MBEDTLS_SSL_PROTO_TLS1_2 */
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
 /**
  * \brief          Configure allowed signature algorithms for use in TLS 1.3
  *
@@ -3311,7 +3314,6 @@ void mbedtls_ssl_conf_sig_hashes( mbedtls_ssl_config *conf,
  */
 void mbedtls_ssl_conf_sig_algs( mbedtls_ssl_config *conf,
                                 const uint16_t* sig_algs );
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 #endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
 
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
@@ -3887,6 +3889,15 @@ size_t mbedtls_ssl_get_bytes_avail( const mbedtls_ssl_context *ssl );
  *                 and \c MBEDTLS_X509_BADCRL_XXX failure flags; see x509.h.
  */
 uint32_t mbedtls_ssl_get_verify_result( const mbedtls_ssl_context *ssl );
+
+/**
+ * \brief          Return the id of the current ciphersuite
+ *
+ * \param ssl      SSL context
+ *
+ * \return         a ciphersuite id
+ */
+int mbedtls_ssl_get_ciphersuite_id_from_ssl( const mbedtls_ssl_context *ssl );
 
 /**
  * \brief          Return the name of the current ciphersuite
