@@ -1706,7 +1706,7 @@ int mbedtls_ssl_write_certificate( mbedtls_ssl_context *ssl )
 #if defined(MBEDTLS_SSL_CLI_C)
     if( ssl->conf->endpoint == MBEDTLS_SSL_IS_CLIENT )
     {
-        if( ssl->client_auth == 0 )
+        if( ssl->handshake->client_auth == 0 )
         {
             MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= skip write certificate" ) );
             ssl->state++;
@@ -5756,7 +5756,12 @@ void mbedtls_ssl_handshake_free( mbedtls_ssl_context *ssl )
         mbedtls_free( (void*) handshake->sig_algs );
     handshake->sig_algs = NULL;
 #endif /* MBEDTLS_DEPRECATED_REMOVED */
-
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
+    if( ssl->handshake->certificate_request_context )
+    {
+        mbedtls_free( (void*) handshake->certificate_request_context );
+    }
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 #endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
 
 #if defined(MBEDTLS_SSL_ASYNC_PRIVATE)
@@ -7211,16 +7216,18 @@ unsigned char mbedtls_ssl_hash_from_md_alg( int md )
     }
 }
 
+#if defined(MBEDTLS_ECP_C)
 /*
  * Check if a curve proposed by the peer is in our list.
  * Return 0 if we're willing to use it, -1 otherwise.
  */
-int mbedtls_ssl_check_curve_tls_id( const mbedtls_ssl_context *ssl, uint16_t tls_id )
+int mbedtls_ssl_check_curve( const mbedtls_ssl_context *ssl, mbedtls_ecp_group_id grp_id )
 {
     const uint16_t *group_list = mbedtls_ssl_get_groups( ssl );
 
     if( group_list == NULL )
         return( -1 );
+    uint16_t tls_id = mbedtls_ecp_curve_info_from_grp_id(grp_id)->tls_id;
 
     for( ; *group_list != 0; group_list++ )
     {
@@ -7229,16 +7236,6 @@ int mbedtls_ssl_check_curve_tls_id( const mbedtls_ssl_context *ssl, uint16_t tls
     }
 
     return( -1 );
-}
-
-#if defined(MBEDTLS_ECP_C)
-/*
- * Same as mbedtls_ssl_check_curve_tls_id() but with a mbedtls_ecp_group_id.
- */
-int mbedtls_ssl_check_curve( const mbedtls_ssl_context *ssl, mbedtls_ecp_group_id grp_id )
-{
-    uint16_t tls_id = mbedtls_ecp_curve_info_from_grp_id( grp_id )->tls_id;
-    return mbedtls_ssl_check_curve_tls_id( ssl, tls_id );
 }
 #endif /* MBEDTLS_ECP_C */
 
@@ -7479,12 +7476,40 @@ int mbedtls_ssl_get_handshake_transcript( mbedtls_ssl_context *ssl,
                                           size_t dst_len,
                                           size_t *olen )
 {
-    ((void) ssl);
-    ((void) md);
-    ((void) dst);
-    ((void) dst_len);
+    psa_status_t status = PSA_ERROR_CORRUPTION_DETECTED;
+    psa_hash_operation_t *hash_operation_to_clone;
+    psa_hash_operation_t hash_operation = psa_hash_operation_init();
+
     *olen = 0;
-    return( MBEDTLS_ERR_SSL_FEATURE_UNAVAILABLE);
+
+    switch( md )
+    {
+#if defined(MBEDTLS_SHA384_C)
+    case MBEDTLS_MD_SHA384:
+        hash_operation_to_clone = &ssl->handshake->fin_sha384_psa;
+        break;
+#endif
+
+#if defined(MBEDTLS_SHA256_C)
+    case MBEDTLS_MD_SHA256:
+        hash_operation_to_clone = &ssl->handshake->fin_sha256_psa;
+        break;
+#endif
+
+    default:
+        goto exit;
+    }
+
+    status = psa_hash_clone( hash_operation_to_clone, &hash_operation );
+    if( status != PSA_SUCCESS )
+        goto exit;
+
+    status = psa_hash_finish( &hash_operation, dst, dst_len, olen );
+    if( status != PSA_SUCCESS )
+        goto exit;
+
+exit:
+    return( psa_ssl_status_to_mbedtls( status ) );
 }
 #else /* MBEDTLS_USE_PSA_CRYPTO */
 

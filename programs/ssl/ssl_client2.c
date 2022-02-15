@@ -21,7 +21,7 @@
 
 #include "ssl_test_lib.h"
 
-#if defined(MBEDTLS_USE_PSA_CRYPTO) || defined(MBEDTLS_SSL_PROTO_TLS1_3)
+#if defined(MBEDTLS_USE_PSA_CRYPTO)
 #include "test/psa_crypto_helpers.h"
 #endif
 
@@ -698,8 +698,6 @@ int main( int argc, char *argv[] )
     psa_key_attributes_t key_attributes;
 #endif
     psa_status_t status;
-#elif defined(MBEDTLS_SSL_PROTO_TLS1_3)
-    psa_status_t status;
 #endif
 
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
@@ -772,7 +770,7 @@ int main( int argc, char *argv[] )
     memset( (void * ) alpn_list, 0, sizeof( alpn_list ) );
 #endif
 
-#if defined(MBEDTLS_USE_PSA_CRYPTO) || defined(MBEDTLS_SSL_PROTO_TLS1_3)
+#if defined(MBEDTLS_USE_PSA_CRYPTO)
     status = psa_crypto_init();
     if( status != PSA_SUCCESS )
     {
@@ -3087,7 +3085,7 @@ exit:
 #endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED &&
           MBEDTLS_USE_PSA_CRYPTO */
 
-#if defined(MBEDTLS_USE_PSA_CRYPTO) || defined(MBEDTLS_SSL_PROTO_TLS1_3)
+#if defined(MBEDTLS_USE_PSA_CRYPTO)
     const char* message = mbedtls_test_helper_is_psa_leaking();
     if( message )
     {
@@ -3099,7 +3097,7 @@ exit:
 
     /* For builds with MBEDTLS_TEST_USE_PSA_CRYPTO_RNG psa crypto
      * resources are freed by rng_free(). */
-#if (defined(MBEDTLS_USE_PSA_CRYPTO) || defined(MBEDTLS_SSL_PROTO_TLS1_3)) && \
+#if defined(MBEDTLS_USE_PSA_CRYPTO) && \
     !defined(MBEDTLS_TEST_USE_PSA_CRYPTO_RNG)
     mbedtls_psa_crypto_free( );
 #endif
