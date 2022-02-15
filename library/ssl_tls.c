@@ -1706,7 +1706,7 @@ int mbedtls_ssl_write_certificate( mbedtls_ssl_context *ssl )
 #if defined(MBEDTLS_SSL_CLI_C)
     if( ssl->conf->endpoint == MBEDTLS_SSL_IS_CLIENT )
     {
-        if( ssl->handshake->client_auth == 0 )
+        if( ssl->client_auth == 0 )
         {
             MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= skip write certificate" ) );
             ssl->state++;
@@ -5756,12 +5756,7 @@ void mbedtls_ssl_handshake_free( mbedtls_ssl_context *ssl )
         mbedtls_free( (void*) handshake->sig_algs );
     handshake->sig_algs = NULL;
 #endif /* MBEDTLS_DEPRECATED_REMOVED */
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
-    if( ssl->handshake->certificate_request_context )
-    {
-        mbedtls_free( (void*) handshake->certificate_request_context );
-    }
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
+
 #endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
 
 #if defined(MBEDTLS_SSL_ASYNC_PRIVATE)
@@ -7476,40 +7471,12 @@ int mbedtls_ssl_get_handshake_transcript( mbedtls_ssl_context *ssl,
                                           size_t dst_len,
                                           size_t *olen )
 {
-    psa_status_t status = PSA_ERROR_CORRUPTION_DETECTED;
-    psa_hash_operation_t *hash_operation_to_clone;
-    psa_hash_operation_t hash_operation = psa_hash_operation_init();
-
+    ((void) ssl);
+    ((void) md);
+    ((void) dst);
+    ((void) dst_len);
     *olen = 0;
-
-    switch( md )
-    {
-#if defined(MBEDTLS_SHA384_C)
-    case MBEDTLS_MD_SHA384:
-        hash_operation_to_clone = &ssl->handshake->fin_sha384_psa;
-        break;
-#endif
-
-#if defined(MBEDTLS_SHA256_C)
-    case MBEDTLS_MD_SHA256:
-        hash_operation_to_clone = &ssl->handshake->fin_sha256_psa;
-        break;
-#endif
-
-    default:
-        goto exit;
-    }
-
-    status = psa_hash_clone( hash_operation_to_clone, &hash_operation );
-    if( status != PSA_SUCCESS )
-        goto exit;
-
-    status = psa_hash_finish( &hash_operation, dst, dst_len, olen );
-    if( status != PSA_SUCCESS )
-        goto exit;
-
-exit:
-    return( psa_ssl_status_to_mbedtls( status ) );
+    return( MBEDTLS_ERR_SSL_FEATURE_UNAVAILABLE);
 }
 #else /* MBEDTLS_USE_PSA_CRYPTO */
 
