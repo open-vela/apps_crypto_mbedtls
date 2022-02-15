@@ -917,29 +917,29 @@ int mbedtls_pk_load_file( const char *path, unsigned char **buf, size_t *n );
 
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
 /**
- * \brief           Turn an EC key into an opaque one.
+ * \brief           Turn an EC or RSA key into an opaque one.
  *
  * \warning         This is a temporary utility function for tests. It might
  *                  change or be removed at any time without notice.
  *
- * \note            Only ECDSA keys are supported so far. Signing with the
- *                  specified hash & ECDH key agreement derivation operation
- *                  are the only allowed use of that key.
- *
- * \param pk        Input: the EC key to import to a PSA key.
+ * \param pk        Input: the EC or RSA key to import to a PSA key.
  *                  Output: a PK context wrapping that PSA key.
  * \param key       Output: a PSA key identifier.
  *                  It's the caller's responsibility to call
  *                  psa_destroy_key() on that key identifier after calling
  *                  mbedtls_pk_free() on the PK context.
- * \param hash_alg  The hash algorithm to allow for use with that key.
+ * \param alg       The algorithm to allow for use with that key.
+ * \param usage     The usage to allow for use with that key.
+ * \param alg2      The secondary algorithm to allow for use with that key.
  *
  * \return          \c 0 if successful.
  * \return          An Mbed TLS error code otherwise.
  */
 int mbedtls_pk_wrap_as_opaque( mbedtls_pk_context *pk,
                                mbedtls_svc_key_id_t *key,
-                               psa_algorithm_t hash_alg );
+                               psa_algorithm_t alg,
+                               psa_key_usage_t usage,
+                               psa_algorithm_t alg2 );
 #endif /* MBEDTLS_USE_PSA_CRYPTO */
 
 #ifdef __cplusplus
