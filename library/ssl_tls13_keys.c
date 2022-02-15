@@ -27,6 +27,7 @@
 #include "mbedtls/hkdf.h"
 #include "mbedtls/debug.h"
 #include "mbedtls/error.h"
+#include "mbedtls/platform.h"
 
 #include "ssl_misc.h"
 #include "ssl_tls13_keys.h"
@@ -1106,7 +1107,7 @@ int mbedtls_ssl_tls13_populate_transform( mbedtls_ssl_transform *transform,
     transform->ivlen       = traffic_keys->iv_len;
     transform->maclen      = 0;
     transform->fixed_ivlen = transform->ivlen;
-    transform->minor_ver   = MBEDTLS_SSL_MINOR_VERSION_4;
+    transform->tls_version = MBEDTLS_SSL_VERSION_TLS1_3;
 
     /* We add the true record content type (1 Byte) to the plaintext and
      * then pad to the configured granularity. The mimimum length of the
@@ -1506,7 +1507,61 @@ int mbedtls_ssl_tls13_generate_application_keys(
     /* randbytes is not used again */
     mbedtls_platform_zeroize( ssl->handshake->randbytes,
                               sizeof( ssl->handshake->randbytes ) );
+
     mbedtls_platform_zeroize( transcript, sizeof( transcript ) );
+    return( ret );
+}
+
+int mbedtls_ssl_tls13_compute_handshake_transform( mbedtls_ssl_context *ssl )
+{
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+    mbedtls_ssl_key_set traffic_keys;
+    mbedtls_ssl_transform *transform_handshake = NULL;
+    mbedtls_ssl_handshake_params *handshake = ssl->handshake;
+
+    /* Compute handshake secret */
+    ret = mbedtls_ssl_tls13_key_schedule_stage_handshake( ssl );
+    if( ret != 0 )
+    {
+        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls13_derive_master_secret", ret );
+        goto cleanup;
+    }
+
+    /* Next evolution in key schedule: Establish handshake secret and
+     * key material. */
+    ret = mbedtls_ssl_tls13_generate_handshake_keys( ssl, &traffic_keys );
+    if( ret != 0 )
+    {
+        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls13_generate_handshake_keys",
+                               ret );
+        goto cleanup;
+    }
+
+    transform_handshake = mbedtls_calloc( 1, sizeof( mbedtls_ssl_transform ) );
+    if( transform_handshake == NULL )
+    {
+        ret = MBEDTLS_ERR_SSL_ALLOC_FAILED;
+        goto cleanup;
+    }
+
+    ret = mbedtls_ssl_tls13_populate_transform(
+                                        transform_handshake,
+                                        ssl->conf->endpoint,
+                                        ssl->session_negotiate->ciphersuite,
+                                        &traffic_keys,
+                                        ssl );
+    if( ret != 0 )
+    {
+        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls13_populate_transform", ret );
+        goto cleanup;
+    }
+    handshake->transform_handshake = transform_handshake;
+
+cleanup:
+    mbedtls_platform_zeroize( &traffic_keys, sizeof( traffic_keys ) );
+    if( ret != 0 )
+        mbedtls_free( transform_handshake );
+
     return( ret );
 }
 
