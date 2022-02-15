@@ -1613,6 +1613,11 @@ struct mbedtls_ssl_context
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
 
     /*
+     * PKI layer
+     */
+    int MBEDTLS_PRIVATE(client_auth);                    /*!<  flag for client auth.   */
+
+    /*
      * User settings
      */
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
