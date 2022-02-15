@@ -136,6 +136,80 @@ void mbedtls_ssl_tls13_add_hs_hdr_to_checksum( mbedtls_ssl_context *ssl,
 }
 
 #if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
+/* mbedtls_ssl_tls13_parse_sig_alg_ext()
+ *
+ * enum {
+ *    ....
+ *   ecdsa_secp256r1_sha256( 0x0403 ),
+ *   ecdsa_secp384r1_sha384( 0x0503 ),
+ *   ecdsa_secp521r1_sha512( 0x0603 ),
+ *    ....
+ * } SignatureScheme;
+ *
+ * struct {
+ *    SignatureScheme supported_signature_algorithms<2..2^16-2>;
+ * } SignatureSchemeList;
+ */
+int mbedtls_ssl_tls13_parse_sig_alg_ext( mbedtls_ssl_context *ssl,
+                                         const unsigned char *buf,
+                                         const unsigned char *end )
+{
+    const unsigned char *p = buf;
+    size_t supported_sig_algs_len = 0;
+    const unsigned char *supported_sig_algs_end;
+    uint16_t sig_alg;
+    uint32_t common_idx = 0;
+
+    MBEDTLS_SSL_CHK_BUF_READ_PTR( p, end, 2 );
+    supported_sig_algs_len = MBEDTLS_GET_UINT16_BE( p, 0 );
+    p += 2;
+
+    memset( ssl->handshake->received_sig_algs, 0,
+            sizeof(ssl->handshake->received_sig_algs) );
+
+    MBEDTLS_SSL_CHK_BUF_READ_PTR( p, end, supported_sig_algs_len );
+    supported_sig_algs_end = p + supported_sig_algs_len;
+    while( p < supported_sig_algs_end )
+    {
+        MBEDTLS_SSL_CHK_BUF_READ_PTR( p, supported_sig_algs_end, 2 );
+        sig_alg = MBEDTLS_GET_UINT16_BE( p, 0 );
+        p += 2;
+
+        MBEDTLS_SSL_DEBUG_MSG( 4, ( "received signature algorithm: 0x%x",
+                                    sig_alg ) );
+
+        if( ! mbedtls_ssl_sig_alg_is_offered( ssl, sig_alg ) ||
+            ! mbedtls_ssl_sig_alg_is_supported( ssl, sig_alg ) )
+            continue;
+
+        if( common_idx + 1 < MBEDTLS_RECEIVED_SIG_ALGS_SIZE )
+        {
+            ssl->handshake->received_sig_algs[common_idx] = sig_alg;
+            common_idx += 1;
+        }
+    }
+    /* Check that we consumed all the message. */
+    if( p != end )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 1,
+            ( "Signature algorithms extension length misaligned" ) );
+        MBEDTLS_SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR,
+                                      MBEDTLS_ERR_SSL_DECODE_ERROR );
+        return( MBEDTLS_ERR_SSL_DECODE_ERROR );
+    }
+
+    if( common_idx == 0 )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 3, ( "no signature algorithm in common" ) );
+        MBEDTLS_SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_HANDSHAKE_FAILURE,
+                                      MBEDTLS_ERR_SSL_HANDSHAKE_FAILURE );
+        return( MBEDTLS_ERR_SSL_HANDSHAKE_FAILURE );
+    }
+
+    ssl->handshake->received_sig_algs[common_idx] = MBEDTLS_TLS1_3_SIG_NONE;
+    return( 0 );
+}
+
 /*
  * STATE HANDLING: Read CertificateVerify
  */
@@ -1146,7 +1220,6 @@ int mbedtls_ssl_reset_transcript_for_hrr( mbedtls_ssl_context *ssl )
     size_t hash_len;
     const mbedtls_ssl_ciphersuite_t *ciphersuite_info;
     uint16_t cipher_suite = ssl->session_negotiate->ciphersuite;
-    psa_status_t status = PSA_ERROR_GENERIC_ERROR;
     ciphersuite_info = mbedtls_ssl_ciphersuite_from_id( cipher_suite );
 
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "Reset SSL session for HRR" ) );
@@ -1200,19 +1273,6 @@ int mbedtls_ssl_reset_transcript_for_hrr( mbedtls_ssl_context *ssl )
 #if defined(MBEDTLS_SHA256_C) || defined(MBEDTLS_SHA384_C)
     ssl->handshake->update_checksum( ssl, hash_transcript, hash_len );
 #endif /* MBEDTLS_SHA256_C || MBEDTLS_SHA384_C */
-
-    /* Destroy generated private key. */
-    status = psa_destroy_key( ssl->handshake->ecdh_psa_privkey );
-
-    if( status != PSA_SUCCESS )
-    {
-        ret = psa_ssl_status_to_mbedtls( status );
-        MBEDTLS_SSL_DEBUG_RET( 1, "psa_destroy_key", ret );
-        return( ret );
-    }
-
-    ssl->handshake->ecdh_psa_privkey = MBEDTLS_SVC_KEY_ID_INIT;
-
     return( ret );
 }
 
