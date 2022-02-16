@@ -60,14 +60,8 @@ int dummy_random( void *p_rng, unsigned char *output, size_t output_len )
     size_t i;
 
 #if defined(MBEDTLS_CTR_DRBG_C)
-    //mbedtls_ctr_drbg_random requires a valid mbedtls_ctr_drbg_context in p_rng
-    if( p_rng != NULL ) {
-        //use mbedtls_ctr_drbg_random to find bugs in it
-        ret = mbedtls_ctr_drbg_random(p_rng, output, output_len);
-    } else {
-        //fall through to pseudo-random
-        ret = 0;
-    }
+    //use mbedtls_ctr_drbg_random to find bugs in it
+    ret = mbedtls_ctr_drbg_random(p_rng, output, output_len);
 #else
     (void) p_rng;
     ret = 0;
