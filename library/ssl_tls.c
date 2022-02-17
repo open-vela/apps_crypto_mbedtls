@@ -7471,40 +7471,12 @@ int mbedtls_ssl_get_handshake_transcript( mbedtls_ssl_context *ssl,
                                           size_t dst_len,
                                           size_t *olen )
 {
-    psa_status_t status = PSA_ERROR_CORRUPTION_DETECTED;
-    psa_hash_operation_t *hash_operation_to_clone;
-    psa_hash_operation_t hash_operation = psa_hash_operation_init();
-
+    ((void) ssl);
+    ((void) md);
+    ((void) dst);
+    ((void) dst_len);
     *olen = 0;
-
-    switch( md )
-    {
-#if defined(MBEDTLS_SHA384_C)
-    case MBEDTLS_MD_SHA384:
-        hash_operation_to_clone = &ssl->handshake->fin_sha384_psa;
-        break;
-#endif
-
-#if defined(MBEDTLS_SHA256_C)
-    case MBEDTLS_MD_SHA256:
-        hash_operation_to_clone = &ssl->handshake->fin_sha256_psa;
-        break;
-#endif
-
-    default:
-        goto exit;
-    }
-
-    status = psa_hash_clone( hash_operation_to_clone, &hash_operation );
-    if( status != PSA_SUCCESS )
-        goto exit;
-
-    status = psa_hash_finish( &hash_operation, dst, dst_len, olen );
-    if( status != PSA_SUCCESS )
-        goto exit;
-
-exit:
-    return( psa_ssl_status_to_mbedtls( status ) );
+    return( MBEDTLS_ERR_SSL_FEATURE_UNAVAILABLE);
 }
 #else /* MBEDTLS_USE_PSA_CRYPTO */
 
