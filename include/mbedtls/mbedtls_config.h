@@ -256,7 +256,7 @@
  */
 //#define MBEDTLS_DEPRECATED_REMOVED
 
-/** \} name SECTION: System support */
+/* \} name SECTION: System support */
 
 /**
  * \name SECTION: mbed TLS feature support
@@ -1081,7 +1081,7 @@
  * which is currently hard-coded to be int32_t.
  *
  * Note that this option is meant for internal use only and may be removed
- * without notice.
+ * without notice. It is incompatible with MBEDTLS_USE_PSA_CRYPTO.
  */
 //#define MBEDTLS_PSA_CRYPTO_KEY_ID_ENCODES_OWNER
 
@@ -1829,7 +1829,7 @@
  * Comment this macro to disallow using RSASSA-PSS in certificates.
  */
 #define MBEDTLS_X509_RSASSA_PSS_SUPPORT
-/** \} name SECTION: mbed TLS feature support */
+/* \} name SECTION: mbed TLS feature support */
 
 /**
  * \name SECTION: mbed TLS modules
@@ -2760,56 +2760,6 @@
 #define MBEDTLS_SHA256_C
 
 /**
- * \def MBEDTLS_SHA256_USE_A64_CRYPTO_IF_PRESENT
- *
- * Enable acceleration of the SHA-256 cryptographic hash algorithm with the
- * Arm A64 cryptographic extensions if they are available at runtime. If not,
- * it will fall back to the C implementation.
- *
- * \note If MBEDTLS_SHA256_USE_A64_CRYPTO_IF_PRESENT is defined when building
- * for a non-Aarch64 build it will be silently ignored.
- *
- * \note The code uses Neon intrinsics, so \c CFLAGS must be set to a minimum
- * of \c -march=armv8-a+crypto.
- *
- * \warning MBEDTLS_SHA256_USE_A64_CRYPTO_IF_PRESENT cannot be defined at the
- * same time as MBEDTLS_SHA256_USE_A64_CRYPTO_ONLY.
- *
- * Requires: MBEDTLS_SHA256_C.
- *
- * Module:  library/sha256.c
- *
- * Uncomment to have the library check for the A64 SHA-256 crypto extensions
- * and use them if available.
- */
-//#define MBEDTLS_SHA256_USE_A64_CRYPTO_IF_PRESENT
-
-/**
- * \def MBEDTLS_SHA256_USE_A64_CRYPTO_ONLY
- *
- * Enable acceleration of the SHA-256 cryptographic hash algorithm with the
- * Arm A64 cryptographic extensions, which must be available at runtime (or
- * an illegal instruction fault will occur).
- *
- * \note This allows builds with a smaller code size than with
- * MBEDTLS_SHA256_USE_A64_CRYPTO_IF_PRESENT
- *
- * \note The code uses Neon intrinsics, so \c CFLAGS must be set to a minimum
- * of \c -march=armv8-a+crypto.
- *
- * \warning MBEDTLS_SHA256_USE_A64_CRYPTO_ONLY cannot be defined at the same
- * time as MBEDTLS_SHA256_USE_A64_CRYPTO_IF_PRESENT.
- *
- * Requires: MBEDTLS_SHA256_C.
- *
- * Module:  library/sha256.c
- *
- * Uncomment to have the library use the A64 SHA-256 crypto extensions
- * unconditionally.
- */
-//#define MBEDTLS_SHA256_USE_A64_CRYPTO_ONLY
-
-/**
  * \def MBEDTLS_SHA384_C
  *
  * Enable the SHA-384 cryptographic hash algorithm.
@@ -3071,7 +3021,7 @@
  */
 #define MBEDTLS_X509_CSR_WRITE_C
 
-/** \} name SECTION: mbed TLS modules */
+/* \} name SECTION: mbed TLS modules */
 
 /**
  * \name SECTION: Module configuration options
@@ -3369,4 +3319,4 @@
  */
 //#define MBEDTLS_ECDH_VARIANT_EVEREST_ENABLED
 
-/** \} name SECTION: Customisation configuration options */
+/* \} name SECTION: Customisation configuration options */

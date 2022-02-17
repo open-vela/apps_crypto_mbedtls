@@ -149,10 +149,6 @@
 #error "MBEDTLS_PK_PARSE_C defined, but not all prerequesites"
 #endif
 
-#if defined(MBEDTLS_PKCS5_C) && !defined(MBEDTLS_MD_C)
-#error "MBEDTLS_PKCS5_C defined, but not all prerequesites"
-#endif
-
 #if defined(MBEDTLS_ENTROPY_C) && (!defined(MBEDTLS_SHA512_C) &&      \
                                     !defined(MBEDTLS_SHA256_C))
 #error "MBEDTLS_ENTROPY_C defined, but not all prerequisites"
@@ -565,6 +561,11 @@
 #error "MBEDTLS_PSA_ITS_FILE_C defined, but not all prerequisites"
 #endif
 
+#if defined(MBEDTLS_PSA_CRYPTO_KEY_ID_ENCODES_OWNER) && \
+    defined(MBEDTLS_USE_PSA_CRYPTO)
+#error "MBEDTLS_PSA_CRYPTO_KEY_ID_ENCODES_OWNER defined, but it cannot coexist with MBEDTLS_USE_PSA_CRYPTO."
+#endif
+
 #if defined(MBEDTLS_RSA_C) && ( !defined(MBEDTLS_BIGNUM_C) ||         \
     !defined(MBEDTLS_OID_C) )
 #error "MBEDTLS_RSA_C defined, but not all prerequisites"
@@ -590,29 +591,6 @@
 
 #if defined(MBEDTLS_SHA256_C) && !defined(MBEDTLS_SHA224_C)
 #error "MBEDTLS_SHA256_C defined without MBEDTLS_SHA224_C"
-#endif
-
-#if defined(MBEDTLS_SHA256_USE_A64_CRYPTO_IF_PRESENT) && \
-    defined(MBEDTLS_SHA256_USE_A64_CRYPTO_ONLY)
-#error "Must only define one of MBEDTLS_SHA256_USE_A64_CRYPTO_*"
-#endif
-
-#if defined(MBEDTLS_SHA256_USE_A64_CRYPTO_IF_PRESENT) || \
-    defined(MBEDTLS_SHA256_USE_A64_CRYPTO_ONLY)
-#if !defined(MBEDTLS_SHA256_C)
-#error "MBEDTLS_SHA256_USE_A64_CRYPTO_* defined without MBEDTLS_SHA256_C"
-#endif
-#if defined(MBEDTLS_SHA256_ALT) || defined(MBEDTLS_SHA256_PROCESS_ALT)
-#error "MBEDTLS_SHA256_*ALT can't be used with MBEDTLS_SHA256_USE_A64_CRYPTO_*"
-#endif
-#if defined(__aarch64__) && !defined(__ARM_FEATURE_CRYPTO)
-#error "Must use minimum -march=armv8-a+crypto for MBEDTLS_SHA256_USE_A64_CRYPTO_*"
-#endif
-#endif
-
-#if defined(MBEDTLS_SHA256_USE_A64_CRYPTO_ONLY) && \
-    !defined(__aarch64__) && !defined(_M_ARM64)
-#error "MBEDTLS_SHA256_USE_A64_CRYPTO_ONLY defined on non-Aarch64 system"
 #endif
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_2) && ( !defined(MBEDTLS_SHA1_C) &&     \
@@ -666,8 +644,7 @@
 #error "MBEDTLS_SSL_SRV_C defined, but not all prerequisites"
 #endif
 
-#if defined(MBEDTLS_SSL_TLS_C) && \
-    !( defined(MBEDTLS_SSL_PROTO_TLS1_2) || defined(MBEDTLS_SSL_PROTO_TLS1_3) )
+#if defined(MBEDTLS_SSL_TLS_C) && !defined(MBEDTLS_SSL_PROTO_TLS1_2)
 #error "MBEDTLS_SSL_TLS_C defined, but no protocols are active"
 #endif
 
