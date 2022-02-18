@@ -1,9 +1,6 @@
 /**
- * \file ssl_debug_helpers.h
+ *  TLS 1.2 and 1.3 client-side functions
  *
- * \brief Automatically generated helper functions for debugging
- */
-/*
  *  Copyright The Mbed TLS Contributors
  *  SPDX-License-Identifier: Apache-2.0
  *
@@ -20,27 +17,17 @@
  *  limitations under the License.
  */
 
-#ifndef MBEDTLS_SSL_DEBUG_HELPERS_H
-#define MBEDTLS_SSL_DEBUG_HELPERS_H
+#ifndef MBEDTLS_SSL_CLIENT_H
+#define MBEDTLS_SSL_CLIENT_H
 
 #include "common.h"
 
-#if defined(MBEDTLS_DEBUG_C)
-
-#include "mbedtls/ssl.h"
+#if defined(MBEDTLS_SSL_TLS_C)
 #include "ssl_misc.h"
+#endif
 
+#include <stddef.h>
 
-const char *mbedtls_ssl_states_str( mbedtls_ssl_states in );
+int mbedtls_ssl_write_client_hello( mbedtls_ssl_context *ssl );
 
-const char *mbedtls_ssl_protocol_version_str( mbedtls_ssl_protocol_version in );
-
-const char *mbedtls_tls_prf_types_str( mbedtls_tls_prf_types in );
-
-const char *mbedtls_ssl_key_export_type_str( mbedtls_ssl_key_export_type in );
-
-const char *mbedtls_ssl_sig_alg_to_str( uint16_t in );
-
-#endif /* MBEDTLS_DEBUG_C */
-
-#endif /* SSL_DEBUG_HELPERS_H */
+#endif /* MBEDTLS_SSL_CLIENT_H */
