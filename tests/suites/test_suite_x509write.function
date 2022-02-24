@@ -241,8 +241,6 @@ void x509_crt_check( char *subject_key_file, char *subject_pwd,
     memset( &rnd_info, 0x2a, sizeof( mbedtls_test_rnd_pseudo_info ) );
     mbedtls_mpi_init( &serial );
 
-    USE_PSA_INIT( );
-
     mbedtls_pk_init( &subject_key );
     mbedtls_pk_init( &issuer_key  );
     mbedtls_pk_init( &issuer_key_alt );
@@ -339,7 +337,6 @@ exit:
     mbedtls_pk_free( &subject_key );
     mbedtls_pk_free( &issuer_key );
     mbedtls_mpi_free( &serial );
-    USE_PSA_DONE( );
 }
 /* END_CASE */
 
