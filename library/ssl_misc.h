@@ -79,9 +79,7 @@
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_2)
 #define MBEDTLS_SSL_MIN_MINOR_VERSION           MBEDTLS_SSL_MINOR_VERSION_3
-#elif defined(MBEDTLS_SSL_PROTO_TLS1_3)
-#define MBEDTLS_SSL_MIN_MINOR_VERSION           MBEDTLS_SSL_MINOR_VERSION_4
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
 
 #define MBEDTLS_SSL_MIN_VALID_MINOR_VERSION MBEDTLS_SSL_MINOR_VERSION_3
 #define MBEDTLS_SSL_MIN_VALID_MAJOR_VERSION MBEDTLS_SSL_MAJOR_VERSION_3
@@ -89,9 +87,7 @@
 /* Determine maximum supported version */
 #define MBEDTLS_SSL_MAX_MAJOR_VERSION           MBEDTLS_SSL_MAJOR_VERSION_3
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
-#define MBEDTLS_SSL_MAX_MINOR_VERSION           MBEDTLS_SSL_MINOR_VERSION_4
-#elif defined(MBEDTLS_SSL_PROTO_TLS1_2)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
 #define MBEDTLS_SSL_MAX_MINOR_VERSION           MBEDTLS_SSL_MINOR_VERSION_3
 #endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
 
@@ -752,6 +748,7 @@ struct mbedtls_ssl_handshake_params
     /*
      * Checksum contexts
      */
+#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
 #if defined(MBEDTLS_SHA256_C)
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
     psa_hash_operation_t fin_sha256_psa;
@@ -766,6 +763,7 @@ struct mbedtls_ssl_handshake_params
     mbedtls_sha512_context fin_sha512;
 #endif
 #endif
+#endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3)
     uint16_t offered_group_id; /* The NamedGroup value for the group
@@ -849,11 +847,6 @@ struct mbedtls_ssl_handshake_params
      * The library does not use it internally. */
     void *user_async_ctx;
 #endif /* MBEDTLS_SSL_ASYNC_PRIVATE */
-
-#if defined(MBEDTLS_SSL_SERVER_NAME_INDICATION)
-    const unsigned char *sni_name;      /*!< raw SNI                        */
-    size_t sni_name_len;                /*!< raw SNI len                    */
-#endif /* MBEDTLS_SSL_SERVER_NAME_INDICATION */
 };
 
 typedef struct mbedtls_ssl_hs_buffer mbedtls_ssl_hs_buffer;
@@ -1145,10 +1138,7 @@ void mbedtls_ssl_handshake_wrapup( mbedtls_ssl_context *ssl );
 int mbedtls_ssl_send_fatal_handshake_failure( mbedtls_ssl_context *ssl );
 
 void mbedtls_ssl_reset_checksum( mbedtls_ssl_context *ssl );
-
-#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
 int mbedtls_ssl_derive_keys( mbedtls_ssl_context *ssl );
-#endif /* MBEDTLS_SSL_PROTO_TLS1_2  */
 
 int mbedtls_ssl_handle_message_type( mbedtls_ssl_context *ssl );
 int mbedtls_ssl_prepare_handshake_record( mbedtls_ssl_context *ssl );
