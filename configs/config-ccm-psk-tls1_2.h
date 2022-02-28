@@ -21,15 +21,11 @@
  */
 /*
  * Minimal configuration for TLS 1.2 with PSK and AES-CCM ciphersuites
- *
  * Distinguishing features:
- * - Optimized for small code size, low bandwidth (on a reliable network),
- *   and low RAM usage.
- * - No asymmetric cryptography (no certificates, no Diffie-Hellman key
- *   exchange).
- * - Fully modern and secure (provided the pre-shared keys are generated and
- *   stored securely).
- * - Very low record overhead with CCM-8.
+ * - no bignum, no PK, no X509
+ * - fully modern and secure (provided the pre-shared keys have high entropy)
+ * - very low record overhead with CCM-8
+ * - optimized for low RAM usage
  *
  * See README.txt for usage instructions.
  */
@@ -38,7 +34,11 @@
 //#define MBEDTLS_HAVE_TIME /* Optionally used in Hello messages */
 /* Other MBEDTLS_HAVE_XXX flags irrelevant for this configuration */
 
-/* Mbed TLS modules */
+/* mbed TLS feature support */
+#define MBEDTLS_KEY_EXCHANGE_PSK_ENABLED
+#define MBEDTLS_SSL_PROTO_TLS1_2
+
+/* mbed TLS modules */
 #define MBEDTLS_AES_C
 #define MBEDTLS_CCM_C
 #define MBEDTLS_CIPHER_C
@@ -55,9 +55,18 @@
 #define MBEDTLS_SSL_SRV_C
 #define MBEDTLS_SSL_TLS_C
 
-/* TLS protocol feature support */
-#define MBEDTLS_KEY_EXCHANGE_PSK_ENABLED
-#define MBEDTLS_SSL_PROTO_TLS1_2
+/* Save RAM at the expense of ROM */
+#define MBEDTLS_AES_ROM_TABLES
+
+/* Save some RAM by adjusting to your exact needs */
+#define MBEDTLS_PSK_MAX_LEN    16 /* 128-bits keys are generally enough */
+
+/*
+ * You should adjust this to the exact number of sources you're using: default
+ * is the "platform_entropy_poll" source, but you may want to add other ones
+ * Minimum is 2 for the entropy test suite.
+ */
+#define MBEDTLS_ENTROPY_MAX_SOURCES 2
 
 /*
  * Use only CCM_8 ciphersuites, and
@@ -72,28 +81,10 @@
  * both ends of the connection!  (See comments in "mbedtls/ssl.h".)
  * The optimal size here depends on the typical size of records.
  */
-#define MBEDTLS_SSL_IN_CONTENT_LEN              1024
+#define MBEDTLS_SSL_IN_CONTENT_LEN             1024
 #define MBEDTLS_SSL_OUT_CONTENT_LEN             1024
-
-/* Save RAM at the expense of ROM */
-#define MBEDTLS_AES_ROM_TABLES
-
-/* Save some RAM by adjusting to your exact needs */
-#define MBEDTLS_PSK_MAX_LEN    16 /* 128-bits keys are generally enough */
-
-/*
- * You should adjust this to the exact number of sources you're using: default
- * is the "platform_entropy_poll" source, but you may want to add other ones
- * Minimum is 2 for the entropy test suite.
- */
-#define MBEDTLS_ENTROPY_MAX_SOURCES 2
 
 /* These defines are present so that the config modifying scripts can enable
  * them during tests/scripts/test-ref-configs.pl */
 //#define MBEDTLS_USE_PSA_CRYPTO
 //#define MBEDTLS_PSA_CRYPTO_C
-
-/* Error messages and TLS debugging traces
- * (huge code size increase, needed for tests/ssl-opt.sh) */
-//#define MBEDTLS_DEBUG_C
-//#define MBEDTLS_ERROR_C
