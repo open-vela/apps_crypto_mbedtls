@@ -293,69 +293,6 @@ maybe_requires_ciphersuite_enabled() {
     unset ciphersuite
 }
 
-adapt_cmd_for_psk () {
-    case "$2" in
-        *openssl*) s='-psk abc123 -nocert';;
-        *gnutls-*) s='--pskkey=abc123';;
-        *) s='psk=abc123';;
-    esac
-    eval $1='"$2 $s"'
-    unset s
-}
-
-# maybe_adapt_for_psk [RUN_TEST_OPTION...]
-# If running in a PSK-only build, maybe adapt the test to use a pre-shared key.
-#
-# If not running in a PSK-only build, do nothing.
-# If the test looks like it doesn't use a pre-shared key but can run with a
-# pre-shared key, pass a pre-shared key. If the test looks like it can't run
-# with a pre-shared key, skip it. If the test looks like it's already using
-# a pre-shared key, do nothing.
-#
-# This code does not consider builds with ECDH-PSK or RSA-PSK.
-#
-# Inputs:
-# * $CLI_CMD, $SRV_CMD, $PXY_CMD: client/server/proxy commands.
-# * $PSK_ONLY: YES if running in a PSK-only build (no asymmetric key exchanges).
-# * "$@": options passed to run_test.
-#
-# Outputs:
-# * $CLI_CMD, $SRV_CMD: may be modified to add PSK-relevant arguments.
-# * $SKIP_NEXT: set to YES if the test can't run with PSK.
-maybe_adapt_for_psk() {
-    if [ "$PSK_ONLY" != "YES" ]; then
-        return
-    fi
-    if [ "$SKIP_NEXT" = "YES" ]; then
-        return
-    fi
-    case "$CLI_CMD $SRV_CMD" in
-        *[-_\ =]psk*|*[-_\ =]PSK*)
-            return;;
-        *force_ciphersuite*)
-            # The test case forces a non-PSK cipher suite. In some cases, a
-            # PSK cipher suite could be substituted, but we're not ready for
-            # that yet.
-            SKIP_NEXT="YES"
-            return;;
-        *\ auth_mode=*|*[-_\ =]crt[_=]*)
-            # The test case involves certificates. PSK won't do.
-            SKIP_NEXT="YES"
-            return;;
-    esac
-    adapt_cmd_for_psk CLI_CMD "$CLI_CMD"
-    adapt_cmd_for_psk SRV_CMD "$SRV_CMD"
-}
-
-case " $CONFIGS_ENABLED " in
-    *\ MBEDTLS_KEY_EXCHANGE_[^P]*) PSK_ONLY="NO";;
-    *\ MBEDTLS_KEY_EXCHANGE_P[^S]*) PSK_ONLY="NO";;
-    *\ MBEDTLS_KEY_EXCHANGE_PS[^K]*) PSK_ONLY="NO";;
-    *\ MBEDTLS_KEY_EXCHANGE_PSK[^_]*) PSK_ONLY="NO";;
-    *\ MBEDTLS_KEY_EXCHANGE_PSK_ENABLED\ *) PSK_ONLY="YES";;
-    *) PSK_ONLY="NO";;
-esac
-
 # skip next test if OpenSSL doesn't support FALLBACK_SCSV
 requires_openssl_with_fallback_scsv() {
     if [ -z "${OPENSSL_HAS_FBSCSV:-}" ]; then
@@ -902,7 +839,11 @@ skip_handshake_stage_check() {
 #
 # Analyze and possibly instrument $PXY_CMD, $CLI_CMD, $SRV_CMD to pass
 # extra arguments or go through wrappers.
+# Set $DTLS (0=TLS, 1=DTLS).
 analyze_test_commands() {
+    # update DTLS variable
+    detect_dtls "$SRV_CMD"
+
     # if the test uses DTLS but no custom proxy, add a simple proxy
     # as it provides timing info that's useful to debug failures
     if [ -z "$PXY_CMD" ] && [ "$DTLS" -eq 1 ]; then
@@ -1209,28 +1150,9 @@ run_test() {
             requires_config_enabled MBEDTLS_FS_IO;;
     esac
 
-    # Check if the test uses DTLS.
-    detect_dtls "$SRV_CMD"
-    if [ "$DTLS" -eq 1 ]; then
-        requires_config_enabled MBEDTLS_SSL_PROTO_DTLS
-    fi
-
-    # Check more TLS protocol features.
-    case "$SRV_CMD $CLI_CMD" in
-        *[-_\ =]tickets=[^0]*)
-            requires_config_enabled MBEDTLS_SSL_TICKET_C;;
-    esac
-    case "$SRV_CMD $CLI_CMD" in
-        *[-_\ =]alpn=*)
-            requires_config_enabled MBEDTLS_SSL_ALPN;;
-    esac
-
     # If the client or serve requires a ciphersuite, check that it's enabled.
     maybe_requires_ciphersuite_enabled "$SRV_CMD" "$@"
     maybe_requires_ciphersuite_enabled "$CLI_CMD" "$@"
-
-    # If we're in a PSK-only build and the test can be adapted to PSK, do that.
-    maybe_adapt_for_psk "$@"
 
     # should we skip?
     if [ "X$SKIP_NEXT" = "XYES" ]; then
@@ -1526,7 +1448,6 @@ trap cleanup INT TERM HUP
 # - the expected parameters are selected
 #   ("signature_algorithm ext: 6" means SHA-512 (highest common hash))
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
-requires_ciphersuite_enabled TLS-ECDHE-RSA-WITH-CHACHA20-POLY1305-SHA256
 run_test    "Default" \
             "$P_SRV debug_level=3" \
             "$P_CLI" \
@@ -1539,7 +1460,6 @@ run_test    "Default" \
             -C "error"
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
-requires_ciphersuite_enabled TLS-ECDHE-RSA-WITH-CHACHA20-POLY1305-SHA256
 run_test    "Default, DTLS" \
             "$P_SRV dtls=1" \
             "$P_CLI dtls=1" \
@@ -2795,7 +2715,6 @@ run_test    "Encrypt then MAC: client disabled, server enabled" \
 # Tests for Extended Master Secret extension
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
-requires_config_enabled MBEDTLS_SSL_EXTENDED_MASTER_SECRET
 run_test    "Extended Master Secret: default" \
             "$P_SRV debug_level=3" \
             "$P_CLI debug_level=3" \
@@ -2808,7 +2727,6 @@ run_test    "Extended Master Secret: default" \
             -s "session hash for extended master secret"
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
-requires_config_enabled MBEDTLS_SSL_EXTENDED_MASTER_SECRET
 run_test    "Extended Master Secret: client enabled, server disabled" \
             "$P_SRV debug_level=3 extended_ms=0" \
             "$P_CLI debug_level=3 extended_ms=1" \
@@ -2821,7 +2739,6 @@ run_test    "Extended Master Secret: client enabled, server disabled" \
             -S "session hash for extended master secret"
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
-requires_config_enabled MBEDTLS_SSL_EXTENDED_MASTER_SECRET
 run_test    "Extended Master Secret: client disabled, server enabled" \
             "$P_SRV debug_level=3 extended_ms=1" \
             "$P_CLI debug_level=3 extended_ms=0" \
@@ -3283,7 +3200,6 @@ run_test    "Session resume using tickets, DTLS: openssl client" \
 # Tests for Session Resume based on session-ID and cache
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
-requires_config_enabled MBEDTLS_SSL_CACHE_C
 run_test    "Session resume using cache: tickets enabled on client" \
             "$P_SRV debug_level=3 tickets=0" \
             "$P_CLI debug_level=3 tickets=1 reconnect=1" \
@@ -3299,7 +3215,6 @@ run_test    "Session resume using cache: tickets enabled on client" \
             -c "a session has been resumed"
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
-requires_config_enabled MBEDTLS_SSL_CACHE_C
 run_test    "Session resume using cache: tickets enabled on server" \
             "$P_SRV debug_level=3 tickets=1" \
             "$P_CLI debug_level=3 tickets=0 reconnect=1" \
@@ -3315,7 +3230,6 @@ run_test    "Session resume using cache: tickets enabled on server" \
             -c "a session has been resumed"
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
-requires_config_enabled MBEDTLS_SSL_CACHE_C
 run_test    "Session resume using cache: cache_max=0" \
             "$P_SRV debug_level=3 tickets=0 cache_max=0" \
             "$P_CLI debug_level=3 tickets=0 reconnect=1" \
@@ -3326,7 +3240,6 @@ run_test    "Session resume using cache: cache_max=0" \
             -C "a session has been resumed"
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
-requires_config_enabled MBEDTLS_SSL_CACHE_C
 run_test    "Session resume using cache: cache_max=1" \
             "$P_SRV debug_level=3 tickets=0 cache_max=1" \
             "$P_CLI debug_level=3 tickets=0 reconnect=1" \
@@ -3337,7 +3250,6 @@ run_test    "Session resume using cache: cache_max=1" \
             -c "a session has been resumed"
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
-requires_config_enabled MBEDTLS_SSL_CACHE_C
 run_test    "Session resume using cache: timeout > delay" \
             "$P_SRV debug_level=3 tickets=0" \
             "$P_CLI debug_level=3 tickets=0 reconnect=1 reco_delay=0" \
@@ -3348,7 +3260,6 @@ run_test    "Session resume using cache: timeout > delay" \
             -c "a session has been resumed"
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
-requires_config_enabled MBEDTLS_SSL_CACHE_C
 run_test    "Session resume using cache: timeout < delay" \
             "$P_SRV debug_level=3 tickets=0 cache_timeout=1" \
             "$P_CLI debug_level=3 tickets=0 reconnect=1 reco_delay=2" \
@@ -3359,7 +3270,6 @@ run_test    "Session resume using cache: timeout < delay" \
             -C "a session has been resumed"
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
-requires_config_enabled MBEDTLS_SSL_CACHE_C
 run_test    "Session resume using cache: no timeout" \
             "$P_SRV debug_level=3 tickets=0 cache_timeout=0" \
             "$P_CLI debug_level=3 tickets=0 reconnect=1 reco_delay=2" \
@@ -3370,7 +3280,6 @@ run_test    "Session resume using cache: no timeout" \
             -c "a session has been resumed"
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
-requires_config_enabled MBEDTLS_SSL_CACHE_C
 run_test    "Session resume using cache: session copy" \
             "$P_SRV debug_level=3 tickets=0" \
             "$P_CLI debug_level=3 tickets=0 reconnect=1 reco_mode=0" \
@@ -3381,7 +3290,6 @@ run_test    "Session resume using cache: session copy" \
             -c "a session has been resumed"
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
-requires_config_enabled MBEDTLS_SSL_CACHE_C
 run_test    "Session resume using cache: openssl client" \
             "$P_SRV debug_level=3 tickets=0" \
             "( $O_CLI -sess_out $SESSION; \
@@ -3395,7 +3303,6 @@ run_test    "Session resume using cache: openssl client" \
             -s "a session has been resumed"
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
-requires_config_enabled MBEDTLS_SSL_CACHE_C
 run_test    "Session resume using cache: openssl server" \
             "$O_SRV" \
             "$P_CLI debug_level=3 tickets=0 reconnect=1" \
@@ -3407,7 +3314,6 @@ run_test    "Session resume using cache: openssl server" \
 # Tests for Session Resume based on session-ID and cache, DTLS
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
-requires_config_enabled MBEDTLS_SSL_CACHE_C
 run_test    "Session resume using cache, DTLS: tickets enabled on client" \
             "$P_SRV dtls=1 debug_level=3 tickets=0" \
             "$P_CLI dtls=1 debug_level=3 tickets=1 reconnect=1 skip_close_notify=1" \
@@ -3423,7 +3329,6 @@ run_test    "Session resume using cache, DTLS: tickets enabled on client" \
             -c "a session has been resumed"
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
-requires_config_enabled MBEDTLS_SSL_CACHE_C
 run_test    "Session resume using cache, DTLS: tickets enabled on server" \
             "$P_SRV dtls=1 debug_level=3 tickets=1" \
             "$P_CLI dtls=1 debug_level=3 tickets=0 reconnect=1 skip_close_notify=1" \
@@ -3439,7 +3344,6 @@ run_test    "Session resume using cache, DTLS: tickets enabled on server" \
             -c "a session has been resumed"
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
-requires_config_enabled MBEDTLS_SSL_CACHE_C
 run_test    "Session resume using cache, DTLS: cache_max=0" \
             "$P_SRV dtls=1 debug_level=3 tickets=0 cache_max=0" \
             "$P_CLI dtls=1 debug_level=3 tickets=0 reconnect=1 skip_close_notify=1" \
@@ -3450,7 +3354,6 @@ run_test    "Session resume using cache, DTLS: cache_max=0" \
             -C "a session has been resumed"
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
-requires_config_enabled MBEDTLS_SSL_CACHE_C
 run_test    "Session resume using cache, DTLS: cache_max=1" \
             "$P_SRV dtls=1 debug_level=3 tickets=0 cache_max=1" \
             "$P_CLI dtls=1 debug_level=3 tickets=0 reconnect=1 skip_close_notify=1" \
@@ -3461,7 +3364,6 @@ run_test    "Session resume using cache, DTLS: cache_max=1" \
             -c "a session has been resumed"
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
-requires_config_enabled MBEDTLS_SSL_CACHE_C
 run_test    "Session resume using cache, DTLS: timeout > delay" \
             "$P_SRV dtls=1 debug_level=3 tickets=0" \
             "$P_CLI dtls=1 debug_level=3 tickets=0 reconnect=1 skip_close_notify=1 reco_delay=0" \
@@ -3472,7 +3374,6 @@ run_test    "Session resume using cache, DTLS: timeout > delay" \
             -c "a session has been resumed"
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
-requires_config_enabled MBEDTLS_SSL_CACHE_C
 run_test    "Session resume using cache, DTLS: timeout < delay" \
             "$P_SRV dtls=1 debug_level=3 tickets=0 cache_timeout=1" \
             "$P_CLI dtls=1 debug_level=3 tickets=0 reconnect=1 skip_close_notify=1 reco_delay=2" \
@@ -3483,7 +3384,6 @@ run_test    "Session resume using cache, DTLS: timeout < delay" \
             -C "a session has been resumed"
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
-requires_config_enabled MBEDTLS_SSL_CACHE_C
 run_test    "Session resume using cache, DTLS: no timeout" \
             "$P_SRV dtls=1 debug_level=3 tickets=0 cache_timeout=0" \
             "$P_CLI dtls=1 debug_level=3 tickets=0 reconnect=1 skip_close_notify=1 reco_delay=2" \
@@ -3494,7 +3394,6 @@ run_test    "Session resume using cache, DTLS: no timeout" \
             -c "a session has been resumed"
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
-requires_config_enabled MBEDTLS_SSL_CACHE_C
 run_test    "Session resume using cache, DTLS: session copy" \
             "$P_SRV dtls=1 debug_level=3 tickets=0" \
             "$P_CLI dtls=1 debug_level=3 tickets=0 reconnect=1 skip_close_notify=1 reco_mode=0" \
@@ -3508,7 +3407,6 @@ run_test    "Session resume using cache, DTLS: session copy" \
 # probability with OpenSSL 1.0.2g on the CI, see #5012.
 requires_openssl_next
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
-requires_config_enabled MBEDTLS_SSL_CACHE_C
 run_test    "Session resume using cache, DTLS: openssl client" \
             "$P_SRV dtls=1 debug_level=3 tickets=0" \
             "( $O_NEXT_CLI -dtls -sess_out $SESSION; \
@@ -3522,7 +3420,6 @@ run_test    "Session resume using cache, DTLS: openssl client" \
             -s "a session has been resumed"
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
-requires_config_enabled MBEDTLS_SSL_CACHE_C
 run_test    "Session resume using cache, DTLS: openssl server" \
             "$O_SRV -dtls" \
             "$P_CLI dtls=1 debug_level=3 tickets=0 reconnect=1" \
@@ -5128,6 +5025,7 @@ run_test    "SNI: no SNI callback" \
              crt_file=data_files/server5.crt key_file=data_files/server5.key" \
             "$P_CLI server_name=localhost" \
             0 \
+            -S "parse ServerName extension" \
             -c "issuer name *: C=NL, O=PolarSSL, CN=Polarssl Test EC CA" \
             -c "subject name *: C=NL, O=PolarSSL, CN=localhost"
 
@@ -5277,6 +5175,7 @@ run_test    "SNI: DTLS, no SNI callback" \
              crt_file=data_files/server5.crt key_file=data_files/server5.key" \
             "$P_CLI server_name=localhost dtls=1" \
             0 \
+            -S "parse ServerName extension" \
             -c "issuer name *: C=NL, O=PolarSSL, CN=Polarssl Test EC CA" \
             -c "subject name *: C=NL, O=PolarSSL, CN=localhost"
 
@@ -6614,12 +6513,11 @@ run_test    "mbedtls_ssl_get_bytes_avail: no extra data" \
             -s "Read from client: 100 bytes read$"
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
-requires_max_content_len 474
 run_test    "mbedtls_ssl_get_bytes_avail: extra data" \
             "$P_SRV" \
-            "$P_CLI request_size=450" \
+            "$P_CLI request_size=500" \
             0 \
-            -s "Read from client: 450 bytes read (.*+.*)"
+            -s "Read from client: 500 bytes read (.*+.*)"
 
 # Tests for small client packets
 
@@ -9521,7 +9419,6 @@ run_test    "DTLS proxy: 3d, max handshake, nbio" \
 
 client_needs_more_time 4
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
-requires_config_enabled MBEDTLS_SSL_CACHE_C
 run_test    "DTLS proxy: 3d, min handshake, resumption" \
             -p "$P_PXY drop=5 delay=5 duplicate=5" \
             "$P_SRV dtls=1 dgram_packing=0 hs_timeout=500-10000 tickets=0 auth_mode=none \
@@ -9537,7 +9434,6 @@ run_test    "DTLS proxy: 3d, min handshake, resumption" \
 
 client_needs_more_time 4
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
-requires_config_enabled MBEDTLS_SSL_CACHE_C
 run_test    "DTLS proxy: 3d, min handshake, resumption, nbio" \
             -p "$P_PXY drop=5 delay=5 duplicate=5" \
             "$P_SRV dtls=1 dgram_packing=0 hs_timeout=500-10000 tickets=0 auth_mode=none \
