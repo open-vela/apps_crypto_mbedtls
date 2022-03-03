@@ -643,8 +643,7 @@
 #error "MBEDTLS_SSL_SRV_C defined, but not all prerequisites"
 #endif
 
-#if defined(MBEDTLS_SSL_TLS_C) && \
-    !( defined(MBEDTLS_SSL_PROTO_TLS1_2) || defined(MBEDTLS_SSL_PROTO_TLS1_3) )
+#if defined(MBEDTLS_SSL_TLS_C) && !defined(MBEDTLS_SSL_PROTO_TLS1_2)
 #error "MBEDTLS_SSL_TLS_C defined, but no protocols are active"
 #endif
 
