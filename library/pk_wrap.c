@@ -197,7 +197,7 @@ static int rsa_encrypt_wrap( void *ctx,
                              &key_id );
     if( status != PSA_SUCCESS )
     {
-        ret = mbedtls_psa_err_translate_pk( status );
+        ret = mbedtls_pk_error_from_psa( status );
         goto cleanup;
     }
 
@@ -205,7 +205,7 @@ static int rsa_encrypt_wrap( void *ctx,
                                      NULL, 0, output, osize, olen);
     if( status != PSA_SUCCESS )
     {
-        ret = mbedtls_psa_err_translate_pk( status );
+        ret = mbedtls_pk_error_from_psa_rsa( status );
         goto cleanup;
     }
 
@@ -214,7 +214,7 @@ static int rsa_encrypt_wrap( void *ctx,
 cleanup:
     status = psa_destroy_key( key_id );
     if( ret == 0 && status != PSA_SUCCESS )
-        ret = mbedtls_psa_err_translate_pk( status );
+        ret = mbedtls_pk_error_from_psa( status );
 
     return( ret );
 }
@@ -713,7 +713,7 @@ static int ecdsa_verify_wrap( void *ctx_arg, mbedtls_md_type_t md_alg,
 cleanup:
     status = psa_destroy_key( key_id );
     if( ret == 0 && status != PSA_SUCCESS )
-        ret = mbedtls_psa_err_translate_pk( status );
+        ret = mbedtls_pk_error_from_psa( status );
 
     return( ret );
 }
