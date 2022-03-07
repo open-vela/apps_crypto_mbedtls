@@ -19,7 +19,9 @@
 
 #include "common.h"
 
-#if defined(MBEDTLS_SSL_SRV_C) && defined(MBEDTLS_SSL_PROTO_TLS1_3)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
+
+#if defined(MBEDTLS_SSL_SRV_C)
 
 #include "mbedtls/debug.h"
 
@@ -36,4 +38,6 @@ int mbedtls_ssl_tls13_handshake_server_step( mbedtls_ssl_context *ssl )
     return( MBEDTLS_ERR_SSL_FEATURE_UNAVAILABLE );
 }
 
-#endif /* MBEDTLS_SSL_SRV_C && MBEDTLS_SSL_PROTO_TLS1_3 */
+#endif /* MBEDTLS_SSL_SRV_C */
+
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
