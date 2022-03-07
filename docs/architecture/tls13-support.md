@@ -120,14 +120,29 @@ MVP definition
   the three first ones in the list above are mandatory (see section 9.1 of the
   specification).
 
-- Supported versions: only TLS 1.3, version negotiation is not supported.
+- Supported versions:
+
+  - TLS 1.2 and TLS 1.3 but version negotiation is not supported.
+
+  - TLS 1.3 cannot be enabled in the build (MBEDTLS_SSL_PROTO_TLS1_3
+    configuration option) without TLS 1.2 (MBEDTLS_SSL_PROTO_TLS1_2 configuration
+    option).
+
+  - TLS 1.2 can be enabled in the build independently of TLS 1.3.
+
+  - If both TLS 1.3 and TLS 1.2 are enabled at build time, only one of them can
+    be configured at runtime via `mbedtls_ssl_conf_{min,max}_version`. Otherwise,
+    `mbedtls_ssl_setup` will raise `MBEDTLS_ERR_SSL_BAD_CONFIG` error.
 
 - Compatibility with existing SSL/TLS build options:
 
   The TLS 1.3 MVP is compatible with all TLS 1.2 configuration options in the
   sense that when enabling the TLS 1.3 MVP in the library there is no need to
-  modify the configuration for TLS 1.2. Mbed TLS SSL/TLS related features are
-  not supported or not applicable to the TLS 1.3 MVP:
+  modify the configuration for TLS 1.2. The MBEDTLS_USE_PSA_CRYPTO configuration
+  option is an exception though, the TLS 1.3 MVP is not compatible with it.
+
+  Mbed TLS SSL/TLS related features are not supported or not applicable to the
+  TLS 1.3 MVP:
 
   | Mbed TLS configuration option            | Support |
   | ---------------------------------------- | ------- |
