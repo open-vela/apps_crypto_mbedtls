@@ -30,9 +30,6 @@
 
 #include "ssl_misc.h"
 #include "ssl_tls13_keys.h"
-#include "ssl_tls13_invasive.h"
-
-#include "psa/crypto.h"
 
 #define MBEDTLS_SSL_TLS1_3_LABEL( name, string )       \
     .name = string,
@@ -135,131 +132,6 @@ static void ssl_tls13_hkdf_encode_label(
     /* Return total length to the caller.  */
     *dst_len = total_hkdf_lbl_len;
 }
-
-#if defined( MBEDTLS_TEST_HOOKS )
-
-MBEDTLS_STATIC_TESTABLE
-psa_status_t mbedtls_psa_hkdf_expand( psa_algorithm_t alg,
-                                      const unsigned char *prk, size_t prk_len,
-                                      const unsigned char *info, size_t info_len,
-                                      unsigned char *okm, size_t okm_len )
-{
-    size_t hash_len;
-    size_t where = 0;
-    size_t n;
-    size_t t_len = 0;
-    size_t i;
-    mbedtls_svc_key_id_t key = MBEDTLS_SVC_KEY_ID_INIT;
-    psa_key_attributes_t attributes = PSA_KEY_ATTRIBUTES_INIT;
-    psa_mac_operation_t operation = PSA_MAC_OPERATION_INIT;
-    psa_status_t status = PSA_ERROR_CORRUPTION_DETECTED;
-    psa_status_t destroy_status = PSA_ERROR_CORRUPTION_DETECTED;
-    unsigned char t[PSA_MAC_MAX_SIZE];
-
-    if( okm == NULL )
-    {
-        return( PSA_ERROR_INVALID_ARGUMENT );
-    }
-
-    hash_len = PSA_HASH_LENGTH( alg );
-
-    if( prk_len < hash_len || hash_len == 0 )
-    {
-        return( PSA_ERROR_INVALID_ARGUMENT );
-    }
-
-    if( info == NULL )
-    {
-        info = (const unsigned char *) "";
-        info_len = 0;
-    }
-
-    n = okm_len / hash_len;
-
-    if( okm_len % hash_len != 0 )
-    {
-        n++;
-    }
-
-    /*
-     * Per RFC 5869 Section 2.3, okm_len must not exceed
-     * 255 times the hash length
-     */
-    if( n > 255 )
-    {
-        return( PSA_ERROR_INVALID_ARGUMENT );
-    }
-
-    psa_set_key_usage_flags( &attributes, PSA_KEY_USAGE_SIGN_MESSAGE );
-    psa_set_key_algorithm( &attributes, alg );
-    psa_set_key_type( &attributes, PSA_KEY_TYPE_HMAC );
-
-    status = psa_import_key( &attributes, prk, prk_len, &key );
-    if( status != PSA_SUCCESS )
-    {
-        goto cleanup;
-    }
-
-    memset( t, 0, hash_len );
-
-    /*
-     * Compute T = T(1) | T(2) | T(3) | ... | T(N)
-     * Where T(N) is defined in RFC 5869 Section 2.3
-     */
-    for( i = 1; i <= n; i++ )
-    {
-        size_t num_to_copy;
-        unsigned char c = i & 0xff;
-        size_t len;
-
-        status = psa_mac_sign_setup( &operation, key, alg );
-        if( status != PSA_SUCCESS )
-        {
-            goto cleanup;
-        }
-
-        status = psa_mac_update( &operation, t, t_len );
-        if( status != PSA_SUCCESS )
-        {
-            goto cleanup;
-        }
-
-        status = psa_mac_update( &operation, info, info_len );
-        if( status != PSA_SUCCESS )
-        {
-            goto cleanup;
-        }
-
-        /* The constant concatenated to the end of each T(n) is a single octet. */
-        status = psa_mac_update( &operation, &c, 1 );
-        if( status != PSA_SUCCESS )
-        {
-            goto cleanup;
-        }
-
-        status = psa_mac_sign_finish( &operation, t, PSA_MAC_MAX_SIZE, &len );
-        if( status != PSA_SUCCESS )
-        {
-            goto cleanup;
-        }
-
-        num_to_copy = i != n ? hash_len : okm_len - where;
-        memcpy( okm + where, t, num_to_copy );
-        where += hash_len;
-        t_len = hash_len;
-    }
-
-cleanup:
-    if( status != PSA_SUCCESS )
-        psa_mac_abort( &operation );
-    destroy_status = psa_destroy_key( key );
-
-    mbedtls_platform_zeroize( t, sizeof( t ) );
-
-    return( ( status == PSA_SUCCESS ) ? destroy_status : status );
-}
-
-#endif /* MBEDTLS_TEST_HOOKS */
 
 int mbedtls_ssl_tls13_hkdf_expand_label(
                      mbedtls_md_type_t hash_alg,
@@ -929,23 +801,13 @@ int mbedtls_ssl_tls13_populate_transform( mbedtls_ssl_transform *transform,
                                           mbedtls_ssl_key_set const *traffic_keys,
                                           mbedtls_ssl_context *ssl /* DEBUG ONLY */ )
 {
-#if !defined(MBEDTLS_USE_PSA_CRYPTO)
     int ret;
-#endif /* MBEDTLS_USE_PSA_CRYPTO */
     mbedtls_cipher_info_t const *cipher_info;
     const mbedtls_ssl_ciphersuite_t *ciphersuite_info;
     unsigned char const *key_enc;
     unsigned char const *iv_enc;
     unsigned char const *key_dec;
     unsigned char const *iv_dec;
-
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
-    psa_key_type_t key_type;
-    psa_key_attributes_t attributes = PSA_KEY_ATTRIBUTES_INIT;
-    psa_algorithm_t alg;
-    size_t key_bits;
-    psa_status_t status = PSA_SUCCESS;
-#endif
 
 #if !defined(MBEDTLS_DEBUG_C)
     ssl = NULL; /* make sure we don't use it except for those cases */
@@ -968,10 +830,10 @@ int mbedtls_ssl_tls13_populate_transform( mbedtls_ssl_transform *transform,
         return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
     }
 
-#if !defined(MBEDTLS_USE_PSA_CRYPTO)
     /*
      * Setup cipher contexts in target transform
      */
+
     if( ( ret = mbedtls_cipher_setup( &transform->cipher_ctx_enc,
                                       cipher_info ) ) != 0 )
     {
@@ -985,7 +847,6 @@ int mbedtls_ssl_tls13_populate_transform( mbedtls_ssl_transform *transform,
         MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_cipher_setup", ret );
         return( ret );
     }
-#endif /* MBEDTLS_USE_PSA_CRYPTO */
 
 #if defined(MBEDTLS_SSL_SRV_C)
     if( endpoint == MBEDTLS_SSL_IS_SERVER )
@@ -1015,7 +876,6 @@ int mbedtls_ssl_tls13_populate_transform( mbedtls_ssl_transform *transform,
     memcpy( transform->iv_enc, iv_enc, traffic_keys->iv_len );
     memcpy( transform->iv_dec, iv_dec, traffic_keys->iv_len );
 
-#if !defined(MBEDTLS_USE_PSA_CRYPTO)
     if( ( ret = mbedtls_cipher_setkey( &transform->cipher_ctx_enc,
                                        key_enc, cipher_info->key_bitlen,
                                        MBEDTLS_ENCRYPT ) ) != 0 )
@@ -1031,7 +891,6 @@ int mbedtls_ssl_tls13_populate_transform( mbedtls_ssl_transform *transform,
         MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_cipher_setkey", ret );
         return( ret );
     }
-#endif /* MBEDTLS_USE_PSA_CRYPTO */
 
     /*
      * Setup other fields in SSL transform
@@ -1053,50 +912,6 @@ int mbedtls_ssl_tls13_populate_transform( mbedtls_ssl_transform *transform,
      * granularity. */
     transform->minlen =
         transform->taglen + MBEDTLS_SSL_CID_TLS1_3_PADDING_GRANULARITY;
-
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
-    /*
-     * Setup psa keys and alg
-     */
-    if( ( status = mbedtls_ssl_cipher_to_psa( cipher_info->type,
-                                 transform->taglen,
-                                 &alg,
-                                 &key_type,
-                                 &key_bits ) ) != PSA_SUCCESS )
-    {
-        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_cipher_to_psa", psa_ssl_status_to_mbedtls( status ) );
-        return( psa_ssl_status_to_mbedtls( status ) );
-    }
-
-    transform->psa_alg = alg;
-
-    if ( alg != MBEDTLS_SSL_NULL_CIPHER )
-    {
-        psa_set_key_usage_flags( &attributes, PSA_KEY_USAGE_ENCRYPT );
-        psa_set_key_algorithm( &attributes, alg );
-        psa_set_key_type( &attributes, key_type );
-
-        if( ( status = psa_import_key( &attributes,
-                                key_enc,
-                                PSA_BITS_TO_BYTES( key_bits ),
-                                &transform->psa_key_enc ) ) != PSA_SUCCESS )
-        {
-            MBEDTLS_SSL_DEBUG_RET( 1, "psa_import_key", psa_ssl_status_to_mbedtls( status ) );
-            return( psa_ssl_status_to_mbedtls( status ) );
-        }
-
-        psa_set_key_usage_flags( &attributes, PSA_KEY_USAGE_DECRYPT );
-
-        if( ( status = psa_import_key( &attributes,
-                                key_dec,
-                                PSA_BITS_TO_BYTES( key_bits ),
-                                &transform->psa_key_dec ) ) != PSA_SUCCESS )
-        {
-            MBEDTLS_SSL_DEBUG_RET( 1, "psa_import_key", psa_ssl_status_to_mbedtls( status ) );
-            return( psa_ssl_status_to_mbedtls( status ) );
-        }
-    }
-#endif /* MBEDTLS_USE_PSA_CRYPTO */
 
     return( 0 );
 }
@@ -1195,16 +1010,16 @@ int mbedtls_ssl_tls13_generate_handshake_keys( mbedtls_ssl_context *ssl,
                 MBEDTLS_SSL_KEY_EXPORT_TLS1_3_CLIENT_HANDSHAKE_TRAFFIC_SECRET,
                 tls13_hs_secrets->client_handshake_traffic_secret,
                 md_size,
+                handshake->randbytes + 32,
                 handshake->randbytes,
-                handshake->randbytes + MBEDTLS_CLIENT_HELLO_RANDOM_LEN,
                 MBEDTLS_SSL_TLS_PRF_NONE /* TODO: FIX! */ );
 
         ssl->f_export_keys( ssl->p_export_keys,
                 MBEDTLS_SSL_KEY_EXPORT_TLS1_3_SERVER_HANDSHAKE_TRAFFIC_SECRET,
                 tls13_hs_secrets->server_handshake_traffic_secret,
                 md_size,
+                handshake->randbytes + 32,
                 handshake->randbytes,
-                handshake->randbytes + MBEDTLS_CLIENT_HELLO_RANDOM_LEN,
                 MBEDTLS_SSL_TLS_PRF_NONE /* TODO: FIX! */ );
     }
 
@@ -1400,16 +1215,16 @@ int mbedtls_ssl_tls13_generate_application_keys(
         ssl->f_export_keys( ssl->p_export_keys,
                 MBEDTLS_SSL_KEY_EXPORT_TLS1_3_CLIENT_APPLICATION_TRAFFIC_SECRET,
                 app_secrets->client_application_traffic_secret_N, md_size,
+                handshake->randbytes + 32,
                 handshake->randbytes,
-                handshake->randbytes + MBEDTLS_CLIENT_HELLO_RANDOM_LEN,
                 MBEDTLS_SSL_TLS_PRF_NONE /* TODO: this should be replaced by
                                             a new constant for TLS 1.3! */ );
 
         ssl->f_export_keys( ssl->p_export_keys,
                 MBEDTLS_SSL_KEY_EXPORT_TLS1_3_SERVER_APPLICATION_TRAFFIC_SECRET,
                 app_secrets->server_application_traffic_secret_N, md_size,
+                handshake->randbytes + 32,
                 handshake->randbytes,
-                handshake->randbytes + MBEDTLS_CLIENT_HELLO_RANDOM_LEN,
                 MBEDTLS_SSL_TLS_PRF_NONE /* TODO: this should be replaced by
                                             a new constant for TLS 1.3! */ );
     }
