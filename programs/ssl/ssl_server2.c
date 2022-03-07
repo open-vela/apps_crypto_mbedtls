@@ -119,9 +119,7 @@ int main( void )
 #define DFL_MFL_CODE            MBEDTLS_SSL_MAX_FRAG_LEN_NONE
 #define DFL_TRUNC_HMAC          -1
 #define DFL_TICKETS             MBEDTLS_SSL_SESSION_TICKETS_ENABLED
-#define DFL_TICKET_ROTATE       0
 #define DFL_TICKET_TIMEOUT      86400
-#define DFL_TICKET_AEAD         MBEDTLS_CIPHER_AES_256_GCM
 #define DFL_CACHE_MAX           -1
 #define DFL_CACHE_TIMEOUT       -1
 #define DFL_SNI                 NULL
@@ -287,9 +285,7 @@ int main( void )
 #if defined(MBEDTLS_SSL_SESSION_TICKETS)
 #define USAGE_TICKETS                                       \
     "    tickets=%%d          default: 1 (enabled)\n"       \
-    "    ticket_rotate=%%d    default: 0 (disabled)\n"      \
-    "    ticket_timeout=%%d   default: 86400 (one day)\n"   \
-    "    ticket_aead=%%s      default: \"AES-256-GCM\"\n"
+    "    ticket_timeout=%%d   default: 86400 (one day)\n"
 #else
 #define USAGE_TICKETS ""
 #endif /* MBEDTLS_SSL_SESSION_TICKETS */
@@ -615,9 +611,7 @@ struct options
     unsigned char mfl_code;     /* code for maximum fragment length         */
     int trunc_hmac;             /* accept truncated hmac?                   */
     int tickets;                /* enable / disable session tickets         */
-    int ticket_rotate;          /* session ticket rotate (code coverage)    */
     int ticket_timeout;         /* session ticket lifetime                  */
-    int ticket_aead;            /* session ticket protection                */
     int cache_max;              /* max number of session cache entries      */
     int cache_timeout;          /* expiration delay of session cache entries */
     char *sni;                  /* string describing sni information        */
@@ -855,7 +849,7 @@ struct _psk_entry
     size_t key_len;
     unsigned char key[MBEDTLS_PSK_MAX_LEN];
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
-    mbedtls_svc_key_id_t slot;
+    psa_key_id_t slot;
 #endif /* MBEDTLS_USE_PSA_CRYPTO */
     psk_entry *next;
 };
@@ -871,9 +865,9 @@ int psk_free( psk_entry *head )
     {
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
         psa_status_t status;
-        mbedtls_svc_key_id_t const slot = head->slot;
+        psa_key_id_t const slot = head->slot;
 
-        if( MBEDTLS_SVC_KEY_ID_GET_KEY_ID( slot ) != 0 )
+        if( slot != 0 )
         {
             status = psa_destroy_key( slot );
             if( status != PSA_SUCCESS )
@@ -946,7 +940,7 @@ int psk_callback( void *p_info, mbedtls_ssl_context *ssl,
             memcmp( name, cur->name, name_len ) == 0 )
         {
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
-            if( MBEDTLS_SVC_KEY_ID_GET_KEY_ID( cur->slot ) != 0 )
+            if( cur->slot != 0 )
                 return( mbedtls_ssl_set_hs_psk_opaque( ssl, cur->slot ) );
             else
 #endif
@@ -1214,8 +1208,7 @@ static void ssl_async_cancel( mbedtls_ssl_context *ssl )
 #endif /* MBEDTLS_SSL_ASYNC_PRIVATE */
 
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
-#if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
-static psa_status_t psa_setup_psk_key_slot( mbedtls_svc_key_id_t *slot,
+static psa_status_t psa_setup_psk_key_slot( psa_key_id_t *slot,
                                             psa_algorithm_t alg,
                                             unsigned char *psk,
                                             size_t psk_len )
@@ -1237,7 +1230,6 @@ static psa_status_t psa_setup_psk_key_slot( mbedtls_svc_key_id_t *slot,
 
     return( PSA_SUCCESS );
 }
-#endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
 #endif /* MBEDTLS_USE_PSA_CRYPTO */
 
 #if defined(MBEDTLS_SSL_DTLS_CONNECTION_ID)
@@ -1299,7 +1291,7 @@ int main( int argc, char *argv[] )
 #if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
     psa_algorithm_t alg = 0;
-    mbedtls_svc_key_id_t psk_slot = MBEDTLS_SVC_KEY_ID_INIT;
+    psa_key_id_t psk_slot = 0;
 #endif /* MBEDTLS_USE_PSA_CRYPTO */
     unsigned char psk[MBEDTLS_PSK_MAX_LEN];
     size_t psk_len = 0;
@@ -1331,8 +1323,8 @@ int main( int argc, char *argv[] )
     mbedtls_x509_crt srvcert2;
     mbedtls_pk_context pkey2;
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
-    mbedtls_svc_key_id_t key_slot = MBEDTLS_SVC_KEY_ID_INIT; /* invalid key slot */
-    mbedtls_svc_key_id_t key_slot2 = MBEDTLS_SVC_KEY_ID_INIT; /* invalid key slot */
+    psa_key_id_t key_slot = 0; /* invalid key slot */
+    psa_key_id_t key_slot2 = 0; /* invalid key slot */
 #endif
     int key_cert_init = 0, key_cert_init2 = 0;
 #if defined(MBEDTLS_SSL_ASYNC_PRIVATE)
@@ -1545,9 +1537,7 @@ int main( int argc, char *argv[] )
     opt.mfl_code            = DFL_MFL_CODE;
     opt.trunc_hmac          = DFL_TRUNC_HMAC;
     opt.tickets             = DFL_TICKETS;
-    opt.ticket_rotate       = DFL_TICKET_ROTATE;
     opt.ticket_timeout      = DFL_TICKET_TIMEOUT;
-    opt.ticket_aead         = DFL_TICKET_AEAD;
     opt.cache_max           = DFL_CACHE_MAX;
     opt.cache_timeout       = DFL_CACHE_TIMEOUT;
     opt.sni                 = DFL_SNI;
@@ -1919,25 +1909,11 @@ int main( int argc, char *argv[] )
             if( opt.tickets < 0 || opt.tickets > 1 )
                 goto usage;
         }
-        else if( strcmp( p, "ticket_rotate" ) == 0 )
-        {
-            opt.ticket_rotate = atoi( q );
-            if( opt.ticket_rotate < 0 || opt.ticket_rotate > 1 )
-                goto usage;
-        }
         else if( strcmp( p, "ticket_timeout" ) == 0 )
         {
             opt.ticket_timeout = atoi( q );
             if( opt.ticket_timeout < 0 )
                 goto usage;
-        }
-        else if( strcmp( p, "ticket_aead" ) == 0 )
-        {
-            const mbedtls_cipher_info_t *ci = mbedtls_cipher_info_from_string( q );
-
-            if( ci == NULL )
-                goto usage;
-            opt.ticket_aead = mbedtls_cipher_info_get_type( ci );
         }
         else if( strcmp( p, "cache_max" ) == 0 )
         {
@@ -2146,7 +2122,6 @@ int main( int argc, char *argv[] )
         }
 
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
-#if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
         if( opt.psk_opaque != 0 || opt.psk_list_opaque != 0 )
         {
             /* Ensure that the chosen ciphersuite is PSK-only; we must know
@@ -2168,7 +2143,6 @@ int main( int argc, char *argv[] )
 #endif /* MBEDTLS_SHA384_C */
                 alg = PSA_ALG_TLS12_PSK_TO_MS(PSA_ALG_SHA_256);
         }
-#endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
 #endif /* MBEDTLS_USE_PSA_CRYPTO */
     }
 
@@ -2541,9 +2515,7 @@ int main( int argc, char *argv[] )
     }
 #endif /* MBEDTLS_USE_PSA_CRYPTO */
 
-    mbedtls_printf( " ok (key types: %s, %s)\n",
-                    key_cert_init ? mbedtls_pk_get_name( &pkey ) : "none",
-                    key_cert_init2 ? mbedtls_pk_get_name( &pkey2 ) : "none" );
+    mbedtls_printf( " ok (key types: %s - %s)\n", mbedtls_pk_get_name( &pkey ), mbedtls_pk_get_name( &pkey2 ) );
 #endif /* MBEDTLS_X509_CRT_PARSE_C */
 
 #if defined(MBEDTLS_DHM_C) && defined(MBEDTLS_FS_IO)
@@ -2602,7 +2574,7 @@ int main( int argc, char *argv[] )
     {
         crt_profile_for_test.allowed_mds |= MBEDTLS_X509_ID_FLAG( MBEDTLS_MD_SHA1 );
         mbedtls_ssl_conf_cert_profile( &conf, &crt_profile_for_test );
-        mbedtls_ssl_conf_sig_algs( &conf, ssl_sig_algs_for_test );
+        mbedtls_ssl_conf_sig_hashes( &conf, ssl_sig_hashes_for_test );
     }
 #endif /* MBEDTLS_X509_CRT_PARSE_C */
 
@@ -2736,7 +2708,7 @@ int main( int argc, char *argv[] )
     {
         if( ( ret = mbedtls_ssl_ticket_setup( &ticket_ctx,
                         rng_get, &rng,
-                        opt.ticket_aead,
+                        MBEDTLS_CIPHER_AES_256_GCM,
                         opt.ticket_timeout ) ) != 0 )
         {
             mbedtls_printf( " failed\n  ! mbedtls_ssl_ticket_setup returned %d\n\n", ret );
@@ -2747,23 +2719,6 @@ int main( int argc, char *argv[] )
                 mbedtls_ssl_ticket_write,
                 mbedtls_ssl_ticket_parse,
                 &ticket_ctx );
-
-        /* exercise manual ticket rotation (not required for typical use)
-         * (used for external synchronization of session ticket encryption keys)
-         */
-        if( opt.ticket_rotate ) {
-            unsigned char kbuf[MBEDTLS_SSL_TICKET_MAX_KEY_BYTES];
-            unsigned char name[MBEDTLS_SSL_TICKET_KEY_NAME_BYTES];
-            if( ( ret = rng_get( &rng, name, sizeof( name ) ) ) != 0 ||
-                ( ret = rng_get( &rng, kbuf, sizeof( kbuf ) ) ) != 0 ||
-                ( ret = mbedtls_ssl_ticket_rotate( &ticket_ctx,
-                        name, sizeof(name), kbuf, sizeof(kbuf),
-                        opt.ticket_timeout ) ) != 0 )
-            {
-                mbedtls_printf( " failed\n  ! mbedtls_ssl_ticket_rotate returned %d\n\n", ret );
-                goto exit;
-            }
-        }
     }
 #endif
 
@@ -3276,17 +3231,8 @@ handshake:
     }
     else /* ret == 0 */
     {
-        int suite_id = mbedtls_ssl_get_ciphersuite_id_from_ssl( &ssl );
-        const mbedtls_ssl_ciphersuite_t *ciphersuite_info;
-        ciphersuite_info = mbedtls_ssl_ciphersuite_from_id( suite_id );
-
-        mbedtls_printf( " ok\n    [ Protocol is %s ]\n"
-                             "    [ Ciphersuite is %s ]\n"
-                             "    [ Key size is %u ]\n",
-          mbedtls_ssl_get_version( &ssl ),
-          mbedtls_ssl_ciphersuite_get_name( ciphersuite_info ),
-          (unsigned int)
-            mbedtls_ssl_ciphersuite_get_cipher_key_bitlen( ciphersuite_info ) );
+        mbedtls_printf( " ok\n    [ Protocol is %s ]\n    [ Ciphersuite is %s ]\n",
+                mbedtls_ssl_get_version( &ssl ), mbedtls_ssl_get_ciphersuite( &ssl ) );
     }
 
     if( ( ret = mbedtls_ssl_get_record_expansion( &ssl ) ) >= 0 )
@@ -4072,8 +4018,7 @@ exit:
             ( opt.query_config_mode == DFL_QUERY_CONFIG_MODE ) )
         {
             mbedtls_printf( "Failed to destroy key slot %u - error was %d",
-                            (unsigned) MBEDTLS_SVC_KEY_ID_GET_KEY_ID( psk_slot ),
-                            (int) status );
+                            (unsigned) psk_slot, (int) status );
         }
     }
 #endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED &&
