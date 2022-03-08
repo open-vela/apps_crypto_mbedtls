@@ -785,6 +785,9 @@ static void mpi_bigendian_to_host( mbedtls_mpi_uint * const p, size_t limbs )
 
 /*
  * Import X from unsigned binary data, little endian
+ *
+ * This function is guaranteed to return an MPI with exactly the necessary
+ * number of limbs (in particular, it does not skip 0s in the input).
  */
 int mbedtls_mpi_read_binary_le( mbedtls_mpi *X,
                                 const unsigned char *buf, size_t buflen )
@@ -811,6 +814,9 @@ cleanup:
 
 /*
  * Import X from unsigned binary data, big endian
+ *
+ * This function is guaranteed to return an MPI with exactly the necessary
+ * number of limbs (in particular, it does not skip 0s in the input).
  */
 int mbedtls_mpi_read_binary( mbedtls_mpi *X, const unsigned char *buf, size_t buflen )
 {
@@ -1931,7 +1937,7 @@ static void mpi_montmul( mbedtls_mpi *A, const mbedtls_mpi *B, const mbedtls_mpi
         mpi_mul_hlp( m, B->p, d, u0 );
         mpi_mul_hlp( n, N->p, d, u1 );
 
-        *d++ = u0; d[n + 1] = 0;
+        d++; d[n + 1] = 0;
     }
 
     /* At this point, d is either the desired result or the desired result
