@@ -1233,14 +1233,6 @@ void mbedtls_ssl_set_timer_cb( mbedtls_ssl_context *ssl,
 }
 
 #if defined(MBEDTLS_SSL_SRV_C)
-void mbedtls_ssl_conf_cert_cb( mbedtls_ssl_config *conf,
-                               int (*f_cert_cb)(mbedtls_ssl_context *) )
-{
-    conf->f_cert_cb = f_cert_cb;
-}
-#endif /* MBEDTLS_SSL_SRV_C */
-
-#if defined(MBEDTLS_SSL_SRV_C)
 void mbedtls_ssl_conf_session_cache( mbedtls_ssl_config *conf,
                                      void *p_cache,
                                      mbedtls_ssl_cache_get_t *f_get_cache,
@@ -1299,32 +1291,12 @@ void mbedtls_ssl_conf_cert_profile( mbedtls_ssl_config *conf,
     conf->cert_profile = profile;
 }
 
-static void ssl_key_cert_free( mbedtls_ssl_key_cert *key_cert )
-{
-    mbedtls_ssl_key_cert *cur = key_cert, *next;
-
-    while( cur != NULL )
-    {
-        next = cur->next;
-        mbedtls_free( cur );
-        cur = next;
-    }
-}
-
 /* Append a new keycert entry to a (possibly empty) list */
 static int ssl_append_key_cert( mbedtls_ssl_key_cert **head,
                                 mbedtls_x509_crt *cert,
                                 mbedtls_pk_context *key )
 {
     mbedtls_ssl_key_cert *new_cert;
-
-    if( cert == NULL )
-    {
-        /* Free list if cert is null */
-        ssl_key_cert_free( *head );
-        *head = NULL;
-        return( 0 );
-    }
 
     new_cert = mbedtls_calloc( 1, sizeof( mbedtls_ssl_key_cert ) );
     if( new_cert == NULL )
@@ -1334,7 +1306,7 @@ static int ssl_append_key_cert( mbedtls_ssl_key_cert **head,
     new_cert->key  = key;
     new_cert->next = NULL;
 
-    /* Update head if the list was null, else add to the end */
+    /* Update head is the list was null, else add to the end */
     if( *head == NULL )
     {
         *head = new_cert;
@@ -1389,13 +1361,6 @@ void mbedtls_ssl_conf_ca_cb( mbedtls_ssl_config *conf,
 #endif /* MBEDTLS_X509_CRT_PARSE_C */
 
 #if defined(MBEDTLS_SSL_SERVER_NAME_INDICATION)
-const unsigned char *mbedtls_ssl_get_hs_sni( mbedtls_ssl_context *ssl,
-                                             size_t *name_len )
-{
-    *name_len = ssl->handshake->sni_name_len;
-    return( ssl->handshake->sni_name );
-}
-
 int mbedtls_ssl_set_hs_own_cert( mbedtls_ssl_context *ssl,
                                  mbedtls_x509_crt *own_cert,
                                  mbedtls_pk_context *pk_key )
@@ -2728,6 +2693,21 @@ static int ssl_prepare_handshake_step( mbedtls_ssl_context *ssl )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
 
+    /*
+     * We may have not been able to send to the peer all the handshake data
+     * that were written into the output buffer by the previous handshake step,
+     * if the write to the network callback returned with the
+     * #MBEDTLS_ERR_SSL_WANT_WRITE error code.
+     * We proceed to the next handshake step only when all data from the
+     * previous one have been sent to the peer, thus we make sure that this is
+     * the case here by calling `mbedtls_ssl_flush_output()`. The function may
+     * return with the #MBEDTLS_ERR_SSL_WANT_WRITE error code in which case
+     * we have to wait before to go ahead.
+     * In the case of TLS 1.3, handshake step handlers do not send data to the
+     * peer. Data are only sent here and through
+     * `mbedtls_ssl_handle_pending_alert` in case an error that triggered an
+     * alert occured.
+     */
     if( ( ret = mbedtls_ssl_flush_output( ssl ) ) != 0 )
         return( ret );
 
@@ -2976,6 +2956,20 @@ int mbedtls_ssl_renegotiate( mbedtls_ssl_context *ssl )
 }
 #endif /* MBEDTLS_SSL_RENEGOTIATION */
 
+#if defined(MBEDTLS_X509_CRT_PARSE_C)
+static void ssl_key_cert_free( mbedtls_ssl_key_cert *key_cert )
+{
+    mbedtls_ssl_key_cert *cur = key_cert, *next;
+
+    while( cur != NULL )
+    {
+        next = cur->next;
+        mbedtls_free( cur );
+        cur = next;
+    }
+}
+#endif /* MBEDTLS_X509_CRT_PARSE_C */
+
 void mbedtls_ssl_handshake_free( mbedtls_ssl_context *ssl )
 {
     mbedtls_ssl_handshake_params *handshake = ssl->handshake;
@@ -3063,7 +3057,17 @@ void mbedtls_ssl_handshake_free( mbedtls_ssl_context *ssl )
      * Free only the linked list wrapper, not the keys themselves
      * since the belong to the SNI callback
      */
-    ssl_key_cert_free( handshake->sni_key_cert );
+    if( handshake->sni_key_cert != NULL )
+    {
+        mbedtls_ssl_key_cert *cur = handshake->sni_key_cert, *next;
+
+        while( cur != NULL )
+        {
+            next = cur->next;
+            mbedtls_free( cur );
+            cur = next;
+        }
+    }
 #endif /* MBEDTLS_X509_CRT_PARSE_C && MBEDTLS_SSL_SERVER_NAME_INDICATION */
 
 #if defined(MBEDTLS_SSL_ECP_RESTARTABLE_ENABLED)
