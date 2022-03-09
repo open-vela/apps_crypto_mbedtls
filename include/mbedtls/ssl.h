@@ -3518,7 +3518,7 @@ int mbedtls_ssl_set_hostname( mbedtls_ssl_context *ssl, const char *hostname );
  * \brief          Set own certificate and key for the current handshake
  *
  * \note           Same as \c mbedtls_ssl_conf_own_cert() but for use within
- *                 the SNI callback.
+ *                 the SNI callback or the certificate selection callback.
  *
  * \param ssl      SSL context
  * \param own_cert own public certificate chain
@@ -3535,7 +3535,7 @@ int mbedtls_ssl_set_hs_own_cert( mbedtls_ssl_context *ssl,
  *                 current handshake
  *
  * \note           Same as \c mbedtls_ssl_conf_ca_chain() but for use within
- *                 the SNI callback.
+ *                 the SNI callback or the certificate selection callback.
  *
  * \param ssl      SSL context
  * \param ca_chain trusted CA chain (meaning all fully trusted top-level CAs)
@@ -3549,7 +3549,7 @@ void mbedtls_ssl_set_hs_ca_chain( mbedtls_ssl_context *ssl,
  * \brief          Set authmode for the current handshake.
  *
  * \note           Same as \c mbedtls_ssl_conf_authmode() but for use within
- *                 the SNI callback.
+ *                 the SNI callback or the certificate selection callback.
  *
  * \param ssl      SSL context
  * \param authmode MBEDTLS_SSL_VERIFY_NONE, MBEDTLS_SSL_VERIFY_OPTIONAL or
