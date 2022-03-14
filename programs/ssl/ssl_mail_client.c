@@ -1,7 +1,7 @@
 /*
  *  SSL client for SMTP servers
  *
- *  Copyright The Mbed TLS Contributors
+ *  Copyright (C) 2006-2015, ARM Limited, All Rights Reserved
  *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -15,16 +15,20 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
+ *
+ *  This file is part of mbed TLS (https://tls.mbed.org)
  */
 
 /* Enable definition of gethostname() even when compiling with -std=c99. Must
- * be set before mbedtls_config.h, which pulls in glibc's features.h indirectly.
+ * be set before config.h, which pulls in glibc's features.h indirectly.
  * Harmless on other platforms. */
-
 #define _POSIX_C_SOURCE 200112L
-#define _XOPEN_SOURCE 600
 
-#include "mbedtls/build_info.h"
+#if !defined(MBEDTLS_CONFIG_FILE)
+#include "mbedtls/config.h"
+#else
+#include MBEDTLS_CONFIG_FILE
+#endif
 
 #if defined(MBEDTLS_PLATFORM_C)
 #include "mbedtls/platform.h"
@@ -62,7 +66,7 @@ int main( void )
 #include "mbedtls/ssl.h"
 #include "mbedtls/entropy.h"
 #include "mbedtls/ctr_drbg.h"
-#include "test/certs.h"
+#include "mbedtls/certs.h"
 #include "mbedtls/x509.h"
 
 #include <stdlib.h>
@@ -205,27 +209,21 @@ static int do_handshake( mbedtls_ssl_context *ssl )
     /* In real life, we probably want to bail out when ret != 0 */
     if( ( flags = mbedtls_ssl_get_verify_result( ssl ) ) != 0 )
     {
-#if !defined(MBEDTLS_X509_REMOVE_INFO)
         char vrfy_buf[512];
-#endif
 
         mbedtls_printf( " failed\n" );
 
-#if !defined(MBEDTLS_X509_REMOVE_INFO)
         mbedtls_x509_crt_verify_info( vrfy_buf, sizeof( vrfy_buf ), "  ! ", flags );
 
         mbedtls_printf( "%s\n", vrfy_buf );
-#endif
     }
     else
         mbedtls_printf( " ok\n" );
 
-#if !defined(MBEDTLS_X509_REMOVE_INFO)
     mbedtls_printf( "  . Peer certificate information    ...\n" );
     mbedtls_x509_crt_info( (char *) buf, sizeof( buf ) - 1, "      ",
                    mbedtls_ssl_get_peer_cert( ssl ) );
     mbedtls_printf( "%s\n", buf );
-#endif
 
     return( 0 );
 }
@@ -512,12 +510,12 @@ int main( int argc, char *argv[] )
         ret = mbedtls_x509_crt_parse_file( &cacert, opt.ca_file );
     else
 #endif
-#if defined(MBEDTLS_PEM_PARSE_C)
+#if defined(MBEDTLS_CERTS_C) && defined(MBEDTLS_PEM_PARSE_C)
         ret = mbedtls_x509_crt_parse( &cacert, (const unsigned char *) mbedtls_test_cas_pem,
                               mbedtls_test_cas_pem_len );
 #else
     {
-        mbedtls_printf("MBEDTLS_PEM_PARSE_C not defined.");
+        mbedtls_printf("MBEDTLS_CERTS_C and/or MBEDTLS_PEM_PARSE_C not defined.");
         goto exit;
     }
 #endif
@@ -542,8 +540,15 @@ int main( int argc, char *argv[] )
         ret = mbedtls_x509_crt_parse_file( &clicert, opt.crt_file );
     else
 #endif
+#if defined(MBEDTLS_CERTS_C)
         ret = mbedtls_x509_crt_parse( &clicert, (const unsigned char *) mbedtls_test_cli_crt,
                               mbedtls_test_cli_crt_len );
+#else
+    {
+        mbedtls_printf("MBEDTLS_CERTS_C not defined.");
+        goto exit;
+    }
+#endif
     if( ret != 0 )
     {
         mbedtls_printf( " failed\n  !  mbedtls_x509_crt_parse returned %d\n\n", ret );
@@ -552,20 +557,15 @@ int main( int argc, char *argv[] )
 
 #if defined(MBEDTLS_FS_IO)
     if( strlen( opt.key_file ) )
-    {
-        ret = mbedtls_pk_parse_keyfile( &pkey, opt.key_file, "",
-                mbedtls_ctr_drbg_random, &ctr_drbg );
-    }
+        ret = mbedtls_pk_parse_keyfile( &pkey, opt.key_file, "" );
     else
 #endif
-#if defined(MBEDTLS_PEM_PARSE_C)
-    {
+#if defined(MBEDTLS_CERTS_C) && defined(MBEDTLS_PEM_PARSE_C)
         ret = mbedtls_pk_parse_key( &pkey, (const unsigned char *) mbedtls_test_cli_key,
-                mbedtls_test_cli_key_len, NULL, 0, mbedtls_ctr_drbg_random, &ctr_drbg );
-    }
+                mbedtls_test_cli_key_len, NULL, 0 );
 #else
     {
-        mbedtls_printf("MBEDTLS_PEM_PARSE_C not defined.");
+        mbedtls_printf("MBEDTLS_CERTS_C or MBEDTLS_PEM_PARSE_C not defined.");
         goto exit;
     }
 #endif

@@ -12,8 +12,7 @@
  * \author Daniel King <damaki.gh@gmail.com>
  */
 
-/*
- *  Copyright The Mbed TLS Contributors
+/*  Copyright (C) 2006-2018, Arm Limited (or its affiliates), All Rights Reserved.
  *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -27,21 +26,24 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
+ *
+ *  This file is part of Mbed TLS (https://tls.mbed.org)
  */
 
 #ifndef MBEDTLS_CHACHAPOLY_H
 #define MBEDTLS_CHACHAPOLY_H
-#include "mbedtls/private_access.h"
 
-#include "mbedtls/build_info.h"
+#if !defined(MBEDTLS_CONFIG_FILE)
+#include "mbedtls/config.h"
+#else
+#include MBEDTLS_CONFIG_FILE
+#endif
 
 /* for shared error codes */
 #include "mbedtls/poly1305.h"
 
-/** The requested operation is not permitted in the current state. */
-#define MBEDTLS_ERR_CHACHAPOLY_BAD_STATE            -0x0054
-/** Authenticated decryption failed: data was not authentic. */
-#define MBEDTLS_ERR_CHACHAPOLY_AUTH_FAILED          -0x0056
+#define MBEDTLS_ERR_CHACHAPOLY_BAD_STATE            -0x0054 /**< The requested operation is not permitted in the current state. */
+#define MBEDTLS_ERR_CHACHAPOLY_AUTH_FAILED          -0x0056 /**< Authenticated decryption failed: data was not authentic. */
 
 #ifdef __cplusplus
 extern "C" {
@@ -60,12 +62,12 @@ mbedtls_chachapoly_mode_t;
 
 typedef struct mbedtls_chachapoly_context
 {
-    mbedtls_chacha20_context MBEDTLS_PRIVATE(chacha20_ctx);  /**< The ChaCha20 context. */
-    mbedtls_poly1305_context MBEDTLS_PRIVATE(poly1305_ctx);  /**< The Poly1305 context. */
-    uint64_t MBEDTLS_PRIVATE(aad_len);                       /**< The length (bytes) of the Additional Authenticated Data. */
-    uint64_t MBEDTLS_PRIVATE(ciphertext_len);                /**< The length (bytes) of the ciphertext. */
-    int MBEDTLS_PRIVATE(state);                              /**< The current state of the context. */
-    mbedtls_chachapoly_mode_t MBEDTLS_PRIVATE(mode);         /**< Cipher mode (encrypt or decrypt). */
+    mbedtls_chacha20_context chacha20_ctx;  /**< The ChaCha20 context. */
+    mbedtls_poly1305_context poly1305_ctx;  /**< The Poly1305 context. */
+    uint64_t aad_len;                       /**< The length (bytes) of the Additional Authenticated Data. */
+    uint64_t ciphertext_len;                /**< The length (bytes) of the ciphertext. */
+    int state;                              /**< The current state of the context. */
+    mbedtls_chachapoly_mode_t mode;         /**< Cipher mode (encrypt or decrypt). */
 }
 mbedtls_chachapoly_context;
 

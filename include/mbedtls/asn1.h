@@ -4,7 +4,7 @@
  * \brief Generic ASN.1 parsing
  */
 /*
- *  Copyright The Mbed TLS Contributors
+ *  Copyright (C) 2006-2015, ARM Limited, All Rights Reserved
  *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -18,12 +18,17 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
+ *
+ *  This file is part of mbed TLS (https://tls.mbed.org)
  */
 #ifndef MBEDTLS_ASN1_H
 #define MBEDTLS_ASN1_H
-#include "mbedtls/private_access.h"
 
-#include "mbedtls/build_info.h"
+#if !defined(MBEDTLS_CONFIG_FILE)
+#include "mbedtls/config.h"
+#else
+#include MBEDTLS_CONFIG_FILE
+#endif
 
 #include <stddef.h>
 
@@ -43,22 +48,15 @@
  * ASN1 is a standard to specify data structures.
  * \{
  */
-/** Out of data when parsing an ASN1 data structure. */
-#define MBEDTLS_ERR_ASN1_OUT_OF_DATA                      -0x0060
-/** ASN1 tag was of an unexpected value. */
-#define MBEDTLS_ERR_ASN1_UNEXPECTED_TAG                   -0x0062
-/** Error when trying to determine the length or invalid length. */
-#define MBEDTLS_ERR_ASN1_INVALID_LENGTH                   -0x0064
-/** Actual length differs from expected length. */
-#define MBEDTLS_ERR_ASN1_LENGTH_MISMATCH                  -0x0066
-/** Data is invalid. */
-#define MBEDTLS_ERR_ASN1_INVALID_DATA                     -0x0068
-/** Memory allocation failed */
-#define MBEDTLS_ERR_ASN1_ALLOC_FAILED                     -0x006A
-/** Buffer too small when writing ASN.1 data structure. */
-#define MBEDTLS_ERR_ASN1_BUF_TOO_SMALL                    -0x006C
+#define MBEDTLS_ERR_ASN1_OUT_OF_DATA                      -0x0060  /**< Out of data when parsing an ASN1 data structure. */
+#define MBEDTLS_ERR_ASN1_UNEXPECTED_TAG                   -0x0062  /**< ASN1 tag was of an unexpected value. */
+#define MBEDTLS_ERR_ASN1_INVALID_LENGTH                   -0x0064  /**< Error when trying to determine the length or invalid length. */
+#define MBEDTLS_ERR_ASN1_LENGTH_MISMATCH                  -0x0066  /**< Actual length differs from expected length. */
+#define MBEDTLS_ERR_ASN1_INVALID_DATA                     -0x0068  /**< Data is invalid. */
+#define MBEDTLS_ERR_ASN1_ALLOC_FAILED                     -0x006A  /**< Memory allocation failed */
+#define MBEDTLS_ERR_ASN1_BUF_TOO_SMALL                    -0x006C  /**< Buffer too small when writing ASN.1 data structure. */
 
-/** \} name ASN1 Error codes */
+/* \} name */
 
 /**
  * \name DER constants
@@ -118,7 +116,8 @@
 #define MBEDTLS_ASN1_TAG_PC_MASK             0x20
 #define MBEDTLS_ASN1_TAG_VALUE_MASK          0x1F
 
-/** \} name DER constants */
+/* \} name */
+/* \} addtogroup asn1_module */
 
 /** Returns the size of the binary string, without the trailing \\0 */
 #define MBEDTLS_OID_SIZE(x) (sizeof(x) - 1)
@@ -174,15 +173,7 @@ mbedtls_asn1_bitstring;
 typedef struct mbedtls_asn1_sequence
 {
     mbedtls_asn1_buf buf;                   /**< Buffer containing the given ASN.1 item. */
-
-    /** The next entry in the sequence.
-     *
-     * The details of memory management for sequences are not documented and
-     * may change in future versions. Set this field to \p NULL when
-     * initializing a structure, and do not modify it except via Mbed TLS
-     * library functions.
-     */
-    struct mbedtls_asn1_sequence *next;
+    struct mbedtls_asn1_sequence *next;    /**< The next entry in the sequence. */
 }
 mbedtls_asn1_sequence;
 
@@ -193,22 +184,8 @@ typedef struct mbedtls_asn1_named_data
 {
     mbedtls_asn1_buf oid;                   /**< The object identifier. */
     mbedtls_asn1_buf val;                   /**< The named value. */
-
-    /** The next entry in the sequence.
-     *
-     * The details of memory management for named data sequences are not
-     * documented and may change in future versions. Set this field to \p NULL
-     * when initializing a structure, and do not modify it except via Mbed TLS
-     * library functions.
-     */
-    struct mbedtls_asn1_named_data *next;
-
-    /** Merge next item into the current one?
-     *
-     * This field exists for the sake of Mbed TLS's X.509 certificate parsing
-     * code and may change in future versions of the library.
-     */
-    unsigned char MBEDTLS_PRIVATE(next_merged);
+    struct mbedtls_asn1_named_data *next;  /**< The next entry in the sequence. */
+    unsigned char next_merged;      /**< Merge next item into the current one? */
 }
 mbedtls_asn1_named_data;
 
@@ -603,7 +580,7 @@ int mbedtls_asn1_get_alg_null( unsigned char **p,
  *
  * \return      NULL if not found, or a pointer to the existing entry.
  */
-const mbedtls_asn1_named_data *mbedtls_asn1_find_named_data( const mbedtls_asn1_named_data *list,
+mbedtls_asn1_named_data *mbedtls_asn1_find_named_data( mbedtls_asn1_named_data *list,
                                        const char *oid, size_t len );
 
 /**
@@ -624,9 +601,6 @@ void mbedtls_asn1_free_named_data( mbedtls_asn1_named_data *entry );
  *              sets \c *head to \c NULL.
  */
 void mbedtls_asn1_free_named_data_list( mbedtls_asn1_named_data **head );
-
-/** \} name Functions to parse ASN.1 data structures */
-/** \} addtogroup asn1_module */
 
 #ifdef __cplusplus
 }

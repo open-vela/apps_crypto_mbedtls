@@ -1,8 +1,7 @@
 /*
  *  PSA crypto support for secure element drivers
  */
-/*
- *  Copyright The Mbed TLS Contributors
+/*  Copyright (C) 2019, ARM Limited, All Rights Reserved
  *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -16,12 +15,18 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
+ *
+ *  This file is part of Mbed TLS (https://tls.mbed.org)
  */
 
 #ifndef PSA_CRYPTO_SE_H
 #define PSA_CRYPTO_SE_H
 
-#include "mbedtls/build_info.h"
+#if !defined(MBEDTLS_CONFIG_FILE)
+#include "mbedtls/config.h"
+#else
+#include MBEDTLS_CONFIG_FILE
+#endif
 
 #include "psa/crypto.h"
 #include "psa/crypto_se_driver.h"
@@ -41,7 +46,7 @@
 /** The base of the range of ITS file identifiers for secure element
  * driver persistent data.
  *
- * We use a slice of the implementation reserved range 0xffff0000..0xffffffff,
+ * We use a slice of the implemenation reserved range 0xffff0000..0xffffffff,
  * specifically the range 0xfffffe00..0xfffffeff. The length of this range
  * drives the value of #PSA_MAX_SE_LOCATION. The identifier 0xfffffe00 is
  * actually not used since it corresponds to #PSA_KEY_LOCATION_LOCAL_STORAGE
@@ -151,13 +156,6 @@ psa_status_t psa_destroy_se_key( psa_se_drv_table_entry_t *driver,
  *
  * \param driver        The driver table entry containing the persistent
  *                      data to load from storage.
- *
- * \return #PSA_SUCCESS
- * \return #PSA_ERROR_NOT_SUPPORTED
- * \return #PSA_ERROR_DOES_NOT_EXIST
- * \return #PSA_ERROR_STORAGE_FAILURE
- * \return #PSA_ERROR_DATA_CORRUPT
- * \return #PSA_ERROR_INVALID_ARGUMENT
  */
 psa_status_t psa_load_se_persistent_data(
     const psa_se_drv_table_entry_t *driver );
@@ -166,14 +164,6 @@ psa_status_t psa_load_se_persistent_data(
  *
  * \param[in] driver    The driver table entry containing the persistent
  *                      data to save to storage.
- *
- * \return #PSA_SUCCESS
- * \return #PSA_ERROR_NOT_SUPPORTED
- * \return #PSA_ERROR_NOT_PERMITTED
- * \return #PSA_ERROR_NOT_SUPPORTED
- * \return #PSA_ERROR_INSUFFICIENT_STORAGE
- * \return #PSA_ERROR_STORAGE_FAILURE
- * \return #PSA_ERROR_INVALID_ARGUMENT
  */
 psa_status_t psa_save_se_persistent_data(
     const psa_se_drv_table_entry_t *driver );
@@ -193,6 +183,7 @@ psa_status_t psa_destroy_se_persistent_data( psa_key_location_t location );
 typedef struct
 {
     uint8_t slot_number[sizeof( psa_key_slot_number_t )];
+    uint8_t bits[sizeof( psa_key_bits_t )];
 } psa_se_key_data_storage_t;
 
 #endif /* PSA_CRYPTO_SE_H */

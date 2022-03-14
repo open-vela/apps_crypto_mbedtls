@@ -1,7 +1,7 @@
 /*
  *  Key generation application
  *
- *  Copyright The Mbed TLS Contributors
+ *  Copyright (C) 2006-2015, ARM Limited, All Rights Reserved
  *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -15,9 +15,15 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
+ *
+ *  This file is part of mbed TLS (https://tls.mbed.org)
  */
 
-#include "mbedtls/build_info.h"
+#if !defined(MBEDTLS_CONFIG_FILE)
+#include "mbedtls/config.h"
+#else
+#include MBEDTLS_CONFIG_FILE
+#endif
 
 #if defined(MBEDTLS_PLATFORM_C)
 #include "mbedtls/platform.h"
@@ -391,10 +397,10 @@ int main( int argc, char *argv[] )
     {
         mbedtls_ecp_keypair *ecp = mbedtls_pk_ec( key );
         mbedtls_printf( "curve: %s\n",
-                mbedtls_ecp_curve_info_from_grp_id( ecp->MBEDTLS_PRIVATE(grp).id )->name );
-        mbedtls_mpi_write_file( "X_Q:   ", &ecp->MBEDTLS_PRIVATE(Q).MBEDTLS_PRIVATE(X), 16, NULL );
-        mbedtls_mpi_write_file( "Y_Q:   ", &ecp->MBEDTLS_PRIVATE(Q).MBEDTLS_PRIVATE(Y), 16, NULL );
-        mbedtls_mpi_write_file( "D:     ", &ecp->MBEDTLS_PRIVATE(d)  , 16, NULL );
+                mbedtls_ecp_curve_info_from_grp_id( ecp->grp.id )->name );
+        mbedtls_mpi_write_file( "X_Q:   ", &ecp->Q.X, 16, NULL );
+        mbedtls_mpi_write_file( "Y_Q:   ", &ecp->Q.Y, 16, NULL );
+        mbedtls_mpi_write_file( "D:     ", &ecp->d  , 16, NULL );
     }
     else
 #endif

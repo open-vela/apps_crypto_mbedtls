@@ -1,27 +1,31 @@
-add_library(everest
-  library/everest.c
-  library/x25519.c
-  library/Hacl_Curve25519_joined.c)
+list (APPEND everest_src)
+list (APPEND everest_inc)
+list (APPEND everest_def)
 
-target_include_directories(everest
-  PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-         $<BUILD_INTERFACE:${MBEDTLS_DIR}/include>
-         $<INSTALL_INTERFACE:include>
-  PRIVATE include/everest
-          include/everest/kremlib
-          ${MBEDTLS_DIR}/library/)
+set(everest_src
+  ${CMAKE_CURRENT_SOURCE_DIR}/library/everest.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/library/x25519.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/library/Hacl_Curve25519_joined.c
+)
 
-if(INSTALL_MBEDTLS_HEADERS)
+list(APPEND everest_inc ${CMAKE_CURRENT_SOURCE_DIR}/include ${CMAKE_CURRENT_SOURCE_DIR}/include/everest ${CMAKE_CURRENT_SOURCE_DIR}/include/everest/kremlib)
 
-  install(DIRECTORY include/everest
-    DESTINATION include
-    FILE_PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
-    DIRECTORY_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
-    FILES_MATCHING PATTERN "*.h")
+execute_process(COMMAND ${MBEDTLS_PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/../../scripts/config.py -f ${CMAKE_CURRENT_SOURCE_DIR}/../../include/mbedtls/config.h get MBEDTLS_ECDH_VARIANT_EVEREST_ENABLED RESULT_VARIABLE result)
 
-endif(INSTALL_MBEDTLS_HEADERS)
+if(${result} EQUAL 0)
 
-install(TARGETS everest
-  EXPORT MbedTLSTargets
-  DESTINATION ${LIB_INSTALL_DIR}
-  PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ)
+  if(INSTALL_MBEDTLS_HEADERS)
+
+    install(DIRECTORY include/everest
+      DESTINATION include
+      FILE_PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
+      DIRECTORY_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
+      FILES_MATCHING PATTERN "*.h")
+
+  endif(INSTALL_MBEDTLS_HEADERS)
+
+endif()
+
+set(thirdparty_src ${thirdparty_src} ${everest_src} PARENT_SCOPE)
+set(thirdparty_inc ${thirdparty_inc} ${everest_inc} PARENT_SCOPE)
+set(thirdparty_def ${thirdparty_def} ${everest_def} PARENT_SCOPE)
