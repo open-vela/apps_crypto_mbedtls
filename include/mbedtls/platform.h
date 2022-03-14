@@ -13,7 +13,7 @@
  *        dynamically configured at runtime.
  */
 /*
- *  Copyright The Mbed TLS Contributors
+ *  Copyright (C) 2006-2018, Arm Limited (or its affiliates), All Rights Reserved
  *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -27,16 +27,24 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
+ *
+ *  This file is part of Mbed TLS (https://tls.mbed.org)
  */
 #ifndef MBEDTLS_PLATFORM_H
 #define MBEDTLS_PLATFORM_H
-#include "mbedtls/private_access.h"
 
-#include "mbedtls/build_info.h"
+#if !defined(MBEDTLS_CONFIG_FILE)
+#include "mbedtls/config.h"
+#else
+#include MBEDTLS_CONFIG_FILE
+#endif
 
 #if defined(MBEDTLS_HAVE_TIME)
 #include "mbedtls/platform_time.h"
 #endif
+
+#define MBEDTLS_ERR_PLATFORM_HW_ACCEL_FAILED     -0x0070 /**< Hardware accelerator failed */
+#define MBEDTLS_ERR_PLATFORM_FEATURE_UNSUPPORTED -0x0072 /**< The requested feature is not supported by the platform */
 
 #ifdef __cplusplus
 extern "C" {
@@ -46,7 +54,7 @@ extern "C" {
  * \name SECTION: Module settings
  *
  * The configuration options you can set for this module are in this section.
- * Either change them in mbedtls_config.h or define them on the compiler command line.
+ * Either change them in config.h or define them on the compiler command line.
  * \{
  */
 
@@ -119,7 +127,7 @@ extern "C" {
 #endif /* MBEDTLS_PLATFORM_NO_STD_FUNCTIONS */
 
 
-/** \} name SECTION: Module settings */
+/* \} name SECTION: Module settings */
 
 /*
  * The function pointers for calloc and free.
@@ -364,7 +372,7 @@ int mbedtls_platform_set_nv_seed(
  */
 typedef struct mbedtls_platform_context
 {
-    char MBEDTLS_PRIVATE(dummy); /**< A placeholder member, as empty structs are not portable. */
+    char dummy; /**< A placeholder member, as empty structs are not portable. */
 }
 mbedtls_platform_context;
 
