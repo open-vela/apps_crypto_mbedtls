@@ -1,7 +1,7 @@
 /*
  *  X.509 certificate writing
  *
- *  Copyright The Mbed TLS Contributors
+ *  Copyright (C) 2006-2015, ARM Limited, All Rights Reserved
  *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -15,6 +15,8 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
+ *
+ *  This file is part of mbed TLS (https://tls.mbed.org)
  */
 /*
  * References:
@@ -23,7 +25,11 @@
  * - attributes: PKCS#9 v2.0 aka RFC 2985
  */
 
-#include "common.h"
+#if !defined(MBEDTLS_CONFIG_FILE)
+#include "mbedtls/config.h"
+#else
+#include MBEDTLS_CONFIG_FILE
+#endif
 
 #if defined(MBEDTLS_X509_CRT_WRITE_C)
 
@@ -163,7 +169,7 @@ int mbedtls_x509write_crt_set_basic_constraints( mbedtls_x509write_cert *ctx,
     return(
         mbedtls_x509write_crt_set_extension( ctx, MBEDTLS_OID_BASIC_CONSTRAINTS,
                              MBEDTLS_OID_SIZE( MBEDTLS_OID_BASIC_CONSTRAINTS ),
-                             is_ca, buf + sizeof(buf) - len, len ) );
+                             0, buf + sizeof(buf) - len, len ) );
 }
 
 #if defined(MBEDTLS_SHA1_C)
@@ -178,7 +184,7 @@ int mbedtls_x509write_crt_set_subject_key_identifier( mbedtls_x509write_cert *ct
     MBEDTLS_ASN1_CHK_ADD( len,
                 mbedtls_pk_write_pubkey( &c, buf, ctx->subject_key ) );
 
-    ret = mbedtls_sha1( buf + sizeof( buf ) - len, len,
+    ret = mbedtls_sha1_ret( buf + sizeof( buf ) - len, len,
                             buf + sizeof( buf ) - 20 );
     if( ret != 0 )
         return( ret );
@@ -206,7 +212,7 @@ int mbedtls_x509write_crt_set_authority_key_identifier( mbedtls_x509write_cert *
     MBEDTLS_ASN1_CHK_ADD( len,
                           mbedtls_pk_write_pubkey( &c, buf, ctx->issuer_key ) );
 
-    ret = mbedtls_sha1( buf + sizeof( buf ) - len, len,
+    ret = mbedtls_sha1_ret( buf + sizeof( buf ) - len, len,
                             buf + sizeof( buf ) - 20 );
     if( ret != 0 )
         return( ret );
@@ -233,7 +239,7 @@ int mbedtls_x509write_crt_set_authority_key_identifier( mbedtls_x509write_cert *
 int mbedtls_x509write_crt_set_key_usage( mbedtls_x509write_cert *ctx,
                                          unsigned int key_usage )
 {
-    unsigned char buf[5] = {0}, ku[2] = {0};
+    unsigned char buf[5], ku[2];
     unsigned char *c;
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     const unsigned int allowed_bits = MBEDTLS_X509_KU_DIGITAL_SIGNATURE |
@@ -251,7 +257,8 @@ int mbedtls_x509write_crt_set_key_usage( mbedtls_x509write_cert *ctx,
         return( MBEDTLS_ERR_X509_FEATURE_UNAVAILABLE );
 
     c = buf + 5;
-    MBEDTLS_PUT_UINT16_LE( key_usage, ku, 0 );
+    ku[0] = (unsigned char)( key_usage      );
+    ku[1] = (unsigned char)( key_usage >> 8 );
     ret = mbedtls_asn1_write_named_bitstring( &c, buf, ku, 9 );
 
     if( ret < 0 )
@@ -271,7 +278,7 @@ int mbedtls_x509write_crt_set_key_usage( mbedtls_x509write_cert *ctx,
 int mbedtls_x509write_crt_set_ns_cert_type( mbedtls_x509write_cert *ctx,
                                     unsigned char ns_cert_type )
 {
-    unsigned char buf[4] = {0};
+    unsigned char buf[4];
     unsigned char *c;
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
 
@@ -473,7 +480,7 @@ int mbedtls_x509write_crt_der( mbedtls_x509write_cert *ctx,
     }
 
     if( ( ret = mbedtls_pk_sign( ctx->issuer_key, ctx->md_alg,
-                                 hash, 0, sig, sizeof( sig ), &sig_len,
+                                 hash, 0, sig, &sig_len,
                                  f_rng, p_rng ) ) != 0 )
     {
         return( ret );

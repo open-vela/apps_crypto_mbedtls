@@ -2,20 +2,9 @@
 
 # test-ref-configs.pl
 #
-# Copyright The Mbed TLS Contributors
-# SPDX-License-Identifier: Apache-2.0
+# This file is part of mbed TLS (https://tls.mbed.org)
 #
-# Licensed under the Apache License, Version 2.0 (the "License"); you may
-# not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-# http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+# Copyright (c) 2013-2016, ARM Limited, All Rights Reserved
 #
 # Purpose
 #
@@ -28,22 +17,19 @@ use warnings;
 use strict;
 
 my %configs = (
-    'config-ccm-psk-tls1_2.h' => {
-        'compat' => '-m tls12 -f \'^TLS-PSK-WITH-AES-...-CCM-8\'',
-        'test_again_with_use_psa' => 1
-    },
-    'config-no-entropy.h' => {
+    'config-mini-tls1_1.h' => {
+        'compat' => '-m tls1_1 -f \'^DES-CBC3-SHA$\|^TLS-RSA-WITH-3DES-EDE-CBC-SHA$\'', #'
     },
     'config-suite-b.h' => {
-        'compat' => "-m tls12 -f 'ECDHE-ECDSA.*AES.*GCM' -p mbedTLS",
-        'test_again_with_use_psa' => 1,
+        'compat' => "-m tls1_2 -f 'ECDHE-ECDSA.*AES.*GCM' -p mbedTLS",
     },
     'config-symmetric-only.h' => {
-        'test_again_with_use_psa' => 0, # Uses PSA by default, no need to test it twice
+    },
+    'config-ccm-psk-tls1_2.h' => {
+        'compat' => '-m tls1_2 -f \'^TLS-PSK-WITH-AES-...-CCM-8\'',
     },
     'config-thread.h' => {
         'opt' => '-f ECJPAKE.*nolog',
-        'test_again_with_use_psa' => 1,
     },
 );
 
@@ -64,7 +50,7 @@ if ($#ARGV >= 0) {
 
 -d 'library' && -d 'include' && -d 'tests' or die "Must be run from root\n";
 
-my $config_h = 'include/mbedtls/mbedtls_config.h';
+my $config_h = 'include/mbedtls/config.h';
 
 system( "cp $config_h $config_h.bak" ) and die;
 sub abort {
@@ -83,32 +69,17 @@ if (!-e "tests/seedfile" || -s "tests/seedfile" < 64) {
     close SEEDFILE or die;
 }
 
-sub perform_test {
-    my $conf = $_[0];
-    my $data = $_[1];
-    my $test_with_psa = $_[2];
-
+while( my ($conf, $data) = each %configs ) {
     system( "cp $config_h.bak $config_h" ) and die;
     system( "make clean" ) and die;
 
     print "\n******************************************\n";
     print "* Testing configuration: $conf\n";
-    if ( $test_with_psa )
-    {
-        print "* ENABLING MBEDTLS_PSA_CRYPTO_C and MBEDTLS_USE_PSA_CRYPTO \n";
-    }
     print "******************************************\n";
-
     $ENV{MBEDTLS_TEST_CONFIGURATION} = $conf;
 
     system( "cp configs/$conf $config_h" )
         and abort "Failed to activate $conf\n";
-
-    if ( $test_with_psa )
-    {
-        system( "scripts/config.py set MBEDTLS_PSA_CRYPTO_C" );
-        system( "scripts/config.py set MBEDTLS_USE_PSA_CRYPTO" );
-    }
 
     system( "CFLAGS='-Os -Werror -Wall -Wextra' make" ) and abort "Failed to build: $conf\n";
     system( "make test" ) and abort "Failed test suite: $conf\n";
@@ -136,15 +107,6 @@ sub perform_test {
     {
         print "\nskipping ssl-opt.sh\n";
     }
-}
-
-while( my ($conf, $data) = each %configs ) {
-    my $test_with_psa = $data->{'test_again_with_use_psa'};
-    if ( $test_with_psa )
-    {
-        perform_test( $conf, $data, $test_with_psa );
-    }
-    perform_test( $conf, $data, 0 );
 }
 
 system( "mv $config_h.bak $config_h" ) and warn "$config_h not restored\n";

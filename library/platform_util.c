@@ -2,7 +2,7 @@
  * Common and shared functions used by multiple modules in the Mbed TLS
  * library.
  *
- *  Copyright The Mbed TLS Contributors
+ *  Copyright (C) 2018, Arm Limited, All Rights Reserved
  *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -16,17 +16,23 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
+ *
+ *  This file is part of Mbed TLS (https://tls.mbed.org)
  */
 
 /*
  * Ensure gmtime_r is available even with -std=c99; must be defined before
- * mbedtls_config.h, which pulls in glibc's features.h. Harmless on other platforms.
+ * config.h, which pulls in glibc's features.h. Harmless on other platforms.
  */
 #if !defined(_POSIX_C_SOURCE)
 #define _POSIX_C_SOURCE 200112L
 #endif
 
-#include "common.h"
+#if !defined(MBEDTLS_CONFIG_FILE)
+#include "mbedtls/config.h"
+#else
+#include MBEDTLS_CONFIG_FILE
+#endif
 
 #include "mbedtls/platform_util.h"
 #include "mbedtls/platform.h"
@@ -84,7 +90,7 @@ void mbedtls_platform_zeroize( void *buf, size_t len )
 
 #if !( ( defined(_POSIX_VERSION) && _POSIX_VERSION >= 200809L ) ||     \
        ( defined(_POSIX_THREAD_SAFE_FUNCTIONS ) &&                     \
-         _POSIX_THREAD_SAFE_FUNCTIONS >= 200112L ) )
+         _POSIX_THREAD_SAFE_FUNCTIONS >= 20112L ) )
 /*
  * This is a convenience shorthand macro to avoid checking the long
  * preprocessor conditions above. Ideally, we could expose this macro in
@@ -98,7 +104,7 @@ void mbedtls_platform_zeroize( void *buf, size_t len )
 
 #endif /* !( ( defined(_POSIX_VERSION) && _POSIX_VERSION >= 200809L ) ||     \
              ( defined(_POSIX_THREAD_SAFE_FUNCTIONS ) &&                     \
-                _POSIX_THREAD_SAFE_FUNCTIONS >= 200112L ) ) */
+                _POSIX_THREAD_SAFE_FUNCTIONS >= 20112L ) ) */
 
 struct tm *mbedtls_platform_gmtime_r( const mbedtls_time_t *tt,
                                       struct tm *tm_buf )
@@ -131,8 +137,3 @@ struct tm *mbedtls_platform_gmtime_r( const mbedtls_time_t *tt,
 #endif /* _WIN32 && !EFIX64 && !EFI32 */
 }
 #endif /* MBEDTLS_HAVE_TIME_DATE && MBEDTLS_PLATFORM_GMTIME_R_ALT */
-
-#if defined(MBEDTLS_TEST_HOOKS)
-void (*mbedtls_test_hook_test_fail)( const char *, int, const char *);
-#endif /* MBEDTLS_TEST_HOOKS */
-

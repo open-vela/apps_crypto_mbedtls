@@ -1,8 +1,7 @@
 /*
  *  PSA ITS simulator over stdio files.
  */
-/*
- *  Copyright The Mbed TLS Contributors
+/*  Copyright (C) 2018, ARM Limited, All Rights Reserved
  *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -16,9 +15,15 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
+ *
+ *  This file is part of mbed TLS (https://tls.mbed.org)
  */
 
-#include "common.h"
+#if defined(MBEDTLS_CONFIG_FILE)
+#include MBEDTLS_CONFIG_FILE
+#else
+#include "mbedtls/config.h"
+#endif
 
 #if defined(MBEDTLS_PSA_ITS_FILE_C)
 
@@ -43,7 +48,7 @@
 #define PSA_ITS_STORAGE_PREFIX ""
 #endif
 
-#define PSA_ITS_STORAGE_FILENAME_PATTERN "%08x%08x"
+#define PSA_ITS_STORAGE_FILENAME_PATTERN "%08lx%08lx"
 #define PSA_ITS_STORAGE_SUFFIX ".psa_its"
 #define PSA_ITS_STORAGE_FILENAME_LENGTH         \
     ( sizeof( PSA_ITS_STORAGE_PREFIX ) - 1 + /*prefix without terminating 0*/ \
@@ -83,8 +88,8 @@ static void psa_its_fill_filename( psa_storage_uid_t uid, char *filename )
     mbedtls_snprintf( filename, PSA_ITS_STORAGE_FILENAME_LENGTH,
                       "%s" PSA_ITS_STORAGE_FILENAME_PATTERN "%s",
                       PSA_ITS_STORAGE_PREFIX,
-                      (unsigned) ( uid >> 32 ),
-                      (unsigned) ( uid & 0xffffffff ),
+                      (unsigned long) ( uid >> 32 ),
+                      (unsigned long) ( uid & 0xffffffff ),
                       PSA_ITS_STORAGE_SUFFIX );
 }
 
@@ -184,11 +189,6 @@ psa_status_t psa_its_set( psa_storage_uid_t uid,
                           const void *p_data,
                           psa_storage_create_flags_t create_flags )
 {
-    if( uid == 0 )
-    {
-        return( PSA_ERROR_INVALID_HANDLE );
-    }
-
     psa_status_t status = PSA_ERROR_STORAGE_FAILURE;
     char filename[PSA_ITS_STORAGE_FILENAME_LENGTH];
     FILE *stream = NULL;
@@ -196,8 +196,14 @@ psa_status_t psa_its_set( psa_storage_uid_t uid,
     size_t n;
 
     memcpy( header.magic, PSA_ITS_MAGIC_STRING, PSA_ITS_MAGIC_LENGTH );
-    MBEDTLS_PUT_UINT32_LE( data_length, header.size, 0 );
-    MBEDTLS_PUT_UINT32_LE( create_flags, header.flags, 0 );
+    header.size[0] = data_length & 0xff;
+    header.size[1] = ( data_length >> 8 ) & 0xff;
+    header.size[2] = ( data_length >> 16 ) & 0xff;
+    header.size[3] = ( data_length >> 24 ) & 0xff;
+    header.flags[0] = create_flags & 0xff;
+    header.flags[1] = ( create_flags >> 8 ) & 0xff;
+    header.flags[2] = ( create_flags >> 16 ) & 0xff;
+    header.flags[3] = ( create_flags >> 24 ) & 0xff;
 
     psa_its_fill_filename( uid, filename );
     stream = fopen( PSA_ITS_STORAGE_TEMP, "wb" );
@@ -228,12 +234,7 @@ exit:
         if( rename_replace_existing( PSA_ITS_STORAGE_TEMP, filename ) != 0 )
             status = PSA_ERROR_STORAGE_FAILURE;
     }
-    /* The temporary file may still exist, but only in failure cases where
-     * we're already reporting an error. So there's nothing we can do on
-     * failure. If the function succeeded, and in some error cases, the
-     * temporary file doesn't exist and so remove() is expected to fail.
-     * Thus we just ignore the return status of remove(). */
-    (void) remove( PSA_ITS_STORAGE_TEMP );
+    remove( PSA_ITS_STORAGE_TEMP );
     return( status );
 }
 

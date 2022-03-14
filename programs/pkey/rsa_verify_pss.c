@@ -1,7 +1,7 @@
 /*
  *  RSASSA-PSS/SHA-256 signature verification program
  *
- *  Copyright The Mbed TLS Contributors
+ *  Copyright (C) 2006-2015, ARM Limited, All Rights Reserved
  *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -15,9 +15,15 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
+ *
+ *  This file is part of mbed TLS (https://tls.mbed.org)
  */
 
-#include "mbedtls/build_info.h"
+#if !defined(MBEDTLS_CONFIG_FILE)
+#include "mbedtls/config.h"
+#else
+#include MBEDTLS_CONFIG_FILE
+#endif
 
 #if defined(MBEDTLS_PLATFORM_C)
 #include "mbedtls/platform.h"
@@ -94,13 +100,7 @@ int main( int argc, char *argv[] )
         goto exit;
     }
 
-    if( ( ret = mbedtls_rsa_set_padding( mbedtls_pk_rsa( pk ),
-                                         MBEDTLS_RSA_PKCS_V21,
-                                         MBEDTLS_MD_SHA256 ) ) != 0 )
-    {
-        mbedtls_printf( " failed\n  ! Invalid padding\n" );
-        goto exit;
-    }
+    mbedtls_rsa_set_padding( mbedtls_pk_rsa( pk ), MBEDTLS_RSA_PKCS_V21, MBEDTLS_MD_SHA256 );
 
     /*
      * Extract the RSA signature from the file

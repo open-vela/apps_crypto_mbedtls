@@ -3,7 +3,7 @@
  * \brief Platform Security Architecture cryptography module
  */
 /*
- *  Copyright The Mbed TLS Contributors
+ *  Copyright (C) 2018, ARM Limited, All Rights Reserved
  *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -35,6 +35,16 @@
 /** \defgroup platform Implementation-specific definitions
  * @{
  */
+
+/** \brief Key handle.
+ *
+ * This type represents open handles to keys. It must be an unsigned integral
+ * type. The choice of type is implementation-dependent.
+ *
+ * 0 is not a valid key handle. How other handle values are assigned is
+ * implementation-dependent.
+ */
+typedef _unsigned_integral_type_ psa_key_handle_t;
 
 /**@}*/
 #endif /* __DOXYGEN_ONLY__ */
@@ -90,14 +100,10 @@ extern "C" {
  *
  * \retval #PSA_SUCCESS
  * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
- * \retval #PSA_ERROR_INSUFFICIENT_STORAGE
  * \retval #PSA_ERROR_COMMUNICATION_FAILURE
  * \retval #PSA_ERROR_HARDWARE_FAILURE
  * \retval #PSA_ERROR_CORRUPTION_DETECTED
  * \retval #PSA_ERROR_INSUFFICIENT_ENTROPY
- * \retval #PSA_ERROR_STORAGE_FAILURE
- * \retval #PSA_ERROR_DATA_INVALID
- * \retval #PSA_ERROR_DATA_CORRUPT
  */
 psa_status_t psa_crypto_init(void);
 
@@ -112,6 +118,12 @@ psa_status_t psa_crypto_init(void);
  * This macro returns a suitable initializer for a key attribute structure
  * of type #psa_key_attributes_t.
  */
+#ifdef __DOXYGEN_ONLY__
+/* This is an example definition for documentation purposes.
+ * Implementations should define a suitable value in `crypto_struct.h`.
+ */
+#define PSA_KEY_ATTRIBUTES_INIT {0}
+#endif
 
 /** Return an initial value for a key attributes structure.
  */
@@ -134,30 +146,11 @@ static psa_key_attributes_t psa_key_attributes_init(void);
  * linkage). This function may be provided as a function-like macro,
  * but in this case it must evaluate each of its arguments exactly once.
  *
- * \param[out] attributes  The attribute structure to write to.
- * \param key              The persistent identifier for the key.
+ * \param[out] attributes       The attribute structure to write to.
+ * \param id                    The persistent identifier for the key.
  */
-static void psa_set_key_id( psa_key_attributes_t *attributes,
-                            mbedtls_svc_key_id_t key );
-
-#ifdef MBEDTLS_PSA_CRYPTO_KEY_ID_ENCODES_OWNER
-/** Set the owner identifier of a key.
- *
- * When key identifiers encode key owner identifiers, psa_set_key_id() does
- * not allow to define in key attributes the owner of volatile keys as
- * psa_set_key_id() enforces the key to be persistent.
- *
- * This function allows to set in key attributes the owner identifier of a
- * key. It is intended to be used for volatile keys. For persistent keys,
- * it is recommended to use the PSA Cryptography API psa_set_key_id() to define
- * the owner of a key.
- *
- * \param[out] attributes  The attribute structure to write to.
- * \param owner            The key owner identifier.
- */
-static void mbedtls_set_key_owner_id( psa_key_attributes_t *attributes,
-                                      mbedtls_key_owner_id_t owner );
-#endif
+static void psa_set_key_id(psa_key_attributes_t *attributes,
+                           psa_key_id_t id);
 
 /** Set the location of a persistent key.
  *
@@ -199,8 +192,7 @@ static void psa_set_key_lifetime(psa_key_attributes_t *attributes,
  *         This value is unspecified if the attribute structure declares
  *         the key as volatile.
  */
-static mbedtls_svc_key_id_t psa_get_key_id(
-    const psa_key_attributes_t *attributes);
+static psa_key_id_t psa_get_key_id(const psa_key_attributes_t *attributes);
 
 /** Retrieve the lifetime from key attributes.
  *
@@ -258,14 +250,6 @@ static psa_key_usage_t psa_get_key_usage_flags(
  * - An algorithm value permits this particular algorithm.
  * - An algorithm wildcard built from #PSA_ALG_ANY_HASH allows the specified
  *   signature scheme with any hash algorithm.
- * - An algorithm built from #PSA_ALG_AT_LEAST_THIS_LENGTH_MAC allows
- *   any MAC algorithm from the same base class (e.g. CMAC) which
- *   generates/verifies a MAC length greater than or equal to the length
- *   encoded in the wildcard algorithm.
- * - An algorithm built from #PSA_ALG_AEAD_WITH_AT_LEAST_THIS_LENGTH_TAG
- *   allows any AEAD algorithm from the same base class (e.g. CCM) which
- *   generates/verifies a tag length greater than or equal to the length
- *   encoded in the wildcard algorithm.
  *
  * This function overwrites any algorithm policy
  * previously set in \p attributes.
@@ -363,7 +347,7 @@ static size_t psa_get_key_bits(const psa_key_attributes_t *attributes);
  *       Once you have called this function on an attribute structure,
  *       you must call psa_reset_key_attributes() to free these resources.
  *
- * \param[in] key               Identifier of the key to query.
+ * \param[in] handle            Handle to the key to query.
  * \param[in,out] attributes    On success, the attributes of the key.
  *                              On failure, equivalent to a
  *                              freshly-initialized structure.
@@ -374,14 +358,12 @@ static size_t psa_get_key_bits(const psa_key_attributes_t *attributes);
  * \retval #PSA_ERROR_COMMUNICATION_FAILURE
  * \retval #PSA_ERROR_CORRUPTION_DETECTED
  * \retval #PSA_ERROR_STORAGE_FAILURE
- * \retval #PSA_ERROR_DATA_CORRUPT
- * \retval #PSA_ERROR_DATA_INVALID
  * \retval #PSA_ERROR_BAD_STATE
  *         The library has not been previously initialized by psa_crypto_init().
  *         It is implementation-dependent whether a failure to initialize
  *         results in this error code.
  */
-psa_status_t psa_get_key_attributes(mbedtls_svc_key_id_t key,
+psa_status_t psa_get_key_attributes(psa_key_handle_t handle,
                                     psa_key_attributes_t *attributes);
 
 /** Reset a key attribute structure to a freshly initialized state.
@@ -404,28 +386,93 @@ void psa_reset_key_attributes(psa_key_attributes_t *attributes);
  * @{
  */
 
-/** Remove non-essential copies of key material from memory.
+/** Open a handle to an existing persistent key.
  *
- * If the key identifier designates a volatile key, this functions does not do
- * anything and returns successfully.
+ * Open a handle to a persistent key. A key is persistent if it was created
+ * with a lifetime other than #PSA_KEY_LIFETIME_VOLATILE. A persistent key
+ * always has a nonzero key identifier, set with psa_set_key_id() when
+ * creating the key. Implementations may provide additional pre-provisioned
+ * keys that can be opened with psa_open_key(). Such keys have a key identifier
+ * in the vendor range, as documented in the description of #psa_key_id_t.
  *
- * If the key identifier designates a persistent key, then this function will
- * free all resources associated with the key in volatile memory. The key
- * data in persistent storage is not affected and the key can still be used.
+ * The application must eventually close the handle with psa_close_key() or
+ * psa_destroy_key() to release associated resources. If the application dies
+ * without calling one of these functions, the implementation should perform
+ * the equivalent of a call to psa_close_key().
  *
- * \param key Identifier of the key to purge.
+ * Some implementations permit an application to open the same key multiple
+ * times. If this is successful, each call to psa_open_key() will return a
+ * different key handle.
+ *
+ * \note Applications that rely on opening a key multiple times will not be
+ * portable to implementations that only permit a single key handle to be
+ * opened. See also :ref:\`key-handles\`.
+ *
+ * \param id            The persistent identifier of the key.
+ * \param[out] handle   On success, a handle to the key.
  *
  * \retval #PSA_SUCCESS
- *         The key material will have been removed from memory if it is not
- *         currently required.
+ *         Success. The application can now use the value of `*handle`
+ *         to access the key.
+ * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
+ *         The implementation does not have sufficient resources to open the
+ *         key. This can be due to reaching an implementation limit on the
+ *         number of open keys, the number of open key handles, or available
+ *         memory.
+ * \retval #PSA_ERROR_DOES_NOT_EXIST
+ *         There is no persistent key with key identifier \p id.
  * \retval #PSA_ERROR_INVALID_ARGUMENT
- *         \p key is not a valid key identifier.
+ *         \p id is not a valid persistent key identifier.
+ * \retval #PSA_ERROR_NOT_PERMITTED
+ *         The specified key exists, but the application does not have the
+ *         permission to access it. Note that this specification does not
+ *         define any way to create such a key, but it may be possible
+ *         through implementation-specific means.
+ * \retval #PSA_ERROR_COMMUNICATION_FAILURE
+ * \retval #PSA_ERROR_CORRUPTION_DETECTED
+ * \retval #PSA_ERROR_STORAGE_FAILURE
  * \retval #PSA_ERROR_BAD_STATE
  *         The library has not been previously initialized by psa_crypto_init().
  *         It is implementation-dependent whether a failure to initialize
  *         results in this error code.
  */
-psa_status_t psa_purge_key(mbedtls_svc_key_id_t key);
+psa_status_t psa_open_key(psa_key_id_t id,
+                          psa_key_handle_t *handle);
+
+
+/** Close a key handle.
+ *
+ * If the handle designates a volatile key, this will destroy the key material
+ * and free all associated resources, just like psa_destroy_key().
+ *
+ * If this is the last open handle to a persistent key, then closing the handle
+ * will free all resources associated with the key in volatile memory. The key
+ * data in persistent storage is not affected and can be opened again later
+ * with a call to psa_open_key().
+ *
+ * Closing the key handle makes the handle invalid, and the key handle
+ * must not be used again by the application.
+ *
+ * \note If the key handle was used to set up an active
+ * :ref:\`multipart operation <multipart-operations>\`, then closing the
+ * key handle can cause the multipart operation to fail. Applications should
+ * maintain the key handle until after the multipart operation has finished.
+ *
+ * \param handle        The key handle to close.
+ *                      If this is \c 0, do nothing and return \c PSA_SUCCESS.
+ *
+ * \retval #PSA_SUCCESS
+ *         \p handle was a valid handle or \c 0. It is now closed.
+ * \retval #PSA_ERROR_INVALID_HANDLE
+ *         \p handle is not a valid handle nor \c 0.
+ * \retval #PSA_ERROR_COMMUNICATION_FAILURE
+ * \retval #PSA_ERROR_CORRUPTION_DETECTED
+ * \retval #PSA_ERROR_BAD_STATE
+ *         The library has not been previously initialized by psa_crypto_init().
+ *         It is implementation-dependent whether a failure to initialize
+ *         results in this error code.
+ */
+psa_status_t psa_close_key(psa_key_handle_t handle);
 
 /** Make a copy of a key.
  *
@@ -464,10 +511,7 @@ psa_status_t psa_purge_key(mbedtls_svc_key_id_t key);
  * The effect of this function on implementation-defined attributes is
  * implementation-defined.
  *
- * \param source_key        The key to copy. It must allow the usage
- *                          #PSA_KEY_USAGE_COPY. If a private or secret key is
- *                          being copied outside of a secure element it must
- *                          also allow #PSA_KEY_USAGE_EXPORT.
+ * \param source_handle     The key to copy. It must be a valid key handle.
  * \param[in] attributes    The attributes for the new key.
  *                          They are used as follows:
  *                          - The key type and size may be 0. If either is
@@ -481,33 +525,32 @@ psa_status_t psa_purge_key(mbedtls_svc_key_id_t key);
  *                            the source key and \p attributes so that
  *                            both sets of restrictions apply, as
  *                            described in the documentation of this function.
- * \param[out] target_key   On success, an identifier for the newly created
- *                          key. For persistent keys, this is the key
- *                          identifier defined in \p attributes.
+ * \param[out] target_handle On success, a handle to the newly created key.
  *                          \c 0 on failure.
  *
  * \retval #PSA_SUCCESS
  * \retval #PSA_ERROR_INVALID_HANDLE
- *         \p source_key is invalid.
+ *         \p source_handle is invalid.
  * \retval #PSA_ERROR_ALREADY_EXISTS
  *         This is an attempt to create a persistent key, and there is
  *         already a persistent key with the given identifier.
  * \retval #PSA_ERROR_INVALID_ARGUMENT
- *         The lifetime or identifier in \p attributes are invalid, or
- *         the policy constraints on the source and specified in
- *         \p attributes are incompatible, or
+ *         The lifetime or identifier in \p attributes are invalid.
+ * \retval #PSA_ERROR_INVALID_ARGUMENT
+ *         The policy constraints on the source and specified in
+ *         \p attributes are incompatible.
+ * \retval #PSA_ERROR_INVALID_ARGUMENT
  *         \p attributes specifies a key type or key size
  *         which does not match the attributes of the source key.
  * \retval #PSA_ERROR_NOT_PERMITTED
- *         The source key does not have the #PSA_KEY_USAGE_COPY usage flag, or
- *         the source key is not exportable and its lifetime does not
+ *         The source key does not have the #PSA_KEY_USAGE_COPY usage flag.
+ * \retval #PSA_ERROR_NOT_PERMITTED
+ *         The source key is not exportable and its lifetime does not
  *         allow copying it to the target's lifetime.
  * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
  * \retval #PSA_ERROR_INSUFFICIENT_STORAGE
  * \retval #PSA_ERROR_COMMUNICATION_FAILURE
  * \retval #PSA_ERROR_HARDWARE_FAILURE
- * \retval #PSA_ERROR_DATA_INVALID
- * \retval #PSA_ERROR_DATA_CORRUPT
  * \retval #PSA_ERROR_STORAGE_FAILURE
  * \retval #PSA_ERROR_CORRUPTION_DETECTED
  * \retval #PSA_ERROR_BAD_STATE
@@ -515,9 +558,9 @@ psa_status_t psa_purge_key(mbedtls_svc_key_id_t key);
  *         It is implementation-dependent whether a failure to initialize
  *         results in this error code.
  */
-psa_status_t psa_copy_key(mbedtls_svc_key_id_t source_key,
+psa_status_t psa_copy_key(psa_key_handle_t source_handle,
                           const psa_key_attributes_t *attributes,
-                          mbedtls_svc_key_id_t *target_key);
+                          psa_key_handle_t *target_handle);
 
 
 /**
@@ -528,29 +571,31 @@ psa_status_t psa_copy_key(mbedtls_svc_key_id_t source_key,
  * make a best effort to ensure that that the key material cannot be recovered.
  *
  * This function also erases any metadata such as policies and frees
- * resources associated with the key.
+ * resources associated with the key. To free all resources associated with
+ * the key, all handles to the key must be closed or destroyed.
+ *
+ * Destroying the key makes the handle invalid, and the key handle
+ * must not be used again by the application. Using other open handles to the
+ * destroyed key in a cryptographic operation will result in an error.
  *
  * If a key is currently in use in a multipart operation, then destroying the
  * key will cause the multipart operation to fail.
  *
- * \param key  Identifier of the key to erase. If this is \c 0, do nothing and
- *             return #PSA_SUCCESS.
+ * \param handle        Handle to the key to erase.
+ *                      If this is \c 0, do nothing and return \c PSA_SUCCESS.
  *
  * \retval #PSA_SUCCESS
- *         \p key was a valid identifier and the key material that it
- *         referred to has been erased. Alternatively, \p key is \c 0.
+ *         \p handle was a valid handle and the key material that it
+ *         referred to has been erased.
+ *         Alternatively, \p handle is \c 0.
  * \retval #PSA_ERROR_NOT_PERMITTED
  *         The key cannot be erased because it is
  *         read-only, either due to a policy or due to physical restrictions.
  * \retval #PSA_ERROR_INVALID_HANDLE
- *         \p key is not a valid identifier nor \c 0.
+ *         \p handle is not a valid handle nor \c 0.
  * \retval #PSA_ERROR_COMMUNICATION_FAILURE
  *         There was an failure in communication with the cryptoprocessor.
  *         The key material may still be present in the cryptoprocessor.
- * \retval #PSA_ERROR_DATA_INVALID
- *         This error is typically a result of either storage corruption on a
- *         cleartext storage backend, or an attempt to read data that was
- *         written by an incompatible version of the library.
  * \retval #PSA_ERROR_STORAGE_FAILURE
  *         The storage is corrupted. Implementations shall make a best effort
  *         to erase key material even in this stage, however applications
@@ -565,7 +610,7 @@ psa_status_t psa_copy_key(mbedtls_svc_key_id_t source_key,
  *         It is implementation-dependent whether a failure to initialize
  *         results in this error code.
  */
-psa_status_t psa_destroy_key(mbedtls_svc_key_id_t key);
+psa_status_t psa_destroy_key(psa_key_handle_t handle);
 
 /**@}*/
 
@@ -600,9 +645,7 @@ psa_status_t psa_destroy_key(mbedtls_svc_key_id_t key);
  *                          \p data buffer.
  *                          If the key size in \p attributes is nonzero,
  *                          it must be equal to the size from \p data.
- * \param[out] key          On success, an identifier to the newly created key.
- *                          For persistent keys, this is the key identifier
- *                          defined in \p attributes.
+ * \param[out] handle       On success, a handle to the newly created key.
  *                          \c 0 on failure.
  * \param[in] data    Buffer containing the key data. The content of this
  *                    buffer is interpreted according to the type declared
@@ -627,15 +670,15 @@ psa_status_t psa_destroy_key(mbedtls_svc_key_id_t key);
  *         The key type or key size is not supported, either by the
  *         implementation in general or in this particular persistent location.
  * \retval #PSA_ERROR_INVALID_ARGUMENT
- *         The key attributes, as a whole, are invalid, or
- *         the key data is not correctly formatted, or
- *         the size in \p attributes is nonzero and does not match the size
+ *         The key attributes, as a whole, are invalid.
+ * \retval #PSA_ERROR_INVALID_ARGUMENT
+ *         The key data is not correctly formatted.
+ * \retval #PSA_ERROR_INVALID_ARGUMENT
+ *         The size in \p attributes is nonzero and does not match the size
  *         of the key data.
  * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
  * \retval #PSA_ERROR_INSUFFICIENT_STORAGE
  * \retval #PSA_ERROR_COMMUNICATION_FAILURE
- * \retval #PSA_ERROR_DATA_CORRUPT
- * \retval #PSA_ERROR_DATA_INVALID
  * \retval #PSA_ERROR_STORAGE_FAILURE
  * \retval #PSA_ERROR_HARDWARE_FAILURE
  * \retval #PSA_ERROR_CORRUPTION_DETECTED
@@ -647,7 +690,7 @@ psa_status_t psa_destroy_key(mbedtls_svc_key_id_t key);
 psa_status_t psa_import_key(const psa_key_attributes_t *attributes,
                             const uint8_t *data,
                             size_t data_length,
-                            mbedtls_svc_key_id_t *key);
+                            psa_key_handle_t *handle);
 
 
 
@@ -692,14 +735,11 @@ psa_status_t psa_import_key(const psa_key_attributes_t *attributes,
  *   where `m` is the bit size associated with the curve, i.e. the bit size
  *   of the order of the curve's coordinate field. This byte string is
  *   in little-endian order for Montgomery curves (curve types
- *   `PSA_ECC_FAMILY_CURVEXXX`), and in big-endian order for Weierstrass
- *   curves (curve types `PSA_ECC_FAMILY_SECTXXX`, `PSA_ECC_FAMILY_SECPXXX`
- *   and `PSA_ECC_FAMILY_BRAINPOOL_PXXX`).
- *   For Weierstrass curves, this is the content of the `privateKey` field of
- *   the `ECPrivateKey` format defined by RFC 5915.  For Montgomery curves,
- *   the format is defined by RFC 7748, and output is masked according to §5.
- *   For twisted Edwards curves, the private key is as defined by RFC 8032
- *   (a 32-byte string for Edwards25519, a 57-byte string for Edwards448).
+ *   `PSA_ECC_CURVE_CURVEXXX`), and in big-endian order for Weierstrass
+ *   curves (curve types `PSA_ECC_CURVE_SECTXXX`, `PSA_ECC_CURVE_SECPXXX`
+ *   and `PSA_ECC_CURVE_BRAINPOOL_PXXX`).
+ *   This is the content of the `privateKey` field of the `ECPrivateKey`
+ *   format defined by RFC 5915.
  * - For Diffie-Hellman key exchange key pairs (key types for which
  *   #PSA_KEY_TYPE_IS_DH_KEY_PAIR is true), the
  *   format is the representation of the private key `x` as a big-endian byte
@@ -710,9 +750,7 @@ psa_status_t psa_import_key(const psa_key_attributes_t *attributes,
  *
  * The policy on the key must have the usage flag #PSA_KEY_USAGE_EXPORT set.
  *
- * \param key               Identifier of the key to export. It must allow the
- *                          usage #PSA_KEY_USAGE_EXPORT, unless it is a public
- *                          key.
+ * \param handle            Handle to the key to export.
  * \param[out] data         Buffer where the key data is to be written.
  * \param data_size         Size of the \p data buffer in bytes.
  * \param[out] data_length  On success, the number of bytes
@@ -726,7 +764,7 @@ psa_status_t psa_import_key(const psa_key_attributes_t *attributes,
  * \retval #PSA_ERROR_BUFFER_TOO_SMALL
  *         The size of the \p data buffer is too small. You can determine a
  *         sufficient buffer size by calling
- *         #PSA_EXPORT_KEY_OUTPUT_SIZE(\c type, \c bits)
+ *         #PSA_KEY_EXPORT_MAX_SIZE(\c type, \c bits)
  *         where \c type is the key type
  *         and \c bits is the key size in bits.
  * \retval #PSA_ERROR_COMMUNICATION_FAILURE
@@ -739,7 +777,7 @@ psa_status_t psa_import_key(const psa_key_attributes_t *attributes,
  *         It is implementation-dependent whether a failure to initialize
  *         results in this error code.
  */
-psa_status_t psa_export_key(mbedtls_svc_key_id_t key,
+psa_status_t psa_export_key(psa_key_handle_t handle,
                             uint8_t *data,
                             size_t data_size,
                             size_t *data_length);
@@ -765,12 +803,7 @@ psa_status_t psa_export_key(mbedtls_svc_key_id_t key,
  *      modulus            INTEGER,    -- n
  *      publicExponent     INTEGER  }  -- e
  *   ```
- * - For elliptic curve keys on a twisted Edwards curve (key types for which
- *   #PSA_KEY_TYPE_IS_ECC_PUBLIC_KEY is true and #PSA_KEY_TYPE_ECC_GET_FAMILY
- *   returns #PSA_ECC_FAMILY_TWISTED_EDWARDS), the public key is as defined
- *   by RFC 8032
- *   (a 32-byte string for Edwards25519, a 57-byte string for Edwards448).
- * - For other elliptic curve public keys (key types for which
+ * - For elliptic curve public keys (key types for which
  *   #PSA_KEY_TYPE_IS_ECC_PUBLIC_KEY is true), the format is the uncompressed
  *   representation defined by SEC1 &sect;2.3.3 as the content of an ECPoint.
  *   Let `m` be the bit size associated with the curve, i.e. the bit size of
@@ -787,7 +820,7 @@ psa_status_t psa_export_key(mbedtls_svc_key_id_t key,
  * Exporting a public key object or the public part of a key pair is
  * always permitted, regardless of the key's usage flags.
  *
- * \param key               Identifier of the key to export.
+ * \param handle            Handle to the key to export.
  * \param[out] data         Buffer where the key data is to be written.
  * \param data_size         Size of the \p data buffer in bytes.
  * \param[out] data_length  On success, the number of bytes
@@ -801,7 +834,7 @@ psa_status_t psa_export_key(mbedtls_svc_key_id_t key,
  * \retval #PSA_ERROR_BUFFER_TOO_SMALL
  *         The size of the \p data buffer is too small. You can determine a
  *         sufficient buffer size by calling
- *         #PSA_EXPORT_KEY_OUTPUT_SIZE(#PSA_KEY_TYPE_PUBLIC_KEY_OF_KEY_PAIR(\c type), \c bits)
+ *         #PSA_KEY_EXPORT_MAX_SIZE(#PSA_KEY_TYPE_PUBLIC_KEY_OF_KEY_PAIR(\c type), \c bits)
  *         where \c type is the key type
  *         and \c bits is the key size in bits.
  * \retval #PSA_ERROR_COMMUNICATION_FAILURE
@@ -814,7 +847,7 @@ psa_status_t psa_export_key(mbedtls_svc_key_id_t key,
  *         It is implementation-dependent whether a failure to initialize
  *         results in this error code.
  */
-psa_status_t psa_export_public_key(mbedtls_svc_key_id_t key,
+psa_status_t psa_export_public_key(psa_key_handle_t handle,
                                    uint8_t *data,
                                    size_t data_size,
                                    size_t *data_length);
@@ -840,7 +873,7 @@ psa_status_t psa_export_public_key(mbedtls_svc_key_id_t key,
  * \param hash_size         Size of the \p hash buffer in bytes.
  * \param[out] hash_length  On success, the number of bytes
  *                          that make up the hash value. This is always
- *                          #PSA_HASH_LENGTH(\p alg).
+ *                          #PSA_HASH_SIZE(\p alg).
  *
  * \retval #PSA_SUCCESS
  *         Success.
@@ -853,6 +886,7 @@ psa_status_t psa_export_public_key(mbedtls_svc_key_id_t key,
  * \retval #PSA_ERROR_COMMUNICATION_FAILURE
  * \retval #PSA_ERROR_HARDWARE_FAILURE
  * \retval #PSA_ERROR_CORRUPTION_DETECTED
+ * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
  * \retval #PSA_ERROR_BAD_STATE
  *         The library has not been previously initialized by psa_crypto_init().
  *         It is implementation-dependent whether a failure to initialize
@@ -888,6 +922,7 @@ psa_status_t psa_hash_compute(psa_algorithm_t alg,
  * \retval #PSA_ERROR_COMMUNICATION_FAILURE
  * \retval #PSA_ERROR_HARDWARE_FAILURE
  * \retval #PSA_ERROR_CORRUPTION_DETECTED
+ * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
  * \retval #PSA_ERROR_BAD_STATE
  *         The library has not been previously initialized by psa_crypto_init().
  *         It is implementation-dependent whether a failure to initialize
@@ -925,8 +960,8 @@ psa_status_t psa_hash_compare(psa_algorithm_t alg,
  *   \endcode
  *
  * This is an implementation-defined \c struct. Applications should not
- * make any assumptions about the content of this structure.
- * Implementation details can change in future versions without notice. */
+ * make any assumptions about the content of this structure except
+ * as directed by the documentation of a specific implementation. */
 typedef struct psa_hash_operation_s psa_hash_operation_t;
 
 /** \def PSA_HASH_OPERATION_INIT
@@ -934,6 +969,12 @@ typedef struct psa_hash_operation_s psa_hash_operation_t;
  * This macro returns a suitable initializer for a hash operation object
  * of type #psa_hash_operation_t.
  */
+#ifdef __DOXYGEN_ONLY__
+/* This is an example definition for documentation purposes.
+ * Implementations should define a suitable value in `crypto_struct.h`.
+ */
+#define PSA_HASH_OPERATION_INIT {0}
+#endif
 
 /** Return an initial value for a hash operation object.
  */
@@ -977,13 +1018,14 @@ static psa_hash_operation_t psa_hash_operation_init(void);
  *         \p alg is not a supported hash algorithm.
  * \retval #PSA_ERROR_INVALID_ARGUMENT
  *         \p alg is not a hash algorithm.
+ * \retval #PSA_ERROR_BAD_STATE
+ *         The operation state is not valid (it must be inactive).
  * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
  * \retval #PSA_ERROR_COMMUNICATION_FAILURE
  * \retval #PSA_ERROR_HARDWARE_FAILURE
  * \retval #PSA_ERROR_CORRUPTION_DETECTED
  * \retval #PSA_ERROR_BAD_STATE
- *         The operation state is not valid (it must be inactive), or
- *         the library has not been previously initialized by psa_crypto_init().
+ *         The library has not been previously initialized by psa_crypto_init().
  *         It is implementation-dependent whether a failure to initialize
  *         results in this error code.
  */
@@ -1003,13 +1045,14 @@ psa_status_t psa_hash_setup(psa_hash_operation_t *operation,
  *
  * \retval #PSA_SUCCESS
  *         Success.
+ * \retval #PSA_ERROR_BAD_STATE
+ *         The operation state is not valid (it muct be active).
  * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
  * \retval #PSA_ERROR_COMMUNICATION_FAILURE
  * \retval #PSA_ERROR_HARDWARE_FAILURE
  * \retval #PSA_ERROR_CORRUPTION_DETECTED
  * \retval #PSA_ERROR_BAD_STATE
- *         The operation state is not valid (it must be active), or
- *         the library has not been previously initialized by psa_crypto_init().
+ *         The library has not been previously initialized by psa_crypto_init().
  *         It is implementation-dependent whether a failure to initialize
  *         results in this error code.
  */
@@ -1040,22 +1083,23 @@ psa_status_t psa_hash_update(psa_hash_operation_t *operation,
  * \param hash_size             Size of the \p hash buffer in bytes.
  * \param[out] hash_length      On success, the number of bytes
  *                              that make up the hash value. This is always
- *                              #PSA_HASH_LENGTH(\c alg) where \c alg is the
+ *                              #PSA_HASH_SIZE(\c alg) where \c alg is the
  *                              hash algorithm that is calculated.
  *
  * \retval #PSA_SUCCESS
  *         Success.
+ * \retval #PSA_ERROR_BAD_STATE
+ *         The operation state is not valid (it must be active).
  * \retval #PSA_ERROR_BUFFER_TOO_SMALL
  *         The size of the \p hash buffer is too small. You can determine a
- *         sufficient buffer size by calling #PSA_HASH_LENGTH(\c alg)
+ *         sufficient buffer size by calling #PSA_HASH_SIZE(\c alg)
  *         where \c alg is the hash algorithm that is calculated.
  * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
  * \retval #PSA_ERROR_COMMUNICATION_FAILURE
  * \retval #PSA_ERROR_HARDWARE_FAILURE
  * \retval #PSA_ERROR_CORRUPTION_DETECTED
  * \retval #PSA_ERROR_BAD_STATE
- *         The operation state is not valid (it must be active), or
- *         the library has not been previously initialized by psa_crypto_init().
+ *         The library has not been previously initialized by psa_crypto_init().
  *         It is implementation-dependent whether a failure to initialize
  *         results in this error code.
  */
@@ -1090,13 +1134,14 @@ psa_status_t psa_hash_finish(psa_hash_operation_t *operation,
  * \retval #PSA_ERROR_INVALID_SIGNATURE
  *         The hash of the message was calculated successfully, but it
  *         differs from the expected hash.
+ * \retval #PSA_ERROR_BAD_STATE
+ *         The operation state is not valid (it must be active).
  * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
  * \retval #PSA_ERROR_COMMUNICATION_FAILURE
  * \retval #PSA_ERROR_HARDWARE_FAILURE
  * \retval #PSA_ERROR_CORRUPTION_DETECTED
  * \retval #PSA_ERROR_BAD_STATE
- *         The operation state is not valid (it must be active), or
- *         the library has not been previously initialized by psa_crypto_init().
+ *         The library has not been previously initialized by psa_crypto_init().
  *         It is implementation-dependent whether a failure to initialize
  *         results in this error code.
  */
@@ -1147,14 +1192,16 @@ psa_status_t psa_hash_abort(psa_hash_operation_t *operation);
  *                                  It must be initialized but not active.
  *
  * \retval #PSA_SUCCESS
+ * \retval #PSA_ERROR_BAD_STATE
+ *         The \p source_operation state is not valid (it must be active).
+ * \retval #PSA_ERROR_BAD_STATE
+ *         The \p target_operation state is not valid (it must be inactive).
  * \retval #PSA_ERROR_COMMUNICATION_FAILURE
  * \retval #PSA_ERROR_HARDWARE_FAILURE
  * \retval #PSA_ERROR_CORRUPTION_DETECTED
  * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
  * \retval #PSA_ERROR_BAD_STATE
- *         The \p source_operation state is not valid (it must be active), or
- *         the \p target_operation state is not valid (it must be inactive), or
- *         the library has not been previously initialized by psa_crypto_init().
+ *         The library has not been previously initialized by psa_crypto_init().
  *         It is implementation-dependent whether a failure to initialize
  *         results in this error code.
  */
@@ -1177,8 +1224,7 @@ psa_status_t psa_hash_clone(const psa_hash_operation_t *source_operation,
  *       about the MAC value which could allow an attacker to guess
  *       a valid MAC and thereby bypass security controls.
  *
- * \param key               Identifier of the key to use for the operation. It
- *                          must allow the usage PSA_KEY_USAGE_SIGN_MESSAGE.
+ * \param handle            Handle to the key to use for the operation.
  * \param alg               The MAC algorithm to compute (\c PSA_ALG_XXX value
  *                          such that #PSA_ALG_IS_MAC(\p alg) is true).
  * \param[in] input         Buffer containing the input message.
@@ -1193,7 +1239,7 @@ psa_status_t psa_hash_clone(const psa_hash_operation_t *source_operation,
  * \retval #PSA_ERROR_INVALID_HANDLE
  * \retval #PSA_ERROR_NOT_PERMITTED
  * \retval #PSA_ERROR_INVALID_ARGUMENT
- *         \p key is not compatible with \p alg.
+ *         \p handle is not compatible with \p alg.
  * \retval #PSA_ERROR_NOT_SUPPORTED
  *         \p alg is not supported or is not a MAC algorithm.
  * \retval #PSA_ERROR_BUFFER_TOO_SMALL
@@ -1209,7 +1255,7 @@ psa_status_t psa_hash_clone(const psa_hash_operation_t *source_operation,
  *         It is implementation-dependent whether a failure to initialize
  *         results in this error code.
  */
-psa_status_t psa_mac_compute(mbedtls_svc_key_id_t key,
+psa_status_t psa_mac_compute(psa_key_handle_t handle,
                              psa_algorithm_t alg,
                              const uint8_t *input,
                              size_t input_length,
@@ -1219,8 +1265,7 @@ psa_status_t psa_mac_compute(mbedtls_svc_key_id_t key,
 
 /** Calculate the MAC of a message and compare it with a reference value.
  *
- * \param key               Identifier of the key to use for the operation. It
- *                          must allow the usage PSA_KEY_USAGE_VERIFY_MESSAGE.
+ * \param handle            Handle to the key to use for the operation.
  * \param alg               The MAC algorithm to compute (\c PSA_ALG_XXX value
  *                          such that #PSA_ALG_IS_MAC(\p alg) is true).
  * \param[in] input         Buffer containing the input message.
@@ -1236,7 +1281,7 @@ psa_status_t psa_mac_compute(mbedtls_svc_key_id_t key,
  * \retval #PSA_ERROR_INVALID_HANDLE
  * \retval #PSA_ERROR_NOT_PERMITTED
  * \retval #PSA_ERROR_INVALID_ARGUMENT
- *         \p key is not compatible with \p alg.
+ *         \p handle is not compatible with \p alg.
  * \retval #PSA_ERROR_NOT_SUPPORTED
  *         \p alg is not supported or is not a MAC algorithm.
  * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
@@ -1250,7 +1295,7 @@ psa_status_t psa_mac_compute(mbedtls_svc_key_id_t key,
  *         It is implementation-dependent whether a failure to initialize
  *         results in this error code.
  */
-psa_status_t psa_mac_verify(mbedtls_svc_key_id_t key,
+psa_status_t psa_mac_verify(psa_key_handle_t handle,
                             psa_algorithm_t alg,
                             const uint8_t *input,
                             size_t input_length,
@@ -1282,10 +1327,9 @@ psa_status_t psa_mac_verify(mbedtls_svc_key_id_t key,
  *   operation = psa_mac_operation_init();
  *   \endcode
  *
- *
  * This is an implementation-defined \c struct. Applications should not
- * make any assumptions about the content of this structure.
- * Implementation details can change in future versions without notice. */
+ * make any assumptions about the content of this structure except
+ * as directed by the documentation of a specific implementation. */
 typedef struct psa_mac_operation_s psa_mac_operation_t;
 
 /** \def PSA_MAC_OPERATION_INIT
@@ -1293,6 +1337,12 @@ typedef struct psa_mac_operation_s psa_mac_operation_t;
  * This macro returns a suitable initializer for a MAC operation object of type
  * #psa_mac_operation_t.
  */
+#ifdef __DOXYGEN_ONLY__
+/* This is an example definition for documentation purposes.
+ * Implementations should define a suitable value in `crypto_struct.h`.
+ */
+#define PSA_MAC_OPERATION_INIT {0}
+#endif
 
 /** Return an initial value for a MAC operation object.
  */
@@ -1330,9 +1380,9 @@ static psa_mac_operation_t psa_mac_operation_init(void);
  * \param[in,out] operation The operation object to set up. It must have
  *                          been initialized as per the documentation for
  *                          #psa_mac_operation_t and not yet in use.
- * \param key               Identifier of the key to use for the operation. It
- *                          must remain valid until the operation terminates.
- *                          It must allow the usage PSA_KEY_USAGE_SIGN_MESSAGE.
+ * \param handle            Handle to the key to use for the operation.
+ *                          It must remain valid until the operation
+ *                          terminates.
  * \param alg               The MAC algorithm to compute (\c PSA_ALG_XXX value
  *                          such that #PSA_ALG_IS_MAC(\p alg) is true).
  *
@@ -1341,7 +1391,7 @@ static psa_mac_operation_t psa_mac_operation_init(void);
  * \retval #PSA_ERROR_INVALID_HANDLE
  * \retval #PSA_ERROR_NOT_PERMITTED
  * \retval #PSA_ERROR_INVALID_ARGUMENT
- *         \p key is not compatible with \p alg.
+ *         \p handle is not compatible with \p alg.
  * \retval #PSA_ERROR_NOT_SUPPORTED
  *         \p alg is not supported or is not a MAC algorithm.
  * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
@@ -1351,13 +1401,14 @@ static psa_mac_operation_t psa_mac_operation_init(void);
  * \retval #PSA_ERROR_STORAGE_FAILURE
  *         The key could not be retrieved from storage.
  * \retval #PSA_ERROR_BAD_STATE
- *         The operation state is not valid (it must be inactive), or
- *         the library has not been previously initialized by psa_crypto_init().
+ *         The operation state is not valid (it must be inactive).
+ * \retval #PSA_ERROR_BAD_STATE
+ *         The library has not been previously initialized by psa_crypto_init().
  *         It is implementation-dependent whether a failure to initialize
  *         results in this error code.
  */
 psa_status_t psa_mac_sign_setup(psa_mac_operation_t *operation,
-                                mbedtls_svc_key_id_t key,
+                                psa_key_handle_t handle,
                                 psa_algorithm_t alg);
 
 /** Set up a multipart MAC verification operation.
@@ -1391,10 +1442,9 @@ psa_status_t psa_mac_sign_setup(psa_mac_operation_t *operation,
  * \param[in,out] operation The operation object to set up. It must have
  *                          been initialized as per the documentation for
  *                          #psa_mac_operation_t and not yet in use.
- * \param key               Identifier of the key to use for the operation. It
- *                          must remain valid until the operation terminates.
- *                          It must allow the usage
- *                          PSA_KEY_USAGE_VERIFY_MESSAGE.
+ * \param handle            Handle to the key to use for the operation.
+ *                          It must remain valid until the operation
+ *                          terminates.
  * \param alg               The MAC algorithm to compute (\c PSA_ALG_XXX value
  *                          such that #PSA_ALG_IS_MAC(\p alg) is true).
  *
@@ -1411,15 +1461,16 @@ psa_status_t psa_mac_sign_setup(psa_mac_operation_t *operation,
  * \retval #PSA_ERROR_HARDWARE_FAILURE
  * \retval #PSA_ERROR_CORRUPTION_DETECTED
  * \retval #PSA_ERROR_STORAGE_FAILURE
- *         The key could not be retrieved from storage.
+ *         The key could not be retrieved from storage
  * \retval #PSA_ERROR_BAD_STATE
- *         The operation state is not valid (it must be inactive), or
- *         the library has not been previously initialized by psa_crypto_init().
+ *         The operation state is not valid (it must be inactive).
+ * \retval #PSA_ERROR_BAD_STATE
+ *         The library has not been previously initialized by psa_crypto_init().
  *         It is implementation-dependent whether a failure to initialize
  *         results in this error code.
  */
 psa_status_t psa_mac_verify_setup(psa_mac_operation_t *operation,
-                                  mbedtls_svc_key_id_t key,
+                                  psa_key_handle_t handle,
                                   psa_algorithm_t alg);
 
 /** Add a message fragment to a multipart MAC operation.
@@ -1437,14 +1488,15 @@ psa_status_t psa_mac_verify_setup(psa_mac_operation_t *operation,
  *
  * \retval #PSA_SUCCESS
  *         Success.
+ * \retval #PSA_ERROR_BAD_STATE
+ *         The operation state is not valid (it must be active).
  * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
  * \retval #PSA_ERROR_COMMUNICATION_FAILURE
  * \retval #PSA_ERROR_HARDWARE_FAILURE
  * \retval #PSA_ERROR_CORRUPTION_DETECTED
  * \retval #PSA_ERROR_STORAGE_FAILURE
  * \retval #PSA_ERROR_BAD_STATE
- *         The operation state is not valid (it must be active), or
- *         the library has not been previously initialized by psa_crypto_init().
+ *         The library has not been previously initialized by psa_crypto_init().
  *         It is implementation-dependent whether a failure to initialize
  *         results in this error code.
  */
@@ -1475,25 +1527,26 @@ psa_status_t psa_mac_update(psa_mac_operation_t *operation,
  * \param mac_size          Size of the \p mac buffer in bytes.
  * \param[out] mac_length   On success, the number of bytes
  *                          that make up the MAC value. This is always
- *                          #PSA_MAC_LENGTH(\c key_type, \c key_bits, \c alg)
+ *                          #PSA_MAC_FINAL_SIZE(\c key_type, \c key_bits, \c alg)
  *                          where \c key_type and \c key_bits are the type and
  *                          bit-size respectively of the key and \c alg is the
  *                          MAC algorithm that is calculated.
  *
  * \retval #PSA_SUCCESS
  *         Success.
+ * \retval #PSA_ERROR_BAD_STATE
+ *         The operation state is not valid (it must be an active mac sign
+ *         operation).
  * \retval #PSA_ERROR_BUFFER_TOO_SMALL
  *         The size of the \p mac buffer is too small. You can determine a
- *         sufficient buffer size by calling PSA_MAC_LENGTH().
+ *         sufficient buffer size by calling PSA_MAC_FINAL_SIZE().
  * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
  * \retval #PSA_ERROR_COMMUNICATION_FAILURE
  * \retval #PSA_ERROR_HARDWARE_FAILURE
  * \retval #PSA_ERROR_CORRUPTION_DETECTED
  * \retval #PSA_ERROR_STORAGE_FAILURE
  * \retval #PSA_ERROR_BAD_STATE
- *         The operation state is not valid (it must be an active mac sign
- *         operation), or the library has not been previously initialized
- *         by psa_crypto_init().
+ *         The library has not been previously initialized by psa_crypto_init().
  *         It is implementation-dependent whether a failure to initialize
  *         results in this error code.
  */
@@ -1528,15 +1581,16 @@ psa_status_t psa_mac_sign_finish(psa_mac_operation_t *operation,
  * \retval #PSA_ERROR_INVALID_SIGNATURE
  *         The MAC of the message was calculated successfully, but it
  *         differs from the expected MAC.
+ * \retval #PSA_ERROR_BAD_STATE
+ *         The operation state is not valid (it must be an active mac verify
+ *         operation).
  * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
  * \retval #PSA_ERROR_COMMUNICATION_FAILURE
  * \retval #PSA_ERROR_HARDWARE_FAILURE
  * \retval #PSA_ERROR_CORRUPTION_DETECTED
  * \retval #PSA_ERROR_STORAGE_FAILURE
  * \retval #PSA_ERROR_BAD_STATE
- *         The operation state is not valid (it must be an active mac verify
- *         operation), or the library has not been previously initialized
- *         by psa_crypto_init().
+ *         The library has not been previously initialized by psa_crypto_init().
  *         It is implementation-dependent whether a failure to initialize
  *         results in this error code.
  */
@@ -1583,8 +1637,9 @@ psa_status_t psa_mac_abort(psa_mac_operation_t *operation);
  * vector). Use the multipart operation interface with a
  * #psa_cipher_operation_t object to provide other forms of IV.
  *
- * \param key                   Identifier of the key to use for the operation.
- *                              It must allow the usage #PSA_KEY_USAGE_ENCRYPT.
+ * \param handle                Handle to the key to use for the operation.
+ *                              It must remain valid until the operation
+ *                              terminates.
  * \param alg                   The cipher algorithm to compute
  *                              (\c PSA_ALG_XXX value such that
  *                              #PSA_ALG_IS_CIPHER(\p alg) is true).
@@ -1602,7 +1657,7 @@ psa_status_t psa_mac_abort(psa_mac_operation_t *operation);
  * \retval #PSA_ERROR_INVALID_HANDLE
  * \retval #PSA_ERROR_NOT_PERMITTED
  * \retval #PSA_ERROR_INVALID_ARGUMENT
- *         \p key is not compatible with \p alg.
+ *         \p handle is not compatible with \p alg.
  * \retval #PSA_ERROR_NOT_SUPPORTED
  *         \p alg is not supported or is not a cipher algorithm.
  * \retval #PSA_ERROR_BUFFER_TOO_SMALL
@@ -1616,7 +1671,7 @@ psa_status_t psa_mac_abort(psa_mac_operation_t *operation);
  *         It is implementation-dependent whether a failure to initialize
  *         results in this error code.
  */
-psa_status_t psa_cipher_encrypt(mbedtls_svc_key_id_t key,
+psa_status_t psa_cipher_encrypt(psa_key_handle_t handle,
                                 psa_algorithm_t alg,
                                 const uint8_t *input,
                                 size_t input_length,
@@ -1628,10 +1683,9 @@ psa_status_t psa_cipher_encrypt(mbedtls_svc_key_id_t key,
  *
  * This function decrypts a message encrypted with a symmetric cipher.
  *
- * \param key                   Identifier of the key to use for the operation.
+ * \param handle                Handle to the key to use for the operation.
  *                              It must remain valid until the operation
- *                              terminates. It must allow the usage
- *                              #PSA_KEY_USAGE_DECRYPT.
+ *                              terminates.
  * \param alg                   The cipher algorithm to compute
  *                              (\c PSA_ALG_XXX value such that
  *                              #PSA_ALG_IS_CIPHER(\p alg) is true).
@@ -1649,7 +1703,7 @@ psa_status_t psa_cipher_encrypt(mbedtls_svc_key_id_t key,
  * \retval #PSA_ERROR_INVALID_HANDLE
  * \retval #PSA_ERROR_NOT_PERMITTED
  * \retval #PSA_ERROR_INVALID_ARGUMENT
- *         \p key is not compatible with \p alg.
+ *         \p handle is not compatible with \p alg.
  * \retval #PSA_ERROR_NOT_SUPPORTED
  *         \p alg is not supported or is not a cipher algorithm.
  * \retval #PSA_ERROR_BUFFER_TOO_SMALL
@@ -1663,7 +1717,7 @@ psa_status_t psa_cipher_encrypt(mbedtls_svc_key_id_t key,
  *         It is implementation-dependent whether a failure to initialize
  *         results in this error code.
  */
-psa_status_t psa_cipher_decrypt(mbedtls_svc_key_id_t key,
+psa_status_t psa_cipher_decrypt(psa_key_handle_t handle,
                                 psa_algorithm_t alg,
                                 const uint8_t *input,
                                 size_t input_length,
@@ -1697,8 +1751,8 @@ psa_status_t psa_cipher_decrypt(mbedtls_svc_key_id_t key,
  *   \endcode
  *
  * This is an implementation-defined \c struct. Applications should not
- * make any assumptions about the content of this structure.
- * Implementation details can change in future versions without notice. */
+ * make any assumptions about the content of this structure except
+ * as directed by the documentation of a specific implementation. */
 typedef struct psa_cipher_operation_s psa_cipher_operation_t;
 
 /** \def PSA_CIPHER_OPERATION_INIT
@@ -1706,6 +1760,12 @@ typedef struct psa_cipher_operation_s psa_cipher_operation_t;
  * This macro returns a suitable initializer for a cipher operation object of
  * type #psa_cipher_operation_t.
  */
+#ifdef __DOXYGEN_ONLY__
+/* This is an example definition for documentation purposes.
+ * Implementations should define a suitable value in `crypto_struct.h`.
+ */
+#define PSA_CIPHER_OPERATION_INIT {0}
+#endif
 
 /** Return an initial value for a cipher operation object.
  */
@@ -1743,10 +1803,9 @@ static psa_cipher_operation_t psa_cipher_operation_init(void);
  * \param[in,out] operation     The operation object to set up. It must have
  *                              been initialized as per the documentation for
  *                              #psa_cipher_operation_t and not yet in use.
- * \param key                   Identifier of the key to use for the operation.
+ * \param handle                Handle to the key to use for the operation.
  *                              It must remain valid until the operation
- *                              terminates. It must allow the usage
- *                              #PSA_KEY_USAGE_ENCRYPT.
+ *                              terminates.
  * \param alg                   The cipher algorithm to compute
  *                              (\c PSA_ALG_XXX value such that
  *                              #PSA_ALG_IS_CIPHER(\p alg) is true).
@@ -1756,7 +1815,7 @@ static psa_cipher_operation_t psa_cipher_operation_init(void);
  * \retval #PSA_ERROR_INVALID_HANDLE
  * \retval #PSA_ERROR_NOT_PERMITTED
  * \retval #PSA_ERROR_INVALID_ARGUMENT
- *         \p key is not compatible with \p alg.
+ *         \p handle is not compatible with \p alg.
  * \retval #PSA_ERROR_NOT_SUPPORTED
  *         \p alg is not supported or is not a cipher algorithm.
  * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
@@ -1765,13 +1824,14 @@ static psa_cipher_operation_t psa_cipher_operation_init(void);
  * \retval #PSA_ERROR_CORRUPTION_DETECTED
  * \retval #PSA_ERROR_STORAGE_FAILURE
  * \retval #PSA_ERROR_BAD_STATE
- *         The operation state is not valid (it must be inactive), or
- *         the library has not been previously initialized by psa_crypto_init().
+ *         The operation state is not valid (it must be inactive).
+ * \retval #PSA_ERROR_BAD_STATE
+ *         The library has not been previously initialized by psa_crypto_init().
  *         It is implementation-dependent whether a failure to initialize
  *         results in this error code.
  */
 psa_status_t psa_cipher_encrypt_setup(psa_cipher_operation_t *operation,
-                                      mbedtls_svc_key_id_t key,
+                                      psa_key_handle_t handle,
                                       psa_algorithm_t alg);
 
 /** Set the key for a multipart symmetric decryption operation.
@@ -1806,10 +1866,9 @@ psa_status_t psa_cipher_encrypt_setup(psa_cipher_operation_t *operation,
  * \param[in,out] operation     The operation object to set up. It must have
  *                              been initialized as per the documentation for
  *                              #psa_cipher_operation_t and not yet in use.
- * \param key                   Identifier of the key to use for the operation.
+ * \param handle                Handle to the key to use for the operation.
  *                              It must remain valid until the operation
- *                              terminates. It must allow the usage
- *                              #PSA_KEY_USAGE_DECRYPT.
+ *                              terminates.
  * \param alg                   The cipher algorithm to compute
  *                              (\c PSA_ALG_XXX value such that
  *                              #PSA_ALG_IS_CIPHER(\p alg) is true).
@@ -1819,7 +1878,7 @@ psa_status_t psa_cipher_encrypt_setup(psa_cipher_operation_t *operation,
  * \retval #PSA_ERROR_INVALID_HANDLE
  * \retval #PSA_ERROR_NOT_PERMITTED
  * \retval #PSA_ERROR_INVALID_ARGUMENT
- *         \p key is not compatible with \p alg.
+ *         \p handle is not compatible with \p alg.
  * \retval #PSA_ERROR_NOT_SUPPORTED
  *         \p alg is not supported or is not a cipher algorithm.
  * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
@@ -1828,13 +1887,14 @@ psa_status_t psa_cipher_encrypt_setup(psa_cipher_operation_t *operation,
  * \retval #PSA_ERROR_CORRUPTION_DETECTED
  * \retval #PSA_ERROR_STORAGE_FAILURE
  * \retval #PSA_ERROR_BAD_STATE
- *         The operation state is not valid (it must be inactive), or
- *         the library has not been previously initialized by psa_crypto_init().
+ *         The operation state is not valid (it must be inactive).
+ * \retval #PSA_ERROR_BAD_STATE
+ *         The library has not been previously initialized by psa_crypto_init().
  *         It is implementation-dependent whether a failure to initialize
  *         results in this error code.
  */
 psa_status_t psa_cipher_decrypt_setup(psa_cipher_operation_t *operation,
-                                      mbedtls_svc_key_id_t key,
+                                      psa_key_handle_t handle,
                                       psa_algorithm_t alg);
 
 /** Generate an IV for a symmetric encryption operation.
@@ -1857,6 +1917,8 @@ psa_status_t psa_cipher_decrypt_setup(psa_cipher_operation_t *operation,
  *
  * \retval #PSA_SUCCESS
  *         Success.
+ * \retval #PSA_ERROR_BAD_STATE
+ *         The operation state is not valid (it must be active, with no IV set).
  * \retval #PSA_ERROR_BUFFER_TOO_SMALL
  *         The size of the \p iv buffer is too small.
  * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
@@ -1865,9 +1927,7 @@ psa_status_t psa_cipher_decrypt_setup(psa_cipher_operation_t *operation,
  * \retval #PSA_ERROR_CORRUPTION_DETECTED
  * \retval #PSA_ERROR_STORAGE_FAILURE
  * \retval #PSA_ERROR_BAD_STATE
- *         The operation state is not valid (it must be active, with no IV set),
- *         or the library has not been previously initialized
- *         by psa_crypto_init().
+ *         The library has not been previously initialized by psa_crypto_init().
  *         It is implementation-dependent whether a failure to initialize
  *         results in this error code.
  */
@@ -1897,6 +1957,9 @@ psa_status_t psa_cipher_generate_iv(psa_cipher_operation_t *operation,
  *
  * \retval #PSA_SUCCESS
  *         Success.
+ * \retval #PSA_ERROR_BAD_STATE
+ *         The operation state is not valid (it must be an active cipher
+ *         encrypt operation, with no IV set).
  * \retval #PSA_ERROR_INVALID_ARGUMENT
  *         The size of \p iv is not acceptable for the chosen algorithm,
  *         or the chosen algorithm does not use an IV.
@@ -1906,9 +1969,7 @@ psa_status_t psa_cipher_generate_iv(psa_cipher_operation_t *operation,
  * \retval #PSA_ERROR_CORRUPTION_DETECTED
  * \retval #PSA_ERROR_STORAGE_FAILURE
  * \retval #PSA_ERROR_BAD_STATE
- *         The operation state is not valid (it must be an active cipher
- *         encrypt operation, with no IV set), or the library has not been
- *         previously initialized by psa_crypto_init().
+ *         The library has not been previously initialized by psa_crypto_init().
  *         It is implementation-dependent whether a failure to initialize
  *         results in this error code.
  */
@@ -1939,6 +2000,9 @@ psa_status_t psa_cipher_set_iv(psa_cipher_operation_t *operation,
  *
  * \retval #PSA_SUCCESS
  *         Success.
+ * \retval #PSA_ERROR_BAD_STATE
+ *         The operation state is not valid (it must be active, with an IV set
+ *         if required for the algorithm).
  * \retval #PSA_ERROR_BUFFER_TOO_SMALL
  *         The size of the \p output buffer is too small.
  * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
@@ -1947,9 +2011,7 @@ psa_status_t psa_cipher_set_iv(psa_cipher_operation_t *operation,
  * \retval #PSA_ERROR_CORRUPTION_DETECTED
  * \retval #PSA_ERROR_STORAGE_FAILURE
  * \retval #PSA_ERROR_BAD_STATE
- *         The operation state is not valid (it must be active, with an IV set
- *         if required for the algorithm), or the library has not been
- *         previously initialized by psa_crypto_init().
+ *         The library has not been previously initialized by psa_crypto_init().
  *         It is implementation-dependent whether a failure to initialize
  *         results in this error code.
  */
@@ -1991,6 +2053,9 @@ psa_status_t psa_cipher_update(psa_cipher_operation_t *operation,
  * \retval #PSA_ERROR_INVALID_PADDING
  *         This is a decryption operation for an algorithm that includes
  *         padding, and the ciphertext does not contain valid padding.
+ * \retval #PSA_ERROR_BAD_STATE
+ *         The operation state is not valid (it must be active, with an IV set
+ *         if required for the algorithm).
  * \retval #PSA_ERROR_BUFFER_TOO_SMALL
  *         The size of the \p output buffer is too small.
  * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
@@ -1999,9 +2064,7 @@ psa_status_t psa_cipher_update(psa_cipher_operation_t *operation,
  * \retval #PSA_ERROR_CORRUPTION_DETECTED
  * \retval #PSA_ERROR_STORAGE_FAILURE
  * \retval #PSA_ERROR_BAD_STATE
- *         The operation state is not valid (it must be active, with an IV set
- *         if required for the algorithm), or the library has not been
- *         previously initialized by psa_crypto_init().
+ *         The library has not been previously initialized by psa_crypto_init().
  *         It is implementation-dependent whether a failure to initialize
  *         results in this error code.
  */
@@ -2045,9 +2108,7 @@ psa_status_t psa_cipher_abort(psa_cipher_operation_t *operation);
 
 /** Process an authenticated encryption operation.
  *
- * \param key                     Identifier of the key to use for the
- *                                operation. It must allow the usage
- *                                #PSA_KEY_USAGE_ENCRYPT.
+ * \param handle                  Handle to the key to use for the operation.
  * \param alg                     The AEAD algorithm to compute
  *                                (\c PSA_ALG_XXX value such that
  *                                #PSA_ALG_IS_AEAD(\p alg) is true).
@@ -2067,16 +2128,9 @@ psa_status_t psa_cipher_abort(psa_cipher_operation_t *operation);
  *                                authentication tag is appended to the
  *                                encrypted data.
  * \param ciphertext_size         Size of the \p ciphertext buffer in bytes.
- *                                This must be appropriate for the selected
- *                                algorithm and key:
- *                                - A sufficient output size is
- *                                  #PSA_AEAD_ENCRYPT_OUTPUT_SIZE(\c key_type,
- *                                  \p alg, \p plaintext_length) where
- *                                  \c key_type is the type of \p key.
- *                                - #PSA_AEAD_ENCRYPT_OUTPUT_MAX_SIZE(\p
- *                                  plaintext_length) evaluates to the maximum
- *                                  ciphertext size of any supported AEAD
- *                                  encryption.
+ *                                This must be at least
+ *                                #PSA_AEAD_ENCRYPT_OUTPUT_SIZE(\p alg,
+ *                                \p plaintext_length).
  * \param[out] ciphertext_length  On success, the size of the output
  *                                in the \p ciphertext buffer.
  *
@@ -2085,16 +2139,12 @@ psa_status_t psa_cipher_abort(psa_cipher_operation_t *operation);
  * \retval #PSA_ERROR_INVALID_HANDLE
  * \retval #PSA_ERROR_NOT_PERMITTED
  * \retval #PSA_ERROR_INVALID_ARGUMENT
- *         \p key is not compatible with \p alg.
+ *         \p handle is not compatible with \p alg.
  * \retval #PSA_ERROR_NOT_SUPPORTED
  *         \p alg is not supported or is not an AEAD algorithm.
  * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
  * \retval #PSA_ERROR_BUFFER_TOO_SMALL
- *         \p ciphertext_size is too small.
- *         #PSA_AEAD_ENCRYPT_OUTPUT_SIZE(\c key_type, \p alg,
- *         \p plaintext_length) or
- *         #PSA_AEAD_ENCRYPT_OUTPUT_MAX_SIZE(\p plaintext_length) can be used to
- *         determine the required buffer size.
+ *         \p ciphertext_size is too small
  * \retval #PSA_ERROR_COMMUNICATION_FAILURE
  * \retval #PSA_ERROR_HARDWARE_FAILURE
  * \retval #PSA_ERROR_CORRUPTION_DETECTED
@@ -2104,7 +2154,7 @@ psa_status_t psa_cipher_abort(psa_cipher_operation_t *operation);
  *         It is implementation-dependent whether a failure to initialize
  *         results in this error code.
  */
-psa_status_t psa_aead_encrypt(mbedtls_svc_key_id_t key,
+psa_status_t psa_aead_encrypt(psa_key_handle_t handle,
                               psa_algorithm_t alg,
                               const uint8_t *nonce,
                               size_t nonce_length,
@@ -2118,9 +2168,7 @@ psa_status_t psa_aead_encrypt(mbedtls_svc_key_id_t key,
 
 /** Process an authenticated decryption operation.
  *
- * \param key                     Identifier of the key to use for the
- *                                operation. It must allow the usage
- *                                #PSA_KEY_USAGE_DECRYPT.
+ * \param handle                  Handle to the key to use for the operation.
  * \param alg                     The AEAD algorithm to compute
  *                                (\c PSA_ALG_XXX value such that
  *                                #PSA_ALG_IS_AEAD(\p alg) is true).
@@ -2138,16 +2186,9 @@ psa_status_t psa_aead_encrypt(mbedtls_svc_key_id_t key,
  * \param ciphertext_length       Size of \p ciphertext in bytes.
  * \param[out] plaintext          Output buffer for the decrypted data.
  * \param plaintext_size          Size of the \p plaintext buffer in bytes.
- *                                This must be appropriate for the selected
- *                                algorithm and key:
- *                                - A sufficient output size is
- *                                  #PSA_AEAD_DECRYPT_OUTPUT_SIZE(\c key_type,
- *                                  \p alg, \p ciphertext_length) where
- *                                  \c key_type is the type of \p key.
- *                                - #PSA_AEAD_DECRYPT_OUTPUT_MAX_SIZE(\p
- *                                  ciphertext_length) evaluates to the maximum
- *                                  plaintext size of any supported AEAD
- *                                  decryption.
+ *                                This must be at least
+ *                                #PSA_AEAD_DECRYPT_OUTPUT_SIZE(\p alg,
+ *                                \p ciphertext_length).
  * \param[out] plaintext_length   On success, the size of the output
  *                                in the \p plaintext buffer.
  *
@@ -2158,16 +2199,12 @@ psa_status_t psa_aead_encrypt(mbedtls_svc_key_id_t key,
  *         The ciphertext is not authentic.
  * \retval #PSA_ERROR_NOT_PERMITTED
  * \retval #PSA_ERROR_INVALID_ARGUMENT
- *         \p key is not compatible with \p alg.
+ *         \p handle is not compatible with \p alg.
  * \retval #PSA_ERROR_NOT_SUPPORTED
  *         \p alg is not supported or is not an AEAD algorithm.
  * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
  * \retval #PSA_ERROR_BUFFER_TOO_SMALL
- *         \p plaintext_size is too small.
- *         #PSA_AEAD_DECRYPT_OUTPUT_SIZE(\c key_type, \p alg,
- *         \p ciphertext_length) or
- *         #PSA_AEAD_DECRYPT_OUTPUT_MAX_SIZE(\p ciphertext_length) can be used
- *         to determine the required buffer size.
+ *         \p plaintext_size or \p nonce_length is too small
  * \retval #PSA_ERROR_COMMUNICATION_FAILURE
  * \retval #PSA_ERROR_HARDWARE_FAILURE
  * \retval #PSA_ERROR_CORRUPTION_DETECTED
@@ -2177,7 +2214,7 @@ psa_status_t psa_aead_encrypt(mbedtls_svc_key_id_t key,
  *         It is implementation-dependent whether a failure to initialize
  *         results in this error code.
  */
-psa_status_t psa_aead_decrypt(mbedtls_svc_key_id_t key,
+psa_status_t psa_aead_decrypt(psa_key_handle_t handle,
                               psa_algorithm_t alg,
                               const uint8_t *nonce,
                               size_t nonce_length,
@@ -2215,8 +2252,8 @@ psa_status_t psa_aead_decrypt(mbedtls_svc_key_id_t key,
  *   \endcode
  *
  * This is an implementation-defined \c struct. Applications should not
- * make any assumptions about the content of this structure.
- * Implementation details can change in future versions without notice. */
+ * make any assumptions about the content of this structure except
+ * as directed by the documentation of a specific implementation. */
 typedef struct psa_aead_operation_s psa_aead_operation_t;
 
 /** \def PSA_AEAD_OPERATION_INIT
@@ -2224,6 +2261,12 @@ typedef struct psa_aead_operation_s psa_aead_operation_t;
  * This macro returns a suitable initializer for an AEAD operation object of
  * type #psa_aead_operation_t.
  */
+#ifdef __DOXYGEN_ONLY__
+/* This is an example definition for documentation purposes.
+ * Implementations should define a suitable value in `crypto_struct.h`.
+ */
+#define PSA_AEAD_OPERATION_INIT {0}
+#endif
 
 /** Return an initial value for an AEAD operation object.
  */
@@ -2267,10 +2310,9 @@ static psa_aead_operation_t psa_aead_operation_init(void);
  * \param[in,out] operation     The operation object to set up. It must have
  *                              been initialized as per the documentation for
  *                              #psa_aead_operation_t and not yet in use.
- * \param key                   Identifier of the key to use for the operation.
+ * \param handle                Handle to the key to use for the operation.
  *                              It must remain valid until the operation
- *                              terminates. It must allow the usage
- *                              #PSA_KEY_USAGE_ENCRYPT.
+ *                              terminates.
  * \param alg                   The AEAD algorithm to compute
  *                              (\c PSA_ALG_XXX value such that
  *                              #PSA_ALG_IS_AEAD(\p alg) is true).
@@ -2278,12 +2320,11 @@ static psa_aead_operation_t psa_aead_operation_init(void);
  * \retval #PSA_SUCCESS
  *         Success.
  * \retval #PSA_ERROR_BAD_STATE
- *         The operation state is not valid (it must be inactive), or
- *         the library has not been previously initialized by psa_crypto_init().
- * \retval #PSA_ERROR_INVALID_HANDLE
+ *         The operation state is not valid (it must be inactive).
+  * \retval #PSA_ERROR_INVALID_HANDLE
  * \retval #PSA_ERROR_NOT_PERMITTED
  * \retval #PSA_ERROR_INVALID_ARGUMENT
- *         \p key is not compatible with \p alg.
+ *         \p handle is not compatible with \p alg.
  * \retval #PSA_ERROR_NOT_SUPPORTED
  *         \p alg is not supported or is not an AEAD algorithm.
  * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
@@ -2291,12 +2332,13 @@ static psa_aead_operation_t psa_aead_operation_init(void);
  * \retval #PSA_ERROR_HARDWARE_FAILURE
  * \retval #PSA_ERROR_CORRUPTION_DETECTED
  * \retval #PSA_ERROR_STORAGE_FAILURE
+ * \retval #PSA_ERROR_BAD_STATE
  *         The library has not been previously initialized by psa_crypto_init().
  *         It is implementation-dependent whether a failure to initialize
  *         results in this error code.
  */
 psa_status_t psa_aead_encrypt_setup(psa_aead_operation_t *operation,
-                                    mbedtls_svc_key_id_t key,
+                                    psa_key_handle_t handle,
                                     psa_algorithm_t alg);
 
 /** Set the key for a multipart authenticated decryption operation.
@@ -2334,20 +2376,21 @@ psa_status_t psa_aead_encrypt_setup(psa_aead_operation_t *operation,
  * \param[in,out] operation     The operation object to set up. It must have
  *                              been initialized as per the documentation for
  *                              #psa_aead_operation_t and not yet in use.
- * \param key                   Identifier of the key to use for the operation.
+ * \param handle                Handle to the key to use for the operation.
  *                              It must remain valid until the operation
- *                              terminates. It must allow the usage
- *                              #PSA_KEY_USAGE_DECRYPT.
+ *                              terminates.
  * \param alg                   The AEAD algorithm to compute
  *                              (\c PSA_ALG_XXX value such that
  *                              #PSA_ALG_IS_AEAD(\p alg) is true).
  *
  * \retval #PSA_SUCCESS
  *         Success.
- * \retval #PSA_ERROR_INVALID_HANDLE
+ * \retval #PSA_ERROR_BAD_STATE
+ *         The operation state is not valid (it must be inactive).
+  * \retval #PSA_ERROR_INVALID_HANDLE
  * \retval #PSA_ERROR_NOT_PERMITTED
  * \retval #PSA_ERROR_INVALID_ARGUMENT
- *         \p key is not compatible with \p alg.
+ *         \p handle is not compatible with \p alg.
  * \retval #PSA_ERROR_NOT_SUPPORTED
  *         \p alg is not supported or is not an AEAD algorithm.
  * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
@@ -2356,13 +2399,12 @@ psa_status_t psa_aead_encrypt_setup(psa_aead_operation_t *operation,
  * \retval #PSA_ERROR_CORRUPTION_DETECTED
  * \retval #PSA_ERROR_STORAGE_FAILURE
  * \retval #PSA_ERROR_BAD_STATE
- *         The operation state is not valid (it must be inactive), or the
- *         library has not been previously initialized by psa_crypto_init().
+ *         The library has not been previously initialized by psa_crypto_init().
  *         It is implementation-dependent whether a failure to initialize
  *         results in this error code.
  */
 psa_status_t psa_aead_decrypt_setup(psa_aead_operation_t *operation,
-                                    mbedtls_svc_key_id_t key,
+                                    psa_key_handle_t handle,
                                     psa_algorithm_t alg);
 
 /** Generate a random nonce for an authenticated encryption operation.
@@ -2386,6 +2428,9 @@ psa_status_t psa_aead_decrypt_setup(psa_aead_operation_t *operation,
  *
  * \retval #PSA_SUCCESS
  *         Success.
+ * \retval #PSA_ERROR_BAD_STATE
+ *         The operation state is not valid (it must be an active aead encrypt
+           operation, with no nonce set).
  * \retval #PSA_ERROR_BUFFER_TOO_SMALL
  *         The size of the \p nonce buffer is too small.
  * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
@@ -2394,9 +2439,7 @@ psa_status_t psa_aead_decrypt_setup(psa_aead_operation_t *operation,
  * \retval #PSA_ERROR_CORRUPTION_DETECTED
  * \retval #PSA_ERROR_STORAGE_FAILURE
  * \retval #PSA_ERROR_BAD_STATE
- *         The operation state is not valid (it must be an active aead encrypt
- *         operation, with no nonce set), or the library has not been
- *         previously initialized by psa_crypto_init().
+ *         The library has not been previously initialized by psa_crypto_init().
  *         It is implementation-dependent whether a failure to initialize
  *         results in this error code.
  */
@@ -2426,6 +2469,9 @@ psa_status_t psa_aead_generate_nonce(psa_aead_operation_t *operation,
  *
  * \retval #PSA_SUCCESS
  *         Success.
+ * \retval #PSA_ERROR_BAD_STATE
+ *         The operation state is not valid (it must be active, with no nonce
+ *         set).
  * \retval #PSA_ERROR_INVALID_ARGUMENT
  *         The size of \p nonce is not acceptable for the chosen algorithm.
  * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
@@ -2434,9 +2480,7 @@ psa_status_t psa_aead_generate_nonce(psa_aead_operation_t *operation,
  * \retval #PSA_ERROR_CORRUPTION_DETECTED
  * \retval #PSA_ERROR_STORAGE_FAILURE
  * \retval #PSA_ERROR_BAD_STATE
- *         The operation state is not valid (it must be active, with no nonce
- *         set), or the library has not been previously initialized
- *         by psa_crypto_init().
+ *         The library has not been previously initialized by psa_crypto_init().
  *         It is implementation-dependent whether a failure to initialize
  *         results in this error code.
  */
@@ -2470,6 +2514,10 @@ psa_status_t psa_aead_set_nonce(psa_aead_operation_t *operation,
  *
  * \retval #PSA_SUCCESS
  *         Success.
+ * \retval #PSA_ERROR_BAD_STATE
+ *         The operation state is not valid (it must be active, and
+ *         psa_aead_update_ad() and psa_aead_update() must not have been
+ *         called yet).
  * \retval #PSA_ERROR_INVALID_ARGUMENT
  *         At least one of the lengths is not acceptable for the chosen
  *         algorithm.
@@ -2478,10 +2526,7 @@ psa_status_t psa_aead_set_nonce(psa_aead_operation_t *operation,
  * \retval #PSA_ERROR_HARDWARE_FAILURE
  * \retval #PSA_ERROR_CORRUPTION_DETECTED
  * \retval #PSA_ERROR_BAD_STATE
- *         The operation state is not valid (it must be active, and
- *         psa_aead_update_ad() and psa_aead_update() must not have been
- *         called yet), or the library has not been previously initialized
- *         by psa_crypto_init().
+ *         The library has not been previously initialized by psa_crypto_init().
  *         It is implementation-dependent whether a failure to initialize
  *         results in this error code.
  */
@@ -2517,6 +2562,10 @@ psa_status_t psa_aead_set_lengths(psa_aead_operation_t *operation,
  *
  * \retval #PSA_SUCCESS
  *         Success.
+ * \retval #PSA_ERROR_BAD_STATE
+ *         The operation state is not valid (it must be active, have a nonce
+ *         set, have lengths set if required by the algorithm, and
+ *         psa_aead_update() must not have been called yet).
  * \retval #PSA_ERROR_INVALID_ARGUMENT
  *         The total input length overflows the additional data length that
  *         was previously specified with psa_aead_set_lengths().
@@ -2526,10 +2575,7 @@ psa_status_t psa_aead_set_lengths(psa_aead_operation_t *operation,
  * \retval #PSA_ERROR_CORRUPTION_DETECTED
  * \retval #PSA_ERROR_STORAGE_FAILURE
  * \retval #PSA_ERROR_BAD_STATE
- *         The operation state is not valid (it must be active, have a nonce
- *         set, have lengths set if required by the algorithm, and
- *         psa_aead_update() must not have been called yet), or the library
- *         has not been previously initialized by psa_crypto_init().
+ *         The library has not been previously initialized by psa_crypto_init().
  *         It is implementation-dependent whether a failure to initialize
  *         results in this error code.
  */
@@ -2577,33 +2623,29 @@ psa_status_t psa_aead_update_ad(psa_aead_operation_t *operation,
  * \param input_length          Size of the \p input buffer in bytes.
  * \param[out] output           Buffer where the output is to be written.
  * \param output_size           Size of the \p output buffer in bytes.
- *                              This must be appropriate for the selected
- *                                algorithm and key:
- *                                - A sufficient output size is
- *                                  #PSA_AEAD_UPDATE_OUTPUT_SIZE(\c key_type,
- *                                  \c alg, \p input_length) where
- *                                  \c key_type is the type of key and \c alg is
- *                                  the algorithm that were used to set up the
- *                                  operation.
- *                                - #PSA_AEAD_UPDATE_OUTPUT_MAX_SIZE(\p
- *                                  input_length) evaluates to the maximum
- *                                  output size of any supported AEAD
- *                                  algorithm.
+ *                              This must be at least
+ *                              #PSA_AEAD_UPDATE_OUTPUT_SIZE(\c alg,
+ *                              \p input_length) where \c alg is the
+ *                              algorithm that is being calculated.
  * \param[out] output_length    On success, the number of bytes
  *                              that make up the returned output.
  *
  * \retval #PSA_SUCCESS
  *         Success.
+ * \retval #PSA_ERROR_BAD_STATE
+ *         The operation state is not valid (it must be active, have a nonce
+ *         set, and have lengths set if required by the algorithm).
  * \retval #PSA_ERROR_BUFFER_TOO_SMALL
  *         The size of the \p output buffer is too small.
- *         #PSA_AEAD_UPDATE_OUTPUT_SIZE(\c key_type, \c alg, \p input_length) or
- *         #PSA_AEAD_UPDATE_OUTPUT_MAX_SIZE(\p input_length) can be used to
- *         determine the required buffer size.
+ *         You can determine a sufficient buffer size by calling
+ *         #PSA_AEAD_UPDATE_OUTPUT_SIZE(\c alg, \p input_length)
+ *         where \c alg is the algorithm that is being calculated.
  * \retval #PSA_ERROR_INVALID_ARGUMENT
  *         The total length of input to psa_aead_update_ad() so far is
  *         less than the additional data length that was previously
- *         specified with psa_aead_set_lengths(), or
- *         the total input length overflows the plaintext length that
+ *         specified with psa_aead_set_lengths().
+ * \retval #PSA_ERROR_INVALID_ARGUMENT
+ *         The total input length overflows the plaintext length that
  *         was previously specified with psa_aead_set_lengths().
  * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
  * \retval #PSA_ERROR_COMMUNICATION_FAILURE
@@ -2611,9 +2653,7 @@ psa_status_t psa_aead_update_ad(psa_aead_operation_t *operation,
  * \retval #PSA_ERROR_CORRUPTION_DETECTED
  * \retval #PSA_ERROR_STORAGE_FAILURE
  * \retval #PSA_ERROR_BAD_STATE
- *         The operation state is not valid (it must be active, have a nonce
- *         set, and have lengths set if required by the algorithm), or the
- *         library has not been previously initialized by psa_crypto_init().
+ *         The library has not been previously initialized by psa_crypto_init().
  *         It is implementation-dependent whether a failure to initialize
  *         results in this error code.
  */
@@ -2636,7 +2676,9 @@ psa_status_t psa_aead_update(psa_aead_operation_t *operation,
  * This function has two output buffers:
  * - \p ciphertext contains trailing ciphertext that was buffered from
  *   preceding calls to psa_aead_update().
- * - \p tag contains the authentication tag.
+ * - \p tag contains the authentication tag. Its length is always
+ *   #PSA_AEAD_TAG_LENGTH(\c alg) where \c alg is the AEAD algorithm
+ *   that the operation performs.
  *
  * When this function returns successfuly, the operation becomes inactive.
  * If this function returns an error status, the operation enters an error
@@ -2646,49 +2688,39 @@ psa_status_t psa_aead_update(psa_aead_operation_t *operation,
  * \param[out] ciphertext       Buffer where the last part of the ciphertext
  *                              is to be written.
  * \param ciphertext_size       Size of the \p ciphertext buffer in bytes.
- *                              This must be appropriate for the selected
- *                              algorithm and key:
- *                              - A sufficient output size is
- *                                #PSA_AEAD_FINISH_OUTPUT_SIZE(\c key_type,
- *                                \c alg) where \c key_type is the type of key
- *                                and \c alg is the algorithm that were used to
- *                                set up the operation.
- *                              - #PSA_AEAD_FINISH_OUTPUT_MAX_SIZE evaluates to
- *                                the maximum output size of any supported AEAD
- *                                algorithm.
+ *                              This must be at least
+ *                              #PSA_AEAD_FINISH_OUTPUT_SIZE(\c alg) where
+ *                              \c alg is the algorithm that is being
+ *                              calculated.
  * \param[out] ciphertext_length On success, the number of bytes of
  *                              returned ciphertext.
  * \param[out] tag              Buffer where the authentication tag is
  *                              to be written.
  * \param tag_size              Size of the \p tag buffer in bytes.
- *                              This must be appropriate for the selected
- *                              algorithm and key:
- *                              - The exact tag size is #PSA_AEAD_TAG_LENGTH(\c
- *                                key_type, \c key_bits, \c alg) where
- *                                \c key_type and \c key_bits are the type and
- *                                bit-size of the key, and \c alg is the
- *                                algorithm that were used in the call to
- *                                psa_aead_encrypt_setup().
- *                              - #PSA_AEAD_TAG_MAX_SIZE evaluates to the
- *                                maximum tag size of any supported AEAD
- *                                algorithm.
+ *                              This must be at least
+ *                              #PSA_AEAD_TAG_LENGTH(\c alg) where \c alg is
+ *                              the algorithm that is being calculated.
  * \param[out] tag_length       On success, the number of bytes
  *                              that make up the returned tag.
  *
  * \retval #PSA_SUCCESS
  *         Success.
+ * \retval #PSA_ERROR_BAD_STATE
+ *         The operation state is not valid (it must be an active encryption
+ *         operation with a nonce set).
  * \retval #PSA_ERROR_BUFFER_TOO_SMALL
  *         The size of the \p ciphertext or \p tag buffer is too small.
- *         #PSA_AEAD_FINISH_OUTPUT_SIZE(\c key_type, \c alg) or
- *         #PSA_AEAD_FINISH_OUTPUT_MAX_SIZE can be used to determine the
- *         required \p ciphertext buffer size. #PSA_AEAD_TAG_LENGTH(\c key_type,
- *         \c key_bits, \c alg) or #PSA_AEAD_TAG_MAX_SIZE can be used to
- *         determine the required \p tag buffer size.
+ *         You can determine a sufficient buffer size for \p ciphertext by
+ *         calling #PSA_AEAD_FINISH_OUTPUT_SIZE(\c alg)
+ *         where \c alg is the algorithm that is being calculated.
+ *         You can determine a sufficient buffer size for \p tag by
+ *         calling #PSA_AEAD_TAG_LENGTH(\c alg).
  * \retval #PSA_ERROR_INVALID_ARGUMENT
  *         The total length of input to psa_aead_update_ad() so far is
  *         less than the additional data length that was previously
- *         specified with psa_aead_set_lengths(), or
- *         the total length of input to psa_aead_update() so far is
+ *         specified with psa_aead_set_lengths().
+ * \retval #PSA_ERROR_INVALID_ARGUMENT
+ *         The total length of input to psa_aead_update() so far is
  *         less than the plaintext length that was previously
  *         specified with psa_aead_set_lengths().
  * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
@@ -2697,9 +2729,7 @@ psa_status_t psa_aead_update(psa_aead_operation_t *operation,
  * \retval #PSA_ERROR_CORRUPTION_DETECTED
  * \retval #PSA_ERROR_STORAGE_FAILURE
  * \retval #PSA_ERROR_BAD_STATE
- *         The operation state is not valid (it must be an active encryption
- *         operation with a nonce set), or the library has not been previously
- *         initialized by psa_crypto_init().
+ *         The library has not been previously initialized by psa_crypto_init().
  *         It is implementation-dependent whether a failure to initialize
  *         results in this error code.
  */
@@ -2743,15 +2773,10 @@ psa_status_t psa_aead_finish(psa_aead_operation_t *operation,
  *                              that could not be processed until the end
  *                              of the input.
  * \param plaintext_size        Size of the \p plaintext buffer in bytes.
- *                              This must be appropriate for the selected algorithm and key:
- *                              - A sufficient output size is
- *                                #PSA_AEAD_VERIFY_OUTPUT_SIZE(\c key_type,
- *                                \c alg) where \c key_type is the type of key
- *                                and \c alg is the algorithm that were used to
- *                                set up the operation.
- *                              - #PSA_AEAD_VERIFY_OUTPUT_MAX_SIZE evaluates to
- *                                the maximum output size of any supported AEAD
- *                                algorithm.
+ *                              This must be at least
+ *                              #PSA_AEAD_VERIFY_OUTPUT_SIZE(\c alg) where
+ *                              \c alg is the algorithm that is being
+ *                              calculated.
  * \param[out] plaintext_length On success, the number of bytes of
  *                              returned plaintext.
  * \param[in] tag               Buffer containing the authentication tag.
@@ -2762,16 +2787,20 @@ psa_status_t psa_aead_finish(psa_aead_operation_t *operation,
  * \retval #PSA_ERROR_INVALID_SIGNATURE
  *         The calculations were successful, but the authentication tag is
  *         not correct.
+ * \retval #PSA_ERROR_BAD_STATE
+ *         The operation state is not valid (it must be an active decryption
+ *         operation with a nonce set).
  * \retval #PSA_ERROR_BUFFER_TOO_SMALL
  *         The size of the \p plaintext buffer is too small.
- *         #PSA_AEAD_VERIFY_OUTPUT_SIZE(\c key_type, \c alg) or
- *         #PSA_AEAD_VERIFY_OUTPUT_MAX_SIZE can be used to determine the
- *         required buffer size.
+ *         You can determine a sufficient buffer size for \p plaintext by
+ *         calling #PSA_AEAD_VERIFY_OUTPUT_SIZE(\c alg)
+ *         where \c alg is the algorithm that is being calculated.
  * \retval #PSA_ERROR_INVALID_ARGUMENT
  *         The total length of input to psa_aead_update_ad() so far is
  *         less than the additional data length that was previously
- *         specified with psa_aead_set_lengths(), or
- *         the total length of input to psa_aead_update() so far is
+ *         specified with psa_aead_set_lengths().
+ * \retval #PSA_ERROR_INVALID_ARGUMENT
+ *         The total length of input to psa_aead_update() so far is
  *         less than the plaintext length that was previously
  *         specified with psa_aead_set_lengths().
  * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
@@ -2780,9 +2809,7 @@ psa_status_t psa_aead_finish(psa_aead_operation_t *operation,
  * \retval #PSA_ERROR_CORRUPTION_DETECTED
  * \retval #PSA_ERROR_STORAGE_FAILURE
  * \retval #PSA_ERROR_BAD_STATE
- *         The operation state is not valid (it must be an active decryption
- *         operation with a nonce set), or the library has not been previously
- *         initialized by psa_crypto_init().
+ *         The library has not been previously initialized by psa_crypto_init().
  *         It is implementation-dependent whether a failure to initialize
  *         results in this error code.
  */
@@ -2827,139 +2854,18 @@ psa_status_t psa_aead_abort(psa_aead_operation_t *operation);
  */
 
 /**
- * \brief Sign a message with a private key. For hash-and-sign algorithms,
- *        this includes the hashing step.
- *
- * \note To perform a multi-part hash-and-sign signature algorithm, first use
- *       a multi-part hash operation and then pass the resulting hash to
- *       psa_sign_hash(). PSA_ALG_GET_HASH(\p alg) can be used to determine the
- *       hash algorithm to use.
- *
- * \param[in]  key              Identifier of the key to use for the operation.
- *                              It must be an asymmetric key pair. The key must
- *                              allow the usage #PSA_KEY_USAGE_SIGN_MESSAGE.
- * \param[in]  alg              An asymmetric signature algorithm (PSA_ALG_XXX
- *                              value such that #PSA_ALG_IS_SIGN_MESSAGE(\p alg)
- *                              is true), that is compatible with the type of
- *                              \p key.
- * \param[in]  input            The input message to sign.
- * \param[in]  input_length     Size of the \p input buffer in bytes.
- * \param[out] signature        Buffer where the signature is to be written.
- * \param[in]  signature_size   Size of the \p signature buffer in bytes. This
- *                              must be appropriate for the selected
- *                              algorithm and key:
- *                              - The required signature size is
- *                                #PSA_SIGN_OUTPUT_SIZE(\c key_type, \c key_bits, \p alg)
- *                                where \c key_type and \c key_bits are the type and
- *                                bit-size respectively of key.
- *                              - #PSA_SIGNATURE_MAX_SIZE evaluates to the
- *                                maximum signature size of any supported
- *                                signature algorithm.
- * \param[out] signature_length On success, the number of bytes that make up
- *                              the returned signature value.
- *
- * \retval #PSA_SUCCESS
- * \retval #PSA_ERROR_INVALID_HANDLE
- * \retval #PSA_ERROR_NOT_PERMITTED
- *         The key does not have the #PSA_KEY_USAGE_SIGN_MESSAGE flag,
- *         or it does not permit the requested algorithm.
- * \retval #PSA_ERROR_BUFFER_TOO_SMALL
- *         The size of the \p signature buffer is too small. You can
- *         determine a sufficient buffer size by calling
- *         #PSA_SIGN_OUTPUT_SIZE(\c key_type, \c key_bits, \p alg)
- *         where \c key_type and \c key_bits are the type and bit-size
- *         respectively of \p key.
- * \retval #PSA_ERROR_NOT_SUPPORTED
- * \retval #PSA_ERROR_INVALID_ARGUMENT
- * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
- * \retval #PSA_ERROR_COMMUNICATION_FAILURE
- * \retval #PSA_ERROR_HARDWARE_FAILURE
- * \retval #PSA_ERROR_CORRUPTION_DETECTED
- * \retval #PSA_ERROR_STORAGE_FAILURE
- * \retval #PSA_ERROR_DATA_CORRUPT
- * \retval #PSA_ERROR_DATA_INVALID
- * \retval #PSA_ERROR_INSUFFICIENT_ENTROPY
- * \retval #PSA_ERROR_BAD_STATE
- *         The library has not been previously initialized by psa_crypto_init().
- *         It is implementation-dependent whether a failure to initialize
- *         results in this error code.
- */
-psa_status_t psa_sign_message( mbedtls_svc_key_id_t key,
-                               psa_algorithm_t alg,
-                               const uint8_t * input,
-                               size_t input_length,
-                               uint8_t * signature,
-                               size_t signature_size,
-                               size_t * signature_length );
-
-/** \brief Verify the signature of a message with a public key, using
- *         a hash-and-sign verification algorithm.
- *
- * \note To perform a multi-part hash-and-sign signature verification
- *       algorithm, first use a multi-part hash operation to hash the message
- *       and then pass the resulting hash to psa_verify_hash().
- *       PSA_ALG_GET_HASH(\p alg) can be used to determine the hash algorithm
- *       to use.
- *
- * \param[in]  key              Identifier of the key to use for the operation.
- *                              It must be a public key or an asymmetric key
- *                              pair. The key must allow the usage
- *                              #PSA_KEY_USAGE_VERIFY_MESSAGE.
- * \param[in]  alg              An asymmetric signature algorithm (PSA_ALG_XXX
- *                              value such that #PSA_ALG_IS_SIGN_MESSAGE(\p alg)
- *                              is true), that is compatible with the type of
- *                              \p key.
- * \param[in]  input            The message whose signature is to be verified.
- * \param[in]  input_length     Size of the \p input buffer in bytes.
- * \param[out] signature        Buffer containing the signature to verify.
- * \param[in]  signature_length Size of the \p signature buffer in bytes.
- *
- * \retval #PSA_SUCCESS
- * \retval #PSA_ERROR_INVALID_HANDLE
- * \retval #PSA_ERROR_NOT_PERMITTED
- *         The key does not have the #PSA_KEY_USAGE_SIGN_MESSAGE flag,
- *         or it does not permit the requested algorithm.
- * \retval #PSA_ERROR_INVALID_SIGNATURE
- *         The calculation was performed successfully, but the passed signature
- *         is not a valid signature.
- * \retval #PSA_ERROR_NOT_SUPPORTED
- * \retval #PSA_ERROR_INVALID_ARGUMENT
- * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
- * \retval #PSA_ERROR_COMMUNICATION_FAILURE
- * \retval #PSA_ERROR_HARDWARE_FAILURE
- * \retval #PSA_ERROR_CORRUPTION_DETECTED
- * \retval #PSA_ERROR_STORAGE_FAILURE
- * \retval #PSA_ERROR_DATA_CORRUPT
- * \retval #PSA_ERROR_DATA_INVALID
- * \retval #PSA_ERROR_BAD_STATE
- *         The library has not been previously initialized by psa_crypto_init().
- *         It is implementation-dependent whether a failure to initialize
- *         results in this error code.
- */
-psa_status_t psa_verify_message( mbedtls_svc_key_id_t key,
-                                 psa_algorithm_t alg,
-                                 const uint8_t * input,
-                                 size_t input_length,
-                                 const uint8_t * signature,
-                                 size_t signature_length );
-
-/**
  * \brief Sign a hash or short message with a private key.
  *
  * Note that to perform a hash-and-sign signature algorithm, you must
  * first calculate the hash by calling psa_hash_setup(), psa_hash_update()
- * and psa_hash_finish(), or alternatively by calling psa_hash_compute().
- * Then pass the resulting hash as the \p hash
+ * and psa_hash_finish(). Then pass the resulting hash as the \p hash
  * parameter to this function. You can use #PSA_ALG_SIGN_GET_HASH(\p alg)
  * to determine the hash algorithm to use.
  *
- * \param key                   Identifier of the key to use for the operation.
- *                              It must be an asymmetric key pair. The key must
- *                              allow the usage #PSA_KEY_USAGE_SIGN_HASH.
- * \param alg                   A signature algorithm (PSA_ALG_XXX
- *                              value such that #PSA_ALG_IS_SIGN_HASH(\p alg)
- *                              is true), that is compatible with
- *                              the type of \p key.
+ * \param handle                Handle to the key to use for the operation.
+ *                              It must be an asymmetric key pair.
+ * \param alg                   A signature algorithm that is compatible with
+ *                              the type of \p handle.
  * \param[in] hash              The hash or message to sign.
  * \param hash_length           Size of the \p hash buffer in bytes.
  * \param[out] signature        Buffer where the signature is to be written.
@@ -2975,7 +2881,7 @@ psa_status_t psa_verify_message( mbedtls_svc_key_id_t key,
  *         determine a sufficient buffer size by calling
  *         #PSA_SIGN_OUTPUT_SIZE(\c key_type, \c key_bits, \p alg)
  *         where \c key_type and \c key_bits are the type and bit-size
- *         respectively of \p key.
+ *         respectively of \p handle.
  * \retval #PSA_ERROR_NOT_SUPPORTED
  * \retval #PSA_ERROR_INVALID_ARGUMENT
  * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
@@ -2989,7 +2895,7 @@ psa_status_t psa_verify_message( mbedtls_svc_key_id_t key,
  *         It is implementation-dependent whether a failure to initialize
  *         results in this error code.
  */
-psa_status_t psa_sign_hash(mbedtls_svc_key_id_t key,
+psa_status_t psa_sign_hash(psa_key_handle_t handle,
                            psa_algorithm_t alg,
                            const uint8_t *hash,
                            size_t hash_length,
@@ -2998,23 +2904,18 @@ psa_status_t psa_sign_hash(mbedtls_svc_key_id_t key,
                            size_t *signature_length);
 
 /**
- * \brief Verify the signature of a hash or short message using a public key.
+ * \brief Verify the signature a hash or short message using a public key.
  *
  * Note that to perform a hash-and-sign signature algorithm, you must
  * first calculate the hash by calling psa_hash_setup(), psa_hash_update()
- * and psa_hash_finish(), or alternatively by calling psa_hash_compute().
- * Then pass the resulting hash as the \p hash
+ * and psa_hash_finish(). Then pass the resulting hash as the \p hash
  * parameter to this function. You can use #PSA_ALG_SIGN_GET_HASH(\p alg)
  * to determine the hash algorithm to use.
  *
- * \param key               Identifier of the key to use for the operation. It
- *                          must be a public key or an asymmetric key pair. The
- *                          key must allow the usage
- *                          #PSA_KEY_USAGE_VERIFY_HASH.
- * \param alg               A signature algorithm (PSA_ALG_XXX
- *                          value such that #PSA_ALG_IS_SIGN_HASH(\p alg)
- *                          is true), that is compatible with
- *                          the type of \p key.
+ * \param handle            Handle to the key to use for the operation.
+ *                          It must be a public key or an asymmetric key pair.
+ * \param alg               A signature algorithm that is compatible with
+ *                          the type of \p handle.
  * \param[in] hash          The hash or message whose signature is to be
  *                          verified.
  * \param hash_length       Size of the \p hash buffer in bytes.
@@ -3040,7 +2941,7 @@ psa_status_t psa_sign_hash(mbedtls_svc_key_id_t key,
  *         It is implementation-dependent whether a failure to initialize
  *         results in this error code.
  */
-psa_status_t psa_verify_hash(mbedtls_svc_key_id_t key,
+psa_status_t psa_verify_hash(psa_key_handle_t handle,
                              psa_algorithm_t alg,
                              const uint8_t *hash,
                              size_t hash_length,
@@ -3050,12 +2951,11 @@ psa_status_t psa_verify_hash(mbedtls_svc_key_id_t key,
 /**
  * \brief Encrypt a short message with a public key.
  *
- * \param key                   Identifer of the key to use for the operation.
- *                              It must be a public key or an asymmetric key
- *                              pair. It must allow the usage
- *                              #PSA_KEY_USAGE_ENCRYPT.
+ * \param handle                Handle to the key to use for the operation.
+ *                              It must be a public key or an asymmetric
+ *                              key pair.
  * \param alg                   An asymmetric encryption algorithm that is
- *                              compatible with the type of \p key.
+ *                              compatible with the type of \p handle.
  * \param[in] input             The message to encrypt.
  * \param input_length          Size of the \p input buffer in bytes.
  * \param[in] salt              A salt or label, if supported by the
@@ -3084,7 +2984,7 @@ psa_status_t psa_verify_hash(mbedtls_svc_key_id_t key,
  *         determine a sufficient buffer size by calling
  *         #PSA_ASYMMETRIC_ENCRYPT_OUTPUT_SIZE(\c key_type, \c key_bits, \p alg)
  *         where \c key_type and \c key_bits are the type and bit-size
- *         respectively of \p key.
+ *         respectively of \p handle.
  * \retval #PSA_ERROR_NOT_SUPPORTED
  * \retval #PSA_ERROR_INVALID_ARGUMENT
  * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
@@ -3098,7 +2998,7 @@ psa_status_t psa_verify_hash(mbedtls_svc_key_id_t key,
  *         It is implementation-dependent whether a failure to initialize
  *         results in this error code.
  */
-psa_status_t psa_asymmetric_encrypt(mbedtls_svc_key_id_t key,
+psa_status_t psa_asymmetric_encrypt(psa_key_handle_t handle,
                                     psa_algorithm_t alg,
                                     const uint8_t *input,
                                     size_t input_length,
@@ -3111,11 +3011,10 @@ psa_status_t psa_asymmetric_encrypt(mbedtls_svc_key_id_t key,
 /**
  * \brief Decrypt a short message with a private key.
  *
- * \param key                   Identifier of the key to use for the operation.
- *                              It must be an asymmetric key pair. It must
- *                              allow the usage #PSA_KEY_USAGE_DECRYPT.
+ * \param handle                Handle to the key to use for the operation.
+ *                              It must be an asymmetric key pair.
  * \param alg                   An asymmetric encryption algorithm that is
- *                              compatible with the type of \p key.
+ *                              compatible with the type of \p handle.
  * \param[in] input             The message to decrypt.
  * \param input_length          Size of the \p input buffer in bytes.
  * \param[in] salt              A salt or label, if supported by the
@@ -3144,7 +3043,7 @@ psa_status_t psa_asymmetric_encrypt(mbedtls_svc_key_id_t key,
  *         determine a sufficient buffer size by calling
  *         #PSA_ASYMMETRIC_DECRYPT_OUTPUT_SIZE(\c key_type, \c key_bits, \p alg)
  *         where \c key_type and \c key_bits are the type and bit-size
- *         respectively of \p key.
+ *         respectively of \p handle.
  * \retval #PSA_ERROR_NOT_SUPPORTED
  * \retval #PSA_ERROR_INVALID_ARGUMENT
  * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
@@ -3159,7 +3058,7 @@ psa_status_t psa_asymmetric_encrypt(mbedtls_svc_key_id_t key,
  *         It is implementation-dependent whether a failure to initialize
  *         results in this error code.
  */
-psa_status_t psa_asymmetric_decrypt(mbedtls_svc_key_id_t key,
+psa_status_t psa_asymmetric_decrypt(psa_key_handle_t handle,
                                     psa_algorithm_t alg,
                                     const uint8_t *input,
                                     size_t input_length,
@@ -3201,8 +3100,8 @@ psa_status_t psa_asymmetric_decrypt(mbedtls_svc_key_id_t key,
  *   \endcode
  *
  * This is an implementation-defined \c struct. Applications should not
- * make any assumptions about the content of this structure.
- * Implementation details can change in future versions without notice.
+ * make any assumptions about the content of this structure except
+ * as directed by the documentation of a specific implementation.
  */
 typedef struct psa_key_derivation_s psa_key_derivation_operation_t;
 
@@ -3211,6 +3110,12 @@ typedef struct psa_key_derivation_s psa_key_derivation_operation_t;
  * This macro returns a suitable initializer for a key derivation operation
  * object of type #psa_key_derivation_operation_t.
  */
+#ifdef __DOXYGEN_ONLY__
+/* This is an example definition for documentation purposes.
+ * Implementations should define a suitable value in `crypto_struct.h`.
+ */
+#define PSA_KEY_DERIVATION_OPERATION_INIT {0}
+#endif
 
 /** Return an initial value for a key derivation operation object.
  */
@@ -3269,8 +3174,9 @@ static psa_key_derivation_operation_t psa_key_derivation_operation_init(void);
  * \retval #PSA_ERROR_CORRUPTION_DETECTED
  * \retval #PSA_ERROR_STORAGE_FAILURE
  * \retval #PSA_ERROR_BAD_STATE
- *         The operation state is not valid (it must be inactive), or
- *         the library has not been previously initialized by psa_crypto_init().
+ *         The operation state is not valid (it must be inactive).
+ * \retval #PSA_ERROR_BAD_STATE
+ *         The library has not been previously initialized by psa_crypto_init().
  *         It is implementation-dependent whether a failure to initialize
  *         results in this error code.
  */
@@ -3289,11 +3195,12 @@ psa_status_t psa_key_derivation_setup(
  *
  * \retval #PSA_SUCCESS
  * \retval #PSA_ERROR_COMMUNICATION_FAILURE
+ * \retval #PSA_ERROR_BAD_STATE
+ *         The operation state is not valid (it must be active).
  * \retval #PSA_ERROR_HARDWARE_FAILURE
  * \retval #PSA_ERROR_CORRUPTION_DETECTED
  * \retval #PSA_ERROR_BAD_STATE
- *         The operation state is not valid (it must be active), or
- *         the library has not been previously initialized by psa_crypto_init().
+ *         The library has not been previously initialized by psa_crypto_init().
  *         It is implementation-dependent whether a failure to initialize
  *         results in this error code.
  */
@@ -3316,12 +3223,13 @@ psa_status_t psa_key_derivation_get_capacity(
  *         \p capacity is larger than the operation's current capacity.
  *         In this case, the operation object remains valid and its capacity
  *         remains unchanged.
+ * \retval #PSA_ERROR_BAD_STATE
+ *         The operation state is not valid (it must be active).
  * \retval #PSA_ERROR_COMMUNICATION_FAILURE
  * \retval #PSA_ERROR_HARDWARE_FAILURE
  * \retval #PSA_ERROR_CORRUPTION_DETECTED
  * \retval #PSA_ERROR_BAD_STATE
- *         The operation state is not valid (it must be active), or the
- *         library has not been previously initialized by psa_crypto_init().
+ *         The library has not been previously initialized by psa_crypto_init().
  *         It is implementation-dependent whether a failure to initialize
  *         results in this error code.
  */
@@ -3365,7 +3273,8 @@ psa_status_t psa_key_derivation_set_capacity(
  * \retval #PSA_SUCCESS
  *         Success.
  * \retval #PSA_ERROR_INVALID_ARGUMENT
- *         \c step is not compatible with the operation's algorithm, or
+ *         \c step is not compatible with the operation's algorithm.
+ * \retval #PSA_ERROR_INVALID_ARGUMENT
  *         \c step does not allow direct inputs.
  * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
  * \retval #PSA_ERROR_COMMUNICATION_FAILURE
@@ -3373,8 +3282,9 @@ psa_status_t psa_key_derivation_set_capacity(
  * \retval #PSA_ERROR_CORRUPTION_DETECTED
  * \retval #PSA_ERROR_STORAGE_FAILURE
  * \retval #PSA_ERROR_BAD_STATE
- *         The operation state is not valid for this input \p step, or
- *         the library has not been previously initialized by psa_crypto_init().
+ *         The operation state is not valid for this input \p step.
+ * \retval #PSA_ERROR_BAD_STATE
+ *         The library has not been previously initialized by psa_crypto_init().
  *         It is implementation-dependent whether a failure to initialize
  *         results in this error code.
  */
@@ -3383,48 +3293,6 @@ psa_status_t psa_key_derivation_input_bytes(
     psa_key_derivation_step_t step,
     const uint8_t *data,
     size_t data_length);
-
-/** Provide a numeric input for key derivation or key agreement.
- *
- * Which inputs are required and in what order depends on the algorithm.
- * However, when an algorithm requires a particular order, numeric inputs
- * usually come first as they tend to be configuration parameters.
- * Refer to the documentation of each key derivation or key agreement
- * algorithm for information.
- *
- * This function is used for inputs which are fixed-size non-negative
- * integers.
- *
- * If this function returns an error status, the operation enters an error
- * state and must be aborted by calling psa_key_derivation_abort().
- *
- * \param[in,out] operation       The key derivation operation object to use.
- *                                It must have been set up with
- *                                psa_key_derivation_setup() and must not
- *                                have produced any output yet.
- * \param step                    Which step the input data is for.
- * \param[in] value               The value of the numeric input.
- *
- * \retval #PSA_SUCCESS
- *         Success.
- * \retval #PSA_ERROR_INVALID_ARGUMENT
- *         \c step is not compatible with the operation's algorithm, or
- *         \c step does not allow numeric inputs.
- * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
- * \retval #PSA_ERROR_COMMUNICATION_FAILURE
- * \retval #PSA_ERROR_HARDWARE_FAILURE
- * \retval #PSA_ERROR_CORRUPTION_DETECTED
- * \retval #PSA_ERROR_STORAGE_FAILURE
- * \retval #PSA_ERROR_BAD_STATE
- *         The operation state is not valid for this input \p step, or
- *         the library has not been previously initialized by psa_crypto_init().
- *         It is implementation-dependent whether a failure to initialize
- *         results in this error code.
- */
-psa_status_t psa_key_derivation_input_integer(
-    psa_key_derivation_operation_t *operation,
-    psa_key_derivation_step_t step,
-    uint64_t value);
 
 /** Provide an input for key derivation in the form of a key.
  *
@@ -3448,33 +3316,17 @@ psa_status_t psa_key_derivation_input_integer(
  *                                psa_key_derivation_setup() and must not
  *                                have produced any output yet.
  * \param step                    Which step the input data is for.
- * \param key                     Identifier of the key. It must have an
- *                                appropriate type for step and must allow the
- *                                usage #PSA_KEY_USAGE_DERIVE or
- *                                #PSA_KEY_USAGE_VERIFY_DERIVATION (see note)
- *                                and the algorithm used by the operation.
- *
- * \note Once all inputs steps are completed, the operations will allow:
- * - psa_key_derivation_output_bytes() if each input was either a direct input
- *   or  a key with #PSA_KEY_USAGE_DERIVE set;
- * - psa_key_derivation_output_key() if the input for step
- *   #PSA_KEY_DERIVATION_INPUT_SECRET or #PSA_KEY_DERIVATION_INPUT_PASSWORD
- *   was from a key slot with #PSA_KEY_USAGE_DERIVE and each other input was
- *   either a direct input or a key with #PSA_KEY_USAGE_DERIVE set;
- * - psa_key_derivation_verify_bytes() if each input was either a direct input
- *   or  a key with #PSA_KEY_USAGE_VERIFY_DERIVATION set;
- * - psa_key_derivation_verify_key() under the same conditions as
- *   psa_key_derivation_verify_bytes().
+ * \param handle                  Handle to the key. It must have an
+ *                                appropriate type for \p step and must
+ *                                allow the usage #PSA_KEY_USAGE_DERIVE.
  *
  * \retval #PSA_SUCCESS
  *         Success.
  * \retval #PSA_ERROR_INVALID_HANDLE
  * \retval #PSA_ERROR_NOT_PERMITTED
- *         The key allows neither #PSA_KEY_USAGE_DERIVE nor
- *         #PSA_KEY_USAGE_VERIFY_DERIVATION, or it doesn't allow this
- *         algorithm.
  * \retval #PSA_ERROR_INVALID_ARGUMENT
- *         \c step is not compatible with the operation's algorithm, or
+ *         \c step is not compatible with the operation's algorithm.
+ * \retval #PSA_ERROR_INVALID_ARGUMENT
  *         \c step does not allow key inputs of the given type
  *         or does not allow key inputs at all.
  * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
@@ -3483,15 +3335,16 @@ psa_status_t psa_key_derivation_input_integer(
  * \retval #PSA_ERROR_CORRUPTION_DETECTED
  * \retval #PSA_ERROR_STORAGE_FAILURE
  * \retval #PSA_ERROR_BAD_STATE
- *         The operation state is not valid for this input \p step, or
- *         the library has not been previously initialized by psa_crypto_init().
+ *         The operation state is not valid for this input \p step.
+ * \retval #PSA_ERROR_BAD_STATE
+ *         The library has not been previously initialized by psa_crypto_init().
  *         It is implementation-dependent whether a failure to initialize
  *         results in this error code.
  */
 psa_status_t psa_key_derivation_input_key(
     psa_key_derivation_operation_t *operation,
     psa_key_derivation_step_t step,
-    mbedtls_svc_key_id_t key);
+    psa_key_handle_t handle);
 
 /** Perform a key agreement and use the shared secret as input to a key
  * derivation.
@@ -3516,8 +3369,7 @@ psa_status_t psa_key_derivation_input_key(
  *                                The operation must be ready for an
  *                                input of the type given by \p step.
  * \param step                    Which step the input data is for.
- * \param private_key             Identifier of the private key to use. It must
- *                                allow the usage #PSA_KEY_USAGE_DERIVE.
+ * \param private_key             Handle to the private key to use.
  * \param[in] peer_key      Public key of the peer. The peer key must be in the
  *                          same format that psa_import_key() accepts for the
  *                          public key type corresponding to the type of
@@ -3536,30 +3388,32 @@ psa_status_t psa_key_derivation_input_key(
  *
  * \retval #PSA_SUCCESS
  *         Success.
+ * \retval #PSA_ERROR_BAD_STATE
+ *         The operation state is not valid for this key agreement \p step.
  * \retval #PSA_ERROR_INVALID_HANDLE
  * \retval #PSA_ERROR_NOT_PERMITTED
  * \retval #PSA_ERROR_INVALID_ARGUMENT
  *         \c private_key is not compatible with \c alg,
  *         or \p peer_key is not valid for \c alg or not compatible with
- *         \c private_key, or \c step does not allow an input resulting
- *         from a key agreement.
+ *         \c private_key.
  * \retval #PSA_ERROR_NOT_SUPPORTED
  *         \c alg is not supported or is not a key derivation algorithm.
+ * \retval #PSA_ERROR_INVALID_ARGUMENT
+ *         \c step does not allow an input resulting from a key agreement.
  * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
  * \retval #PSA_ERROR_COMMUNICATION_FAILURE
  * \retval #PSA_ERROR_HARDWARE_FAILURE
  * \retval #PSA_ERROR_CORRUPTION_DETECTED
  * \retval #PSA_ERROR_STORAGE_FAILURE
  * \retval #PSA_ERROR_BAD_STATE
- *         The operation state is not valid for this key agreement \p step,
- *         or the library has not been previously initialized by psa_crypto_init().
+ *         The library has not been previously initialized by psa_crypto_init().
  *         It is implementation-dependent whether a failure to initialize
  *         results in this error code.
  */
 psa_status_t psa_key_derivation_key_agreement(
     psa_key_derivation_operation_t *operation,
     psa_key_derivation_step_t step,
-    mbedtls_svc_key_id_t private_key,
+    psa_key_handle_t private_key,
     const uint8_t *peer_key,
     size_t peer_key_length);
 
@@ -3581,9 +3435,6 @@ psa_status_t psa_key_derivation_key_agreement(
  * \param output_length     Number of bytes to output.
  *
  * \retval #PSA_SUCCESS
- * \retval #PSA_ERROR_NOT_PERMITTED
- *         One of the inputs was a key whose policy didn't allow
- *         #PSA_KEY_USAGE_DERIVE.
  * \retval #PSA_ERROR_INSUFFICIENT_DATA
  *                          The operation's capacity was less than
  *                          \p output_length bytes. Note that in this case,
@@ -3591,15 +3442,16 @@ psa_status_t psa_key_derivation_key_agreement(
  *                          The operation's capacity is set to 0, thus
  *                          subsequent calls to this function will not
  *                          succeed, even with a smaller output buffer.
+ * \retval #PSA_ERROR_BAD_STATE
+ *         The operation state is not valid (it must be active and completed
+ *         all required input steps).
  * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
  * \retval #PSA_ERROR_COMMUNICATION_FAILURE
  * \retval #PSA_ERROR_HARDWARE_FAILURE
  * \retval #PSA_ERROR_CORRUPTION_DETECTED
  * \retval #PSA_ERROR_STORAGE_FAILURE
  * \retval #PSA_ERROR_BAD_STATE
- *         The operation state is not valid (it must be active and completed
- *         all required input steps), or the library has not been previously
- *         initialized by psa_crypto_init().
+ *         The library has not been previously initialized by psa_crypto_init().
  *         It is implementation-dependent whether a failure to initialize
  *         results in this error code.
  */
@@ -3625,8 +3477,7 @@ psa_status_t psa_key_derivation_output_bytes(
  * state and must be aborted by calling psa_key_derivation_abort().
  *
  * How much output is produced and consumed from the operation, and how
- * the key is derived, depends on the key type and on the key size
- * (denoted \c bits below):
+ * the key is derived, depends on the key type:
  *
  * - For key types for which the key is an arbitrary sequence of bytes
  *   of a given size, this function is functionally equivalent to
@@ -3636,15 +3487,14 @@ psa_status_t psa_key_derivation_output_bytes(
  *   if the implementation provides an isolation boundary then
  *   the key material is not exposed outside the isolation boundary.
  *   As a consequence, for these key types, this function always consumes
- *   exactly (\c bits / 8) bytes from the operation.
+ *   exactly (\p bits / 8) bytes from the operation.
  *   The following key types defined in this specification follow this scheme:
  *
  *     - #PSA_KEY_TYPE_AES;
- *     - #PSA_KEY_TYPE_ARIA;
+ *     - #PSA_KEY_TYPE_ARC4;
  *     - #PSA_KEY_TYPE_CAMELLIA;
  *     - #PSA_KEY_TYPE_DERIVE;
- *     - #PSA_KEY_TYPE_HMAC;
- *     - #PSA_KEY_TYPE_PASSWORD_HASH.
+ *     - #PSA_KEY_TYPE_HMAC.
  *
  * - For ECC keys on a Montgomery elliptic curve
  *   (#PSA_KEY_TYPE_ECC_KEY_PAIR(\c curve) where \c curve designates a
@@ -3652,14 +3502,14 @@ psa_status_t psa_key_derivation_output_bytes(
  *   length is determined by the curve, and sets the mandatory bits
  *   accordingly. That is:
  *
- *     - Curve25519 (#PSA_ECC_FAMILY_MONTGOMERY, 255 bits): draw a 32-byte
+ *     - Curve25519 (#PSA_ECC_CURVE_MONTGOMERY, 255 bits): draw a 32-byte
  *       string and process it as specified in RFC 7748 &sect;5.
- *     - Curve448 (#PSA_ECC_FAMILY_MONTGOMERY, 448 bits): draw a 56-byte
+ *     - Curve448 (#PSA_ECC_CURVE_MONTGOMERY, 448 bits): draw a 56-byte
  *       string and process it as specified in RFC 7748 &sect;5.
  *
  * - For key types for which the key is represented by a single sequence of
- *   \c bits bits with constraints as to which bit sequences are acceptable,
- *   this function draws a byte string of length (\c bits / 8) bytes rounded
+ *   \p bits bits with constraints as to which bit sequences are acceptable,
+ *   this function draws a byte string of length (\p bits / 8) bytes rounded
  *   up to the nearest whole number of bytes. If the resulting byte string
  *   is acceptable, it becomes the key, otherwise the drawn bytes are discarded.
  *   This process is repeated until an acceptable byte string is drawn.
@@ -3706,14 +3556,8 @@ psa_status_t psa_key_derivation_output_bytes(
  * on the derived key based on the attributes and strength of the secret key.
  *
  * \param[in] attributes    The attributes for the new key.
- *                          If the key type to be created is
- *                          #PSA_KEY_TYPE_PASSWORD_HASH then the algorithm in
- *                          the policy must be the same as in the current
- *                          operation.
  * \param[in,out] operation The key derivation operation object to read from.
- * \param[out] key          On success, an identifier for the newly created
- *                          key. For persistent keys, this is the key
- *                          identifier defined in \p attributes.
+ * \param[out] handle       On success, a handle to the newly created key.
  *                          \c 0 on failure.
  *
  * \retval #PSA_SUCCESS
@@ -3734,150 +3578,26 @@ psa_status_t psa_key_derivation_output_bytes(
  * \retval #PSA_ERROR_INVALID_ARGUMENT
  *         The provided key attributes are not valid for the operation.
  * \retval #PSA_ERROR_NOT_PERMITTED
- *         The #PSA_KEY_DERIVATION_INPUT_SECRET or
- *         #PSA_KEY_DERIVATION_INPUT_PASSWORD input was not provided through a
- *         key; or one of the inputs was a key whose policy didn't allow
- *         #PSA_KEY_USAGE_DERIVE.
+ *         The #PSA_KEY_DERIVATION_INPUT_SECRET input was not provided through
+ *         a key.
+ * \retval #PSA_ERROR_BAD_STATE
+ *         The operation state is not valid (it must be active and completed
+ *         all required input steps).
  * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
  * \retval #PSA_ERROR_INSUFFICIENT_STORAGE
  * \retval #PSA_ERROR_COMMUNICATION_FAILURE
  * \retval #PSA_ERROR_HARDWARE_FAILURE
  * \retval #PSA_ERROR_CORRUPTION_DETECTED
- * \retval #PSA_ERROR_DATA_INVALID
- * \retval #PSA_ERROR_DATA_CORRUPT
  * \retval #PSA_ERROR_STORAGE_FAILURE
  * \retval #PSA_ERROR_BAD_STATE
- *         The operation state is not valid (it must be active and completed
- *         all required input steps), or the library has not been previously
- *         initialized by psa_crypto_init().
+ *         The library has not been previously initialized by psa_crypto_init().
  *         It is implementation-dependent whether a failure to initialize
  *         results in this error code.
  */
 psa_status_t psa_key_derivation_output_key(
     const psa_key_attributes_t *attributes,
     psa_key_derivation_operation_t *operation,
-    mbedtls_svc_key_id_t *key);
-
-/** Compare output data from a key derivation operation to an expected value.
- *
- * This function calculates output bytes from a key derivation algorithm and
- * compares those bytes to an expected value in constant time.
- * If you view the key derivation's output as a stream of bytes, this
- * function destructively reads the expected number of bytes from the
- * stream before comparing them.
- * The operation's capacity decreases by the number of bytes read.
- *
- * This is functionally equivalent to the following code:
- * \code
- * psa_key_derivation_output_bytes(operation, tmp, output_length);
- * if (memcmp(output, tmp, output_length) != 0)
- *     return PSA_ERROR_INVALID_SIGNATURE;
- * \endcode
- * except (1) it works even if the key's policy does not allow outputting the
- * bytes, and (2) the comparison will be done in constant time.
- *
- * If this function returns an error status other than
- * #PSA_ERROR_INSUFFICIENT_DATA or #PSA_ERROR_INVALID_SIGNATURE,
- * the operation enters an error state and must be aborted by calling
- * psa_key_derivation_abort().
- *
- * \param[in,out] operation The key derivation operation object to read from.
- * \param[in] expected_output Buffer containing the expected derivation output.
- * \param output_length     Length ot the expected output; this is also the
- *                          number of bytes that will be read.
- *
- * \retval #PSA_SUCCESS
- * \retval #PSA_ERROR_INVALID_SIGNATURE
- *         The output was read successfully, but it differs from the expected
- *         output.
- * \retval #PSA_ERROR_NOT_PERMITTED
- *         One of the inputs was a key whose policy didn't allow
- *         #PSA_KEY_USAGE_VERIFY_DERIVATION.
- * \retval #PSA_ERROR_INSUFFICIENT_DATA
- *                          The operation's capacity was less than
- *                          \p output_length bytes. Note that in this case,
- *                          the operation's capacity is set to 0, thus
- *                          subsequent calls to this function will not
- *                          succeed, even with a smaller expected output.
- * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
- * \retval #PSA_ERROR_COMMUNICATION_FAILURE
- * \retval #PSA_ERROR_HARDWARE_FAILURE
- * \retval #PSA_ERROR_CORRUPTION_DETECTED
- * \retval #PSA_ERROR_STORAGE_FAILURE
- * \retval #PSA_ERROR_BAD_STATE
- *         The operation state is not valid (it must be active and completed
- *         all required input steps), or the library has not been previously
- *         initialized by psa_crypto_init().
- *         It is implementation-dependent whether a failure to initialize
- *         results in this error code.
- */
-psa_status_t psa_key_derivation_verify_bytes(
-    psa_key_derivation_operation_t *operation,
-    const uint8_t *expected_output,
-    size_t output_length);
-
-/** Compare output data from a key derivation operation to an expected value
- * stored in a key object.
- *
- * This function calculates output bytes from a key derivation algorithm and
- * compares those bytes to an expected value, provided as key of type
- * #PSA_KEY_TYPE_PASSWORD_HASH.
- * If you view the key derivation's output as a stream of bytes, this
- * function destructively reads the number of bytes corresponding the the
- * length of the expected value from the stream before comparing them.
- * The operation's capacity decreases by the number of bytes read.
- *
- * This is functionally equivalent to exporting the key and calling
- * psa_key_derivation_verify_bytes() on the result, except that it
- * works even if the key cannot be exported.
- *
- * If this function returns an error status other than
- * #PSA_ERROR_INSUFFICIENT_DATA or #PSA_ERROR_INVALID_SIGNATURE,
- * the operation enters an error state and must be aborted by calling
- * psa_key_derivation_abort().
- *
- * \param[in,out] operation The key derivation operation object to read from.
- * \param[in] expected      A key of type #PSA_KEY_TYPE_PASSWORD_HASH
- *                          containing the expected output. Its policy must
- *                          include the #PSA_KEY_USAGE_VERIFY_DERIVATION flag
- *                          and the permitted algorithm must match the
- *                          operation. The value of this key was likely
- *                          computed by a previous call to
- *                          psa_key_derivation_output_key().
- *
- * \retval #PSA_SUCCESS
- * \retval #PSA_ERROR_INVALID_SIGNATURE
- *         The output was read successfully, but if differs from the expected
- *         output.
- * \retval #PSA_ERROR_INVALID_HANDLE
- *         The key passed as the expected value does not exist.
- * \retval #PSA_ERROR_INVALID_ARGUMENT
- *         The key passed as the expected value has an invalid type.
- * \retval #PSA_ERROR_NOT_PERMITTED
- *         The key passed as the expected value does not allow this usage or
- *         this algorithm; or one of the inputs was a key whose policy didn't
- *         allow #PSA_KEY_USAGE_VERIFY_DERIVATION.
- * \retval #PSA_ERROR_INSUFFICIENT_DATA
- *                          The operation's capacity was less than
- *                          the length of the expected value. In this case,
- *                          the operation's capacity is set to 0, thus
- *                          subsequent calls to this function will not
- *                          succeed, even with a smaller expected output.
- * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
- * \retval #PSA_ERROR_COMMUNICATION_FAILURE
- * \retval #PSA_ERROR_HARDWARE_FAILURE
- * \retval #PSA_ERROR_CORRUPTION_DETECTED
- * \retval #PSA_ERROR_STORAGE_FAILURE
- * \retval #PSA_ERROR_BAD_STATE
- *         The operation state is not valid (it must be active and completed
- *         all required input steps), or the library has not been previously
- *         initialized by psa_crypto_init().
- *         It is implementation-dependent whether a failure to initialize
- *         results in this error code.
- */
-psa_status_t psa_key_derivation_verify_key(
-    psa_key_derivation_operation_t *operation,
-    psa_key_id_t expected);
+    psa_key_handle_t *handle);
 
 /** Abort a key derivation operation.
  *
@@ -3918,8 +3638,7 @@ psa_status_t psa_key_derivation_abort(
  *                                (\c PSA_ALG_XXX value such that
  *                                #PSA_ALG_IS_RAW_KEY_AGREEMENT(\p alg)
  *                                is true).
- * \param private_key             Identifier of the private key to use. It must
- *                                allow the usage #PSA_KEY_USAGE_DERIVE.
+ * \param private_key             Handle to the private key to use.
  * \param[in] peer_key            Public key of the peer. It must be
  *                                in the same format that psa_import_key()
  *                                accepts. The standard formats for public
@@ -3937,7 +3656,8 @@ psa_status_t psa_key_derivation_abort(
  * \retval #PSA_ERROR_INVALID_HANDLE
  * \retval #PSA_ERROR_NOT_PERMITTED
  * \retval #PSA_ERROR_INVALID_ARGUMENT
- *         \p alg is not a key agreement algorithm, or
+ *         \p alg is not a key agreement algorithm
+ * \retval #PSA_ERROR_INVALID_ARGUMENT
  *         \p private_key is not compatible with \p alg,
  *         or \p peer_key is not valid for \p alg or not compatible with
  *         \p private_key.
@@ -3956,7 +3676,7 @@ psa_status_t psa_key_derivation_abort(
  *         results in this error code.
  */
 psa_status_t psa_raw_key_agreement(psa_algorithm_t alg,
-                                   mbedtls_svc_key_id_t private_key,
+                                   psa_key_handle_t private_key,
                                    const uint8_t *peer_key,
                                    size_t peer_key_length,
                                    uint8_t *output,
@@ -4012,9 +3732,7 @@ psa_status_t psa_generate_random(uint8_t *output,
  *   attributes.
  *
  * \param[in] attributes    The attributes for the new key.
- * \param[out] key          On success, an identifier for the newly created
- *                          key. For persistent keys, this is the key
- *                          identifier defined in \p attributes.
+ * \param[out] handle       On success, a handle to the newly created key.
  *                          \c 0 on failure.
  *
  * \retval #PSA_SUCCESS
@@ -4032,8 +3750,6 @@ psa_status_t psa_generate_random(uint8_t *output,
  * \retval #PSA_ERROR_HARDWARE_FAILURE
  * \retval #PSA_ERROR_CORRUPTION_DETECTED
  * \retval #PSA_ERROR_INSUFFICIENT_STORAGE
- * \retval #PSA_ERROR_DATA_INVALID
- * \retval #PSA_ERROR_DATA_CORRUPT
  * \retval #PSA_ERROR_STORAGE_FAILURE
  * \retval #PSA_ERROR_BAD_STATE
  *         The library has not been previously initialized by psa_crypto_init().
@@ -4041,7 +3757,7 @@ psa_status_t psa_generate_random(uint8_t *output,
  *         results in this error code.
  */
 psa_status_t psa_generate_key(const psa_key_attributes_t *attributes,
-                              mbedtls_svc_key_id_t *key);
+                              psa_key_handle_t *handle);
 
 /**@}*/
 
