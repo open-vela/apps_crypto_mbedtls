@@ -1,20 +1,3 @@
-/*
- *  Copyright The Mbed TLS Contributors
- *  SPDX-License-Identifier: Apache-2.0
- *
- *  Licensed under the Apache License, Version 2.0 (the "License"); you may
- *  not use this file except in compliance with the License.
- *  You may obtain a copy of the License at
- *
- *  http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
- */
-
 #include <errno.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -52,6 +35,12 @@ int snprintf( char *s, size_t n, const char *fmt, ... )
 }
 #endif
 
+/* There are different GET_HASH macros for different kinds of algorithms
+ * built from hashes, but the values are all constructed on the
+ * same model. */
+#define PSA_ALG_GET_HASH(alg)                                   \
+    (((alg) & PSA_ALG_HASH_MASK) | PSA_ALG_CATEGORY_HASH)
+
 static void append(char **buffer, size_t buffer_size,
                    size_t *required_size,
                    const char *string, size_t length)
@@ -74,21 +63,21 @@ static void append_integer(char **buffer, size_t buffer_size,
 }
 
 /* The code of these function is automatically generated and included below. */
-static const char *psa_ecc_family_name(psa_ecc_family_t curve);
-static const char *psa_dh_family_name(psa_dh_family_t group);
+static const char *psa_ecc_curve_name(psa_ecc_curve_t curve);
+static const char *psa_dh_group_name(psa_dh_group_t group);
 static const char *psa_hash_algorithm_name(psa_algorithm_t hash_alg);
 
 static void append_with_curve(char **buffer, size_t buffer_size,
                               size_t *required_size,
                               const char *string, size_t length,
-                              psa_ecc_family_t curve)
+                              psa_ecc_curve_t curve)
 {
-    const char *family_name = psa_ecc_family_name(curve);
+    const char *curve_name = psa_ecc_curve_name(curve);
     append(buffer, buffer_size, required_size, string, length);
     append(buffer, buffer_size, required_size, "(", 1);
-    if (family_name != NULL) {
+    if (curve_name != NULL) {
         append(buffer, buffer_size, required_size,
-               family_name, strlen(family_name));
+               curve_name, strlen(curve_name));
     } else {
         append_integer(buffer, buffer_size, required_size,
                        "0x%02x", curve);
@@ -99,9 +88,9 @@ static void append_with_curve(char **buffer, size_t buffer_size,
 static void append_with_group(char **buffer, size_t buffer_size,
                               size_t *required_size,
                               const char *string, size_t length,
-                              psa_dh_family_t group)
+                              psa_dh_group_t group)
 {
-    const char *group_name = psa_dh_family_name(group);
+    const char *group_name = psa_dh_group_name(group);
     append(buffer, buffer_size, required_size, string, length);
     append(buffer, buffer_size, required_size, "(", 1);
     if (group_name != NULL) {
@@ -151,9 +140,9 @@ static int psa_snprint_status(char *buffer, size_t buffer_size,
 }
 
 static int psa_snprint_ecc_curve(char *buffer, size_t buffer_size,
-                                 psa_ecc_family_t curve)
+                                 psa_ecc_curve_t curve)
 {
-    const char *name = psa_ecc_family_name(curve);
+    const char *name = psa_ecc_curve_name(curve);
     if (name == NULL) {
         return snprintf(buffer, buffer_size, "0x%02x", (unsigned) curve);
     } else {
@@ -168,9 +157,9 @@ static int psa_snprint_ecc_curve(char *buffer, size_t buffer_size,
 }
 
 static int psa_snprint_dh_group(char *buffer, size_t buffer_size,
-                                psa_dh_family_t group)
+                                psa_dh_group_t group)
 {
-    const char *name = psa_dh_family_name(group);
+    const char *name = psa_dh_group_name(group);
     if (name == NULL) {
         return snprintf(buffer, buffer_size, "0x%02x", (unsigned) group);
     } else {
@@ -191,8 +180,8 @@ static void usage(const char *program_name)
     printf("Print the symbolic name whose numerical value is VALUE in TYPE.\n");
     printf("Supported types (with = between aliases):\n");
     printf("  alg=algorithm         Algorithm (psa_algorithm_t)\n");
-    printf("  curve=ecc_curve       Elliptic curve identifier (psa_ecc_family_t)\n");
-    printf("  group=dh_group        Diffie-Hellman group identifier (psa_dh_family_t)\n");
+    printf("  curve=ecc_curve       Elliptic curve identifier (psa_ecc_curve_t)\n");
+    printf("  group=dh_group        Diffie-Hellman group identifier (psa_dh_group_t)\n");
     printf("  type=key_type         Key type (psa_key_type_t)\n");
     printf("  usage=key_usage       Key usage (psa_key_usage_t)\n");
     printf("  error=status          Status code (psa_status_t)\n");
@@ -263,11 +252,11 @@ int process_unsigned(unsigned_value_type type, unsigned long max, char **argp)
                 break;
             case TYPE_ECC_CURVE:
                 psa_snprint_ecc_curve(buffer, sizeof(buffer),
-                                      (psa_ecc_family_t) value);
+                                      (psa_ecc_curve_t) value);
                 break;
             case TYPE_DH_GROUP:
                 psa_snprint_dh_group(buffer, sizeof(buffer),
-                                     (psa_dh_family_t) value);
+                                     (psa_dh_group_t) value);
                 break;
             case TYPE_KEY_TYPE:
                 psa_snprint_key_type(buffer, sizeof(buffer),
@@ -303,10 +292,10 @@ int main(int argc, char *argv[])
         return process_unsigned(TYPE_ALGORITHM, (psa_algorithm_t) (-1),
                                 argv + 2);
     } else if (!strcmp(argv[1], "curve") || !strcmp(argv[1], "ecc_curve")) {
-        return process_unsigned(TYPE_ECC_CURVE, (psa_ecc_family_t) (-1),
+        return process_unsigned(TYPE_ECC_CURVE, (psa_ecc_curve_t) (-1),
                                 argv + 2);
     } else if (!strcmp(argv[1], "group") || !strcmp(argv[1], "dh_group")) {
-        return process_unsigned(TYPE_DH_GROUP, (psa_dh_family_t) (-1),
+        return process_unsigned(TYPE_DH_GROUP, (psa_dh_group_t) (-1),
                                 argv + 2);
     } else if (!strcmp(argv[1], "type") || !strcmp(argv[1], "key_type")) {
         return process_unsigned(TYPE_KEY_TYPE, (psa_key_type_t) (-1),

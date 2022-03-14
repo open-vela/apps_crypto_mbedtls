@@ -1,9 +1,6 @@
-MBEDTLS_TEST_PATH:=../../tests/src
-MBEDTLS_TEST_OBJS:=$(patsubst %.c,%.o,$(wildcard ${MBEDTLS_TEST_PATH}/*.c ${MBEDTLS_TEST_PATH}/drivers/*.c))
 
-LOCAL_CFLAGS = -I../../tests/include -I../../include -D_FILE_OFFSET_BITS=64
-LOCAL_LDFLAGS = ${MBEDTLS_TEST_OBJS}		\
-		-L../../library			\
+LOCAL_CFLAGS = -I../../include -D_FILE_OFFSET_BITS=64
+LOCAL_LDFLAGS = -L../../library			\
 		-lmbedtls$(SHARED_SUFFIX)	\
 		-lmbedx509$(SHARED_SUFFIX)	\
 		-lmbedcrypto$(SHARED_SUFFIX)
@@ -20,6 +17,13 @@ endif
 DLEXT ?= so
 EXEXT=
 SHARED_SUFFIX=
+# python2 for POSIX since FreeBSD has only python2 as default.
+PYTHON ?= python2
+
+# Zlib shared library extensions:
+ifdef ZLIB
+LOCAL_LDFLAGS += -lz
+endif
 
 ifdef FUZZINGENGINE
 LOCAL_LDFLAGS += -lFuzzingEngine
