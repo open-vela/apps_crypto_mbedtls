@@ -443,41 +443,51 @@ class StorageFormat:
                 continue
             yield self.key_for_lifetime(lifetime)
 
-    def key_for_usage_flags(
+    def keys_for_usage_flags(
             self,
             usage_flags: List[str],
             short: Optional[str] = None,
-            test_implicit_usage: Optional[bool] = True
-    ) -> StorageTestData:
+            test_implicit_usage: Optional[bool] = False
+    ) -> Iterator[StorageTestData]:
         """Construct a test key for the given key usage."""
         usage = ' | '.join(usage_flags) if usage_flags else '0'
         if short is None:
             short = re.sub(r'\bPSA_KEY_USAGE_', r'', usage)
-        extra_desc = ' without implication' if test_implicit_usage else ''
+        extra_desc = ' with implication' if test_implicit_usage else ''
         description = 'usage' + extra_desc + ': ' + short
         key1 = StorageTestData(version=self.version,
                                id=1, lifetime=0x00000001,
                                type='PSA_KEY_TYPE_RAW_DATA', bits=8,
                                expected_usage=usage,
-                               without_implicit_usage=not test_implicit_usage,
                                usage=usage, alg=0, alg2=0,
                                material=b'K',
                                description=description)
-        return key1
+        yield key1
+
+        if test_implicit_usage:
+            description = 'usage without implication' + ': ' + short
+            key2 = StorageTestData(version=self.version,
+                                   id=1, lifetime=0x00000001,
+                                   type='PSA_KEY_TYPE_RAW_DATA', bits=8,
+                                   without_implicit_usage=True,
+                                   usage=usage, alg=0, alg2=0,
+                                   material=b'K',
+                                   description=description)
+            yield key2
 
     def generate_keys_for_usage_flags(self, **kwargs) -> Iterator[StorageTestData]:
         """Generate test keys covering usage flags."""
         known_flags = sorted(self.constructors.key_usage_flags)
-        yield self.key_for_usage_flags(['0'], **kwargs)
+        yield from self.keys_for_usage_flags(['0'], **kwargs)
         for usage_flag in known_flags:
-            yield self.key_for_usage_flags([usage_flag], **kwargs)
+            yield from self.keys_for_usage_flags([usage_flag], **kwargs)
         for flag1, flag2 in zip(known_flags,
                                 known_flags[1:] + [known_flags[0]]):
-            yield self.key_for_usage_flags([flag1, flag2], **kwargs)
+            yield from self.keys_for_usage_flags([flag1, flag2], **kwargs)
 
     def generate_key_for_all_usage_flags(self) -> Iterator[StorageTestData]:
         known_flags = sorted(self.constructors.key_usage_flags)
-        yield self.key_for_usage_flags(known_flags, short='all known')
+        yield from self.keys_for_usage_flags(known_flags, short='all known')
 
     def all_keys_for_usage_flags(self) -> Iterator[StorageTestData]:
         yield from self.generate_keys_for_usage_flags()
@@ -583,8 +593,8 @@ class StorageFormatV0(StorageFormat):
 
     def all_keys_for_usage_flags(self) -> Iterator[StorageTestData]:
         """Generate test keys covering usage flags."""
-        yield from super().all_keys_for_usage_flags()
-        yield from self.generate_keys_for_usage_flags(test_implicit_usage=False)
+        yield from self.generate_keys_for_usage_flags(test_implicit_usage=True)
+        yield from self.generate_key_for_all_usage_flags()
 
     def keys_for_implicit_usage(
             self,
@@ -715,6 +725,8 @@ class TestGenerator:
         filename = self.filename_for(basename)
         test_case.write_data_file(filename, test_cases)
 
+    # Note that targets whose name containns 'test_format' have their content
+    # validated by `abi_check.py`.
     TARGETS = {
         'test_suite_psa_crypto_generate_key.generated':
         lambda info: KeyGenerate(info).test_cases_for_key_generation(),
