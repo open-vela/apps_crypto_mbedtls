@@ -181,9 +181,30 @@
 #endif
 #undef MBEDTLS_HAS_MEMSAN
 
+#if defined(MBEDTLS_CCM_C) && (                                        \
+    !defined(MBEDTLS_AES_C) && !defined(MBEDTLS_CAMELLIA_C) && !defined(MBEDTLS_ARIA_C) )
+#error "MBEDTLS_CCM_C defined, but not all prerequisites"
+#endif
+
+#if defined(MBEDTLS_CCM_C) && !defined(MBEDTLS_CIPHER_C)
+#error "MBEDTLS_CCM_C defined, but not all prerequisites"
+#endif
+
 #if defined(MBEDTLS_GCM_C) && (                                        \
-        !defined(MBEDTLS_AES_C) && !defined(MBEDTLS_CAMELLIA_C) && !defined(MBEDTLS_ARIA_C) )
+    !defined(MBEDTLS_AES_C) && !defined(MBEDTLS_CAMELLIA_C) && !defined(MBEDTLS_ARIA_C) )
 #error "MBEDTLS_GCM_C defined, but not all prerequisites"
+#endif
+
+#if defined(MBEDTLS_GCM_C) && !defined(MBEDTLS_CIPHER_C)
+#error "MBEDTLS_GCM_C defined, but not all prerequisites"
+#endif
+
+#if defined(MBEDTLS_CHACHAPOLY_C) && !defined(MBEDTLS_CHACHA20_C)
+#error "MBEDTLS_CHACHAPOLY_C defined, but not all prerequisites"
+#endif
+
+#if defined(MBEDTLS_CHACHAPOLY_C) && !defined(MBEDTLS_POLY1305_C)
+#error "MBEDTLS_CHACHAPOLY_C defined, but not all prerequisites"
 #endif
 
 #if defined(MBEDTLS_ECP_RANDOMIZE_JAC_ALT) && !defined(MBEDTLS_ECP_INTERNAL_ALT)
@@ -590,6 +611,29 @@
 
 #if defined(MBEDTLS_SHA256_C) && !defined(MBEDTLS_SHA224_C)
 #error "MBEDTLS_SHA256_C defined without MBEDTLS_SHA224_C"
+#endif
+
+#if defined(MBEDTLS_SHA256_USE_A64_CRYPTO_IF_PRESENT) && \
+    defined(MBEDTLS_SHA256_USE_A64_CRYPTO_ONLY)
+#error "Must only define one of MBEDTLS_SHA256_USE_A64_CRYPTO_*"
+#endif
+
+#if defined(MBEDTLS_SHA256_USE_A64_CRYPTO_IF_PRESENT) || \
+    defined(MBEDTLS_SHA256_USE_A64_CRYPTO_ONLY)
+#if !defined(MBEDTLS_SHA256_C)
+#error "MBEDTLS_SHA256_USE_A64_CRYPTO_* defined without MBEDTLS_SHA256_C"
+#endif
+#if defined(MBEDTLS_SHA256_ALT) || defined(MBEDTLS_SHA256_PROCESS_ALT)
+#error "MBEDTLS_SHA256_*ALT can't be used with MBEDTLS_SHA256_USE_A64_CRYPTO_*"
+#endif
+#if defined(__aarch64__) && !defined(__ARM_FEATURE_CRYPTO)
+#error "Must use minimum -march=armv8-a+crypto for MBEDTLS_SHA256_USE_A64_CRYPTO_*"
+#endif
+#endif
+
+#if defined(MBEDTLS_SHA256_USE_A64_CRYPTO_ONLY) && \
+    !defined(__aarch64__) && !defined(_M_ARM64)
+#error "MBEDTLS_SHA256_USE_A64_CRYPTO_ONLY defined on non-Aarch64 system"
 #endif
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_2) && ( !defined(MBEDTLS_SHA1_C) &&     \
