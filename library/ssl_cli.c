@@ -2610,36 +2610,6 @@ static int ssl_get_ecdh_params_from_cert( mbedtls_ssl_context *ssl )
 
     peer_key = mbedtls_pk_ec( *peer_pk );
 
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
-    size_t ecdh_bits = 0;
-    size_t qlen = 0;
-
-    ssl->handshake->ecdh_psa_type =
-        PSA_KEY_TYPE_ECC_KEY_PAIR( mbedtls_ecc_group_to_psa( peer_key->grp.id,
-                                                             &ecdh_bits ) );
-
-    if( ssl->handshake->ecdh_psa_type == 0 || ecdh_bits > 0xffff )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "Invalid ecc group conversion to psa." ) );
-        return( MBEDTLS_ERR_SSL_ILLEGAL_PARAMETER );
-    }
-
-    ssl->handshake->ecdh_bits = (uint16_t) ecdh_bits;
-
-    qlen = mbedtls_mpi_size( (const mbedtls_mpi*) &peer_key->Q );
-
-    /* Store peer's public key in psa format. */
-    ssl->handshake->ecdh_psa_peerkey[0] = 0x04;
-    MBEDTLS_MPI_CHK( mbedtls_mpi_write_binary( &peer_key->Q.X,
-                        ssl->handshake->ecdh_psa_peerkey + 1, qlen ) );
-    MBEDTLS_MPI_CHK( mbedtls_mpi_write_binary( &peer_key->Q.Y,
-                        ssl->handshake->ecdh_psa_peerkey + 1 + qlen, qlen ) );
-
-    ssl->handshake->ecdh_psa_peerkey_len = ( 2 * qlen + 1 );
-
-    ret = 0;
-cleanup:
-#else
     if( ( ret = mbedtls_ecdh_get_params( &ssl->handshake->ecdh_ctx, peer_key,
                                  MBEDTLS_ECDH_THEIRS ) ) != 0 )
     {
@@ -2653,7 +2623,6 @@ cleanup:
         return( MBEDTLS_ERR_SSL_BAD_CERTIFICATE );
     }
 
-#endif
 #if !defined(MBEDTLS_SSL_KEEP_PEER_CERTIFICATE)
     /* We don't need the peer's public key anymore. Free it,
      * so that more RAM is available for upcoming expensive
@@ -3319,13 +3288,9 @@ static int ssl_write_client_key_exchange( mbedtls_ssl_context *ssl )
 #endif /* MBEDTLS_KEY_EXCHANGE_DHE_RSA_ENABLED */
 #if defined(MBEDTLS_USE_PSA_CRYPTO) &&                           \
         ( defined(MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED) ||     \
-          defined(MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED) ||   \
-          defined(MBEDTLS_KEY_EXCHANGE_ECDH_RSA_ENABLED) ||      \
-          defined(MBEDTLS_KEY_EXCHANGE_ECDH_ECDSA_ENABLED) )
+          defined(MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED) )
     if( ciphersuite_info->key_exchange == MBEDTLS_KEY_EXCHANGE_ECDHE_RSA ||
-        ciphersuite_info->key_exchange == MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA ||
-        ciphersuite_info->key_exchange == MBEDTLS_KEY_EXCHANGE_ECDH_RSA ||
-        ciphersuite_info->key_exchange == MBEDTLS_KEY_EXCHANGE_ECDH_ECDSA )
+        ciphersuite_info->key_exchange == MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA )
     {
         psa_status_t status = PSA_ERROR_CORRUPTION_DETECTED;
         psa_status_t destruction_status = PSA_ERROR_CORRUPTION_DETECTED;
@@ -3401,9 +3366,7 @@ static int ssl_write_client_key_exchange( mbedtls_ssl_context *ssl )
     else
 #endif /* MBEDTLS_USE_PSA_CRYPTO &&
             ( MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED ||
-              MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED ||
-              MBEDTLS_KEY_EXCHANGE_ECDH_RSA_ENABLED ||
-              MBEDTLS_KEY_EXCHANGE_ECDH_ECDSA) */
+              MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED ) */
 #if defined(MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED) ||                     \
     defined(MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED) ||                   \
     defined(MBEDTLS_KEY_EXCHANGE_ECDH_RSA_ENABLED) ||                      \
