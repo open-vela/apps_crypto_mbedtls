@@ -46,6 +46,10 @@ if(GEN_FILES)
             --directory ${CMAKE_CURRENT_BINARY_DIR}/suites
         DEPENDS
             ${CMAKE_CURRENT_SOURCE_DIR}/../tests/scripts/generate_psa_tests.py
+            ${CMAKE_CURRENT_SOURCE_DIR}/../scripts/mbedtls_dev/crypto_knowledge.py
+            ${CMAKE_CURRENT_SOURCE_DIR}/../scripts/mbedtls_dev/macro_collector.py
+            ${CMAKE_CURRENT_SOURCE_DIR}/../scripts/mbedtls_dev/psa_storage.py
+            ${CMAKE_CURRENT_SOURCE_DIR}/../scripts/mbedtls_dev/test_case.py
             ${CMAKE_CURRENT_SOURCE_DIR}/../include/psa/crypto_config.h
             ${CMAKE_CURRENT_SOURCE_DIR}/../include/psa/crypto_values.h
             ${CMAKE_CURRENT_SOURCE_DIR}/../include/psa/crypto_extra.h
@@ -139,10 +143,6 @@ endfunction(add_test_suite)
 # (gethostname, strdup, fileno...) even when compiling with -std=c99. Harmless
 # on non-POSIX platforms.
 add_definitions("-D_POSIX_C_SOURCE=200809L")
-
-if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_CLANG)
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-unused-function")
-endif(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_CLANG)
 
 if(CMAKE_COMPILER_IS_CLANG)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wdocumentation -Wno-documentation-deprecated-sync -Wunreachable-code")
