@@ -7052,9 +7052,6 @@ static int ssl_tls12_populate_transform( mbedtls_ssl_transform *transform,
         mac_enc = keyblk;
         mac_dec = keyblk + mac_key_len;
 
-        /*
-         * This is not used in TLS v1.1.
-         */
         iv_copy_len = ( transform->fixed_ivlen ) ?
                             transform->fixed_ivlen : transform->ivlen;
         memcpy( transform->iv_enc, key2 + keylen,  iv_copy_len );
@@ -7072,9 +7069,6 @@ static int ssl_tls12_populate_transform( mbedtls_ssl_transform *transform,
         mac_enc = keyblk + mac_key_len;
         mac_dec = keyblk;
 
-        /*
-         * This is not used in TLS v1.1.
-         */
         iv_copy_len = ( transform->fixed_ivlen ) ?
                             transform->fixed_ivlen : transform->ivlen;
         memcpy( transform->iv_dec, key1 + keylen,  iv_copy_len );
