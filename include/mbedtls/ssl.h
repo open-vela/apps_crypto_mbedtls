@@ -41,8 +41,9 @@
 #endif
 
 /* Adding guard for MBEDTLS_ECDSA_C to ensure no compile errors due
- * to guards in TLS code. There is a gap in functionality that access to
- * ecdh_ctx structure is needed for MBEDTLS_ECDSA_C which does not seem correct.
+ * to guards also being in ssl_srv.c and ssl_cli.c. There is a gap
+ * in functionality that access to ecdh_ctx structure is needed for
+ * MBEDTLS_ECDSA_C which does not seem correct.
  */
 #if defined(MBEDTLS_ECDH_C) || defined(MBEDTLS_ECDSA_C)
 #include "mbedtls/ecdh.h"
@@ -1118,11 +1119,10 @@ struct mbedtls_ssl_session
 
     unsigned char MBEDTLS_PRIVATE(exported);
 
-    /*!< Minor version negotiated in the session. Used if and when
-     *   renegotiating or resuming a session instead of the configured minor
-     *   version.
-     */
-    unsigned char MBEDTLS_PRIVATE(minor_ver);
+    /* This field is temporarily duplicated with mbedtls_ssl_context.minor_ver.
+     * Once runtime negotiation of TLS 1.2 and TLS 1.3 is implemented, it needs
+     * to be studied whether one of them can be removed. */
+    unsigned char MBEDTLS_PRIVATE(minor_ver);    /*!< The TLS version used in the session. */
 
 #if defined(MBEDTLS_HAVE_TIME)
     mbedtls_time_t MBEDTLS_PRIVATE(start);       /*!< starting time      */
@@ -1217,25 +1217,6 @@ typedef void mbedtls_ssl_export_keys_t( void *p_expkey,
                                         const unsigned char client_random[32],
                                         const unsigned char server_random[32],
                                         mbedtls_tls_prf_types tls_prf_type );
-
-#if defined(MBEDTLS_SSL_SRV_C)
-/**
- * \brief           Callback type: generic handshake callback
- *
- * \note            Callbacks may use user_data funcs to set/get app user data.
- *                  See \c mbedtls_ssl_get_user_data_p()
- *                      \c mbedtls_ssl_get_user_data_n()
- *                      \c mbedtls_ssl_conf_get_user_data_p()
- *                      \c mbedtls_ssl_conf_get_user_data_n()
- *
- * \param ssl       \c mbedtls_ssl_context on which the callback is run
- *
- * \return          The return value of the callback is 0 if successful,
- *                  or a specific MBEDTLS_ERR_XXX code, which will cause
- *                  the handshake to be aborted.
- */
-typedef int (*mbedtls_ssl_hs_cb_t)( mbedtls_ssl_context *ssl );
-#endif
 
 /* A type for storing user data in a library structure.
  *
@@ -1496,7 +1477,7 @@ struct mbedtls_ssl_config
     mbedtls_ssl_user_data_t MBEDTLS_PRIVATE(user_data);
 
 #if defined(MBEDTLS_SSL_SRV_C)
-    mbedtls_ssl_hs_cb_t MBEDTLS_PRIVATE(f_cert_cb);  /*!< certificate selection callback */
+    int (*MBEDTLS_PRIVATE(f_cert_cb))(mbedtls_ssl_context *); /*!< certificate selection callback */
 #endif /* MBEDTLS_SSL_SRV_C */
 };
 
@@ -1515,25 +1496,12 @@ struct mbedtls_ssl_context
                                   renego_max_records is < 0           */
 #endif /* MBEDTLS_SSL_RENEGOTIATION */
 
-    /*!< Equal to MBEDTLS_SSL_MAJOR_VERSION_3 */
-    int MBEDTLS_PRIVATE(major_ver);
+    int MBEDTLS_PRIVATE(major_ver);              /*!< equal to  MBEDTLS_SSL_MAJOR_VERSION_3    */
 
-    /*!< Server: Negotiated minor version.
-     *   Client: Maximum minor version to be negotiated, then negotiated minor
-     *           version.
-     *
-     *   It is initialized as the maximum minor version to be negotiated in the
-     *   ClientHello writing preparation stage and used throughout the
-     *   ClientHello writing. For a fresh handshake not linked to any previous
-     *   handshake, it is initialized to the configured maximum minor version
-     *   to be negotiated. When renegotiating or resuming a session, it is
-     *   initialized to the previously negotiated minor version.
-     *
-     *   Updated to the negotiated minor version as soon as the ServerHello is
-     *   received.
-     */
-    int MBEDTLS_PRIVATE(minor_ver);
-
+    /* This field is temporarily duplicated with mbedtls_ssl_context.minor_ver.
+     * Once runtime negotiation of TLS 1.2 and TLS 1.3 is implemented, it needs
+     * to be studied whether one of them can be removed. */
+    int MBEDTLS_PRIVATE(minor_ver);              /*!< one of MBEDTLS_SSL_MINOR_VERSION_x macros */
     unsigned MBEDTLS_PRIVATE(badmac_seen);       /*!< records with a bad MAC received    */
 
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
@@ -2056,40 +2024,6 @@ int mbedtls_ssl_set_cid( mbedtls_ssl_context *ssl,
                          size_t own_cid_len );
 
 /**
- * \brief              Get information about our request for usage of the CID
- *                     extension in the current connection.
- *
- * \param ssl          The SSL context to query.
- * \param enabled      The address at which to store whether the CID extension
- *                     is requested to be used or not. If the CID is
- *                     requested, `*enabled` is set to
- *                     MBEDTLS_SSL_CID_ENABLED; otherwise, it is set to
- *                     MBEDTLS_SSL_CID_DISABLED.
- * \param own_cid      The address of the buffer in which to store our own
- *                     CID (if the CID extension is requested). This may be
- *                     \c NULL in case the value of our CID isn't needed. If
- *                     it is not \c NULL, \p own_cid_len must not be \c NULL.
- * \param own_cid_len  The address at which to store the size of our own CID
- *                     (if the CID extension is requested). This is also the
- *                     number of Bytes in \p own_cid that have been written.
- *                     This may be \c NULL in case the length of our own CID
- *                     isn't needed. If it is \c NULL, \p own_cid must be
- *                     \c NULL, too.
- *
- *\note                If we are requesting an empty CID this function sets
- *                     `*enabled` to #MBEDTLS_SSL_CID_DISABLED (the rationale
- *                     for this is that the resulting outcome is the
- *                     same as if the CID extensions wasn't requested).
- *
- * \return            \c 0 on success.
- * \return            A negative error code on failure.
- */
-int mbedtls_ssl_get_own_cid( mbedtls_ssl_context *ssl,
-                            int *enabled,
-                            unsigned char own_cid[MBEDTLS_SSL_CID_OUT_LEN_MAX],
-                            size_t *own_cid_len );
-
-/**
  * \brief              Get information about the use of the CID extension
  *                     in the current connection.
  *
@@ -2297,15 +2231,19 @@ void mbedtls_ssl_set_timer_cb( mbedtls_ssl_context *ssl,
  *                  If set, the callback is always called for each handshake,
  *                  after `ClientHello` processing has finished.
  *
+ *                  The callback has the following parameters:
+ *                  - \c mbedtls_ssl_context*: The SSL context to which
+ *                                             the operation applies.
+ *                  The return value of the callback is 0 if successful,
+ *                  or a specific MBEDTLS_ERR_XXX code, which will cause
+ *                  the handshake to be aborted.
+ *
  * \param conf      The SSL configuration to register the callback with.
  * \param f_cert_cb The callback for selecting server certificate after
  *                  `ClientHello` processing has finished.
  */
-static inline void mbedtls_ssl_conf_cert_cb( mbedtls_ssl_config *conf,
-                                             mbedtls_ssl_hs_cb_t f_cert_cb )
-{
-    conf->MBEDTLS_PRIVATE(f_cert_cb) = f_cert_cb;
-}
+void mbedtls_ssl_conf_cert_cb( mbedtls_ssl_config *conf,
+                               int (*f_cert_cb)(mbedtls_ssl_context *) );
 #endif /* MBEDTLS_SSL_SRV_C */
 
 /**
@@ -4420,40 +4358,11 @@ int mbedtls_ssl_get_session( const mbedtls_ssl_context *ssl,
 int mbedtls_ssl_handshake( mbedtls_ssl_context *ssl );
 
 /**
- * \brief          After calling mbedtls_ssl_handshake() to start the SSL
- *                 handshake you can call this function to check whether the
- *                 handshake is over for a given SSL context. This function
- *                 should be also used to determine when to stop calling
- *                 mbedtls_handshake_step() for that context.
- *
- * \param ssl      SSL context
- *
- * \return         \c 1 if handshake is over, \c 0 if it is still ongoing.
- */
-static inline int mbedtls_ssl_is_handshake_over( mbedtls_ssl_context *ssl )
-{
-    return( ssl->MBEDTLS_PRIVATE( state ) == MBEDTLS_SSL_HANDSHAKE_OVER );
-}
-
-/**
  * \brief          Perform a single step of the SSL handshake
  *
  * \note           The state of the context (ssl->state) will be at
  *                 the next state after this function returns \c 0. Do not
- *                 call this function if mbedtls_ssl_is_handshake_over()
- *                 returns \c 1.
- *
- * \warning        Whilst in the past you may have used direct access to the
- *                 context state (ssl->state) in order to ascertain when to
- *                 stop calling this function and although you can still do
- *                 so with something like ssl->MBEDTLS_PRIVATE(state) or by
- *                 defining MBEDTLS_ALLOW_PRIVATE_ACCESS, this is now
- *                 considered deprecated and could be broken in any future
- *                 release. If you still find you have good reason for such
- *                 direct access, then please do contact the team to explain
- *                 this (raise an issue or post to the mailing list), so that
- *                 we can add a solution to your problem that will be
- *                 guaranteed to work in the future.
+ *                 call this function if state is MBEDTLS_SSL_HANDSHAKE_OVER.
  *
  * \param ssl      SSL context
  *
