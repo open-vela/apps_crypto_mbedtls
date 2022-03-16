@@ -30,16 +30,18 @@
 #define mbedtls_free       free
 #endif
 
-#if !defined(MBEDTLS_HAVE_TIME)
+#if !defined(MBEDTLS_TIMING_C)
 int main( void )
 {
-    mbedtls_printf("MBEDTLS_HAVE_TIME not defined.\n");
+    mbedtls_printf("MBEDTLS_TIMING_C not defined.\n");
     mbedtls_exit( 0 );
 }
 #else
 
 #include <string.h>
 #include <stdlib.h>
+
+#include "mbedtls/timing.h"
 
 #include "mbedtls/md5.h"
 #include "mbedtls/ripemd160.h"
@@ -1302,4 +1304,4 @@ int main( int argc, char *argv[] )
     mbedtls_exit( 0 );
 }
 
-#endif /* MBEDTLS_HAVE_TIME */
+#endif /* MBEDTLS_TIMING_C */
