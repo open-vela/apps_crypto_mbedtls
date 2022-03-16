@@ -3332,3 +3332,6 @@ conf_version:MBEDTLS_SSL_IS_CLIENT:MBEDTLS_SSL_TRANSPORT_STREAM:3:4:3:5:MBEDTLS_
 
 Test accessor into timing_delay_context
 timing_final_delay_accessor
+
+Sanity test cid functions
+cid_sanity:
