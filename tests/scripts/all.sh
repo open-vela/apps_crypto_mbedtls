@@ -1435,23 +1435,8 @@ component_build_crypto_full () {
 component_build_crypto_baremetal () {
   msg "build: make, crypto only, baremetal config"
   scripts/config.py crypto_baremetal
-  make CFLAGS="-O1 -Werror -I$PWD/tests/include/baremetal-override/"
+  make CFLAGS='-O1 -Werror'
   are_empty_libraries library/libmbedx509.* library/libmbedtls.*
-}
-support_build_crypto_baremetal () {
-    support_build_baremetal "$@"
-}
-
-component_build_baremetal () {
-  msg "build: make, baremetal config"
-  scripts/config.py baremetal
-  make CFLAGS="-O1 -Werror -I$PWD/tests/include/baremetal-override/"
-}
-support_build_baremetal () {
-    # Older Glibc versions include time.h from other headers such as stdlib.h,
-    # which makes the no-time.h-in-baremetal check fail. Ubuntu 16.04 has this
-    # problem, Ubuntu 18.04 is ok.
-    ! grep -q -F time.h /usr/include/x86_64-linux-gnu/sys/types.h
 }
 
 component_test_depends_curves () {
@@ -1513,9 +1498,6 @@ component_build_module_alt () {
     # The SpecifiedECDomain parsing code accesses mbedtls_ecp_group fields
     # directly and assumes the implementation works with partial groups.
     scripts/config.py unset MBEDTLS_PK_PARSE_EC_EXTENDED
-    # MBEDTLS_SHA256_*ALT can't be used with MBEDTLS_SHA256_USE_A64_CRYPTO_*
-    scripts/config.py unset MBEDTLS_SHA256_USE_A64_CRYPTO_IF_PRESENT
-    scripts/config.py unset MBEDTLS_SHA256_USE_A64_CRYPTO_ONLY
     # Enable all MBEDTLS_XXX_ALT for whole modules. Do not enable
     # MBEDTLS_XXX_YYY_ALT which are for single functions.
     scripts/config.py set-all 'MBEDTLS_([A-Z0-9]*|NIST_KW)_ALT'
@@ -2720,7 +2702,7 @@ component_build_armcc () {
     armc6_build_test "--target=arm-arm-none-eabi -march=armv8-m.main"
 
     # ARM Compiler 6 - Target ARMv8-A - AArch64
-    armc6_build_test "--target=aarch64-arm-none-eabi -march=armv8.2-a+crypto"
+    armc6_build_test "--target=aarch64-arm-none-eabi -march=armv8.2-a"
 }
 
 component_test_tls13_only () {
