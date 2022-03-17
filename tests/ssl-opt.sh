@@ -2816,6 +2816,7 @@ run_test    "Session resume using tickets: basic" \
             -c "a session has been resumed"
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
+requires_config_disabled MBEDTLS_USE_PSA_CRYPTO
 run_test    "Session resume using tickets: manual rotation" \
             "$P_SRV debug_level=3 tickets=1 ticket_rotate=1" \
             "$P_CLI debug_level=3 tickets=1 reconnect=1" \
@@ -3096,21 +3097,6 @@ run_test    "Session resume using tickets: ARIA-192-CCM" \
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 run_test    "Session resume using tickets: ARIA-256-CCM" \
             "$P_SRV debug_level=3 tickets=1 ticket_aead=ARIA-256-CCM" \
-            "$P_CLI debug_level=3 tickets=1 reconnect=1" \
-            0 \
-            -c "client hello, adding session ticket extension" \
-            -s "found session ticket extension" \
-            -s "server hello, adding session ticket extension" \
-            -c "found session_ticket extension" \
-            -c "parse new session ticket" \
-            -S "session successfully restored from cache" \
-            -s "session successfully restored from ticket" \
-            -s "a session has been resumed" \
-            -c "a session has been resumed"
-
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
-run_test    "Session resume using tickets: CHACHA20-POLY1305" \
-            "$P_SRV debug_level=3 tickets=1 ticket_aead=CHACHA20-POLY1305" \
             "$P_CLI debug_level=3 tickets=1 reconnect=1" \
             0 \
             -c "client hello, adding session ticket extension" \
@@ -9682,6 +9668,7 @@ run_test    "TLS 1.3: minimal feature sets - openssl" \
             -c "<= parse certificate verify"          \
             -c "mbedtls_ssl_tls13_process_certificate_verify() returned 0" \
             -c "<= parse finished message" \
+            -c "Protocol is TLSv1.3" \
             -c "HTTP/1.0 200 ok"
 
 requires_gnutls_tls1_3
@@ -9715,6 +9702,7 @@ run_test    "TLS 1.3: minimal feature sets - gnutls" \
             -c "<= parse certificate verify"          \
             -c "mbedtls_ssl_tls13_process_certificate_verify() returned 0" \
             -c "<= parse finished message" \
+            -c "Protocol is TLSv1.3" \
             -c "HTTP/1.0 200 OK"
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3

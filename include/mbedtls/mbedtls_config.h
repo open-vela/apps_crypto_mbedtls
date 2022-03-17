@@ -1769,15 +1769,8 @@
  * This setting allows support for cryptographic mechanisms through the PSA
  * API to be configured separately from support through the mbedtls API.
  *
- * When this option is disabled, the PSA API exposes the same cryptographic
- * mechanism as the `mbedtls_xxx` API configured with `MBEDTLS_XXX` symbols.
- *
- * When this option is enabled, the PSA API exposes the cryptographic
- * mechanisms requested by the `PSA_WANT_XXX` symbols defined in
- * include/psa/crypto_config.h. The corresponding `MBEDTLS_XXX` settings are
- * automatically enabled if required (i.e. if no PSA driver provides the
- * mechanism). You may still freely enable additional `MBEDTLS_XXX` symbols
- * in mbedtls_config.h.
+ * Uncomment this to enable use of PSA Crypto configuration settings which
+ * can be found in include/psa/crypto_config.h.
  *
  * This feature is still experimental and is not ready for production since
  * it is not completed.
@@ -3044,38 +3037,6 @@
  * parameters (to prevent duplicate documentation).
  * \{
  */
-
-/* Meta configuration */
-/**
- * \def MBEDTLS_CONFIG_FILE
- *
- * If defined, this is a header which will be included instead of
- * `"mbedtls/mbedtls_config.h"`.
- * This header file specifies the compile-time configuration of Mbed TLS.
- *
- * This macro is expanded after an `#include` directive. This is a popular but
- * non-standard feature of the C language, so this feature is only available
- * with compilers that perform macro expansion on an `#include` line.
- *
- * The value of this symbol is typically a path in double quotes, relative
- * to a directory on the include search pah.
- */
-//#define MBEDTLS_CONFIG_FILE "mbedtls/mbedtls_config.h"
-
-/**
- * \def MBEDTLS_USER_CONFIG_FILE
- *
- * If defined, this is a header which will be included after
- * `"mbedtls/mbedtls_config.h"` or #MBEDTLS_CONFIG_FILE.
- *
- * This macro is expanded after an `#include` directive. This is a popular but
- * non-standard feature of the C language, so this feature is only available
- * with compilers that perform macro expansion on an `#include` line.
- *
- * The value of this symbol is typically a path in double quotes, relative
- * to a directory on the include search pah.
- */
-//#define MBEDTLS_USER_CONFIG_FILE "/dev/null"
 
 /* MPI / BIGNUM options */
 //#define MBEDTLS_MPI_WINDOW_SIZE            6 /**< Maximum window size used. */
