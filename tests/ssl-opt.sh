@@ -2816,7 +2816,6 @@ run_test    "Session resume using tickets: basic" \
             -c "a session has been resumed"
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
-requires_config_disabled MBEDTLS_USE_PSA_CRYPTO
 run_test    "Session resume using tickets: manual rotation" \
             "$P_SRV debug_level=3 tickets=1 ticket_rotate=1" \
             "$P_CLI debug_level=3 tickets=1 reconnect=1" \
@@ -3097,6 +3096,21 @@ run_test    "Session resume using tickets: ARIA-192-CCM" \
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 run_test    "Session resume using tickets: ARIA-256-CCM" \
             "$P_SRV debug_level=3 tickets=1 ticket_aead=ARIA-256-CCM" \
+            "$P_CLI debug_level=3 tickets=1 reconnect=1" \
+            0 \
+            -c "client hello, adding session ticket extension" \
+            -s "found session ticket extension" \
+            -s "server hello, adding session ticket extension" \
+            -c "found session_ticket extension" \
+            -c "parse new session ticket" \
+            -S "session successfully restored from cache" \
+            -s "session successfully restored from ticket" \
+            -s "a session has been resumed" \
+            -c "a session has been resumed"
+
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
+run_test    "Session resume using tickets: CHACHA20-POLY1305" \
+            "$P_SRV debug_level=3 tickets=1 ticket_aead=CHACHA20-POLY1305" \
             "$P_CLI debug_level=3 tickets=1 reconnect=1" \
             0 \
             -c "client hello, adding session ticket extension" \
@@ -5025,7 +5039,6 @@ run_test    "SNI: no SNI callback" \
              crt_file=data_files/server5.crt key_file=data_files/server5.key" \
             "$P_CLI server_name=localhost" \
             0 \
-            -S "parse ServerName extension" \
             -c "issuer name *: C=NL, O=PolarSSL, CN=Polarssl Test EC CA" \
             -c "subject name *: C=NL, O=PolarSSL, CN=localhost"
 
@@ -5175,7 +5188,6 @@ run_test    "SNI: DTLS, no SNI callback" \
              crt_file=data_files/server5.crt key_file=data_files/server5.key" \
             "$P_CLI server_name=localhost dtls=1" \
             0 \
-            -S "parse ServerName extension" \
             -c "issuer name *: C=NL, O=PolarSSL, CN=Polarssl Test EC CA" \
             -c "subject name *: C=NL, O=PolarSSL, CN=localhost"
 
@@ -9704,6 +9716,76 @@ run_test    "TLS 1.3: minimal feature sets - gnutls" \
             -c "<= parse finished message" \
             -c "Protocol is TLSv1.3" \
             -c "HTTP/1.0 200 OK"
+
+requires_openssl_tls1_3
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
+requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
+requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
+requires_config_enabled MBEDTLS_SSL_ALPN
+requires_config_disabled MBEDTLS_USE_PSA_CRYPTO
+run_test    "TLS 1.3: alpn - openssl" \
+            "$O_NEXT_SRV -msg -tls1_3 -num_tickets 0 -no_resume_ephemeral -no_cache -alpn h2" \
+            "$P_CLI debug_level=3 min_version=tls13 max_version=tls13 alpn=h2" \
+            0 \
+            -c "tls13 client state: MBEDTLS_SSL_HELLO_REQUEST"               \
+            -c "tls13 client state: MBEDTLS_SSL_SERVER_HELLO"                \
+            -c "tls13 client state: MBEDTLS_SSL_ENCRYPTED_EXTENSIONS"       \
+            -c "tls13 client state: MBEDTLS_SSL_CERTIFICATE_REQUEST"         \
+            -c "tls13 client state: MBEDTLS_SSL_SERVER_CERTIFICATE"          \
+            -c "tls13 client state: MBEDTLS_SSL_CERTIFICATE_VERIFY"          \
+            -c "tls13 client state: MBEDTLS_SSL_SERVER_FINISHED"            \
+            -c "tls13 client state: MBEDTLS_SSL_CLIENT_FINISHED"            \
+            -c "tls13 client state: MBEDTLS_SSL_FLUSH_BUFFERS"              \
+            -c "tls13 client state: MBEDTLS_SSL_HANDSHAKE_WRAPUP"           \
+            -c "<= ssl_tls13_process_server_hello" \
+            -c "server hello, chosen ciphersuite: ( 1301 ) - TLS1-3-AES-128-GCM-SHA256" \
+            -c "ECDH curve: x25519"         \
+            -c "=> ssl_tls13_process_server_hello" \
+            -c "<= parse encrypted extensions"      \
+            -c "Certificate verification flags clear" \
+            -c "=> parse certificate verify"          \
+            -c "<= parse certificate verify"          \
+            -c "mbedtls_ssl_tls13_process_certificate_verify() returned 0" \
+            -c "<= parse finished message" \
+            -c "HTTP/1.0 200 ok" \
+            -c "Application Layer Protocol is h2"
+
+requires_gnutls_tls1_3
+requires_gnutls_next_no_ticket
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
+requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
+requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
+requires_config_enabled MBEDTLS_SSL_ALPN
+requires_config_disabled MBEDTLS_USE_PSA_CRYPTO
+run_test    "TLS 1.3: alpn - gnutls" \
+            "$G_NEXT_SRV --debug=4 --priority=NORMAL:-VERS-ALL:+VERS-TLS1.3:+CIPHER-ALL:%NO_TICKETS --disable-client-cert --alpn=h2" \
+            "$P_CLI debug_level=3 min_version=tls13 max_version=tls13 alpn=h2" \
+            0 \
+            -s "SERVER HELLO was queued"    \
+            -c "tls13 client state: MBEDTLS_SSL_HELLO_REQUEST"               \
+            -c "tls13 client state: MBEDTLS_SSL_SERVER_HELLO"                \
+            -c "tls13 client state: MBEDTLS_SSL_ENCRYPTED_EXTENSIONS"       \
+            -c "tls13 client state: MBEDTLS_SSL_CERTIFICATE_REQUEST"         \
+            -c "tls13 client state: MBEDTLS_SSL_SERVER_CERTIFICATE"          \
+            -c "tls13 client state: MBEDTLS_SSL_CERTIFICATE_VERIFY"          \
+            -c "tls13 client state: MBEDTLS_SSL_SERVER_FINISHED"            \
+            -c "tls13 client state: MBEDTLS_SSL_CLIENT_FINISHED"            \
+            -c "tls13 client state: MBEDTLS_SSL_FLUSH_BUFFERS"              \
+            -c "tls13 client state: MBEDTLS_SSL_HANDSHAKE_WRAPUP"           \
+            -c "<= ssl_tls13_process_server_hello" \
+            -c "server hello, chosen ciphersuite: ( 1301 ) - TLS1-3-AES-128-GCM-SHA256" \
+            -c "ECDH curve: x25519"         \
+            -c "=> ssl_tls13_process_server_hello" \
+            -c "<= parse encrypted extensions"      \
+            -c "Certificate verification flags clear" \
+            -c "=> parse certificate verify"          \
+            -c "<= parse certificate verify"          \
+            -c "mbedtls_ssl_tls13_process_certificate_verify() returned 0" \
+            -c "<= parse finished message" \
+            -c "HTTP/1.0 200 OK" \
+            -c "Application Layer Protocol is h2"
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_DEBUG_C
