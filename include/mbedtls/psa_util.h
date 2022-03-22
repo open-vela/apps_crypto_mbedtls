@@ -29,7 +29,7 @@
 
 #include "mbedtls/build_info.h"
 
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
+#if defined(MBEDTLS_PSA_CRYPTO_C)
 
 #include "psa/crypto.h"
 
@@ -277,13 +277,11 @@ static inline psa_key_type_t mbedtls_psa_parse_tls_ecc_group(
 }
 #endif /* MBEDTLS_ECP_C */
 
-#endif /* MBEDTLS_USE_PSA_CRYPTO */
-
 /* Expose whatever RNG the PSA subsystem uses to applications using the
  * mbedtls_xxx API. The declarations and definitions here need to be
  * consistent with the implementation in library/psa_crypto_random_impl.h.
  * See that file for implementation documentation. */
-#if defined(MBEDTLS_PSA_CRYPTO_C)
+
 
 /* The type of a `f_rng` random generator function that many library functions
  * take.
