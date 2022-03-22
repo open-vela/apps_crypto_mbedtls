@@ -27,8 +27,9 @@
 #include "mbedtls/ssl.h"
 #include "mbedtls/cipher.h"
 
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
+#if defined(MBEDTLS_USE_PSA_CRYPTO) || defined(MBEDTLS_SSL_PROTO_TLS1_3)
 #include "psa/crypto.h"
+#include "mbedtls/psa_util.h"
 #endif
 
 #if defined(MBEDTLS_MD5_C)
@@ -629,13 +630,13 @@ struct mbedtls_ssl_handshake_params
 #if defined(MBEDTLS_ECDH_C) || defined(MBEDTLS_ECDSA_C)
     mbedtls_ecdh_context ecdh_ctx;              /*!<  ECDH key exchange       */
 
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
+#if defined(MBEDTLS_USE_PSA_CRYPTO) || defined(MBEDTLS_SSL_PROTO_TLS1_3)
     psa_key_type_t ecdh_psa_type;
     uint16_t ecdh_bits;
     mbedtls_svc_key_id_t ecdh_psa_privkey;
     unsigned char ecdh_psa_peerkey[MBEDTLS_PSA_MAX_EC_PUBKEY_LENGTH];
     size_t ecdh_psa_peerkey_len;
-#endif /* MBEDTLS_USE_PSA_CRYPTO */
+#endif /* MBEDTLS_USE_PSA_CRYPTO || MBEDTLS_SSL_PROTO_TLS1_3 */
 #endif /* MBEDTLS_ECDH_C || MBEDTLS_ECDSA_C */
 
 #if defined(MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED)
@@ -849,6 +850,11 @@ struct mbedtls_ssl_handshake_params
      * The library does not use it internally. */
     void *user_async_ctx;
 #endif /* MBEDTLS_SSL_ASYNC_PRIVATE */
+
+#if defined(MBEDTLS_SSL_SERVER_NAME_INDICATION)
+    const unsigned char *sni_name;      /*!< raw SNI                        */
+    size_t sni_name_len;                /*!< raw SNI len                    */
+#endif /* MBEDTLS_SSL_SERVER_NAME_INDICATION */
 };
 
 typedef struct mbedtls_ssl_hs_buffer mbedtls_ssl_hs_buffer;
@@ -948,8 +954,14 @@ struct mbedtls_ssl_transform
 
 #if defined(MBEDTLS_SSL_SOME_SUITES_USE_MAC)
 
+#if defined(MBEDTLS_USE_PSA_CRYPTO)
+    mbedtls_svc_key_id_t psa_mac_enc;           /*!<  MAC (encryption)        */
+    mbedtls_svc_key_id_t psa_mac_dec;           /*!<  MAC (decryption)        */
+    psa_algorithm_t psa_mac_alg;                /*!<  psa MAC algorithm       */
+#else
     mbedtls_md_context_t md_ctx_enc;            /*!<  MAC (encryption)        */
     mbedtls_md_context_t md_ctx_dec;            /*!<  MAC (decryption)        */
+#endif /* MBEDTLS_USE_PSA_CRYPTO */
 
 #if defined(MBEDTLS_SSL_ENCRYPT_THEN_MAC)
     int encrypt_then_mac;       /*!< flag for EtM activation                */
@@ -1230,13 +1242,14 @@ int mbedtls_ssl_read_record( mbedtls_ssl_context *ssl,
 int mbedtls_ssl_fetch_input( mbedtls_ssl_context *ssl, size_t nb_want );
 
 int mbedtls_ssl_write_handshake_msg_ext( mbedtls_ssl_context *ssl,
-                                         int update_checksum );
+                                         int update_checksum,
+                                         int force_flush );
 static inline int mbedtls_ssl_write_handshake_msg( mbedtls_ssl_context *ssl )
 {
-    return( mbedtls_ssl_write_handshake_msg_ext( ssl, 1 /* update checksum */ ) );
+    return( mbedtls_ssl_write_handshake_msg_ext( ssl, 1 /* update checksum */, 1 /* force flush */ ) );
 }
 
-int mbedtls_ssl_write_record( mbedtls_ssl_context *ssl, uint8_t force_flush );
+int mbedtls_ssl_write_record( mbedtls_ssl_context *ssl, int force_flush );
 int mbedtls_ssl_flush_output( mbedtls_ssl_context *ssl );
 
 int mbedtls_ssl_parse_certificate( mbedtls_ssl_context *ssl );
@@ -2045,6 +2058,10 @@ static inline int mbedtls_ssl_sig_alg_is_supported(
     defined(MBEDTLS_X509_RSASSA_PSS_SUPPORT)
             case MBEDTLS_TLS1_3_SIG_RSA_PSS_RSAE_SHA256:
                 break;
+            case MBEDTLS_TLS1_3_SIG_RSA_PSS_RSAE_SHA384:
+                break;
+            case MBEDTLS_TLS1_3_SIG_RSA_PSS_RSAE_SHA512:
+                break;
 #endif /* MBEDTLS_SHA256_C &&
           MBEDTLS_X509_RSASSA_PSS_SUPPORT */
 
@@ -2109,7 +2126,9 @@ psa_status_t mbedtls_ssl_cipher_to_psa( mbedtls_cipher_type_t mbedtls_cipher_typ
                                     psa_algorithm_t *alg,
                                     psa_key_type_t *key_type,
                                     size_t *key_size );
+#endif /* MBEDTLS_USE_PSA_CRYPTO */
 
+#if defined(MBEDTLS_USE_PSA_CRYPTO) || defined(MBEDTLS_SSL_PROTO_TLS1_3)
 /**
  * \brief       Convert given PSA status to mbedtls error code.
  *
@@ -2133,6 +2152,6 @@ static inline int psa_ssl_status_to_mbedtls( psa_status_t status )
             return( MBEDTLS_ERR_PLATFORM_HW_ACCEL_FAILED );
     }
 }
-#endif /* MBEDTLS_USE_PSA_CRYPTO */
+#endif /* MBEDTLS_USE_PSA_CRYPTO || MBEDTLS_SSL_PROTO_TLS1_3 */
 
 #endif /* ssl_misc.h */
