@@ -610,13 +610,8 @@ void mbedtls_ssl_transform_init( mbedtls_ssl_transform *transform )
 #endif
 
 #if defined(MBEDTLS_SSL_SOME_SUITES_USE_MAC)
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
-    transform->psa_mac_enc = MBEDTLS_SVC_KEY_ID_INIT;
-    transform->psa_mac_dec = MBEDTLS_SVC_KEY_ID_INIT;
-#else
     mbedtls_md_init( &transform->md_ctx_enc );
     mbedtls_md_init( &transform->md_ctx_dec );
-#endif
 #endif
 }
 
@@ -2733,21 +2728,6 @@ static int ssl_prepare_handshake_step( mbedtls_ssl_context *ssl )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
 
-    /*
-     * We may have not been able to send to the peer all the handshake data
-     * that were written into the output buffer by the previous handshake step,
-     * if the write to the network callback returned with the
-     * #MBEDTLS_ERR_SSL_WANT_WRITE error code.
-     * We proceed to the next handshake step only when all data from the
-     * previous one have been sent to the peer, thus we make sure that this is
-     * the case here by calling `mbedtls_ssl_flush_output()`. The function may
-     * return with the #MBEDTLS_ERR_SSL_WANT_WRITE error code in which case
-     * we have to wait before to go ahead.
-     * In the case of TLS 1.3, handshake step handlers do not send data to the
-     * peer. Data are only sent here and through
-     * `mbedtls_ssl_handle_pending_alert` in case an error that triggered an
-     * alert occured.
-     */
     if( ( ret = mbedtls_ssl_flush_output( ssl ) ) != 0 )
         return( ret );
 
@@ -3100,11 +3080,9 @@ void mbedtls_ssl_handshake_free( mbedtls_ssl_context *ssl )
     mbedtls_pk_free( &handshake->peer_pubkey );
 #endif /* MBEDTLS_X509_CRT_PARSE_C && !MBEDTLS_SSL_KEEP_PEER_CERTIFICATE */
 
-#if defined(MBEDTLS_SSL_CLI_C) && \
-    ( defined(MBEDTLS_SSL_PROTO_DTLS) || defined(MBEDTLS_SSL_PROTO_TLS1_3) )
-    mbedtls_free( handshake->cookie );
-#endif /* MBEDTLS_SSL_CLI_C &&
-          ( MBEDTLS_SSL_PROTO_DTLS || MBEDTLS_SSL_PROTO_TLS1_3 ) */
+#if defined(MBEDTLS_SSL_PROTO_DTLS) || defined(MBEDTLS_SSL_PROTO_TLS1_3)
+    mbedtls_free( handshake->verify_cookie );
+#endif /* MBEDTLS_SSL_PROTO_DTLS || MBEDTLS_SSL_PROTO_TLS1_3 */
 
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
     mbedtls_ssl_flight_free( handshake->flight );
@@ -7203,7 +7181,6 @@ static int ssl_tls12_populate_transform( mbedtls_ssl_transform *transform,
     if( mbedtls_cipher_info_get_mode( cipher_info ) == MBEDTLS_MODE_STREAM ||
         mbedtls_cipher_info_get_mode( cipher_info ) == MBEDTLS_MODE_CBC )
     {
-#if !defined(MBEDTLS_USE_PSA_CRYPTO)
         /* Initialize HMAC contexts */
         if( ( ret = mbedtls_md_setup( &transform->md_ctx_enc, md_info, 1 ) ) != 0 ||
             ( ret = mbedtls_md_setup( &transform->md_ctx_dec, md_info, 1 ) ) != 0 )
@@ -7211,7 +7188,6 @@ static int ssl_tls12_populate_transform( mbedtls_ssl_transform *transform,
             MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_md_setup", ret );
             goto end;
         }
-#endif /* !MBEDTLS_USE_PSA_CRYPTO */
 
         /* Get MAC length */
         mac_key_len = mbedtls_md_get_size( md_info );
@@ -7319,6 +7295,23 @@ static int ssl_tls12_populate_transform( mbedtls_ssl_transform *transform,
         goto end;
     }
 
+#if defined(MBEDTLS_SSL_SOME_SUITES_USE_MAC)
+    /* For HMAC-based ciphersuites, initialize the HMAC transforms.
+       For AEAD-based ciphersuites, there is nothing to do here. */
+    if( mac_key_len != 0 )
+    {
+        ret = mbedtls_md_hmac_starts( &transform->md_ctx_enc, mac_enc, mac_key_len );
+        if( ret != 0 )
+            goto end;
+        ret = mbedtls_md_hmac_starts( &transform->md_ctx_dec, mac_dec, mac_key_len );
+        if( ret != 0 )
+            goto end;
+    }
+#endif /* MBEDTLS_SSL_SOME_SUITES_USE_MAC */
+
+    ((void) mac_dec);
+    ((void) mac_enc);
+
     if( ssl != NULL && ssl->f_export_keys != NULL )
     {
         ssl->f_export_keys( ssl->p_export_keys,
@@ -7422,66 +7415,6 @@ static int ssl_tls12_populate_transform( mbedtls_ssl_transform *transform,
     }
 #endif /* MBEDTLS_CIPHER_MODE_CBC */
 #endif /* MBEDTLS_USE_PSA_CRYPTO */
-
-#if defined(MBEDTLS_SSL_SOME_SUITES_USE_MAC)
-    /* For HMAC-based ciphersuites, initialize the HMAC transforms.
-       For AEAD-based ciphersuites, there is nothing to do here. */
-    if( mac_key_len != 0 )
-    {
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
-        alg = mbedtls_psa_translate_md( ciphersuite_info->mac );
-        if( alg == 0 )
-        {
-                ret = MBEDTLS_ERR_SSL_BAD_INPUT_DATA;
-                MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_md_type_to_psa", ret );
-                goto end;
-        }
-
-        transform->psa_mac_alg = PSA_ALG_HMAC( alg );
-
-        psa_set_key_usage_flags( &attributes, PSA_KEY_USAGE_SIGN_MESSAGE );
-        psa_set_key_algorithm( &attributes, PSA_ALG_HMAC( alg ) );
-        psa_set_key_type( &attributes, PSA_KEY_TYPE_HMAC );
-
-        if( ( status = psa_import_key( &attributes,
-                                       mac_enc, mac_key_len,
-                                       &transform->psa_mac_enc ) ) != PSA_SUCCESS )
-        {
-            ret = psa_ssl_status_to_mbedtls( status );
-            MBEDTLS_SSL_DEBUG_RET( 1, "psa_import_mac_key", ret );
-            goto end;
-        }
-
-        if( ( transform->psa_alg == MBEDTLS_SSL_NULL_CIPHER ) ||
-            ( ( transform->psa_alg == PSA_ALG_CBC_NO_PADDING ) &&
-              ( transform->encrypt_then_mac == MBEDTLS_SSL_ETM_DISABLED ) ) )
-            /* mbedtls_ct_hmac() requires the key to be exportable */
-            psa_set_key_usage_flags( &attributes, PSA_KEY_USAGE_EXPORT |
-                                                  PSA_KEY_USAGE_VERIFY_HASH );
-        else
-            psa_set_key_usage_flags( &attributes, PSA_KEY_USAGE_VERIFY_HASH );
-
-        if( ( status = psa_import_key( &attributes,
-                                       mac_dec, mac_key_len,
-                                       &transform->psa_mac_dec ) ) != PSA_SUCCESS )
-        {
-            ret = psa_ssl_status_to_mbedtls( status );
-            MBEDTLS_SSL_DEBUG_RET( 1, "psa_import_mac_key", ret );
-            goto end;
-        }
-#else
-        ret = mbedtls_md_hmac_starts( &transform->md_ctx_enc, mac_enc, mac_key_len );
-        if( ret != 0 )
-            goto end;
-        ret = mbedtls_md_hmac_starts( &transform->md_ctx_dec, mac_dec, mac_key_len );
-        if( ret != 0 )
-            goto end;
-#endif /* MBEDTLS_USE_PSA_CRYPTO */
-    }
-#endif /* MBEDTLS_SSL_SOME_SUITES_USE_MAC */
-
-    ((void) mac_dec);
-    ((void) mac_enc);
 
 end:
     mbedtls_platform_zeroize( keyblk, sizeof( keyblk ) );
