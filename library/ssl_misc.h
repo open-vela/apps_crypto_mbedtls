@@ -704,20 +704,14 @@ struct mbedtls_ssl_handshake_params
 
     } buffering;
 
-#if defined(MBEDTLS_SSL_CLI_C) && \
-    ( defined(MBEDTLS_SSL_PROTO_DTLS) || defined(MBEDTLS_SSL_PROTO_TLS1_3) )
-    unsigned char *cookie;              /*!<  HelloVerifyRequest cookie for DTLS
-                                         *    HelloRetryRequest cookie for TLS 1.3 */
-#endif /* MBEDTLS_SSL_CLI_C &&
-          ( MBEDTLS_SSL_PROTO_DTLS || MBEDTLS_SSL_PROTO_TLS1_3 ) */
-#if defined(MBEDTLS_SSL_PROTO_DTLS)
-    unsigned char verify_cookie_len;    /*!<  Cli: HelloVerifyRequest cookie
-                                         *    length
+#if defined(MBEDTLS_SSL_PROTO_DTLS) || defined(MBEDTLS_SSL_PROTO_TLS1_3)
+    unsigned char *verify_cookie;       /*!<  Cli: HelloVerifyRequest cookie
+                                         *    for dtls / tls 1.3
+                                         *    Srv: unused                    */
+    unsigned char verify_cookie_len;    /*!<  Cli: cookie length for
+                                         *    dtls / tls 1.3
                                          *    Srv: flag for sending a cookie */
-#endif /* MBEDTLS_SSL_PROTO_DTLS */
-#if defined(MBEDTLS_SSL_CLI_C) && defined(MBEDTLS_SSL_PROTO_TLS1_3)
-    uint16_t hrr_cookie_len;            /*!<  HelloRetryRequest cookie length */
-#endif /* MBEDTLS_SSL_CLI_C && MBEDTLS_SSL_PROTO_TLS1_3 */
+#endif /* MBEDTLS_SSL_PROTO_DTLS || MBEDTLS_SSL_PROTO_TLS1_3 */
 
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
     unsigned int out_msg_seq;           /*!<  Outgoing handshake sequence number */
@@ -960,14 +954,8 @@ struct mbedtls_ssl_transform
 
 #if defined(MBEDTLS_SSL_SOME_SUITES_USE_MAC)
 
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
-    mbedtls_svc_key_id_t psa_mac_enc;           /*!<  MAC (encryption)        */
-    mbedtls_svc_key_id_t psa_mac_dec;           /*!<  MAC (decryption)        */
-    psa_algorithm_t psa_mac_alg;                /*!<  psa MAC algorithm       */
-#else
     mbedtls_md_context_t md_ctx_enc;            /*!<  MAC (encryption)        */
     mbedtls_md_context_t md_ctx_dec;            /*!<  MAC (decryption)        */
-#endif /* MBEDTLS_USE_PSA_CRYPTO */
 
 #if defined(MBEDTLS_SSL_ENCRYPT_THEN_MAC)
     int encrypt_then_mac;       /*!< flag for EtM activation                */
@@ -1248,14 +1236,13 @@ int mbedtls_ssl_read_record( mbedtls_ssl_context *ssl,
 int mbedtls_ssl_fetch_input( mbedtls_ssl_context *ssl, size_t nb_want );
 
 int mbedtls_ssl_write_handshake_msg_ext( mbedtls_ssl_context *ssl,
-                                         int update_checksum,
-                                         int force_flush );
+                                         int update_checksum );
 static inline int mbedtls_ssl_write_handshake_msg( mbedtls_ssl_context *ssl )
 {
-    return( mbedtls_ssl_write_handshake_msg_ext( ssl, 1 /* update checksum */, 1 /* force flush */ ) );
+    return( mbedtls_ssl_write_handshake_msg_ext( ssl, 1 /* update checksum */ ) );
 }
 
-int mbedtls_ssl_write_record( mbedtls_ssl_context *ssl, int force_flush );
+int mbedtls_ssl_write_record( mbedtls_ssl_context *ssl, uint8_t force_flush );
 int mbedtls_ssl_flush_output( mbedtls_ssl_context *ssl );
 
 int mbedtls_ssl_parse_certificate( mbedtls_ssl_context *ssl );
