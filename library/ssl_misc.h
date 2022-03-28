@@ -704,14 +704,20 @@ struct mbedtls_ssl_handshake_params
 
     } buffering;
 
-#if defined(MBEDTLS_SSL_PROTO_DTLS) || defined(MBEDTLS_SSL_PROTO_TLS1_3)
-    unsigned char *verify_cookie;       /*!<  Cli: HelloVerifyRequest cookie
-                                         *    for dtls / tls 1.3
-                                         *    Srv: unused                    */
-    unsigned char verify_cookie_len;    /*!<  Cli: cookie length for
-                                         *    dtls / tls 1.3
+#if defined(MBEDTLS_SSL_CLI_C) && \
+    ( defined(MBEDTLS_SSL_PROTO_DTLS) || defined(MBEDTLS_SSL_PROTO_TLS1_3) )
+    unsigned char *cookie;              /*!<  HelloVerifyRequest cookie for DTLS
+                                         *    HelloRetryRequest cookie for TLS 1.3 */
+#endif /* MBEDTLS_SSL_CLI_C &&
+          ( MBEDTLS_SSL_PROTO_DTLS || MBEDTLS_SSL_PROTO_TLS1_3 ) */
+#if defined(MBEDTLS_SSL_PROTO_DTLS)
+    unsigned char verify_cookie_len;    /*!<  Cli: HelloVerifyRequest cookie
+                                         *    length
                                          *    Srv: flag for sending a cookie */
-#endif /* MBEDTLS_SSL_PROTO_DTLS || MBEDTLS_SSL_PROTO_TLS1_3 */
+#endif /* MBEDTLS_SSL_PROTO_DTLS */
+#if defined(MBEDTLS_SSL_CLI_C) && defined(MBEDTLS_SSL_PROTO_TLS1_3)
+    uint16_t hrr_cookie_len;            /*!<  HelloRetryRequest cookie length */
+#endif /* MBEDTLS_SSL_CLI_C && MBEDTLS_SSL_PROTO_TLS1_3 */
 
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
     unsigned int out_msg_seq;           /*!<  Outgoing handshake sequence number */
@@ -954,8 +960,14 @@ struct mbedtls_ssl_transform
 
 #if defined(MBEDTLS_SSL_SOME_SUITES_USE_MAC)
 
+#if defined(MBEDTLS_USE_PSA_CRYPTO)
+    mbedtls_svc_key_id_t psa_mac_enc;           /*!<  MAC (encryption)        */
+    mbedtls_svc_key_id_t psa_mac_dec;           /*!<  MAC (decryption)        */
+    psa_algorithm_t psa_mac_alg;                /*!<  psa MAC algorithm       */
+#else
     mbedtls_md_context_t md_ctx_enc;            /*!<  MAC (encryption)        */
     mbedtls_md_context_t md_ctx_dec;            /*!<  MAC (decryption)        */
+#endif /* MBEDTLS_USE_PSA_CRYPTO */
 
 #if defined(MBEDTLS_SSL_ENCRYPT_THEN_MAC)
     int encrypt_then_mac;       /*!< flag for EtM activation                */
@@ -1236,13 +1248,14 @@ int mbedtls_ssl_read_record( mbedtls_ssl_context *ssl,
 int mbedtls_ssl_fetch_input( mbedtls_ssl_context *ssl, size_t nb_want );
 
 int mbedtls_ssl_write_handshake_msg_ext( mbedtls_ssl_context *ssl,
-                                         int update_checksum );
+                                         int update_checksum,
+                                         int force_flush );
 static inline int mbedtls_ssl_write_handshake_msg( mbedtls_ssl_context *ssl )
 {
-    return( mbedtls_ssl_write_handshake_msg_ext( ssl, 1 /* update checksum */ ) );
+    return( mbedtls_ssl_write_handshake_msg_ext( ssl, 1 /* update checksum */, 1 /* force flush */ ) );
 }
 
-int mbedtls_ssl_write_record( mbedtls_ssl_context *ssl, uint8_t force_flush );
+int mbedtls_ssl_write_record( mbedtls_ssl_context *ssl, int force_flush );
 int mbedtls_ssl_flush_output( mbedtls_ssl_context *ssl );
 
 int mbedtls_ssl_parse_certificate( mbedtls_ssl_context *ssl );
@@ -2085,7 +2098,7 @@ static inline int mbedtls_ssl_sig_alg_is_supported(
 #define MBEDTLS_SSL_SIG_ALG( hash )
 #endif /* MBEDTLS_ECDSA_C && MBEDTLS_RSA_C */
 #endif /* MBEDTLS_SSL_PROTO_TLS1_2 && MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
-#if defined(MBEDTLS_PSA_CRYPTO_C)
+#if defined(MBEDTLS_USE_PSA_CRYPTO)
 /* Corresponding PSA algorithm for MBEDTLS_CIPHER_NULL.
  * Same value is used fo PSA_ALG_CATEGORY_CIPHER, hence it is
  * guaranteed to not be a valid PSA algorithm identifier.
@@ -2115,7 +2128,9 @@ psa_status_t mbedtls_ssl_cipher_to_psa( mbedtls_cipher_type_t mbedtls_cipher_typ
                                     psa_algorithm_t *alg,
                                     psa_key_type_t *key_type,
                                     size_t *key_size );
+#endif /* MBEDTLS_USE_PSA_CRYPTO */
 
+#if defined(MBEDTLS_USE_PSA_CRYPTO) || defined(MBEDTLS_SSL_PROTO_TLS1_3)
 /**
  * \brief       Convert given PSA status to mbedtls error code.
  *
@@ -2130,19 +2145,15 @@ static inline int psa_ssl_status_to_mbedtls( psa_status_t status )
         case PSA_SUCCESS:
             return( 0 );
         case PSA_ERROR_INSUFFICIENT_MEMORY:
-            return( MBEDTLS_ERR_SSL_ALLOC_FAILED );
+            return( MBEDTLS_ERR_CIPHER_ALLOC_FAILED );
         case PSA_ERROR_NOT_SUPPORTED:
-            return( MBEDTLS_ERR_SSL_FEATURE_UNAVAILABLE );
+            return( MBEDTLS_ERR_CIPHER_FEATURE_UNAVAILABLE );
         case PSA_ERROR_INVALID_SIGNATURE:
             return( MBEDTLS_ERR_SSL_INVALID_MAC );
-        case PSA_ERROR_INVALID_ARGUMENT:
-            return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
-        case PSA_ERROR_BAD_STATE:
-            return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
         default:
             return( MBEDTLS_ERR_PLATFORM_HW_ACCEL_FAILED );
     }
 }
-#endif /* MBEDTLS_PSA_CRYPTO_C */
+#endif /* MBEDTLS_USE_PSA_CRYPTO || MBEDTLS_SSL_PROTO_TLS1_3 */
 
 #endif /* ssl_misc.h */
