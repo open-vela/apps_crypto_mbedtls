@@ -41,8 +41,9 @@
 #endif
 
 /* Adding guard for MBEDTLS_ECDSA_C to ensure no compile errors due
- * to guards in TLS code. There is a gap in functionality that access to
- * ecdh_ctx structure is needed for MBEDTLS_ECDSA_C which does not seem correct.
+ * to guards also being in ssl_srv.c and ssl_cli.c. There is a gap
+ * in functionality that access to ecdh_ctx structure is needed for
+ * MBEDTLS_ECDSA_C which does not seem correct.
  */
 #if defined(MBEDTLS_ECDH_C) || defined(MBEDTLS_ECDSA_C)
 #include "mbedtls/ecdh.h"
