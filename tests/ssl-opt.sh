@@ -9630,23 +9630,26 @@ run_test    "TLS 1.3: Test gnutls tls1_3 feature" \
             -c "Version: TLS1.3"
 
 # TLS1.3 test cases
+# TODO: remove or rewrite this test case if #4832 is resolved.
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 skip_handshake_stage_check
 run_test    "TLS 1.3: Not supported version check: tls12 and tls13" \
-            "$P_SRV debug_level=1" \
+            "$P_SRV debug_level=1 min_version=tls12 max_version=tls13" \
             "$P_CLI debug_level=1 min_version=tls12 max_version=tls13" \
             1 \
+            -s "SSL - The requested feature is not available" \
             -c "SSL - The requested feature is not available" \
+            -s "Hybrid TLS 1.2 + TLS 1.3 configurations are not yet supported" \
             -c "Hybrid TLS 1.2 + TLS 1.3 configurations are not yet supported"
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-skip_handshake_stage_check
-run_test    "TLS 1.3: No server support" \
-            "$P_SRV debug_level=2 force_version=tls13" \
-            "$P_CLI debug_level=2 force_version=tls13" \
+run_test    "TLS 1.3: handshake dispatch test: tls13 only" \
+            "$P_SRV debug_level=2 min_version=tls13 max_version=tls13" \
+            "$P_CLI debug_level=2 min_version=tls13 max_version=tls13" \
             1 \
-            -s "TLS 1.3 server is not supported yet."
+            -s "tls13 server state: MBEDTLS_SSL_HELLO_REQUEST"     \
+            -c "tls13 client state: MBEDTLS_SSL_HELLO_REQUEST"
 
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
@@ -10034,11 +10037,12 @@ run_test    "TLS 1.3: Client authentication, rsa_pss_rsae_sha256 - openssl" \
             "$O_NEXT_SRV -msg -tls1_3 -num_tickets 0 -no_resume_ephemeral -no_cache -Verify 10" \
             "$P_CLI debug_level=4 force_version=tls13 crt_file=data_files/cert_sha256.crt \
                     key_file=data_files/server1.key sig_algs=ecdsa_secp256r1_sha256,rsa_pss_rsae_sha256" \
-            0 \
+            1 \
             -c "got a certificate request" \
             -c "client state: MBEDTLS_SSL_CLIENT_CERTIFICATE" \
             -c "client state: MBEDTLS_SSL_CLIENT_CERTIFICATE_VERIFY" \
-            -c "Protocol is TLSv1.3"
+            -c "unkown pk type" \
+            -c "signature algorithm not in received or offered list."
 
 requires_gnutls_tls1_3
 requires_gnutls_next_no_ticket
@@ -10051,77 +10055,12 @@ run_test    "TLS 1.3: Client authentication, rsa_pss_rsae_sha256 - gnutls" \
             "$G_NEXT_SRV --debug=4 --priority=NORMAL:-VERS-ALL:+VERS-TLS1.3:+CIPHER-ALL:%NO_TICKETS" \
             "$P_CLI debug_level=3 force_version=tls13 crt_file=data_files/server2-sha256.crt \
                     key_file=data_files/server2.key sig_algs=ecdsa_secp256r1_sha256,rsa_pss_rsae_sha256" \
-            0 \
+            1 \
             -c "got a certificate request" \
             -c "client state: MBEDTLS_SSL_CLIENT_CERTIFICATE" \
             -c "client state: MBEDTLS_SSL_CLIENT_CERTIFICATE_VERIFY" \
-            -c "Protocol is TLSv1.3"
-
-requires_openssl_tls1_3
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-requires_config_enabled MBEDTLS_DEBUG_C
-requires_config_enabled MBEDTLS_SSL_CLI_C
-requires_config_enabled MBEDTLS_RSA_C
-requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
-run_test    "TLS 1.3: Client authentication, rsa_pss_rsae_sha384 - openssl" \
-            "$O_NEXT_SRV -msg -tls1_3 -num_tickets 0 -no_resume_ephemeral -no_cache -Verify 10" \
-            "$P_CLI debug_level=4 force_version=tls13 crt_file=data_files/cert_sha256.crt \
-                    key_file=data_files/server1.key sig_algs=ecdsa_secp256r1_sha256,rsa_pss_rsae_sha384" \
-            0 \
-            -c "got a certificate request" \
-            -c "client state: MBEDTLS_SSL_CLIENT_CERTIFICATE" \
-            -c "client state: MBEDTLS_SSL_CLIENT_CERTIFICATE_VERIFY" \
-            -c "Protocol is TLSv1.3"
-
-requires_gnutls_tls1_3
-requires_gnutls_next_no_ticket
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-requires_config_enabled MBEDTLS_DEBUG_C
-requires_config_enabled MBEDTLS_SSL_CLI_C
-requires_config_enabled MBEDTLS_RSA_C
-requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
-run_test    "TLS 1.3: Client authentication, rsa_pss_rsae_sha384 - gnutls" \
-            "$G_NEXT_SRV --debug=4 --priority=NORMAL:-VERS-ALL:+VERS-TLS1.3:+CIPHER-ALL:%NO_TICKETS" \
-            "$P_CLI debug_level=3 force_version=tls13 crt_file=data_files/server2-sha256.crt \
-                    key_file=data_files/server2.key sig_algs=ecdsa_secp256r1_sha256,rsa_pss_rsae_sha384" \
-            0 \
-            -c "got a certificate request" \
-            -c "client state: MBEDTLS_SSL_CLIENT_CERTIFICATE" \
-            -c "client state: MBEDTLS_SSL_CLIENT_CERTIFICATE_VERIFY" \
-            -c "Protocol is TLSv1.3"
-
-requires_openssl_tls1_3
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-requires_config_enabled MBEDTLS_DEBUG_C
-requires_config_enabled MBEDTLS_SSL_CLI_C
-requires_config_enabled MBEDTLS_RSA_C
-requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
-run_test    "TLS 1.3: Client authentication, rsa_pss_rsae_sha512 - openssl" \
-            "$O_NEXT_SRV -msg -tls1_3 -num_tickets 0 -no_resume_ephemeral -no_cache -Verify 10" \
-            "$P_CLI debug_level=4 force_version=tls13 crt_file=data_files/cert_sha256.crt \
-                    key_file=data_files/server1.key sig_algs=ecdsa_secp256r1_sha256,rsa_pss_rsae_sha512" \
-            0 \
-            -c "got a certificate request" \
-            -c "client state: MBEDTLS_SSL_CLIENT_CERTIFICATE" \
-            -c "client state: MBEDTLS_SSL_CLIENT_CERTIFICATE_VERIFY" \
-            -c "Protocol is TLSv1.3"
-
-requires_gnutls_tls1_3
-requires_gnutls_next_no_ticket
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-requires_config_enabled MBEDTLS_DEBUG_C
-requires_config_enabled MBEDTLS_SSL_CLI_C
-requires_config_enabled MBEDTLS_RSA_C
-requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
-run_test    "TLS 1.3: Client authentication, rsa_pss_rsae_sha512 - gnutls" \
-            "$G_NEXT_SRV --debug=4 --priority=NORMAL:-VERS-ALL:+VERS-TLS1.3:+CIPHER-ALL:%NO_TICKETS" \
-            "$P_CLI debug_level=3 force_version=tls13 crt_file=data_files/server2-sha256.crt \
-                    key_file=data_files/server2.key sig_algs=ecdsa_secp256r1_sha256,rsa_pss_rsae_sha512" \
-            0 \
-            -c "got a certificate request" \
-            -c "client state: MBEDTLS_SSL_CLIENT_CERTIFICATE" \
-            -c "client state: MBEDTLS_SSL_CLIENT_CERTIFICATE_VERIFY" \
-            -c "Protocol is TLSv1.3"
+            -c "unkown pk type" \
+            -c "signature algorithm not in received or offered list."
 
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
