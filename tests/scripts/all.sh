@@ -1325,25 +1325,6 @@ component_test_memsan_constant_flow () {
     # - or alternatively, change the build type to MemSanDbg, which enables
     # origin tracking and nicer stack traces (which are useful for debugging
     # anyway), and check if the origin was TEST_CF_SECRET() or something else.
-    msg "build: cmake MSan (clang), full config minus MBEDTLS_USE_PSA_CRYPTO with constant flow testing"
-    scripts/config.py full
-    scripts/config.py set MBEDTLS_TEST_CONSTANT_FLOW_MEMSAN
-    scripts/config.py unset MBEDTLS_USE_PSA_CRYPTO
-    scripts/config.py unset MBEDTLS_AESNI_C # memsan doesn't grok asm
-    CC=clang cmake -D CMAKE_BUILD_TYPE:String=MemSan .
-    make
-
-    msg "test: main suites (full minus MBEDTLS_USE_PSA_CRYPTO, Msan + constant flow)"
-    make test
-}
-
-component_test_memsan_constant_flow_psa () {
-    # This tests both (1) accesses to undefined memory, and (2) branches or
-    # memory access depending on secret values. To distinguish between those:
-    # - unset MBEDTLS_TEST_CONSTANT_FLOW_MEMSAN - does the failure persist?
-    # - or alternatively, change the build type to MemSanDbg, which enables
-    # origin tracking and nicer stack traces (which are useful for debugging
-    # anyway), and check if the origin was TEST_CF_SECRET() or something else.
     msg "build: cmake MSan (clang), full config with constant flow testing"
     scripts/config.py full
     scripts/config.py set MBEDTLS_TEST_CONSTANT_FLOW_MEMSAN
@@ -1356,29 +1337,6 @@ component_test_memsan_constant_flow_psa () {
 }
 
 component_test_valgrind_constant_flow () {
-    # This tests both (1) everything that valgrind's memcheck usually checks
-    # (heap buffer overflows, use of uninitialized memory, use-after-free,
-    # etc.) and (2) branches or memory access depending on secret values,
-    # which will be reported as uninitialized memory. To distinguish between
-    # secret and actually uninitialized:
-    # - unset MBEDTLS_TEST_CONSTANT_FLOW_VALGRIND - does the failure persist?
-    # - or alternatively, build with debug info and manually run the offending
-    # test suite with valgrind --track-origins=yes, then check if the origin
-    # was TEST_CF_SECRET() or something else.
-    msg "build: cmake release GCC, full config minus MBEDTLS_USE_PSA_CRYPTO with constant flow testing"
-    scripts/config.py full
-    scripts/config.py set MBEDTLS_TEST_CONSTANT_FLOW_VALGRIND
-    scripts/config.py unset MBEDTLS_USE_PSA_CRYPTO
-    cmake -D CMAKE_BUILD_TYPE:String=Release .
-    make
-
-    # this only shows a summary of the results (how many of each type)
-    # details are left in Testing/<date>/DynamicAnalysis.xml
-    msg "test: main suites (full minus MBEDTLS_USE_PSA_CRYPTO, valgrind + constant flow)"
-    make memcheck
-}
-
-component_test_valgrind_constant_flow_psa () {
     # This tests both (1) everything that valgrind's memcheck usually checks
     # (heap buffer overflows, use of uninitialized memory, use-after-free,
     # etc.) and (2) branches or memory access depending on secret values,
@@ -1558,9 +1516,6 @@ component_build_module_alt () {
     # MBEDTLS_SHA256_*ALT can't be used with MBEDTLS_SHA256_USE_A64_CRYPTO_*
     scripts/config.py unset MBEDTLS_SHA256_USE_A64_CRYPTO_IF_PRESENT
     scripts/config.py unset MBEDTLS_SHA256_USE_A64_CRYPTO_ONLY
-    # MBEDTLS_SHA512_*ALT can't be used with MBEDTLS_SHA512_USE_A64_CRYPTO_*
-    scripts/config.py unset MBEDTLS_SHA512_USE_A64_CRYPTO_IF_PRESENT
-    scripts/config.py unset MBEDTLS_SHA512_USE_A64_CRYPTO_ONLY
     # Enable all MBEDTLS_XXX_ALT for whole modules. Do not enable
     # MBEDTLS_XXX_YYY_ALT which are for single functions.
     scripts/config.py set-all 'MBEDTLS_([A-Z0-9]*|NIST_KW)_ALT'
@@ -2172,14 +2127,14 @@ component_build_no_std_function () {
 }
 
 component_build_no_ssl_srv () {
-    msg "build: full config except SSL server, make, gcc" # ~ 30s
+    msg "build: full config except ssl_srv.c, make, gcc" # ~ 30s
     scripts/config.py full
     scripts/config.py unset MBEDTLS_SSL_SRV_C
     make CC=gcc CFLAGS='-Werror -Wall -Wextra -O1'
 }
 
 component_build_no_ssl_cli () {
-    msg "build: full config except SSL client, make, gcc" # ~ 30s
+    msg "build: full config except ssl_cli.c, make, gcc" # ~ 30s
     scripts/config.py full
     scripts/config.py unset MBEDTLS_SSL_CLI_C
     make CC=gcc CFLAGS='-Werror -Wall -Wextra -O1'
@@ -2745,9 +2700,6 @@ component_build_arm_none_eabi_gcc_no_64bit_multiplication () {
 component_build_armcc () {
     msg "build: ARM Compiler 5"
     scripts/config.py baremetal
-    # armc[56] don't support SHA-512 intrinsics
-    scripts/config.py unset MBEDTLS_SHA512_USE_A64_CRYPTO_IF_PRESENT
-
     make CC="$ARMC5_CC" AR="$ARMC5_AR" WARNING_CFLAGS='--strict --c99' lib
 
     msg "size: ARM Compiler 5"
@@ -2767,7 +2719,7 @@ component_build_armcc () {
     # ARM Compiler 6 - Target ARMv8-M
     armc6_build_test "--target=arm-arm-none-eabi -march=armv8-m.main"
 
-    # ARM Compiler 6 - Target ARMv8.2-A - AArch64
+    # ARM Compiler 6 - Target ARMv8-A - AArch64
     armc6_build_test "--target=aarch64-arm-none-eabi -march=armv8.2-a+crypto"
 }
 
@@ -3111,7 +3063,7 @@ run_component () {
     local dd_cmd
     dd_cmd=(dd if=/dev/urandom of=./tests/seedfile bs=64 count=1)
     case $OSTYPE in
-        linux*|freebsd*|openbsd*) dd_cmd+=(status=none)
+        linux*|freebsd*|openbsd*|darwin*) dd_cmd+=(status=none)
     esac
     "${dd_cmd[@]}"
 
