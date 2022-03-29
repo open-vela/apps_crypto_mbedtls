@@ -3100,11 +3100,9 @@ void mbedtls_ssl_handshake_free( mbedtls_ssl_context *ssl )
     mbedtls_pk_free( &handshake->peer_pubkey );
 #endif /* MBEDTLS_X509_CRT_PARSE_C && !MBEDTLS_SSL_KEEP_PEER_CERTIFICATE */
 
-#if defined(MBEDTLS_SSL_CLI_C) && \
-    ( defined(MBEDTLS_SSL_PROTO_DTLS) || defined(MBEDTLS_SSL_PROTO_TLS1_3) )
-    mbedtls_free( handshake->cookie );
-#endif /* MBEDTLS_SSL_CLI_C &&
-          ( MBEDTLS_SSL_PROTO_DTLS || MBEDTLS_SSL_PROTO_TLS1_3 ) */
+#if defined(MBEDTLS_SSL_PROTO_DTLS) || defined(MBEDTLS_SSL_PROTO_TLS1_3)
+    mbedtls_free( handshake->verify_cookie );
+#endif /* MBEDTLS_SSL_PROTO_DTLS || MBEDTLS_SSL_PROTO_TLS1_3 */
 
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
     mbedtls_ssl_flight_free( handshake->flight );
@@ -7452,9 +7450,9 @@ static int ssl_tls12_populate_transform( mbedtls_ssl_transform *transform,
             goto end;
         }
 
-        if( ( transform->psa_alg == MBEDTLS_SSL_NULL_CIPHER ) ||
-            ( ( transform->psa_alg == PSA_ALG_CBC_NO_PADDING ) &&
-              ( transform->encrypt_then_mac == MBEDTLS_SSL_ETM_DISABLED ) ) )
+        if( ( transform->psa_alg == MBEDTLS_SSL_NULL_CIPHER ||
+              transform->psa_alg == PSA_ALG_CBC_NO_PADDING ) &&
+            transform->encrypt_then_mac == MBEDTLS_SSL_ETM_DISABLED )
             /* mbedtls_ct_hmac() requires the key to be exportable */
             psa_set_key_usage_flags( &attributes, PSA_KEY_USAGE_EXPORT |
                                                   PSA_KEY_USAGE_VERIFY_HASH );
