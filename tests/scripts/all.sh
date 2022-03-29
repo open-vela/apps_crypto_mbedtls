@@ -1558,6 +1558,9 @@ component_build_module_alt () {
     # MBEDTLS_SHA256_*ALT can't be used with MBEDTLS_SHA256_USE_A64_CRYPTO_*
     scripts/config.py unset MBEDTLS_SHA256_USE_A64_CRYPTO_IF_PRESENT
     scripts/config.py unset MBEDTLS_SHA256_USE_A64_CRYPTO_ONLY
+    # MBEDTLS_SHA512_*ALT can't be used with MBEDTLS_SHA512_USE_A64_CRYPTO_*
+    scripts/config.py unset MBEDTLS_SHA512_USE_A64_CRYPTO_IF_PRESENT
+    scripts/config.py unset MBEDTLS_SHA512_USE_A64_CRYPTO_ONLY
     # Enable all MBEDTLS_XXX_ALT for whole modules. Do not enable
     # MBEDTLS_XXX_YYY_ALT which are for single functions.
     scripts/config.py set-all 'MBEDTLS_([A-Z0-9]*|NIST_KW)_ALT'
@@ -2169,14 +2172,14 @@ component_build_no_std_function () {
 }
 
 component_build_no_ssl_srv () {
-    msg "build: full config except SSL server, make, gcc" # ~ 30s
+    msg "build: full config except ssl_srv.c, make, gcc" # ~ 30s
     scripts/config.py full
     scripts/config.py unset MBEDTLS_SSL_SRV_C
     make CC=gcc CFLAGS='-Werror -Wall -Wextra -O1'
 }
 
 component_build_no_ssl_cli () {
-    msg "build: full config except SSL client, make, gcc" # ~ 30s
+    msg "build: full config except ssl_cli.c, make, gcc" # ~ 30s
     scripts/config.py full
     scripts/config.py unset MBEDTLS_SSL_CLI_C
     make CC=gcc CFLAGS='-Werror -Wall -Wextra -O1'
@@ -2742,6 +2745,9 @@ component_build_arm_none_eabi_gcc_no_64bit_multiplication () {
 component_build_armcc () {
     msg "build: ARM Compiler 5"
     scripts/config.py baremetal
+    # armc[56] don't support SHA-512 intrinsics
+    scripts/config.py unset MBEDTLS_SHA512_USE_A64_CRYPTO_IF_PRESENT
+
     make CC="$ARMC5_CC" AR="$ARMC5_AR" WARNING_CFLAGS='--strict --c99' lib
 
     msg "size: ARM Compiler 5"
@@ -2761,7 +2767,7 @@ component_build_armcc () {
     # ARM Compiler 6 - Target ARMv8-M
     armc6_build_test "--target=arm-arm-none-eabi -march=armv8-m.main"
 
-    # ARM Compiler 6 - Target ARMv8-A - AArch64
+    # ARM Compiler 6 - Target ARMv8.2-A - AArch64
     armc6_build_test "--target=aarch64-arm-none-eabi -march=armv8.2-a+crypto"
 }
 
@@ -3105,7 +3111,7 @@ run_component () {
     local dd_cmd
     dd_cmd=(dd if=/dev/urandom of=./tests/seedfile bs=64 count=1)
     case $OSTYPE in
-        linux*|freebsd*|openbsd*|darwin*) dd_cmd+=(status=none)
+        linux*|freebsd*|openbsd*) dd_cmd+=(status=none)
     esac
     "${dd_cmd[@]}"
 
