@@ -1921,7 +1921,7 @@ int mbedtls_ssl_fetch_input( mbedtls_ssl_context *ssl, size_t nb_want )
         {
             len = in_buf_len - ( ssl->in_hdr - ssl->in_buf );
 
-            if( mbedtls_ssl_is_handshake_over( ssl ) == 0 )
+            if( ssl->state != MBEDTLS_SSL_HANDSHAKE_OVER )
                 timeout = ssl->handshake->retransmit_timeout;
             else
                 timeout = ssl->conf->read_timeout;
@@ -1945,7 +1945,7 @@ int mbedtls_ssl_fetch_input( mbedtls_ssl_context *ssl, size_t nb_want )
             MBEDTLS_SSL_DEBUG_MSG( 2, ( "timeout" ) );
             mbedtls_ssl_set_timer( ssl, 0 );
 
-            if( mbedtls_ssl_is_handshake_over( ssl ) == 0 )
+            if( ssl->state != MBEDTLS_SSL_HANDSHAKE_OVER )
             {
                 if( ssl_double_retransmit_timeout( ssl ) != 0 )
                 {
@@ -2380,7 +2380,7 @@ int mbedtls_ssl_flight_transmit( mbedtls_ssl_context *ssl )
         return( ret );
 
     /* Update state and set timer */
-    if( mbedtls_ssl_is_handshake_over( ssl ) == 1 )
+    if( ssl->state == MBEDTLS_SSL_HANDSHAKE_OVER )
         ssl->handshake->retransmit_state = MBEDTLS_SSL_RETRANS_FINISHED;
     else
     {
@@ -2445,6 +2445,24 @@ void mbedtls_ssl_send_flight_completed( mbedtls_ssl_context *ssl )
 /*
  * Handshake layer functions
  */
+int mbedtls_ssl_start_handshake_msg( mbedtls_ssl_context *ssl, unsigned hs_type,
+                                     unsigned char **buf, size_t *buf_len )
+{
+    /*
+     * Reserve 4 bytes for hanshake header. ( Section 4,RFC 8446 )
+     *    ...
+     *    HandshakeType msg_type;
+     *    uint24 length;
+     *    ...
+     */
+    *buf = ssl->out_msg + 4;
+    *buf_len = MBEDTLS_SSL_OUT_CONTENT_LEN - 4;
+
+    ssl->out_msgtype = MBEDTLS_SSL_MSG_HANDSHAKE;
+    ssl->out_msg[0]  = hs_type;
+
+    return( 0 );
+}
 
 /*
  * Write (DTLS: or queue) current handshake (including CCS) message.
@@ -2607,6 +2625,22 @@ int mbedtls_ssl_write_handshake_msg_ext( mbedtls_ssl_context *ssl,
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= write handshake message" ) );
 
     return( 0 );
+}
+
+int mbedtls_ssl_finish_handshake_msg( mbedtls_ssl_context *ssl,
+                                      size_t buf_len, size_t msg_len )
+{
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+    size_t msg_with_header_len;
+    ((void) buf_len);
+
+    /* Add reserved 4 bytes for handshake header */
+    msg_with_header_len = msg_len + 4;
+    ssl->out_msglen = msg_with_header_len;
+    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_write_handshake_msg_ext( ssl, 0, 0 ) );
+
+cleanup:
+    return( ret );
 }
 
 /*
@@ -2937,9 +2971,9 @@ int mbedtls_ssl_prepare_handshake_record( mbedtls_ssl_context *ssl )
         }
 
         if( ssl->handshake != NULL &&
-           ( ( mbedtls_ssl_is_handshake_over( ssl ) == 0 &&
+            ( ( ssl->state   != MBEDTLS_SSL_HANDSHAKE_OVER &&
                 recv_msg_seq != ssl->handshake->in_msg_seq ) ||
-             ( mbedtls_ssl_is_handshake_over( ssl ) == 1 &&
+              ( ssl->state  == MBEDTLS_SSL_HANDSHAKE_OVER &&
                 ssl->in_msg[0] != MBEDTLS_SSL_HS_CLIENT_HELLO ) ) )
         {
             if( recv_msg_seq > ssl->handshake->in_msg_seq )
@@ -3005,7 +3039,7 @@ void mbedtls_ssl_update_handshake_status( mbedtls_ssl_context *ssl )
 {
     mbedtls_ssl_handshake_params * const hs = ssl->handshake;
 
-    if( mbedtls_ssl_is_handshake_over( ssl ) == 0 && hs != NULL )
+    if( ssl->state != MBEDTLS_SSL_HANDSHAKE_OVER && hs != NULL )
     {
         ssl->handshake->update_checksum( ssl, ssl->in_msg, ssl->in_hslen );
     }
@@ -3626,7 +3660,7 @@ static int ssl_check_client_reconnect( mbedtls_ssl_context *ssl )
      */
     if( rec_epoch == 0 &&
         ssl->conf->endpoint == MBEDTLS_SSL_IS_SERVER &&
-        mbedtls_ssl_is_handshake_over( ssl ) == 1 &&
+        ssl->state == MBEDTLS_SSL_HANDSHAKE_OVER &&
         ssl->in_msgtype == MBEDTLS_SSL_MSG_HANDSHAKE &&
         ssl->in_left > 13 &&
         ssl->in_buf[13] == MBEDTLS_SSL_HS_CLIENT_HELLO )
@@ -4783,7 +4817,7 @@ int mbedtls_ssl_handle_message_type( mbedtls_ssl_context *ssl )
         /* Drop unexpected ApplicationData records,
          * except at the beginning of renegotiations */
         if( ssl->in_msgtype == MBEDTLS_SSL_MSG_APPLICATION_DATA &&
-            mbedtls_ssl_is_handshake_over( ssl ) == 0
+            ssl->state != MBEDTLS_SSL_HANDSHAKE_OVER
 #if defined(MBEDTLS_SSL_RENEGOTIATION)
             && ! ( ssl->renego_status == MBEDTLS_SSL_RENEGOTIATION_IN_PROGRESS &&
                    ssl->state == MBEDTLS_SSL_SERVER_HELLO )
@@ -4795,7 +4829,7 @@ int mbedtls_ssl_handle_message_type( mbedtls_ssl_context *ssl )
         }
 
         if( ssl->handshake != NULL &&
-            mbedtls_ssl_is_handshake_over( ssl ) == 1 )
+            ssl->state == MBEDTLS_SSL_HANDSHAKE_OVER  )
         {
             mbedtls_ssl_handshake_wrapup_free_hs_transform( ssl );
         }
@@ -5219,7 +5253,7 @@ static int ssl_check_ctr_renegotiate( mbedtls_ssl_context *ssl )
     int in_ctr_cmp;
     int out_ctr_cmp;
 
-    if( mbedtls_ssl_is_handshake_over( ssl ) == 0 ||
+    if( ssl->state != MBEDTLS_SSL_HANDSHAKE_OVER ||
         ssl->renego_status == MBEDTLS_SSL_RENEGOTIATION_PENDING ||
         ssl->conf->disable_renegotiation == MBEDTLS_SSL_RENEGOTIATION_DISABLED )
     {
@@ -5397,7 +5431,7 @@ int mbedtls_ssl_read( mbedtls_ssl_context *ssl, unsigned char *buf, size_t len )
     }
 #endif
 
-    if( mbedtls_ssl_is_handshake_over( ssl ) == 0 )
+    if( ssl->state != MBEDTLS_SSL_HANDSHAKE_OVER )
     {
         ret = mbedtls_ssl_handshake( ssl );
         if( ret != MBEDTLS_ERR_SSL_WAITING_SERVER_HELLO_RENEGO &&
@@ -5508,7 +5542,7 @@ int mbedtls_ssl_read( mbedtls_ssl_context *ssl, unsigned char *buf, size_t len )
 
         /* We're going to return something now, cancel timer,
          * except if handshake (renegotiation) is in progress */
-        if( mbedtls_ssl_is_handshake_over( ssl ) == 1 )
+        if( ssl->state == MBEDTLS_SSL_HANDSHAKE_OVER )
             mbedtls_ssl_set_timer( ssl, 0 );
 
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
@@ -5652,7 +5686,7 @@ int mbedtls_ssl_write( mbedtls_ssl_context *ssl, const unsigned char *buf, size_
     }
 #endif
 
-    if( mbedtls_ssl_is_handshake_over( ssl ) == 0 )
+    if( ssl->state != MBEDTLS_SSL_HANDSHAKE_OVER )
     {
         if( ( ret = mbedtls_ssl_handshake( ssl ) ) != 0 )
         {
@@ -5683,7 +5717,7 @@ int mbedtls_ssl_close_notify( mbedtls_ssl_context *ssl )
     if( ssl->out_left != 0 )
         return( mbedtls_ssl_flush_output( ssl ) );
 
-    if( mbedtls_ssl_is_handshake_over( ssl ) == 1 )
+    if( ssl->state == MBEDTLS_SSL_HANDSHAKE_OVER )
     {
         if( ( ret = mbedtls_ssl_send_alert_message( ssl,
                         MBEDTLS_SSL_ALERT_LEVEL_WARNING,
