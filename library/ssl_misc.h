@@ -84,9 +84,6 @@
 #define MBEDTLS_SSL_MIN_MINOR_VERSION           MBEDTLS_SSL_MINOR_VERSION_4
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
-#define MBEDTLS_SSL_MIN_VALID_MINOR_VERSION MBEDTLS_SSL_MINOR_VERSION_3
-#define MBEDTLS_SSL_MIN_VALID_MAJOR_VERSION MBEDTLS_SSL_MAJOR_VERSION_3
-
 /* Determine maximum supported version */
 #define MBEDTLS_SSL_MAX_MAJOR_VERSION           MBEDTLS_SSL_MAJOR_VERSION_3
 
@@ -541,6 +538,9 @@ struct mbedtls_ssl_handshake_params
      * advantage of smaller code size for indirect access on Arm Thumb) */
     uint8_t resume;                     /*!<  session resume indicator*/
     uint8_t cli_exts;                   /*!< client extension presence*/
+
+    /*!< Minimum minor version to be negotiated. */
+    unsigned char min_minor_ver;
 
 #if defined(MBEDTLS_SSL_SERVER_NAME_INDICATION)
     uint8_t sni_authmode;               /*!< authmode from SNI callback     */
@@ -1095,6 +1095,25 @@ struct mbedtls_ssl_flight_item
 };
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
 
+#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
+/**
+ * \brief Given an SSL context and its associated configuration, write the TLS
+ *        1.2 specific extensions of the ClientHello message.
+ *
+ * \param[in]   ssl     SSL context
+ * \param[in]   buf     Base address of the buffer where to write the extensions
+ * \param[in]   end     End address of the buffer where to write the extensions
+ * \param       uses_ec Whether one proposed ciphersuite uses an elliptic curve
+ *                      (<> 0) or not ( 0 ).
+ * \param[out]  out_len Length of the data written into the buffer \p buf
+ */
+int mbedtls_ssl_tls12_write_client_hello_exts( mbedtls_ssl_context *ssl,
+                                               unsigned char *buf,
+                                               const unsigned char *end,
+                                               int uses_ec,
+                                               size_t *out_len );
+#endif
+
 #if defined(MBEDTLS_SSL_PROTO_TLS1_2) && \
     defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
 
@@ -1141,13 +1160,6 @@ void mbedtls_ssl_set_inbound_transform( mbedtls_ssl_context *ssl,
 /* set outbound transform of ssl context */
 void mbedtls_ssl_set_outbound_transform( mbedtls_ssl_context *ssl,
                                          mbedtls_ssl_transform *transform );
-
-#if defined(MBEDTLS_SSL_SERVER_NAME_INDICATION)
-int mbedtls_ssl_write_hostname_ext( mbedtls_ssl_context *ssl,
-                                    unsigned char *buf,
-                                    const unsigned char *end,
-                                    size_t *olen );
-#endif
 
 int mbedtls_ssl_handshake_client_step( mbedtls_ssl_context *ssl );
 int mbedtls_ssl_handshake_server_step( mbedtls_ssl_context *ssl );
@@ -1296,6 +1308,9 @@ void mbedtls_ssl_add_hs_msg_to_checksum( mbedtls_ssl_context *ssl,
 #if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
 int mbedtls_ssl_psk_derive_premaster( mbedtls_ssl_context *ssl,
                                       mbedtls_key_exchange_type_t key_ex );
+#if defined(MBEDTLS_SSL_CLI_C) && defined(MBEDTLS_SSL_PROTO_TLS1_2)
+int mbedtls_ssl_conf_has_static_psk( mbedtls_ssl_config const *conf );
+#endif
 
 /**
  * Get the first defined PSK by order of precedence:
@@ -1653,6 +1668,20 @@ int mbedtls_ssl_tls13_write_finished_message( mbedtls_ssl_context *ssl );
 void mbedtls_ssl_tls13_handshake_wrapup( mbedtls_ssl_context *ssl );
 
 /**
+ * \brief Given an SSL context and its associated configuration, write the TLS
+ *        1.3 specific extensions of the ClientHello message.
+ *
+ * \param[in]   ssl     SSL context
+ * \param[in]   buf     Base address of the buffer where to write the extensions
+ * \param[in]   end     End address of the buffer where to write the extensions
+ * \param[out]  out_len Length of the data written into the buffer \p buf
+ */
+int mbedtls_ssl_tls13_write_client_hello_exts( mbedtls_ssl_context *ssl,
+                                               unsigned char *buf,
+                                               unsigned char *end,
+                                               size_t *out_len );
+
+/**
  * \brief           TLS 1.3 client side state machine entry
  *
  * \param ssl       SSL context
@@ -1795,12 +1824,6 @@ int mbedtls_ssl_reset_transcript_for_hrr( mbedtls_ssl_context *ssl );
 
 #if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
 /*
- * Write Signature Algorithm extension
- */
-int mbedtls_ssl_write_sig_alg_ext( mbedtls_ssl_context *ssl, unsigned char *buf,
-                                   const unsigned char *end, size_t *out_len );
-
-/*
  * Parse TLS 1.3 Signature Algorithm extension
  */
 int mbedtls_ssl_tls13_parse_sig_alg_ext( mbedtls_ssl_context *ssl,
@@ -1877,17 +1900,6 @@ static inline int mbedtls_ssl_tls13_named_group_is_dhe( uint16_t named_group )
             named_group <= MBEDTLS_SSL_IANA_TLS_GROUP_FFDHE8192 );
 }
 
-#if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED) || \
-    defined(MBEDTLS_ECDH_C) || defined(MBEDTLS_ECDSA_C) || \
-    defined(MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED)
-int mbedtls_ssl_write_supported_groups_ext( mbedtls_ssl_context *ssl,
-                                            unsigned char *buf,
-                                            const unsigned char *end,
-                                            size_t *out_len );
-
-#endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED ||
-          MBEDTLS_ECDH_C || MBEDTLS_ECDSA_C ||
-          MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED */
 /*
  * Return supported signature algorithms.
  *
