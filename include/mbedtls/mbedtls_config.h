@@ -1317,9 +1317,8 @@
  * in the underlying transport.
  *
  * Setting this option enables the SSL APIs `mbedtls_ssl_set_cid()`,
- * mbedtls_ssl_get_own_cid()`, `mbedtls_ssl_get_peer_cid()` and
- * `mbedtls_ssl_conf_cid()`. See the corresponding documentation for
- * more information.
+ * `mbedtls_ssl_get_peer_cid()` and `mbedtls_ssl_conf_cid()`.
+ * See the corresponding documentation for more information.
  *
  * \warning The Connection ID extension is still in draft state.
  *          We make no stability promises for the availability
@@ -2182,10 +2181,9 @@
  * Enable the debug functions.
  *
  * Module:  library/debug.c
- * Caller:  library/ssl_msg.c
+ * Caller:  library/ssl_cli.c
+ *          library/ssl_srv.c
  *          library/ssl_tls.c
- *          library/ssl_tls12_*.c
- *          library/ssl_tls13_*.c
  *
  * This module provides debugging functions.
  */
@@ -2213,9 +2211,8 @@
  * Enable the Diffie-Hellman-Merkle module.
  *
  * Module:  library/dhm.c
- * Caller:  library/ssl_tls.c
- *          library/ssl*_client.c
- *          library/ssl*_server.c
+ * Caller:  library/ssl_cli.c
+ *          library/ssl_srv.c
  *
  * This module is used by the following key exchanges:
  *      DHE-RSA, DHE-PSK
@@ -2235,10 +2232,8 @@
  * Enable the elliptic curve Diffie-Hellman library.
  *
  * Module:  library/ecdh.c
- * Caller:  library/psa_crypto.c
- *          library/ssl_tls.c
- *          library/ssl*_client.c
- *          library/ssl*_server.c
+ * Caller:  library/ssl_cli.c
+ *          library/ssl_srv.c
  *
  * This module is used by the following key exchanges:
  *      ECDHE-ECDSA, ECDHE-RSA, DHE-PSK
@@ -2524,11 +2519,9 @@
  * Enable the generic public (asymetric) key layer.
  *
  * Module:  library/pk.c
- * Caller:  library/psa_crypto_rsa.c
- *          library/ssl_tls.c
- *          library/ssl*_client.c
- *          library/ssl*_server.c
- *          library/x509.c
+ * Caller:  library/ssl_tls.c
+ *          library/ssl_cli.c
+ *          library/ssl_srv.c
  *
  * Requires: MBEDTLS_RSA_C or MBEDTLS_ECP_C
  *
@@ -2696,11 +2689,10 @@
  *
  * Module:  library/rsa.c
  *          library/rsa_alt_helpers.c
- * Caller:  library/pk.c
- *          library/psa_crypto.c
+ * Caller:  library/ssl_cli.c
+ *          library/ssl_srv.c
  *          library/ssl_tls.c
- *          library/ssl*_client.c
- *          library/ssl*_server.c
+ *          library/x509.c
  *
  * This module is used by the following key exchanges:
  *      RSA, DHE-RSA, ECDHE-RSA, RSA-PSK
@@ -2716,7 +2708,10 @@
  *
  * Module:  library/sha1.c
  * Caller:  library/md.c
- *          library/psa_crypto_hash.c
+ *          library/ssl_cli.c
+ *          library/ssl_srv.c
+ *          library/ssl_tls.c
+ *          library/x509write_crt.c
  *
  * This module is required for TLS 1.2 depending on the handshake parameters,
  * and for SHA1-signed certificates.
@@ -2755,64 +2750,14 @@
  * Module:  library/sha256.c
  * Caller:  library/entropy.c
  *          library/md.c
+ *          library/ssl_cli.c
+ *          library/ssl_srv.c
  *          library/ssl_tls.c
- *          library/ssl*_client.c
- *          library/ssl*_server.c
  *
  * This module adds support for SHA-256.
  * This module is required for the SSL/TLS 1.2 PRF function.
  */
 #define MBEDTLS_SHA256_C
-
-/**
- * \def MBEDTLS_SHA256_USE_A64_CRYPTO_IF_PRESENT
- *
- * Enable acceleration of the SHA-256 cryptographic hash algorithm with the
- * Arm A64 cryptographic extensions if they are available at runtime. If not,
- * it will fall back to the C implementation.
- *
- * \note If MBEDTLS_SHA256_USE_A64_CRYPTO_IF_PRESENT is defined when building
- * for a non-Aarch64 build it will be silently ignored.
- *
- * \note The code uses Neon intrinsics, so \c CFLAGS must be set to a minimum
- * of \c -march=armv8-a+crypto.
- *
- * \warning MBEDTLS_SHA256_USE_A64_CRYPTO_IF_PRESENT cannot be defined at the
- * same time as MBEDTLS_SHA256_USE_A64_CRYPTO_ONLY.
- *
- * Requires: MBEDTLS_SHA256_C.
- *
- * Module:  library/sha256.c
- *
- * Uncomment to have the library check for the A64 SHA-256 crypto extensions
- * and use them if available.
- */
-//#define MBEDTLS_SHA256_USE_A64_CRYPTO_IF_PRESENT
-
-/**
- * \def MBEDTLS_SHA256_USE_A64_CRYPTO_ONLY
- *
- * Enable acceleration of the SHA-256 cryptographic hash algorithm with the
- * Arm A64 cryptographic extensions, which must be available at runtime (or
- * an illegal instruction fault will occur).
- *
- * \note This allows builds with a smaller code size than with
- * MBEDTLS_SHA256_USE_A64_CRYPTO_IF_PRESENT
- *
- * \note The code uses Neon intrinsics, so \c CFLAGS must be set to a minimum
- * of \c -march=armv8-a+crypto.
- *
- * \warning MBEDTLS_SHA256_USE_A64_CRYPTO_ONLY cannot be defined at the same
- * time as MBEDTLS_SHA256_USE_A64_CRYPTO_IF_PRESENT.
- *
- * Requires: MBEDTLS_SHA256_C.
- *
- * Module:  library/sha256.c
- *
- * Uncomment to have the library use the A64 SHA-256 crypto extensions
- * unconditionally.
- */
-//#define MBEDTLS_SHA256_USE_A64_CRYPTO_ONLY
 
 /**
  * \def MBEDTLS_SHA384_C
@@ -2823,10 +2768,8 @@
  *
  * Module:  library/sha512.c
  * Caller:  library/md.c
- *          library/psa_crypto_hash.c
- *          library/ssl_tls.c
- *          library/ssl*_client.c
- *          library/ssl*_server.c
+ *          library/ssl_cli.c
+ *          library/ssl_srv.c
  *
  * Comment to disable SHA-384
  */
@@ -2846,60 +2789,6 @@
  * This module adds support for SHA-512.
  */
 #define MBEDTLS_SHA512_C
-
-/**
- * \def MBEDTLS_SHA512_USE_A64_CRYPTO_IF_PRESENT
- *
- * Enable acceleration of the SHA-512 cryptographic hash algorithm with the
- * Arm A64 cryptographic extensions if they are available at runtime. If not,
- * it will fall back to the C implementation.
- *
- * \note If MBEDTLS_SHA512_USE_A64_CRYPTO_IF_PRESENT is defined when building
- * for a non-Aarch64 build it will be silently ignored.
- *
- * \note The code uses the SHA-512 Neon intrinsics, so requires GCC >= 8 or
- * Clang >= 7, and \c CFLAGS must be set to a minimum of
- * \c -march=armv8.2-a+sha3. An optimisation level of \c -O3 generates the
- * fastest code.
- *
- * \warning MBEDTLS_SHA512_USE_A64_CRYPTO_IF_PRESENT cannot be defined at the
- * same time as MBEDTLS_SHA512_USE_A64_CRYPTO_ONLY.
- *
- * Requires: MBEDTLS_SHA512_C.
- *
- * Module:  library/sha512.c
- *
- * Uncomment to have the library check for the A64 SHA-512 crypto extensions
- * and use them if available.
- */
-//#define MBEDTLS_SHA512_USE_A64_CRYPTO_IF_PRESENT
-
-/**
- * \def MBEDTLS_SHA512_USE_A64_CRYPTO_ONLY
- *
- * Enable acceleration of the SHA-512 cryptographic hash algorithm with the
- * Arm A64 cryptographic extensions, which must be available at runtime (or
- * an illegal instruction fault will occur).
- *
- * \note This allows builds with a smaller code size than with
- * MBEDTLS_SHA512_USE_A64_CRYPTO_IF_PRESENT
- *
- * \note The code uses the SHA-512 Neon intrinsics, so requires GCC >= 8 or
- * Clang >= 7, and \c CFLAGS must be set to a minimum of
- * \c -march=armv8.2-a+sha3. An optimisation level of \c -O3 generates the
- * fastest code.
- *
- * \warning MBEDTLS_SHA512_USE_A64_CRYPTO_ONLY cannot be defined at the same
- * time as MBEDTLS_SHA512_USE_A64_CRYPTO_IF_PRESENT.
- *
- * Requires: MBEDTLS_SHA512_C.
- *
- * Module:  library/sha512.c
- *
- * Uncomment to have the library use the A64 SHA-512 crypto extensions
- * unconditionally.
- */
-//#define MBEDTLS_SHA512_USE_A64_CRYPTO_ONLY
 
 /**
  * \def MBEDTLS_SSL_CACHE_C
@@ -2940,7 +2829,7 @@
  *
  * Enable the SSL/TLS client code.
  *
- * Module:  library/ssl*_client.c
+ * Module:  library/ssl_cli.c
  * Caller:
  *
  * Requires: MBEDTLS_SSL_TLS_C
@@ -2954,7 +2843,7 @@
  *
  * Enable the SSL/TLS server code.
  *
- * Module:  library/ssl*_server.c
+ * Module:  library/ssl_srv.c
  * Caller:
  *
  * Requires: MBEDTLS_SSL_TLS_C
@@ -2969,8 +2858,8 @@
  * Enable the generic SSL/TLS code.
  *
  * Module:  library/ssl_tls.c
- * Caller:  library/ssl*_client.c
- *          library/ssl*_server.c
+ * Caller:  library/ssl_cli.c
+ *          library/ssl_srv.c
  *
  * Requires: MBEDTLS_CIPHER_C, MBEDTLS_MD_C
  *           and at least one of the MBEDTLS_SSL_PROTO_XXX defines
@@ -3055,9 +2944,9 @@
  * Enable X.509 certificate parsing.
  *
  * Module:  library/x509_crt.c
- * Caller:  library/ssl_tls.c
- *          library/ssl*_client.c
- *          library/ssl*_server.c
+ * Caller:  library/ssl_cli.c
+ *          library/ssl_srv.c
+ *          library/ssl_tls.c
  *
  * Requires: MBEDTLS_X509_USE_C
  *
