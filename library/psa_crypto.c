@@ -4315,13 +4315,6 @@ psa_status_t psa_key_derivation_abort( psa_key_derivation_operation_t *operation
             mbedtls_free( operation->ctx.tls12_prf.label );
         }
 
-        if( operation->ctx.tls12_prf.other_secret != NULL )
-        {
-            mbedtls_platform_zeroize( operation->ctx.tls12_prf.other_secret,
-                                      operation->ctx.tls12_prf.other_secret_length );
-            mbedtls_free( operation->ctx.tls12_prf.other_secret );
-        }
-
         status = PSA_SUCCESS;
 
         /* We leave the fields Ai and output_block to be erased safely by the
@@ -5226,28 +5219,6 @@ static psa_status_t psa_tls12_prf_set_key( psa_tls12_prf_key_derivation_t *prf,
     return( PSA_SUCCESS );
 }
 
-static psa_status_t psa_tls12_prf_set_other_key( psa_tls12_prf_key_derivation_t *prf,
-                                                 const uint8_t *data,
-                                                 size_t data_length )
-{
-    if( prf->state != PSA_TLS12_PRF_STATE_SEED_SET )
-        return( PSA_ERROR_BAD_STATE );
-
-    if( data_length != 0 )
-    {
-        prf->other_secret = mbedtls_calloc( 1, data_length );
-        if( prf->other_secret == NULL )
-            return( PSA_ERROR_INSUFFICIENT_MEMORY );
-
-        memcpy( prf->other_secret, data, data_length );
-        prf->other_secret_length = data_length;
-    }
-
-    prf->state = PSA_TLS12_PRF_STATE_OTHER_KEY_SET;
-
-    return( PSA_SUCCESS );
-}
-
 static psa_status_t psa_tls12_prf_set_label( psa_tls12_prf_key_derivation_t *prf,
                                              const uint8_t *data,
                                              size_t data_length )
@@ -5281,8 +5252,6 @@ static psa_status_t psa_tls12_prf_input( psa_tls12_prf_key_derivation_t *prf,
             return( psa_tls12_prf_set_seed( prf, data, data_length ) );
         case PSA_KEY_DERIVATION_INPUT_SECRET:
             return( psa_tls12_prf_set_key( prf, data, data_length ) );
-        case PSA_KEY_DERIVATION_INPUT_OTHER_SECRET:
-            return( psa_tls12_prf_set_other_key( prf, data, data_length ) );
         case PSA_KEY_DERIVATION_INPUT_LABEL:
             return( psa_tls12_prf_set_label( prf, data, data_length ) );
         default:
