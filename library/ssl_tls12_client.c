@@ -1861,7 +1861,9 @@ static int ssl_parse_server_ecdh_params_psa( mbedtls_ssl_context *ssl,
     {
         return( MBEDTLS_ERR_SSL_HANDSHAKE_FAILURE );
     }
-    handshake->ecdh_bits = ecdh_bits;
+    if( ecdh_bits > 0xffff )
+        return( MBEDTLS_ERR_SSL_ILLEGAL_PARAMETER );
+    handshake->ecdh_bits = (uint16_t) ecdh_bits;
 
     /* Keep a copy of the peer's public key */
     ecpoint_len = *(*p)++;
