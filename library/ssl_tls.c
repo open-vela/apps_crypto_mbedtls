@@ -1313,6 +1313,14 @@ void mbedtls_ssl_set_timer_cb( mbedtls_ssl_context *ssl,
 }
 
 #if defined(MBEDTLS_SSL_SRV_C)
+void mbedtls_ssl_conf_cert_cb( mbedtls_ssl_config *conf,
+                               int (*f_cert_cb)(mbedtls_ssl_context *) )
+{
+    conf->f_cert_cb = f_cert_cb;
+}
+#endif /* MBEDTLS_SSL_SRV_C */
+
+#if defined(MBEDTLS_SSL_SRV_C)
 void mbedtls_ssl_conf_session_cache( mbedtls_ssl_config *conf,
                                      void *p_cache,
                                      mbedtls_ssl_cache_get_t *f_get_cache,
@@ -3196,8 +3204,7 @@ void mbedtls_ssl_handshake_free( mbedtls_ssl_context *ssl )
 
 #if defined(MBEDTLS_ECDH_C) && \
     ( defined(MBEDTLS_USE_PSA_CRYPTO) || defined(MBEDTLS_SSL_PROTO_TLS1_3) )
-    if( handshake->ecdh_psa_privkey_is_external == 0 )
-        psa_destroy_key( handshake->ecdh_psa_privkey );
+    psa_destroy_key( handshake->ecdh_psa_privkey );
 #endif /* MBEDTLS_ECDH_C && MBEDTLS_USE_PSA_CRYPTO */
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3)
