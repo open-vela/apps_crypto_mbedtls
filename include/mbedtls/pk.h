@@ -535,45 +535,6 @@ int mbedtls_pk_sign( mbedtls_pk_context *ctx, mbedtls_md_type_t md_alg,
              unsigned char *sig, size_t sig_size, size_t *sig_len,
              int (*f_rng)(void *, unsigned char *, size_t), void *p_rng );
 
-#if defined(MBEDTLS_PSA_CRYPTO_C)
-/**
- * \brief           Make signature given a signature type.
- *
- * \param pk_type   Signature type.
- * \param ctx       The PK context to use. It must have been set up
- *                  with a private key.
- * \param md_alg    Hash algorithm used (see notes)
- * \param hash      Hash of the message to sign
- * \param hash_len  Hash length
- * \param sig       Place to write the signature.
- *                  It must have enough room for the signature.
- *                  #MBEDTLS_PK_SIGNATURE_MAX_SIZE is always enough.
- *                  You may use a smaller buffer if it is large enough
- *                  given the key type.
- * \param sig_size  The size of the \p sig buffer in bytes.
- * \param sig_len   On successful return,
- *                  the number of bytes written to \p sig.
- * \param f_rng     RNG function, must not be \c NULL.
- * \param p_rng     RNG parameter
- *
- * \return          0 on success, or a specific error code.
- *
- * \note            When \p pk_type is #MBEDTLS_PK_RSASSA_PSS,
- *                  see #PSA_ALG_RSA_PSS for a description of PSS options used.
- *
- * \note            For RSA, md_alg may be MBEDTLS_MD_NONE if hash_len != 0.
- *                  For ECDSA, md_alg may never be MBEDTLS_MD_NONE.
- *
- */
-int mbedtls_pk_sign_ext( mbedtls_pk_type_t pk_type,
-                         mbedtls_pk_context *ctx,
-                         mbedtls_md_type_t md_alg,
-                         const unsigned char *hash, size_t hash_len,
-                         unsigned char *sig, size_t sig_size, size_t *sig_len,
-                         int (*f_rng)(void *, unsigned char *, size_t),
-                         void *p_rng );
-#endif /* MBEDTLS_PSA_CRYPTO_C */
-
 /**
  * \brief           Restartable version of \c mbedtls_pk_sign()
  *
@@ -923,8 +884,7 @@ int mbedtls_pk_load_file( const char *path, unsigned char **buf, size_t *n );
  *                  change or be removed at any time without notice.
  *
  * \note            Only ECDSA keys are supported so far. Signing with the
- *                  specified hash & ECDH key agreement derivation operation
- *                  are the only allowed use of that key.
+ *                  specified hash is the only allowed use of that key.
  *
  * \param pk        Input: the EC key to import to a PSA key.
  *                  Output: a PK context wrapping that PSA key.
