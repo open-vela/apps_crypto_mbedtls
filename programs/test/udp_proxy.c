@@ -32,11 +32,9 @@
 #else
 #include <stdio.h>
 #include <stdlib.h>
-#if defined(MBEDTLS_HAVE_TIME)
 #include <time.h>
 #define mbedtls_time            time
 #define mbedtls_time_t          time_t
-#endif
 #define mbedtls_printf          printf
 #define mbedtls_calloc          calloc
 #define mbedtls_free            free
@@ -73,9 +71,7 @@ int main( void )
 #endif
 #endif /* _MSC_VER */
 #else /* ( _WIN32 || _WIN32_WCE ) && !EFIX64 && !EFI32 */
-#if defined(MBEDTLS_HAVE_TIME)
 #include <sys/time.h>
-#endif
 #include <sys/types.h>
 #include <unistd.h>
 #endif /* ( _WIN32 || _WIN32_WCE ) && !EFIX64 && !EFI32 */
@@ -835,11 +831,7 @@ int main( int argc, char *argv[] )
      */
     if( opt.seed == 0 )
     {
-#if defined(MBEDTLS_HAVE_TIME)
-        opt.seed = (unsigned int) mbedtls_time( NULL );
-#else
-        opt.seed = 1;
-#endif /* MBEDTLS_HAVE_TIME */
+        opt.seed = (unsigned int) time( NULL );
         mbedtls_printf( "  . Pseudo-random seed: %u\n", opt.seed );
     }
 
