@@ -129,12 +129,7 @@
  * MBEDTLS_PLATFORM_TIME_MACRO, MBEDTLS_PLATFORM_TIME_TYPE_MACRO and
  * MBEDTLS_PLATFORM_STD_TIME.
  *
- * Comment if your system does not support time functions.
- *
- * \note If MBEDTLS_TIMING_C is set - to enable the semi-portable timing
- *       interface - timing.c will include time.h on suitable platforms
- *       regardless of the setting of MBEDTLS_HAVE_TIME, unless
- *       MBEDTLS_TIMING_ALT is used. See timing.c for more information.
+ * Comment if your system does not support time functions
  */
 #define MBEDTLS_HAVE_TIME
 
@@ -3017,10 +3012,6 @@
  * \c mbedtls_ssl_set_timer_cb() for DTLS, or leave it enabled and provide
  * your own implementation of the whole module by setting
  * \c MBEDTLS_TIMING_ALT in the current file.
- *
- * \note The timing module will include time.h on suitable platforms
- *       regardless of the setting of MBEDTLS_HAVE_TIME, unless
- *       MBEDTLS_TIMING_ALT is used. See timing.c for more information.
  *
  * \note See also our Knowledge Base article about porting to a new
  * environment:
