@@ -1164,7 +1164,8 @@ run_test() {
 
     analyze_test_commands "$@"
 
-    TIMES_LEFT=2
+    # One regular run and two retries
+    TIMES_LEFT=3
     while [ $TIMES_LEFT -gt 0 ]; do
         TIMES_LEFT=$(( $TIMES_LEFT - 1 ))
 
@@ -1580,6 +1581,24 @@ run_test    "Opaque key for server authentication" \
             -c "Ciphersuite is TLS-ECDHE-ECDSA" \
             -s "key types: Opaque, none" \
             -s "Ciphersuite is TLS-ECDHE-ECDSA" \
+            -S "error" \
+            -C "error"
+
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
+requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
+requires_config_enabled MBEDTLS_X509_CRT_PARSE_C
+requires_config_enabled MBEDTLS_ECDSA_C
+requires_config_enabled MBEDTLS_SHA256_C
+run_test    "Opaque key for server authentication (ECDH-)" \
+            "$P_SRV force_version=tls12 auth_mode=required key_opaque=1\
+             crt_file=data_files/server5.ku-ka.crt\
+             key_file=data_files/server5.key" \
+            "$P_CLI" \
+            0 \
+            -c "Verifying peer X.509 certificate... ok" \
+            -c "Ciphersuite is TLS-ECDH-" \
+            -s "key types: Opaque, none" \
+            -s "Ciphersuite is TLS-ECDH-" \
             -S "error" \
             -C "error"
 
