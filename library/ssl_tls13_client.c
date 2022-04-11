@@ -229,9 +229,7 @@ static int ssl_tls13_generate_and_write_ecdh_key_exchange(
         mbedtls_psa_parse_tls_ecc_group( named_group, &ecdh_bits ) ) == 0 )
             return( MBEDTLS_ERR_SSL_HANDSHAKE_FAILURE );
 
-    if( ecdh_bits > 0xffff )
-        return( MBEDTLS_ERR_SSL_ILLEGAL_PARAMETER );
-    ssl->handshake->ecdh_bits = (uint16_t) ecdh_bits;
+    ssl->handshake->ecdh_bits = ecdh_bits;
 
     key_attributes = psa_key_attributes_init();
     psa_set_key_usage_flags( &key_attributes, PSA_KEY_USAGE_DERIVE );
@@ -260,12 +258,6 @@ static int ssl_tls13_generate_and_write_ecdh_key_exchange(
         MBEDTLS_SSL_DEBUG_RET( 1, "psa_export_public_key", ret );
         return( ret );
 
-    }
-
-    if( own_pubkey_len > (size_t)( end - buf ) )
-    {
-            MBEDTLS_SSL_DEBUG_MSG( 1, ( "No space in the buffer for ECDH public key." ) );
-        return( MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL );
     }
 
     *out_len = own_pubkey_len;
