@@ -38,6 +38,7 @@
 #if defined(MBEDTLS_BIGNUM_C)
 
 #include "mbedtls/bignum.h"
+#include "bignum_internal.h"
 #include "bn_mul.h"
 #include "mbedtls/platform_util.h"
 #include "mbedtls/error.h"
@@ -1369,53 +1370,29 @@ int mbedtls_mpi_sub_int( mbedtls_mpi *X, const mbedtls_mpi *A, mbedtls_mpi_sint 
     return( mbedtls_mpi_sub_mpi( X, A, &B ) );
 }
 
-/** Helper for mbedtls_mpi multiplication.
- *
- * Add \p b * \p s to \p d.
- *
- * \param i             The number of limbs of \p s.
- * \param[in] s         A bignum to multiply, of size \p i.
- *                      It may overlap with \p d, but only if
- *                      \p d <= \p s.
- *                      Its leading limb must not be \c 0.
- * \param[in,out] d     The bignum to add to.
- *                      It must be sufficiently large to store the
- *                      result of the multiplication. This means
- *                      \p i + 1 limbs if \p d[\p i - 1] started as 0 and \p b
- *                      is not known a priori.
- * \param b             A scalar to multiply.
- */
-static
-#if defined(__APPLE__) && defined(__arm__)
-/*
- * Apple LLVM version 4.2 (clang-425.0.24) (based on LLVM 3.2svn)
- * appears to need this to prevent bad ARM code generation at -O3.
- */
-__attribute__ ((noinline))
-#endif
-void mpi_mul_hlp( size_t i,
-                  const mbedtls_mpi_uint *s,
-                  mbedtls_mpi_uint *d,
-                  mbedtls_mpi_uint b )
+mbedtls_mpi_uint mbedtls_mpi_core_mla( mbedtls_mpi_uint *d, size_t d_len,
+                                       const mbedtls_mpi_uint *s, size_t s_len,
+                                       mbedtls_mpi_uint b )
 {
-    mbedtls_mpi_uint c = 0, t = 0;
+    mbedtls_mpi_uint c = 0; /* carry */
+    size_t excess_len = d_len - s_len;
 
 #if defined(MULADDC_HUIT)
-    for( ; i >= 8; i -= 8 )
+    for( ; s_len >= 8; s_len -= 8 )
     {
         MULADDC_INIT
         MULADDC_HUIT
         MULADDC_STOP
     }
 
-    for( ; i > 0; i-- )
+    for( ; s_len > 0; s_len-- )
     {
         MULADDC_INIT
         MULADDC_CORE
         MULADDC_STOP
     }
 #else /* MULADDC_HUIT */
-    for( ; i >= 16; i -= 16 )
+    for( ; s_len >= 16; s_len -= 16 )
     {
         MULADDC_INIT
         MULADDC_CORE   MULADDC_CORE
@@ -1430,7 +1407,7 @@ void mpi_mul_hlp( size_t i,
         MULADDC_STOP
     }
 
-    for( ; i >= 8; i -= 8 )
+    for( ; s_len >= 8; s_len -= 8 )
     {
         MULADDC_INIT
         MULADDC_CORE   MULADDC_CORE
@@ -1441,7 +1418,7 @@ void mpi_mul_hlp( size_t i,
         MULADDC_STOP
     }
 
-    for( ; i > 0; i-- )
+    for( ; s_len > 0; s_len-- )
     {
         MULADDC_INIT
         MULADDC_CORE
@@ -1449,12 +1426,12 @@ void mpi_mul_hlp( size_t i,
     }
 #endif /* MULADDC_HUIT */
 
-    t++;
-
-    while( c != 0 )
+    while( excess_len-- )
     {
         *d += c; c = ( *d < c ); d++;
     }
+
+    return( c );
 }
 
 /*
@@ -1463,9 +1440,7 @@ void mpi_mul_hlp( size_t i,
 int mbedtls_mpi_mul_mpi( mbedtls_mpi *X, const mbedtls_mpi *A, const mbedtls_mpi *B )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
-    size_t i, j;
     mbedtls_mpi TA, TB;
-    int result_is_zero = 0;
     MPI_VALIDATE_RET( X != NULL );
     MPI_VALIDATE_RET( A != NULL );
     MPI_VALIDATE_RET( B != NULL );
@@ -1475,32 +1450,31 @@ int mbedtls_mpi_mul_mpi( mbedtls_mpi *X, const mbedtls_mpi *A, const mbedtls_mpi
     if( X == A ) { MBEDTLS_MPI_CHK( mbedtls_mpi_copy( &TA, A ) ); A = &TA; }
     if( X == B ) { MBEDTLS_MPI_CHK( mbedtls_mpi_copy( &TB, B ) ); B = &TB; }
 
-    for( i = A->n; i > 0; i-- )
-        if( A->p[i - 1] != 0 )
-            break;
-    if( i == 0 )
-        result_is_zero = 1;
-
-    for( j = B->n; j > 0; j-- )
-        if( B->p[j - 1] != 0 )
-            break;
-    if( j == 0 )
-        result_is_zero = 1;
-
-    MBEDTLS_MPI_CHK( mbedtls_mpi_grow( X, i + j ) );
+    const size_t A_len = A->n, B_len = B->n;
+    MBEDTLS_MPI_CHK( mbedtls_mpi_grow( X, A_len + B_len ) );
     MBEDTLS_MPI_CHK( mbedtls_mpi_lset( X, 0 ) );
 
-    for( ; j > 0; j-- )
-        mpi_mul_hlp( i, A->p, X->p + j - 1, B->p[j - 1] );
+    for( size_t k = 0; k < B_len; k++ )
+    {
+        /* We know that there cannot be any carry-out since we're
+         * iterating from bottom to top. */
+        (void) mbedtls_mpi_core_mla( X->p + k, A_len + 1,
+                                     A->p, A_len,
+                                     B->p[k] );
+    }
 
-    /* If the result is 0, we don't shortcut the operation, which reduces
-     * but does not eliminate side channels leaking the zero-ness. We do
-     * need to take care to set the sign bit properly since the library does
-     * not fully support an MPI object with a value of 0 and s == -1. */
-    if( result_is_zero )
-        X->s = 1;
-    else
-        X->s = A->s * B->s;
+    X->s = A->s * B->s;
+
+    /* The library does not fully support a "negative zero". */
+    if( X->s == -1 )
+    {
+        size_t i;
+        for( i = X->n; i > 0; i-- )
+            if( X->p[i - 1] != 0 )
+                break;
+        if( i == 0 )
+            X->s = 1;
+    }
 
 cleanup:
 
@@ -1517,19 +1491,11 @@ int mbedtls_mpi_mul_int( mbedtls_mpi *X, const mbedtls_mpi *A, mbedtls_mpi_uint 
     MPI_VALIDATE_RET( X != NULL );
     MPI_VALIDATE_RET( A != NULL );
 
-    /* mpi_mul_hlp can't deal with a leading 0. */
-    size_t n = A->n;
-    while( n > 0 && A->p[n - 1] == 0 )
-        --n;
-
-    /* The general method below doesn't work if n==0 or b==0. By chance
-     * calculating the result is trivial in those cases. */
-    if( b == 0 || n == 0 )
-    {
+    /* The general method below doesn't work if b==0. */
+    if( b == 0 )
         return( mbedtls_mpi_lset( X, 0 ) );
-    }
 
-    /* Calculate A*b as A + A*(b-1) to take advantage of mpi_mul_hlp */
+    /* Calculate A*b as A + A*(b-1) to take advantage of mbedtls_mpi_core_mla */
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     /* In general, A * b requires 1 limb more than b. If
      * A->p[n - 1] * b / b == A->p[n - 1], then A * b fits in the same
@@ -1539,9 +1505,9 @@ int mbedtls_mpi_mul_int( mbedtls_mpi *X, const mbedtls_mpi *A, mbedtls_mpi_uint 
      * calls to calloc() in ECP code, presumably because it reuses the
      * same mpi for a while and this way the mpi is more likely to directly
      * grow to its final size. */
-    MBEDTLS_MPI_CHK( mbedtls_mpi_grow( X, n + 1 ) );
+    MBEDTLS_MPI_CHK( mbedtls_mpi_grow( X, A->n + 1 ) );
     MBEDTLS_MPI_CHK( mbedtls_mpi_copy( X, A ) );
-    mpi_mul_hlp( n, A->p, X->p, b - 1 );
+    mbedtls_mpi_core_mla( X->p, X->n, A->p, A->n, b - 1 );
 
 cleanup:
     return( ret );
@@ -1907,8 +1873,8 @@ static void mpi_montg_init( mbedtls_mpi_uint *mm, const mbedtls_mpi *N )
  * \param           mm  The value calculated by `mpi_montg_init(&mm, N)`.
  *                      This is -N^-1 mod 2^ciL.
  * \param[in,out]   T   A bignum for temporary storage.
- *                      It must be at least twice the limb size of N plus 2
- *                      (T->n >= 2 * (N->n + 1)).
+ *                      It must be at least twice the limb size of N plus 1
+ *                      (T->n >= 2 * N->n + 1).
  *                      Its initial content is unused and
  *                      its final content is indeterminate.
  *                      Note that unlike the usual convention in the library
@@ -1934,10 +1900,13 @@ static void mpi_montmul( mbedtls_mpi *A, const mbedtls_mpi *B, const mbedtls_mpi
         u0 = A->p[i];
         u1 = ( d[0] + u0 * B->p[0] ) * mm;
 
-        mpi_mul_hlp( m, B->p, d, u0 );
-        mpi_mul_hlp( n, N->p, d, u1 );
-
-        d++; d[n + 1] = 0;
+        (void) mbedtls_mpi_core_mla( d, n + 2,
+                                     B->p, m,
+                                     u0 );
+        (void) mbedtls_mpi_core_mla( d, n + 2,
+                                     N->p, n,
+                                     u1 );
+        d++;
     }
 
     /* At this point, d is either the desired result or the desired result
