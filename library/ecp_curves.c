@@ -5224,6 +5224,8 @@ static int ecp_mod_p255( mbedtls_mpi *N )
 
     if( N->n < P255_WIDTH )
         return( 0 );
+    if( NT_n > P255_WIDTH )
+        return( MBEDTLS_ERR_ECP_BAD_INPUT_DATA );
 
     /* M = A1 */
     M.s = 1;
