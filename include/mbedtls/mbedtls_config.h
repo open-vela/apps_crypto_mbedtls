@@ -1769,8 +1769,18 @@
  * This setting allows support for cryptographic mechanisms through the PSA
  * API to be configured separately from support through the mbedtls API.
  *
- * Uncomment this to enable use of PSA Crypto configuration settings which
- * can be found in include/psa/crypto_config.h.
+ * When this option is disabled, the PSA API exposes the same cryptographic
+ * mechanism as the `mbedtls_xxx` API configured with `MBEDTLS_XXX` symbols.
+ *
+ * When this option is enabled, the PSA API exposes the cryptographic
+ * mechanisms requested by the `PSA_WANT_XXX` symbols defined in
+ * include/psa/crypto_config.h. The corresponding `MBEDTLS_XXX` settings are
+ * automatically enabled if required (i.e. if no PSA driver provides the
+ * mechanism). You may still freely enable additional `MBEDTLS_XXX` symbols
+ * in mbedtls_config.h.
+ *
+ * If the symbol #MBEDTLS_PSA_CRYPTO_CONFIG_FILE is defined, it specifies
+ * an alternative location to use instead of include/psa/crypto_config.h.
  *
  * This feature is still experimental and is not ready for production since
  * it is not completed.
@@ -2760,6 +2770,56 @@
 #define MBEDTLS_SHA256_C
 
 /**
+ * \def MBEDTLS_SHA256_USE_A64_CRYPTO_IF_PRESENT
+ *
+ * Enable acceleration of the SHA-256 cryptographic hash algorithm with the
+ * Arm A64 cryptographic extensions if they are available at runtime. If not,
+ * it will fall back to the C implementation.
+ *
+ * \note If MBEDTLS_SHA256_USE_A64_CRYPTO_IF_PRESENT is defined when building
+ * for a non-Aarch64 build it will be silently ignored.
+ *
+ * \note The code uses Neon intrinsics, so \c CFLAGS must be set to a minimum
+ * of \c -march=armv8-a+crypto.
+ *
+ * \warning MBEDTLS_SHA256_USE_A64_CRYPTO_IF_PRESENT cannot be defined at the
+ * same time as MBEDTLS_SHA256_USE_A64_CRYPTO_ONLY.
+ *
+ * Requires: MBEDTLS_SHA256_C.
+ *
+ * Module:  library/sha256.c
+ *
+ * Uncomment to have the library check for the A64 SHA-256 crypto extensions
+ * and use them if available.
+ */
+//#define MBEDTLS_SHA256_USE_A64_CRYPTO_IF_PRESENT
+
+/**
+ * \def MBEDTLS_SHA256_USE_A64_CRYPTO_ONLY
+ *
+ * Enable acceleration of the SHA-256 cryptographic hash algorithm with the
+ * Arm A64 cryptographic extensions, which must be available at runtime (or
+ * an illegal instruction fault will occur).
+ *
+ * \note This allows builds with a smaller code size than with
+ * MBEDTLS_SHA256_USE_A64_CRYPTO_IF_PRESENT
+ *
+ * \note The code uses Neon intrinsics, so \c CFLAGS must be set to a minimum
+ * of \c -march=armv8-a+crypto.
+ *
+ * \warning MBEDTLS_SHA256_USE_A64_CRYPTO_ONLY cannot be defined at the same
+ * time as MBEDTLS_SHA256_USE_A64_CRYPTO_IF_PRESENT.
+ *
+ * Requires: MBEDTLS_SHA256_C.
+ *
+ * Module:  library/sha256.c
+ *
+ * Uncomment to have the library use the A64 SHA-256 crypto extensions
+ * unconditionally.
+ */
+//#define MBEDTLS_SHA256_USE_A64_CRYPTO_ONLY
+
+/**
  * \def MBEDTLS_SHA384_C
  *
  * Enable the SHA-384 cryptographic hash algorithm.
@@ -3022,6 +3082,81 @@
 #define MBEDTLS_X509_CSR_WRITE_C
 
 /** \} name SECTION: mbed TLS modules */
+
+/**
+ * \name SECTION: General configuration options
+ *
+ * This section contains Mbed TLS build settings that are not associated
+ * with a particular module.
+ *
+ * \{
+ */
+
+/**
+ * \def MBEDTLS_CONFIG_FILE
+ *
+ * If defined, this is a header which will be included instead of
+ * `"mbedtls/mbedtls_config.h"`.
+ * This header file specifies the compile-time configuration of Mbed TLS.
+ *
+ * This macro is expanded after an <tt>\#include</tt> directive. This is a popular but
+ * non-standard feature of the C language, so this feature is only available
+ * with compilers that perform macro expansion on an <tt>\#include</tt> line.
+ *
+ * The value of this symbol is typically a path in double quotes, relative
+ * to a directory on the include search pah.
+ */
+//#define MBEDTLS_CONFIG_FILE "mbedtls/mbedtls_config.h"
+
+/**
+ * \def MBEDTLS_USER_CONFIG_FILE
+ *
+ * If defined, this is a header which will be included after
+ * `"mbedtls/mbedtls_config.h"` or #MBEDTLS_CONFIG_FILE.
+ *
+ * This macro is expanded after an <tt>\#include</tt> directive. This is a popular but
+ * non-standard feature of the C language, so this feature is only available
+ * with compilers that perform macro expansion on an <tt>\#include</tt> line.
+ *
+ * The value of this symbol is typically a path in double quotes, relative
+ * to a directory on the include search pah.
+ */
+//#define MBEDTLS_USER_CONFIG_FILE "/dev/null"
+
+/**
+ * \def MBEDTLS_PSA_CRYPTO_CONFIG_FILE
+ *
+ * If defined, this is a header which will be included instead of
+ * `"psa/crypto_config.h"`.
+ * This header file specifies which cryptographic mechanisms are available
+ * through the PSA API when #MBEDTLS_PSA_CRYPTO_CONFIG is enabled, and
+ * is not used when #MBEDTLS_PSA_CRYPTO_CONFIG is disabled.
+ *
+ * This macro is expanded after an <tt>\#include</tt> directive. This is a popular but
+ * non-standard feature of the C language, so this feature is only available
+ * with compilers that perform macro expansion on an <tt>\#include</tt> line.
+ *
+ * The value of this symbol is typically a path in double quotes, relative
+ * to a directory on the include search pah.
+ */
+//#define MBEDTLS_PSA_CRYPTO_CONFIG_FILE "psa/crypto_config.h"
+
+/**
+ * \def MBEDTLS_PSA_CRYPTO_USER_CONFIG_FILE
+ *
+ * If defined, this is a header which will be included after
+ * `"psa/crypto_config.h"` or #MBEDTLS_PSA_CRYPTO_CONFIG_FILE.
+ *
+ * This macro is expanded after an <tt>\#include</tt> directive. This is a popular but
+ * non-standard feature of the C language, so this feature is only available
+ * with compilers that perform macro expansion on an <tt>\#include</tt> line.
+ *
+ * The value of this symbol is typically a path in double quotes, relative
+ * to a directory on the include search pah.
+ */
+//#define MBEDTLS_PSA_CRYPTO_USER_CONFIG_FILE "/dev/null"
+
+/** \} name SECTION: General configuration options */
 
 /**
  * \name SECTION: Module configuration options
