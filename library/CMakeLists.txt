@@ -99,12 +99,13 @@ set(src_tls
     net_sockets.c
     ssl_cache.c
     ssl_ciphersuites.c
-    ssl_cli.c
+    ssl_client.c
     ssl_cookie.c
     ssl_msg.c
-    ssl_srv.c
     ssl_ticket.c
     ssl_tls.c
+    ssl_tls12_client.c
+    ssl_tls12_server.c
     ssl_tls13_keys.c
     ssl_tls13_server.c
     ssl_tls13_client.c
@@ -259,6 +260,7 @@ if(USE_STATIC_MBEDTLS_LIBRARY)
 endif(USE_STATIC_MBEDTLS_LIBRARY)
 
 if(USE_SHARED_MBEDTLS_LIBRARY)
+    set(CMAKE_LIBRARY_PATH ${CMAKE_CURRENT_BINARY_DIR})
     add_library(${mbedcrypto_target} SHARED ${src_crypto})
     set_target_properties(${mbedcrypto_target} PROPERTIES VERSION 3.1.0 SOVERSION 11)
     target_link_libraries(${mbedcrypto_target} PUBLIC ${libs})
