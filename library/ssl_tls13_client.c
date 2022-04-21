@@ -49,8 +49,8 @@ static int ssl_tls13_write_supported_versions_ext( mbedtls_ssl_context *ssl,
                                                    size_t *out_len )
 {
     unsigned char *p = buf;
-    unsigned char versions_len = ( ssl->handshake->min_minor_ver <=
-                                   MBEDTLS_SSL_MINOR_VERSION_3 ) ? 4 : 2;
+    unsigned char versions_len = ( ssl->handshake->min_tls_version <=
+                                   MBEDTLS_SSL_VERSION_TLS1_2 ) ? 4 : 2;
 
     *out_len = 0;
 
@@ -75,17 +75,15 @@ static int ssl_tls13_write_supported_versions_ext( mbedtls_ssl_context *ssl,
      * They are defined by the configuration.
      * Currently, we advertise only TLS 1.3 or both TLS 1.3 and TLS 1.2.
      */
-    mbedtls_ssl_write_version( MBEDTLS_SSL_MAJOR_VERSION_3,
-                               MBEDTLS_SSL_MINOR_VERSION_4,
-                               MBEDTLS_SSL_TRANSPORT_STREAM, p );
+    mbedtls_ssl_write_version( p, MBEDTLS_SSL_TRANSPORT_STREAM,
+                               MBEDTLS_SSL_VERSION_TLS1_3 );
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "supported version: [3:4]" ) );
 
 
-    if( ssl->handshake->min_minor_ver <= MBEDTLS_SSL_MINOR_VERSION_3 )
+    if( ssl->handshake->min_tls_version <= MBEDTLS_SSL_VERSION_TLS1_2 )
     {
-        mbedtls_ssl_write_version( MBEDTLS_SSL_MAJOR_VERSION_3,
-                                   MBEDTLS_SSL_MINOR_VERSION_3,
-                                   MBEDTLS_SSL_TRANSPORT_STREAM, p + 2 );
+        mbedtls_ssl_write_version( p + 2, MBEDTLS_SSL_TRANSPORT_STREAM,
+                                   MBEDTLS_SSL_VERSION_TLS1_2 );
         MBEDTLS_SSL_DEBUG_MSG( 3, ( "supported version: [3:3]" ) );
     }
 
@@ -101,8 +99,8 @@ static int ssl_tls13_parse_supported_versions_ext( mbedtls_ssl_context *ssl,
     ((void) ssl);
 
     MBEDTLS_SSL_CHK_BUF_READ_PTR( buf, end, 2 );
-    if( buf[0] != MBEDTLS_SSL_MAJOR_VERSION_3 ||
-        buf[1] != MBEDTLS_SSL_MINOR_VERSION_4 )
+    if( mbedtls_ssl_read_version( buf, ssl->conf->transport ) !=
+          MBEDTLS_SSL_VERSION_TLS1_3 )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "unexpected version" ) );
 
@@ -419,30 +417,6 @@ cleanup:
     return( ret );
 }
 
-#if defined(MBEDTLS_ECDH_C)
-
-static int ssl_tls13_read_public_ecdhe_share( mbedtls_ssl_context *ssl,
-                                              const unsigned char *buf,
-                                              size_t buf_len )
-{
-    uint8_t *p = (uint8_t*)buf;
-    mbedtls_ssl_handshake_params *handshake = ssl->handshake;
-
-    /* Get size of the TLS opaque key_exchange field of the KeyShareEntry struct. */
-    uint16_t peerkey_len = MBEDTLS_GET_UINT16_BE( p, 0 );
-    p += 2;
-
-    /* Check if key size is consistent with given buffer length. */
-    if ( peerkey_len > ( buf_len - 2 ) )
-        return( MBEDTLS_ERR_SSL_DECODE_ERROR );
-
-    /* Store peer's ECDH public key. */
-    memcpy( handshake->ecdh_psa_peerkey, p, peerkey_len );
-    handshake->ecdh_psa_peerkey_len = peerkey_len;
-
-    return( 0 );
-}
-#endif /* MBEDTLS_ECDH_C */
 
 /*
  * ssl_tls13_parse_hrr_key_share_ext()
@@ -567,7 +541,7 @@ static int ssl_tls13_parse_key_share_ext( mbedtls_ssl_context *ssl,
 
         MBEDTLS_SSL_DEBUG_MSG( 2, ( "ECDH curve: %s", curve_info->name ) );
 
-        ret = ssl_tls13_read_public_ecdhe_share( ssl, p, end - p );
+        ret = mbedtls_ssl_tls13_read_public_ecdhe_share( ssl, p, end - p );
         if( ret != 0 )
             return( ret );
     }
@@ -861,7 +835,7 @@ static int ssl_tls13_server_hello_coordinate( mbedtls_ssl_context *ssl,
          * expecting it, abort the handshake. Otherwise, switch to TLS 1.2
          * handshake.
          */
-        if( ssl->handshake->min_minor_ver > MBEDTLS_SSL_MINOR_VERSION_3 )
+        if( ssl->handshake->min_tls_version > MBEDTLS_SSL_VERSION_TLS1_2 )
         {
             MBEDTLS_SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_ILLEGAL_PARAMETER,
                                           MBEDTLS_ERR_SSL_ILLEGAL_PARAMETER );
@@ -869,7 +843,7 @@ static int ssl_tls13_server_hello_coordinate( mbedtls_ssl_context *ssl,
         }
 
         ssl->keep_current_message = 1;
-        ssl->minor_ver = MBEDTLS_SSL_MINOR_VERSION_3;
+        ssl->tls_version = MBEDTLS_SSL_VERSION_TLS1_2;
         mbedtls_ssl_add_hs_msg_to_checksum( ssl, MBEDTLS_SSL_HS_SERVER_HELLO,
                                             *buf, *buf_len );
 
@@ -965,22 +939,6 @@ static int ssl_tls13_check_server_hello_session_id_echo( mbedtls_ssl_context *ss
     return( 0 );
 }
 
-static int ssl_tls13_cipher_suite_is_offered( mbedtls_ssl_context *ssl,
-                                              int cipher_suite )
-{
-    const int *ciphersuite_list = ssl->conf->ciphersuite_list;
-
-    /* Check whether we have offered this ciphersuite */
-    for ( size_t i = 0; ciphersuite_list[i] != 0; i++ )
-    {
-        if( ciphersuite_list[i] == cipher_suite )
-        {
-            return( 1 );
-        }
-    }
-    return( 0 );
-}
-
 /* Parse ServerHello message and configure context
  *
  * struct {
@@ -1026,8 +984,8 @@ static int ssl_tls13_parse_server_hello( mbedtls_ssl_context *ssl,
      * with ProtocolVersion defined as:
      * uint16 ProtocolVersion;
      */
-    if( !( p[0] == MBEDTLS_SSL_MAJOR_VERSION_3 &&
-           p[1] == MBEDTLS_SSL_MINOR_VERSION_3 ) )
+    if( mbedtls_ssl_read_version( p, ssl->conf->transport ) !=
+          MBEDTLS_SSL_VERSION_TLS1_2 )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "Unsupported version of TLS." ) );
         MBEDTLS_SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_PROTOCOL_VERSION,
@@ -1077,9 +1035,10 @@ static int ssl_tls13_parse_server_hello( mbedtls_ssl_context *ssl,
     /*
      * Check whether this ciphersuite is valid and offered.
      */
-    if( ( mbedtls_ssl_validate_ciphersuite(
-            ssl, ciphersuite_info, ssl->minor_ver, ssl->minor_ver ) != 0 ) ||
-        !ssl_tls13_cipher_suite_is_offered( ssl, cipher_suite ) )
+    if( ( mbedtls_ssl_validate_ciphersuite( ssl, ciphersuite_info,
+                                            ssl->tls_version,
+                                            ssl->tls_version ) != 0 ) ||
+        !mbedtls_ssl_tls13_cipher_suite_is_offered( ssl, cipher_suite ) )
     {
         fatal_alert = MBEDTLS_SSL_ALERT_MSG_ILLEGAL_PARAMETER;
     }
@@ -1411,7 +1370,6 @@ static int ssl_tls13_process_server_hello( mbedtls_ssl_context *ssl )
      * - Make sure it's either a ServerHello or a HRR.
      * - Switch processing routine in case of HRR
      */
-    ssl->major_ver = MBEDTLS_SSL_MAJOR_VERSION_3;
     ssl->handshake->extensions_present = MBEDTLS_SSL_EXT_NONE;
 
     ret = ssl_tls13_server_hello_coordinate( ssl, &buf, &buf_len );
