@@ -488,6 +488,7 @@
 #define MBEDTLS_SSL_ALERT_MSG_INAPROPRIATE_FALLBACK 86  /* 0x56 */
 #define MBEDTLS_SSL_ALERT_MSG_USER_CANCELED         90  /* 0x5A */
 #define MBEDTLS_SSL_ALERT_MSG_NO_RENEGOTIATION     100  /* 0x64 */
+#define MBEDTLS_SSL_ALERT_MSG_MISSING_EXTENSION    109  /* 0x6d -- new in TLS 1.3 */
 #define MBEDTLS_SSL_ALERT_MSG_UNSUPPORTED_EXT      110  /* 0x6E */
 #define MBEDTLS_SSL_ALERT_MSG_UNRECOGNIZED_NAME    112  /* 0x70 */
 #define MBEDTLS_SSL_ALERT_MSG_UNKNOWN_PSK_IDENTITY 115  /* 0x73 */
@@ -641,6 +642,7 @@ typedef enum
     MBEDTLS_SSL_SERVER_NEW_SESSION_TICKET,
     MBEDTLS_SSL_SERVER_HELLO_VERIFY_REQUEST_SENT,
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3)
+    MBEDTLS_SSL_HELLO_RETRY_REQUEST,
     MBEDTLS_SSL_ENCRYPTED_EXTENSIONS,
     MBEDTLS_SSL_CLIENT_CERTIFICATE_VERIFY,
 #if defined(MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE)
@@ -1128,8 +1130,8 @@ struct mbedtls_ssl_session
 
     unsigned char MBEDTLS_PRIVATE(exported);
 
-    /** TLS version negotiated in the session. Used if and when renegotiating
-     *  or resuming a session instead of the configured minor TLS version.
+    /*!< TLS version negotiated in the session. Used if and when renegotiating
+     *   or resuming a session instead of the configured minor TLS version.
      */
     mbedtls_ssl_protocol_version MBEDTLS_PRIVATE(tls_version);
 
@@ -1372,7 +1374,6 @@ struct mbedtls_ssl_config
     int (*MBEDTLS_PRIVATE(f_ticket_parse))( void *, mbedtls_ssl_session *, unsigned char *, size_t);
     void *MBEDTLS_PRIVATE(p_ticket);                 /*!< context for the ticket callbacks   */
 #endif /* MBEDTLS_SSL_SESSION_TICKETS && MBEDTLS_SSL_SRV_C */
-
 #if defined(MBEDTLS_SSL_DTLS_CONNECTION_ID)
     size_t MBEDTLS_PRIVATE(cid_len); /*!< The length of CIDs for incoming DTLS records.      */
 #endif /* MBEDTLS_SSL_DTLS_CONNECTION_ID */
@@ -1514,19 +1515,19 @@ struct mbedtls_ssl_context
                                   renego_max_records is < 0           */
 #endif /* MBEDTLS_SSL_RENEGOTIATION */
 
-    /** Server: Negotiated TLS protocol version.
-     *  Client: Maximum TLS version to be negotiated, then negotiated TLS
-     *          version.
+    /*!< Server: Negotiated TLS protocol version.
+     *   Client: Maximum TLS version to be negotiated, then negotiated TLS
+     *           version.
      *
-     *  It is initialized as the maximum TLS version to be negotiated in the
-     *  ClientHello writing preparation stage and used throughout the
-     *  ClientHello writing. For a fresh handshake not linked to any previous
-     *  handshake, it is initialized to the configured maximum TLS version
-     *  to be negotiated. When renegotiating or resuming a session, it is
-     *  initialized to the previously negotiated TLS version.
+     *   It is initialized as the maximum TLS version to be negotiated in the
+     *   ClientHello writing preparation stage and used throughout the
+     *   ClientHello writing. For a fresh handshake not linked to any previous
+     *   handshake, it is initialized to the configured maximum TLS version
+     *   to be negotiated. When renegotiating or resuming a session, it is
+     *   initialized to the previously negotiated TLS version.
      *
-     *  Updated to the negotiated TLS version as soon as the ServerHello is
-     *  received.
+     *   Updated to the negotiated TLS version as soon as the ServerHello is
+     *   received.
      */
     mbedtls_ssl_protocol_version MBEDTLS_PRIVATE(tls_version);
 
