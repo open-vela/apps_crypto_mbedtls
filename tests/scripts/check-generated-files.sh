@@ -76,7 +76,7 @@ check()
 
     for FILE in "$@"; do
         if [ -e "$FILE" ]; then
-            cp -p "$FILE" "$FILE.bak"
+            cp "$FILE" "$FILE.bak"
         else
             rm -f "$FILE.bak"
         fi
@@ -86,17 +86,16 @@ check()
 
     # Compare the script output to the old files and remove backups
     for FILE in "$@"; do
-        if diff "$FILE" "$FILE.bak" >/dev/null 2>&1; then
-            # Move the original file back so that $FILE's timestamp doesn't
-            # change (avoids spurious rebuilds with make).
-            mv "$FILE.bak" "$FILE"
-        else
+        if ! diff "$FILE" "$FILE.bak" >/dev/null 2>&1; then
             echo "'$FILE' was either modified or deleted by '$SCRIPT'"
             if [ -z "$UPDATE" ]; then
                 exit 1
-            else
-                rm -f "$FILE.bak"
             fi
+        fi
+        if [ -z "$UPDATE" ]; then
+            mv "$FILE.bak" "$FILE"
+        else
+            rm -f "$FILE.bak"
         fi
     done
 
