@@ -65,7 +65,7 @@ int main( void )
 #include <windows.h>
 #endif
 
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
+#if defined(MBEDTLS_USE_PSA_CRYPTO) || defined(MBEDTLS_SSL_PROTO_TLS1_3)
 #include "test/psa_crypto_helpers.h"
 #endif
 
@@ -169,6 +169,9 @@ int main( void )
 
 /*
  * Size of the basic I/O buffer. Able to hold our default response.
+ *
+ * You will need to adapt the mbedtls_ssl_get_bytes_avail() test in ssl-opt.sh
+ * if you change this value to something outside the range <= 100 or > 500
  */
 #define DFL_IO_BUF_LEN      200
 
@@ -1418,7 +1421,7 @@ int main( int argc, char *argv[] )
     int i;
     char *p, *q;
     const int *list;
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
+#if defined(MBEDTLS_USE_PSA_CRYPTO) || defined(MBEDTLS_SSL_PROTO_TLS1_3)
     psa_status_t status;
 #endif
     unsigned char eap_tls_keymaterial[16];
@@ -1484,7 +1487,7 @@ int main( int argc, char *argv[] )
     mbedtls_ssl_cookie_init( &cookie_ctx );
 #endif
 
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
+#if defined(MBEDTLS_USE_PSA_CRYPTO) || defined(MBEDTLS_SSL_PROTO_TLS1_3)
     status = psa_crypto_init();
     if( status != PSA_SUCCESS )
     {
@@ -2110,26 +2113,10 @@ int main( int argc, char *argv[] )
 #if defined(MBEDTLS_DEBUG_C)
     mbedtls_debug_set_threshold( opt.debug_level );
 #endif
-
-    /* buf will alternatively contain the input read from the client and the
-     * response that's about to be sent, plus a null byte in each case. */
-    size_t buf_content_size = opt.buffer_size;
-    /* The default response contains the ciphersuite name. Leave enough
-     * room for that plus some margin. */
-    if( buf_content_size < strlen( HTTP_RESPONSE ) + 80 )
-    {
-        buf_content_size = strlen( HTTP_RESPONSE ) + 80;
-    }
-    if( opt.response_size != DFL_RESPONSE_SIZE &&
-        buf_content_size < (size_t) opt.response_size )
-    {
-        buf_content_size = opt.response_size;
-    }
-    buf = mbedtls_calloc( 1, buf_content_size + 1 );
+    buf = mbedtls_calloc( 1, opt.buffer_size + 1 );
     if( buf == NULL )
     {
-        mbedtls_printf( "Could not allocate %lu bytes\n",
-                        (unsigned long) buf_content_size + 1 );
+        mbedtls_printf( "Could not allocate %u bytes\n", opt.buffer_size );
         ret = 3;
         goto exit;
     }
@@ -3563,7 +3550,7 @@ data_exchange:
         do
         {
             int terminated = 0;
-            len = opt.buffer_size;
+            len = opt.buffer_size - 1;
             memset( buf, 0, opt.buffer_size );
             ret = mbedtls_ssl_read( &ssl, buf, len );
 
@@ -3664,7 +3651,7 @@ data_exchange:
     }
     else /* Not stream, so datagram */
     {
-        len = opt.buffer_size;
+        len = opt.buffer_size - 1;
         memset( buf, 0, opt.buffer_size );
 
         do
@@ -3766,8 +3753,6 @@ data_exchange:
     mbedtls_printf( "  > Write to client:" );
     fflush( stdout );
 
-    /* If the format of the response changes, make sure there is enough
-     * room in buf (buf_content_size calculation above). */
     len = sprintf( (char *) buf, HTTP_RESPONSE,
                    mbedtls_ssl_get_ciphersuite( &ssl ) );
 
@@ -4142,7 +4127,7 @@ exit:
 #endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED &&
           MBEDTLS_USE_PSA_CRYPTO */
 
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
+#if defined(MBEDTLS_USE_PSA_CRYPTO) || defined(MBEDTLS_SSL_PROTO_TLS1_3)
     const char* message = mbedtls_test_helper_is_psa_leaking();
     if( message )
     {
@@ -4154,8 +4139,8 @@ exit:
 
     /* For builds with MBEDTLS_TEST_USE_PSA_CRYPTO_RNG psa crypto
      * resources are freed by rng_free(). */
-#if defined(MBEDTLS_USE_PSA_CRYPTO) && \
-    !defined(MBEDTLS_TEST_USE_PSA_CRYPTO_RNG)
+#if ( defined(MBEDTLS_USE_PSA_CRYPTO) || defined(MBEDTLS_SSL_PROTO_TLS1_3) ) \
+    && !defined(MBEDTLS_TEST_USE_PSA_CRYPTO_RNG)
     mbedtls_psa_crypto_free( );
 #endif
 

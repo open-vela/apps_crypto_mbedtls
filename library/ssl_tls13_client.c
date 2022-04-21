@@ -30,6 +30,7 @@
 #include "mbedtls/platform.h"
 
 #include "ssl_misc.h"
+#include "ecdh_misc.h"
 #include "ssl_client.h"
 #include "ssl_tls13_keys.h"
 
@@ -416,30 +417,6 @@ cleanup:
     return( ret );
 }
 
-#if defined(MBEDTLS_ECDH_C)
-
-static int ssl_tls13_read_public_ecdhe_share( mbedtls_ssl_context *ssl,
-                                              const unsigned char *buf,
-                                              size_t buf_len )
-{
-    uint8_t *p = (uint8_t*)buf;
-    mbedtls_ssl_handshake_params *handshake = ssl->handshake;
-
-    /* Get size of the TLS opaque key_exchange field of the KeyShareEntry struct. */
-    uint16_t peerkey_len = MBEDTLS_GET_UINT16_BE( p, 0 );
-    p += 2;
-
-    /* Check if key size is consistent with given buffer length. */
-    if ( peerkey_len > ( buf_len - 2 ) )
-        return( MBEDTLS_ERR_SSL_DECODE_ERROR );
-
-    /* Store peer's ECDH public key. */
-    memcpy( handshake->ecdh_psa_peerkey, p, peerkey_len );
-    handshake->ecdh_psa_peerkey_len = peerkey_len;
-
-    return( 0 );
-}
-#endif /* MBEDTLS_ECDH_C */
 
 /*
  * ssl_tls13_parse_hrr_key_share_ext()
@@ -564,7 +541,7 @@ static int ssl_tls13_parse_key_share_ext( mbedtls_ssl_context *ssl,
 
         MBEDTLS_SSL_DEBUG_MSG( 2, ( "ECDH curve: %s", curve_info->name ) );
 
-        ret = ssl_tls13_read_public_ecdhe_share( ssl, p, end - p );
+        ret = mbedtls_ssl_tls13_read_public_ecdhe_share( ssl, p, end - p );
         if( ret != 0 )
             return( ret );
     }
@@ -710,7 +687,6 @@ int mbedtls_ssl_tls13_write_client_hello_exts( mbedtls_ssl_context *ssl,
 /*
  * Functions for parsing and processing Server Hello
  */
-
 /**
  * \brief Detect if the ServerHello contains a supported_versions extension
  *        or not.
@@ -793,36 +769,6 @@ static int ssl_tls13_is_supported_versions_ext_present(
 }
 
 /* Returns a negative value on failure, and otherwise
- * - 1 if the last eight bytes of the ServerHello random bytes indicate that
- *     the server is TLS 1.3 capable but negotiating TLS 1.2 or below.
- * - 0 otherwise
- */
-static int ssl_tls13_is_downgrade_negotiation( mbedtls_ssl_context *ssl,
-                                               const unsigned char *buf,
-                                               const unsigned char *end )
-{
-    /* First seven bytes of the magic downgrade strings, see RFC 8446 4.1.3 */
-    static const unsigned char magic_downgrade_string[] =
-        { 0x44, 0x4F, 0x57, 0x4E, 0x47, 0x52, 0x44 };
-    const unsigned char *last_eight_bytes_of_random;
-    unsigned char last_byte_of_random;
-
-    MBEDTLS_SSL_CHK_BUF_READ_PTR( buf, end, MBEDTLS_SERVER_HELLO_RANDOM_LEN + 2 );
-    last_eight_bytes_of_random = buf + 2 + MBEDTLS_SERVER_HELLO_RANDOM_LEN - 8;
-
-    if( memcmp( last_eight_bytes_of_random,
-                magic_downgrade_string,
-                sizeof( magic_downgrade_string ) ) == 0 )
-    {
-        last_byte_of_random = last_eight_bytes_of_random[7];
-        return( last_byte_of_random == 0 ||
-                last_byte_of_random == 1    );
-    }
-
-    return( 0 );
-}
-
-/* Returns a negative value on failure, and otherwise
  * - SSL_SERVER_HELLO_COORDINATE_HELLO or
  * - SSL_SERVER_HELLO_COORDINATE_HRR
  * to indicate which message is expected and to be parsed next.
@@ -876,27 +822,20 @@ static int ssl_tls13_server_hello_coordinate( mbedtls_ssl_context *ssl,
                                               size_t *buf_len )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
-    const unsigned char *end;
 
     MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_tls13_fetch_handshake_msg( ssl,
                                              MBEDTLS_SSL_HS_SERVER_HELLO,
                                              buf, buf_len ) );
-    end = *buf + *buf_len;
 
     MBEDTLS_SSL_PROC_CHK_NEG( ssl_tls13_is_supported_versions_ext_present(
-                                  ssl, *buf, end ) );
+                                  ssl, *buf, *buf + *buf_len ) );
     if( ret == 0 )
     {
-        MBEDTLS_SSL_PROC_CHK_NEG(
-            ssl_tls13_is_downgrade_negotiation( ssl, *buf, end ) );
-
-        /* If the server is negotiating TLS 1.2 or below and:
-         * . we did not propose TLS 1.2 or
-         * . the server responded it is TLS 1.3 capable but negotiating a lower
-         *   version of the protocol and thus we are under downgrade attack
-         * abort the handshake with an "illegal parameter" alert.
+        /* If the supported versions extension is not present but we were
+         * expecting it, abort the handshake. Otherwise, switch to TLS 1.2
+         * handshake.
          */
-        if( ssl->handshake->min_tls_version > MBEDTLS_SSL_VERSION_TLS1_2 || ret )
+        if( ssl->handshake->min_tls_version > MBEDTLS_SSL_VERSION_TLS1_2 )
         {
             MBEDTLS_SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_ILLEGAL_PARAMETER,
                                           MBEDTLS_ERR_SSL_ILLEGAL_PARAMETER );
@@ -918,7 +857,7 @@ static int ssl_tls13_server_hello_coordinate( mbedtls_ssl_context *ssl,
         return( SSL_SERVER_HELLO_COORDINATE_TLS1_2 );
     }
 
-    ret = ssl_server_hello_is_hrr( ssl, *buf, end );
+    ret = ssl_server_hello_is_hrr( ssl, *buf, *buf + *buf_len );
     switch( ret )
     {
         case SSL_SERVER_HELLO_COORDINATE_HELLO:
@@ -997,22 +936,6 @@ static int ssl_tls13_check_server_hello_session_id_echo( mbedtls_ssl_context *ss
 
     MBEDTLS_SSL_DEBUG_BUF( 3, "Session ID", ssl->session_negotiate->id,
                             ssl->session_negotiate->id_len );
-    return( 0 );
-}
-
-static int ssl_tls13_cipher_suite_is_offered( mbedtls_ssl_context *ssl,
-                                              int cipher_suite )
-{
-    const int *ciphersuite_list = ssl->conf->ciphersuite_list;
-
-    /* Check whether we have offered this ciphersuite */
-    for ( size_t i = 0; ciphersuite_list[i] != 0; i++ )
-    {
-        if( ciphersuite_list[i] == cipher_suite )
-        {
-            return( 1 );
-        }
-    }
     return( 0 );
 }
 
@@ -1115,7 +1038,7 @@ static int ssl_tls13_parse_server_hello( mbedtls_ssl_context *ssl,
     if( ( mbedtls_ssl_validate_ciphersuite( ssl, ciphersuite_info,
                                             ssl->tls_version,
                                             ssl->tls_version ) != 0 ) ||
-        !ssl_tls13_cipher_suite_is_offered( ssl, cipher_suite ) )
+        !mbedtls_ssl_tls13_cipher_suite_is_offered( ssl, cipher_suite ) )
     {
         fatal_alert = MBEDTLS_SSL_ALERT_MSG_ILLEGAL_PARAMETER;
     }
