@@ -666,11 +666,13 @@ if type lsof >/dev/null 2>/dev/null; then
         fi
         # Make a tight loop, server normally takes less than 1s to start.
         while true; do
-              SERVER_PIDS=$(lsof -a -n -b -i "$proto:$1" -t)
+              SERVER_PIDS=$(lsof -a -n -b -i "$proto:$1" -F p)
               # When we use a proxy, it will be listening on the same port we
               # are checking for as well as the server and lsof will list both.
+              # If multiple PIDs are returned, each one will be on a separate
+              # line, each prepended with 'p'.
              case ${newline}${SERVER_PIDS}${newline} in
-                  *${newline}${2}${newline}*) break;;
+                  *${newline}p${2}${newline}*) break;;
               esac
               if [ $(( $(date +%s) - $START_TIME )) -gt $DOG_DELAY ]; then
                   echo "$3 START TIMEOUT"
@@ -1581,6 +1583,24 @@ run_test    "Opaque key for server authentication" \
             -S "error" \
             -C "error"
 
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
+requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
+requires_config_enabled MBEDTLS_X509_CRT_PARSE_C
+requires_config_enabled MBEDTLS_ECDSA_C
+requires_config_enabled MBEDTLS_SHA256_C
+run_test    "Opaque key for server authentication (ECDH-)" \
+            "$P_SRV force_version=tls12 auth_mode=required key_opaque=1\
+             crt_file=data_files/server5.ku-ka.crt\
+             key_file=data_files/server5.key" \
+            "$P_CLI" \
+            0 \
+            -c "Verifying peer X.509 certificate... ok" \
+            -c "Ciphersuite is TLS-ECDH-" \
+            -s "key types: Opaque, none" \
+            -s "Ciphersuite is TLS-ECDH-" \
+            -S "error" \
+            -C "error"
+
 # Test using an opaque private key for client/server authentication
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
@@ -1728,37 +1748,37 @@ run_test    "SHA-256 allowed by default in client certificate" \
 # ssl_client2/ssl_server2 example programs works.
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-run_test    "TLS 1.3: key exchange mode parameter passing: PSK only" \
+run_test    "TLS 1.3, key exchange mode parameter passing: PSK only" \
             "$P_SRV tls13_kex_modes=psk debug_level=4" \
             "$P_CLI tls13_kex_modes=psk debug_level=4" \
             0
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-run_test    "TLS 1.3: key exchange mode parameter passing: PSK-ephemeral only" \
+run_test    "TLS 1.3, key exchange mode parameter passing: PSK-ephemeral only" \
             "$P_SRV tls13_kex_modes=psk_ephemeral" \
             "$P_CLI tls13_kex_modes=psk_ephemeral" \
             0
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-run_test    "TLS 1.3: key exchange mode parameter passing: Pure-ephemeral only" \
+run_test    "TLS 1.3, key exchange mode parameter passing: Pure-ephemeral only" \
             "$P_SRV tls13_kex_modes=ephemeral" \
             "$P_CLI tls13_kex_modes=ephemeral" \
             0
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-run_test    "TLS 1.3: key exchange mode parameter passing: All ephemeral" \
+run_test    "TLS 1.3, key exchange mode parameter passing: All ephemeral" \
             "$P_SRV tls13_kex_modes=ephemeral_all" \
             "$P_CLI tls13_kex_modes=ephemeral_all" \
             0
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-run_test    "TLS 1.3: key exchange mode parameter passing: All PSK" \
+run_test    "TLS 1.3, key exchange mode parameter passing: All PSK" \
             "$P_SRV tls13_kex_modes=psk_all" \
             "$P_CLI tls13_kex_modes=psk_all" \
             0
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-run_test    "TLS 1.3: key exchange mode parameter passing: All" \
+run_test    "TLS 1.3, key exchange mode parameter passing: All" \
             "$P_SRV tls13_kex_modes=all" \
             "$P_CLI tls13_kex_modes=all" \
             0
@@ -9617,6 +9637,14 @@ run_test    "TLS 1.3: Test gnutls tls1_3 feature" \
             -c "Version: TLS1.3"
 
 # TLS1.3 test cases
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
+skip_handshake_stage_check
+run_test    "TLS 1.3: No server support" \
+            "$P_SRV debug_level=2 force_version=tls13" \
+            "$P_CLI debug_level=2 force_version=tls13" \
+            1 \
+            -s "The requested feature is not available"
+
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
@@ -9689,6 +9717,7 @@ requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_DEBUG_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_SSL_ALPN
+requires_config_disabled MBEDTLS_USE_PSA_CRYPTO
 run_test    "TLS 1.3: alpn - openssl" \
             "$O_NEXT_SRV -msg -tls1_3 -num_tickets 0 -no_resume_ephemeral -no_cache -alpn h2" \
             "$P_CLI debug_level=3 alpn=h2" \
@@ -9724,6 +9753,7 @@ requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_DEBUG_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_SSL_ALPN
+requires_config_disabled MBEDTLS_USE_PSA_CRYPTO
 run_test    "TLS 1.3: alpn - gnutls" \
             "$G_NEXT_SRV --debug=4 --priority=NORMAL:-VERS-ALL:+VERS-TLS1.3:+CIPHER-ALL:%NO_TICKETS --disable-client-cert --alpn=h2" \
             "$P_CLI debug_level=3 alpn=h2" \
@@ -9758,7 +9788,7 @@ requires_config_enabled MBEDTLS_DEBUG_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
 skip_handshake_stage_check
 requires_gnutls_tls1_3
-run_test    "TLS 1.3: Not supported version check:gnutls: srv max TLS 1.0" \
+run_test    "TLS 1.3:Not supported version check:gnutls: srv max TLS 1.0" \
             "$G_NEXT_SRV --priority=NORMAL:-VERS-TLS-ALL:+VERS-TLS1.0 -d 4" \
             "$P_CLI debug_level=4" \
             1 \
@@ -9771,7 +9801,7 @@ requires_config_enabled MBEDTLS_DEBUG_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
 skip_handshake_stage_check
 requires_gnutls_tls1_3
-run_test    "TLS 1.3: Not supported version check:gnutls: srv max TLS 1.1" \
+run_test    "TLS 1.3:Not supported version check:gnutls: srv max TLS 1.1" \
             "$G_NEXT_SRV --priority=NORMAL:-VERS-TLS-ALL:+VERS-TLS1.1 -d 4" \
             "$P_CLI debug_level=4" \
             1 \
@@ -9784,7 +9814,7 @@ requires_config_enabled MBEDTLS_DEBUG_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
 skip_handshake_stage_check
 requires_gnutls_tls1_3
-run_test    "TLS 1.3: Not supported version check:gnutls: srv max TLS 1.2" \
+run_test    "TLS 1.3:Not supported version check:gnutls: srv max TLS 1.2" \
             "$G_NEXT_SRV --priority=NORMAL:-VERS-TLS-ALL:+VERS-TLS1.2 -d 4" \
             "$P_CLI force_version=tls13 debug_level=4" \
             1 \
@@ -9798,7 +9828,7 @@ requires_config_enabled MBEDTLS_DEBUG_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
 skip_handshake_stage_check
 requires_openssl_next
-run_test    "TLS 1.3: Not supported version check:openssl: srv max TLS 1.0" \
+run_test    "TLS 1.3:Not supported version check:openssl: srv max TLS 1.0" \
             "$O_NEXT_SRV -msg -tls1" \
             "$P_CLI debug_level=4" \
             1 \
@@ -9812,7 +9842,7 @@ requires_config_enabled MBEDTLS_DEBUG_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
 skip_handshake_stage_check
 requires_openssl_next
-run_test    "TLS 1.3: Not supported version check:openssl: srv max TLS 1.1" \
+run_test    "TLS 1.3:Not supported version check:openssl: srv max TLS 1.1" \
             "$O_NEXT_SRV -msg -tls1_1" \
             "$P_CLI debug_level=4" \
             1 \
@@ -9826,7 +9856,7 @@ requires_config_enabled MBEDTLS_DEBUG_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
 skip_handshake_stage_check
 requires_openssl_next
-run_test    "TLS 1.3: Not supported version check:openssl: srv max TLS 1.2" \
+run_test    "TLS 1.3:Not supported version check:openssl: srv max TLS 1.2" \
             "$O_NEXT_SRV -msg -tls1_2" \
             "$P_CLI force_version=tls13 debug_level=4" \
             1 \
@@ -10128,7 +10158,7 @@ requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_DEBUG_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_openssl_tls1_3
-run_test    "TLS 1.3: HRR check, ciphersuite TLS_AES_128_GCM_SHA256 - openssl" \
+run_test    "TLS 1.3: HelloRetryRequest check, ciphersuite TLS_AES_128_GCM_SHA256 - openssl" \
             "$O_NEXT_SRV -ciphersuites TLS_AES_128_GCM_SHA256  -sigalgs ecdsa_secp256r1_sha256 -groups P-256 -msg -tls1_3 -num_tickets 0 -no_resume_ephemeral -no_cache" \
             "$P_CLI debug_level=4" \
             0 \
@@ -10143,7 +10173,7 @@ requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_DEBUG_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_openssl_tls1_3
-run_test    "TLS 1.3: HRR check, ciphersuite TLS_AES_256_GCM_SHA384 - openssl" \
+run_test    "TLS 1.3: HelloRetryRequest check, ciphersuite TLS_AES_256_GCM_SHA384 - openssl" \
             "$O_NEXT_SRV -ciphersuites TLS_AES_256_GCM_SHA384  -sigalgs ecdsa_secp256r1_sha256 -groups P-256 -msg -tls1_3 -num_tickets 0 -no_resume_ephemeral -no_cache" \
             "$P_CLI debug_level=4" \
             0 \
@@ -10159,7 +10189,7 @@ requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_DEBUG_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
-run_test    "TLS 1.3: HRR check, ciphersuite TLS_AES_128_GCM_SHA256 - gnutls" \
+run_test    "TLS 1.3: HelloRetryRequest check, ciphersuite TLS_AES_128_GCM_SHA256 - gnutls" \
             "$G_NEXT_SRV -d 4 --priority=NONE:+GROUP-SECP256R1:+AES-128-GCM:+SHA256:+AEAD:+SIGN-ECDSA-SECP256R1-SHA256:+VERS-TLS1.3:%NO_TICKETS --disable-client-cert" \
             "$P_CLI debug_level=4" \
             0 \
@@ -10175,7 +10205,7 @@ requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_DEBUG_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
-run_test    "TLS 1.3: HRR check, ciphersuite TLS_AES_256_GCM_SHA384 - gnutls" \
+run_test    "TLS 1.3: HelloRetryRequest check, ciphersuite TLS_AES_256_GCM_SHA384 - gnutls" \
             "$G_NEXT_SRV -d 4 --priority=NONE:+GROUP-SECP256R1:+AES-256-GCM:+SHA384:+AEAD:+SIGN-ECDSA-SECP256R1-SHA256:+VERS-TLS1.3:%NO_TICKETS --disable-client-cert" \
             "$P_CLI debug_level=4" \
             0 \
@@ -10184,37 +10214,6 @@ run_test    "TLS 1.3: HRR check, ciphersuite TLS_AES_256_GCM_SHA384 - gnutls" \
             -c "client state: MBEDTLS_SSL_CLIENT_HELLO" \
             -c "Protocol is TLSv1.3" \
             -c "HTTP/1.0 200 OK"
-
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-requires_config_enabled MBEDTLS_DEBUG_C
-requires_config_enabled MBEDTLS_SSL_CLI_C
-requires_config_disabled MBEDTLS_USE_PSA_CRYPTO
-requires_openssl_tls1_3
-run_test    "TLS 1.3: Server side check - openssl" \
-            "$P_SRV debug_level=4 crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13 tickets=0" \
-            "$O_NEXT_CLI -msg -tls1_3" \
-            1 \
-            -s " tls13 server state: MBEDTLS_SSL_CLIENT_HELLO" \
-            -s " tls13 server state: MBEDTLS_SSL_SERVER_HELLO" \
-            -s " SSL - The requested feature is not available" \
-            -s "=> parse client hello" \
-            -s "<= parse client hello"
-
-requires_gnutls_tls1_3
-requires_gnutls_next_no_ticket
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-requires_config_enabled MBEDTLS_DEBUG_C
-requires_config_enabled MBEDTLS_SSL_CLI_C
-requires_config_disabled MBEDTLS_USE_PSA_CRYPTO
-run_test    "TLS 1.3: Server side check - gnutls" \
-            "$P_SRV debug_level=4 crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13 tickets=0" \
-            "$G_NEXT_CLI localhost -d 4 --priority=NORMAL:-VERS-ALL:+VERS-TLS1.3:%NO_TICKETS:%DISABLE_TLS13_COMPAT_MODE -V" \
-            1 \
-            -s " tls13 server state: MBEDTLS_SSL_CLIENT_HELLO" \
-            -s " tls13 server state: MBEDTLS_SSL_SERVER_HELLO" \
-            -s " SSL - The requested feature is not available" \
-            -s "=> parse client hello" \
-            -s "<= parse client hello"
 
 for i in opt-testcases/*.sh
 do

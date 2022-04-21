@@ -873,12 +873,7 @@ component_check_doxygen_warnings () {
     tests/scripts/doxygen.sh
 }
 
-component_check_test_requires_psa_disabled () {
-  msg "Check: tests requiring PSA to be disabled"
 
-  not grep -n -R 'depends.*!MBEDTLS_USE_PSA_CRYPTO' tests/suites/
-  not grep -n -R 'requires.*disabled.*USE_PSA' tests/ssl-opt.sh tests/opt-testcases/
-}
 
 ################################################################
 #### Build and test many configurations and targets
@@ -2983,17 +2978,16 @@ component_test_cmake_out_of_source () {
 
     msg "test: cmake 'out-of-source' build"
     make test
-    # Check that ssl-opt.sh can find the test programs.
+    # Test an SSL option that requires an auxiliary script in test/scripts/.
     # Also ensure that there are no error messages such as
     # "No such file or directory", which would indicate that some required
     # file is missing (ssl-opt.sh tolerates the absence of some files so
     # may exit with status 0 but emit errors).
-    ./tests/ssl-opt.sh -f 'Default' >ssl-opt.out 2>ssl-opt.err
-    grep PASS ssl-opt.out
+    ./tests/ssl-opt.sh -f 'Fallback SCSV: beginning of list' 2>ssl-opt.err
     cat ssl-opt.err >&2
     # If ssl-opt.err is non-empty, record an error and keep going.
     [ ! -s ssl-opt.err ]
-    rm ssl-opt.out ssl-opt.err
+    rm ssl-opt.err
     cd "$MBEDTLS_ROOT_DIR"
     rm -rf "$OUT_OF_SOURCE_DIR"
 }
