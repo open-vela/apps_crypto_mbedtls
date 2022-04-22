@@ -616,9 +616,7 @@ struct mbedtls_ssl_handshake_params
  * seem correct.
  */
 #if defined(MBEDTLS_ECDH_C) || defined(MBEDTLS_ECDSA_C)
-#if !defined(MBEDTLS_USE_PSA_CRYPTO)
     mbedtls_ecdh_context ecdh_ctx;              /*!<  ECDH key exchange       */
-#endif /* !MBEDTLS_USE_PSA_CRYPTO */
 
 #if defined(MBEDTLS_USE_PSA_CRYPTO) || defined(MBEDTLS_SSL_PROTO_TLS1_3)
     psa_key_type_t ecdh_psa_type;
@@ -1782,6 +1780,16 @@ int mbedtls_ssl_tls13_process_certificate_verify( mbedtls_ssl_context *ssl );
 int mbedtls_ssl_tls13_write_change_cipher_spec( mbedtls_ssl_context *ssl );
 
 int mbedtls_ssl_reset_transcript_for_hrr( mbedtls_ssl_context *ssl );
+
+#if defined(MBEDTLS_ECDH_C)
+int mbedtls_ssl_tls13_generate_and_write_ecdh_key_exchange(
+                mbedtls_ssl_context *ssl,
+                uint16_t named_group,
+                unsigned char *buf,
+                unsigned char *end,
+                size_t *out_len );
+#endif /* MBEDTLS_ECDH_C */
+
 
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
