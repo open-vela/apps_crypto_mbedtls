@@ -951,7 +951,7 @@ static int ssl_check_key_curve( mbedtls_pk_context *pk,
 static int ssl_pick_cert( mbedtls_ssl_context *ssl,
                           const mbedtls_ssl_ciphersuite_t * ciphersuite_info )
 {
-    mbedtls_ssl_key_cert *cur, *list;
+    mbedtls_ssl_key_cert *cur, *list, *fallback = NULL;
     mbedtls_pk_type_t pk_alg =
         mbedtls_ssl_get_ciphersuite_sig_pk_alg( ciphersuite_info );
     uint32_t flags;
@@ -1015,6 +1015,9 @@ static int ssl_pick_cert( mbedtls_ssl_context *ssl,
         break;
     }
 
+    if( cur == NULL )
+        cur = fallback;
+
     /* Do not update ssl->handshake->key_cert unless there is a match */
     if( cur != NULL )
     {
@@ -1051,8 +1054,8 @@ static int ssl_ciphersuite_match( mbedtls_ssl_context *ssl, int suite_id,
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "trying ciphersuite: %#04x (%s)",
                                 (unsigned int) suite_id, suite_info->name ) );
 
-    if( suite_info->min_tls_version > ssl->tls_version ||
-        suite_info->max_tls_version < ssl->tls_version )
+    if( suite_info->min_minor_ver > ssl->minor_ver ||
+        suite_info->max_minor_ver < ssl->minor_ver )
     {
         MBEDTLS_SSL_DEBUG_MSG( 3, ( "ciphersuite mismatch: version" ) );
         return( 0 );
@@ -1144,6 +1147,7 @@ static int ssl_parse_client_hello( mbedtls_ssl_context *ssl )
     int handshake_failure = 0;
     const int *ciphersuites;
     const mbedtls_ssl_ciphersuite_t *ciphersuite_info;
+    int major, minor;
 
     /* If there is no signature-algorithm extension present,
      * we need to fall back to the default values for allowed
@@ -1201,6 +1205,18 @@ read_record_header:
 
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "client hello, protocol version: [%d:%d]",
                    buf[1], buf[2] ) );
+
+    mbedtls_ssl_read_version( &major, &minor, ssl->conf->transport, buf + 1 );
+
+    /* According to RFC 5246 Appendix E.1, the version here is typically
+     * "{03,00}, the lowest version number supported by the client, [or] the
+     * value of ClientHello.client_version", so the only meaningful check here
+     * is the major version shouldn't be less than 3 */
+    if( major < MBEDTLS_SSL_MAJOR_VERSION_3 )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad client hello message" ) );
+        return( MBEDTLS_ERR_SSL_BAD_PROTOCOL_VERSION );
+    }
 
     /* For DTLS if this is the initial handshake, remember the client sequence
      * number to use it in our next message (RFC 6347 4.2.1) */
@@ -1389,10 +1405,12 @@ read_record_header:
      */
     MBEDTLS_SSL_DEBUG_BUF( 3, "client hello, version", buf, 2 );
 
-    ssl->tls_version = mbedtls_ssl_read_version( buf, ssl->conf->transport );
-    ssl->session_negotiate->tls_version = ssl->tls_version;
+    mbedtls_ssl_read_version( &ssl->major_ver, &ssl->minor_ver,
+                      ssl->conf->transport, buf );
+    ssl->session_negotiate->minor_ver = ssl->minor_ver;
 
-    if( ssl->tls_version != MBEDTLS_SSL_VERSION_TLS1_2 )
+    if( ( ssl->major_ver != MBEDTLS_SSL_MAJOR_VERSION_3 ) ||
+        ( ssl->minor_ver != MBEDTLS_SSL_MINOR_VERSION_3 ) )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "server only supports TLS 1.2" ) );
         mbedtls_ssl_send_alert_message( ssl, MBEDTLS_SSL_ALERT_LEVEL_FATAL,
@@ -2337,7 +2355,8 @@ static int ssl_write_hello_verify_request( mbedtls_ssl_context *ssl )
 
     /* The RFC is not clear on this point, but sending the actual negotiated
      * version looks like the most interoperable thing to do. */
-    mbedtls_ssl_write_version( p, ssl->conf->transport, ssl->tls_version );
+    mbedtls_ssl_write_version( ssl->major_ver, ssl->minor_ver,
+                       ssl->conf->transport, p );
     MBEDTLS_SSL_DEBUG_BUF( 3, "server version", p, 2 );
     p += 2;
 
@@ -2476,7 +2495,8 @@ static int ssl_write_server_hello( mbedtls_ssl_context *ssl )
     buf = ssl->out_msg;
     p = buf + 4;
 
-    mbedtls_ssl_write_version( p, ssl->conf->transport, ssl->tls_version );
+    mbedtls_ssl_write_version( ssl->major_ver, ssl->minor_ver,
+                       ssl->conf->transport, p );
     p += 2;
 
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "server hello, chosen version: [%d:%d]",
@@ -2608,9 +2628,8 @@ static int ssl_write_server_hello( mbedtls_ssl_context *ssl )
 
 #if defined(MBEDTLS_ECDH_C) || defined(MBEDTLS_ECDSA_C) || \
     defined(MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED)
-    const mbedtls_ssl_ciphersuite_t *suite =
-        mbedtls_ssl_ciphersuite_from_id( ssl->session_negotiate->ciphersuite );
-    if ( suite != NULL && mbedtls_ssl_ciphersuite_uses_ec( suite) )
+    if ( mbedtls_ssl_ciphersuite_uses_ec(
+         mbedtls_ssl_ciphersuite_from_id( ssl->session_negotiate->ciphersuite ) ) )
     {
         ssl_write_supported_point_formats_ext( ssl, p + 2 + ext_len, &olen );
         ext_len += olen;
@@ -2930,14 +2949,7 @@ static int ssl_get_ecdh_params_from_cert( mbedtls_ssl_context *ssl )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
 
-    const mbedtls_pk_context *private_key = mbedtls_ssl_own_key( ssl );
-    if( private_key == NULL)
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "got no ECDH private key" ) );
-        return( MBEDTLS_ERR_SSL_PRIVATE_KEY_REQUIRED );
-    }
-
-    if( ! mbedtls_pk_can_do( private_key, MBEDTLS_PK_ECKEY ) )
+    if( ! mbedtls_pk_can_do( mbedtls_ssl_own_key( ssl ), MBEDTLS_PK_ECKEY ) )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "server key not ECDH capable" ) );
         return( MBEDTLS_ERR_SSL_PK_TYPE_MISMATCH );
@@ -3317,12 +3329,6 @@ curve_matching_done:
          */
         if( md_alg != MBEDTLS_MD_NONE )
         {
-            if( dig_signed == NULL )
-            {
-                MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
-                return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
-            }
-
             ret = mbedtls_ssl_get_key_exchange_md_tls1_2( ssl, hash, &hashlen,
                                                           dig_signed,
                                                           dig_signed_len,
@@ -3730,8 +3736,9 @@ static int ssl_parse_encrypted_pms( mbedtls_ssl_context *ssl,
         return( ret );
 #endif /* MBEDTLS_SSL_ASYNC_PRIVATE */
 
-    mbedtls_ssl_write_version( ver, ssl->conf->transport,
-                               ssl->session_negotiate->tls_version );
+    mbedtls_ssl_write_version( MBEDTLS_SSL_MAJOR_VERSION_3,
+                               MBEDTLS_SSL_MINOR_VERSION_3,
+                               ssl->conf->transport, ver );
 
     /* Avoid data-dependent branches while checking for invalid
      * padding, to protect against timing-based Bleichenbacher-type
