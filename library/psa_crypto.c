@@ -2333,6 +2333,20 @@ static psa_status_t psa_mac_finalize_alg_and_key_validation(
         return( PSA_ERROR_INVALID_ARGUMENT );
     }
 
+    if( *mac_size > PSA_MAC_MAX_SIZE )
+    {
+        /* PSA_MAC_LENGTH returns the correct length even for a MAC algorithm
+         * that is disabled in the compile-time configuration. The result can
+         * therefore be larger than PSA_MAC_MAX_SIZE, which does take the
+         * configuration into account. In this case, force a return of
+         * PSA_ERROR_NOT_SUPPORTED here. Otherwise psa_mac_verify(), or
+         * psa_mac_compute(mac_size=PSA_MAC_MAX_SIZE), would return
+         * PSA_ERROR_BUFFER_TOO_SMALL for an unsupported algorithm whose MAC size
+         * is larger than PSA_MAC_MAX_SIZE, which is misleading and which breaks
+         * systematically generated tests. */
+        return( PSA_ERROR_NOT_SUPPORTED );
+    }
+
     return( PSA_SUCCESS );
 }
 
@@ -4315,6 +4329,13 @@ psa_status_t psa_key_derivation_abort( psa_key_derivation_operation_t *operation
             mbedtls_free( operation->ctx.tls12_prf.label );
         }
 
+        if( operation->ctx.tls12_prf.other_secret != NULL )
+        {
+            mbedtls_platform_zeroize( operation->ctx.tls12_prf.other_secret,
+                                      operation->ctx.tls12_prf.other_secret_length );
+            mbedtls_free( operation->ctx.tls12_prf.other_secret );
+        }
+
         status = PSA_SUCCESS;
 
         /* We leave the fields Ai and output_block to be erased safely by the
@@ -5019,50 +5040,75 @@ psa_status_t psa_key_derivation_output_key( const psa_key_attributes_t *attribut
 /****************************************************************/
 
 #if defined(AT_LEAST_ONE_BUILTIN_KDF)
+static int is_kdf_alg_supported( psa_algorithm_t kdf_alg )
+{
+#if defined(MBEDTLS_PSA_BUILTIN_ALG_HKDF)
+    if( PSA_ALG_IS_HKDF( kdf_alg ) )
+        return( 1 );
+#endif
+#if defined(MBEDTLS_PSA_BUILTIN_ALG_TLS12_PRF)
+    if( PSA_ALG_IS_TLS12_PRF( kdf_alg ) )
+        return( 1 );
+#endif
+#if defined(MBEDTLS_PSA_BUILTIN_ALG_TLS12_PSK_TO_MS)
+    if( PSA_ALG_IS_TLS12_PSK_TO_MS( kdf_alg ) )
+        return( 1 );
+#endif
+    return( 0 );
+}
+
+static psa_status_t psa_hash_try_support( psa_algorithm_t alg )
+{
+    psa_hash_operation_t operation = PSA_HASH_OPERATION_INIT;
+    psa_status_t status = psa_hash_setup( &operation, alg );
+    psa_hash_abort( &operation );
+    return( status );
+}
+
 static psa_status_t psa_key_derivation_setup_kdf(
     psa_key_derivation_operation_t *operation,
     psa_algorithm_t kdf_alg )
 {
-    int is_kdf_alg_supported;
-
     /* Make sure that operation->ctx is properly zero-initialised. (Macro
      * initialisers for this union leave some bytes unspecified.) */
     memset( &operation->ctx, 0, sizeof( operation->ctx ) );
 
     /* Make sure that kdf_alg is a supported key derivation algorithm. */
-#if defined(MBEDTLS_PSA_BUILTIN_ALG_HKDF)
-    if( PSA_ALG_IS_HKDF( kdf_alg ) )
-        is_kdf_alg_supported = 1;
-    else
-#endif
-#if defined(MBEDTLS_PSA_BUILTIN_ALG_TLS12_PRF)
-    if( PSA_ALG_IS_TLS12_PRF( kdf_alg ) )
-        is_kdf_alg_supported = 1;
-    else
-#endif
-#if defined(MBEDTLS_PSA_BUILTIN_ALG_TLS12_PSK_TO_MS)
-    if( PSA_ALG_IS_TLS12_PSK_TO_MS( kdf_alg ) )
-        is_kdf_alg_supported = 1;
-    else
-#endif
-    is_kdf_alg_supported = 0;
+    if( ! is_kdf_alg_supported( kdf_alg ) )
+        return( PSA_ERROR_NOT_SUPPORTED );
 
-    if( is_kdf_alg_supported )
+    /* All currently supported key derivation algorithms are based on a
+     * hash algorithm. */
+    psa_algorithm_t hash_alg = PSA_ALG_HKDF_GET_HASH( kdf_alg );
+    size_t hash_size = PSA_HASH_LENGTH( hash_alg );
+    if( hash_size == 0 )
+        return( PSA_ERROR_NOT_SUPPORTED );
+
+    /* Make sure that hash_alg is a supported hash algorithm. Otherwise
+     * we might fail later, which is somewhat unfriendly and potentially
+     * risk-prone. */
+    psa_status_t status = psa_hash_try_support( hash_alg );
+    if( status != PSA_SUCCESS )
+        return( status );
+
+    if( ( PSA_ALG_IS_TLS12_PRF( kdf_alg ) ||
+          PSA_ALG_IS_TLS12_PSK_TO_MS( kdf_alg ) ) &&
+        ! ( hash_alg == PSA_ALG_SHA_256 || hash_alg == PSA_ALG_SHA_384 ) )
     {
-        psa_algorithm_t hash_alg = PSA_ALG_HKDF_GET_HASH( kdf_alg );
-        size_t hash_size = PSA_HASH_LENGTH( hash_alg );
-        if( hash_size == 0 )
-            return( PSA_ERROR_NOT_SUPPORTED );
-        if( ( PSA_ALG_IS_TLS12_PRF( kdf_alg ) ||
-              PSA_ALG_IS_TLS12_PSK_TO_MS( kdf_alg ) ) &&
-            ! ( hash_alg == PSA_ALG_SHA_256 || hash_alg == PSA_ALG_SHA_384 ) )
-        {
-            return( PSA_ERROR_NOT_SUPPORTED );
-        }
-        operation->capacity = 255 * hash_size;
-        return( PSA_SUCCESS );
+        return( PSA_ERROR_NOT_SUPPORTED );
     }
 
+    operation->capacity = 255 * hash_size;
+    return( PSA_SUCCESS );
+}
+
+static psa_status_t psa_key_agreement_try_support( psa_algorithm_t alg )
+{
+#if defined(PSA_WANT_ALG_ECDH)
+    if( alg == PSA_ALG_ECDH )
+        return( PSA_SUCCESS );
+#endif
+    (void) alg;
     return( PSA_ERROR_NOT_SUPPORTED );
 }
 #endif /* AT_LEAST_ONE_BUILTIN_KDF */
@@ -5081,6 +5127,10 @@ psa_status_t psa_key_derivation_setup( psa_key_derivation_operation_t *operation
     {
 #if defined(AT_LEAST_ONE_BUILTIN_KDF)
         psa_algorithm_t kdf_alg = PSA_ALG_KEY_AGREEMENT_GET_KDF( alg );
+        psa_algorithm_t ka_alg = PSA_ALG_KEY_AGREEMENT_GET_BASE( alg );
+        status = psa_key_agreement_try_support( ka_alg );
+        if( status != PSA_SUCCESS )
+            return( status );
         status = psa_key_derivation_setup_kdf( operation, kdf_alg );
 #else
         return( PSA_ERROR_NOT_SUPPORTED );
@@ -5201,7 +5251,8 @@ static psa_status_t psa_tls12_prf_set_key( psa_tls12_prf_key_derivation_t *prf,
                                            const uint8_t *data,
                                            size_t data_length )
 {
-    if( prf->state != PSA_TLS12_PRF_STATE_SEED_SET )
+    if( prf->state != PSA_TLS12_PRF_STATE_SEED_SET &&
+        prf->state != PSA_TLS12_PRF_STATE_OTHER_KEY_SET )
         return( PSA_ERROR_BAD_STATE );
 
     if( data_length != 0 )
@@ -5268,32 +5319,93 @@ static psa_status_t psa_tls12_prf_psk_to_ms_set_key(
     size_t data_length )
 {
     psa_status_t status;
-    uint8_t pms[ 4 + 2 * PSA_TLS12_PSK_TO_MS_PSK_MAX_SIZE ];
-    uint8_t *cur = pms;
+    const size_t pms_len = ( prf->state == PSA_TLS12_PRF_STATE_OTHER_KEY_SET ?
+        4 + data_length + prf->other_secret_length :
+        4 + 2 * data_length );
 
     if( data_length > PSA_TLS12_PSK_TO_MS_PSK_MAX_SIZE )
         return( PSA_ERROR_INVALID_ARGUMENT );
 
-    /* Quoting RFC 4279, Section 2:
+    uint8_t *pms = mbedtls_calloc( 1, pms_len );
+    if( pms == NULL )
+        return( PSA_ERROR_INSUFFICIENT_MEMORY );
+    uint8_t *cur = pms;
+
+    /* pure-PSK:
+     * Quoting RFC 4279, Section 2:
      *
      * The premaster secret is formed as follows: if the PSK is N octets
      * long, concatenate a uint16 with the value N, N zero octets, a second
      * uint16 with the value N, and the PSK itself.
+     *
+     * mixed-PSK:
+     * In a DHE-PSK, RSA-PSK, ECDHE-PSK the premaster secret is formed as
+     * follows: concatenate a uint16 with the length of the other secret,
+     * the other secret itself, uint16 with the length of PSK, and the
+     * PSK itself.
+     * For details please check:
+     * - RFC 4279, Section 4 for the definition of RSA-PSK,
+     * - RFC 4279, Section 3 for the definition of DHE-PSK,
+     * - RFC 5489 for the definition of ECDHE-PSK.
      */
+
+    if( prf->state == PSA_TLS12_PRF_STATE_OTHER_KEY_SET )
+    {
+        *cur++ = MBEDTLS_BYTE_1( prf->other_secret_length );
+        *cur++ = MBEDTLS_BYTE_0( prf->other_secret_length );
+        if( prf->other_secret_length != 0 )
+        {
+            memcpy( cur, prf->other_secret, prf->other_secret_length );
+            mbedtls_platform_zeroize( prf->other_secret, prf->other_secret_length );
+            cur += prf->other_secret_length;
+        }
+    }
+    else
+    {
+        *cur++ = MBEDTLS_BYTE_1( data_length );
+        *cur++ = MBEDTLS_BYTE_0( data_length );
+        memset( cur, 0, data_length );
+        cur += data_length;
+    }
 
     *cur++ = MBEDTLS_BYTE_1( data_length );
     *cur++ = MBEDTLS_BYTE_0( data_length );
-    memset( cur, 0, data_length );
-    cur += data_length;
-    *cur++ = pms[0];
-    *cur++ = pms[1];
     memcpy( cur, data, data_length );
+    mbedtls_platform_zeroize( (void*) data, data_length );
     cur += data_length;
 
     status = psa_tls12_prf_set_key( prf, pms, cur - pms );
 
-    mbedtls_platform_zeroize( pms, sizeof( pms ) );
+    mbedtls_platform_zeroize( pms, pms_len );
+    mbedtls_free( pms );
     return( status );
+}
+
+static psa_status_t psa_tls12_prf_psk_to_ms_set_other_key(
+    psa_tls12_prf_key_derivation_t *prf,
+    const uint8_t *data,
+    size_t data_length )
+{
+    if( prf->state != PSA_TLS12_PRF_STATE_SEED_SET )
+        return( PSA_ERROR_BAD_STATE );
+
+    if( data_length != 0 )
+    {
+        prf->other_secret = mbedtls_calloc( 1, data_length );
+        if( prf->other_secret == NULL )
+            return( PSA_ERROR_INSUFFICIENT_MEMORY );
+
+        memcpy( prf->other_secret, data, data_length );
+        prf->other_secret_length = data_length;
+    }
+    else
+    {
+        prf->other_secret_length = 0;
+    }
+
+    prf->state = PSA_TLS12_PRF_STATE_OTHER_KEY_SET;
+
+    return( PSA_SUCCESS );
 }
 
 static psa_status_t psa_tls12_prf_psk_to_ms_input(
@@ -5302,13 +5414,22 @@ static psa_status_t psa_tls12_prf_psk_to_ms_input(
     const uint8_t *data,
     size_t data_length )
 {
-    if( step == PSA_KEY_DERIVATION_INPUT_SECRET )
+    switch( step )
     {
-        return( psa_tls12_prf_psk_to_ms_set_key( prf,
-                                                 data, data_length ) );
-    }
+        case PSA_KEY_DERIVATION_INPUT_SECRET:
+            return( psa_tls12_prf_psk_to_ms_set_key( prf,
+                                                     data, data_length ) );
+            break;
+        case PSA_KEY_DERIVATION_INPUT_OTHER_SECRET:
+            return( psa_tls12_prf_psk_to_ms_set_other_key( prf,
+                                                           data,
+                                                           data_length ) );
+            break;
+        default:
+            return( psa_tls12_prf_input( prf, step, data, data_length ) );
+            break;
 
-    return( psa_tls12_prf_input( prf, step, data, data_length ) );
+    }
 }
 #endif /* MBEDTLS_PSA_BUILTIN_ALG_TLS12_PSK_TO_MS */
 
@@ -5328,6 +5449,12 @@ static int psa_key_derivation_check_input_type(
     switch( step )
     {
         case PSA_KEY_DERIVATION_INPUT_SECRET:
+            if( key_type == PSA_KEY_TYPE_DERIVE )
+                return( PSA_SUCCESS );
+            if( key_type == PSA_KEY_TYPE_NONE )
+                return( PSA_SUCCESS );
+            break;
+        case PSA_KEY_DERIVATION_INPUT_OTHER_SECRET:
             if( key_type == PSA_KEY_TYPE_DERIVE )
                 return( PSA_SUCCESS );
             if( key_type == PSA_KEY_TYPE_NONE )
