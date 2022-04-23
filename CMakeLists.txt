@@ -39,8 +39,6 @@ else()
     project("mbed TLS" C)
 endif()
 
-include(GNUInstallDirs)
-
 # Determine if mbed TLS is being built as a subproject using add_subdirectory()
 if(NOT DEFINED MBEDTLS_AS_SUBPROJECT)
   set(MBEDTLS_AS_SUBPROJECT ON)
@@ -56,7 +54,7 @@ option(ENABLE_PROGRAMS "Build mbed TLS programs." ON)
 
 option(UNSAFE_BUILD "Allow unsafe builds. These builds ARE NOT SECURE." OFF)
 option(MBEDTLS_FATAL_WARNINGS "Compiler warnings treated as errors" ON)
-if(WIN32)
+if(CMAKE_HOST_WIN32)
     option(GEN_FILES "Generate the auto-generated files as needed" OFF)
 else()
     option(GEN_FILES "Generate the auto-generated files as needed" ON)
@@ -251,7 +249,8 @@ if(CMAKE_BUILD_TYPE STREQUAL "Coverage")
 endif(CMAKE_BUILD_TYPE STREQUAL "Coverage")
 
 if(LIB_INSTALL_DIR)
-    set(CMAKE_INSTALL_LIBDIR "${LIB_INSTALL_DIR}")
+else()
+    set(LIB_INSTALL_DIR lib)
 endif()
 
 add_subdirectory(include)
