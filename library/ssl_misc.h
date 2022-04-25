@@ -59,6 +59,35 @@
 #define inline __inline
 #endif
 
+/* Legacy minor version numbers as defined by:
+ * - RFC 2246: ProtocolVersion version = { 3, 1 };     // TLS v1.0
+ * - RFC 4346: ProtocolVersion version = { 3, 2 };     // TLS v1.1
+ *
+ * We no longer support these versions, but some code still references those
+ * constants as part of negotiating with the peer, so keep them available
+ * internally.
+ */
+#define MBEDTLS_SSL_MINOR_VERSION_1             1
+#define MBEDTLS_SSL_MINOR_VERSION_2             2
+
+/* Determine minimum supported version */
+#define MBEDTLS_SSL_MIN_MAJOR_VERSION           MBEDTLS_SSL_MAJOR_VERSION_3
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
+#define MBEDTLS_SSL_MIN_MINOR_VERSION           MBEDTLS_SSL_MINOR_VERSION_3
+#elif defined(MBEDTLS_SSL_PROTO_TLS1_3)
+#define MBEDTLS_SSL_MIN_MINOR_VERSION           MBEDTLS_SSL_MINOR_VERSION_4
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
+
+/* Determine maximum supported version */
+#define MBEDTLS_SSL_MAX_MAJOR_VERSION           MBEDTLS_SSL_MAJOR_VERSION_3
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
+#define MBEDTLS_SSL_MAX_MINOR_VERSION           MBEDTLS_SSL_MINOR_VERSION_4
+#elif defined(MBEDTLS_SSL_PROTO_TLS1_2)
+#define MBEDTLS_SSL_MAX_MINOR_VERSION           MBEDTLS_SSL_MINOR_VERSION_3
+#endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
+
 /* Shorthand for restartable ECC */
 #if defined(MBEDTLS_ECP_RESTARTABLE) && \
     defined(MBEDTLS_SSL_CLI_C) && \
@@ -505,6 +534,28 @@ struct mbedtls_ssl_handshake_params
     uint8_t resume;                     /*!<  session resume indicator*/
     uint8_t cli_exts;                   /*!< client extension presence*/
 
+#if defined(MBEDTLS_SSL_CLI_C)
+    /*!< Minimum minor version to be negotiated.
+     *
+     *   It is set up in the ClientHello writing preparation stage and used
+     *   throughout the ClientHello writing. Not relevant anymore as soon as
+     *   the protocol version has been negotiated thus as soon as the
+     *   ServerHello is received.
+     *   For a fresh handshake not linked to any previous handshake, it is
+     *   equal to the configured minimum minor version to be negotiated. When
+     *   renegotiating or resuming a session, it is equal to the previously
+     *   negotiated minor version.
+     *
+     *   There is no maximum minor version field in this handshake context.
+     *   From the start of the handshake, we need to define a current protocol
+     *   version for the record layer which we define as the maximum minor
+     *   version to be negotiated. The `minor_ver` field of the SSL context is
+     *   used to store this maximum value until it contains the actual
+     *   negotiated value.
+     */
+    unsigned char min_minor_ver;
+#endif
+
 #if defined(MBEDTLS_SSL_SERVER_NAME_INDICATION)
     uint8_t sni_authmode;               /*!< authmode from SNI callback     */
 #endif
@@ -512,28 +563,6 @@ struct mbedtls_ssl_handshake_params
 #if defined(MBEDTLS_SSL_SESSION_TICKETS)
     uint8_t new_session_ticket;         /*!< use NewSessionTicket?    */
 #endif /* MBEDTLS_SSL_SESSION_TICKETS */
-
-#if defined(MBEDTLS_SSL_CLI_C)
-    /** Minimum TLS version to be negotiated.
-     *
-     *  It is set up in the ClientHello writing preparation stage and used
-     *  throughout the ClientHello writing. Not relevant anymore as soon as
-     *  the protocol version has been negotiated thus as soon as the
-     *  ServerHello is received.
-     *  For a fresh handshake not linked to any previous handshake, it is
-     *  equal to the configured minimum minor version to be negotiated. When
-     *  renegotiating or resuming a session, it is equal to the previously
-     *  negotiated minor version.
-     *
-     *  There is no maximum TLS version field in this handshake context.
-     *  From the start of the handshake, we need to define a current protocol
-     *  version for the record layer which we define as the maximum TLS
-     *  version to be negotiated. The `tls_version` field of the SSL context is
-     *  used to store this maximum value until it contains the actual
-     *  negotiated value.
-     */
-    mbedtls_ssl_protocol_version min_tls_version;
-#endif
 
 #if defined(MBEDTLS_SSL_EXTENDED_MASTER_SECRET)
     uint8_t extended_ms;                /*!< use Extended Master Secret? */
@@ -582,14 +611,9 @@ struct mbedtls_ssl_handshake_params
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
 #if defined(MBEDTLS_SSL_CLI_C)
-    /** Number of Hello Retry Request messages received from the server.  */
+    /*!<  Number of Hello Retry Request messages received from the server.  */
     int hello_retry_request_count;
 #endif /* MBEDTLS_SSL_CLI_C */
-
-#if defined(MBEDTLS_SSL_SRV_C)
-    /** selected_group of key_share extension in HelloRetryRequest message. */
-    uint16_t hrr_selected_group;
-#endif /* MBEDTLS_SSL_SRV_C */
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_2) && \
     defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
@@ -923,7 +947,7 @@ typedef struct mbedtls_ssl_hs_buffer mbedtls_ssl_hs_buffer;
  *   and indicates the length of the static part of the IV which is
  *   constant throughout the communication, and which is stored in
  *   the first fixed_ivlen bytes of the iv_{enc/dec} arrays.
- * - tls_version denotes the 2-byte TLS version
+ * - minor_ver denotes the SSL/TLS version
  * - For stream/CBC transformations, maclen denotes the length of the
  *   authentication tag, while taglen is unused and 0.
  * - For AEAD transformations, taglen denotes the length of the
@@ -964,7 +988,7 @@ struct mbedtls_ssl_transform
 
 #endif /* MBEDTLS_SSL_SOME_SUITES_USE_MAC */
 
-    mbedtls_ssl_protocol_version tls_version;
+    int minor_ver;
 
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
     mbedtls_svc_key_id_t psa_key_enc;           /*!<  psa encryption key      */
@@ -1433,10 +1457,10 @@ int mbedtls_ssl_check_cert_usage( const mbedtls_x509_crt *cert,
                           uint32_t *flags );
 #endif /* MBEDTLS_X509_CRT_PARSE_C */
 
-void mbedtls_ssl_write_version( unsigned char version[2], int transport,
-                                mbedtls_ssl_protocol_version tls_version );
-uint16_t mbedtls_ssl_read_version( const unsigned char version[2],
-                                   int transport );
+void mbedtls_ssl_write_version( int major, int minor, int transport,
+                        unsigned char ver[2] );
+void mbedtls_ssl_read_version( int *major, int *minor, int transport,
+                       const unsigned char ver[2] );
 
 static inline size_t mbedtls_ssl_in_hdr_len( const mbedtls_ssl_context *ssl )
 {
@@ -1577,8 +1601,14 @@ void mbedtls_ssl_flight_free( mbedtls_ssl_flight_item *flight );
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3)
 static inline int mbedtls_ssl_conf_is_tls13_only( const mbedtls_ssl_config *conf )
 {
-    return( conf->min_tls_version == MBEDTLS_SSL_VERSION_TLS1_3 &&
-            conf->max_tls_version == MBEDTLS_SSL_VERSION_TLS1_3 );
+    if( conf->min_major_ver == MBEDTLS_SSL_MAJOR_VERSION_3 &&
+        conf->max_major_ver == MBEDTLS_SSL_MAJOR_VERSION_3 &&
+        conf->min_minor_ver == MBEDTLS_SSL_MINOR_VERSION_4 &&
+        conf->max_minor_ver == MBEDTLS_SSL_MINOR_VERSION_4 )
+    {
+        return( 1 );
+    }
+    return( 0 );
 }
 
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
@@ -1586,8 +1616,14 @@ static inline int mbedtls_ssl_conf_is_tls13_only( const mbedtls_ssl_config *conf
 #if defined(MBEDTLS_SSL_PROTO_TLS1_2)
 static inline int mbedtls_ssl_conf_is_tls12_only( const mbedtls_ssl_config *conf )
 {
-    return( conf->min_tls_version == MBEDTLS_SSL_VERSION_TLS1_2 &&
-            conf->max_tls_version == MBEDTLS_SSL_VERSION_TLS1_2 );
+    if( conf->min_major_ver == MBEDTLS_SSL_MAJOR_VERSION_3 &&
+        conf->max_major_ver == MBEDTLS_SSL_MAJOR_VERSION_3 &&
+        conf->min_minor_ver == MBEDTLS_SSL_MINOR_VERSION_3 &&
+        conf->max_minor_ver == MBEDTLS_SSL_MINOR_VERSION_3 )
+    {
+        return( 1 );
+    }
+    return( 0 );
 }
 
 #endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
@@ -1595,8 +1631,14 @@ static inline int mbedtls_ssl_conf_is_tls12_only( const mbedtls_ssl_config *conf
 static inline int mbedtls_ssl_conf_is_tls13_enabled( const mbedtls_ssl_config *conf )
 {
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3)
-    return( conf->min_tls_version <= MBEDTLS_SSL_VERSION_TLS1_3 &&
-            conf->max_tls_version >= MBEDTLS_SSL_VERSION_TLS1_3 );
+    if( conf->min_major_ver == MBEDTLS_SSL_MAJOR_VERSION_3 &&
+        conf->max_major_ver == MBEDTLS_SSL_MAJOR_VERSION_3 &&
+        conf->min_minor_ver <= MBEDTLS_SSL_MINOR_VERSION_4 &&
+        conf->max_minor_ver >= MBEDTLS_SSL_MINOR_VERSION_4 )
+    {
+        return( 1 );
+    }
+    return( 0 );
 #else
     ((void) conf);
     return( 0 );
@@ -1606,8 +1648,14 @@ static inline int mbedtls_ssl_conf_is_tls13_enabled( const mbedtls_ssl_config *c
 static inline int mbedtls_ssl_conf_is_tls12_enabled( const mbedtls_ssl_config *conf )
 {
 #if defined(MBEDTLS_SSL_PROTO_TLS1_2)
-    return( conf->min_tls_version <= MBEDTLS_SSL_VERSION_TLS1_2 &&
-            conf->max_tls_version >= MBEDTLS_SSL_VERSION_TLS1_2 );
+    if( conf->min_major_ver == MBEDTLS_SSL_MAJOR_VERSION_3 &&
+        conf->max_major_ver == MBEDTLS_SSL_MAJOR_VERSION_3 &&
+        conf->min_minor_ver <= MBEDTLS_SSL_MINOR_VERSION_3 &&
+        conf->max_minor_ver >= MBEDTLS_SSL_MINOR_VERSION_3 )
+    {
+        return( 1 );
+    }
+    return( 0 );
 #else
     ((void) conf);
     return( 0 );
@@ -1617,8 +1665,14 @@ static inline int mbedtls_ssl_conf_is_tls12_enabled( const mbedtls_ssl_config *c
 #if defined(MBEDTLS_SSL_PROTO_TLS1_2) && defined(MBEDTLS_SSL_PROTO_TLS1_3)
 static inline int mbedtls_ssl_conf_is_hybrid_tls12_tls13( const mbedtls_ssl_config *conf )
 {
-    return( conf->min_tls_version == MBEDTLS_SSL_VERSION_TLS1_2 &&
-            conf->max_tls_version == MBEDTLS_SSL_VERSION_TLS1_3 );
+    if( conf->min_major_ver == MBEDTLS_SSL_MAJOR_VERSION_3 &&
+        conf->max_major_ver == MBEDTLS_SSL_MAJOR_VERSION_3 &&
+        conf->min_minor_ver == MBEDTLS_SSL_MINOR_VERSION_3 &&
+        conf->max_minor_ver == MBEDTLS_SSL_MINOR_VERSION_4 )
+    {
+        return( 1 );
+    }
+    return( 0 );
 }
 #endif /* MBEDTLS_SSL_PROTO_TLS1_2 && MBEDTLS_SSL_PROTO_TLS1_3 */
 
@@ -1781,16 +1835,6 @@ int mbedtls_ssl_tls13_write_change_cipher_spec( mbedtls_ssl_context *ssl );
 
 int mbedtls_ssl_reset_transcript_for_hrr( mbedtls_ssl_context *ssl );
 
-#if defined(MBEDTLS_ECDH_C)
-int mbedtls_ssl_tls13_generate_and_write_ecdh_key_exchange(
-                mbedtls_ssl_context *ssl,
-                uint16_t named_group,
-                unsigned char *buf,
-                unsigned char *end,
-                size_t *out_len );
-#endif /* MBEDTLS_ECDH_C */
-
-
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
 #if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
@@ -1869,39 +1913,6 @@ static inline int mbedtls_ssl_tls13_named_group_is_dhe( uint16_t named_group )
 {
     return( named_group >= MBEDTLS_SSL_IANA_TLS_GROUP_FFDHE2048 &&
             named_group <= MBEDTLS_SSL_IANA_TLS_GROUP_FFDHE8192 );
-}
-
-static inline int mbedtls_ssl_named_group_is_offered(
-                        const mbedtls_ssl_context *ssl, uint16_t named_group )
-{
-    const uint16_t *group_list = mbedtls_ssl_get_groups( ssl );
-
-    if( group_list == NULL )
-        return( 0 );
-
-    for( ; *group_list != 0; group_list++ )
-    {
-        if( *group_list == named_group )
-            return( 1 );
-    }
-
-    return( 0 );
-}
-
-static inline int mbedtls_ssl_named_group_is_supported( uint16_t named_group )
-{
-#if defined(MBEDTLS_ECDH_C)
-    if( mbedtls_ssl_tls13_named_group_is_ecdhe( named_group ) )
-    {
-        const mbedtls_ecp_curve_info *curve_info =
-            mbedtls_ecp_curve_info_from_tls_id( named_group );
-        if( curve_info != NULL )
-            return( 1 );
-    }
-#else
-    ((void) named_group);
-#endif /* MBEDTLS_ECDH_C */
-    return( 0 );
 }
 
 /*
@@ -2066,7 +2077,7 @@ static inline int mbedtls_ssl_sig_alg_is_supported(
 {
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_2)
-    if( ssl->tls_version == MBEDTLS_SSL_VERSION_TLS1_2 )
+    if( ssl->minor_ver == MBEDTLS_SSL_MINOR_VERSION_3)
     {
         /* High byte is hash */
         unsigned char hash = MBEDTLS_BYTE_1( sig_alg );
@@ -2129,7 +2140,7 @@ static inline int mbedtls_ssl_sig_alg_is_supported(
 #endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3)
-    if( ssl->tls_version == MBEDTLS_SSL_VERSION_TLS1_3 )
+    if( ssl->minor_ver == MBEDTLS_SSL_MINOR_VERSION_4)
     {
         mbedtls_pk_type_t pk_type;
         mbedtls_md_type_t md_alg;
@@ -2219,45 +2230,5 @@ static inline int psa_ssl_status_to_mbedtls( psa_status_t status )
     }
 }
 #endif /* MBEDTLS_USE_PSA_CRYPTO || MBEDTLS_SSL_PROTO_TLS1_3 */
-
-#if defined(MBEDTLS_ECDH_C)
-
-int mbedtls_ssl_tls13_read_public_ecdhe_share( mbedtls_ssl_context *ssl,
-                                               const unsigned char *buf,
-                                               size_t buf_len );
-
-#endif /* MBEDTLS_ECDH_C */
-
-static inline int mbedtls_ssl_tls13_cipher_suite_is_offered(
-        mbedtls_ssl_context *ssl, int cipher_suite )
-{
-    const int *ciphersuite_list = ssl->conf->ciphersuite_list;
-
-    /* Check whether we have offered this ciphersuite */
-    for ( size_t i = 0; ciphersuite_list[i] != 0; i++ )
-    {
-        if( ciphersuite_list[i] == cipher_suite )
-        {
-            return( 1 );
-        }
-    }
-    return( 0 );
-}
-
-/**
- * \brief Validate cipher suite against config in SSL context.
- *
- * \param ssl              SSL context
- * \param suite_info       Cipher suite to validate
- * \param min_tls_version  Minimal TLS version to accept a cipher suite
- * \param max_tls_version  Maximal TLS version to accept a cipher suite
- *
- * \return 0 if valid, negative value otherwise.
- */
-int mbedtls_ssl_validate_ciphersuite(
-    const mbedtls_ssl_context *ssl,
-    const mbedtls_ssl_ciphersuite_t *suite_info,
-    mbedtls_ssl_protocol_version min_tls_version,
-    mbedtls_ssl_protocol_version max_tls_version );
 
 #endif /* ssl_misc.h */
