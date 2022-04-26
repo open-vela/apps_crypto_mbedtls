@@ -382,7 +382,8 @@ static int ssl_parse_inner_plaintext( unsigned char const *content,
 static void ssl_extract_add_data_from_record( unsigned char* add_data,
                                               size_t *add_data_len,
                                               mbedtls_record *rec,
-                                              unsigned minor_ver,
+                                              mbedtls_ssl_protocol_version
+                                                tls_version,
                                               size_t taglen )
 {
     /* Quoting RFC 5246 (TLS 1.2):
@@ -421,7 +422,7 @@ static void ssl_extract_add_data_from_record( unsigned char* add_data,
     size_t ad_len_field = rec->data_len;
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3)
-    if( minor_ver == MBEDTLS_SSL_MINOR_VERSION_4 )
+    if( tls_version == MBEDTLS_SSL_VERSION_TLS1_3 )
     {
         /* In TLS 1.3, the AAD contains the length of the TLSCiphertext,
          * which differs from the length of the TLSInnerPlaintext
@@ -431,7 +432,7 @@ static void ssl_extract_add_data_from_record( unsigned char* add_data,
     else
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
     {
-        ((void) minor_ver);
+        ((void) tls_version);
         ((void) taglen);
         memcpy( cur, rec->ctr, sizeof( rec->ctr ) );
         cur += sizeof( rec->ctr );
@@ -522,9 +523,7 @@ int mbedtls_ssl_encrypt_buf( mbedtls_ssl_context *ssl,
                              int (*f_rng)(void *, unsigned char *, size_t),
                              void *p_rng )
 {
-#if !defined(MBEDTLS_USE_PSA_CRYPTO)
-    mbedtls_cipher_mode_t mode;
-#endif /* MBEDTLS_USE_PSA_CRYPTO */
+    mbedtls_ssl_mode_t ssl_mode;
     int auth_done = 0;
     unsigned char * data;
     unsigned char add_data[13 + 1 + MBEDTLS_SSL_CID_OUT_LEN_MAX ];
@@ -565,14 +564,12 @@ int mbedtls_ssl_encrypt_buf( mbedtls_ssl_context *ssl,
         return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
     }
 
+    ssl_mode = mbedtls_ssl_get_mode_from_transform( transform );
+
     data = rec->buf + rec->data_offset;
     post_avail = rec->buf_len - ( rec->data_len + rec->data_offset );
     MBEDTLS_SSL_DEBUG_BUF( 4, "before encrypt: output payload",
                            data, rec->data_len );
-
-#if !defined(MBEDTLS_USE_PSA_CRYPTO)
-    mode = mbedtls_cipher_get_cipher_mode( &transform->cipher_ctx_enc );
-#endif /* MBEDTLS_USE_PSA_CRYPTO */
 
     if( rec->data_len > MBEDTLS_SSL_OUT_CONTENT_LEN )
     {
@@ -596,7 +593,7 @@ int mbedtls_ssl_encrypt_buf( mbedtls_ssl_context *ssl,
      * is hence no risk of double-addition of the inner plaintext.
      */
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3)
-    if( transform->minor_ver == MBEDTLS_SSL_MINOR_VERSION_4 )
+    if( transform->tls_version == MBEDTLS_SSL_VERSION_TLS1_3 )
     {
         size_t padding =
             ssl_compute_padding_length( rec->data_len,
@@ -653,17 +650,8 @@ int mbedtls_ssl_encrypt_buf( mbedtls_ssl_context *ssl,
      * Add MAC before if needed
      */
 #if defined(MBEDTLS_SSL_SOME_SUITES_USE_MAC)
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
-    if ( transform->psa_alg == MBEDTLS_SSL_NULL_CIPHER  ||
-            ( transform->psa_alg == PSA_ALG_CBC_NO_PADDING
-#else
-    if( mode == MBEDTLS_MODE_STREAM ||
-        ( mode == MBEDTLS_MODE_CBC
-#endif
-#if defined(MBEDTLS_SSL_ENCRYPT_THEN_MAC)
-          && transform->encrypt_then_mac == MBEDTLS_SSL_ETM_DISABLED
-#endif
-        ) )
+    if( ssl_mode == MBEDTLS_SSL_MODE_STREAM ||
+        ssl_mode == MBEDTLS_SSL_MODE_CBC )
     {
         if( post_avail < transform->maclen )
         {
@@ -680,7 +668,7 @@ int mbedtls_ssl_encrypt_buf( mbedtls_ssl_context *ssl,
 #endif /* MBEDTLS_USE_PSA_CRYPTO */
 
         ssl_extract_add_data_from_record( add_data, &add_data_len, rec,
-                                          transform->minor_ver,
+                                          transform->tls_version,
                                           transform->taglen );
 
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
@@ -747,11 +735,7 @@ int mbedtls_ssl_encrypt_buf( mbedtls_ssl_context *ssl,
      * Encrypt
      */
 #if defined(MBEDTLS_SSL_SOME_SUITES_USE_STREAM)
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
-    if ( transform->psa_alg == MBEDTLS_SSL_NULL_CIPHER )
-#else
-    if( mode == MBEDTLS_MODE_STREAM )
-#endif
+    if( ssl_mode == MBEDTLS_SSL_MODE_STREAM )
     {
         MBEDTLS_SSL_DEBUG_MSG( 3, ( "before encrypt: msglen = %" MBEDTLS_PRINTF_SIZET ", "
                                     "including %d bytes of padding",
@@ -766,13 +750,7 @@ int mbedtls_ssl_encrypt_buf( mbedtls_ssl_context *ssl,
 #if defined(MBEDTLS_GCM_C) || \
     defined(MBEDTLS_CCM_C) || \
     defined(MBEDTLS_CHACHAPOLY_C)
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
-    if ( PSA_ALG_IS_AEAD( transform->psa_alg ) )
-#else
-    if( mode == MBEDTLS_MODE_GCM ||
-        mode == MBEDTLS_MODE_CCM ||
-        mode == MBEDTLS_MODE_CHACHAPOLY )
-#endif /* MBEDTLS_USE_PSA_CRYPTO */
+    if( ssl_mode == MBEDTLS_SSL_MODE_AEAD )
     {
         unsigned char iv[12];
         unsigned char *dynamic_iv;
@@ -817,7 +795,7 @@ int mbedtls_ssl_encrypt_buf( mbedtls_ssl_context *ssl,
          * This depends on the TLS version.
          */
         ssl_extract_add_data_from_record( add_data, &add_data_len, rec,
-                                          transform->minor_ver,
+                                          transform->tls_version,
                                           transform->taglen );
 
         MBEDTLS_SSL_DEBUG_BUF( 4, "IV used (internal)",
@@ -890,11 +868,8 @@ int mbedtls_ssl_encrypt_buf( mbedtls_ssl_context *ssl,
     else
 #endif /* MBEDTLS_GCM_C || MBEDTLS_CCM_C || MBEDTLS_CHACHAPOLY_C */
 #if defined(MBEDTLS_SSL_SOME_SUITES_USE_CBC)
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
-    if ( transform->psa_alg == PSA_ALG_CBC_NO_PADDING )
-#else
-    if( mode == MBEDTLS_MODE_CBC )
-#endif /* MBEDTLS_USE_PSA_CRYPTO */
+    if( ssl_mode == MBEDTLS_SSL_MODE_CBC ||
+        ssl_mode == MBEDTLS_SSL_MODE_CBC_ETM )
     {
         int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
         size_t padlen, i;
@@ -1050,7 +1025,7 @@ int mbedtls_ssl_encrypt_buf( mbedtls_ssl_context *ssl,
             }
 
             ssl_extract_add_data_from_record( add_data, &add_data_len,
-                                              rec, transform->minor_ver,
+                                              rec, transform->tls_version,
                                               transform->taglen );
 
             MBEDTLS_SSL_DEBUG_MSG( 3, ( "using encrypt then mac" ) );
@@ -1138,13 +1113,8 @@ int mbedtls_ssl_decrypt_buf( mbedtls_ssl_context const *ssl,
                              mbedtls_record *rec )
 {
     size_t olen;
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
+    mbedtls_ssl_mode_t ssl_mode;
     int ret;
-
-#else
-    mbedtls_cipher_mode_t mode;
-    int ret;
-#endif /* MBEDTLS_USE_PSA_CRYPTO */
 
     int auth_done = 0;
 #if defined(MBEDTLS_SSL_SOME_SUITES_USE_MAC)
@@ -1170,9 +1140,7 @@ int mbedtls_ssl_decrypt_buf( mbedtls_ssl_context const *ssl,
     }
 
     data = rec->buf + rec->data_offset;
-#if !defined(MBEDTLS_USE_PSA_CRYPTO)
-    mode = mbedtls_cipher_get_cipher_mode( &transform->cipher_ctx_dec );
-#endif /* MBEDTLS_USE_PSA_CRYPTO */
+    ssl_mode = mbedtls_ssl_get_mode_from_transform( transform );
 
 #if defined(MBEDTLS_SSL_DTLS_CONNECTION_ID)
     /*
@@ -1186,11 +1154,7 @@ int mbedtls_ssl_decrypt_buf( mbedtls_ssl_context const *ssl,
 #endif /* MBEDTLS_SSL_DTLS_CONNECTION_ID */
 
 #if defined(MBEDTLS_SSL_SOME_SUITES_USE_STREAM)
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
-    if ( transform->psa_alg == MBEDTLS_SSL_NULL_CIPHER )
-#else
-    if( mode == MBEDTLS_MODE_STREAM )
-#endif /* MBEDTLS_USE_PSA_CRYPTO */
+    if( ssl_mode == MBEDTLS_SSL_MODE_STREAM )
     {
         /* The only supported stream cipher is "NULL",
          * so there's nothing to do here.*/
@@ -1200,13 +1164,7 @@ int mbedtls_ssl_decrypt_buf( mbedtls_ssl_context const *ssl,
 #if defined(MBEDTLS_GCM_C) || \
     defined(MBEDTLS_CCM_C) || \
     defined(MBEDTLS_CHACHAPOLY_C)
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
-    if ( PSA_ALG_IS_AEAD( transform->psa_alg ) )
-#else
-    if( mode == MBEDTLS_MODE_GCM ||
-        mode == MBEDTLS_MODE_CCM ||
-        mode == MBEDTLS_MODE_CHACHAPOLY )
-#endif /* MBEDTLS_USE_PSA_CRYPTO */
+    if( ssl_mode == MBEDTLS_SSL_MODE_AEAD )
     {
         unsigned char iv[12];
         unsigned char *dynamic_iv;
@@ -1270,7 +1228,7 @@ int mbedtls_ssl_decrypt_buf( mbedtls_ssl_context const *ssl,
          * This depends on the TLS version.
          */
         ssl_extract_add_data_from_record( add_data, &add_data_len, rec,
-                                          transform->minor_ver,
+                                          transform->tls_version,
                                           transform->taglen );
         MBEDTLS_SSL_DEBUG_BUF( 4, "additional data used for AEAD",
                                add_data, add_data_len );
@@ -1332,11 +1290,8 @@ int mbedtls_ssl_decrypt_buf( mbedtls_ssl_context const *ssl,
     else
 #endif /* MBEDTLS_GCM_C || MBEDTLS_CCM_C */
 #if defined(MBEDTLS_SSL_SOME_SUITES_USE_CBC)
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
-    if ( transform->psa_alg == PSA_ALG_CBC_NO_PADDING )
-#else
-    if( mode == MBEDTLS_MODE_CBC )
-#endif /* MBEDTLS_USE_PSA_CRYPTO */
+    if( ssl_mode == MBEDTLS_SSL_MODE_CBC ||
+        ssl_mode == MBEDTLS_SSL_MODE_CBC_ETM )
     {
         size_t minlen = 0;
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
@@ -1390,7 +1345,7 @@ int mbedtls_ssl_decrypt_buf( mbedtls_ssl_context const *ssl,
          * Authenticate before decrypt if enabled
          */
 #if defined(MBEDTLS_SSL_ENCRYPT_THEN_MAC)
-        if( transform->encrypt_then_mac == MBEDTLS_SSL_ETM_ENABLED )
+        if( ssl_mode == MBEDTLS_SSL_MODE_CBC_ETM )
         {
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
             psa_mac_operation_t operation = PSA_MAC_OPERATION_INIT;
@@ -1412,7 +1367,7 @@ int mbedtls_ssl_decrypt_buf( mbedtls_ssl_context const *ssl,
              * Further, we still know that data_len > minlen */
             rec->data_len -= transform->maclen;
             ssl_extract_add_data_from_record( add_data, &add_data_len, rec,
-                                              transform->minor_ver,
+                                              transform->tls_version,
                                               transform->taglen );
 
             /* Calculate expected MAC. */
@@ -1697,7 +1652,7 @@ int mbedtls_ssl_decrypt_buf( mbedtls_ssl_context const *ssl,
          */
         rec->data_len -= transform->maclen;
         ssl_extract_add_data_from_record( add_data, &add_data_len, rec,
-                                          transform->minor_ver,
+                                          transform->tls_version,
                                           transform->taglen );
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_2)
@@ -1775,7 +1730,7 @@ int mbedtls_ssl_decrypt_buf( mbedtls_ssl_context const *ssl,
     }
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3)
-    if( transform->minor_ver == MBEDTLS_SSL_MINOR_VERSION_4 )
+    if( transform->tls_version == MBEDTLS_SSL_VERSION_TLS1_3 )
     {
         /* Remove inner padding and infer true content type. */
         ret = ssl_parse_inner_plaintext( data, &rec->data_len,
@@ -2674,15 +2629,15 @@ int mbedtls_ssl_write_record( mbedtls_ssl_context *ssl, int force_flush )
 #endif
         /* Skip writing the record content type to after the encryption,
          * as it may change when using the CID extension. */
-        int minor_ver = ssl->minor_ver;
+        mbedtls_ssl_protocol_version tls_ver = ssl->tls_version;
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3)
         /* TLS 1.3 still uses the TLS 1.2 version identifier
          * for backwards compatibility. */
-        if( minor_ver == MBEDTLS_SSL_MINOR_VERSION_4 )
-            minor_ver = MBEDTLS_SSL_MINOR_VERSION_3;
+        if( tls_ver == MBEDTLS_SSL_VERSION_TLS1_3 )
+            tls_ver = MBEDTLS_SSL_VERSION_TLS1_2;
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
-        mbedtls_ssl_write_version( ssl->major_ver, minor_ver,
-                                   ssl->conf->transport, ssl->out_hdr + 1 );
+        mbedtls_ssl_write_version( ssl->out_hdr + 1, ssl->conf->transport,
+                                   tls_ver );
 
         memcpy( ssl->out_ctr, ssl->cur_out_ctr, MBEDTLS_SSL_SEQUENCE_NUMBER_LEN );
         MBEDTLS_PUT_UINT16_BE( len, ssl->out_len, 0);
@@ -2697,8 +2652,7 @@ int mbedtls_ssl_write_record( mbedtls_ssl_context *ssl, int force_flush )
             rec.data_offset = ssl->out_msg - rec.buf;
 
             memcpy( &rec.ctr[0], ssl->out_ctr, sizeof( rec.ctr ) );
-            mbedtls_ssl_write_version( ssl->major_ver, minor_ver,
-                                       ssl->conf->transport, rec.ver );
+            mbedtls_ssl_write_version( rec.ver, ssl->conf->transport, tls_ver );
             rec.type = ssl->out_msgtype;
 
 #if defined(MBEDTLS_SSL_DTLS_CONNECTION_ID)
@@ -3420,7 +3374,7 @@ static int ssl_parse_record_header( mbedtls_ssl_context const *ssl,
                                     size_t len,
                                     mbedtls_record *rec )
 {
-    int major_ver, minor_ver;
+    mbedtls_ssl_protocol_version tls_version;
 
     size_t const rec_hdr_type_offset    = 0;
     size_t const rec_hdr_type_len       = 1;
@@ -3530,19 +3484,12 @@ static int ssl_parse_record_header( mbedtls_ssl_context const *ssl,
 
     rec->ver[0] = buf[ rec_hdr_version_offset + 0 ];
     rec->ver[1] = buf[ rec_hdr_version_offset + 1 ];
-    mbedtls_ssl_read_version( &major_ver, &minor_ver,
-                              ssl->conf->transport,
-                              &rec->ver[0] );
+    tls_version = mbedtls_ssl_read_version( buf + rec_hdr_version_offset,
+                                            ssl->conf->transport );
 
-    if( major_ver != ssl->major_ver )
+    if( tls_version > ssl->conf->max_tls_version )
     {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "major version mismatch" ) );
-        return( MBEDTLS_ERR_SSL_INVALID_RECORD );
-    }
-
-    if( minor_ver > ssl->conf->max_minor_ver )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "minor version mismatch" ) );
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "TLS version mismatch" ) );
         return( MBEDTLS_ERR_SSL_INVALID_RECORD );
     }
 
@@ -3574,9 +3521,8 @@ static int ssl_parse_record_header( mbedtls_ssl_context const *ssl,
     MBEDTLS_SSL_DEBUG_BUF( 4, "input record header", buf, rec->data_offset );
 
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "input record: msgtype = %u, "
-                                "version = [%d:%d], msglen = %" MBEDTLS_PRINTF_SIZET,
-                                rec->type,
-                                major_ver, minor_ver, rec->data_len ) );
+                                "version = [0x%x], msglen = %" MBEDTLS_PRINTF_SIZET,
+                                rec->type, (unsigned)tls_version, rec->data_len ) );
 
     rec->buf     = buf;
     rec->buf_len = rec->data_offset + rec->data_len;
@@ -3692,7 +3638,7 @@ static int ssl_prepare_record_content( mbedtls_ssl_context *ssl,
      */
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3)
     if( ssl->transform_in != NULL &&
-        ssl->transform_in->minor_ver == MBEDTLS_SSL_MINOR_VERSION_4 )
+        ssl->transform_in->tls_version == MBEDTLS_SSL_VERSION_TLS1_3 )
     {
         if( rec->type == MBEDTLS_SSL_MSG_CHANGE_CIPHER_SPEC )
             done = 1;
@@ -3748,7 +3694,7 @@ static int ssl_prepare_record_content( mbedtls_ssl_context *ssl,
         if( rec->data_len == 0 )
         {
 #if defined(MBEDTLS_SSL_PROTO_TLS1_2)
-            if( ssl->minor_ver == MBEDTLS_SSL_MINOR_VERSION_3
+            if( ssl->tls_version == MBEDTLS_SSL_VERSION_TLS1_2
                 && rec->type != MBEDTLS_SSL_MSG_APPLICATION_DATA )
             {
                 /* TLS v1.2 explicitly disallows zero-length messages which are not application data */
@@ -4751,7 +4697,7 @@ int mbedtls_ssl_handle_message_type( mbedtls_ssl_context *ssl )
 #endif
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3)
-        if( ssl->minor_ver == MBEDTLS_SSL_MINOR_VERSION_4 )
+        if( ssl->tls_version == MBEDTLS_SSL_VERSION_TLS1_3 )
         {
 #if defined(MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE)
             MBEDTLS_SSL_DEBUG_MSG( 1,
@@ -4970,9 +4916,6 @@ int mbedtls_ssl_parse_change_cipher_spec( mbedtls_ssl_context *ssl )
 static size_t ssl_transform_get_explicit_iv_len(
                         mbedtls_ssl_transform const *transform )
 {
-    if( transform->minor_ver < MBEDTLS_SSL_MINOR_VERSION_3 )
-        return( 0 );
-
     return( transform->ivlen - transform->fixed_ivlen );
 }
 
@@ -5814,51 +5757,35 @@ static void ssl_buffering_free_slot( mbedtls_ssl_context *ssl,
  * and, for DTLS, to/from TLS equivalent.
  *
  * For TLS this is the identity.
- * For DTLS, use 1's complement (v -> 255 - v, and then map as follows:
+ * For DTLS, map as follows, then use 1's complement (v -> ~v):
  * 1.x <-> 3.x+1    for x != 0 (DTLS 1.2 based on TLS 1.2)
+ *                  DTLS 1.0 is stored as TLS 1.1 internally
  */
-void mbedtls_ssl_write_version( int major, int minor, int transport,
-                        unsigned char ver[2] )
+void mbedtls_ssl_write_version( unsigned char version[2], int transport,
+                                mbedtls_ssl_protocol_version tls_version )
 {
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
     if( transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM )
-    {
-        if( minor == MBEDTLS_SSL_MINOR_VERSION_2 )
-            --minor; /* DTLS 1.0 stored as TLS 1.1 internally */
-
-        ver[0] = (unsigned char)( 255 - ( major - 2 ) );
-        ver[1] = (unsigned char)( 255 - ( minor - 1 ) );
-    }
-    else
+        tls_version =
+          ~( tls_version - ( tls_version == 0x0302 ? 0x0202 : 0x0201 ) );
 #else
     ((void) transport);
 #endif
-    {
-        ver[0] = (unsigned char) major;
-        ver[1] = (unsigned char) minor;
-    }
+    MBEDTLS_PUT_UINT16_BE( tls_version, version, 0 );
 }
 
-void mbedtls_ssl_read_version( int *major, int *minor, int transport,
-                       const unsigned char ver[2] )
+uint16_t mbedtls_ssl_read_version( const unsigned char version[2],
+                                   int transport )
 {
+    uint16_t tls_version = MBEDTLS_GET_UINT16_BE( version, 0 );
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
     if( transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM )
-    {
-        *major = 255 - ver[0] + 2;
-        *minor = 255 - ver[1] + 1;
-
-        if( *minor == MBEDTLS_SSL_MINOR_VERSION_1 )
-            ++*minor; /* DTLS 1.0 stored as TLS 1.1 internally */
-    }
-    else
+        tls_version =
+          ~( tls_version - ( tls_version == 0xfeff ? 0x0202 : 0x0201 ) );
 #else
     ((void) transport);
 #endif
-    {
-        *major = ver[0];
-        *minor = ver[1];
-    }
+    return tls_version;
 }
 
 /*
