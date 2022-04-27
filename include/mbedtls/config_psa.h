@@ -31,16 +31,8 @@
 #define MBEDTLS_CONFIG_PSA_H
 
 #if defined(MBEDTLS_PSA_CRYPTO_CONFIG)
-#if defined(MBEDTLS_PSA_CRYPTO_CONFIG_FILE)
-#include MBEDTLS_PSA_CRYPTO_CONFIG_FILE
-#else
 #include "psa/crypto_config.h"
-#endif
 #endif /* defined(MBEDTLS_PSA_CRYPTO_CONFIG) */
-
-#if defined(MBEDTLS_PSA_CRYPTO_USER_CONFIG_FILE)
-#include MBEDTLS_PSA_CRYPTO_USER_CONFIG_FILE
-#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -523,7 +515,7 @@ extern "C" {
 #if !defined(MBEDTLS_PSA_ACCEL_ECC_SECP_K1_224)
 /*
  * SECP224K1 is buggy via the PSA API in Mbed TLS
- * (https://github.com/ARMmbed/mbedtls/issues/3541).
+ * (https://github.com/Mbed-TLS/mbedtls/issues/3541).
  */
 #error "SECP224K1 is buggy via the PSA API in Mbed TLS."
 #define MBEDTLS_ECP_DP_SECP224K1_ENABLED
@@ -784,7 +776,7 @@ extern "C" {
 #define PSA_WANT_ECC_SECP_K1_192
 #endif
 
-/* SECP224K1 is buggy via the PSA API (https://github.com/ARMmbed/mbedtls/issues/3541) */
+/* SECP224K1 is buggy via the PSA API (https://github.com/Mbed-TLS/mbedtls/issues/3541) */
 #if 0 && defined(MBEDTLS_ECP_DP_SECP224K1_ENABLED)
 #define MBEDTLS_PSA_BUILTIN_ECC_SECP_K1_224 1
 #define PSA_WANT_ECC_SECP_K1_224
