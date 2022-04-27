@@ -78,11 +78,6 @@ def automatic_dependencies(*expressions: str) -> List[str]:
     """
     used = set()
     for expr in expressions:
-        # HKDF_EXTRACT and HKDF_EXPAND algs depend on HKDF
-        if "HKDF_EXTRACT" in expr:
-            expr = expr.replace("HKDF_EXTRACT", "HKDF")
-        if "HKDF_EXPAND" in expr:
-            expr = expr.replace("HKDF_EXPAND", "HKDF")
         used.update(re.findall(r'PSA_(?:ALG|ECC_FAMILY|KEY_TYPE)_\w+', expr))
     used.difference_update(SYMBOLS_WITHOUT_DEPENDENCY)
     return sorted(psa_want_symbol(name) for name in used)
@@ -170,6 +165,7 @@ class NotSupported:
     ALWAYS_SUPPORTED = frozenset([
         'PSA_KEY_TYPE_DERIVE',
         'PSA_KEY_TYPE_RAW_DATA',
+        'PSA_KEY_TYPE_HMAC'
     ])
     def test_cases_for_key_type_not_supported(
             self,
