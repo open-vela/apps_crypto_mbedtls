@@ -22,8 +22,10 @@
 #if defined(MBEDTLS_SSL_SRV_C) && defined(MBEDTLS_SSL_PROTO_TLS1_3)
 
 #include "mbedtls/debug.h"
-#include "mbedtls/error.h"
-#include "mbedtls/platform.h"
+
+#include "ssl_misc.h"
+#include "ssl_tls13_keys.h"
+#include "ssl_debug_helpers.h"
 
 #if defined(MBEDTLS_ECP_C)
 #include "mbedtls/ecp.h"
@@ -36,10 +38,6 @@
 #define mbedtls_calloc    calloc
 #define mbedtls_free       free
 #endif /* MBEDTLS_PLATFORM_C */
-
-#include "ssl_misc.h"
-#include "ssl_tls13_keys.h"
-#include "ssl_debug_helpers.h"
 
 /* From RFC 8446:
  *   struct {
@@ -1057,129 +1055,6 @@ cleanup:
 }
 
 /*
- * Handler for MBEDTLS_SSL_ENCRYPTED_EXTENSIONS
- */
-static int ssl_tls13_prepare_encrypted_extensions( mbedtls_ssl_context *ssl )
-{
-    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
-    mbedtls_ssl_key_set traffic_keys;
-    mbedtls_ssl_transform *transform_handshake = NULL;
-
-    /* Compute handshake secret */
-    ret = mbedtls_ssl_tls13_key_schedule_stage_handshake( ssl );
-    if( ret != 0 )
-    {
-        MBEDTLS_SSL_DEBUG_RET(
-            1, "mbedtls_ssl_tls13_key_schedule_stage_handshake", ret );
-        return( ret );
-    }
-
-    /* Derive handshake key material */
-    ret = mbedtls_ssl_tls13_generate_handshake_keys( ssl, &traffic_keys );
-    if( ret != 0 )
-    {
-        MBEDTLS_SSL_DEBUG_RET(
-            1, "mbedtls_ssl_tls13_generate_handshake_keys", ret );
-        return( ret );
-    }
-
-    transform_handshake = mbedtls_calloc( 1, sizeof( mbedtls_ssl_transform ) );
-    if( transform_handshake == NULL )
-        return( MBEDTLS_ERR_SSL_ALLOC_FAILED );
-
-    /* Setup transform from handshake key material */
-    ret = mbedtls_ssl_tls13_populate_transform(
-                               transform_handshake,
-                               ssl->conf->endpoint,
-                               ssl->session_negotiate->ciphersuite,
-                               &traffic_keys,
-                               ssl );
-    if( ret != 0 )
-    {
-        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls13_populate_transform", ret );
-        mbedtls_free( transform_handshake );
-        return( ret );
-    }
-
-    ssl->handshake->transform_handshake = transform_handshake;
-    mbedtls_ssl_set_outbound_transform( ssl, ssl->handshake->transform_handshake );
-    MBEDTLS_SSL_DEBUG_MSG(
-        3, ( "switching to new transform spec for outbound data" ) );
-
-    return( 0 );
-}
-
-/*
- * struct {
- *    Extension extensions<0..2 ^ 16 - 1>;
- * } EncryptedExtensions;
- *
- */
-static int ssl_tls13_write_encrypted_extensions_body( mbedtls_ssl_context *ssl,
-                                                      unsigned char *buf,
-                                                      unsigned char *end,
-                                                      size_t *out_len )
-{
-    unsigned char *p = buf;
-    size_t extensions_len = 0;
-    unsigned char *p_extensions_len;
-
-    *out_len = 0;
-
-    MBEDTLS_SSL_CHK_BUF_PTR( p, end, 2 );
-    p_extensions_len = p;
-    p += 2;
-
-    ((void) ssl);
-
-    extensions_len = ( p - p_extensions_len ) - 2;
-    MBEDTLS_PUT_UINT16_BE( extensions_len, p_extensions_len, 0 );
-
-    *out_len = p - buf;
-
-    MBEDTLS_SSL_DEBUG_BUF( 4, "encrypted extensions", buf, *out_len );
-
-    return( 0 );
-}
-
-static int ssl_tls13_write_encrypted_extensions( mbedtls_ssl_context *ssl )
-{
-    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
-    unsigned char *buf;
-    size_t buf_len, msg_len;
-
-    MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> write encrypted extensions" ) );
-
-    MBEDTLS_SSL_PROC_CHK( ssl_tls13_prepare_encrypted_extensions( ssl ) );
-
-    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_start_handshake_msg( ssl,
-                       MBEDTLS_SSL_HS_ENCRYPTED_EXTENSIONS, &buf, &buf_len ) );
-
-    MBEDTLS_SSL_PROC_CHK( ssl_tls13_write_encrypted_extensions_body(
-                              ssl, buf, buf + buf_len, &msg_len ) );
-
-    mbedtls_ssl_add_hs_msg_to_checksum(
-        ssl, MBEDTLS_SSL_HS_ENCRYPTED_EXTENSIONS, buf, msg_len );
-
-    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_finish_handshake_msg(
-                              ssl, buf_len, msg_len ) );
-
-#if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
-    if( mbedtls_ssl_tls13_some_psk_enabled( ssl ) )
-        mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_SERVER_FINISHED );
-    else
-        mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_SERVER_CERTIFICATE );
-#else
-    mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_SERVER_FINISHED );
-#endif
-
-cleanup:
-
-    MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= write encrypted extensions" ) );
-    return( ret );
-}
-
-/*
  * TLS 1.3 State Machine -- server side
  */
 int mbedtls_ssl_tls13_handshake_server_step( mbedtls_ssl_context *ssl )
@@ -1212,15 +1087,6 @@ int mbedtls_ssl_tls13_handshake_server_step( mbedtls_ssl_context *ssl )
 
         case MBEDTLS_SSL_SERVER_HELLO:
             ret = ssl_tls13_write_server_hello( ssl );
-            break;
-
-        case MBEDTLS_SSL_ENCRYPTED_EXTENSIONS:
-            ret = ssl_tls13_write_encrypted_extensions( ssl );
-            if( ret != 0 )
-            {
-                MBEDTLS_SSL_DEBUG_RET( 1, "ssl_tls13_write_encrypted_extensions", ret );
-                return( ret );
-            }
             break;
 
         default:
