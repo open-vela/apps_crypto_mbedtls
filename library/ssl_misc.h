@@ -173,12 +173,6 @@
 #define MBEDTLS_SSL_SOME_SUITES_USE_MAC
 #endif
 
-/* This macro determines whether a ciphersuite uses Encrypt-then-MAC with CBC */
-#if defined(MBEDTLS_SSL_SOME_SUITES_USE_CBC) && \
-    defined(MBEDTLS_SSL_ENCRYPT_THEN_MAC)
-#define MBEDTLS_SSL_SOME_SUITES_USE_CBC_ETM
-#endif
-
 #endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
 
 #if defined(MBEDTLS_SSL_SOME_SUITES_USE_MAC)
@@ -1789,6 +1783,16 @@ int mbedtls_ssl_tls13_write_change_cipher_spec( mbedtls_ssl_context *ssl );
 
 int mbedtls_ssl_reset_transcript_for_hrr( mbedtls_ssl_context *ssl );
 
+#if defined(MBEDTLS_ECDH_C)
+int mbedtls_ssl_tls13_generate_and_write_ecdh_key_exchange(
+                mbedtls_ssl_context *ssl,
+                uint16_t named_group,
+                unsigned char *buf,
+                unsigned char *end,
+                size_t *out_len );
+#endif /* MBEDTLS_ECDH_C */
+
+
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
 #if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
@@ -2217,28 +2221,6 @@ static inline int psa_ssl_status_to_mbedtls( psa_status_t status )
     }
 }
 #endif /* MBEDTLS_USE_PSA_CRYPTO || MBEDTLS_SSL_PROTO_TLS1_3 */
-
-/**
- * \brief       TLS record protection modes
- */
-typedef enum {
-    MBEDTLS_SSL_MODE_STREAM = 0,
-    MBEDTLS_SSL_MODE_CBC,
-    MBEDTLS_SSL_MODE_CBC_ETM,
-    MBEDTLS_SSL_MODE_AEAD
-} mbedtls_ssl_mode_t;
-
-mbedtls_ssl_mode_t mbedtls_ssl_get_mode_from_transform(
-        const mbedtls_ssl_transform *transform );
-
-#if defined(MBEDTLS_SSL_SOME_SUITES_USE_CBC_ETM)
-mbedtls_ssl_mode_t mbedtls_ssl_get_mode_from_ciphersuite(
-        int encrypt_then_mac,
-        const mbedtls_ssl_ciphersuite_t *suite );
-#else
-mbedtls_ssl_mode_t mbedtls_ssl_get_mode_from_ciphersuite(
-        const mbedtls_ssl_ciphersuite_t *suite );
-#endif /* MBEDTLS_SSL_SOME_SUITES_USE_CBC_ETM */
 
 #if defined(MBEDTLS_ECDH_C)
 
