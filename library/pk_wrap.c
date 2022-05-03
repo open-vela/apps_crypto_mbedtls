@@ -1602,30 +1602,6 @@ const mbedtls_pk_info_t mbedtls_pk_ecdsa_opaque_info = {
     NULL, /* debug - could be done later, or even left NULL */
 };
 
-static int pk_opaque_rsa_decrypt( void *ctx,
-                    const unsigned char *input, size_t ilen,
-                    unsigned char *output, size_t *olen, size_t osize,
-                    int (*f_rng)(void *, unsigned char *, size_t), void *p_rng )
-{
-    const mbedtls_svc_key_id_t *key = (const mbedtls_svc_key_id_t *) ctx;
-    psa_status_t status;
-
-    /* PSA has its own RNG */
-    (void) f_rng;
-    (void) p_rng;
-
-    status = psa_asymmetric_decrypt( *key, PSA_ALG_RSA_PKCS1V15_CRYPT,
-                                     input, ilen,
-                                     NULL, 0,
-                                     output, osize, olen );
-    if( status != PSA_SUCCESS )
-    {
-        return( mbedtls_pk_error_from_psa_rsa( status ) );
-    }
-
-    return 0;
-}
-
 const mbedtls_pk_info_t mbedtls_pk_rsa_opaque_info = {
     MBEDTLS_PK_OPAQUE,
     "Opaque",
@@ -1637,7 +1613,7 @@ const mbedtls_pk_info_t mbedtls_pk_rsa_opaque_info = {
     NULL, /* restartable verify - not relevant */
     NULL, /* restartable sign - not relevant */
 #endif
-    pk_opaque_rsa_decrypt,
+    NULL, /* decrypt - will be done later */
     NULL, /* encrypt - will be done later */
     NULL, /* check_pair - could be done later or left NULL */
     pk_opaque_alloc_wrap,
