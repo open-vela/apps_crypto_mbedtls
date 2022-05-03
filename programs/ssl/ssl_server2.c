@@ -2207,17 +2207,6 @@ int main( int argc, char *argv[] )
 #if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
         if( opt.psk_opaque != 0 || opt.psk_list_opaque != 0 )
         {
-            /* Ensure that the chosen ciphersuite is PSK-only; we must know
-             * the ciphersuite in advance to set the correct policy for the
-             * PSK key slot. This limitation might go away in the future. */
-            if( ciphersuite_info->key_exchange != MBEDTLS_KEY_EXCHANGE_PSK ||
-                opt.min_version != MBEDTLS_SSL_VERSION_TLS1_2 )
-            {
-                mbedtls_printf( "opaque PSKs are only supported in conjunction with forcing TLS 1.2 and a PSK-only ciphersuite through the 'force_ciphersuite' option.\n" );
-                ret = 2;
-                goto usage;
-            }
-
             /* Determine KDF algorithm the opaque PSK will be used in. */
 #if defined(MBEDTLS_SHA384_C)
             if( ciphersuite_info->mac == MBEDTLS_MD_SHA384 )
@@ -2575,11 +2564,29 @@ int main( int argc, char *argv[] )
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
     if( opt.key_opaque != 0 )
     {
+        psa_algorithm_t psa_alg, psa_alg2;
+        psa_key_usage_t psa_usage;
+
         if ( mbedtls_pk_get_type( &pkey ) == MBEDTLS_PK_ECKEY ||
              mbedtls_pk_get_type( &pkey ) == MBEDTLS_PK_RSA )
         {
+            if( mbedtls_pk_get_type( &pkey ) == MBEDTLS_PK_ECKEY )
+            {
+                psa_alg = PSA_ALG_ECDSA( PSA_ALG_ANY_HASH );
+                psa_alg2 = PSA_ALG_ECDH;
+                psa_usage = PSA_KEY_USAGE_SIGN_HASH | PSA_KEY_USAGE_DERIVE;
+            }
+            else
+            {
+                psa_alg = PSA_ALG_RSA_PKCS1V15_SIGN( PSA_ALG_ANY_HASH );
+                psa_alg2 = PSA_ALG_NONE;
+                psa_usage = PSA_KEY_USAGE_SIGN_HASH;
+            }
+
             if( ( ret = mbedtls_pk_wrap_as_opaque( &pkey, &key_slot,
-                                                PSA_ALG_ANY_HASH ) ) != 0 )
+                                                   psa_alg,
+                                                   psa_usage,
+                                                   psa_alg2 ) ) != 0 )
             {
                 mbedtls_printf( " failed\n  !  "
                                 "mbedtls_pk_wrap_as_opaque returned -0x%x\n\n", (unsigned int)  -ret );
@@ -2590,8 +2597,23 @@ int main( int argc, char *argv[] )
         if ( mbedtls_pk_get_type( &pkey2 ) == MBEDTLS_PK_ECKEY ||
              mbedtls_pk_get_type( &pkey2 ) == MBEDTLS_PK_RSA )
         {
+            if( mbedtls_pk_get_type( &pkey2 ) == MBEDTLS_PK_ECKEY )
+            {
+                psa_alg = PSA_ALG_ECDSA( PSA_ALG_ANY_HASH );
+                psa_alg2 = PSA_ALG_ECDH;
+                psa_usage = PSA_KEY_USAGE_SIGN_HASH | PSA_KEY_USAGE_DERIVE;
+            }
+            else
+            {
+                psa_alg = PSA_ALG_RSA_PKCS1V15_SIGN( PSA_ALG_ANY_HASH );
+                psa_alg2 = PSA_ALG_NONE;
+                psa_usage = PSA_KEY_USAGE_SIGN_HASH;
+            }
+
             if( ( ret = mbedtls_pk_wrap_as_opaque( &pkey2, &key_slot2,
-                                                PSA_ALG_ANY_HASH ) ) != 0 )
+                                                   psa_alg,
+                                                   psa_usage,
+                                                   psa_alg2 ) ) != 0 )
             {
                 mbedtls_printf( " failed\n  !  "
                                 "mbedtls_pk_wrap_as_opaque returned -0x%x\n\n", (unsigned int)  -ret );
