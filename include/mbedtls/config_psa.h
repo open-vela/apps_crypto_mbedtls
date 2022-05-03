@@ -31,16 +31,8 @@
 #define MBEDTLS_CONFIG_PSA_H
 
 #if defined(MBEDTLS_PSA_CRYPTO_CONFIG)
-#if defined(MBEDTLS_PSA_CRYPTO_CONFIG_FILE)
-#include MBEDTLS_PSA_CRYPTO_CONFIG_FILE
-#else
 #include "psa/crypto_config.h"
-#endif
 #endif /* defined(MBEDTLS_PSA_CRYPTO_CONFIG) */
-
-#if defined(MBEDTLS_PSA_CRYPTO_USER_CONFIG_FILE)
-#include MBEDTLS_PSA_CRYPTO_USER_CONFIG_FILE
-#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -268,6 +260,7 @@ extern "C" {
 #if (defined(PSA_WANT_ALG_CTR) && !defined(MBEDTLS_PSA_ACCEL_ALG_CTR)) || \
     (defined(PSA_WANT_ALG_CFB) && !defined(MBEDTLS_PSA_ACCEL_ALG_CFB)) || \
     (defined(PSA_WANT_ALG_OFB) && !defined(MBEDTLS_PSA_ACCEL_ALG_OFB)) || \
+    (defined(PSA_WANT_ALG_XTS) && !defined(MBEDTLS_PSA_ACCEL_ALG_XTS)) || \
     defined(PSA_WANT_ALG_ECB_NO_PADDING) || \
     (defined(PSA_WANT_ALG_CBC_NO_PADDING) && \
      !defined(MBEDTLS_PSA_ACCEL_ALG_CBC_NO_PADDING)) || \
@@ -388,6 +381,14 @@ extern "C" {
 #define MBEDTLS_CIPHER_MODE_OFB
 #endif
 #endif /* PSA_WANT_ALG_OFB */
+
+#if defined(PSA_WANT_ALG_XTS)
+#if !defined(MBEDTLS_PSA_ACCEL_ALG_XTS) || \
+    defined(PSA_HAVE_SOFT_BLOCK_CIPHER)
+#define MBEDTLS_PSA_BUILTIN_ALG_XTS 1
+#define MBEDTLS_CIPHER_MODE_XTS
+#endif
+#endif /* PSA_WANT_ALG_XTS */
 
 #if defined(PSA_WANT_ALG_ECB_NO_PADDING) &&     \
     !defined(MBEDTLS_PSA_ACCEL_ALG_ECB_NO_PADDING)
@@ -723,6 +724,11 @@ extern "C" {
 #if defined(MBEDTLS_CIPHER_MODE_OFB)
 #define MBEDTLS_PSA_BUILTIN_ALG_OFB 1
 #define PSA_WANT_ALG_OFB 1
+#endif
+
+#if defined(MBEDTLS_CIPHER_MODE_XTS)
+#define MBEDTLS_PSA_BUILTIN_ALG_XTS 1
+#define PSA_WANT_ALG_XTS 1
 #endif
 
 #if defined(MBEDTLS_ECP_DP_BP256R1_ENABLED)
