@@ -6399,6 +6399,8 @@ run_test    "PSK callback: opaque psk on client, no callback" \
             "$P_CLI extended_ms=0 debug_level=1 min_version=tls12 force_ciphersuite=TLS-PSK-WITH-AES-128-CBC-SHA \
             psk_identity=foo psk=abc123 psk_opaque=1" \
             0 \
+            -c "skip PMS generation for opaque PSK"\
+            -S "skip PMS generation for opaque PSK"\
             -C "session hash for extended master secret"\
             -S "session hash for extended master secret"\
             -S "SSL - The handshake negotiation failed" \
@@ -6412,6 +6414,8 @@ run_test    "PSK callback: opaque psk on client, no callback, SHA-384" \
             "$P_CLI extended_ms=0 debug_level=1 min_version=tls12 force_ciphersuite=TLS-PSK-WITH-AES-256-CBC-SHA384 \
             psk_identity=foo psk=abc123 psk_opaque=1" \
             0 \
+            -c "skip PMS generation for opaque PSK"\
+            -S "skip PMS generation for opaque PSK"\
             -C "session hash for extended master secret"\
             -S "session hash for extended master secret"\
             -S "SSL - The handshake negotiation failed" \
@@ -6425,6 +6429,8 @@ run_test    "PSK callback: opaque psk on client, no callback, EMS" \
             "$P_CLI extended_ms=1 debug_level=3 min_version=tls12 force_ciphersuite=TLS-PSK-WITH-AES-128-CBC-SHA \
             psk_identity=foo psk=abc123 psk_opaque=1" \
             0 \
+            -c "skip PMS generation for opaque PSK"\
+            -S "skip PMS generation for opaque PSK"\
             -c "session hash for extended master secret"\
             -s "session hash for extended master secret"\
             -S "SSL - The handshake negotiation failed" \
@@ -6438,162 +6444,8 @@ run_test    "PSK callback: opaque psk on client, no callback, SHA-384, EMS" \
             "$P_CLI extended_ms=1 debug_level=3 min_version=tls12 force_ciphersuite=TLS-PSK-WITH-AES-256-CBC-SHA384 \
             psk_identity=foo psk=abc123 psk_opaque=1" \
             0 \
-            -c "session hash for extended master secret"\
-            -s "session hash for extended master secret"\
-            -S "SSL - The handshake negotiation failed" \
-            -S "SSL - Unknown identity received" \
-            -S "SSL - Verification of the message MAC failed"
-
-requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
-run_test    "PSK callback: opaque rsa-psk on client, no callback" \
-            "$P_SRV extended_ms=0 debug_level=1 psk=abc123 psk_identity=foo" \
-            "$P_CLI extended_ms=0 debug_level=1 min_version=tls12 force_ciphersuite=TLS-RSA-PSK-WITH-AES-128-CBC-SHA256 \
-            psk_identity=foo psk=abc123 psk_opaque=1" \
-            0 \
-            -C "session hash for extended master secret"\
-            -S "session hash for extended master secret"\
-            -S "SSL - The handshake negotiation failed" \
-            -S "SSL - Unknown identity received" \
-            -S "SSL - Verification of the message MAC failed"
-
-requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
-run_test    "PSK callback: opaque rsa-psk on client, no callback, SHA-384" \
-            "$P_SRV extended_ms=0 debug_level=1 psk=abc123 psk_identity=foo" \
-            "$P_CLI extended_ms=0 debug_level=1 min_version=tls12 force_ciphersuite=TLS-RSA-PSK-WITH-AES-256-CBC-SHA384 \
-            psk_identity=foo psk=abc123 psk_opaque=1" \
-            0 \
-            -C "session hash for extended master secret"\
-            -S "session hash for extended master secret"\
-            -S "SSL - The handshake negotiation failed" \
-            -S "SSL - Unknown identity received" \
-            -S "SSL - Verification of the message MAC failed"
-
-requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
-run_test    "PSK callback: opaque rsa-psk on client, no callback, EMS" \
-            "$P_SRV extended_ms=1 debug_level=3 psk=abc123 psk_identity=foo" \
-            "$P_CLI extended_ms=1 debug_level=3 min_version=tls12 force_ciphersuite=TLS-RSA-PSK-WITH-AES-128-CBC-SHA \
-            psk_identity=foo psk=abc123 psk_opaque=1" \
-            0 \
-            -c "session hash for extended master secret"\
-            -s "session hash for extended master secret"\
-            -S "SSL - The handshake negotiation failed" \
-            -S "SSL - Unknown identity received" \
-            -S "SSL - Verification of the message MAC failed"
-
-requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
-run_test    "PSK callback: opaque rsa-psk on client, no callback, SHA-384, EMS" \
-            "$P_SRV extended_ms=1 debug_level=3 psk=abc123 psk_identity=foo" \
-            "$P_CLI extended_ms=1 debug_level=3 min_version=tls12 force_ciphersuite=TLS-RSA-PSK-WITH-AES-256-CBC-SHA384 \
-            psk_identity=foo psk=abc123 psk_opaque=1" \
-            0 \
-            -c "session hash for extended master secret"\
-            -s "session hash for extended master secret"\
-            -S "SSL - The handshake negotiation failed" \
-            -S "SSL - Unknown identity received" \
-            -S "SSL - Verification of the message MAC failed"
-
-requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
-run_test    "PSK callback: opaque ecdhe-psk on client, no callback" \
-            "$P_SRV extended_ms=0 debug_level=1 psk=abc123 psk_identity=foo" \
-            "$P_CLI extended_ms=0 debug_level=1 min_version=tls12 force_ciphersuite=TLS-ECDHE-PSK-WITH-AES-128-CBC-SHA256 \
-            psk_identity=foo psk=abc123 psk_opaque=1" \
-            0 \
-            -C "session hash for extended master secret"\
-            -S "session hash for extended master secret"\
-            -S "SSL - The handshake negotiation failed" \
-            -S "SSL - Unknown identity received" \
-            -S "SSL - Verification of the message MAC failed"
-
-requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
-run_test    "PSK callback: opaque ecdhe-psk on client, no callback, SHA-384" \
-            "$P_SRV extended_ms=0 debug_level=1 psk=abc123 psk_identity=foo" \
-            "$P_CLI extended_ms=0 debug_level=1 min_version=tls12 force_ciphersuite=TLS-ECDHE-PSK-WITH-AES-256-CBC-SHA384 \
-            psk_identity=foo psk=abc123 psk_opaque=1" \
-            0 \
-            -C "session hash for extended master secret"\
-            -S "session hash for extended master secret"\
-            -S "SSL - The handshake negotiation failed" \
-            -S "SSL - Unknown identity received" \
-            -S "SSL - Verification of the message MAC failed"
-
-requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
-run_test    "PSK callback: opaque ecdhe-psk on client, no callback, EMS" \
-            "$P_SRV extended_ms=1 debug_level=3 psk=abc123 psk_identity=foo" \
-            "$P_CLI extended_ms=1 debug_level=3 min_version=tls12 force_ciphersuite=TLS-ECDHE-PSK-WITH-AES-128-CBC-SHA \
-            psk_identity=foo psk=abc123 psk_opaque=1" \
-            0 \
-            -c "session hash for extended master secret"\
-            -s "session hash for extended master secret"\
-            -S "SSL - The handshake negotiation failed" \
-            -S "SSL - Unknown identity received" \
-            -S "SSL - Verification of the message MAC failed"
-
-requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
-run_test    "PSK callback: opaque ecdhe-psk on client, no callback, SHA-384, EMS" \
-            "$P_SRV extended_ms=1 debug_level=3 psk=abc123 psk_identity=foo" \
-            "$P_CLI extended_ms=1 debug_level=3 min_version=tls12 force_ciphersuite=TLS-ECDHE-PSK-WITH-AES-256-CBC-SHA384 \
-            psk_identity=foo psk=abc123 psk_opaque=1" \
-            0 \
-            -c "session hash for extended master secret"\
-            -s "session hash for extended master secret"\
-            -S "SSL - The handshake negotiation failed" \
-            -S "SSL - Unknown identity received" \
-            -S "SSL - Verification of the message MAC failed"
-
-requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
-run_test    "PSK callback: opaque dhe-psk on client, no callback" \
-            "$P_SRV extended_ms=0 debug_level=1 psk=abc123 psk_identity=foo" \
-            "$P_CLI extended_ms=0 debug_level=1 min_version=tls12 force_ciphersuite=TLS-DHE-PSK-WITH-AES-128-CBC-SHA256 \
-            psk_identity=foo psk=abc123 psk_opaque=1" \
-            0 \
-            -C "session hash for extended master secret"\
-            -S "session hash for extended master secret"\
-            -S "SSL - The handshake negotiation failed" \
-            -S "SSL - Unknown identity received" \
-            -S "SSL - Verification of the message MAC failed"
-
-requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
-run_test    "PSK callback: opaque dhe-psk on client, no callback, SHA-384" \
-            "$P_SRV extended_ms=0 debug_level=1 psk=abc123 psk_identity=foo" \
-            "$P_CLI extended_ms=0 debug_level=1 min_version=tls12 force_ciphersuite=TLS-DHE-PSK-WITH-AES-256-CBC-SHA384 \
-            psk_identity=foo psk=abc123 psk_opaque=1" \
-            0 \
-            -C "session hash for extended master secret"\
-            -S "session hash for extended master secret"\
-            -S "SSL - The handshake negotiation failed" \
-            -S "SSL - Unknown identity received" \
-            -S "SSL - Verification of the message MAC failed"
-
-requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
-run_test    "PSK callback: opaque dhe-psk on client, no callback, EMS" \
-            "$P_SRV extended_ms=1 debug_level=3 psk=abc123 psk_identity=foo" \
-            "$P_CLI extended_ms=1 debug_level=3 min_version=tls12 force_ciphersuite=TLS-DHE-PSK-WITH-AES-128-CBC-SHA \
-            psk_identity=foo psk=abc123 psk_opaque=1" \
-            0 \
-            -c "session hash for extended master secret"\
-            -s "session hash for extended master secret"\
-            -S "SSL - The handshake negotiation failed" \
-            -S "SSL - Unknown identity received" \
-            -S "SSL - Verification of the message MAC failed"
-
-requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
-run_test    "PSK callback: opaque dhe-psk on client, no callback, SHA-384, EMS" \
-            "$P_SRV extended_ms=1 debug_level=3 psk=abc123 psk_identity=foo" \
-            "$P_CLI extended_ms=1 debug_level=3 min_version=tls12 force_ciphersuite=TLS-DHE-PSK-WITH-AES-256-CBC-SHA384 \
-            psk_identity=foo psk=abc123 psk_opaque=1" \
-            0 \
+            -c "skip PMS generation for opaque PSK"\
+            -S "skip PMS generation for opaque PSK"\
             -c "session hash for extended master secret"\
             -s "session hash for extended master secret"\
             -S "SSL - The handshake negotiation failed" \
@@ -6607,6 +6459,8 @@ run_test    "PSK callback: raw psk on client, static opaque on server, no callba
             "$P_CLI extended_ms=0 debug_level=1 min_version=tls12 force_ciphersuite=TLS-PSK-WITH-AES-128-CBC-SHA \
             psk_identity=foo psk=abc123" \
             0 \
+            -C "skip PMS generation for opaque PSK"\
+            -s "skip PMS generation for opaque PSK"\
             -C "session hash for extended master secret"\
             -S "session hash for extended master secret"\
             -S "SSL - The handshake negotiation failed" \
@@ -6620,6 +6474,8 @@ run_test    "PSK callback: raw psk on client, static opaque on server, no callba
             "$P_CLI extended_ms=0 debug_level=1 min_version=tls12 force_ciphersuite=TLS-PSK-WITH-AES-256-CBC-SHA384 \
             psk_identity=foo psk=abc123" \
             0 \
+            -C "skip PMS generation for opaque PSK"\
+            -s "skip PMS generation for opaque PSK"\
             -C "session hash for extended master secret"\
             -S "session hash for extended master secret"\
             -S "SSL - The handshake negotiation failed" \
@@ -6636,6 +6492,8 @@ run_test    "PSK callback: raw psk on client, static opaque on server, no callba
             0 \
             -c "session hash for extended master secret"\
             -s "session hash for extended master secret"\
+            -C "skip PMS generation for opaque PSK"\
+            -s "skip PMS generation for opaque PSK"\
             -S "SSL - The handshake negotiation failed" \
             -S "SSL - Unknown identity received" \
             -S "SSL - Verification of the message MAC failed"
@@ -6650,168 +6508,8 @@ run_test    "PSK callback: raw psk on client, static opaque on server, no callba
             0 \
             -c "session hash for extended master secret"\
             -s "session hash for extended master secret"\
-            -S "SSL - The handshake negotiation failed" \
-            -S "SSL - Unknown identity received" \
-            -S "SSL - Verification of the message MAC failed"
-
-requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
-run_test    "PSK callback: raw rsa-psk on client, static opaque on server, no callback" \
-            "$P_SRV extended_ms=0 debug_level=5 psk=abc123 psk_identity=foo psk_opaque=1 min_version=tls12 force_ciphersuite=TLS-RSA-PSK-WITH-AES-128-CBC-SHA" \
-            "$P_CLI extended_ms=0 debug_level=5 min_version=tls12 force_ciphersuite=TLS-RSA-PSK-WITH-AES-128-CBC-SHA \
-            psk_identity=foo psk=abc123" \
-            0 \
-            -C "session hash for extended master secret"\
-            -S "session hash for extended master secret"\
-            -S "SSL - The handshake negotiation failed" \
-            -S "SSL - Unknown identity received" \
-            -S "SSL - Verification of the message MAC failed"
-
-requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
-run_test    "PSK callback: raw rsa-psk on client, static opaque on server, no callback, SHA-384" \
-            "$P_SRV extended_ms=0 debug_level=1 psk=abc123 psk_identity=foo psk_opaque=1 min_version=tls12 force_ciphersuite=TLS-RSA-PSK-WITH-AES-256-CBC-SHA384" \
-            "$P_CLI extended_ms=0 debug_level=1 min_version=tls12 force_ciphersuite=TLS-RSA-PSK-WITH-AES-256-CBC-SHA384 \
-            psk_identity=foo psk=abc123" \
-            0 \
-            -C "session hash for extended master secret"\
-            -S "session hash for extended master secret"\
-            -S "SSL - The handshake negotiation failed" \
-            -S "SSL - Unknown identity received" \
-            -S "SSL - Verification of the message MAC failed"
-
-requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
-run_test    "PSK callback: raw rsa-psk on client, static opaque on server, no callback, EMS" \
-            "$P_SRV debug_level=3 psk=abc123 psk_identity=foo psk_opaque=1 min_version=tls12 \
-            force_ciphersuite=TLS-RSA-PSK-WITH-AES-128-CBC-SHA extended_ms=1" \
-            "$P_CLI debug_level=3 min_version=tls12 force_ciphersuite=TLS-RSA-PSK-WITH-AES-128-CBC-SHA \
-            psk_identity=foo psk=abc123 extended_ms=1" \
-            0 \
-            -c "session hash for extended master secret"\
-            -s "session hash for extended master secret"\
-            -S "SSL - The handshake negotiation failed" \
-            -S "SSL - Unknown identity received" \
-            -S "SSL - Verification of the message MAC failed"
-
-requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
-run_test    "PSK callback: raw rsa-psk on client, static opaque on server, no callback, EMS, SHA384" \
-            "$P_SRV debug_level=3 psk=abc123 psk_identity=foo psk_opaque=1 min_version=tls12 \
-            force_ciphersuite=TLS-RSA-PSK-WITH-AES-256-CBC-SHA384 extended_ms=1" \
-            "$P_CLI debug_level=3 min_version=tls12 force_ciphersuite=TLS-RSA-PSK-WITH-AES-256-CBC-SHA384 \
-            psk_identity=foo psk=abc123 extended_ms=1" \
-            0 \
-            -c "session hash for extended master secret"\
-            -s "session hash for extended master secret"\
-            -S "SSL - The handshake negotiation failed" \
-            -S "SSL - Unknown identity received" \
-            -S "SSL - Verification of the message MAC failed"
-
-requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
-run_test    "PSK callback: raw ecdhe-psk on client, static opaque on server, no callback" \
-            "$P_SRV extended_ms=0 debug_level=5 psk=abc123 psk_identity=foo psk_opaque=1 min_version=tls12 force_ciphersuite=TLS-ECDHE-PSK-WITH-AES-128-CBC-SHA" \
-            "$P_CLI extended_ms=0 debug_level=5 min_version=tls12 force_ciphersuite=TLS-ECDHE-PSK-WITH-AES-128-CBC-SHA \
-            psk_identity=foo psk=abc123" \
-            0 \
-            -C "session hash for extended master secret"\
-            -S "session hash for extended master secret"\
-            -S "SSL - The handshake negotiation failed" \
-            -S "SSL - Unknown identity received" \
-            -S "SSL - Verification of the message MAC failed"
-
-requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
-run_test    "PSK callback: raw ecdhe-psk on client, static opaque on server, no callback, SHA-384" \
-            "$P_SRV extended_ms=0 debug_level=1 psk=abc123 psk_identity=foo psk_opaque=1 min_version=tls12 force_ciphersuite=TLS-ECDHE-PSK-WITH-AES-256-CBC-SHA384" \
-            "$P_CLI extended_ms=0 debug_level=1 min_version=tls12 force_ciphersuite=TLS-ECDHE-PSK-WITH-AES-256-CBC-SHA384 \
-            psk_identity=foo psk=abc123" \
-            0 \
-            -C "session hash for extended master secret"\
-            -S "session hash for extended master secret"\
-            -S "SSL - The handshake negotiation failed" \
-            -S "SSL - Unknown identity received" \
-            -S "SSL - Verification of the message MAC failed"
-
-requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
-run_test    "PSK callback: raw ecdhe-psk on client, static opaque on server, no callback, EMS" \
-            "$P_SRV debug_level=3 psk=abc123 psk_identity=foo psk_opaque=1 min_version=tls12 \
-            force_ciphersuite=TLS-ECDHE-PSK-WITH-AES-128-CBC-SHA extended_ms=1" \
-            "$P_CLI debug_level=3 min_version=tls12 force_ciphersuite=TLS-ECDHE-PSK-WITH-AES-128-CBC-SHA \
-            psk_identity=foo psk=abc123 extended_ms=1" \
-            0 \
-            -c "session hash for extended master secret"\
-            -s "session hash for extended master secret"\
-            -S "SSL - The handshake negotiation failed" \
-            -S "SSL - Unknown identity received" \
-            -S "SSL - Verification of the message MAC failed"
-
-requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
-run_test    "PSK callback: raw ecdhe-psk on client, static opaque on server, no callback, EMS, SHA384" \
-            "$P_SRV debug_level=3 psk=abc123 psk_identity=foo psk_opaque=1 min_version=tls12 \
-            force_ciphersuite=TLS-ECDHE-PSK-WITH-AES-256-CBC-SHA384 extended_ms=1" \
-            "$P_CLI debug_level=3 min_version=tls12 force_ciphersuite=TLS-ECDHE-PSK-WITH-AES-256-CBC-SHA384 \
-            psk_identity=foo psk=abc123 extended_ms=1" \
-            0 \
-            -c "session hash for extended master secret"\
-            -s "session hash for extended master secret"\
-            -S "SSL - The handshake negotiation failed" \
-            -S "SSL - Unknown identity received" \
-            -S "SSL - Verification of the message MAC failed"
-
-requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
-run_test    "PSK callback: raw dhe-psk on client, static opaque on server, no callback" \
-            "$P_SRV extended_ms=0 debug_level=5 psk=abc123 psk_identity=foo psk_opaque=1 min_version=tls12 force_ciphersuite=TLS-DHE-PSK-WITH-AES-128-CBC-SHA" \
-            "$P_CLI extended_ms=0 debug_level=5 min_version=tls12 force_ciphersuite=TLS-DHE-PSK-WITH-AES-128-CBC-SHA \
-            psk_identity=foo psk=abc123" \
-            0 \
-            -C "session hash for extended master secret"\
-            -S "session hash for extended master secret"\
-            -S "SSL - The handshake negotiation failed" \
-            -S "SSL - Unknown identity received" \
-            -S "SSL - Verification of the message MAC failed"
-
-requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
-run_test    "PSK callback: raw dhe-psk on client, static opaque on server, no callback, SHA-384" \
-            "$P_SRV extended_ms=0 debug_level=1 psk=abc123 psk_identity=foo psk_opaque=1 min_version=tls12 force_ciphersuite=TLS-DHE-PSK-WITH-AES-256-CBC-SHA384" \
-            "$P_CLI extended_ms=0 debug_level=1 min_version=tls12 force_ciphersuite=TLS-DHE-PSK-WITH-AES-256-CBC-SHA384 \
-            psk_identity=foo psk=abc123" \
-            0 \
-            -C "session hash for extended master secret"\
-            -S "session hash for extended master secret"\
-            -S "SSL - The handshake negotiation failed" \
-            -S "SSL - Unknown identity received" \
-            -S "SSL - Verification of the message MAC failed"
-
-requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
-run_test    "PSK callback: raw dhe-psk on client, static opaque on server, no callback, EMS" \
-            "$P_SRV debug_level=3 psk=abc123 psk_identity=foo psk_opaque=1 min_version=tls12 \
-            force_ciphersuite=TLS-DHE-PSK-WITH-AES-128-CBC-SHA extended_ms=1" \
-            "$P_CLI debug_level=3 min_version=tls12 force_ciphersuite=TLS-DHE-PSK-WITH-AES-128-CBC-SHA \
-            psk_identity=foo psk=abc123 extended_ms=1" \
-            0 \
-            -c "session hash for extended master secret"\
-            -s "session hash for extended master secret"\
-            -S "SSL - The handshake negotiation failed" \
-            -S "SSL - Unknown identity received" \
-            -S "SSL - Verification of the message MAC failed"
-
-requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
-run_test    "PSK callback: raw dhe-psk on client, static opaque on server, no callback, EMS, SHA384" \
-            "$P_SRV debug_level=3 psk=abc123 psk_identity=foo psk_opaque=1 min_version=tls12 \
-            force_ciphersuite=TLS-DHE-PSK-WITH-AES-256-CBC-SHA384 extended_ms=1" \
-            "$P_CLI debug_level=3 min_version=tls12 force_ciphersuite=TLS-DHE-PSK-WITH-AES-256-CBC-SHA384 \
-            psk_identity=foo psk=abc123 extended_ms=1" \
-            0 \
-            -c "session hash for extended master secret"\
-            -s "session hash for extended master secret"\
+            -C "skip PMS generation for opaque PSK"\
+            -s "skip PMS generation for opaque PSK"\
             -S "SSL - The handshake negotiation failed" \
             -S "SSL - Unknown identity received" \
             -S "SSL - Verification of the message MAC failed"
@@ -6823,6 +6521,8 @@ run_test    "PSK callback: raw psk on client, no static PSK on server, opaque PS
             "$P_CLI extended_ms=0 debug_level=3 min_version=tls12 force_ciphersuite=TLS-PSK-WITH-AES-128-CBC-SHA \
             psk_identity=def psk=beef" \
             0 \
+            -C "skip PMS generation for opaque PSK"\
+            -s "skip PMS generation for opaque PSK"\
             -C "session hash for extended master secret"\
             -S "session hash for extended master secret"\
             -S "SSL - The handshake negotiation failed" \
@@ -6836,6 +6536,8 @@ run_test    "PSK callback: raw psk on client, no static PSK on server, opaque PS
             "$P_CLI extended_ms=0 debug_level=3 min_version=tls12 force_ciphersuite=TLS-PSK-WITH-AES-256-CBC-SHA384 \
             psk_identity=def psk=beef" \
             0 \
+            -C "skip PMS generation for opaque PSK"\
+            -s "skip PMS generation for opaque PSK"\
             -C "session hash for extended master secret"\
             -S "session hash for extended master secret"\
             -S "SSL - The handshake negotiation failed" \
@@ -6852,6 +6554,8 @@ run_test    "PSK callback: raw psk on client, no static PSK on server, opaque PS
             0 \
             -c "session hash for extended master secret"\
             -s "session hash for extended master secret"\
+            -C "skip PMS generation for opaque PSK"\
+            -s "skip PMS generation for opaque PSK"\
             -S "SSL - The handshake negotiation failed" \
             -S "SSL - Unknown identity received" \
             -S "SSL - Verification of the message MAC failed"
@@ -6866,168 +6570,8 @@ run_test    "PSK callback: raw psk on client, no static PSK on server, opaque PS
             0 \
             -c "session hash for extended master secret"\
             -s "session hash for extended master secret"\
-            -S "SSL - The handshake negotiation failed" \
-            -S "SSL - Unknown identity received" \
-            -S "SSL - Verification of the message MAC failed"
-
-requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
-run_test    "PSK callback: raw rsa-psk on client, no static RSA-PSK on server, opaque RSA-PSK from callback" \
-            "$P_SRV extended_ms=0 debug_level=3 psk_list=abc,dead,def,beef psk_list_opaque=1 min_version=tls12 force_ciphersuite=TLS-RSA-PSK-WITH-AES-128-CBC-SHA" \
-            "$P_CLI extended_ms=0 debug_level=3 min_version=tls12 force_ciphersuite=TLS-RSA-PSK-WITH-AES-128-CBC-SHA \
-            psk_identity=def psk=beef" \
-            0 \
-            -C "session hash for extended master secret"\
-            -S "session hash for extended master secret"\
-            -S "SSL - The handshake negotiation failed" \
-            -S "SSL - Unknown identity received" \
-            -S "SSL - Verification of the message MAC failed"
-
-requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
-run_test    "PSK callback: raw rsa-psk on client, no static RSA-PSK on server, opaque RSA-PSK from callback, SHA-384" \
-            "$P_SRV extended_ms=0 debug_level=3 psk_list=abc,dead,def,beef psk_list_opaque=1 min_version=tls12 force_ciphersuite=TLS-RSA-PSK-WITH-AES-256-CBC-SHA384" \
-            "$P_CLI extended_ms=0 debug_level=3 min_version=tls12 force_ciphersuite=TLS-RSA-PSK-WITH-AES-256-CBC-SHA384 \
-            psk_identity=def psk=beef" \
-            0 \
-            -C "session hash for extended master secret"\
-            -S "session hash for extended master secret"\
-            -S "SSL - The handshake negotiation failed" \
-            -S "SSL - Unknown identity received" \
-            -S "SSL - Verification of the message MAC failed"
-
-requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
-run_test    "PSK callback: raw rsa-psk on client, no static RSA-PSK on server, opaque RSA-PSK from callback, EMS" \
-            "$P_SRV debug_level=3 psk_list=abc,dead,def,beef psk_list_opaque=1 min_version=tls12 \
-            force_ciphersuite=TLS-RSA-PSK-WITH-AES-128-CBC-SHA extended_ms=1" \
-            "$P_CLI debug_level=3 min_version=tls12 force_ciphersuite=TLS-RSA-PSK-WITH-AES-128-CBC-SHA \
-            psk_identity=abc psk=dead extended_ms=1" \
-            0 \
-            -c "session hash for extended master secret"\
-            -s "session hash for extended master secret"\
-            -S "SSL - The handshake negotiation failed" \
-            -S "SSL - Unknown identity received" \
-            -S "SSL - Verification of the message MAC failed"
-
-requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
-run_test    "PSK callback: raw rsa-psk on client, no static RSA-PSK on server, opaque RSA-PSK from callback, EMS, SHA384" \
-            "$P_SRV debug_level=3 psk_list=abc,dead,def,beef psk_list_opaque=1 min_version=tls12 \
-            force_ciphersuite=TLS-RSA-PSK-WITH-AES-256-CBC-SHA384 extended_ms=1" \
-            "$P_CLI debug_level=3 min_version=tls12 force_ciphersuite=TLS-RSA-PSK-WITH-AES-256-CBC-SHA384 \
-            psk_identity=abc psk=dead extended_ms=1" \
-            0 \
-            -c "session hash for extended master secret"\
-            -s "session hash for extended master secret"\
-            -S "SSL - The handshake negotiation failed" \
-            -S "SSL - Unknown identity received" \
-            -S "SSL - Verification of the message MAC failed"
-
-requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
-run_test    "PSK callback: raw ecdhe-psk on client, no static ECDHE-PSK on server, opaque ECDHE-PSK from callback" \
-            "$P_SRV extended_ms=0 debug_level=3 psk_list=abc,dead,def,beef psk_list_opaque=1 min_version=tls12 force_ciphersuite=TLS-ECDHE-PSK-WITH-AES-128-CBC-SHA" \
-            "$P_CLI extended_ms=0 debug_level=3 min_version=tls12 force_ciphersuite=TLS-ECDHE-PSK-WITH-AES-128-CBC-SHA \
-            psk_identity=def psk=beef" \
-            0 \
-            -C "session hash for extended master secret"\
-            -S "session hash for extended master secret"\
-            -S "SSL - The handshake negotiation failed" \
-            -S "SSL - Unknown identity received" \
-            -S "SSL - Verification of the message MAC failed"
-
-requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
-run_test    "PSK callback: raw ecdhe-psk on client, no static ECDHE-PSK on server, opaque ECDHE-PSK from callback, SHA-384" \
-            "$P_SRV extended_ms=0 debug_level=3 psk_list=abc,dead,def,beef psk_list_opaque=1 min_version=tls12 force_ciphersuite=TLS-ECDHE-PSK-WITH-AES-256-CBC-SHA384" \
-            "$P_CLI extended_ms=0 debug_level=3 min_version=tls12 force_ciphersuite=TLS-ECDHE-PSK-WITH-AES-256-CBC-SHA384 \
-            psk_identity=def psk=beef" \
-            0 \
-            -C "session hash for extended master secret"\
-            -S "session hash for extended master secret"\
-            -S "SSL - The handshake negotiation failed" \
-            -S "SSL - Unknown identity received" \
-            -S "SSL - Verification of the message MAC failed"
-
-requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
-run_test    "PSK callback: raw ecdhe-psk on client, no static ECDHE-PSK on server, opaque ECDHE-PSK from callback, EMS" \
-            "$P_SRV debug_level=3 psk_list=abc,dead,def,beef psk_list_opaque=1 min_version=tls12 \
-            force_ciphersuite=TLS-ECDHE-PSK-WITH-AES-128-CBC-SHA extended_ms=1" \
-            "$P_CLI debug_level=3 min_version=tls12 force_ciphersuite=TLS-ECDHE-PSK-WITH-AES-128-CBC-SHA \
-            psk_identity=abc psk=dead extended_ms=1" \
-            0 \
-            -c "session hash for extended master secret"\
-            -s "session hash for extended master secret"\
-            -S "SSL - The handshake negotiation failed" \
-            -S "SSL - Unknown identity received" \
-            -S "SSL - Verification of the message MAC failed"
-
-requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
-run_test    "PSK callback: raw ecdhe-psk on client, no static ECDHE-PSK on server, opaque ECDHE-PSK from callback, EMS, SHA384" \
-            "$P_SRV debug_level=3 psk_list=abc,dead,def,beef psk_list_opaque=1 min_version=tls12 \
-            force_ciphersuite=TLS-ECDHE-PSK-WITH-AES-256-CBC-SHA384 extended_ms=1" \
-            "$P_CLI debug_level=3 min_version=tls12 force_ciphersuite=TLS-ECDHE-PSK-WITH-AES-256-CBC-SHA384 \
-            psk_identity=abc psk=dead extended_ms=1" \
-            0 \
-            -c "session hash for extended master secret"\
-            -s "session hash for extended master secret"\
-            -S "SSL - The handshake negotiation failed" \
-            -S "SSL - Unknown identity received" \
-            -S "SSL - Verification of the message MAC failed"
-
-requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
-run_test    "PSK callback: raw dhe-psk on client, no static DHE-PSK on server, opaque DHE-PSK from callback" \
-            "$P_SRV extended_ms=0 debug_level=3 psk_list=abc,dead,def,beef psk_list_opaque=1 min_version=tls12 force_ciphersuite=TLS-DHE-PSK-WITH-AES-128-CBC-SHA" \
-            "$P_CLI extended_ms=0 debug_level=3 min_version=tls12 force_ciphersuite=TLS-DHE-PSK-WITH-AES-128-CBC-SHA \
-            psk_identity=def psk=beef" \
-            0 \
-            -C "session hash for extended master secret"\
-            -S "session hash for extended master secret"\
-            -S "SSL - The handshake negotiation failed" \
-            -S "SSL - Unknown identity received" \
-            -S "SSL - Verification of the message MAC failed"
-
-requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
-run_test    "PSK callback: raw dhe-psk on client, no static DHE-PSK on server, opaque DHE-PSK from callback, SHA-384" \
-            "$P_SRV extended_ms=0 debug_level=3 psk_list=abc,dead,def,beef psk_list_opaque=1 min_version=tls12 force_ciphersuite=TLS-DHE-PSK-WITH-AES-256-CBC-SHA384" \
-            "$P_CLI extended_ms=0 debug_level=3 min_version=tls12 force_ciphersuite=TLS-DHE-PSK-WITH-AES-256-CBC-SHA384 \
-            psk_identity=def psk=beef" \
-            0 \
-            -C "session hash for extended master secret"\
-            -S "session hash for extended master secret"\
-            -S "SSL - The handshake negotiation failed" \
-            -S "SSL - Unknown identity received" \
-            -S "SSL - Verification of the message MAC failed"
-
-requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
-run_test    "PSK callback: raw dhe-psk on client, no static DHE-PSK on server, opaque DHE-PSK from callback, EMS" \
-            "$P_SRV debug_level=3 psk_list=abc,dead,def,beef psk_list_opaque=1 min_version=tls12 \
-            force_ciphersuite=TLS-DHE-PSK-WITH-AES-128-CBC-SHA extended_ms=1" \
-            "$P_CLI debug_level=3 min_version=tls12 force_ciphersuite=TLS-DHE-PSK-WITH-AES-128-CBC-SHA \
-            psk_identity=abc psk=dead extended_ms=1" \
-            0 \
-            -c "session hash for extended master secret"\
-            -s "session hash for extended master secret"\
-            -S "SSL - The handshake negotiation failed" \
-            -S "SSL - Unknown identity received" \
-            -S "SSL - Verification of the message MAC failed"
-
-requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
-run_test    "PSK callback: raw dhe-psk on client, no static DHE-PSK on server, opaque DHE-PSK from callback, EMS, SHA384" \
-            "$P_SRV debug_level=3 psk_list=abc,dead,def,beef psk_list_opaque=1 min_version=tls12 \
-            force_ciphersuite=TLS-DHE-PSK-WITH-AES-256-CBC-SHA384 extended_ms=1" \
-            "$P_CLI debug_level=3 min_version=tls12 force_ciphersuite=TLS-DHE-PSK-WITH-AES-256-CBC-SHA384 \
-            psk_identity=abc psk=dead extended_ms=1" \
-            0 \
-            -c "session hash for extended master secret"\
-            -s "session hash for extended master secret"\
+            -C "skip PMS generation for opaque PSK"\
+            -s "skip PMS generation for opaque PSK"\
             -S "SSL - The handshake negotiation failed" \
             -S "SSL - Unknown identity received" \
             -S "SSL - Verification of the message MAC failed"
@@ -7039,6 +6583,8 @@ run_test    "PSK callback: raw psk on client, mismatching static raw PSK on serv
             "$P_CLI extended_ms=0 debug_level=3 min_version=tls12 force_ciphersuite=TLS-PSK-WITH-AES-128-CBC-SHA \
             psk_identity=def psk=beef" \
             0 \
+            -C "skip PMS generation for opaque PSK"\
+            -s "skip PMS generation for opaque PSK"\
             -C "session hash for extended master secret"\
             -S "session hash for extended master secret"\
             -S "SSL - The handshake negotiation failed" \
@@ -7052,6 +6598,8 @@ run_test    "PSK callback: raw psk on client, mismatching static opaque PSK on s
             "$P_CLI extended_ms=0 debug_level=3 min_version=tls12 force_ciphersuite=TLS-PSK-WITH-AES-128-CBC-SHA \
             psk_identity=def psk=beef" \
             0 \
+            -C "skip PMS generation for opaque PSK"\
+            -s "skip PMS generation for opaque PSK"\
             -C "session hash for extended master secret"\
             -S "session hash for extended master secret"\
             -S "SSL - The handshake negotiation failed" \
@@ -7065,6 +6613,7 @@ run_test    "PSK callback: raw psk on client, mismatching static opaque PSK on s
             "$P_CLI extended_ms=0 debug_level=3 min_version=tls12 force_ciphersuite=TLS-PSK-WITH-AES-128-CBC-SHA \
             psk_identity=def psk=beef" \
             0 \
+            -C "skip PMS generation for opaque PSK"\
             -C "session hash for extended master secret"\
             -S "session hash for extended master secret"\
             -S "SSL - The handshake negotiation failed" \
@@ -7078,6 +6627,7 @@ run_test    "PSK callback: raw psk on client, id-matching but wrong raw PSK on s
             "$P_CLI extended_ms=0 debug_level=3 min_version=tls12 force_ciphersuite=TLS-PSK-WITH-AES-128-CBC-SHA \
             psk_identity=def psk=beef" \
             0 \
+            -C "skip PMS generation for opaque PSK"\
             -C "session hash for extended master secret"\
             -S "session hash for extended master secret"\
             -S "SSL - The handshake negotiation failed" \
@@ -10425,6 +9975,7 @@ requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_DEBUG_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_SSL_ALPN
+requires_config_disabled MBEDTLS_USE_PSA_CRYPTO
 run_test    "TLS 1.3: alpn - openssl" \
             "$O_NEXT_SRV -msg -tls1_3 -num_tickets 0 -no_resume_ephemeral -no_cache -alpn h2" \
             "$P_CLI debug_level=3 alpn=h2" \
@@ -10460,6 +10011,7 @@ requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_DEBUG_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_SSL_ALPN
+requires_config_disabled MBEDTLS_USE_PSA_CRYPTO
 run_test    "TLS 1.3: alpn - gnutls" \
             "$G_NEXT_SRV --debug=4 --priority=NORMAL:-VERS-ALL:+VERS-TLS1.3:+CIPHER-ALL:%NO_TICKETS --disable-client-cert --alpn=h2" \
             "$P_CLI debug_level=3 alpn=h2" \
@@ -10859,279 +10411,6 @@ run_test    "TLS 1.3: Client authentication, client alg not in server list - gnu
             -c "signature algorithm not in received or offered list." \
             -C "unkown pk type"
 
-# Test using an opaque private key for client authentication
-requires_openssl_tls1_3
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-requires_config_enabled MBEDTLS_DEBUG_C
-requires_config_enabled MBEDTLS_SSL_CLI_C
-requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
-run_test    "TLS 1.3: Client authentication - opaque key, no server middlebox compat - openssl" \
-            "$O_NEXT_SRV -msg -tls1_3 -num_tickets 0 -no_resume_ephemeral -no_cache -Verify 10 -no_middlebox" \
-            "$P_CLI debug_level=4 crt_file=data_files/cli2.crt key_file=data_files/cli2.key key_opaque=1" \
-            0 \
-            -c "got a certificate request" \
-            -c "client state: MBEDTLS_SSL_CLIENT_CERTIFICATE" \
-            -c "client state: MBEDTLS_SSL_CLIENT_CERTIFICATE_VERIFY" \
-            -c "Protocol is TLSv1.3"
-
-requires_gnutls_tls1_3
-requires_gnutls_next_no_ticket
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-requires_config_enabled MBEDTLS_DEBUG_C
-requires_config_enabled MBEDTLS_SSL_CLI_C
-requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
-run_test    "TLS 1.3: Client authentication - opaque key, no server middlebox compat - gnutls" \
-            "$G_NEXT_SRV --debug=4 --priority=NORMAL:-VERS-ALL:+VERS-TLS1.3:+CIPHER-ALL:%NO_TICKETS:%DISABLE_TLS13_COMPAT_MODE" \
-            "$P_CLI debug_level=3 crt_file=data_files/cli2.crt \
-                    key_file=data_files/cli2.key key_opaque=1" \
-            0 \
-            -c "got a certificate request" \
-            -c "client state: MBEDTLS_SSL_CLIENT_CERTIFICATE" \
-            -c "client state: MBEDTLS_SSL_CLIENT_CERTIFICATE_VERIFY" \
-            -c "Protocol is TLSv1.3"
-
-requires_openssl_tls1_3
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-requires_config_enabled MBEDTLS_DEBUG_C
-requires_config_enabled MBEDTLS_SSL_CLI_C
-requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
-requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
-run_test    "TLS 1.3: Client authentication - opaque key, ecdsa_secp256r1_sha256 - openssl" \
-            "$O_NEXT_SRV -msg -tls1_3 -num_tickets 0 -no_resume_ephemeral -no_cache -Verify 10" \
-            "$P_CLI debug_level=4 crt_file=data_files/ecdsa_secp256r1.crt \
-                    key_file=data_files/ecdsa_secp256r1.key key_opaque=1" \
-            0 \
-            -c "got a certificate request" \
-            -c "client state: MBEDTLS_SSL_CLIENT_CERTIFICATE" \
-            -c "client state: MBEDTLS_SSL_CLIENT_CERTIFICATE_VERIFY" \
-            -c "Protocol is TLSv1.3"
-
-requires_gnutls_tls1_3
-requires_gnutls_next_no_ticket
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-requires_config_enabled MBEDTLS_DEBUG_C
-requires_config_enabled MBEDTLS_SSL_CLI_C
-requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
-requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
-run_test    "TLS 1.3: Client authentication - opaque key, ecdsa_secp256r1_sha256 - gnutls" \
-            "$G_NEXT_SRV --debug=4 --priority=NORMAL:-VERS-ALL:+VERS-TLS1.3:+CIPHER-ALL:%NO_TICKETS" \
-            "$P_CLI debug_level=3 crt_file=data_files/ecdsa_secp256r1.crt \
-                    key_file=data_files/ecdsa_secp256r1.key key_opaque=1" \
-            0 \
-            -c "got a certificate request" \
-            -c "client state: MBEDTLS_SSL_CLIENT_CERTIFICATE" \
-            -c "client state: MBEDTLS_SSL_CLIENT_CERTIFICATE_VERIFY" \
-            -c "Protocol is TLSv1.3"
-
-requires_openssl_tls1_3
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-requires_config_enabled MBEDTLS_DEBUG_C
-requires_config_enabled MBEDTLS_SSL_CLI_C
-requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
-requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
-run_test    "TLS 1.3: Client authentication - opaque key, ecdsa_secp384r1_sha384 - openssl" \
-            "$O_NEXT_SRV -msg -tls1_3 -num_tickets 0 -no_resume_ephemeral -no_cache -Verify 10" \
-            "$P_CLI debug_level=4 crt_file=data_files/ecdsa_secp384r1.crt \
-                    key_file=data_files/ecdsa_secp384r1.key key_opaque=1" \
-            0 \
-            -c "got a certificate request" \
-            -c "client state: MBEDTLS_SSL_CLIENT_CERTIFICATE" \
-            -c "client state: MBEDTLS_SSL_CLIENT_CERTIFICATE_VERIFY" \
-            -c "Protocol is TLSv1.3"
-
-requires_gnutls_tls1_3
-requires_gnutls_next_no_ticket
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-requires_config_enabled MBEDTLS_DEBUG_C
-requires_config_enabled MBEDTLS_SSL_CLI_C
-requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
-requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
-run_test    "TLS 1.3: Client authentication - opaque key, ecdsa_secp384r1_sha384 - gnutls" \
-            "$G_NEXT_SRV --debug=4 --priority=NORMAL:-VERS-ALL:+VERS-TLS1.3:+CIPHER-ALL:%NO_TICKETS" \
-            "$P_CLI debug_level=3 crt_file=data_files/ecdsa_secp384r1.crt \
-                    key_file=data_files/ecdsa_secp384r1.key key_opaque=1" \
-            0 \
-            -c "got a certificate request" \
-            -c "client state: MBEDTLS_SSL_CLIENT_CERTIFICATE" \
-            -c "client state: MBEDTLS_SSL_CLIENT_CERTIFICATE_VERIFY" \
-            -c "Protocol is TLSv1.3"
-
-requires_openssl_tls1_3
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-requires_config_enabled MBEDTLS_DEBUG_C
-requires_config_enabled MBEDTLS_SSL_CLI_C
-requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
-requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
-run_test    "TLS 1.3: Client authentication - opaque key, ecdsa_secp521r1_sha512 - openssl" \
-            "$O_NEXT_SRV -msg -tls1_3 -num_tickets 0 -no_resume_ephemeral -no_cache -Verify 10" \
-            "$P_CLI debug_level=4 crt_file=data_files/ecdsa_secp521r1.crt \
-                    key_file=data_files/ecdsa_secp521r1.key key_opaque=1" \
-            0 \
-            -c "got a certificate request" \
-            -c "client state: MBEDTLS_SSL_CLIENT_CERTIFICATE" \
-            -c "client state: MBEDTLS_SSL_CLIENT_CERTIFICATE_VERIFY" \
-            -c "Protocol is TLSv1.3"
-
-requires_gnutls_tls1_3
-requires_gnutls_next_no_ticket
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-requires_config_enabled MBEDTLS_DEBUG_C
-requires_config_enabled MBEDTLS_SSL_CLI_C
-requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
-requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
-run_test    "TLS 1.3: Client authentication - opaque key, ecdsa_secp521r1_sha512 - gnutls" \
-            "$G_NEXT_SRV --debug=4 --priority=NORMAL:-VERS-ALL:+VERS-TLS1.3:+CIPHER-ALL:%NO_TICKETS" \
-            "$P_CLI debug_level=3 crt_file=data_files/ecdsa_secp521r1.crt \
-                    key_file=data_files/ecdsa_secp521r1.key key_opaque=1" \
-            0 \
-            -c "got a certificate request" \
-            -c "client state: MBEDTLS_SSL_CLIENT_CERTIFICATE" \
-            -c "client state: MBEDTLS_SSL_CLIENT_CERTIFICATE_VERIFY" \
-            -c "Protocol is TLSv1.3"
-
-requires_openssl_tls1_3
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-requires_config_enabled MBEDTLS_DEBUG_C
-requires_config_enabled MBEDTLS_SSL_CLI_C
-requires_config_enabled MBEDTLS_RSA_C
-requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
-requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
-run_test    "TLS 1.3: Client authentication - opaque key, rsa_pss_rsae_sha256 - openssl" \
-            "$O_NEXT_SRV -msg -tls1_3 -num_tickets 0 -no_resume_ephemeral -no_cache -Verify 10" \
-            "$P_CLI debug_level=4 crt_file=data_files/cert_sha256.crt \
-                    key_file=data_files/server1.key sig_algs=ecdsa_secp256r1_sha256,rsa_pss_rsae_sha256 key_opaque=1" \
-            0 \
-            -c "got a certificate request" \
-            -c "client state: MBEDTLS_SSL_CLIENT_CERTIFICATE" \
-            -c "client state: MBEDTLS_SSL_CLIENT_CERTIFICATE_VERIFY" \
-            -c "Protocol is TLSv1.3"
-
-requires_gnutls_tls1_3
-requires_gnutls_next_no_ticket
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-requires_config_enabled MBEDTLS_DEBUG_C
-requires_config_enabled MBEDTLS_SSL_CLI_C
-requires_config_enabled MBEDTLS_RSA_C
-requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
-requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
-run_test    "TLS 1.3: Client authentication - opaque key, rsa_pss_rsae_sha256 - gnutls" \
-            "$G_NEXT_SRV --debug=4 --priority=NORMAL:-VERS-ALL:+VERS-TLS1.3:+CIPHER-ALL:%NO_TICKETS" \
-            "$P_CLI debug_level=3 crt_file=data_files/server2-sha256.crt \
-                    key_file=data_files/server2.key sig_algs=ecdsa_secp256r1_sha256,rsa_pss_rsae_sha256 key_opaque=1" \
-            0 \
-            -c "got a certificate request" \
-            -c "client state: MBEDTLS_SSL_CLIENT_CERTIFICATE" \
-            -c "client state: MBEDTLS_SSL_CLIENT_CERTIFICATE_VERIFY" \
-            -c "Protocol is TLSv1.3"
-
-requires_openssl_tls1_3
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-requires_config_enabled MBEDTLS_DEBUG_C
-requires_config_enabled MBEDTLS_SSL_CLI_C
-requires_config_enabled MBEDTLS_RSA_C
-requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
-requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
-run_test    "TLS 1.3: Client authentication - opaque key, rsa_pss_rsae_sha384 - openssl" \
-            "$O_NEXT_SRV -msg -tls1_3 -num_tickets 0 -no_resume_ephemeral -no_cache -Verify 10" \
-            "$P_CLI debug_level=4 force_version=tls13 crt_file=data_files/cert_sha256.crt \
-                    key_file=data_files/server1.key sig_algs=ecdsa_secp256r1_sha256,rsa_pss_rsae_sha384 key_opaque=1" \
-            0 \
-            -c "got a certificate request" \
-            -c "client state: MBEDTLS_SSL_CLIENT_CERTIFICATE" \
-            -c "client state: MBEDTLS_SSL_CLIENT_CERTIFICATE_VERIFY" \
-            -c "Protocol is TLSv1.3"
-
-requires_gnutls_tls1_3
-requires_gnutls_next_no_ticket
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-requires_config_enabled MBEDTLS_DEBUG_C
-requires_config_enabled MBEDTLS_SSL_CLI_C
-requires_config_enabled MBEDTLS_RSA_C
-requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
-requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
-run_test    "TLS 1.3: Client authentication - opaque key, rsa_pss_rsae_sha384 - gnutls" \
-            "$G_NEXT_SRV --debug=4 --priority=NORMAL:-VERS-ALL:+VERS-TLS1.3:+CIPHER-ALL:%NO_TICKETS" \
-            "$P_CLI debug_level=3 force_version=tls13 crt_file=data_files/server2-sha256.crt \
-                    key_file=data_files/server2.key sig_algs=ecdsa_secp256r1_sha256,rsa_pss_rsae_sha384 key_opaque=1" \
-            0 \
-            -c "got a certificate request" \
-            -c "client state: MBEDTLS_SSL_CLIENT_CERTIFICATE" \
-            -c "client state: MBEDTLS_SSL_CLIENT_CERTIFICATE_VERIFY" \
-            -c "Protocol is TLSv1.3"
-
-requires_openssl_tls1_3
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-requires_config_enabled MBEDTLS_DEBUG_C
-requires_config_enabled MBEDTLS_SSL_CLI_C
-requires_config_enabled MBEDTLS_RSA_C
-requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
-requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
-run_test    "TLS 1.3: Client authentication - opaque key, rsa_pss_rsae_sha512 - openssl" \
-            "$O_NEXT_SRV -msg -tls1_3 -num_tickets 0 -no_resume_ephemeral -no_cache -Verify 10" \
-            "$P_CLI debug_level=4 force_version=tls13 crt_file=data_files/cert_sha256.crt \
-                    key_file=data_files/server1.key sig_algs=ecdsa_secp256r1_sha256,rsa_pss_rsae_sha512 key_opaque=1" \
-            0 \
-            -c "got a certificate request" \
-            -c "client state: MBEDTLS_SSL_CLIENT_CERTIFICATE" \
-            -c "client state: MBEDTLS_SSL_CLIENT_CERTIFICATE_VERIFY" \
-            -c "Protocol is TLSv1.3"
-
-requires_gnutls_tls1_3
-requires_gnutls_next_no_ticket
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-requires_config_enabled MBEDTLS_DEBUG_C
-requires_config_enabled MBEDTLS_SSL_CLI_C
-requires_config_enabled MBEDTLS_RSA_C
-requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
-requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
-run_test    "TLS 1.3: Client authentication - opaque key, rsa_pss_rsae_sha512 - gnutls" \
-            "$G_NEXT_SRV --debug=4 --priority=NORMAL:-VERS-ALL:+VERS-TLS1.3:+CIPHER-ALL:%NO_TICKETS" \
-            "$P_CLI debug_level=3 force_version=tls13 crt_file=data_files/server2-sha256.crt \
-                    key_file=data_files/server2.key sig_algs=ecdsa_secp256r1_sha256,rsa_pss_rsae_sha512 key_opaque=1" \
-            0 \
-            -c "got a certificate request" \
-            -c "client state: MBEDTLS_SSL_CLIENT_CERTIFICATE" \
-            -c "client state: MBEDTLS_SSL_CLIENT_CERTIFICATE_VERIFY" \
-            -c "Protocol is TLSv1.3"
-
-requires_openssl_tls1_3
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-requires_config_enabled MBEDTLS_DEBUG_C
-requires_config_enabled MBEDTLS_SSL_CLI_C
-requires_config_enabled MBEDTLS_RSA_C
-requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
-requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
-run_test    "TLS 1.3: Client authentication - opaque key, client alg not in server list - openssl" \
-            "$O_NEXT_SRV -msg -tls1_3 -num_tickets 0 -no_resume_ephemeral -no_cache -Verify 10
-                -sigalgs ecdsa_secp256r1_sha256" \
-            "$P_CLI debug_level=3 crt_file=data_files/ecdsa_secp521r1.crt \
-                    key_file=data_files/ecdsa_secp521r1.key sig_algs=ecdsa_secp256r1_sha256,ecdsa_secp521r1_sha512 key_opaque=1" \
-            1 \
-            -c "got a certificate request" \
-            -c "client state: MBEDTLS_SSL_CLIENT_CERTIFICATE" \
-            -c "client state: MBEDTLS_SSL_CLIENT_CERTIFICATE_VERIFY" \
-            -c "signature algorithm not in received or offered list." \
-            -C "unkown pk type"
-
-requires_gnutls_tls1_3
-requires_gnutls_next_no_ticket
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-requires_config_enabled MBEDTLS_DEBUG_C
-requires_config_enabled MBEDTLS_SSL_CLI_C
-requires_config_enabled MBEDTLS_RSA_C
-requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
-requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
-run_test    "TLS 1.3: Client authentication - opaque key, client alg not in server list - gnutls" \
-            "$G_NEXT_SRV --debug=4 --priority=NORMAL:-VERS-ALL:+VERS-TLS1.3:+CIPHER-ALL:-SIGN-ALL:+SIGN-ECDSA-SECP256R1-SHA256:%NO_TICKETS" \
-            "$P_CLI debug_level=3 crt_file=data_files/ecdsa_secp521r1.crt \
-                    key_file=data_files/ecdsa_secp521r1.key sig_algs=ecdsa_secp256r1_sha256,ecdsa_secp521r1_sha512 key_opaque=1" \
-            1 \
-            -c "got a certificate request" \
-            -c "client state: MBEDTLS_SSL_CLIENT_CERTIFICATE" \
-            -c "client state: MBEDTLS_SSL_CLIENT_CERTIFICATE_VERIFY" \
-            -c "signature algorithm not in received or offered list." \
-            -C "unkown pk type"
-
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_DEBUG_C
@@ -11205,6 +10484,7 @@ run_test    "TLS 1.3: Server side check - openssl" \
             -s "tls13 server state: MBEDTLS_SSL_CLIENT_HELLO" \
             -s "tls13 server state: MBEDTLS_SSL_SERVER_HELLO" \
             -s "tls13 server state: MBEDTLS_SSL_ENCRYPTED_EXTENSIONS" \
+            -s "tls13 server state: MBEDTLS_SSL_SERVER_CERTIFICATE" \
             -s "SSL - The requested feature is not available" \
             -s "=> parse client hello" \
             -s "<= parse client hello"
@@ -11221,6 +10501,7 @@ run_test    "TLS 1.3: Server side check - gnutls" \
             -s "tls13 server state: MBEDTLS_SSL_CLIENT_HELLO" \
             -s "tls13 server state: MBEDTLS_SSL_SERVER_HELLO" \
             -s "tls13 server state: MBEDTLS_SSL_ENCRYPTED_EXTENSIONS" \
+            -s "tls13 server state: MBEDTLS_SSL_SERVER_CERTIFICATE" \
             -s "SSL - The requested feature is not available" \
             -s "=> parse client hello" \
             -s "<= parse client hello"
@@ -11236,7 +10517,8 @@ run_test    "TLS 1.3: Server side check - mbedtls" \
             -s "tls13 server state: MBEDTLS_SSL_CLIENT_HELLO" \
             -s "tls13 server state: MBEDTLS_SSL_SERVER_HELLO" \
             -s "tls13 server state: MBEDTLS_SSL_ENCRYPTED_EXTENSIONS" \
-            -c "client state: MBEDTLS_SSL_ENCRYPTED_EXTENSIONS" \
+            -s "tls13 server state: MBEDTLS_SSL_SERVER_CERTIFICATE" \
+            -c "client state: MBEDTLS_SSL_CERTIFICATE_REQUEST" \
             -s "SSL - The requested feature is not available" \
             -s "=> parse client hello" \
             -s "<= parse client hello"

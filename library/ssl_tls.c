@@ -383,9 +383,11 @@ typedef int ssl_tls_prf_t(const unsigned char *, size_t, const char *,
 static int ssl_tls12_populate_transform( mbedtls_ssl_transform *transform,
                                    int ciphersuite,
                                    const unsigned char master[48],
-#if defined(MBEDTLS_SSL_SOME_SUITES_USE_CBC_ETM)
+#if defined(MBEDTLS_SSL_SOME_SUITES_USE_MAC) && \
+    defined(MBEDTLS_SSL_ENCRYPT_THEN_MAC)
                                    int encrypt_then_mac,
-#endif /* MBEDTLS_SSL_SOME_SUITES_USE_CBC_ETM */
+#endif /* MBEDTLS_SSL_ENCRYPT_THEN_MAC &&
+          MBEDTLS_SSL_SOME_SUITES_USE_MAC */
                                    ssl_tls_prf_t tls_prf,
                                    const unsigned char randbytes[64],
                                    mbedtls_ssl_protocol_version tls_version,
@@ -1527,10 +1529,10 @@ static int ssl_conf_psk_is_configured( mbedtls_ssl_config const *conf )
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
     if( !mbedtls_svc_key_id_is_null( conf->psk_opaque ) )
         return( 1 );
-#else
+#endif /* MBEDTLS_USE_PSA_CRYPTO */
+
     if( conf->psk != NULL )
         return( 1 );
-#endif /* MBEDTLS_USE_PSA_CRYPTO */
 
     return( 0 );
 }
@@ -1541,16 +1543,16 @@ static void ssl_conf_remove_psk( mbedtls_ssl_config *conf )
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
     if( ! mbedtls_svc_key_id_is_null( conf->psk_opaque ) )
     {
-        /* The maintenance of the external PSK key slot is the
+        /* The maintenance of the PSK key slot is the
          * user's responsibility. */
-        if( conf->psk_opaque_is_internal )
-        {
-            psa_destroy_key( conf->psk_opaque );
-            conf->psk_opaque_is_internal = 0;
-        }
         conf->psk_opaque = MBEDTLS_SVC_KEY_ID_INIT;
     }
-#else
+    /* This and the following branch should never
+     * be taken simultaenously as we maintain the
+     * invariant that raw and opaque PSKs are never
+     * configured simultaneously. As a safeguard,
+     * though, `else` is omitted here. */
+#endif /* MBEDTLS_USE_PSA_CRYPTO */
     if( conf->psk != NULL )
     {
         mbedtls_platform_zeroize( conf->psk, conf->psk_len );
@@ -1559,7 +1561,6 @@ static void ssl_conf_remove_psk( mbedtls_ssl_config *conf )
         conf->psk = NULL;
         conf->psk_len = 0;
     }
-#endif /* MBEDTLS_USE_PSA_CRYPTO */
 
     /* Remove reference to PSK identity, if any. */
     if( conf->psk_identity != NULL )
@@ -1601,11 +1602,6 @@ int mbedtls_ssl_conf_psk( mbedtls_ssl_config *conf,
                 const unsigned char *psk_identity, size_t psk_identity_len )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
-    psa_key_attributes_t key_attributes = psa_key_attributes_init();
-    psa_status_t status;
-    mbedtls_svc_key_id_t key;
-#endif /* MBEDTLS_USE_PSA_CRYPTO */
 
     /* We currently only support one PSK, raw or opaque. */
     if( ssl_conf_psk_is_configured( conf ) )
@@ -1619,23 +1615,6 @@ int mbedtls_ssl_conf_psk( mbedtls_ssl_config *conf,
     if( psk_len > MBEDTLS_PSK_MAX_LEN )
         return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
 
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
-    psa_set_key_usage_flags( &key_attributes, PSA_KEY_USAGE_DERIVE );
-    psa_set_key_algorithm( &key_attributes,
-                           PSA_ALG_TLS12_PSK_TO_MS(PSA_ALG_SHA_256) );
-    psa_set_key_enrollment_algorithm( &key_attributes,
-                           PSA_ALG_TLS12_PSK_TO_MS(PSA_ALG_SHA_384) );
-    psa_set_key_type( &key_attributes, PSA_KEY_TYPE_DERIVE );
-
-    status = psa_import_key( &key_attributes, psk, psk_len, &key );
-    if( status != PSA_SUCCESS )
-        return( MBEDTLS_ERR_SSL_HW_ACCEL_FAILED );
-
-    /* Allow calling psa_destroy_key() on config psk remove/free */
-    conf->psk_opaque_is_internal = 1;
-    ret = mbedtls_ssl_conf_psk_opaque( conf, key,
-                                       psk_identity, psk_identity_len );
-#else
     if( ( conf->psk = mbedtls_calloc( 1, psk_len ) ) == NULL )
         return( MBEDTLS_ERR_SSL_ALLOC_FAILED );
     conf->psk_len = psk_len;
@@ -1645,7 +1624,6 @@ int mbedtls_ssl_conf_psk( mbedtls_ssl_config *conf,
     ret = ssl_conf_set_psk_identity( conf, psk_identity, psk_identity_len );
     if( ret != 0 )
         ssl_conf_remove_psk( conf );
-#endif /* MBEDTLS_USE_PSA_CRYPTO */
 
     return( ret );
 }
@@ -1655,16 +1633,10 @@ static void ssl_remove_psk( mbedtls_ssl_context *ssl )
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
     if( ! mbedtls_svc_key_id_is_null( ssl->handshake->psk_opaque ) )
     {
-        /* The maintenance of the external PSK key slot is the
-         * user's responsibility. */
-        if( ssl->handshake->psk_opaque_is_internal )
-        {
-            psa_destroy_key( ssl->handshake->psk_opaque );
-            ssl->handshake->psk_opaque_is_internal = 0;
-        }
         ssl->handshake->psk_opaque = MBEDTLS_SVC_KEY_ID_INIT;
     }
-#else
+    else
+#endif /* MBEDTLS_USE_PSA_CRYPTO */
     if( ssl->handshake->psk != NULL )
     {
         mbedtls_platform_zeroize( ssl->handshake->psk,
@@ -1672,19 +1644,11 @@ static void ssl_remove_psk( mbedtls_ssl_context *ssl )
         mbedtls_free( ssl->handshake->psk );
         ssl->handshake->psk_len = 0;
     }
-#endif /* MBEDTLS_USE_PSA_CRYPTO */
 }
 
 int mbedtls_ssl_set_hs_psk( mbedtls_ssl_context *ssl,
                             const unsigned char *psk, size_t psk_len )
 {
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
-    psa_key_attributes_t key_attributes = psa_key_attributes_init();
-    psa_status_t status;
-    psa_algorithm_t alg;
-    mbedtls_svc_key_id_t key;
-#endif /* MBEDTLS_USE_PSA_CRYPTO */
-
     if( psk == NULL || ssl->handshake == NULL )
         return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
 
@@ -1693,24 +1657,6 @@ int mbedtls_ssl_set_hs_psk( mbedtls_ssl_context *ssl,
 
     ssl_remove_psk( ssl );
 
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
-    if( ssl->handshake->ciphersuite_info->mac == MBEDTLS_MD_SHA384)
-        alg = PSA_ALG_TLS12_PSK_TO_MS(PSA_ALG_SHA_384);
-    else
-        alg = PSA_ALG_TLS12_PSK_TO_MS(PSA_ALG_SHA_256);
-
-    psa_set_key_usage_flags( &key_attributes, PSA_KEY_USAGE_DERIVE );
-    psa_set_key_algorithm( &key_attributes, alg );
-    psa_set_key_type( &key_attributes, PSA_KEY_TYPE_DERIVE );
-
-    status = psa_import_key( &key_attributes, psk, psk_len, &key );
-    if( status != PSA_SUCCESS )
-        return( MBEDTLS_ERR_SSL_HW_ACCEL_FAILED );
-
-    /* Allow calling psa_destroy_key() on psk remove */
-    ssl->handshake->psk_opaque_is_internal = 1;
-    return mbedtls_ssl_set_hs_psk_opaque( ssl, key );
-#else
     if( ( ssl->handshake->psk = mbedtls_calloc( 1, psk_len ) ) == NULL )
         return( MBEDTLS_ERR_SSL_ALLOC_FAILED );
 
@@ -1718,7 +1664,6 @@ int mbedtls_ssl_set_hs_psk( mbedtls_ssl_context *ssl,
     memcpy( ssl->handshake->psk, psk, ssl->handshake->psk_len );
 
     return( 0 );
-#endif /* MBEDTLS_USE_PSA_CRYPTO */
 }
 
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
@@ -1769,109 +1714,6 @@ void mbedtls_ssl_conf_psk_cb( mbedtls_ssl_config *conf,
     conf->p_psk = p_psk;
 }
 #endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
-
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
-static mbedtls_ssl_mode_t mbedtls_ssl_get_base_mode(
-        psa_algorithm_t alg )
-{
-#if defined(MBEDTLS_SSL_SOME_SUITES_USE_MAC)
-    if( alg == PSA_ALG_CBC_NO_PADDING )
-        return( MBEDTLS_SSL_MODE_CBC );
-#endif /* MBEDTLS_SSL_SOME_SUITES_USE_MAC */
-    if( PSA_ALG_IS_AEAD( alg ) )
-        return( MBEDTLS_SSL_MODE_AEAD );
-    return( MBEDTLS_SSL_MODE_STREAM );
-}
-
-#else /* MBEDTLS_USE_PSA_CRYPTO */
-
-static mbedtls_ssl_mode_t mbedtls_ssl_get_base_mode(
-        mbedtls_cipher_mode_t mode )
-{
-#if defined(MBEDTLS_SSL_SOME_SUITES_USE_MAC)
-    if( mode == MBEDTLS_MODE_CBC )
-        return( MBEDTLS_SSL_MODE_CBC );
-#endif /* MBEDTLS_SSL_SOME_SUITES_USE_MAC */
-
-#if defined(MBEDTLS_GCM_C) || \
-    defined(MBEDTLS_CCM_C) || \
-    defined(MBEDTLS_CHACHAPOLY_C)
-    if( mode == MBEDTLS_MODE_GCM ||
-        mode == MBEDTLS_MODE_CCM ||
-        mode == MBEDTLS_MODE_CHACHAPOLY )
-        return( MBEDTLS_SSL_MODE_AEAD );
-#endif /* MBEDTLS_GCM_C || MBEDTLS_CCM_C || MBEDTLS_CHACHAPOLY_C */
-
-    return( MBEDTLS_SSL_MODE_STREAM );
-}
-#endif /* MBEDTLS_USE_PSA_CRYPTO */
-
-static mbedtls_ssl_mode_t mbedtls_ssl_get_actual_mode(
-    mbedtls_ssl_mode_t base_mode,
-    int encrypt_then_mac )
-{
-#if defined(MBEDTLS_SSL_SOME_SUITES_USE_CBC_ETM)
-    if( encrypt_then_mac == MBEDTLS_SSL_ETM_ENABLED &&
-        base_mode == MBEDTLS_SSL_MODE_CBC )
-    {
-        return( MBEDTLS_SSL_MODE_CBC_ETM );
-    }
-#else
-    (void) encrypt_then_mac;
-#endif
-    return( base_mode );
-}
-
-mbedtls_ssl_mode_t mbedtls_ssl_get_mode_from_transform(
-                    const mbedtls_ssl_transform *transform )
-{
-    mbedtls_ssl_mode_t base_mode = mbedtls_ssl_get_base_mode(
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
-            transform->psa_alg
-#else
-            mbedtls_cipher_get_cipher_mode( &transform->cipher_ctx_enc )
-#endif
-        );
-
-    int encrypt_then_mac = 0;
-#if defined(MBEDTLS_SSL_SOME_SUITES_USE_CBC_ETM)
-    encrypt_then_mac = transform->encrypt_then_mac;
-#endif
-    return( mbedtls_ssl_get_actual_mode( base_mode, encrypt_then_mac ) );
-}
-
-mbedtls_ssl_mode_t mbedtls_ssl_get_mode_from_ciphersuite(
-#if defined(MBEDTLS_SSL_SOME_SUITES_USE_CBC_ETM)
-        int encrypt_then_mac,
-#endif /* MBEDTLS_SSL_SOME_SUITES_USE_CBC_ETM */
-        const mbedtls_ssl_ciphersuite_t *suite )
-{
-    mbedtls_ssl_mode_t base_mode = MBEDTLS_SSL_MODE_STREAM;
-
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
-    psa_status_t status;
-    psa_algorithm_t alg;
-    psa_key_type_t type;
-    size_t size;
-    status = mbedtls_ssl_cipher_to_psa( suite->cipher, 0, &alg, &type, &size );
-    if( status == PSA_SUCCESS )
-        base_mode = mbedtls_ssl_get_base_mode( alg );
-#else
-    const mbedtls_cipher_info_t *cipher =
-            mbedtls_cipher_info_from_type( suite->cipher );
-    if( cipher != NULL )
-    {
-        base_mode =
-            mbedtls_ssl_get_base_mode(
-                mbedtls_cipher_info_get_mode( cipher ) );
-    }
-#endif /* MBEDTLS_USE_PSA_CRYPTO */
-
-#if !defined(MBEDTLS_SSL_SOME_SUITES_USE_CBC_ETM)
-    int encrypt_then_mac = 0;
-#endif
-    return( mbedtls_ssl_get_actual_mode( base_mode, encrypt_then_mac ) );
-}
 
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
 psa_status_t mbedtls_ssl_cipher_to_psa( mbedtls_cipher_type_t mbedtls_cipher_type,
@@ -3288,25 +3130,11 @@ void mbedtls_ssl_handshake_free( mbedtls_ssl_context *ssl )
 #endif
 
 #if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
-    if( ! mbedtls_svc_key_id_is_null( ssl->handshake->psk_opaque ) )
-    {
-        /* The maintenance of the external PSK key slot is the
-         * user's responsibility. */
-        if( ssl->handshake->psk_opaque_is_internal )
-        {
-            psa_destroy_key( ssl->handshake->psk_opaque );
-            ssl->handshake->psk_opaque_is_internal = 0;
-        }
-        ssl->handshake->psk_opaque = MBEDTLS_SVC_KEY_ID_INIT;
-    }
-#else
     if( handshake->psk != NULL )
     {
         mbedtls_platform_zeroize( handshake->psk, handshake->psk_len );
         mbedtls_free( handshake->psk );
     }
-#endif /* MBEDTLS_USE_PSA_CRYPTO */
 #endif
 
 #if defined(MBEDTLS_X509_CRT_PARSE_C) && \
@@ -3787,9 +3615,11 @@ static int ssl_context_load( mbedtls_ssl_context *ssl,
     ret = ssl_tls12_populate_transform( ssl->transform,
                   ssl->session->ciphersuite,
                   ssl->session->master,
-#if defined(MBEDTLS_SSL_SOME_SUITES_USE_CBC_ETM)
+#if defined(MBEDTLS_SSL_SOME_SUITES_USE_MAC) && \
+    defined(MBEDTLS_SSL_ENCRYPT_THEN_MAC)
                   ssl->session->encrypt_then_mac,
-#endif /* MBEDTLS_SSL_SOME_SUITES_USE_CBC_ETM */
+#endif /* MBEDTLS_SSL_ENCRYPT_THEN_MAC &&
+          MBEDTLS_SSL_SOME_SUITES_USE_MAC */
                   ssl_tls12prf_from_cs( ssl->session->ciphersuite ),
                   p, /* currently pointing to randbytes */
                   MBEDTLS_SSL_VERSION_TLS1_2, /* (D)TLS 1.2 is forced */
@@ -4495,17 +4325,6 @@ void mbedtls_ssl_config_free( mbedtls_ssl_config *conf )
 #endif
 
 #if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
-    if( ! mbedtls_svc_key_id_is_null( conf->psk_opaque ) )
-    {
-        if( conf->psk_opaque_is_internal )
-        {
-            psa_destroy_key( conf->psk_opaque );
-            conf->psk_opaque_is_internal = 0;
-        }
-        conf->psk_opaque = MBEDTLS_SVC_KEY_ID_INIT;
-    }
-#else
     if( conf->psk != NULL )
     {
         mbedtls_platform_zeroize( conf->psk, conf->psk_len );
@@ -4513,7 +4332,6 @@ void mbedtls_ssl_config_free( mbedtls_ssl_config *conf )
         conf->psk = NULL;
         conf->psk_len = 0;
     }
-#endif /* MBEDTLS_USE_PSA_CRYPTO */
 
     if( conf->psk_identity != NULL )
     {
@@ -4897,8 +4715,6 @@ static psa_status_t setup_psa_key_derivation( psa_key_derivation_operation_t* de
                                               psa_algorithm_t alg,
                                               const unsigned char* seed, size_t seed_length,
                                               const unsigned char* label, size_t label_length,
-                                              const unsigned char* other_secret,
-                                              size_t other_secret_length,
                                               size_t capacity )
 {
     psa_status_t status;
@@ -4914,15 +4730,6 @@ static psa_status_t setup_psa_key_derivation( psa_key_derivation_operation_t* de
                                                  seed, seed_length );
         if( status != PSA_SUCCESS )
             return( status );
-
-        if ( other_secret != NULL )
-        {
-            status = psa_key_derivation_input_bytes( derivation,
-                                        PSA_KEY_DERIVATION_INPUT_OTHER_SECRET,
-                                        other_secret, other_secret_length );
-            if( status != PSA_SUCCESS )
-                return( status );
-        }
 
         if( mbedtls_svc_key_id_is_null( key ) )
         {
@@ -4997,7 +4804,6 @@ static int tls_prf_generic( mbedtls_md_type_t md_type,
                                        random, rlen,
                                        (unsigned char const *) label,
                                        (size_t) strlen( label ),
-                                       NULL, 0,
                                        dlen );
     if( status != PSA_SUCCESS )
     {
@@ -5183,6 +4989,28 @@ static int ssl_set_handshake_prfs( mbedtls_ssl_handshake_params *handshake,
     return( 0 );
 }
 
+#if defined(MBEDTLS_KEY_EXCHANGE_PSK_ENABLED) && \
+    defined(MBEDTLS_USE_PSA_CRYPTO)
+static int ssl_use_opaque_psk( mbedtls_ssl_context const *ssl )
+{
+    if( ssl->conf->f_psk != NULL )
+    {
+        /* If we've used a callback to select the PSK,
+         * the static configuration is irrelevant. */
+        if( ! mbedtls_svc_key_id_is_null( ssl->handshake->psk_opaque ) )
+            return( 1 );
+
+        return( 0 );
+    }
+
+    if( ! mbedtls_svc_key_id_is_null( ssl->conf->psk_opaque ) )
+        return( 1 );
+
+    return( 0 );
+}
+#endif /* MBEDTLS_USE_PSA_CRYPTO &&
+          MBEDTLS_KEY_EXCHANGE_PSK_ENABLED */
+
 /*
  * Compute master secret if needed
  *
@@ -5217,15 +5045,15 @@ static int ssl_compute_master( mbedtls_ssl_handshake_params *handshake,
      * is used. */
     char const *lbl = "master secret";
 
-    /* The seed for the KDF used for key expansion.
+    /* The salt for the KDF used for key expansion.
      * - If the Extended Master Secret extension is not used,
      *   this is ClientHello.Random + ServerHello.Random
      *   (see Sect. 8.1 in RFC 5246).
      * - If the Extended Master Secret extension is used,
      *   this is the transcript of the handshake so far.
      *   (see Sect. 4 in RFC 7627). */
-    unsigned char const *seed = handshake->randbytes;
-    size_t seed_len = 64;
+    unsigned char const *salt = handshake->randbytes;
+    size_t salt_len = 64;
 
 #if !defined(MBEDTLS_DEBUG_C) &&                    \
     !defined(MBEDTLS_SSL_EXTENDED_MASTER_SECRET) && \
@@ -5245,17 +5073,18 @@ static int ssl_compute_master( mbedtls_ssl_handshake_params *handshake,
     if( handshake->extended_ms == MBEDTLS_SSL_EXTENDED_MS_ENABLED )
     {
         lbl  = "extended master secret";
-        seed = session_hash;
-        handshake->calc_verify( ssl, session_hash, &seed_len );
+        salt = session_hash;
+        handshake->calc_verify( ssl, session_hash, &salt_len );
 
         MBEDTLS_SSL_DEBUG_BUF( 3, "session hash for extended master secret",
-                                  session_hash, seed_len );
+                                  session_hash, salt_len );
     }
-#endif /* MBEDTLS_SSL_EXTENDED_MASTER_SECRET */
+#endif /* MBEDTLS_SSL_EXTENDED_MS_ENABLED */
 
-#if defined(MBEDTLS_USE_PSA_CRYPTO) &&                   \
-    defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
-    if( mbedtls_ssl_ciphersuite_uses_psk( handshake->ciphersuite_info ) == 1 )
+#if defined(MBEDTLS_USE_PSA_CRYPTO) &&          \
+    defined(MBEDTLS_KEY_EXCHANGE_PSK_ENABLED)
+    if( handshake->ciphersuite_info->key_exchange == MBEDTLS_KEY_EXCHANGE_PSK &&
+        ssl_use_opaque_psk( ssl ) == 1 )
     {
         /* Perform PSK-to-MS expansion in a single step. */
         psa_status_t status;
@@ -5274,34 +5103,10 @@ static int ssl_compute_master( mbedtls_ssl_handshake_params *handshake,
         else
             alg = PSA_ALG_TLS12_PSK_TO_MS(PSA_ALG_SHA_256);
 
-        size_t other_secret_len = 0;
-        unsigned char* other_secret = NULL;
-
-        switch( handshake->ciphersuite_info->key_exchange )
-        {
-            /* Provide other secret.
-             * Other secret is stored in premaster, where first 2 bytes hold the
-             * length of the other key.
-             */
-            case MBEDTLS_KEY_EXCHANGE_RSA_PSK:
-                /* For RSA-PSK other key length is always 48 bytes. */
-                other_secret_len = 48;
-                other_secret = handshake->premaster + 2;
-                break;
-            case MBEDTLS_KEY_EXCHANGE_ECDHE_PSK:
-            case MBEDTLS_KEY_EXCHANGE_DHE_PSK:
-                other_secret_len = MBEDTLS_GET_UINT16_BE(handshake->premaster, 0);
-                other_secret = handshake->premaster + 2;
-                break;
-            default:
-                break;
-        }
-
         status = setup_psa_key_derivation( &derivation, psk, alg,
-                                           seed, seed_len,
+                                           salt, salt_len,
                                            (unsigned char const *) lbl,
                                            (size_t) strlen( lbl ),
-                                           other_secret, other_secret_len,
                                            master_secret_len );
         if( status != PSA_SUCCESS )
         {
@@ -5326,7 +5131,7 @@ static int ssl_compute_master( mbedtls_ssl_handshake_params *handshake,
 #endif
     {
         ret = handshake->tls_prf( handshake->premaster, handshake->pmslen,
-                                  lbl, seed, seed_len,
+                                  lbl, salt, salt_len,
                                   master,
                                   master_secret_len );
         if( ret != 0 )
@@ -5388,9 +5193,11 @@ int mbedtls_ssl_derive_keys( mbedtls_ssl_context *ssl )
     ret = ssl_tls12_populate_transform( ssl->transform_negotiate,
                                         ssl->session_negotiate->ciphersuite,
                                         ssl->session_negotiate->master,
-#if defined(MBEDTLS_SSL_SOME_SUITES_USE_CBC_ETM)
+#if defined(MBEDTLS_SSL_SOME_SUITES_USE_MAC) && \
+    defined(MBEDTLS_SSL_ENCRYPT_THEN_MAC)
                                         ssl->session_negotiate->encrypt_then_mac,
-#endif /* MBEDTLS_SSL_SOME_SUITES_USE_CBC_ETM */
+#endif /* MBEDTLS_SSL_ENCRYPT_THEN_MAC &&
+          MBEDTLS_SSL_SOME_SUITES_USE_MAC */
                                         ssl->handshake->tls_prf,
                                         ssl->handshake->randbytes,
                                         ssl->tls_version,
@@ -5530,30 +5337,28 @@ void ssl_calc_verify_tls_sha384( const mbedtls_ssl_context *ssl,
 }
 #endif /* MBEDTLS_SHA384_C */
 
-#if !defined(MBEDTLS_USE_PSA_CRYPTO) &&                      \
-    defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
+#if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
 int mbedtls_ssl_psk_derive_premaster( mbedtls_ssl_context *ssl, mbedtls_key_exchange_type_t key_ex )
 {
     unsigned char *p = ssl->handshake->premaster;
     unsigned char *end = p + sizeof( ssl->handshake->premaster );
     const unsigned char *psk = NULL;
     size_t psk_len = 0;
-    int psk_ret = mbedtls_ssl_get_psk( ssl, &psk, &psk_len );
 
-    if( psk_ret == MBEDTLS_ERR_SSL_PRIVATE_KEY_REQUIRED )
+#if defined(MBEDTLS_USE_PSA_CRYPTO) &&                 \
+    defined(MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED)
+    (void) key_ex;
+#endif /* MBEDTLS_USE_PSA_CRYPTO && MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED */
+
+    if( mbedtls_ssl_get_psk( ssl, &psk, &psk_len )
+            == MBEDTLS_ERR_SSL_PRIVATE_KEY_REQUIRED )
     {
         /*
          * This should never happen because the existence of a PSK is always
-         * checked before calling this function.
-         *
-         * The exception is opaque DHE-PSK. For DHE-PSK fill premaster with
-         * the shared secret without PSK.
+         * checked before calling this function
          */
-        if ( key_ex != MBEDTLS_KEY_EXCHANGE_DHE_PSK )
-        {
-            MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
-            return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
-        }
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
+        return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
     }
 
     /*
@@ -5617,7 +5422,8 @@ int mbedtls_ssl_psk_derive_premaster( mbedtls_ssl_context *ssl, mbedtls_key_exch
     }
     else
 #endif /* MBEDTLS_KEY_EXCHANGE_DHE_PSK_ENABLED */
-#if defined(MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED)
+#if !defined(MBEDTLS_USE_PSA_CRYPTO) &&                 \
+    defined(MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED)
     if( key_ex == MBEDTLS_KEY_EXCHANGE_ECDHE_PSK )
     {
         int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
@@ -5638,7 +5444,7 @@ int mbedtls_ssl_psk_derive_premaster( mbedtls_ssl_context *ssl, mbedtls_key_exch
                                 MBEDTLS_DEBUG_ECDH_Z );
     }
     else
-#endif /* MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED */
+#endif /* !MBEDTLS_USE_PSA_CRYPTO && MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED */
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
         return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
@@ -5661,7 +5467,7 @@ int mbedtls_ssl_psk_derive_premaster( mbedtls_ssl_context *ssl, mbedtls_key_exch
 
     return( 0 );
 }
-#endif /* !MBEDTLS_USE_PSA_CRYPTO && MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
+#endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
 
 #if defined(MBEDTLS_SSL_SRV_C) && defined(MBEDTLS_SSL_RENEGOTIATION)
 static int ssl_write_hello_request( mbedtls_ssl_context *ssl );
@@ -6983,9 +6789,11 @@ static mbedtls_tls_prf_types tls_prf_get_type( mbedtls_ssl_tls_prf_cb *tls_prf )
 static int ssl_tls12_populate_transform( mbedtls_ssl_transform *transform,
                                    int ciphersuite,
                                    const unsigned char master[48],
-#if defined(MBEDTLS_SSL_SOME_SUITES_USE_CBC_ETM)
+#if defined(MBEDTLS_SSL_SOME_SUITES_USE_MAC) && \
+    defined(MBEDTLS_SSL_ENCRYPT_THEN_MAC)
                                    int encrypt_then_mac,
-#endif /* MBEDTLS_SSL_SOME_SUITES_USE_CBC_ETM */
+#endif /* MBEDTLS_SSL_ENCRYPT_THEN_MAC &&
+          MBEDTLS_SSL_SOME_SUITES_USE_MAC */
                                    ssl_tls_prf_t tls_prf,
                                    const unsigned char randbytes[64],
                                    mbedtls_ssl_protocol_version tls_version,
@@ -7002,9 +6810,8 @@ static int ssl_tls12_populate_transform( mbedtls_ssl_transform *transform,
     size_t iv_copy_len;
     size_t keylen;
     const mbedtls_ssl_ciphersuite_t *ciphersuite_info;
-    mbedtls_ssl_mode_t ssl_mode;
-#if !defined(MBEDTLS_USE_PSA_CRYPTO)
     const mbedtls_cipher_info_t *cipher_info;
+#if !defined(MBEDTLS_USE_PSA_CRYPTO)
     const mbedtls_md_info_t *md_info;
 #endif /* !MBEDTLS_USE_PSA_CRYPTO */
 
@@ -7029,9 +6836,10 @@ static int ssl_tls12_populate_transform( mbedtls_ssl_transform *transform,
     /*
      * Some data just needs copying into the structure
      */
-#if defined(MBEDTLS_SSL_SOME_SUITES_USE_CBC_ETM)
+#if defined(MBEDTLS_SSL_ENCRYPT_THEN_MAC) && \
+    defined(MBEDTLS_SSL_SOME_SUITES_USE_MAC)
     transform->encrypt_then_mac = encrypt_then_mac;
-#endif /* MBEDTLS_SSL_SOME_SUITES_USE_CBC_ETM */
+#endif
     transform->tls_version = tls_version;
 
 #if defined(MBEDTLS_SSL_CONTEXT_SERIALIZATION)
@@ -7058,28 +6866,6 @@ static int ssl_tls12_populate_transform( mbedtls_ssl_transform *transform,
         return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
     }
 
-    ssl_mode = mbedtls_ssl_get_mode_from_ciphersuite(
-#if defined(MBEDTLS_SSL_SOME_SUITES_USE_CBC_ETM)
-                                        encrypt_then_mac,
-#endif /* MBEDTLS_SSL_SOME_SUITES_USE_CBC_ETM */
-                                        ciphersuite_info );
-
-    if( ssl_mode == MBEDTLS_SSL_MODE_AEAD )
-        transform->taglen =
-            ciphersuite_info->flags & MBEDTLS_CIPHERSUITE_SHORT_TAG ? 8 : 16;
-
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
-    if( ( status = mbedtls_ssl_cipher_to_psa( ciphersuite_info->cipher,
-                                 transform->taglen,
-                                 &alg,
-                                 &key_type,
-                                 &key_bits ) ) != PSA_SUCCESS )
-    {
-        ret = psa_ssl_status_to_mbedtls( status );
-        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_cipher_to_psa", ret );
-        goto end;
-    }
-#else
     cipher_info = mbedtls_cipher_info_from_type( ciphersuite_info->cipher );
     if( cipher_info == NULL )
     {
@@ -7087,7 +6873,6 @@ static int ssl_tls12_populate_transform( mbedtls_ssl_transform *transform,
                                     ciphersuite_info->cipher ) );
         return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
     }
-#endif /* MBEDTLS_USE_PSA_CRYPTO */
 
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
     mac_alg = mbedtls_psa_translate_md( ciphersuite_info->mac );
@@ -7147,21 +6932,21 @@ static int ssl_tls12_populate_transform( mbedtls_ssl_transform *transform,
      * Determine the appropriate key, IV and MAC length.
      */
 
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
-    keylen = PSA_BITS_TO_BYTES(key_bits);
-#else
     keylen = mbedtls_cipher_info_get_key_bitlen( cipher_info ) / 8;
-#endif
 
 #if defined(MBEDTLS_GCM_C) ||                           \
     defined(MBEDTLS_CCM_C) ||                           \
     defined(MBEDTLS_CHACHAPOLY_C)
-    if( ssl_mode == MBEDTLS_SSL_MODE_AEAD )
+    if( mbedtls_cipher_info_get_mode( cipher_info ) == MBEDTLS_MODE_GCM ||
+        mbedtls_cipher_info_get_mode( cipher_info ) == MBEDTLS_MODE_CCM ||
+        mbedtls_cipher_info_get_mode( cipher_info ) == MBEDTLS_MODE_CHACHAPOLY )
     {
         size_t explicit_ivlen;
 
         transform->maclen = 0;
         mac_key_len = 0;
+        transform->taglen =
+            ciphersuite_info->flags & MBEDTLS_CIPHERSUITE_SHORT_TAG ? 8 : 16;
 
         /* All modes haves 96-bit IVs, but the length of the static parts vary
          * with mode and version:
@@ -7172,11 +6957,7 @@ static int ssl_tls12_populate_transform( mbedtls_ssl_transform *transform,
          *   sequence number).
          */
         transform->ivlen = 12;
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
-        if( key_type == PSA_KEY_TYPE_CHACHA20 )
-#else
         if( mbedtls_cipher_info_get_mode( cipher_info ) == MBEDTLS_MODE_CHACHAPOLY )
-#endif /* MBEDTLS_USE_PSA_CRYPTO */
             transform->fixed_ivlen = 12;
         else
             transform->fixed_ivlen = 4;
@@ -7188,16 +6969,9 @@ static int ssl_tls12_populate_transform( mbedtls_ssl_transform *transform,
     else
 #endif /* MBEDTLS_GCM_C || MBEDTLS_CCM_C || MBEDTLS_CHACHAPOLY_C */
 #if defined(MBEDTLS_SSL_SOME_SUITES_USE_MAC)
-    if( ssl_mode == MBEDTLS_SSL_MODE_STREAM ||
-        ssl_mode == MBEDTLS_SSL_MODE_CBC ||
-        ssl_mode == MBEDTLS_SSL_MODE_CBC_ETM )
+    if( mbedtls_cipher_info_get_mode( cipher_info ) == MBEDTLS_MODE_STREAM ||
+        mbedtls_cipher_info_get_mode( cipher_info ) == MBEDTLS_MODE_CBC )
     {
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
-        size_t block_size = PSA_BLOCK_CIPHER_BLOCK_LENGTH( key_type );
-#else
-        size_t block_size = cipher_info->block_size;
-#endif /* MBEDTLS_USE_PSA_CRYPTO */
-
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
         /* Get MAC length */
         mac_key_len = PSA_HASH_LENGTH(mac_alg);
@@ -7216,14 +6990,10 @@ static int ssl_tls12_populate_transform( mbedtls_ssl_transform *transform,
         transform->maclen = mac_key_len;
 
         /* IV length */
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
-        transform->ivlen = PSA_CIPHER_IV_LENGTH( key_type, alg );
-#else
         transform->ivlen = cipher_info->iv_size;
-#endif /* MBEDTLS_USE_PSA_CRYPTO */
 
         /* Minimum length */
-        if( ssl_mode == MBEDTLS_SSL_MODE_STREAM )
+        if( mbedtls_cipher_info_get_mode( cipher_info ) == MBEDTLS_MODE_STREAM )
             transform->minlen = transform->maclen;
         else
         {
@@ -7234,17 +7004,17 @@ static int ssl_tls12_populate_transform( mbedtls_ssl_transform *transform,
              * 2. IV
              */
 #if defined(MBEDTLS_SSL_ENCRYPT_THEN_MAC)
-            if( ssl_mode == MBEDTLS_SSL_MODE_CBC_ETM )
+            if( encrypt_then_mac == MBEDTLS_SSL_ETM_ENABLED )
             {
                 transform->minlen = transform->maclen
-                                  + block_size;
+                                  + cipher_info->block_size;
             }
             else
 #endif
             {
                 transform->minlen = transform->maclen
-                                  + block_size
-                                  - transform->maclen % block_size;
+                                  + cipher_info->block_size
+                                  - transform->maclen % cipher_info->block_size;
             }
 
             if( tls_version == MBEDTLS_SSL_VERSION_TLS1_2 )
@@ -7326,6 +7096,17 @@ static int ssl_tls12_populate_transform( mbedtls_ssl_transform *transform,
     }
 
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
+    if( ( status = mbedtls_ssl_cipher_to_psa( cipher_info->type,
+                                 transform->taglen,
+                                 &alg,
+                                 &key_type,
+                                 &key_bits ) ) != PSA_SUCCESS )
+    {
+        ret = psa_ssl_status_to_mbedtls( status );
+        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_cipher_to_psa", ret );
+        goto end;
+    }
+
     transform->psa_alg = alg;
 
     if ( alg != MBEDTLS_SSL_NULL_CIPHER )
