@@ -35,8 +35,8 @@ const mbedtls_x509_crt_profile compat_profile =
     MBEDTLS_X509_ID_FLAG( MBEDTLS_MD_SHA256 ) |
     MBEDTLS_X509_ID_FLAG( MBEDTLS_MD_SHA384 ) |
     MBEDTLS_X509_ID_FLAG( MBEDTLS_MD_SHA512 ),
-    0xFFFFFFF, /* Any PK alg    */
-    0xFFFFFFF, /* Any curve     */
+    0xFFFFFFFF, /* Any PK alg    */
+    0xFFFFFFFF, /* Any curve     */
     1024,
 };
 
@@ -53,8 +53,8 @@ const mbedtls_x509_crt_profile profile_rsa3072 =
 const mbedtls_x509_crt_profile profile_sha512 =
 {
     MBEDTLS_X509_ID_FLAG( MBEDTLS_MD_SHA512 ),
-    0xFFFFFFF, /* Any PK alg    */
-    0xFFFFFFF, /* Any curve     */
+    0xFFFFFFFF, /* Any PK alg    */
+    0xFFFFFFFF, /* Any curve     */
     1024,
 };
 
@@ -87,7 +87,7 @@ int ca_callback_fail( void *data, mbedtls_x509_crt const *child, mbedtls_x509_cr
 
     return -1;
 }
-#if defined(MBEDTLS_X509_CRT_PARSE_C)
+
 int ca_callback( void *data, mbedtls_x509_crt const *child,
                  mbedtls_x509_crt **candidates )
 {
@@ -141,7 +141,6 @@ exit:
     *candidates = first;
     return( ret );
 }
-#endif /* MBEDTLS_X509_CRT_PARSE_C */
 #endif /* MBEDTLS_X509_TRUSTED_CERTIFICATE_CALLBACK */
 
 int verify_fatal( void *data, mbedtls_x509_crt *crt, int certificate_depth, uint32_t *flags )
