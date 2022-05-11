@@ -6399,6 +6399,8 @@ run_test    "PSK callback: opaque psk on client, no callback" \
             "$P_CLI extended_ms=0 debug_level=1 min_version=tls12 force_ciphersuite=TLS-PSK-WITH-AES-128-CBC-SHA \
             psk_identity=foo psk=abc123 psk_opaque=1" \
             0 \
+            -c "skip PMS generation for opaque PSK"\
+            -S "skip PMS generation for opaque PSK"\
             -C "session hash for extended master secret"\
             -S "session hash for extended master secret"\
             -S "SSL - The handshake negotiation failed" \
@@ -6412,6 +6414,8 @@ run_test    "PSK callback: opaque psk on client, no callback, SHA-384" \
             "$P_CLI extended_ms=0 debug_level=1 min_version=tls12 force_ciphersuite=TLS-PSK-WITH-AES-256-CBC-SHA384 \
             psk_identity=foo psk=abc123 psk_opaque=1" \
             0 \
+            -c "skip PMS generation for opaque PSK"\
+            -S "skip PMS generation for opaque PSK"\
             -C "session hash for extended master secret"\
             -S "session hash for extended master secret"\
             -S "SSL - The handshake negotiation failed" \
@@ -6425,6 +6429,8 @@ run_test    "PSK callback: opaque psk on client, no callback, EMS" \
             "$P_CLI extended_ms=1 debug_level=3 min_version=tls12 force_ciphersuite=TLS-PSK-WITH-AES-128-CBC-SHA \
             psk_identity=foo psk=abc123 psk_opaque=1" \
             0 \
+            -c "skip PMS generation for opaque PSK"\
+            -S "skip PMS generation for opaque PSK"\
             -c "session hash for extended master secret"\
             -s "session hash for extended master secret"\
             -S "SSL - The handshake negotiation failed" \
@@ -6438,6 +6444,8 @@ run_test    "PSK callback: opaque psk on client, no callback, SHA-384, EMS" \
             "$P_CLI extended_ms=1 debug_level=3 min_version=tls12 force_ciphersuite=TLS-PSK-WITH-AES-256-CBC-SHA384 \
             psk_identity=foo psk=abc123 psk_opaque=1" \
             0 \
+            -c "skip PMS generation for opaque PSK"\
+            -S "skip PMS generation for opaque PSK"\
             -c "session hash for extended master secret"\
             -s "session hash for extended master secret"\
             -S "SSL - The handshake negotiation failed" \
@@ -6451,6 +6459,8 @@ run_test    "PSK callback: opaque rsa-psk on client, no callback" \
             "$P_CLI extended_ms=0 debug_level=1 min_version=tls12 force_ciphersuite=TLS-RSA-PSK-WITH-AES-128-CBC-SHA256 \
             psk_identity=foo psk=abc123 psk_opaque=1" \
             0 \
+            -c "skip PMS generation for opaque RSA-PSK"\
+            -S "skip PMS generation for opaque RSA-PSK"\
             -C "session hash for extended master secret"\
             -S "session hash for extended master secret"\
             -S "SSL - The handshake negotiation failed" \
@@ -6464,6 +6474,8 @@ run_test    "PSK callback: opaque rsa-psk on client, no callback, SHA-384" \
             "$P_CLI extended_ms=0 debug_level=1 min_version=tls12 force_ciphersuite=TLS-RSA-PSK-WITH-AES-256-CBC-SHA384 \
             psk_identity=foo psk=abc123 psk_opaque=1" \
             0 \
+            -c "skip PMS generation for opaque RSA-PSK"\
+            -S "skip PMS generation for opaque RSA-PSK"\
             -C "session hash for extended master secret"\
             -S "session hash for extended master secret"\
             -S "SSL - The handshake negotiation failed" \
@@ -6477,6 +6489,8 @@ run_test    "PSK callback: opaque rsa-psk on client, no callback, EMS" \
             "$P_CLI extended_ms=1 debug_level=3 min_version=tls12 force_ciphersuite=TLS-RSA-PSK-WITH-AES-128-CBC-SHA \
             psk_identity=foo psk=abc123 psk_opaque=1" \
             0 \
+            -c "skip PMS generation for opaque RSA-PSK"\
+            -S "skip PMS generation for opaque RSA-PSK"\
             -c "session hash for extended master secret"\
             -s "session hash for extended master secret"\
             -S "SSL - The handshake negotiation failed" \
@@ -6490,6 +6504,8 @@ run_test    "PSK callback: opaque rsa-psk on client, no callback, SHA-384, EMS" 
             "$P_CLI extended_ms=1 debug_level=3 min_version=tls12 force_ciphersuite=TLS-RSA-PSK-WITH-AES-256-CBC-SHA384 \
             psk_identity=foo psk=abc123 psk_opaque=1" \
             0 \
+            -c "skip PMS generation for opaque RSA-PSK"\
+            -S "skip PMS generation for opaque RSA-PSK"\
             -c "session hash for extended master secret"\
             -s "session hash for extended master secret"\
             -S "SSL - The handshake negotiation failed" \
@@ -6503,6 +6519,8 @@ run_test    "PSK callback: opaque ecdhe-psk on client, no callback" \
             "$P_CLI extended_ms=0 debug_level=1 min_version=tls12 force_ciphersuite=TLS-ECDHE-PSK-WITH-AES-128-CBC-SHA256 \
             psk_identity=foo psk=abc123 psk_opaque=1" \
             0 \
+            -c "skip PMS generation for opaque ECDHE-PSK"\
+            -S "skip PMS generation for opaque ECDHE-PSK"\
             -C "session hash for extended master secret"\
             -S "session hash for extended master secret"\
             -S "SSL - The handshake negotiation failed" \
@@ -6516,6 +6534,8 @@ run_test    "PSK callback: opaque ecdhe-psk on client, no callback, SHA-384" \
             "$P_CLI extended_ms=0 debug_level=1 min_version=tls12 force_ciphersuite=TLS-ECDHE-PSK-WITH-AES-256-CBC-SHA384 \
             psk_identity=foo psk=abc123 psk_opaque=1" \
             0 \
+            -c "skip PMS generation for opaque ECDHE-PSK"\
+            -S "skip PMS generation for opaque ECDHE-PSK"\
             -C "session hash for extended master secret"\
             -S "session hash for extended master secret"\
             -S "SSL - The handshake negotiation failed" \
@@ -6529,6 +6549,8 @@ run_test    "PSK callback: opaque ecdhe-psk on client, no callback, EMS" \
             "$P_CLI extended_ms=1 debug_level=3 min_version=tls12 force_ciphersuite=TLS-ECDHE-PSK-WITH-AES-128-CBC-SHA \
             psk_identity=foo psk=abc123 psk_opaque=1" \
             0 \
+            -c "skip PMS generation for opaque ECDHE-PSK"\
+            -S "skip PMS generation for opaque ECDHE-PSK"\
             -c "session hash for extended master secret"\
             -s "session hash for extended master secret"\
             -S "SSL - The handshake negotiation failed" \
@@ -6542,6 +6564,8 @@ run_test    "PSK callback: opaque ecdhe-psk on client, no callback, SHA-384, EMS
             "$P_CLI extended_ms=1 debug_level=3 min_version=tls12 force_ciphersuite=TLS-ECDHE-PSK-WITH-AES-256-CBC-SHA384 \
             psk_identity=foo psk=abc123 psk_opaque=1" \
             0 \
+            -c "skip PMS generation for opaque ECDHE-PSK"\
+            -S "skip PMS generation for opaque ECDHE-PSK"\
             -c "session hash for extended master secret"\
             -s "session hash for extended master secret"\
             -S "SSL - The handshake negotiation failed" \
@@ -6555,6 +6579,8 @@ run_test    "PSK callback: opaque dhe-psk on client, no callback" \
             "$P_CLI extended_ms=0 debug_level=1 min_version=tls12 force_ciphersuite=TLS-DHE-PSK-WITH-AES-128-CBC-SHA256 \
             psk_identity=foo psk=abc123 psk_opaque=1" \
             0 \
+            -c "skip PMS generation for opaque DHE-PSK"\
+            -S "skip PMS generation for opaque DHE-PSK"\
             -C "session hash for extended master secret"\
             -S "session hash for extended master secret"\
             -S "SSL - The handshake negotiation failed" \
@@ -6568,6 +6594,8 @@ run_test    "PSK callback: opaque dhe-psk on client, no callback, SHA-384" \
             "$P_CLI extended_ms=0 debug_level=1 min_version=tls12 force_ciphersuite=TLS-DHE-PSK-WITH-AES-256-CBC-SHA384 \
             psk_identity=foo psk=abc123 psk_opaque=1" \
             0 \
+            -c "skip PMS generation for opaque DHE-PSK"\
+            -S "skip PMS generation for opaque DHE-PSK"\
             -C "session hash for extended master secret"\
             -S "session hash for extended master secret"\
             -S "SSL - The handshake negotiation failed" \
@@ -6581,6 +6609,8 @@ run_test    "PSK callback: opaque dhe-psk on client, no callback, EMS" \
             "$P_CLI extended_ms=1 debug_level=3 min_version=tls12 force_ciphersuite=TLS-DHE-PSK-WITH-AES-128-CBC-SHA \
             psk_identity=foo psk=abc123 psk_opaque=1" \
             0 \
+            -c "skip PMS generation for opaque DHE-PSK"\
+            -S "skip PMS generation for opaque DHE-PSK"\
             -c "session hash for extended master secret"\
             -s "session hash for extended master secret"\
             -S "SSL - The handshake negotiation failed" \
@@ -6594,6 +6624,8 @@ run_test    "PSK callback: opaque dhe-psk on client, no callback, SHA-384, EMS" 
             "$P_CLI extended_ms=1 debug_level=3 min_version=tls12 force_ciphersuite=TLS-DHE-PSK-WITH-AES-256-CBC-SHA384 \
             psk_identity=foo psk=abc123 psk_opaque=1" \
             0 \
+            -c "skip PMS generation for opaque DHE-PSK"\
+            -S "skip PMS generation for opaque DHE-PSK"\
             -c "session hash for extended master secret"\
             -s "session hash for extended master secret"\
             -S "SSL - The handshake negotiation failed" \
@@ -6607,6 +6639,8 @@ run_test    "PSK callback: raw psk on client, static opaque on server, no callba
             "$P_CLI extended_ms=0 debug_level=1 min_version=tls12 force_ciphersuite=TLS-PSK-WITH-AES-128-CBC-SHA \
             psk_identity=foo psk=abc123" \
             0 \
+            -C "skip PMS generation for opaque PSK"\
+            -s "skip PMS generation for opaque PSK"\
             -C "session hash for extended master secret"\
             -S "session hash for extended master secret"\
             -S "SSL - The handshake negotiation failed" \
@@ -6620,6 +6654,8 @@ run_test    "PSK callback: raw psk on client, static opaque on server, no callba
             "$P_CLI extended_ms=0 debug_level=1 min_version=tls12 force_ciphersuite=TLS-PSK-WITH-AES-256-CBC-SHA384 \
             psk_identity=foo psk=abc123" \
             0 \
+            -C "skip PMS generation for opaque PSK"\
+            -s "skip PMS generation for opaque PSK"\
             -C "session hash for extended master secret"\
             -S "session hash for extended master secret"\
             -S "SSL - The handshake negotiation failed" \
@@ -6636,6 +6672,8 @@ run_test    "PSK callback: raw psk on client, static opaque on server, no callba
             0 \
             -c "session hash for extended master secret"\
             -s "session hash for extended master secret"\
+            -C "skip PMS generation for opaque PSK"\
+            -s "skip PMS generation for opaque PSK"\
             -S "SSL - The handshake negotiation failed" \
             -S "SSL - Unknown identity received" \
             -S "SSL - Verification of the message MAC failed"
@@ -6650,6 +6688,8 @@ run_test    "PSK callback: raw psk on client, static opaque on server, no callba
             0 \
             -c "session hash for extended master secret"\
             -s "session hash for extended master secret"\
+            -C "skip PMS generation for opaque PSK"\
+            -s "skip PMS generation for opaque PSK"\
             -S "SSL - The handshake negotiation failed" \
             -S "SSL - Unknown identity received" \
             -S "SSL - Verification of the message MAC failed"
@@ -6661,6 +6701,8 @@ run_test    "PSK callback: raw rsa-psk on client, static opaque on server, no ca
             "$P_CLI extended_ms=0 debug_level=5 min_version=tls12 force_ciphersuite=TLS-RSA-PSK-WITH-AES-128-CBC-SHA \
             psk_identity=foo psk=abc123" \
             0 \
+            -C "skip PMS generation for opaque RSA-PSK"\
+            -s "skip PMS generation for opaque RSA-PSK"\
             -C "session hash for extended master secret"\
             -S "session hash for extended master secret"\
             -S "SSL - The handshake negotiation failed" \
@@ -6674,6 +6716,8 @@ run_test    "PSK callback: raw rsa-psk on client, static opaque on server, no ca
             "$P_CLI extended_ms=0 debug_level=1 min_version=tls12 force_ciphersuite=TLS-RSA-PSK-WITH-AES-256-CBC-SHA384 \
             psk_identity=foo psk=abc123" \
             0 \
+            -C "skip PMS generation for opaque RSA-PSK"\
+            -s "skip PMS generation for opaque RSA-PSK"\
             -C "session hash for extended master secret"\
             -S "session hash for extended master secret"\
             -S "SSL - The handshake negotiation failed" \
@@ -6690,6 +6734,8 @@ run_test    "PSK callback: raw rsa-psk on client, static opaque on server, no ca
             0 \
             -c "session hash for extended master secret"\
             -s "session hash for extended master secret"\
+            -C "skip PMS generation for opaque RSA-PSK"\
+            -s "skip PMS generation for opaque RSA-PSK"\
             -S "SSL - The handshake negotiation failed" \
             -S "SSL - Unknown identity received" \
             -S "SSL - Verification of the message MAC failed"
@@ -6704,6 +6750,8 @@ run_test    "PSK callback: raw rsa-psk on client, static opaque on server, no ca
             0 \
             -c "session hash for extended master secret"\
             -s "session hash for extended master secret"\
+            -C "skip PMS generation for opaque RSA-PSK"\
+            -s "skip PMS generation for opaque RSA-PSK"\
             -S "SSL - The handshake negotiation failed" \
             -S "SSL - Unknown identity received" \
             -S "SSL - Verification of the message MAC failed"
@@ -6715,6 +6763,8 @@ run_test    "PSK callback: raw ecdhe-psk on client, static opaque on server, no 
             "$P_CLI extended_ms=0 debug_level=5 min_version=tls12 force_ciphersuite=TLS-ECDHE-PSK-WITH-AES-128-CBC-SHA \
             psk_identity=foo psk=abc123" \
             0 \
+            -C "skip PMS generation for opaque ECDHE-PSK"\
+            -s "skip PMS generation for opaque ECDHE-PSK"\
             -C "session hash for extended master secret"\
             -S "session hash for extended master secret"\
             -S "SSL - The handshake negotiation failed" \
@@ -6728,6 +6778,8 @@ run_test    "PSK callback: raw ecdhe-psk on client, static opaque on server, no 
             "$P_CLI extended_ms=0 debug_level=1 min_version=tls12 force_ciphersuite=TLS-ECDHE-PSK-WITH-AES-256-CBC-SHA384 \
             psk_identity=foo psk=abc123" \
             0 \
+            -C "skip PMS generation for opaque ECDHE-PSK"\
+            -s "skip PMS generation for opaque ECDHE-PSK"\
             -C "session hash for extended master secret"\
             -S "session hash for extended master secret"\
             -S "SSL - The handshake negotiation failed" \
@@ -6744,6 +6796,8 @@ run_test    "PSK callback: raw ecdhe-psk on client, static opaque on server, no 
             0 \
             -c "session hash for extended master secret"\
             -s "session hash for extended master secret"\
+            -C "skip PMS generation for opaque ECDHE-PSK"\
+            -s "skip PMS generation for opaque ECDHE-PSK"\
             -S "SSL - The handshake negotiation failed" \
             -S "SSL - Unknown identity received" \
             -S "SSL - Verification of the message MAC failed"
@@ -6758,6 +6812,8 @@ run_test    "PSK callback: raw ecdhe-psk on client, static opaque on server, no 
             0 \
             -c "session hash for extended master secret"\
             -s "session hash for extended master secret"\
+            -C "skip PMS generation for opaque ECDHE-PSK"\
+            -s "skip PMS generation for opaque ECDHE-PSK"\
             -S "SSL - The handshake negotiation failed" \
             -S "SSL - Unknown identity received" \
             -S "SSL - Verification of the message MAC failed"
@@ -6769,6 +6825,8 @@ run_test    "PSK callback: raw dhe-psk on client, static opaque on server, no ca
             "$P_CLI extended_ms=0 debug_level=5 min_version=tls12 force_ciphersuite=TLS-DHE-PSK-WITH-AES-128-CBC-SHA \
             psk_identity=foo psk=abc123" \
             0 \
+            -C "skip PMS generation for opaque DHE-PSK"\
+            -s "skip PMS generation for opaque DHE-PSK"\
             -C "session hash for extended master secret"\
             -S "session hash for extended master secret"\
             -S "SSL - The handshake negotiation failed" \
@@ -6782,6 +6840,8 @@ run_test    "PSK callback: raw dhe-psk on client, static opaque on server, no ca
             "$P_CLI extended_ms=0 debug_level=1 min_version=tls12 force_ciphersuite=TLS-DHE-PSK-WITH-AES-256-CBC-SHA384 \
             psk_identity=foo psk=abc123" \
             0 \
+            -C "skip PMS generation for opaque DHE-PSK"\
+            -s "skip PMS generation for opaque DHE-PSK"\
             -C "session hash for extended master secret"\
             -S "session hash for extended master secret"\
             -S "SSL - The handshake negotiation failed" \
@@ -6798,6 +6858,8 @@ run_test    "PSK callback: raw dhe-psk on client, static opaque on server, no ca
             0 \
             -c "session hash for extended master secret"\
             -s "session hash for extended master secret"\
+            -C "skip PMS generation for opaque DHE-PSK"\
+            -s "skip PMS generation for opaque DHE-PSK"\
             -S "SSL - The handshake negotiation failed" \
             -S "SSL - Unknown identity received" \
             -S "SSL - Verification of the message MAC failed"
@@ -6812,6 +6874,8 @@ run_test    "PSK callback: raw dhe-psk on client, static opaque on server, no ca
             0 \
             -c "session hash for extended master secret"\
             -s "session hash for extended master secret"\
+            -C "skip PMS generation for opaque DHE-PSK"\
+            -s "skip PMS generation for opaque DHE-PSK"\
             -S "SSL - The handshake negotiation failed" \
             -S "SSL - Unknown identity received" \
             -S "SSL - Verification of the message MAC failed"
@@ -6823,6 +6887,8 @@ run_test    "PSK callback: raw psk on client, no static PSK on server, opaque PS
             "$P_CLI extended_ms=0 debug_level=3 min_version=tls12 force_ciphersuite=TLS-PSK-WITH-AES-128-CBC-SHA \
             psk_identity=def psk=beef" \
             0 \
+            -C "skip PMS generation for opaque PSK"\
+            -s "skip PMS generation for opaque PSK"\
             -C "session hash for extended master secret"\
             -S "session hash for extended master secret"\
             -S "SSL - The handshake negotiation failed" \
@@ -6836,6 +6902,8 @@ run_test    "PSK callback: raw psk on client, no static PSK on server, opaque PS
             "$P_CLI extended_ms=0 debug_level=3 min_version=tls12 force_ciphersuite=TLS-PSK-WITH-AES-256-CBC-SHA384 \
             psk_identity=def psk=beef" \
             0 \
+            -C "skip PMS generation for opaque PSK"\
+            -s "skip PMS generation for opaque PSK"\
             -C "session hash for extended master secret"\
             -S "session hash for extended master secret"\
             -S "SSL - The handshake negotiation failed" \
@@ -6852,6 +6920,8 @@ run_test    "PSK callback: raw psk on client, no static PSK on server, opaque PS
             0 \
             -c "session hash for extended master secret"\
             -s "session hash for extended master secret"\
+            -C "skip PMS generation for opaque PSK"\
+            -s "skip PMS generation for opaque PSK"\
             -S "SSL - The handshake negotiation failed" \
             -S "SSL - Unknown identity received" \
             -S "SSL - Verification of the message MAC failed"
@@ -6866,6 +6936,8 @@ run_test    "PSK callback: raw psk on client, no static PSK on server, opaque PS
             0 \
             -c "session hash for extended master secret"\
             -s "session hash for extended master secret"\
+            -C "skip PMS generation for opaque PSK"\
+            -s "skip PMS generation for opaque PSK"\
             -S "SSL - The handshake negotiation failed" \
             -S "SSL - Unknown identity received" \
             -S "SSL - Verification of the message MAC failed"
@@ -6877,6 +6949,8 @@ run_test    "PSK callback: raw rsa-psk on client, no static RSA-PSK on server, o
             "$P_CLI extended_ms=0 debug_level=3 min_version=tls12 force_ciphersuite=TLS-RSA-PSK-WITH-AES-128-CBC-SHA \
             psk_identity=def psk=beef" \
             0 \
+            -C "skip PMS generation for opaque RSA-PSK"\
+            -s "skip PMS generation for opaque RSA-PSK"\
             -C "session hash for extended master secret"\
             -S "session hash for extended master secret"\
             -S "SSL - The handshake negotiation failed" \
@@ -6890,6 +6964,8 @@ run_test    "PSK callback: raw rsa-psk on client, no static RSA-PSK on server, o
             "$P_CLI extended_ms=0 debug_level=3 min_version=tls12 force_ciphersuite=TLS-RSA-PSK-WITH-AES-256-CBC-SHA384 \
             psk_identity=def psk=beef" \
             0 \
+            -C "skip PMS generation for opaque RSA-PSK"\
+            -s "skip PMS generation for opaque RSA-PSK"\
             -C "session hash for extended master secret"\
             -S "session hash for extended master secret"\
             -S "SSL - The handshake negotiation failed" \
@@ -6906,6 +6982,8 @@ run_test    "PSK callback: raw rsa-psk on client, no static RSA-PSK on server, o
             0 \
             -c "session hash for extended master secret"\
             -s "session hash for extended master secret"\
+            -C "skip PMS generation for opaque RSA-PSK"\
+            -s "skip PMS generation for opaque RSA-PSK"\
             -S "SSL - The handshake negotiation failed" \
             -S "SSL - Unknown identity received" \
             -S "SSL - Verification of the message MAC failed"
@@ -6920,6 +6998,8 @@ run_test    "PSK callback: raw rsa-psk on client, no static RSA-PSK on server, o
             0 \
             -c "session hash for extended master secret"\
             -s "session hash for extended master secret"\
+            -C "skip PMS generation for opaque RSA-PSK"\
+            -s "skip PMS generation for opaque RSA-PSK"\
             -S "SSL - The handshake negotiation failed" \
             -S "SSL - Unknown identity received" \
             -S "SSL - Verification of the message MAC failed"
@@ -6931,6 +7011,8 @@ run_test    "PSK callback: raw ecdhe-psk on client, no static ECDHE-PSK on serve
             "$P_CLI extended_ms=0 debug_level=3 min_version=tls12 force_ciphersuite=TLS-ECDHE-PSK-WITH-AES-128-CBC-SHA \
             psk_identity=def psk=beef" \
             0 \
+            -C "skip PMS generation for opaque ECDHE-PSK"\
+            -s "skip PMS generation for opaque ECDHE-PSK"\
             -C "session hash for extended master secret"\
             -S "session hash for extended master secret"\
             -S "SSL - The handshake negotiation failed" \
@@ -6944,6 +7026,8 @@ run_test    "PSK callback: raw ecdhe-psk on client, no static ECDHE-PSK on serve
             "$P_CLI extended_ms=0 debug_level=3 min_version=tls12 force_ciphersuite=TLS-ECDHE-PSK-WITH-AES-256-CBC-SHA384 \
             psk_identity=def psk=beef" \
             0 \
+            -C "skip PMS generation for opaque ECDHE-PSK"\
+            -s "skip PMS generation for opaque ECDHE-PSK"\
             -C "session hash for extended master secret"\
             -S "session hash for extended master secret"\
             -S "SSL - The handshake negotiation failed" \
@@ -6960,6 +7044,8 @@ run_test    "PSK callback: raw ecdhe-psk on client, no static ECDHE-PSK on serve
             0 \
             -c "session hash for extended master secret"\
             -s "session hash for extended master secret"\
+            -C "skip PMS generation for opaque ECDHE-PSK"\
+            -s "skip PMS generation for opaque ECDHE-PSK"\
             -S "SSL - The handshake negotiation failed" \
             -S "SSL - Unknown identity received" \
             -S "SSL - Verification of the message MAC failed"
@@ -6974,6 +7060,8 @@ run_test    "PSK callback: raw ecdhe-psk on client, no static ECDHE-PSK on serve
             0 \
             -c "session hash for extended master secret"\
             -s "session hash for extended master secret"\
+            -C "skip PMS generation for opaque ECDHE-PSK"\
+            -s "skip PMS generation for opaque ECDHE-PSK"\
             -S "SSL - The handshake negotiation failed" \
             -S "SSL - Unknown identity received" \
             -S "SSL - Verification of the message MAC failed"
@@ -6985,6 +7073,8 @@ run_test    "PSK callback: raw dhe-psk on client, no static DHE-PSK on server, o
             "$P_CLI extended_ms=0 debug_level=3 min_version=tls12 force_ciphersuite=TLS-DHE-PSK-WITH-AES-128-CBC-SHA \
             psk_identity=def psk=beef" \
             0 \
+            -C "skip PMS generation for opaque DHE-PSK"\
+            -s "skip PMS generation for opaque DHE-PSK"\
             -C "session hash for extended master secret"\
             -S "session hash for extended master secret"\
             -S "SSL - The handshake negotiation failed" \
@@ -6998,6 +7088,8 @@ run_test    "PSK callback: raw dhe-psk on client, no static DHE-PSK on server, o
             "$P_CLI extended_ms=0 debug_level=3 min_version=tls12 force_ciphersuite=TLS-DHE-PSK-WITH-AES-256-CBC-SHA384 \
             psk_identity=def psk=beef" \
             0 \
+            -C "skip PMS generation for opaque DHE-PSK"\
+            -s "skip PMS generation for opaque DHE-PSK"\
             -C "session hash for extended master secret"\
             -S "session hash for extended master secret"\
             -S "SSL - The handshake negotiation failed" \
@@ -7014,6 +7106,8 @@ run_test    "PSK callback: raw dhe-psk on client, no static DHE-PSK on server, o
             0 \
             -c "session hash for extended master secret"\
             -s "session hash for extended master secret"\
+            -C "skip PMS generation for opaque DHE-PSK"\
+            -s "skip PMS generation for opaque DHE-PSK"\
             -S "SSL - The handshake negotiation failed" \
             -S "SSL - Unknown identity received" \
             -S "SSL - Verification of the message MAC failed"
@@ -7028,6 +7122,8 @@ run_test    "PSK callback: raw dhe-psk on client, no static DHE-PSK on server, o
             0 \
             -c "session hash for extended master secret"\
             -s "session hash for extended master secret"\
+            -C "skip PMS generation for opaque DHE-PSK"\
+            -s "skip PMS generation for opaque DHE-PSK"\
             -S "SSL - The handshake negotiation failed" \
             -S "SSL - Unknown identity received" \
             -S "SSL - Verification of the message MAC failed"
@@ -7039,6 +7135,8 @@ run_test    "PSK callback: raw psk on client, mismatching static raw PSK on serv
             "$P_CLI extended_ms=0 debug_level=3 min_version=tls12 force_ciphersuite=TLS-PSK-WITH-AES-128-CBC-SHA \
             psk_identity=def psk=beef" \
             0 \
+            -C "skip PMS generation for opaque PSK"\
+            -s "skip PMS generation for opaque PSK"\
             -C "session hash for extended master secret"\
             -S "session hash for extended master secret"\
             -S "SSL - The handshake negotiation failed" \
@@ -7052,6 +7150,8 @@ run_test    "PSK callback: raw psk on client, mismatching static opaque PSK on s
             "$P_CLI extended_ms=0 debug_level=3 min_version=tls12 force_ciphersuite=TLS-PSK-WITH-AES-128-CBC-SHA \
             psk_identity=def psk=beef" \
             0 \
+            -C "skip PMS generation for opaque PSK"\
+            -s "skip PMS generation for opaque PSK"\
             -C "session hash for extended master secret"\
             -S "session hash for extended master secret"\
             -S "SSL - The handshake negotiation failed" \
@@ -7065,6 +7165,7 @@ run_test    "PSK callback: raw psk on client, mismatching static opaque PSK on s
             "$P_CLI extended_ms=0 debug_level=3 min_version=tls12 force_ciphersuite=TLS-PSK-WITH-AES-128-CBC-SHA \
             psk_identity=def psk=beef" \
             0 \
+            -C "skip PMS generation for opaque PSK"\
             -C "session hash for extended master secret"\
             -S "session hash for extended master secret"\
             -S "SSL - The handshake negotiation failed" \
@@ -7078,6 +7179,7 @@ run_test    "PSK callback: raw psk on client, id-matching but wrong raw PSK on s
             "$P_CLI extended_ms=0 debug_level=3 min_version=tls12 force_ciphersuite=TLS-PSK-WITH-AES-128-CBC-SHA \
             psk_identity=def psk=beef" \
             0 \
+            -C "skip PMS generation for opaque PSK"\
             -C "session hash for extended master secret"\
             -S "session hash for extended master secret"\
             -S "SSL - The handshake negotiation failed" \
@@ -11205,25 +11307,6 @@ run_test    "TLS 1.3: Server side check - openssl" \
             -s "tls13 server state: MBEDTLS_SSL_CLIENT_HELLO" \
             -s "tls13 server state: MBEDTLS_SSL_SERVER_HELLO" \
             -s "tls13 server state: MBEDTLS_SSL_ENCRYPTED_EXTENSIONS" \
-            -s "tls13 server state: MBEDTLS_SSL_SERVER_CERTIFICATE" \
-            -s "SSL - The requested feature is not available" \
-            -s "=> parse client hello" \
-            -s "<= parse client hello"
-
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-requires_config_enabled MBEDTLS_DEBUG_C
-requires_config_enabled MBEDTLS_SSL_SRV_C
-requires_openssl_tls1_3
-run_test    "TLS 1.3: Server side check - openssl with client authentication" \
-            "$P_SRV debug_level=4 auth_mode=required crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13 tickets=0" \
-            "$O_NEXT_CLI -msg -debug -cert data_files/server5.crt -key data_files/server5.key -tls1_3" \
-            1 \
-            -s "tls13 server state: MBEDTLS_SSL_CLIENT_HELLO" \
-            -s "tls13 server state: MBEDTLS_SSL_SERVER_HELLO" \
-            -s "tls13 server state: MBEDTLS_SSL_ENCRYPTED_EXTENSIONS" \
-            -s "tls13 server state: MBEDTLS_SSL_CERTIFICATE_REQUEST" \
-            -s "tls13 server state: MBEDTLS_SSL_SERVER_CERTIFICATE" \
-            -s "=> write certificate request" \
             -s "SSL - The requested feature is not available" \
             -s "=> parse client hello" \
             -s "<= parse client hello"
@@ -11240,26 +11323,6 @@ run_test    "TLS 1.3: Server side check - gnutls" \
             -s "tls13 server state: MBEDTLS_SSL_CLIENT_HELLO" \
             -s "tls13 server state: MBEDTLS_SSL_SERVER_HELLO" \
             -s "tls13 server state: MBEDTLS_SSL_ENCRYPTED_EXTENSIONS" \
-            -s "tls13 server state: MBEDTLS_SSL_SERVER_CERTIFICATE" \
-            -s "SSL - The requested feature is not available" \
-            -s "=> parse client hello" \
-            -s "<= parse client hello"
-
-requires_gnutls_tls1_3
-requires_gnutls_next_no_ticket
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-requires_config_enabled MBEDTLS_DEBUG_C
-requires_config_enabled MBEDTLS_SSL_SRV_C
-run_test    "TLS 1.3: Server side check - gnutls with client authentication" \
-            "$P_SRV debug_level=4 auth_mode=required crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13 tickets=0" \
-            "$G_NEXT_CLI localhost -d 4 --x509certfile data_files/server5.crt --x509keyfile data_files/server5.key --priority=NORMAL:-VERS-ALL:+VERS-TLS1.3:%NO_TICKETS:%DISABLE_TLS13_COMPAT_MODE -V" \
-            1 \
-            -s "tls13 server state: MBEDTLS_SSL_CLIENT_HELLO" \
-            -s "tls13 server state: MBEDTLS_SSL_SERVER_HELLO" \
-            -s "tls13 server state: MBEDTLS_SSL_ENCRYPTED_EXTENSIONS" \
-            -s "tls13 server state: MBEDTLS_SSL_CERTIFICATE_REQUEST" \
-            -s "tls13 server state: MBEDTLS_SSL_SERVER_CERTIFICATE" \
-            -s "=> write certificate request" \
             -s "SSL - The requested feature is not available" \
             -s "=> parse client hello" \
             -s "<= parse client hello"
@@ -11275,48 +11338,10 @@ run_test    "TLS 1.3: Server side check - mbedtls" \
             -s "tls13 server state: MBEDTLS_SSL_CLIENT_HELLO" \
             -s "tls13 server state: MBEDTLS_SSL_SERVER_HELLO" \
             -s "tls13 server state: MBEDTLS_SSL_ENCRYPTED_EXTENSIONS" \
-            -s "tls13 server state: MBEDTLS_SSL_SERVER_CERTIFICATE" \
-            -s "=> write certificate request" \
-            -c "client state: MBEDTLS_SSL_CERTIFICATE_REQUEST" \
+            -c "client state: MBEDTLS_SSL_ENCRYPTED_EXTENSIONS" \
             -s "SSL - The requested feature is not available" \
             -s "=> parse client hello" \
             -s "<= parse client hello"
-
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-requires_config_enabled MBEDTLS_DEBUG_C
-requires_config_enabled MBEDTLS_SSL_SRV_C
-requires_config_enabled MBEDTLS_SSL_CLI_C
-run_test    "TLS 1.3: Server side check - mbedtls with client authentication" \
-            "$P_SRV debug_level=4 auth_mode=required crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13 tickets=0" \
-            "$P_CLI debug_level=4 crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13" \
-            1 \
-            -s "tls13 server state: MBEDTLS_SSL_CLIENT_HELLO" \
-            -s "tls13 server state: MBEDTLS_SSL_SERVER_HELLO" \
-            -s "tls13 server state: MBEDTLS_SSL_ENCRYPTED_EXTENSIONS" \
-            -s "tls13 server state: MBEDTLS_SSL_SERVER_CERTIFICATE" \
-            -c "client state: MBEDTLS_SSL_CERTIFICATE_REQUEST" \
-            -s "SSL - The requested feature is not available" \
-            -s "=> parse client hello" \
-            -s "<= parse client hello"
-
-
-requires_config_enabled MBEDTLS_DEBUG_C
-requires_config_enabled MBEDTLS_SSL_CLI_C
-requires_config_enabled MBEDTLS_SSL_SRV_C
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-run_test "TLS 1.3: server: HRR check - mbedtls" \
-         "$P_SRV debug_level=4 force_version=tls13 curves=secp384r1" \
-         "$P_CLI debug_level=4 force_version=tls13 curves=secp256r1,secp384r1" \
-         1 \
-        -s "tls13 server state: MBEDTLS_SSL_CLIENT_HELLO" \
-        -s "tls13 server state: MBEDTLS_SSL_SERVER_HELLO" \
-        -s "tls13 server state: MBEDTLS_SSL_ENCRYPTED_EXTENSIONS" \
-        -s "tls13 server state: MBEDTLS_SSL_HELLO_RETRY_REQUEST" \
-        -c "client state: MBEDTLS_SSL_ENCRYPTED_EXTENSIONS" \
-        -s "selected_group: secp384r1" \
-        -s "SSL - The requested feature is not available" \
-        -s "=> write hello retry request" \
-        -s "<= write hello retry request"
 
 for i in opt-testcases/*.sh
 do
