@@ -585,14 +585,17 @@ struct mbedtls_ssl_handshake_params
      */
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3)
     int tls13_kex_modes; /*!< key exchange modes for TLS 1.3 */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
-    /** Number of HelloRetryRequest messages received/sent from/to the server. */
+#if defined(MBEDTLS_SSL_CLI_C)
+    /** Number of Hello Retry Request messages received from the server.  */
     int hello_retry_request_count;
+#endif /* MBEDTLS_SSL_CLI_C */
+
 #if defined(MBEDTLS_SSL_SRV_C)
     /** selected_group of key_share extension in HelloRetryRequest message. */
     uint16_t hrr_selected_group;
 #endif /* MBEDTLS_SSL_SRV_C */
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_2) && \
     defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
@@ -649,11 +652,9 @@ struct mbedtls_ssl_handshake_params
 #if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
     mbedtls_svc_key_id_t psk_opaque;            /*!< Opaque PSK from the callback   */
-    uint8_t psk_opaque_is_internal;
-#else
+#endif /* MBEDTLS_USE_PSA_CRYPTO */
     unsigned char *psk;                 /*!<  PSK from the callback         */
     size_t psk_len;                     /*!<  Length of PSK from callback   */
-#endif /* MBEDTLS_USE_PSA_CRYPTO */
 #endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
 
 #if defined(MBEDTLS_SSL_ECP_RESTARTABLE_ENABLED)
@@ -1304,34 +1305,12 @@ void mbedtls_ssl_add_hs_msg_to_checksum( mbedtls_ssl_context *ssl,
                                          size_t msg_len );
 
 #if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
-#if !defined(MBEDTLS_USE_PSA_CRYPTO)
 int mbedtls_ssl_psk_derive_premaster( mbedtls_ssl_context *ssl,
                                       mbedtls_key_exchange_type_t key_ex );
-#endif /* !MBEDTLS_USE_PSA_CRYPTO */
 #if defined(MBEDTLS_SSL_CLI_C) && defined(MBEDTLS_SSL_PROTO_TLS1_2)
 int mbedtls_ssl_conf_has_static_psk( mbedtls_ssl_config const *conf );
 #endif
 
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
-/**
- * Get the first defined opaque PSK by order of precedence:
- * 1. handshake PSK set by \c mbedtls_ssl_set_hs_psk_opaque() in the PSK
- *    callback
- * 2. static PSK configured by \c mbedtls_ssl_conf_psk_opaque()
- * Return an opaque PSK
- */
-static inline mbedtls_svc_key_id_t mbedtls_ssl_get_opaque_psk(
-    const mbedtls_ssl_context *ssl )
-{
-    if( ! mbedtls_svc_key_id_is_null( ssl->handshake->psk_opaque ) )
-        return( ssl->handshake->psk_opaque );
-
-    if( ! mbedtls_svc_key_id_is_null( ssl->conf->psk_opaque ) )
-        return( ssl->conf->psk_opaque );
-
-    return( MBEDTLS_SVC_KEY_ID_INIT );
-}
-#else
 /**
  * Get the first defined PSK by order of precedence:
  * 1. handshake PSK set by \c mbedtls_ssl_set_hs_psk() in the PSK callback
@@ -1362,6 +1341,27 @@ static inline int mbedtls_ssl_get_psk( const mbedtls_ssl_context *ssl,
 
     return( 0 );
 }
+
+#if defined(MBEDTLS_USE_PSA_CRYPTO)
+/**
+ * Get the first defined opaque PSK by order of precedence:
+ * 1. handshake PSK set by \c mbedtls_ssl_set_hs_psk_opaque() in the PSK
+ *    callback
+ * 2. static PSK configured by \c mbedtls_ssl_conf_psk_opaque()
+ * Return an opaque PSK
+ */
+static inline mbedtls_svc_key_id_t mbedtls_ssl_get_opaque_psk(
+    const mbedtls_ssl_context *ssl )
+{
+    if( ! mbedtls_svc_key_id_is_null( ssl->handshake->psk_opaque ) )
+        return( ssl->handshake->psk_opaque );
+
+    if( ! mbedtls_svc_key_id_is_null( ssl->conf->psk_opaque ) )
+        return( ssl->conf->psk_opaque );
+
+    return( MBEDTLS_SVC_KEY_ID_INIT );
+}
+
 #endif /* MBEDTLS_USE_PSA_CRYPTO */
 
 #endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
@@ -1631,8 +1631,7 @@ static inline int mbedtls_ssl_conf_is_hybrid_tls12_tls13( const mbedtls_ssl_conf
 #endif /* MBEDTLS_SSL_PROTO_TLS1_2 && MBEDTLS_SSL_PROTO_TLS1_3 */
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3)
-extern const uint8_t mbedtls_ssl_tls13_hello_retry_request_magic[
-                        MBEDTLS_SERVER_HELLO_RANDOM_LEN ];
+
 int mbedtls_ssl_tls13_process_finished_message( mbedtls_ssl_context *ssl );
 int mbedtls_ssl_tls13_write_finished_message( mbedtls_ssl_context *ssl );
 void mbedtls_ssl_tls13_handshake_wrapup( mbedtls_ssl_context *ssl );
@@ -2290,8 +2289,5 @@ int mbedtls_ssl_validate_ciphersuite(
     const mbedtls_ssl_ciphersuite_t *suite_info,
     mbedtls_ssl_protocol_version min_tls_version,
     mbedtls_ssl_protocol_version max_tls_version );
-
-int mbedtls_ssl_write_sig_alg_ext( mbedtls_ssl_context *ssl, unsigned char *buf,
-                                   const unsigned char *end, size_t *out_len );
 
 #endif /* ssl_misc.h */
