@@ -259,7 +259,7 @@ General options:
      --no-force         Refuse to overwrite modified files (default).
      --no-keep-going    Stop at the first error (default).
      --no-memory        No additional memory tests (default).
-     --no-quiet         Print full ouput from components.
+     --no-quiet         Print full output from components.
      --out-of-source-dir=<path>  Directory used for CMake out-of-source build tests.
      --outcome-file=<path>  File where test outcomes are written (not done if
                             empty; default: \$MBEDTLS_TEST_OUTCOME_FILE).
@@ -1201,6 +1201,30 @@ component_test_psa_external_rng_no_drbg_use_psa () {
 
     msg "test: PSA_CRYPTO_EXTERNAL_RNG minus *_DRBG, PSA crypto - ssl-opt.sh (subset)"
     tests/ssl-opt.sh -f 'Default\|opaque'
+}
+
+component_test_crypto_full_no_md () {
+    msg "build: crypto_full minus MD"
+    scripts/config.py crypto_full
+    scripts/config.py unset MBEDTLS_MD_C
+    # Direct dependencies
+    scripts/config.py unset MBEDTLS_ECJPAKE_C
+    scripts/config.py unset MBEDTLS_HKDF_C
+    scripts/config.py unset MBEDTLS_HMAC_DRBG_C
+    scripts/config.py unset MBEDTLS_PK_C
+    scripts/config.py unset MBEDTLS_PKCS1_V15
+    scripts/config.py unset MBEDTLS_PKCS1_V21
+    scripts/config.py unset MBEDTLS_PKCS5_C
+    scripts/config.py unset MBEDTLS_PKCS12_C
+    # Indirect dependencies
+    scripts/config.py unset MBEDTLS_ECDSA_DETERMINISTIC
+    scripts/config.py unset MBEDTLS_PK_PARSE_C
+    scripts/config.py unset MBEDTLS_PK_WRITE_C
+    scripts/config.py unset MBEDTLS_RSA_C
+    make
+
+    msg "test: crypto_full minus MD"
+    make test
 }
 
 component_test_psa_external_rng_use_psa_crypto () {
