@@ -651,7 +651,7 @@ static int ssl_tls13_parse_client_hello( mbedtls_ssl_context *ssl,
             case MBEDTLS_TLS_EXT_SIG_ALG:
                 MBEDTLS_SSL_DEBUG_MSG( 3, ( "found signature_algorithms extension" ) );
 
-                ret = mbedtls_ssl_parse_sig_alg_ext(
+                ret = mbedtls_ssl_tls13_parse_sig_alg_ext(
                           ssl, p, extension_data_end );
                 if( ret != 0 )
                 {
@@ -1376,6 +1376,7 @@ cleanup:
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= write certificate request" ) );
     return( ret );
 }
+#endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
 
 /*
  * Handler for MBEDTLS_SSL_HELLO_RETRY_REQUEST
@@ -1443,39 +1444,6 @@ cleanup:
 }
 
 /*
- * Handler for MBEDTLS_SSL_SERVER_CERTIFICATE
- */
-static int ssl_tls13_write_server_certificate( mbedtls_ssl_context *ssl )
-{
-    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
-    if( mbedtls_ssl_own_cert( ssl ) == NULL )
-    {
-        MBEDTLS_SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_HANDSHAKE_FAILURE,
-                                      MBEDTLS_ERR_SSL_HANDSHAKE_FAILURE);
-        return( MBEDTLS_ERR_SSL_HANDSHAKE_FAILURE );
-    }
-
-    ret = mbedtls_ssl_tls13_write_certificate( ssl );
-    if( ret != 0 )
-        return( ret );
-    mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CERTIFICATE_VERIFY );
-    return( 0 );
-}
-
-/*
- * Handler for MBEDTLS_SSL_CERTIFICATE_VERIFY
- */
-static int ssl_tls13_write_certificate_verify( mbedtls_ssl_context *ssl )
-{
-    int ret = mbedtls_ssl_tls13_write_certificate_verify( ssl );
-    if( ret != 0 )
-        return( ret );
-    mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_SERVER_FINISHED );
-    return( 0 );
-}
-#endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
-
-/*
  * TLS 1.3 State Machine -- server side
  */
 int mbedtls_ssl_tls13_handshake_server_step( mbedtls_ssl_context *ssl )
@@ -1528,14 +1496,6 @@ int mbedtls_ssl_tls13_handshake_server_step( mbedtls_ssl_context *ssl )
 #if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
         case MBEDTLS_SSL_CERTIFICATE_REQUEST:
             ret = ssl_tls13_write_certificate_request( ssl );
-            break;
-
-        case MBEDTLS_SSL_SERVER_CERTIFICATE:
-            ret = ssl_tls13_write_server_certificate( ssl );
-            break;
-
-        case MBEDTLS_SSL_CERTIFICATE_VERIFY:
-            ret = ssl_tls13_write_certificate_verify( ssl );
             break;
 #endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
 
