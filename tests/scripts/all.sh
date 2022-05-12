@@ -259,7 +259,7 @@ General options:
      --no-force         Refuse to overwrite modified files (default).
      --no-keep-going    Stop at the first error (default).
      --no-memory        No additional memory tests (default).
-     --no-quiet         Print full ouput from components.
+     --no-quiet         Print full output from components.
      --out-of-source-dir=<path>  Directory used for CMake out-of-source build tests.
      --outcome-file=<path>  File where test outcomes are written (not done if
                             empty; default: \$MBEDTLS_TEST_OUTCOME_FILE).
@@ -1224,6 +1224,57 @@ component_test_crypto_full_no_md () {
     make
 
     msg "test: crypto_full minus MD"
+    make test
+}
+
+component_test_full_no_cipher () {
+    msg "build: full minus CIPHER"
+    scripts/config.py full
+    scripts/config.py unset MBEDTLS_CIPHER_C
+    # Direct dependencies
+    scripts/config.py unset MBEDTLS_CCM_C
+    scripts/config.py unset MBEDTLS_CMAC_C
+    scripts/config.py unset MBEDTLS_GCM_C
+    scripts/config.py unset MBEDTLS_NIST_KW_C
+    scripts/config.py unset MBEDTLS_PKCS12_C
+    scripts/config.py unset MBEDTLS_PKCS5_C
+    scripts/config.py unset MBEDTLS_PSA_CRYPTO_C
+    scripts/config.py unset MBEDTLS_SSL_TLS_C
+    scripts/config.py unset MBEDTLS_SSL_TICKET_C
+    # Indirect dependencies
+    scripts/config.py unset MBEDTLS_SSL_CLI_C
+    scripts/config.py unset MBEDTLS_PSA_CRYPTO_SE_C
+    scripts/config.py unset MBEDTLS_PSA_CRYPTO_STORAGE_C
+    scripts/config.py unset MBEDTLS_SSL_DTLS_ANTI_REPLAY
+    scripts/config.py unset MBEDTLS_SSL_DTLS_CONNECTION_ID
+    scripts/config.py unset MBEDTLS_SSL_PROTO_TLS1_3
+    scripts/config.py unset MBEDTLS_SSL_SRV_C
+    scripts/config.py unset MBEDTLS_USE_PSA_CRYPTO
+    make
+
+    msg "test: full minus CIPHER"
+    make test
+}
+
+component_test_crypto_full_no_cipher () {
+    msg "build: crypto_full minus CIPHER"
+    scripts/config.py crypto_full
+    scripts/config.py unset MBEDTLS_CIPHER_C
+    # Direct dependencies
+    scripts/config.py unset MBEDTLS_CCM_C
+    scripts/config.py unset MBEDTLS_CMAC_C
+    scripts/config.py unset MBEDTLS_GCM_C
+    scripts/config.py unset MBEDTLS_NIST_KW_C
+    scripts/config.py unset MBEDTLS_PKCS12_C
+    scripts/config.py unset MBEDTLS_PKCS5_C
+    scripts/config.py unset MBEDTLS_PSA_CRYPTO_C
+    # Indirect dependencies
+    scripts/config.py unset MBEDTLS_PSA_CRYPTO_SE_C
+    scripts/config.py unset MBEDTLS_PSA_CRYPTO_STORAGE_C
+    scripts/config.py unset MBEDTLS_USE_PSA_CRYPTO
+    make
+
+    msg "test: crypto_full minus CIPHER"
     make test
 }
 
