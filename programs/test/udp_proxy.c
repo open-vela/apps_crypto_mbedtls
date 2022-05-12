@@ -1,5 +1,5 @@
 /*
- *  UDP proxy: emulate an unreliable UDP connection for DTLS testing
+ *  UDP proxy: emulate an unreliable UDP connexion for DTLS testing
  *
  *  Copyright The Mbed TLS Contributors
  *  SPDX-License-Identifier: Apache-2.0
@@ -1014,6 +1014,11 @@ exit:
     mbedtls_net_free( &client_fd );
     mbedtls_net_free( &server_fd );
     mbedtls_net_free( &listen_fd );
+
+#if defined(_WIN32)
+    mbedtls_printf( "  Press Enter to exit this program.\n" );
+    fflush( stdout ); getchar();
+#endif
 
     mbedtls_exit( exit_code );
 }

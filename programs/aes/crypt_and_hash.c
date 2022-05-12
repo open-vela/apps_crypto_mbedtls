@@ -137,6 +137,11 @@ int main( int argc, char *argv[] )
             list++;
         }
 
+#if defined(_WIN32)
+        mbedtls_printf( "\n  Press Enter to exit this program.\n" );
+        fflush( stdout ); getchar();
+#endif
+
         goto exit;
     }
 
