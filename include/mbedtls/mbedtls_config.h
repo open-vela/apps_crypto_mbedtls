@@ -129,12 +129,7 @@
  * MBEDTLS_PLATFORM_TIME_MACRO, MBEDTLS_PLATFORM_TIME_TYPE_MACRO and
  * MBEDTLS_PLATFORM_STD_TIME.
  *
- * Comment if your system does not support time functions.
- *
- * \note If MBEDTLS_TIMING_C is set - to enable the semi-portable timing
- *       interface - timing.c will include time.h on suitable platforms
- *       regardless of the setting of MBEDTLS_HAVE_TIME, unless
- *       MBEDTLS_TIMING_ALT is used. See timing.c for more information.
+ * Comment if your system does not support time functions
  */
 #define MBEDTLS_HAVE_TIME
 
@@ -1129,7 +1124,7 @@
  *
  * Enable support for PKCS#1 v1.5 encoding.
  *
- * Requires: MBEDTLS_MD_C, MBEDTLS_RSA_C
+ * Requires: MBEDTLS_RSA_C
  *
  * This enables support for PKCS#1 v1.5 operations.
  */
@@ -1278,7 +1273,7 @@
  * Enable an implementation of SHA-256 that has lower ROM footprint but also
  * lower performance.
  *
- * The default implementation is meant to be a reasonable compromise between
+ * The default implementation is meant to be a reasonnable compromise between
  * performance and size. This version optimizes more aggressively for size at
  * the expense of performance. Eg on Cortex-M4 it reduces the size of
  * mbedtls_sha256_process() from ~2KB to ~0.5KB for a performance hit of about
@@ -1775,19 +1770,8 @@
  * This setting allows support for cryptographic mechanisms through the PSA
  * API to be configured separately from support through the mbedtls API.
  *
- * When this option is disabled, the PSA API exposes the cryptographic
- * mechanisms that can be implemented on top of the `mbedtls_xxx` API
- * configured with `MBEDTLS_XXX` symbols.
- *
- * When this option is enabled, the PSA API exposes the cryptographic
- * mechanisms requested by the `PSA_WANT_XXX` symbols defined in
- * include/psa/crypto_config.h. The corresponding `MBEDTLS_XXX` settings are
- * automatically enabled if required (i.e. if no PSA driver provides the
- * mechanism). You may still freely enable additional `MBEDTLS_XXX` symbols
- * in mbedtls_config.h.
- *
- * If the symbol #MBEDTLS_PSA_CRYPTO_CONFIG_FILE is defined, it specifies
- * an alternative header to include instead of include/psa/crypto_config.h.
+ * Uncomment this to enable use of PSA Crypto configuration settings which
+ * can be found in include/psa/crypto_config.h.
  *
  * This feature is still experimental and is not ready for production since
  * it is not completed.
@@ -2401,24 +2385,7 @@
  * Enable the generic message digest layer.
  *
  * Module:  library/md.c
- * Caller:  library/constant_time.c
- *          library/ecdsa.c
- *          library/ecjpake.c
- *          library/hkdf.c
- *          library/hmac_drbg.c
- *          library/pk.c
- *          library/pkcs5.c
- *          library/pkcs12.c
- *          library/psa_crypto_ecp.c
- *          library/psa_crypto_rsa.c
- *          library/rsa.c
- *          library/ssl_cookie.c
- *          library/ssl_msg.c
- *          library/ssl_tls.c
- *          library/x509.c
- *          library/x509_crt.c
- *          library/x509write_crt.c
- *          library/x509write_csr.c
+ * Caller:
  *
  * Uncomment to enable generic message digest wrappers.
  */
@@ -2563,7 +2530,7 @@
  *          library/ssl*_server.c
  *          library/x509.c
  *
- * Requires: MBEDTLS_MD_C, MBEDTLS_RSA_C or MBEDTLS_ECP_C
+ * Requires: MBEDTLS_RSA_C or MBEDTLS_ECP_C
  *
  * Uncomment to enable generic public key wrappers.
  */
@@ -3046,10 +3013,6 @@
  * your own implementation of the whole module by setting
  * \c MBEDTLS_TIMING_ALT in the current file.
  *
- * \note The timing module will include time.h on suitable platforms
- *       regardless of the setting of MBEDTLS_HAVE_TIME, unless
- *       MBEDTLS_TIMING_ALT is used. See timing.c for more information.
- *
  * \note See also our Knowledge Base article about porting to a new
  * environment:
  * https://tls.mbed.org/kb/how-to/how-do-i-port-mbed-tls-to-a-new-environment-OS
@@ -3172,88 +3135,6 @@
 /** \} name SECTION: mbed TLS modules */
 
 /**
- * \name SECTION: General configuration options
- *
- * This section contains Mbed TLS build settings that are not associated
- * with a particular module.
- *
- * \{
- */
-
-/**
- * \def MBEDTLS_CONFIG_FILE
- *
- * If defined, this is a header which will be included instead of
- * `"mbedtls/mbedtls_config.h"`.
- * This header file specifies the compile-time configuration of Mbed TLS.
- * Unlike other configuration options, this one must be defined on the
- * compiler command line: a definition in `mbedtls_config.h` would have
- * no effect.
- *
- * This macro is expanded after an <tt>\#include</tt> directive. This is a popular but
- * non-standard feature of the C language, so this feature is only available
- * with compilers that perform macro expansion on an <tt>\#include</tt> line.
- *
- * The value of this symbol is typically a path in double quotes, either
- * absolute or relative to a directory on the include search path.
- */
-//#define MBEDTLS_CONFIG_FILE "mbedtls/mbedtls_config.h"
-
-/**
- * \def MBEDTLS_USER_CONFIG_FILE
- *
- * If defined, this is a header which will be included after
- * `"mbedtls/mbedtls_config.h"` or #MBEDTLS_CONFIG_FILE.
- * This allows you to modify the default configuration, including the ability
- * to undefine options that are enabled by default.
- *
- * This macro is expanded after an <tt>\#include</tt> directive. This is a popular but
- * non-standard feature of the C language, so this feature is only available
- * with compilers that perform macro expansion on an <tt>\#include</tt> line.
- *
- * The value of this symbol is typically a path in double quotes, either
- * absolute or relative to a directory on the include search path.
- */
-//#define MBEDTLS_USER_CONFIG_FILE "/dev/null"
-
-/**
- * \def MBEDTLS_PSA_CRYPTO_CONFIG_FILE
- *
- * If defined, this is a header which will be included instead of
- * `"psa/crypto_config.h"`.
- * This header file specifies which cryptographic mechanisms are available
- * through the PSA API when #MBEDTLS_PSA_CRYPTO_CONFIG is enabled, and
- * is not used when #MBEDTLS_PSA_CRYPTO_CONFIG is disabled.
- *
- * This macro is expanded after an <tt>\#include</tt> directive. This is a popular but
- * non-standard feature of the C language, so this feature is only available
- * with compilers that perform macro expansion on an <tt>\#include</tt> line.
- *
- * The value of this symbol is typically a path in double quotes, either
- * absolute or relative to a directory on the include search path.
- */
-//#define MBEDTLS_PSA_CRYPTO_CONFIG_FILE "psa/crypto_config.h"
-
-/**
- * \def MBEDTLS_PSA_CRYPTO_USER_CONFIG_FILE
- *
- * If defined, this is a header which will be included after
- * `"psa/crypto_config.h"` or #MBEDTLS_PSA_CRYPTO_CONFIG_FILE.
- * This allows you to modify the default configuration, including the ability
- * to undefine options that are enabled by default.
- *
- * This macro is expanded after an <tt>\#include</tt> directive. This is a popular but
- * non-standard feature of the C language, so this feature is only available
- * with compilers that perform macro expansion on an <tt>\#include</tt> line.
- *
- * The value of this symbol is typically a path in double quotes, either
- * absolute or relative to a directory on the include search path.
- */
-//#define MBEDTLS_PSA_CRYPTO_USER_CONFIG_FILE "/dev/null"
-
-/** \} name SECTION: General configuration options */
-
-/**
  * \name SECTION: Module configuration options
  *
  * This section allows for the setting of module specific sizes and
@@ -3262,15 +3143,11 @@
  *
  * Our advice is to enable options and change their values here
  * only if you have a good reason and know the consequences.
+ *
+ * Please check the respective header file for documentation on these
+ * parameters (to prevent duplicate documentation).
  * \{
  */
-/* The Doxygen documentation here is used when a user comments out a
- * setting and runs doxygen themselves. On the other hand, when we typeset
- * the full documentation including disabled settings, the documentation
- * in specific modules' header files is used if present. When editing this
- * file, make sure that each option is documented in exactly one place,
- * plus optionally a same-line Doxygen comment here if there is a Doxygen
- * comment in the specific module. */
 
 /* MPI / BIGNUM options */
 //#define MBEDTLS_MPI_WINDOW_SIZE            6 /**< Maximum window size used. */
@@ -3553,4 +3430,4 @@
  */
 //#define MBEDTLS_ECDH_VARIANT_EVEREST_ENABLED
 
-/** \} name SECTION: Module configuration options */
+/** \} name SECTION: Customisation configuration options */
