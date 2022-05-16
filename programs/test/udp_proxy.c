@@ -1,5 +1,5 @@
 /*
- *  UDP proxy: emulate an unreliable UDP connexion for DTLS testing
+ *  UDP proxy: emulate an unreliable UDP connection for DTLS testing
  *
  *  Copyright The Mbed TLS Contributors
  *  SPDX-License-Identifier: Apache-2.0
@@ -73,9 +73,10 @@ int main( void )
 #endif
 #endif /* _MSC_VER */
 #else /* ( _WIN32 || _WIN32_WCE ) && !EFIX64 && !EFI32 */
-#if defined(MBEDTLS_HAVE_TIME)
+#if defined(MBEDTLS_HAVE_TIME) || (defined(MBEDTLS_TIMING_C) && !defined(MBEDTLS_TIMING_ALT))
 #include <sys/time.h>
 #endif
+#include <sys/select.h>
 #include <sys/types.h>
 #include <unistd.h>
 #endif /* ( _WIN32 || _WIN32_WCE ) && !EFIX64 && !EFI32 */
@@ -825,7 +826,6 @@ int main( int argc, char *argv[] )
 
     get_options( argc, argv );
 
-#if defined(MBEDTLS_HAVE_TIME)
     /*
      * Decisions to drop/delay/duplicate packets are pseudo-random: dropping
      * exactly 1 in N packets would lead to problems when a flight has exactly
@@ -836,12 +836,15 @@ int main( int argc, char *argv[] )
      */
     if( opt.seed == 0 )
     {
+#if defined(MBEDTLS_HAVE_TIME)
         opt.seed = (unsigned int) mbedtls_time( NULL );
+#else
+        opt.seed = 1;
+#endif /* MBEDTLS_HAVE_TIME */
         mbedtls_printf( "  . Pseudo-random seed: %u\n", opt.seed );
     }
 
     srand( opt.seed );
-#endif /* MBEDTLS_HAVE_TIME */
 
     /*
      * 0. "Connect" to the server
@@ -1012,11 +1015,6 @@ exit:
     mbedtls_net_free( &client_fd );
     mbedtls_net_free( &server_fd );
     mbedtls_net_free( &listen_fd );
-
-#if defined(_WIN32)
-    mbedtls_printf( "  Press Enter to exit this program.\n" );
-    fflush( stdout ); getchar();
-#endif
 
     mbedtls_exit( exit_code );
 }
