@@ -585,14 +585,17 @@ struct mbedtls_ssl_handshake_params
      */
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3)
     int tls13_kex_modes; /*!< key exchange modes for TLS 1.3 */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
-    /** Number of HelloRetryRequest messages received/sent from/to the server. */
+#if defined(MBEDTLS_SSL_CLI_C)
+    /** Number of Hello Retry Request messages received from the server.  */
     int hello_retry_request_count;
+#endif /* MBEDTLS_SSL_CLI_C */
+
 #if defined(MBEDTLS_SSL_SRV_C)
     /** selected_group of key_share extension in HelloRetryRequest message. */
     uint16_t hrr_selected_group;
 #endif /* MBEDTLS_SSL_SRV_C */
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_2) && \
     defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
@@ -1631,8 +1634,7 @@ static inline int mbedtls_ssl_conf_is_hybrid_tls12_tls13( const mbedtls_ssl_conf
 #endif /* MBEDTLS_SSL_PROTO_TLS1_2 && MBEDTLS_SSL_PROTO_TLS1_3 */
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3)
-extern const uint8_t mbedtls_ssl_tls13_hello_retry_request_magic[
-                        MBEDTLS_SERVER_HELLO_RANDOM_LEN ];
+
 int mbedtls_ssl_tls13_process_finished_message( mbedtls_ssl_context *ssl );
 int mbedtls_ssl_tls13_write_finished_message( mbedtls_ssl_context *ssl );
 void mbedtls_ssl_tls13_handshake_wrapup( mbedtls_ssl_context *ssl );
@@ -1854,7 +1856,7 @@ static inline int mbedtls_ssl_tls12_named_group_is_ecdhe( uint16_t named_group )
             named_group == MBEDTLS_SSL_IANA_TLS_GROUP_BP384R1   ||
             named_group == MBEDTLS_SSL_IANA_TLS_GROUP_BP512R1   ||
             named_group == MBEDTLS_SSL_IANA_TLS_GROUP_X448      ||
-            /* Below deprecated curves should be removed with notice to users */
+            /* Below deprected curves should be removed with notice to users */
             named_group == MBEDTLS_SSL_IANA_TLS_GROUP_SECP192K1 ||
             named_group == MBEDTLS_SSL_IANA_TLS_GROUP_SECP192R1 ||
             named_group == MBEDTLS_SSL_IANA_TLS_GROUP_SECP224K1 ||
@@ -2167,7 +2169,7 @@ static inline int mbedtls_ssl_sig_alg_is_supported(
 #endif /* MBEDTLS_SSL_PROTO_TLS1_2 && MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
 /* Corresponding PSA algorithm for MBEDTLS_CIPHER_NULL.
- * Same value is used for PSA_ALG_CATEGORY_CIPHER, hence it is
+ * Same value is used fo PSA_ALG_CATEGORY_CIPHER, hence it is
  * guaranteed to not be a valid PSA algorithm identifier.
  */
 #define MBEDTLS_SSL_NULL_CIPHER 0x04000000
