@@ -1261,7 +1261,7 @@ read_record_header:
      * Handshake layer:
      *     0  .   0   handshake type
      *     1  .   3   handshake length
-     *     4  .   5   DTLS only: message seqence number
+     *     4  .   5   DTLS only: message sequence number
      *     6  .   8   DTLS only: fragment offset
      *     9  .  11   DTLS only: fragment length
      */
@@ -3240,12 +3240,6 @@ curve_matching_done:
 #if defined(MBEDTLS_KEY_EXCHANGE_WITH_SERVER_SIGNATURE_ENABLED)
     if( mbedtls_ssl_ciphersuite_uses_server_signature( ciphersuite_info ) )
     {
-        if( dig_signed == NULL )
-        {
-            MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
-            return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
-        }
-
         size_t dig_signed_len = ssl->out_msg + ssl->out_msglen - dig_signed;
         size_t hashlen = 0;
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
