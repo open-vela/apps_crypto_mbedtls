@@ -4580,7 +4580,7 @@ run_test    "Renegotiation: DTLS, gnutls server, client-initiated" \
             -C "error" \
             -s "Extra-header:"
 
-# Test for the "secure renegotation" extension only (no actual renegotiation)
+# Test for the "secure renegotiation" extension only (no actual renegotiation)
 
 requires_gnutls
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
@@ -5317,7 +5317,7 @@ run_test    "Authentication, CA callback: client max_int chain, server required"
             -s "use CA callback for X.509 CRT verification" \
             -S "X509 - A fatal error occurred"
 
-# Tests for certificate selection based on SHA verson
+# Tests for certificate selection based on SHA version
 
 requires_config_disabled MBEDTLS_X509_REMOVE_INFO
 run_test    "Certificate hash: client TLS 1.2 -> SHA-2" \
@@ -9068,7 +9068,7 @@ run_test    "DTLS fragmenting: gnutls server, DTLS 1.2" \
 # certificate obtained from the server. Here, however, it
 # connects to 127.0.0.1 while our test certificates use 'localhost'
 # as the server name in the certificate. This will make the
-# certifiate validation fail, but passing --insecure makes
+# certificate validation fail, but passing --insecure makes
 # GnuTLS continue the connection nonetheless.
 requires_config_enabled MBEDTLS_SSL_PROTO_DTLS
 requires_config_enabled MBEDTLS_RSA_C
@@ -10839,7 +10839,7 @@ run_test    "TLS 1.3: Client authentication, client alg not in server list - ope
             -c "client state: MBEDTLS_SSL_CLIENT_CERTIFICATE" \
             -c "client state: MBEDTLS_SSL_CLIENT_CERTIFICATE_VERIFY" \
             -c "signature algorithm not in received or offered list." \
-            -C "unkown pk type"
+            -C "unknown pk type"
 
 requires_gnutls_tls1_3
 requires_gnutls_next_no_ticket
@@ -10857,7 +10857,7 @@ run_test    "TLS 1.3: Client authentication, client alg not in server list - gnu
             -c "client state: MBEDTLS_SSL_CLIENT_CERTIFICATE" \
             -c "client state: MBEDTLS_SSL_CLIENT_CERTIFICATE_VERIFY" \
             -c "signature algorithm not in received or offered list." \
-            -C "unkown pk type"
+            -C "unknown pk type"
 
 # Test using an opaque private key for client authentication
 requires_openssl_tls1_3
@@ -11206,6 +11206,8 @@ run_test    "TLS 1.3: Server side check - openssl" \
             -s "tls13 server state: MBEDTLS_SSL_SERVER_HELLO" \
             -s "tls13 server state: MBEDTLS_SSL_ENCRYPTED_EXTENSIONS" \
             -s "tls13 server state: MBEDTLS_SSL_SERVER_CERTIFICATE" \
+            -s "tls13 server state: MBEDTLS_SSL_CERTIFICATE_VERIFY" \
+            -s "tls13 server state: MBEDTLS_SSL_SERVER_FINISHED" \
             -s "SSL - The requested feature is not available" \
             -s "=> parse client hello" \
             -s "<= parse client hello"
@@ -11223,6 +11225,8 @@ run_test    "TLS 1.3: Server side check - openssl with client authentication" \
             -s "tls13 server state: MBEDTLS_SSL_ENCRYPTED_EXTENSIONS" \
             -s "tls13 server state: MBEDTLS_SSL_CERTIFICATE_REQUEST" \
             -s "tls13 server state: MBEDTLS_SSL_SERVER_CERTIFICATE" \
+            -s "tls13 server state: MBEDTLS_SSL_CERTIFICATE_VERIFY" \
+            -s "tls13 server state: MBEDTLS_SSL_SERVER_FINISHED" \
             -s "=> write certificate request" \
             -s "SSL - The requested feature is not available" \
             -s "=> parse client hello" \
@@ -11241,6 +11245,8 @@ run_test    "TLS 1.3: Server side check - gnutls" \
             -s "tls13 server state: MBEDTLS_SSL_SERVER_HELLO" \
             -s "tls13 server state: MBEDTLS_SSL_ENCRYPTED_EXTENSIONS" \
             -s "tls13 server state: MBEDTLS_SSL_SERVER_CERTIFICATE" \
+            -s "tls13 server state: MBEDTLS_SSL_CERTIFICATE_VERIFY" \
+            -s "tls13 server state: MBEDTLS_SSL_SERVER_FINISHED" \
             -s "SSL - The requested feature is not available" \
             -s "=> parse client hello" \
             -s "<= parse client hello"
@@ -11259,6 +11265,8 @@ run_test    "TLS 1.3: Server side check - gnutls with client authentication" \
             -s "tls13 server state: MBEDTLS_SSL_ENCRYPTED_EXTENSIONS" \
             -s "tls13 server state: MBEDTLS_SSL_CERTIFICATE_REQUEST" \
             -s "tls13 server state: MBEDTLS_SSL_SERVER_CERTIFICATE" \
+            -s "tls13 server state: MBEDTLS_SSL_CERTIFICATE_VERIFY" \
+            -s "tls13 server state: MBEDTLS_SSL_SERVER_FINISHED" \
             -s "=> write certificate request" \
             -s "SSL - The requested feature is not available" \
             -s "=> parse client hello" \
@@ -11293,11 +11301,44 @@ run_test    "TLS 1.3: Server side check - mbedtls with client authentication" \
             -s "tls13 server state: MBEDTLS_SSL_CLIENT_HELLO" \
             -s "tls13 server state: MBEDTLS_SSL_SERVER_HELLO" \
             -s "tls13 server state: MBEDTLS_SSL_ENCRYPTED_EXTENSIONS" \
+            -s "tls13 server state: MBEDTLS_SSL_CERTIFICATE_REQUEST" \
             -s "tls13 server state: MBEDTLS_SSL_SERVER_CERTIFICATE" \
+            -s "tls13 server state: MBEDTLS_SSL_CERTIFICATE_VERIFY" \
+            -s "tls13 server state: MBEDTLS_SSL_SERVER_FINISHED" \
             -c "client state: MBEDTLS_SSL_CERTIFICATE_REQUEST" \
             -s "SSL - The requested feature is not available" \
             -s "=> parse client hello" \
             -s "<= parse client hello"
+
+
+requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
+requires_config_enabled MBEDTLS_SSL_SRV_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
+run_test "TLS 1.3: server: HRR check - mbedtls" \
+         "$P_SRV debug_level=4 force_version=tls13 curves=secp384r1" \
+         "$P_CLI debug_level=4 force_version=tls13 curves=secp256r1,secp384r1" \
+         1 \
+        -s "tls13 server state: MBEDTLS_SSL_CLIENT_HELLO" \
+        -s "tls13 server state: MBEDTLS_SSL_SERVER_HELLO" \
+        -s "tls13 server state: MBEDTLS_SSL_ENCRYPTED_EXTENSIONS" \
+        -s "tls13 server state: MBEDTLS_SSL_HELLO_RETRY_REQUEST" \
+        -c "client state: MBEDTLS_SSL_ENCRYPTED_EXTENSIONS" \
+        -s "selected_group: secp384r1" \
+        -s "SSL - The requested feature is not available" \
+        -s "=> write hello retry request" \
+        -s "<= write hello retry request"
+
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
+requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_SRV_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
+run_test    "TLS 1.3: Server side check, no server certificate available" \
+            "$P_SRV debug_level=4 crt_file=none key_file=none force_version=tls13" \
+            "$P_CLI debug_level=4 force_version=tls13" \
+            1 \
+            -s "tls13 server state: MBEDTLS_SSL_SERVER_CERTIFICATE" \
+            -s "No certificate available."
 
 for i in opt-testcases/*.sh
 do
