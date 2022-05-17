@@ -1267,7 +1267,7 @@ cleanup:
  * For curves in short Weierstrass form, we do all the internal operations in
  * Jacobian coordinates.
  *
- * For multiplication, we'll use a comb method with countermeasures against
+ * For multiplication, we'll use a comb method with coutermeasueres against
  * SPA, hence timing attacks.
  */
 
@@ -1817,7 +1817,7 @@ static int ecp_precompute_comb( const mbedtls_ecp_group *grp,
     unsigned char i;
     size_t j = 0;
     const unsigned char T_size = 1U << ( w - 1 );
-    mbedtls_ecp_point *cur, *TT[COMB_MAX_PRE - 1] = {NULL};
+    mbedtls_ecp_point *cur, *TT[COMB_MAX_PRE - 1];
 
     mbedtls_mpi tmp[4];
 
@@ -2231,7 +2231,7 @@ static unsigned char ecp_pick_window_size( const mbedtls_ecp_group *grp,
  * This function is mainly responsible for administrative work:
  * - managing the restart context if enabled
  * - managing the table of precomputed points (passed between the below two
- *   functions): allocation, computation, ownership transfer, freeing.
+ *   functions): allocation, computation, ownership tranfer, freeing.
  *
  * It delegates the actual arithmetic work to:
  *      ecp_precompute_comb() and ecp_mul_comb_with_precomp()
@@ -2365,7 +2365,7 @@ cleanup:
 /*
  * For Montgomery curves, we do all the internal arithmetic in projective
  * coordinates. Import/export of points uses only the x coordinates, which is
- * internally represented as X / Z.
+ * internaly represented as X / Z.
  *
  * For scalar multiplication, we'll use a Montgomery ladder.
  */
@@ -2519,14 +2519,14 @@ static int ecp_mul_mxz( mbedtls_ecp_group *grp, mbedtls_ecp_point *R,
     MPI_ECP_LSET( &R->Z, 0 );
     mbedtls_mpi_free( &R->Y );
 
-    /* RP.X might be slightly larger than P, so reduce it */
+    /* RP.X might be sligtly larger than P, so reduce it */
     MOD_ADD( &RP.X );
 
     /* Randomize coordinates of the starting point */
     MBEDTLS_MPI_CHK( ecp_randomize_mxz( grp, &RP, f_rng, p_rng ) );
 
     /* Loop invariant: R = result so far, RP = R + P */
-    i = grp->nbits + 1; /* one past the (zero-based) required msb for private keys */
+    i = mbedtls_mpi_bitlen( m ); /* one past the (zero-based) most significant bit */
     while( i-- > 0 )
     {
         b = mbedtls_mpi_get_bit( m, i );
