@@ -34,6 +34,13 @@
 #include "ssl_tls13_keys.h"
 #include "ssl_debug_helpers.h"
 
+const uint8_t mbedtls_ssl_tls13_hello_retry_request_magic[
+                MBEDTLS_SERVER_HELLO_RANDOM_LEN ] =
+                    { 0xCF, 0x21, 0xAD, 0x74, 0xE5, 0x9A, 0x61, 0x11,
+                      0xBE, 0x1D, 0x8C, 0x02, 0x1E, 0x65, 0xB8, 0x91,
+                      0xC2, 0xA2, 0x11, 0x16, 0x7A, 0xBB, 0x8C, 0x5E,
+                      0x07, 0x9E, 0x09, 0xE2, 0xC8, 0xA8, 0x33, 0x9C };
+
 int mbedtls_ssl_tls13_fetch_handshake_msg( mbedtls_ssl_context *ssl,
                                            unsigned hs_type,
                                            unsigned char **buf,
@@ -73,80 +80,6 @@ cleanup:
 }
 
 #if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
-/* mbedtls_ssl_tls13_parse_sig_alg_ext()
- *
- * enum {
- *    ....
- *   ecdsa_secp256r1_sha256( 0x0403 ),
- *   ecdsa_secp384r1_sha384( 0x0503 ),
- *   ecdsa_secp521r1_sha512( 0x0603 ),
- *    ....
- * } SignatureScheme;
- *
- * struct {
- *    SignatureScheme supported_signature_algorithms<2..2^16-2>;
- * } SignatureSchemeList;
- */
-int mbedtls_ssl_tls13_parse_sig_alg_ext( mbedtls_ssl_context *ssl,
-                                         const unsigned char *buf,
-                                         const unsigned char *end )
-{
-    const unsigned char *p = buf;
-    size_t supported_sig_algs_len = 0;
-    const unsigned char *supported_sig_algs_end;
-    uint16_t sig_alg;
-    uint32_t common_idx = 0;
-
-    MBEDTLS_SSL_CHK_BUF_READ_PTR( p, end, 2 );
-    supported_sig_algs_len = MBEDTLS_GET_UINT16_BE( p, 0 );
-    p += 2;
-
-    memset( ssl->handshake->received_sig_algs, 0,
-            sizeof(ssl->handshake->received_sig_algs) );
-
-    MBEDTLS_SSL_CHK_BUF_READ_PTR( p, end, supported_sig_algs_len );
-    supported_sig_algs_end = p + supported_sig_algs_len;
-    while( p < supported_sig_algs_end )
-    {
-        MBEDTLS_SSL_CHK_BUF_READ_PTR( p, supported_sig_algs_end, 2 );
-        sig_alg = MBEDTLS_GET_UINT16_BE( p, 0 );
-        p += 2;
-
-        MBEDTLS_SSL_DEBUG_MSG( 4, ( "received signature algorithm: 0x%x",
-                                    sig_alg ) );
-
-        if( ! mbedtls_ssl_sig_alg_is_offered( ssl, sig_alg ) ||
-            ! mbedtls_ssl_sig_alg_is_supported( ssl, sig_alg ) )
-            continue;
-
-        if( common_idx + 1 < MBEDTLS_RECEIVED_SIG_ALGS_SIZE )
-        {
-            ssl->handshake->received_sig_algs[common_idx] = sig_alg;
-            common_idx += 1;
-        }
-    }
-    /* Check that we consumed all the message. */
-    if( p != end )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1,
-            ( "Signature algorithms extension length misaligned" ) );
-        MBEDTLS_SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR,
-                                      MBEDTLS_ERR_SSL_DECODE_ERROR );
-        return( MBEDTLS_ERR_SSL_DECODE_ERROR );
-    }
-
-    if( common_idx == 0 )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 3, ( "no signature algorithm in common" ) );
-        MBEDTLS_SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_HANDSHAKE_FAILURE,
-                                      MBEDTLS_ERR_SSL_HANDSHAKE_FAILURE );
-        return( MBEDTLS_ERR_SSL_HANDSHAKE_FAILURE );
-    }
-
-    ssl->handshake->received_sig_algs[common_idx] = MBEDTLS_TLS1_3_SIG_NONE;
-    return( 0 );
-}
-
 /*
  * STATE HANDLING: Read CertificateVerify
  */
@@ -975,7 +908,7 @@ static int ssl_tls13_get_sig_alg_from_pk( mbedtls_ssl_context *ssl,
 #endif /* MBEDTLS_RSA_C */
         default:
             MBEDTLS_SSL_DEBUG_MSG( 1,
-                                   ( "unkown signature type : %u", sig ) );
+                                   ( "unknown signature type : %u", sig ) );
             break;
     }
     return( -1 );
@@ -1510,5 +1443,88 @@ int mbedtls_ssl_reset_transcript_for_hrr( mbedtls_ssl_context *ssl )
 
     return( ret );
 }
+
+#if defined(MBEDTLS_ECDH_C)
+
+int mbedtls_ssl_tls13_read_public_ecdhe_share( mbedtls_ssl_context *ssl,
+                                               const unsigned char *buf,
+                                               size_t buf_len )
+{
+    uint8_t *p = (uint8_t*)buf;
+    const uint8_t *end = buf + buf_len;
+    mbedtls_ssl_handshake_params *handshake = ssl->handshake;
+
+    /* Get size of the TLS opaque key_exchange field of the KeyShareEntry struct. */
+    MBEDTLS_SSL_CHK_BUF_PTR( p, end, 2 );
+    uint16_t peerkey_len = MBEDTLS_GET_UINT16_BE( p, 0 );
+    p += 2;
+
+    /* Check if key size is consistent with given buffer length. */
+    MBEDTLS_SSL_CHK_BUF_PTR( p, end, peerkey_len );
+
+    /* Store peer's ECDH public key. */
+    memcpy( handshake->ecdh_psa_peerkey, p, peerkey_len );
+    handshake->ecdh_psa_peerkey_len = peerkey_len;
+
+    return( 0 );
+}
+
+int mbedtls_ssl_tls13_generate_and_write_ecdh_key_exchange(
+                mbedtls_ssl_context *ssl,
+                uint16_t named_group,
+                unsigned char *buf,
+                unsigned char *end,
+                size_t *out_len )
+{
+    psa_status_t status = PSA_ERROR_GENERIC_ERROR;
+    int ret = MBEDTLS_ERR_SSL_FEATURE_UNAVAILABLE;
+    psa_key_attributes_t key_attributes;
+    size_t own_pubkey_len;
+    mbedtls_ssl_handshake_params *handshake = ssl->handshake;
+    size_t ecdh_bits = 0;
+
+    MBEDTLS_SSL_DEBUG_MSG( 1, ( "Perform PSA-based ECDH computation." ) );
+
+    /* Convert EC group to PSA key type. */
+    if( ( handshake->ecdh_psa_type =
+        mbedtls_psa_parse_tls_ecc_group( named_group, &ecdh_bits ) ) == 0 )
+            return( MBEDTLS_ERR_SSL_HANDSHAKE_FAILURE );
+
+    ssl->handshake->ecdh_bits = ecdh_bits;
+
+    key_attributes = psa_key_attributes_init();
+    psa_set_key_usage_flags( &key_attributes, PSA_KEY_USAGE_DERIVE );
+    psa_set_key_algorithm( &key_attributes, PSA_ALG_ECDH );
+    psa_set_key_type( &key_attributes, handshake->ecdh_psa_type );
+    psa_set_key_bits( &key_attributes, handshake->ecdh_bits );
+
+    /* Generate ECDH private key. */
+    status = psa_generate_key( &key_attributes,
+                                &handshake->ecdh_psa_privkey );
+    if( status != PSA_SUCCESS )
+    {
+        ret = psa_ssl_status_to_mbedtls( status );
+        MBEDTLS_SSL_DEBUG_RET( 1, "psa_generate_key", ret );
+        return( ret );
+
+    }
+
+    /* Export the public part of the ECDH private key from PSA. */
+    status = psa_export_public_key( handshake->ecdh_psa_privkey,
+                                    buf, (size_t)( end - buf ),
+                                    &own_pubkey_len );
+    if( status != PSA_SUCCESS )
+    {
+        ret = psa_ssl_status_to_mbedtls( status );
+        MBEDTLS_SSL_DEBUG_RET( 1, "psa_export_public_key", ret );
+        return( ret );
+
+    }
+
+    *out_len = own_pubkey_len;
+
+    return( 0 );
+}
+#endif /* MBEDTLS_ECDH_C */
 
 #endif /* MBEDTLS_SSL_TLS_C && MBEDTLS_SSL_PROTO_TLS1_3 */
