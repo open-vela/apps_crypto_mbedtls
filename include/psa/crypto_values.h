@@ -1762,97 +1762,6 @@
 #define PSA_ALG_HKDF_GET_HASH(hkdf_alg)                         \
     (PSA_ALG_CATEGORY_HASH | ((hkdf_alg) & PSA_ALG_HASH_MASK))
 
-#define PSA_ALG_HKDF_EXTRACT_BASE                       ((psa_algorithm_t)0x08000400)
-/** Macro to build an HKDF-Extract algorithm.
- *
- * For example, `PSA_ALG_HKDF_EXTRACT(PSA_ALG_SHA256)` is
- * HKDF-Extract using HMAC-SHA-256.
- *
- * This key derivation algorithm uses the following inputs:
- *  - PSA_KEY_DERIVATION_INPUT_SALT is the salt.
- *  - PSA_KEY_DERIVATION_INPUT_SECRET is the input keying material used in the
- *    "extract" step.
- * The inputs are mandatory and must be passed in the order above.
- * Each input may only be passed once.
- *
- *  \warning HKDF-Extract is not meant to be used on its own. PSA_ALG_HKDF
- *  should be used instead if possible. PSA_ALG_HKDF_EXTRACT is provided
- *  as a separate algorithm for the sake of protocols that use it as a
- *  building block. It may also be a slight performance optimization
- *  in applications that use HKDF with the same salt and key but many
- *  different info strings.
- *
- *  \warning  HKDF processes the salt as follows: first hash it with hash_alg
- *  if the salt is longer than the block size of the hash algorithm; then
- *  pad with null bytes up to the block size. As a result, it is possible
- *  for distinct salt inputs to result in the same outputs. To ensure
- *  unique outputs, it is recommended to use a fixed length for salt values.
- *
- * \param hash_alg      A hash algorithm (\c PSA_ALG_XXX value such that
- *                      #PSA_ALG_IS_HASH(\p hash_alg) is true).
- *
- * \return              The corresponding HKDF-Extract algorithm.
- * \return              Unspecified if \p hash_alg is not a supported
- *                      hash algorithm.
- */
-#define PSA_ALG_HKDF_EXTRACT(hash_alg)                                  \
-    (PSA_ALG_HKDF_EXTRACT_BASE | ((hash_alg) & PSA_ALG_HASH_MASK))
-/** Whether the specified algorithm is an HKDF-Extract algorithm.
- *
- * HKDF-Extract is a family of key derivation algorithms that are based
- * on a hash function and the HMAC construction.
- *
- * \param alg An algorithm identifier (value of type #psa_algorithm_t).
- *
- * \return 1 if \c alg is an HKDF-Extract algorithm, 0 otherwise.
- *         This macro may return either 0 or 1 if \c alg is not a supported
- *         key derivation algorithm identifier.
- */
-#define PSA_ALG_IS_HKDF_EXTRACT(alg)                            \
-    (((alg) & ~PSA_ALG_HASH_MASK) == PSA_ALG_HKDF_EXTRACT_BASE)
-
-#define PSA_ALG_HKDF_EXPAND_BASE                       ((psa_algorithm_t)0x08000500)
-/** Macro to build an HKDF-Expand algorithm.
- *
- * For example, `PSA_ALG_HKDF_EXPAND(PSA_ALG_SHA256)` is
- * HKDF-Expand using HMAC-SHA-256.
- *
- * This key derivation algorithm uses the following inputs:
- *  - PSA_KEY_DERIVATION_INPUT_SECRET is the pseudoramdom key (PRK).
- *  - PSA_KEY_DERIVATION_INPUT_INFO is the info string.
- *
- *  The inputs are mandatory and must be passed in the order above.
- *  Each input may only be passed once.
- *
- *  \warning HKDF-Expand is not meant to be used on its own. `PSA_ALG_HKDF`
- *  should be used instead if possible. `PSA_ALG_HKDF_EXPAND` is provided as
- *  a separate algorithm for the sake of protocols that use it as a building
- *  block. It may also be a slight performance optimization in applications
- *  that use HKDF with the same salt and key but many different info strings.
- *
- * \param hash_alg      A hash algorithm (\c PSA_ALG_XXX value such that
- *                      #PSA_ALG_IS_HASH(\p hash_alg) is true).
- *
- * \return              The corresponding HKDF-Expand algorithm.
- * \return              Unspecified if \p hash_alg is not a supported
- *                      hash algorithm.
- */
-#define PSA_ALG_HKDF_EXPAND(hash_alg)                                  \
-    (PSA_ALG_HKDF_EXPAND_BASE | ((hash_alg) & PSA_ALG_HASH_MASK))
-/** Whether the specified algorithm is an HKDF-Expand algorithm.
- *
- * HKDF-Expand is a family of key derivation algorithms that are based
- * on a hash function and the HMAC construction.
- *
- * \param alg An algorithm identifier (value of type #psa_algorithm_t).
- *
- * \return 1 if \c alg is an HKDF-Expand algorithm, 0 otherwise.
- *         This macro may return either 0 or 1 if \c alg is not a supported
- *         key derivation algorithm identifier.
- */
-#define PSA_ALG_IS_HKDF_EXPAND(alg)                            \
-    (((alg) & ~PSA_ALG_HASH_MASK) == PSA_ALG_HKDF_EXPAND_BASE)
-
 #define PSA_ALG_TLS12_PRF_BASE                  ((psa_algorithm_t)0x08000200)
 /** Macro to build a TLS-1.2 PRF algorithm.
  *
@@ -1908,37 +1817,13 @@
  * This key derivation algorithm uses the following inputs, which must be
  * passed in the order given here:
  * - #PSA_KEY_DERIVATION_INPUT_SEED is the seed.
- * - #PSA_KEY_DERIVATION_INPUT_OTHER_SECRET is the other secret for the
- *   computation of the premaster secret. This input is optional;
- *   if omitted, it defaults to a string of null bytes with the same length
- *   as the secret (PSK) input.
  * - #PSA_KEY_DERIVATION_INPUT_SECRET is the secret key.
  * - #PSA_KEY_DERIVATION_INPUT_LABEL is the label.
  *
  * For the application to TLS-1.2, the seed (which is
  * forwarded to the TLS-1.2 PRF) is the concatenation of the
  * ClientHello.Random + ServerHello.Random,
- * the label is "master secret" or "extended master secret" and
- * the other secret depends on the key exchange specified in the cipher suite:
- * - for a plain PSK cipher suite (RFC 4279, Section 2), omit
- *   PSA_KEY_DERIVATION_INPUT_OTHER_SECRET
- * - for a DHE-PSK (RFC 4279, Section 3) or ECDHE-PSK cipher suite
- *   (RFC 5489, Section 2), the other secret should be the output of the
- *   PSA_ALG_FFDH or PSA_ALG_ECDH key agreement performed with the peer.
- *   The recommended way to pass this input is to use a key derivation
- *   algorithm constructed as
- *   PSA_ALG_KEY_AGREEMENT(ka_alg, PSA_ALG_TLS12_PSK_TO_MS(hash_alg))
- *   and to call psa_key_derivation_key_agreement(). Alternatively,
- *   this input may be an output of `psa_raw_key_agreement()` passed with
- *   psa_key_derivation_input_bytes(), or an equivalent input passed with
- *   psa_key_derivation_input_bytes() or psa_key_derivation_input_key().
- * - for a RSA-PSK cipher suite (RFC 4279, Section 4), the other secret
- *   should be the 48-byte client challenge (the PreMasterSecret of
- *   (RFC 5246, Section 7.4.7.1)) concatenation of the TLS version and
- *   a 46-byte random string chosen by the client. On the server, this is
- *   typically an output of psa_asymmetric_decrypt() using
- *   PSA_ALG_RSA_PKCS1V15_CRYPT, passed to the key derivation operation
- *   with `psa_key_derivation_input_bytes()`.
+ * and the label is "master secret" or "extended master secret".
  *
  * For example, `PSA_ALG_TLS12_PSK_TO_MS(PSA_ALG_SHA256)` represents the
  * TLS-1.2 PSK to MasterSecret derivation PRF using HMAC-SHA-256.
@@ -2568,16 +2453,6 @@ static inline int mbedtls_svc_key_id_is_null( mbedtls_svc_key_id_t key )
  * psa_key_derivation_output_key().
  */
 #define PSA_KEY_DERIVATION_INPUT_PASSWORD   ((psa_key_derivation_step_t)0x0102)
-
-/** A high-entropy additional secret input for key derivation.
- *
- * This is typically the shared secret resulting from a key agreement obtained
- * via `psa_key_derivation_key_agreement()`. It may alternatively be a key of
- * type `PSA_KEY_TYPE_DERIVE` passed to `psa_key_derivation_input_key()`, or
- * a direct input passed to `psa_key_derivation_input_bytes()`.
- */
-#define PSA_KEY_DERIVATION_INPUT_OTHER_SECRET \
-                                            ((psa_key_derivation_step_t)0x0103)
 
 /** A label for key derivation.
  *
