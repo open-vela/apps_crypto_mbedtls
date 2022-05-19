@@ -1182,6 +1182,22 @@ cleanup:
 static int ssl_tls13_postprocess_finished_message( mbedtls_ssl_context *ssl )
 {
 
+#if defined(MBEDTLS_SSL_SRV_C)
+    int ret;
+    if( ssl->conf->endpoint == MBEDTLS_SSL_IS_SERVER )
+    {
+        ret = mbedtls_ssl_tls13_generate_resumption_master_secret( ssl );
+        if( ret != 0 )
+        {
+            MBEDTLS_SSL_DEBUG_RET( 1,
+               "mbedtls_ssl_tls13_generate_resumption_master_secret ", ret );
+            return( ret );
+        }
+
+        return( 0 );
+    }
+#endif /* MBEDTLS_SSL_SRV_C */
+
 #if defined(MBEDTLS_SSL_CLI_C)
     if( ssl->conf->endpoint == MBEDTLS_SSL_IS_CLIENT )
     {
@@ -1250,8 +1266,65 @@ static int ssl_tls13_prepare_finished_message( mbedtls_ssl_context *ssl )
 
 static int ssl_tls13_finalize_finished_message( mbedtls_ssl_context *ssl )
 {
-    // TODO: Add back resumption keys calculation after MVP.
-    ((void) ssl);
+    int ret = 0;
+#if defined(MBEDTLS_SSL_CLI_C)
+    if( ssl->conf->endpoint == MBEDTLS_SSL_IS_CLIENT )
+    {
+        ret = mbedtls_ssl_tls13_generate_resumption_master_secret( ssl );
+        if( ret != 0 )
+        {
+            MBEDTLS_SSL_DEBUG_RET( 1,
+                    "mbedtls_ssl_tls13_generate_resumption_master_secret ", ret );
+            return ( ret );
+        }
+
+    }
+    else
+#endif /* MBEDTLS_SSL_CLI_C */
+
+#if defined(MBEDTLS_SSL_SRV_C)
+    if( ssl->conf->endpoint == MBEDTLS_SSL_IS_SERVER )
+    {
+        mbedtls_ssl_key_set traffic_keys;
+        mbedtls_ssl_transform *transform_application;
+
+        ret = mbedtls_ssl_tls13_key_schedule_stage_application( ssl );
+        if( ret != 0 )
+        {
+            MBEDTLS_SSL_DEBUG_RET( 1,
+               "mbedtls_ssl_tls13_key_schedule_stage_application", ret );
+            return( ret );
+        }
+
+        ret = mbedtls_ssl_tls13_generate_application_keys(
+                     ssl, &traffic_keys );
+        if( ret != 0 )
+        {
+            MBEDTLS_SSL_DEBUG_RET( 1,
+                  "mbedtls_ssl_tls13_generate_application_keys", ret );
+            return( ret );
+        }
+
+        transform_application =
+            mbedtls_calloc( 1, sizeof( mbedtls_ssl_transform ) );
+        if( transform_application == NULL )
+            return( MBEDTLS_ERR_SSL_ALLOC_FAILED );
+
+        ret = mbedtls_ssl_tls13_populate_transform(
+            transform_application, ssl->conf->endpoint,
+            ssl->session_negotiate->ciphersuite,
+            &traffic_keys, ssl );
+        if( ret != 0 )
+            return( ret );
+
+        ssl->transform_application = transform_application;
+    }
+    else
+#endif /* MBEDTLS_SSL_SRV_C */
+    {
+        /* Should never happen */
+        return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
+    }
 
     return( 0 );
 }
@@ -1309,6 +1382,12 @@ void mbedtls_ssl_tls13_handshake_wrapup( mbedtls_ssl_context *ssl )
 {
 
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "=> handshake wrapup" ) );
+
+    MBEDTLS_SSL_DEBUG_MSG( 1, ( "Switch to application keys for inbound traffic" ) );
+    mbedtls_ssl_set_inbound_transform ( ssl, ssl->transform_application );
+
+    MBEDTLS_SSL_DEBUG_MSG( 1, ( "Switch to application keys for outbound traffic" ) );
+    mbedtls_ssl_set_outbound_transform( ssl, ssl->transform_application );
 
     /*
      * Free the previous session and switch to the current one.
