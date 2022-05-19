@@ -22,6 +22,8 @@
 #if defined(MBEDTLS_SSL_SRV_C) && defined(MBEDTLS_SSL_PROTO_TLS1_3)
 
 #include "mbedtls/debug.h"
+#include "mbedtls/error.h"
+#include "mbedtls/platform.h"
 
 #include "ssl_misc.h"
 #include "ssl_tls13_keys.h"
@@ -38,6 +40,10 @@
 #define mbedtls_calloc    calloc
 #define mbedtls_free       free
 #endif /* MBEDTLS_PLATFORM_C */
+
+#include "ssl_misc.h"
+#include "ssl_tls13_keys.h"
+#include "ssl_debug_helpers.h"
 
 /* From RFC 8446:
  *   struct {
@@ -1024,6 +1030,26 @@ static int ssl_tls13_write_server_hello_body( mbedtls_ssl_context *ssl,
     return( ret );
 }
 
+static int ssl_tls13_finalize_write_server_hello( mbedtls_ssl_context *ssl )
+{
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+    ret = mbedtls_ssl_tls13_compute_handshake_transform( ssl );
+    if( ret != 0 )
+    {
+        MBEDTLS_SSL_DEBUG_RET( 1,
+                               "mbedtls_ssl_tls13_compute_handshake_transform",
+                               ret );
+        return( ret );
+    }
+
+    mbedtls_ssl_set_outbound_transform( ssl,
+                                        ssl->handshake->transform_handshake );
+    MBEDTLS_SSL_DEBUG_MSG(
+        3, ( "switching to handshake transform for outbound data" ) );
+
+    return( ret );
+}
+
 static int ssl_tls13_write_server_hello( mbedtls_ssl_context *ssl )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
@@ -1047,12 +1073,208 @@ static int ssl_tls13_write_server_hello( mbedtls_ssl_context *ssl )
     MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_finish_handshake_msg(
                               ssl, buf_len, msg_len ) );
 
+    MBEDTLS_SSL_PROC_CHK( ssl_tls13_finalize_write_server_hello( ssl ) );
+
     mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_ENCRYPTED_EXTENSIONS );
+
 cleanup:
 
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= write server hello" ) );
     return( ret );
 }
+
+/*
+ * Handler for MBEDTLS_SSL_ENCRYPTED_EXTENSIONS
+ */
+
+/*
+ * struct {
+ *    Extension extensions<0..2 ^ 16 - 1>;
+ * } EncryptedExtensions;
+ *
+ */
+static int ssl_tls13_write_encrypted_extensions_body( mbedtls_ssl_context *ssl,
+                                                      unsigned char *buf,
+                                                      unsigned char *end,
+                                                      size_t *out_len )
+{
+    unsigned char *p = buf;
+    size_t extensions_len = 0;
+    unsigned char *p_extensions_len;
+
+    *out_len = 0;
+
+    MBEDTLS_SSL_CHK_BUF_PTR( p, end, 2 );
+    p_extensions_len = p;
+    p += 2;
+
+    ((void) ssl);
+
+    extensions_len = ( p - p_extensions_len ) - 2;
+    MBEDTLS_PUT_UINT16_BE( extensions_len, p_extensions_len, 0 );
+
+    *out_len = p - buf;
+
+    MBEDTLS_SSL_DEBUG_BUF( 4, "encrypted extensions", buf, *out_len );
+
+    return( 0 );
+}
+
+static int ssl_tls13_write_encrypted_extensions( mbedtls_ssl_context *ssl )
+{
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+    unsigned char *buf;
+    size_t buf_len, msg_len;
+
+    MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> write encrypted extensions" ) );
+
+    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_start_handshake_msg( ssl,
+                       MBEDTLS_SSL_HS_ENCRYPTED_EXTENSIONS, &buf, &buf_len ) );
+
+    MBEDTLS_SSL_PROC_CHK( ssl_tls13_write_encrypted_extensions_body(
+                              ssl, buf, buf + buf_len, &msg_len ) );
+
+    mbedtls_ssl_add_hs_msg_to_checksum(
+        ssl, MBEDTLS_SSL_HS_ENCRYPTED_EXTENSIONS, buf, msg_len );
+
+    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_finish_handshake_msg(
+                              ssl, buf_len, msg_len ) );
+
+#if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
+    if( mbedtls_ssl_tls13_some_psk_enabled( ssl ) )
+        mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_SERVER_FINISHED );
+    else
+        mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CERTIFICATE_REQUEST );
+#else
+    mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_SERVER_FINISHED );
+#endif
+
+cleanup:
+
+    MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= write encrypted extensions" ) );
+    return( ret );
+}
+
+#if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
+#define SSL_CERTIFICATE_REQUEST_SEND_REQUEST 0
+#define SSL_CERTIFICATE_REQUEST_SKIP         1
+/* Coordination:
+ * Check whether a CertificateRequest message should be written.
+ * Returns a negative code on failure, or
+ * - SSL_CERTIFICATE_REQUEST_SEND_REQUEST
+ * - SSL_CERTIFICATE_REQUEST_SKIP
+ * indicating if the writing of the CertificateRequest
+ * should be skipped or not.
+ */
+static int ssl_tls13_certificate_request_coordinate( mbedtls_ssl_context *ssl )
+{
+    int authmode;
+
+    authmode = ssl->conf->authmode;
+
+    if( authmode == MBEDTLS_SSL_VERIFY_NONE )
+        return( SSL_CERTIFICATE_REQUEST_SKIP );
+
+    return( SSL_CERTIFICATE_REQUEST_SEND_REQUEST );
+}
+
+/*
+ * struct {
+ *   opaque certificate_request_context<0..2^8-1>;
+ *   Extension extensions<2..2^16-1>;
+ * } CertificateRequest;
+ *
+ */
+static int ssl_tls13_write_certificate_request_body( mbedtls_ssl_context *ssl,
+                                                     unsigned char *buf,
+                                                     const unsigned char *end,
+                                                     size_t *out_len )
+{
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+    unsigned char *p = buf;
+    size_t output_len = 0;
+    unsigned char *p_extensions_len;
+
+    *out_len = 0;
+
+    /* Check if we have enough space:
+     * - certificate_request_context (1 byte)
+     * - extensions length           (2 bytes)
+     */
+    MBEDTLS_SSL_CHK_BUF_PTR( p, end, 3 );
+
+    /*
+     * Write certificate_request_context
+     */
+    /*
+     * We use a zero length context for the normal handshake
+     * messages. For post-authentication handshake messages
+     * this request context would be set to a non-zero value.
+     */
+    *p++ = 0x0;
+
+    /*
+     * Write extensions
+     */
+    /* The extensions must contain the signature_algorithms. */
+    p_extensions_len = p;
+    p += 2;
+    ret = mbedtls_ssl_write_sig_alg_ext( ssl, p, end, &output_len );
+    if( ret != 0 )
+        return( ret );
+
+    p += output_len;
+    MBEDTLS_PUT_UINT16_BE( p - p_extensions_len - 2, p_extensions_len, 0 );
+
+    *out_len = p - buf;
+
+    return( 0 );
+}
+
+static int ssl_tls13_write_certificate_request( mbedtls_ssl_context *ssl )
+{
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+
+    MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> write certificate request" ) );
+
+    MBEDTLS_SSL_PROC_CHK_NEG( ssl_tls13_certificate_request_coordinate( ssl ) );
+
+    if( ret == SSL_CERTIFICATE_REQUEST_SEND_REQUEST )
+    {
+        unsigned char *buf;
+        size_t buf_len, msg_len;
+
+        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_start_handshake_msg( ssl,
+                MBEDTLS_SSL_HS_CERTIFICATE_REQUEST, &buf, &buf_len ) );
+
+        MBEDTLS_SSL_PROC_CHK( ssl_tls13_write_certificate_request_body(
+                                  ssl, buf, buf + buf_len, &msg_len ) );
+
+        mbedtls_ssl_add_hs_msg_to_checksum(
+            ssl, MBEDTLS_SSL_HS_CERTIFICATE_REQUEST, buf, msg_len );
+
+        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_finish_handshake_msg(
+                                  ssl, buf_len, msg_len ) );
+    }
+    else if( ret == SSL_CERTIFICATE_REQUEST_SKIP )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= skip write certificate request" ) );
+        ret = 0;
+    }
+    else
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
+        ret = MBEDTLS_ERR_SSL_INTERNAL_ERROR;
+        goto cleanup;
+    }
+
+    mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_SERVER_CERTIFICATE );
+cleanup:
+
+    MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= write certificate request" ) );
+    return( ret );
+}
+#endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
 
 /*
  * TLS 1.3 State Machine -- server side
@@ -1088,6 +1310,21 @@ int mbedtls_ssl_tls13_handshake_server_step( mbedtls_ssl_context *ssl )
         case MBEDTLS_SSL_SERVER_HELLO:
             ret = ssl_tls13_write_server_hello( ssl );
             break;
+
+        case MBEDTLS_SSL_ENCRYPTED_EXTENSIONS:
+            ret = ssl_tls13_write_encrypted_extensions( ssl );
+            if( ret != 0 )
+            {
+                MBEDTLS_SSL_DEBUG_RET( 1, "ssl_tls13_write_encrypted_extensions", ret );
+                return( ret );
+            }
+            break;
+
+#if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
+        case MBEDTLS_SSL_CERTIFICATE_REQUEST:
+            ret = ssl_tls13_write_certificate_request( ssl );
+            break;
+#endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
 
         default:
             MBEDTLS_SSL_DEBUG_MSG( 1, ( "invalid state %d", ssl->state ) );
