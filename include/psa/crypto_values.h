@@ -489,12 +489,8 @@
  *
  * ChaCha20 and the ChaCha20_Poly1305 construction are defined in RFC 7539.
  *
- * \note For ChaCha20 and ChaCha20_Poly1305, Mbed TLS only supports
- *       12-byte nonces.
- *
- * \note For ChaCha20, the initial counter value is 0. To encrypt or decrypt
- *       with the initial counter value 1, you can process and discard a
- *       64-byte block before the real data.
+ * Implementations must support 12-byte nonces, may support 8-byte nonces,
+ * and should reject other sizes.
  */
 #define PSA_KEY_TYPE_CHACHA20                       ((psa_key_type_t)0x2004)
 
@@ -1460,7 +1456,7 @@
  * with a random per-message secret number (*k*).
  *
  * The representation of the signature as a byte string consists of
- * the concatenation of the signature values *r* and *s*. Each of
+ * the concatentation of the signature values *r* and *s*. Each of
  * *r* and *s* is encoded as an *N*-octet string, where *N* is the length
  * of the base point of the curve in octets. Each value is represented
  * in big-endian order (most significant octet first).
@@ -1765,6 +1761,97 @@
     (((alg) & ~PSA_ALG_HASH_MASK) == PSA_ALG_HKDF_BASE)
 #define PSA_ALG_HKDF_GET_HASH(hkdf_alg)                         \
     (PSA_ALG_CATEGORY_HASH | ((hkdf_alg) & PSA_ALG_HASH_MASK))
+
+#define PSA_ALG_HKDF_EXTRACT_BASE                       ((psa_algorithm_t)0x08000400)
+/** Macro to build an HKDF-Extract algorithm.
+ *
+ * For example, `PSA_ALG_HKDF_EXTRACT(PSA_ALG_SHA256)` is
+ * HKDF-Extract using HMAC-SHA-256.
+ *
+ * This key derivation algorithm uses the following inputs:
+ *  - PSA_KEY_DERIVATION_INPUT_SALT is the salt.
+ *  - PSA_KEY_DERIVATION_INPUT_SECRET is the input keying material used in the
+ *    "extract" step.
+ * The inputs are mandatory and must be passed in the order above.
+ * Each input may only be passed once.
+ *
+ *  \warning HKDF-Extract is not meant to be used on its own. PSA_ALG_HKDF
+ *  should be used instead if possible. PSA_ALG_HKDF_EXTRACT is provided
+ *  as a separate algorithm for the sake of protocols that use it as a
+ *  building block. It may also be a slight performance optimization
+ *  in applications that use HKDF with the same salt and key but many
+ *  different info strings.
+ *
+ *  \warning  HKDF processes the salt as follows: first hash it with hash_alg
+ *  if the salt is longer than the block size of the hash algorithm; then
+ *  pad with null bytes up to the block size. As a result, it is possible
+ *  for distinct salt inputs to result in the same outputs. To ensure
+ *  unique outputs, it is recommended to use a fixed length for salt values.
+ *
+ * \param hash_alg      A hash algorithm (\c PSA_ALG_XXX value such that
+ *                      #PSA_ALG_IS_HASH(\p hash_alg) is true).
+ *
+ * \return              The corresponding HKDF-Extract algorithm.
+ * \return              Unspecified if \p hash_alg is not a supported
+ *                      hash algorithm.
+ */
+#define PSA_ALG_HKDF_EXTRACT(hash_alg)                                  \
+    (PSA_ALG_HKDF_EXTRACT_BASE | ((hash_alg) & PSA_ALG_HASH_MASK))
+/** Whether the specified algorithm is an HKDF-Extract algorithm.
+ *
+ * HKDF-Extract is a family of key derivation algorithms that are based
+ * on a hash function and the HMAC construction.
+ *
+ * \param alg An algorithm identifier (value of type #psa_algorithm_t).
+ *
+ * \return 1 if \c alg is an HKDF-Extract algorithm, 0 otherwise.
+ *         This macro may return either 0 or 1 if \c alg is not a supported
+ *         key derivation algorithm identifier.
+ */
+#define PSA_ALG_IS_HKDF_EXTRACT(alg)                            \
+    (((alg) & ~PSA_ALG_HASH_MASK) == PSA_ALG_HKDF_EXTRACT_BASE)
+
+#define PSA_ALG_HKDF_EXPAND_BASE                       ((psa_algorithm_t)0x08000500)
+/** Macro to build an HKDF-Expand algorithm.
+ *
+ * For example, `PSA_ALG_HKDF_EXPAND(PSA_ALG_SHA256)` is
+ * HKDF-Expand using HMAC-SHA-256.
+ *
+ * This key derivation algorithm uses the following inputs:
+ *  - PSA_KEY_DERIVATION_INPUT_SECRET is the pseudoramdom key (PRK).
+ *  - PSA_KEY_DERIVATION_INPUT_INFO is the info string.
+ *
+ *  The inputs are mandatory and must be passed in the order above.
+ *  Each input may only be passed once.
+ *
+ *  \warning HKDF-Expand is not meant to be used on its own. `PSA_ALG_HKDF`
+ *  should be used instead if possible. `PSA_ALG_HKDF_EXPAND` is provided as
+ *  a separate algorithm for the sake of protocols that use it as a building
+ *  block. It may also be a slight performance optimization in applications
+ *  that use HKDF with the same salt and key but many different info strings.
+ *
+ * \param hash_alg      A hash algorithm (\c PSA_ALG_XXX value such that
+ *                      #PSA_ALG_IS_HASH(\p hash_alg) is true).
+ *
+ * \return              The corresponding HKDF-Expand algorithm.
+ * \return              Unspecified if \p hash_alg is not a supported
+ *                      hash algorithm.
+ */
+#define PSA_ALG_HKDF_EXPAND(hash_alg)                                  \
+    (PSA_ALG_HKDF_EXPAND_BASE | ((hash_alg) & PSA_ALG_HASH_MASK))
+/** Whether the specified algorithm is an HKDF-Expand algorithm.
+ *
+ * HKDF-Expand is a family of key derivation algorithms that are based
+ * on a hash function and the HMAC construction.
+ *
+ * \param alg An algorithm identifier (value of type #psa_algorithm_t).
+ *
+ * \return 1 if \c alg is an HKDF-Expand algorithm, 0 otherwise.
+ *         This macro may return either 0 or 1 if \c alg is not a supported
+ *         key derivation algorithm identifier.
+ */
+#define PSA_ALG_IS_HKDF_EXPAND(alg)                            \
+    (((alg) & ~PSA_ALG_HASH_MASK) == PSA_ALG_HKDF_EXPAND_BASE)
 
 #define PSA_ALG_TLS12_PRF_BASE                  ((psa_algorithm_t)0x08000200)
 /** Macro to build a TLS-1.2 PRF algorithm.
@@ -2273,8 +2360,8 @@ static inline int mbedtls_svc_key_id_is_null( mbedtls_svc_key_id_t key )
 #else /* MBEDTLS_PSA_CRYPTO_KEY_ID_ENCODES_OWNER */
 
 #define MBEDTLS_SVC_KEY_ID_INIT ( (mbedtls_svc_key_id_t){ 0, 0 } )
-#define MBEDTLS_SVC_KEY_ID_GET_KEY_ID( id ) ( ( id ).MBEDTLS_PRIVATE(key_id) )
-#define MBEDTLS_SVC_KEY_ID_GET_OWNER_ID( id ) ( ( id ).MBEDTLS_PRIVATE(owner) )
+#define MBEDTLS_SVC_KEY_ID_GET_KEY_ID( id ) ( ( id ).key_id )
+#define MBEDTLS_SVC_KEY_ID_GET_OWNER_ID( id ) ( ( id ).owner )
 
 /** Utility to initialize a key identifier at runtime.
  *
