@@ -209,6 +209,96 @@ static int ssl_parse_renegotiation_info( mbedtls_ssl_context *ssl,
     return( 0 );
 }
 
+#if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
+
+/*
+ * Status of the implementation of signature-algorithms extension:
+ *
+ * Currently, we are only considering the signature-algorithm extension
+ * to pick a ciphersuite which allows us to send the ServerKeyExchange
+ * message with a signature-hash combination that the user allows.
+ *
+ * We do *not* check whether all certificates in our certificate
+ * chain are signed with an allowed signature-hash pair.
+ * This needs to be done at a later stage.
+ *
+ */
+static int ssl_parse_sig_alg_ext( mbedtls_ssl_context *ssl,
+                                  const unsigned char *buf,
+                                  size_t len )
+{
+    size_t sig_alg_list_size;
+
+    const unsigned char *p;
+    const unsigned char *end = buf + len;
+
+    mbedtls_md_type_t md_cur;
+    mbedtls_pk_type_t sig_cur;
+
+    if ( len < 2 ) {
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad client hello message" ) );
+        mbedtls_ssl_send_alert_message( ssl, MBEDTLS_SSL_ALERT_LEVEL_FATAL,
+                                       MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR );
+        return( MBEDTLS_ERR_SSL_DECODE_ERROR );
+    }
+    sig_alg_list_size = ( ( buf[0] << 8 ) | ( buf[1] ) );
+    if( sig_alg_list_size + 2 != len ||
+        sig_alg_list_size % 2 != 0 )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad client hello message" ) );
+        mbedtls_ssl_send_alert_message( ssl, MBEDTLS_SSL_ALERT_LEVEL_FATAL,
+                                        MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR );
+        return( MBEDTLS_ERR_SSL_DECODE_ERROR );
+    }
+
+    /* Currently we only guarantee signing the ServerKeyExchange message according
+     * to the constraints specified in this extension (see above), so it suffices
+     * to remember only one suitable hash for each possible signature algorithm.
+     *
+     * This will change when we also consider certificate signatures,
+     * in which case we will need to remember the whole signature-hash
+     * pair list from the extension.
+     */
+
+    for( p = buf + 2; p < end; p += 2 )
+    {
+        /* Silently ignore unknown signature or hash algorithms. */
+
+        if( ( sig_cur = mbedtls_ssl_pk_alg_from_sig( p[1] ) ) == MBEDTLS_PK_NONE )
+        {
+            MBEDTLS_SSL_DEBUG_MSG( 3, ( "client hello v3, signature_algorithm ext"
+                                        " unknown sig alg encoding %d", p[1] ) );
+            continue;
+        }
+
+        /* Check if we support the hash the user proposes */
+        md_cur = mbedtls_ssl_md_alg_from_hash( p[0] );
+        if( md_cur == MBEDTLS_MD_NONE )
+        {
+            MBEDTLS_SSL_DEBUG_MSG( 3, ( "client hello v3, signature_algorithm ext:"
+                                        " unknown hash alg encoding %d", p[0] ) );
+            continue;
+        }
+
+        if( mbedtls_ssl_sig_alg_is_offered(
+                ssl, MBEDTLS_GET_UINT16_BE( p, 0 ) ) )
+        {
+            mbedtls_ssl_sig_hash_set_add( &ssl->handshake->hash_algs, sig_cur, md_cur );
+            MBEDTLS_SSL_DEBUG_MSG( 3, ( "client hello v3, signature_algorithm ext:"
+                                        " match sig %u and hash %u",
+                                        (unsigned) sig_cur, (unsigned) md_cur ) );
+        }
+        else
+        {
+            MBEDTLS_SSL_DEBUG_MSG( 3, ( "client hello v3, signature_algorithm ext: "
+                                        "hash alg %u not supported", (unsigned) md_cur ) );
+        }
+    }
+
+    return( 0 );
+}
+#endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
+
 #if defined(MBEDTLS_ECDH_C) || defined(MBEDTLS_ECDSA_C) || \
     defined(MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED)
 /*
@@ -988,8 +1078,7 @@ static int ssl_ciphersuite_match( mbedtls_ssl_context *ssl, int suite_id,
      * a suitable hash algorithm is present. */
     sig_type = mbedtls_ssl_get_ciphersuite_sig_alg( suite_info );
     if( sig_type != MBEDTLS_PK_NONE &&
-        mbedtls_ssl_tls12_get_preferred_hash_for_sig_alg(
-            ssl, mbedtls_ssl_sig_from_pk_alg( sig_type ) ) == MBEDTLS_SSL_HASH_NONE )
+        mbedtls_ssl_sig_hash_set_find( &ssl->handshake->hash_algs, sig_type ) == MBEDTLS_MD_NONE )
     {
         MBEDTLS_SSL_DEBUG_MSG( 3, ( "ciphersuite mismatch: no suitable hash algorithm "
                                     "for signature algorithm %u", (unsigned) sig_type ) );
@@ -1172,7 +1261,7 @@ read_record_header:
      * Handshake layer:
      *     0  .   0   handshake type
      *     1  .   3   handshake length
-     *     4  .   5   DTLS only: message sequence number
+     *     4  .   5   DTLS only: message seqence number
      *     6  .   8   DTLS only: fragment offset
      *     9  .  11   DTLS only: fragment length
      */
@@ -1504,7 +1593,7 @@ read_record_header:
             case MBEDTLS_TLS_EXT_SIG_ALG:
                 MBEDTLS_SSL_DEBUG_MSG( 3, ( "found signature_algorithms extension" ) );
 
-                ret = mbedtls_ssl_parse_sig_alg_ext( ssl, ext + 4, ext + 4 + ext_size );
+                ret = ssl_parse_sig_alg_ext( ssl, ext + 4, ext_size );
                 if( ret != 0 )
                     return( ret );
 
@@ -1628,27 +1717,18 @@ read_record_header:
      * Try to fall back to default hash SHA1 if the client
      * hasn't provided any preferred signature-hash combinations.
      */
-    if( ! sig_hash_alg_ext_present )
+    if( sig_hash_alg_ext_present == 0 )
     {
-        uint16_t *received_sig_algs = ssl->handshake->received_sig_algs;
-        const uint16_t default_sig_algs[] = {
-#if defined(MBEDTLS_ECDSA_C)
-            MBEDTLS_SSL_TLS12_SIG_AND_HASH_ALG( MBEDTLS_SSL_SIG_ECDSA,
-                                                MBEDTLS_SSL_HASH_SHA1 ),
-#endif
-#if defined(MBEDTLS_RSA_C)
-            MBEDTLS_SSL_TLS12_SIG_AND_HASH_ALG( MBEDTLS_SSL_SIG_RSA,
-                                                MBEDTLS_SSL_HASH_SHA1 ),
-#endif
-            MBEDTLS_TLS_SIG_NONE
-        };
+        uint16_t sig_algs[] = { MBEDTLS_SSL_SIG_ALG(MBEDTLS_SSL_HASH_SHA1) };
+        mbedtls_md_type_t md_default = MBEDTLS_MD_NONE;
+        for( i = 0; i < sizeof( sig_algs ) / sizeof( sig_algs[0] ) ; i++ )
+        {
+            if( mbedtls_ssl_sig_alg_is_offered( ssl, sig_algs[ i ] ) )
+                md_default = MBEDTLS_MD_SHA1;
+        }
 
-#if defined(static_assert)
-        static_assert( sizeof( default_sig_algs ) / sizeof( default_sig_algs[0] ) <=
-                       MBEDTLS_RECEIVED_SIG_ALGS_SIZE, "default_sig_algs is too big" );
-#endif
-
-        memcpy( received_sig_algs, default_sig_algs, sizeof( default_sig_algs ) );
+        mbedtls_ssl_sig_hash_set_const_hash( &ssl->handshake->hash_algs,
+                                             md_default );
     }
 
 #endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
@@ -1809,10 +1889,10 @@ have_ciphersuite:
     mbedtls_pk_type_t sig_alg = mbedtls_ssl_get_ciphersuite_sig_alg( ciphersuite_info );
     if( sig_alg != MBEDTLS_PK_NONE )
     {
-        unsigned int sig_hash = mbedtls_ssl_tls12_get_preferred_hash_for_sig_alg(
-                                    ssl, mbedtls_ssl_sig_from_pk_alg( sig_alg ) );
-        MBEDTLS_SSL_DEBUG_MSG( 3, ( "client hello v3, signature_algorithm ext: %u",
-                                    sig_hash ) );
+        mbedtls_md_type_t md_alg = mbedtls_ssl_sig_hash_set_find( &ssl->handshake->hash_algs,
+                                                              sig_alg );
+        MBEDTLS_SSL_DEBUG_MSG( 3, ( "client hello v3, signature_algorithm ext: %d",
+                                    mbedtls_ssl_hash_from_md_alg( md_alg ) ) );
     }
     else
     {
@@ -2648,7 +2728,7 @@ static int ssl_write_certificate_request( mbedtls_ssl_context *ssl )
     if( sig_alg == NULL )
         return( MBEDTLS_ERR_SSL_BAD_CONFIG );
 
-    for( ; *sig_alg != MBEDTLS_TLS_SIG_NONE; sig_alg++ )
+    for( ; *sig_alg != MBEDTLS_TLS1_3_SIG_NONE; sig_alg++ )
     {
         unsigned char hash = MBEDTLS_BYTE_1( *sig_alg );
 
@@ -3175,18 +3255,15 @@ curve_matching_done:
          *      to choose appropriate hash.
          */
 
+        mbedtls_md_type_t md_alg;
         mbedtls_pk_type_t sig_alg =
             mbedtls_ssl_get_ciphersuite_sig_pk_alg( ciphersuite_info );
 
-        unsigned int sig_hash =
-            mbedtls_ssl_tls12_get_preferred_hash_for_sig_alg(
-                ssl, mbedtls_ssl_sig_from_pk_alg( sig_alg ) );
-
-        mbedtls_md_type_t md_alg = mbedtls_ssl_md_alg_from_hash( sig_hash );
-
         /*    For TLS 1.2, obey signature-hash-algorithm extension
          *    (RFC 5246, Sec. 7.4.1.4.1). */
-        if( sig_alg == MBEDTLS_PK_NONE || md_alg == MBEDTLS_MD_NONE )
+        if( sig_alg == MBEDTLS_PK_NONE ||
+            ( md_alg = mbedtls_ssl_sig_hash_set_find( &ssl->handshake->hash_algs,
+                                                      sig_alg ) ) == MBEDTLS_MD_NONE )
         {
             MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
             /* (... because we choose a cipher suite
