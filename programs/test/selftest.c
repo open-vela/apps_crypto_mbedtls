@@ -35,6 +35,7 @@
 #include "mbedtls/sha1.h"
 #include "mbedtls/sha256.h"
 #include "mbedtls/sha512.h"
+#include "mbedtls/sha3.h"
 #include "mbedtls/arc4.h"
 #include "mbedtls/des.h"
 #include "mbedtls/aes.h"
@@ -260,6 +261,9 @@ const selftest_t selftests[] =
 #endif
 #if defined(MBEDTLS_SHA512_C)
     { "sha512", mbedtls_sha512_self_test },
+#endif
+#if defined(MBEDTLS_SHA3_C)
+    {"sha3", mbedtls_sha3_self_test},
 #endif
 #if defined(MBEDTLS_ARC4_C)
     {"arc4", mbedtls_arc4_self_test},
