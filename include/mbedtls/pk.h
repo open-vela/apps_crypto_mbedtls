@@ -330,8 +330,8 @@ int mbedtls_pk_setup( mbedtls_pk_context *ctx, const mbedtls_pk_info_t *info );
  *                  storing and manipulating the key material directly.
  *
  * \param ctx       The context to initialize. It must be empty (type NONE).
- * \param key       The PSA key to wrap, which must hold an ECC or RSA key
- *                  pair (see notes below).
+ * \param key       The PSA key to wrap, which must hold an ECC key pair
+ *                  (see notes below).
  *
  * \note            The wrapped key must remain valid as long as the
  *                  wrapping PK context is in use, that is at least between
@@ -339,8 +339,8 @@ int mbedtls_pk_setup( mbedtls_pk_context *ctx, const mbedtls_pk_info_t *info );
  *                  mbedtls_pk_free() is called on this context. The wrapped
  *                  key might then be independently used or destroyed.
  *
- * \note            This function is currently only available for ECC or RSA
- *                  key pairs (that is, keys containing private key material).
+ * \note            This function is currently only available for ECC key
+ *                  pairs (that is, ECC keys containing private key material).
  *                  Support for other key types may be added later.
  *
  * \return          \c 0 on success.
@@ -410,38 +410,6 @@ static inline size_t mbedtls_pk_get_len( const mbedtls_pk_context *ctx )
  *                  cleared with mbedtls_pk_free().
  */
 int mbedtls_pk_can_do( const mbedtls_pk_context *ctx, mbedtls_pk_type_t type );
-
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
-/**
- * \brief           Tell if context can do the operation given by PSA algorithm
- *
- * \param ctx       The context to query. It must have been initialized.
- * \param alg       PSA algorithm to check against, the following are allowed:
- *                  PSA_ALG_RSA_PKCS1V15_SIGN(hash),
- *                  PSA_ALG_RSA_PSS(hash),
- *                  PSA_ALG_RSA_PKCS1V15_CRYPT,
- *                  PSA_ALG_ECDSA(hash),
- *                  PSA_ALG_ECDH, where hash is a specific hash.
- * \param usage  PSA usage flag to check against, must be composed of:
- *                  PSA_KEY_USAGE_SIGN_HASH
- *                  PSA_KEY_USAGE_DECRYPT
- *                  PSA_KEY_USAGE_DERIVE.
- *                  Context key must match all passed usage flags.
- *
- * \warning         Since the set of allowed algorithms and usage flags may be
- *                  expanded in the future, the return value \c 0 should not
- *                  be taken in account for non-allowed algorithms and usage
- *                  flags.
- *
- * \return          1 if the context can do operations on the given type.
- * \return          0 if the context cannot do the operations on the given
- *                  type, for non-allowed algorithms and usage flags, or
- *                  for a context that has been initialized but not set up
- *                  or that has been cleared with mbedtls_pk_free().
- */
-int mbedtls_pk_can_do_ext( const mbedtls_pk_context *ctx, psa_algorithm_t alg,
-                           psa_key_usage_t usage );
-#endif /* MBEDTLS_USE_PSA_CRYPTO */
 
 /**
  * \brief           Verify signature (including padding if relevant).
@@ -949,29 +917,29 @@ int mbedtls_pk_load_file( const char *path, unsigned char **buf, size_t *n );
 
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
 /**
- * \brief           Turn an EC or RSA key into an opaque one.
+ * \brief           Turn an EC key into an opaque one.
  *
  * \warning         This is a temporary utility function for tests. It might
  *                  change or be removed at any time without notice.
  *
- * \param pk        Input: the EC or RSA key to import to a PSA key.
+ * \note            Only ECDSA keys are supported so far. Signing with the
+ *                  specified hash & ECDH key agreement derivation operation
+ *                  are the only allowed use of that key.
+ *
+ * \param pk        Input: the EC key to import to a PSA key.
  *                  Output: a PK context wrapping that PSA key.
  * \param key       Output: a PSA key identifier.
  *                  It's the caller's responsibility to call
  *                  psa_destroy_key() on that key identifier after calling
  *                  mbedtls_pk_free() on the PK context.
- * \param alg       The algorithm to allow for use with that key.
- * \param usage     The usage to allow for use with that key.
- * \param alg2      The secondary algorithm to allow for use with that key.
+ * \param hash_alg  The hash algorithm to allow for use with that key.
  *
  * \return          \c 0 if successful.
  * \return          An Mbed TLS error code otherwise.
  */
 int mbedtls_pk_wrap_as_opaque( mbedtls_pk_context *pk,
                                mbedtls_svc_key_id_t *key,
-                               psa_algorithm_t alg,
-                               psa_key_usage_t usage,
-                               psa_algorithm_t alg2 );
+                               psa_algorithm_t hash_alg );
 #endif /* MBEDTLS_USE_PSA_CRYPTO */
 
 #ifdef __cplusplus
