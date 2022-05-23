@@ -190,9 +190,7 @@ mbedtls_x509_subject_alternative_name;
 typedef struct mbedtls_x509_crt_profile
 {
     uint32_t allowed_mds;       /**< MDs for signatures         */
-    uint32_t allowed_pks;       /**< PK algs for public keys;
-                                 *   this applies to all certificates
-                                 *   in the provided chain.     */
+    uint32_t allowed_pks;       /**< PK algs for signatures     */
     uint32_t allowed_curves;    /**< Elliptic curves for ECDSA  */
     uint32_t rsa_min_bitlen;    /**< Minimum size for RSA keys  */
 }
@@ -968,7 +966,7 @@ void mbedtls_x509_crt_restart_free( mbedtls_x509_crt_restart_ctx *ctx );
 void mbedtls_x509write_crt_init( mbedtls_x509write_cert *ctx );
 
 /**
- * \brief           Set the version for a Certificate
+ * \brief           Set the verion for a Certificate
  *                  Default: MBEDTLS_X509_CRT_VERSION_3
  *
  * \param ctx       CRT context to use
