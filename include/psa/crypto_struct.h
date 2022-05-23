@@ -203,12 +203,11 @@ typedef struct
     defined(MBEDTLS_PSA_BUILTIN_ALG_TLS12_PSK_TO_MS)
 typedef enum
 {
-    PSA_TLS12_PRF_STATE_INIT,             /* no input provided */
-    PSA_TLS12_PRF_STATE_SEED_SET,         /* seed has been set */
-    PSA_TLS12_PRF_STATE_OTHER_KEY_SET,    /* other key has been set - optional */
-    PSA_TLS12_PRF_STATE_KEY_SET,          /* key has been set */
-    PSA_TLS12_PRF_STATE_LABEL_SET,        /* label has been set */
-    PSA_TLS12_PRF_STATE_OUTPUT            /* output has been started */
+    PSA_TLS12_PRF_STATE_INIT,       /* no input provided */
+    PSA_TLS12_PRF_STATE_SEED_SET,   /* seed has been set */
+    PSA_TLS12_PRF_STATE_KEY_SET,    /* key has been set */
+    PSA_TLS12_PRF_STATE_LABEL_SET,  /* label has been set */
+    PSA_TLS12_PRF_STATE_OUTPUT      /* output has been started */
 } psa_tls12_prf_key_derivation_state_t;
 
 typedef struct psa_tls12_prf_key_derivation_s
@@ -232,10 +231,6 @@ typedef struct psa_tls12_prf_key_derivation_s
     size_t MBEDTLS_PRIVATE(seed_length);
     uint8_t *MBEDTLS_PRIVATE(label);
     size_t MBEDTLS_PRIVATE(label_length);
-#if defined(MBEDTLS_PSA_BUILTIN_ALG_TLS12_PSK_TO_MS)
-    uint8_t *MBEDTLS_PRIVATE(other_secret);
-    size_t MBEDTLS_PRIVATE(other_secret_length);
-#endif /* MBEDTLS_PSA_BUILTIN_ALG_TLS12_PSK_TO_MS */
 
     uint8_t MBEDTLS_PRIVATE(Ai)[PSA_HASH_MAX_SIZE];
 
@@ -462,7 +457,7 @@ static inline void psa_set_key_type( psa_key_attributes_t *attributes,
     }
     else
     {
-        /* Call the bigger function to free the old domain parameters.
+        /* Call the bigger function to free the old domain paramteres.
          * Ignore any errors which may arise due to type requiring
          * non-default domain parameters, since this function can't
          * report errors. */
