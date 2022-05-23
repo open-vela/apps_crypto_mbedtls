@@ -37,7 +37,7 @@
 #include <string.h>
 
 /*
- * Initialize context
+ * Initialze context
  */
 void mbedtls_ssl_ticket_init( mbedtls_ssl_ticket_context *ctx )
 {
@@ -70,7 +70,7 @@ static int ssl_ticket_gen_key( mbedtls_ssl_ticket_context *ctx,
                                unsigned char index )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
-    unsigned char buf[MAX_KEY_BYTES] = {0};
+    unsigned char buf[MAX_KEY_BYTES];
     mbedtls_ssl_ticket_key *key = ctx->keys + index;
 
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
@@ -216,23 +216,19 @@ int mbedtls_ssl_ticket_setup( mbedtls_ssl_ticket_context *ctx,
     uint32_t lifetime )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
-    size_t key_bits;
+    const mbedtls_cipher_info_t *cipher_info;
 
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
     psa_algorithm_t alg;
     psa_key_type_t key_type;
-#else
-    const mbedtls_cipher_info_t *cipher_info;
-#endif /* MBEDTLS_USE_PSA_CRYPTO */
+    size_t key_bits;
+#endif
 
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
-    if( mbedtls_ssl_cipher_to_psa( cipher, TICKET_AUTH_TAG_BYTES,
-                                   &alg, &key_type, &key_bits ) != PSA_SUCCESS )
-        return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
+    ctx->f_rng = f_rng;
+    ctx->p_rng = p_rng;
 
-    if( PSA_ALG_IS_AEAD( alg ) == 0 )
-        return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
-#else
+    ctx->ticket_lifetime = lifetime;
+
     cipher_info = mbedtls_cipher_info_from_type( cipher );
 
     if( mbedtls_cipher_info_get_mode( cipher_info ) != MBEDTLS_MODE_GCM &&
@@ -242,18 +238,14 @@ int mbedtls_ssl_ticket_setup( mbedtls_ssl_ticket_context *ctx,
         return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
     }
 
-    key_bits = mbedtls_cipher_info_get_key_bitlen( cipher_info );
-#endif /* MBEDTLS_USE_PSA_CRYPTO */
-
-    if( key_bits > 8 * MAX_KEY_BYTES )
+    if( mbedtls_cipher_info_get_key_bitlen( cipher_info ) > 8 * MAX_KEY_BYTES )
         return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
 
-    ctx->f_rng = f_rng;
-    ctx->p_rng = p_rng;
-
-    ctx->ticket_lifetime = lifetime;
-
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
+    if( mbedtls_ssl_cipher_to_psa( cipher_info->type, TICKET_AUTH_TAG_BYTES,
+                                   &alg, &key_type, &key_bits ) != PSA_SUCCESS )
+        return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
+
     ctx->keys[0].alg = alg;
     ctx->keys[0].key_type = key_type;
     ctx->keys[0].key_bits = key_bits;

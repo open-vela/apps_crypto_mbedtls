@@ -100,8 +100,7 @@ int mbedtls_pk_error_from_psa( psa_status_t status )
     }
 }
 
-#if defined(PSA_WANT_KEY_TYPE_RSA_PUBLIC_KEY) ||    \
-    defined(PSA_WANT_KEY_TYPE_RSA_KEY_PAIR)
+#if defined(PSA_WANT_KEY_TYPE_RSA_PUBLIC_KEY)
 int mbedtls_pk_error_from_psa_rsa( psa_status_t status )
 {
     switch( status )
@@ -122,7 +121,7 @@ int mbedtls_pk_error_from_psa_rsa( psa_status_t status )
             return( mbedtls_pk_error_from_psa( status ) );
     }
 }
-#endif /* PSA_WANT_KEY_TYPE_RSA_PUBLIC_KEY || PSA_WANT_KEY_TYPE_RSA_KEY_PAIR */
+#endif
 
 #endif /* MBEDTLS_PSA_CRYPTO_C */
 
@@ -1494,16 +1493,13 @@ static size_t pk_opaque_get_bitlen( const void *ctx )
     return( bits );
 }
 
-static int pk_opaque_ecdsa_can_do( mbedtls_pk_type_t type )
+static int pk_opaque_can_do( mbedtls_pk_type_t type )
 {
+    /* For now opaque PSA keys can only wrap ECC keypairs,
+     * as checked by setup_psa().
+     * Also, ECKEY_DH does not really make sense with the current API. */
     return( type == MBEDTLS_PK_ECKEY ||
             type == MBEDTLS_PK_ECDSA );
-}
-
-static int pk_opaque_rsa_can_do( mbedtls_pk_type_t type )
-{
-    return( type == MBEDTLS_PK_RSA ||
-            type == MBEDTLS_PK_RSASSA_PSS );
 }
 
 static int pk_opaque_sign_wrap( void *ctx, mbedtls_md_type_t md_alg,
@@ -1511,7 +1507,7 @@ static int pk_opaque_sign_wrap( void *ctx, mbedtls_md_type_t md_alg,
                    unsigned char *sig, size_t sig_size, size_t *sig_len,
                    int (*f_rng)(void *, unsigned char *, size_t), void *p_rng )
 {
-#if !defined(MBEDTLS_ECDSA_C) && !defined(MBEDTLS_RSA_C)
+#if !defined(MBEDTLS_ECDSA_C)
     ((void) ctx);
     ((void) md_alg);
     ((void) hash);
@@ -1522,129 +1518,38 @@ static int pk_opaque_sign_wrap( void *ctx, mbedtls_md_type_t md_alg,
     ((void) f_rng);
     ((void) p_rng);
     return( MBEDTLS_ERR_PK_FEATURE_UNAVAILABLE );
-#else /* !MBEDTLS_ECDSA_C && !MBEDTLS_RSA_C */
+#else /* !MBEDTLS_ECDSA_C */
     const mbedtls_svc_key_id_t *key = (const mbedtls_svc_key_id_t *) ctx;
-    psa_key_attributes_t attributes = PSA_KEY_ATTRIBUTES_INIT;
-    psa_algorithm_t alg;
-    psa_key_type_t type;
+    psa_algorithm_t alg = PSA_ALG_ECDSA( mbedtls_psa_translate_md( md_alg ) );
     psa_status_t status;
 
     /* PSA has its own RNG */
     (void) f_rng;
     (void) p_rng;
-
-    status = psa_get_key_attributes( *key, &attributes );
-    if( status != PSA_SUCCESS )
-        return( mbedtls_pk_error_from_psa( status ) );
-
-    type = psa_get_key_type( &attributes );
-    psa_reset_key_attributes( &attributes );
-
-#if defined(MBEDTLS_ECDSA_C)
-    if( PSA_KEY_TYPE_IS_ECC_KEY_PAIR( type ) )
-        alg = PSA_ALG_ECDSA( mbedtls_psa_translate_md( md_alg ) );
-    else
-#endif /* MBEDTLS_ECDSA_C */
-#if defined(MBEDTLS_RSA_C)
-    if( PSA_KEY_TYPE_IS_RSA( type ) )
-        alg = PSA_ALG_RSA_PKCS1V15_SIGN( mbedtls_psa_translate_md( md_alg ) );
-    else
-#endif /* MBEDTLS_RSA_C */
-        return( MBEDTLS_ERR_PK_FEATURE_UNAVAILABLE );
 
     /* make the signature */
     status = psa_sign_hash( *key, alg, hash, hash_len,
                             sig, sig_size, sig_len );
     if( status != PSA_SUCCESS )
-    {
-#if defined(MBEDTLS_ECDSA_C)
-        if( PSA_KEY_TYPE_IS_ECC_KEY_PAIR( type ) )
-            return( mbedtls_pk_error_from_psa_ecdsa( status ) );
-        else
-#endif /* MBEDTLS_ECDSA_C */
-#if defined(MBEDTLS_RSA_C)
-        if( PSA_KEY_TYPE_IS_RSA( type ) )
-            return( mbedtls_pk_error_from_psa_rsa( status ) );
-        else
-#endif /* MBEDTLS_RSA_C */
-            return( mbedtls_pk_error_from_psa( status ) );
-    }
+        return( mbedtls_pk_error_from_psa_ecdsa( status ) );
 
-#if defined(MBEDTLS_ECDSA_C)
-    if( PSA_KEY_TYPE_IS_ECC_KEY_PAIR( type ) )
-        /* transcode it to ASN.1 sequence */
-        return( pk_ecdsa_sig_asn1_from_psa( sig, sig_len, sig_size ) );
-#endif /* MBEDTLS_ECDSA_C */
-
-    return 0;
-#endif /* !MBEDTLS_ECDSA_C && !MBEDTLS_RSA_C */
+    /* transcode it to ASN.1 sequence */
+    return( pk_ecdsa_sig_asn1_from_psa( sig, sig_len, sig_size ) );
+#endif /* !MBEDTLS_ECDSA_C */
 }
 
-const mbedtls_pk_info_t mbedtls_pk_ecdsa_opaque_info = {
+const mbedtls_pk_info_t mbedtls_pk_opaque_info = {
     MBEDTLS_PK_OPAQUE,
     "Opaque",
     pk_opaque_get_bitlen,
-    pk_opaque_ecdsa_can_do,
+    pk_opaque_can_do,
     NULL, /* verify - will be done later */
     pk_opaque_sign_wrap,
 #if defined(MBEDTLS_ECDSA_C) && defined(MBEDTLS_ECP_RESTARTABLE)
     NULL, /* restartable verify - not relevant */
     NULL, /* restartable sign - not relevant */
 #endif
-    NULL, /* decrypt - not relevant */
-    NULL, /* encrypt - not relevant */
-    NULL, /* check_pair - could be done later or left NULL */
-    pk_opaque_alloc_wrap,
-    pk_opaque_free_wrap,
-#if defined(MBEDTLS_ECDSA_C) && defined(MBEDTLS_ECP_RESTARTABLE)
-    NULL, /* restart alloc - not relevant */
-    NULL, /* restart free - not relevant */
-#endif
-    NULL, /* debug - could be done later, or even left NULL */
-};
-
-#if defined(PSA_WANT_KEY_TYPE_RSA_KEY_PAIR)
-static int pk_opaque_rsa_decrypt( void *ctx,
-                    const unsigned char *input, size_t ilen,
-                    unsigned char *output, size_t *olen, size_t osize,
-                    int (*f_rng)(void *, unsigned char *, size_t), void *p_rng )
-{
-    const mbedtls_svc_key_id_t *key = (const mbedtls_svc_key_id_t *) ctx;
-    psa_status_t status;
-
-    /* PSA has its own RNG */
-    (void) f_rng;
-    (void) p_rng;
-
-    status = psa_asymmetric_decrypt( *key, PSA_ALG_RSA_PKCS1V15_CRYPT,
-                                     input, ilen,
-                                     NULL, 0,
-                                     output, osize, olen );
-    if( status != PSA_SUCCESS )
-    {
-        return( mbedtls_pk_error_from_psa_rsa( status ) );
-    }
-
-    return 0;
-}
-#endif /* PSA_WANT_KEY_TYPE_RSA_KEY_PAIR */
-
-const mbedtls_pk_info_t mbedtls_pk_rsa_opaque_info = {
-    MBEDTLS_PK_OPAQUE,
-    "Opaque",
-    pk_opaque_get_bitlen,
-    pk_opaque_rsa_can_do,
-    NULL, /* verify - will be done later */
-    pk_opaque_sign_wrap,
-#if defined(MBEDTLS_ECDSA_C) && defined(MBEDTLS_ECP_RESTARTABLE)
-    NULL, /* restartable verify - not relevant */
-    NULL, /* restartable sign - not relevant */
-#endif
-#if defined(PSA_WANT_KEY_TYPE_RSA_KEY_PAIR)
-    pk_opaque_rsa_decrypt,
-#else
-    NULL, /* decrypt - not available */
-#endif /* PSA_WANT_KEY_TYPE_RSA_PUBLIC_KEY */
+    NULL, /* decrypt - will be done later */
     NULL, /* encrypt - will be done later */
     NULL, /* check_pair - could be done later or left NULL */
     pk_opaque_alloc_wrap,
