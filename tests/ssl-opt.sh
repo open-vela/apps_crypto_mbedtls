@@ -82,7 +82,6 @@ if [ -n "${OPENSSL_NEXT:-}" ]; then
     O_NEXT_SRV="$OPENSSL_NEXT s_server -www -cert data_files/server5.crt -key data_files/server5.key"
     O_NEXT_SRV_NO_CERT="$OPENSSL_NEXT s_server -www "
     O_NEXT_CLI="echo 'GET / HTTP/1.0' | $OPENSSL_NEXT s_client -CAfile data_files/test-ca_cat12.crt"
-    O_NEXT_CLI_NO_CERT="echo 'GET / HTTP/1.0' | $OPENSSL_NEXT s_client"
 else
     O_NEXT_SRV=false
     O_NEXT_SRV_NO_CERT=false
@@ -99,7 +98,6 @@ fi
 
 if [ -n "${GNUTLS_NEXT_CLI:-}" ]; then
     G_NEXT_CLI="echo 'GET / HTTP/1.0' | $GNUTLS_NEXT_CLI --x509cafile data_files/test-ca_cat12.crt"
-    G_NEXT_CLI_NO_CERT="echo 'GET / HTTP/1.0' | $GNUTLS_NEXT_CLI"
 else
     G_NEXT_CLI=false
 fi
@@ -1540,7 +1538,6 @@ SRV_DELAY_SECONDS=0
 # Note: Using 'localhost' rather than 127.0.0.1 here is unwise, as on many
 # machines that will resolve to ::1, and we don't want ipv6 here.
 P_SRV="$P_SRV server_addr=127.0.0.1 server_port=$SRV_PORT"
-P_SRV_NO_CERT="$P_SRV server_addr=127.0.0.1 server_port=$SRV_PORT"
 P_CLI="$P_CLI server_addr=127.0.0.1 server_port=+SRV_PORT"
 P_PXY="$P_PXY server_addr=127.0.0.1 server_port=$SRV_PORT listen_addr=127.0.0.1 listen_port=$PXY_PORT ${SEED:+"seed=$SEED"}"
 O_SRV="$O_SRV -accept $SRV_PORT"
@@ -1557,7 +1554,6 @@ if [ -n "${OPENSSL_NEXT:-}" ]; then
     O_NEXT_SRV="$O_NEXT_SRV -accept $SRV_PORT"
     O_NEXT_SRV_NO_CERT="$O_NEXT_SRV_NO_CERT -accept $SRV_PORT"
     O_NEXT_CLI="$O_NEXT_CLI -connect 127.0.0.1:+SRV_PORT"
-    O_NEXT_CLI_NO_CERT="$O_NEXT_CLI_NO_CERT -connect 127.0.0.1:+SRV_PORT"
 fi
 
 if [ -n "${GNUTLS_NEXT_SERV:-}" ]; then
@@ -11245,10 +11241,6 @@ run_test    "TLS 1.3: Server side check - openssl" \
             -s "tls13 server state: MBEDTLS_SSL_CLIENT_FINISHED" \
             -s "tls13 server state: MBEDTLS_SSL_HANDSHAKE_WRAPUP"
 
-# Skip this test before openssl exit code issue fixed
-# On fail, openssl return different exit code on OpenCI and internal CI for
-# this test.
-skip_next_test
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_DEBUG_C
 requires_config_enabled MBEDTLS_SSL_SRV_C
@@ -11256,7 +11248,7 @@ requires_openssl_tls1_3
 run_test    "TLS 1.3: Server side check - openssl with client authentication" \
             "$P_SRV debug_level=4 auth_mode=required crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13 tickets=0" \
             "$O_NEXT_CLI -msg -debug -cert data_files/server5.crt -key data_files/server5.key -tls1_3 -no_middlebox" \
-            1 \
+            0 \
             -s "tls13 server state: MBEDTLS_SSL_CLIENT_HELLO" \
             -s "tls13 server state: MBEDTLS_SSL_SERVER_HELLO" \
             -s "tls13 server state: MBEDTLS_SSL_ENCRYPTED_EXTENSIONS" \
@@ -11295,7 +11287,7 @@ requires_config_enabled MBEDTLS_SSL_SRV_C
 run_test    "TLS 1.3: Server side check - gnutls with client authentication" \
             "$P_SRV debug_level=4 auth_mode=required crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13 tickets=0" \
             "$G_NEXT_CLI localhost -d 4 --x509certfile data_files/server5.crt --x509keyfile data_files/server5.key --priority=NORMAL:-VERS-ALL:+VERS-TLS1.3:%NO_TICKETS:%DISABLE_TLS13_COMPAT_MODE -V" \
-            1 \
+            0 \
             -s "tls13 server state: MBEDTLS_SSL_CLIENT_HELLO" \
             -s "tls13 server state: MBEDTLS_SSL_SERVER_HELLO" \
             -s "tls13 server state: MBEDTLS_SSL_ENCRYPTED_EXTENSIONS" \
@@ -11333,7 +11325,7 @@ requires_config_enabled MBEDTLS_SSL_CLI_C
 run_test    "TLS 1.3: Server side check - mbedtls with client authentication" \
             "$P_SRV debug_level=4 auth_mode=required crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13 tickets=0" \
             "$P_CLI debug_level=4 crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13" \
-            1 \
+            0 \
             -s "tls13 server state: MBEDTLS_SSL_CLIENT_HELLO" \
             -s "tls13 server state: MBEDTLS_SSL_SERVER_HELLO" \
             -s "tls13 server state: MBEDTLS_SSL_ENCRYPTED_EXTENSIONS" \
@@ -11343,6 +11335,40 @@ run_test    "TLS 1.3: Server side check - mbedtls with client authentication" \
             -s "=> parse client hello" \
             -s "<= parse client hello"
 
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
+requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_SRV_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
+run_test    "TLS 1.3: Server side check - mbedtls with client empty certificate" \
+            "$P_SRV debug_level=4 auth_mode=required crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13 tickets=0" \
+            "$P_CLI debug_level=4 crt_file=none key_file=none force_version=tls13" \
+            1 \
+            -s "tls13 server state: MBEDTLS_SSL_CLIENT_HELLO" \
+            -s "tls13 server state: MBEDTLS_SSL_SERVER_HELLO" \
+            -s "tls13 server state: MBEDTLS_SSL_ENCRYPTED_EXTENSIONS" \
+            -s "tls13 server state: MBEDTLS_SSL_SERVER_CERTIFICATE" \
+            -s "=> write certificate request" \
+            -s "SSL - No client certification received from the client, but required by the authentication mode" \
+            -c "client state: MBEDTLS_SSL_CERTIFICATE_REQUEST" \
+            -s "=> parse client hello" \
+            -s "<= parse client hello"
+
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
+requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_SRV_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
+run_test    "TLS 1.3: Server side check - mbedtls with optional client authentication" \
+            "$P_SRV debug_level=4 auth_mode=optional crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13 tickets=0" \
+            "$P_CLI debug_level=4 force_version=tls13 crt_file=none key_file=none" \
+            0 \
+            -s "tls13 server state: MBEDTLS_SSL_CLIENT_HELLO" \
+            -s "tls13 server state: MBEDTLS_SSL_SERVER_HELLO" \
+            -s "tls13 server state: MBEDTLS_SSL_ENCRYPTED_EXTENSIONS" \
+            -s "tls13 server state: MBEDTLS_SSL_SERVER_CERTIFICATE" \
+            -s "=> write certificate request" \
+            -c "client state: MBEDTLS_SSL_CERTIFICATE_REQUEST" \
+            -s "=> parse client hello" \
+            -s "<= parse client hello"
 
 requires_config_enabled MBEDTLS_DEBUG_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
