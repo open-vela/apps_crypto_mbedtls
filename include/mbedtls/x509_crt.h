@@ -114,7 +114,7 @@ mbedtls_x509_crt;
 typedef struct mbedtls_x509_san_other_name
 {
     /**
-     * The type_id is an OID as defined in RFC 5280.
+     * The type_id is an OID as deifned in RFC 5280.
      * To check the value of the type id, you should use
      * \p MBEDTLS_OID_CMP with a known OID mbedtls_x509_buf.
      */
@@ -968,7 +968,7 @@ void mbedtls_x509_crt_restart_free( mbedtls_x509_crt_restart_ctx *ctx );
 void mbedtls_x509write_crt_init( mbedtls_x509write_cert *ctx );
 
 /**
- * \brief           Set the version for a Certificate
+ * \brief           Set the verion for a Certificate
  *                  Default: MBEDTLS_X509_CRT_VERSION_3
  *
  * \param ctx       CRT context to use
@@ -1084,7 +1084,7 @@ int mbedtls_x509write_crt_set_extension( mbedtls_x509write_cert *ctx,
  * \param is_ca     is this a CA certificate
  * \param max_pathlen   maximum length of certificate chains below this
  *                      certificate (only for CA certificates, -1 is
- *                      unlimited)
+ *                      inlimited)
  *
  * \return          0 if successful, or a MBEDTLS_ERR_X509_ALLOC_FAILED
  */
@@ -1138,23 +1138,6 @@ int mbedtls_x509write_crt_set_key_usage( mbedtls_x509write_cert *ctx,
  */
 int mbedtls_x509write_crt_set_ns_cert_type( mbedtls_x509write_cert *ctx,
                                     unsigned char ns_cert_type );
-
-/**
- * \brief               Query certificate for given extension type
- *
- * \param[in] ctx       Certificate context to be queried, must not be \c NULL
- * \param ext_type      Extension type being queried for, must be a valid
- *                      extension type. Must be one of the MBEDTLS_X509_EXT_XXX
- *                      values
- *
- * \return              0 if the given extension type is not present,
- *                      non-zero otherwise
- */
-static inline int mbedtls_x509_crt_has_ext_type( const mbedtls_x509_crt *ctx,
-                                                 int ext_type )
-{
-    return ctx->MBEDTLS_PRIVATE(ext_types) & ext_type;
-}
 
 /**
  * \brief           Free the contents of a CRT write context
