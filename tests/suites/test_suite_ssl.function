@@ -886,7 +886,6 @@ exit:
  *
  * \retval  0 on success, otherwise error code.
  */
-
 int mbedtls_endpoint_init( mbedtls_endpoint *ep, int endpoint_type, int pk_alg,
                            mbedtls_test_message_socket_context *dtls_context,
                            mbedtls_test_message_queue *input_queue,
@@ -913,8 +912,6 @@ int mbedtls_endpoint_init( mbedtls_endpoint *ep, int endpoint_type, int pk_alg,
         mbedtls_ctr_drbg_random,
         &( ep->ctr_drbg ) );
     mbedtls_entropy_init( &( ep->entropy ) );
-
-
 
     TEST_ASSERT( mbedtls_ssl_conf_get_user_data_p( &ep->conf ) == NULL );
     TEST_EQUAL( mbedtls_ssl_conf_get_user_data_n( &ep->conf ), 0 );
@@ -2099,17 +2096,6 @@ void perform_handshake( handshake_test_options* options )
     }
 
     TEST_ASSERT( mbedtls_ssl_is_handshake_over( &client.ssl ) == 1 );
-
-    /* Make sure server state is moved to HANDSHAKE_OVER also. */
-    TEST_ASSERT( mbedtls_move_handshake_to_state( &(server.ssl),
-                                                  &(client.ssl),
-                                                  MBEDTLS_SSL_HANDSHAKE_OVER )
-                 ==  expected_handshake_result );
-    if( expected_handshake_result != 0 )
-    {
-        goto exit;
-    }
-
     TEST_ASSERT( mbedtls_ssl_is_handshake_over( &server.ssl ) == 1 );
 
     /* Check that both sides have negotiated the expected version. */
@@ -2243,7 +2229,7 @@ void perform_handshake( handshake_test_options* options )
 
         /* After calling mbedtls_ssl_renegotiate for the client all renegotiation
          * should happen inside this function. However in this test, we cannot
-         * perform simultaneous communication between client and server so this
+         * perform simultaneous communication betwen client and server so this
          * function will return waiting error on the socket. All rest of
          * renegotiation should happen during data exchanging */
         ret = mbedtls_ssl_renegotiate( &(client.ssl) );
@@ -2335,7 +2321,7 @@ void test_callback_buffer_sanity()
     TEST_ASSERT( mbedtls_test_buffer_get( NULL, NULL, 0 ) == -1 );
 
     /* Make sure calling put and get on a buffer that hasn't been set up results
-     * in error. */
+     * in eror. */
     mbedtls_test_buffer_init( &buf );
 
     TEST_ASSERT( mbedtls_test_buffer_put( &buf, input, sizeof( input ) ) == -1 );
@@ -4881,7 +4867,7 @@ exit:
 }
 /* END_CASE */
 
-/* BEGIN_CASE depends_on:MBEDTLS_X509_CRT_PARSE_C:MBEDTLS_RSA_C:MBEDTLS_ECP_DP_SECP384R1_ENABLED:MBEDTLS_PKCS1_V15:MBEDTLS_ENTROPY_C:MBEDTLS_CTR_DRBG_C */
+/* BEGIN_CASE depends_on:MBEDTLS_X509_CRT_PARSE_C:MBEDTLS_RSA_C:MBEDTLS_ECP_DP_SECP384R1_ENABLED:!MBEDTLS_SSL_PROTO_TLS1_3:MBEDTLS_PKCS1_V15:MBEDTLS_ENTROPY_C:MBEDTLS_ENTROPY_C:MBEDTLS_CTR_DRBG_C */
 void move_handshake_to_state(int endpoint_type, int state, int need_pass)
 {
     enum { BUFFSIZE = 1024 };
@@ -4910,16 +4896,12 @@ void move_handshake_to_state(int endpoint_type, int state, int need_pass)
                                            state );
     if( need_pass )
     {
-        TEST_ASSERT( ret == 0 ||
-                     ret == MBEDTLS_ERR_SSL_WANT_READ ||
-                     ret == MBEDTLS_ERR_SSL_WANT_WRITE );
+        TEST_ASSERT( ret == 0 );
         TEST_ASSERT( base_ep.ssl.state == state );
     }
     else
     {
-        TEST_ASSERT( ret != 0 &&
-                     ret != MBEDTLS_ERR_SSL_WANT_READ &&
-                     ret != MBEDTLS_ERR_SSL_WANT_WRITE );
+        TEST_ASSERT( ret != 0 );
         TEST_ASSERT( base_ep.ssl.state != state );
     }
 
@@ -5328,7 +5310,6 @@ void test_multiple_psks()
 
     mbedtls_ssl_config conf;
 
-    USE_PSA_INIT( );
     mbedtls_ssl_config_init( &conf );
 
     TEST_ASSERT( mbedtls_ssl_conf_psk( &conf,
@@ -5342,8 +5323,6 @@ void test_multiple_psks()
 exit:
 
     mbedtls_ssl_config_free( &conf );
-
-    USE_PSA_DONE( );
 }
 /* END_CASE */
 
