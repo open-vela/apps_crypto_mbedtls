@@ -76,7 +76,7 @@
 #endif
 
 #if defined(MBEDTLS_CMAC_C) && \
-    ( !defined(MBEDTLS_CIPHER_C ) || ( !defined(MBEDTLS_AES_C) && !defined(MBEDTLS_DES_C) ) )
+    !defined(MBEDTLS_AES_C) && !defined(MBEDTLS_DES_C)
 #error "MBEDTLS_CMAC_C defined, but not all prerequisites"
 #endif
 
@@ -146,28 +146,11 @@
 #endif
 
 #if defined(MBEDTLS_PK_PARSE_C) && !defined(MBEDTLS_ASN1_PARSE_C)
-#error "MBEDTLS_PK_PARSE_C defined, but not all prerequisites"
+#error "MBEDTLS_PK_PARSE_C defined, but not all prerequesites"
 #endif
 
-#if defined(MBEDTLS_PKCS12_C) && !defined(MBEDTLS_CIPHER_C)
-#error "MBEDTLS_PKCS12_C defined, but not all prerequisites"
-#endif
-
-#if defined(MBEDTLS_PKCS5_C) && (!defined(MBEDTLS_MD_C) || \
-                                 !defined(MBEDTLS_CIPHER_C))
-#error "MBEDTLS_PKCS5_C defined, but not all prerequisites"
-#endif
-
-#if defined(MBEDTLS_PKCS12_C) && !defined(MBEDTLS_MD_C)
-#error "MBEDTLS_PKCS12_C defined, but not all prerequisites"
-#endif
-
-#if defined(MBEDTLS_PKCS1_V15) && !defined(MBEDTLS_MD_C)
-#error "MBEDTLS_PKCS1_V15 defined, but not all prerequisites"
-#endif
-
-#if defined(MBEDTLS_PKCS1_V21) && !defined(MBEDTLS_MD_C)
-#error "MBEDTLS_PKCS1_V21 defined, but not all prerequisites"
+#if defined(MBEDTLS_PKCS5_C) && !defined(MBEDTLS_MD_C)
+#error "MBEDTLS_PKCS5_C defined, but not all prerequesites"
 #endif
 
 #if defined(MBEDTLS_ENTROPY_C) && (!defined(MBEDTLS_SHA512_C) &&      \
@@ -339,11 +322,11 @@
 #endif
 
 #if defined(MBEDTLS_MEMORY_BACKTRACE) && !defined(MBEDTLS_MEMORY_BUFFER_ALLOC_C)
-#error "MBEDTLS_MEMORY_BACKTRACE defined, but not all prerequisites"
+#error "MBEDTLS_MEMORY_BACKTRACE defined, but not all prerequesites"
 #endif
 
 #if defined(MBEDTLS_MEMORY_DEBUG) && !defined(MBEDTLS_MEMORY_BUFFER_ALLOC_C)
-#error "MBEDTLS_MEMORY_DEBUG defined, but not all prerequisites"
+#error "MBEDTLS_MEMORY_DEBUG defined, but not all prerequesites"
 #endif
 
 #if defined(MBEDTLS_PADLOCK_C) && !defined(MBEDTLS_HAVE_ASM)
@@ -359,7 +342,7 @@
 #endif
 
 #if defined(MBEDTLS_PK_C) && \
-    ( !defined(MBEDTLS_MD_C) || ( !defined(MBEDTLS_RSA_C) && !defined(MBEDTLS_ECP_C) ) )
+    ( !defined(MBEDTLS_RSA_C) && !defined(MBEDTLS_ECP_C) )
 #error "MBEDTLS_PK_C defined, but not all prerequisites"
 #endif
 
@@ -565,10 +548,6 @@
          defined(MBEDTLS_ENTROPY_C) ) ||                                \
        defined(MBEDTLS_PSA_CRYPTO_EXTERNAL_RNG) )
 #error "MBEDTLS_PSA_CRYPTO_C defined, but not all prerequisites (missing RNG)"
-#endif
-
-#if defined(MBEDTLS_PSA_CRYPTO_C) && !defined(MBEDTLS_CIPHER_C )
-#error "MBEDTLS_PSA_CRYPTO_C defined, but not all prerequisites"
 #endif
 
 #if defined(MBEDTLS_PSA_CRYPTO_SPM) && !defined(MBEDTLS_PSA_CRYPTO_C)
@@ -801,16 +780,15 @@
 
 #if defined(MBEDTLS_SSL_ENCRYPT_THEN_MAC) &&   \
     !defined(MBEDTLS_SSL_PROTO_TLS1_2)
-#error "MBEDTLS_SSL_ENCRYPT_THEN_MAC defined, but not all prerequisites"
+#error "MBEDTLS_SSL_ENCRYPT_THEN_MAC defined, but not all prerequsites"
 #endif
 
 #if defined(MBEDTLS_SSL_EXTENDED_MASTER_SECRET) && \
     !defined(MBEDTLS_SSL_PROTO_TLS1_2)
-#error "MBEDTLS_SSL_EXTENDED_MASTER_SECRET defined, but not all prerequisites"
+#error "MBEDTLS_SSL_EXTENDED_MASTER_SECRET defined, but not all prerequsites"
 #endif
 
-#if defined(MBEDTLS_SSL_TICKET_C) && ( !defined(MBEDTLS_CIPHER_C) && \
-                                       !defined(MBEDTLS_USE_PSA_CRYPTO) )
+#if defined(MBEDTLS_SSL_TICKET_C) && !defined(MBEDTLS_CIPHER_C)
 #error "MBEDTLS_SSL_TICKET_C defined, but not all prerequisites"
 #endif
 
