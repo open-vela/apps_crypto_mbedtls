@@ -31,16 +31,8 @@
 #define MBEDTLS_CONFIG_PSA_H
 
 #if defined(MBEDTLS_PSA_CRYPTO_CONFIG)
-#if defined(MBEDTLS_PSA_CRYPTO_CONFIG_FILE)
-#include MBEDTLS_PSA_CRYPTO_CONFIG_FILE
-#else
 #include "psa/crypto_config.h"
-#endif
 #endif /* defined(MBEDTLS_PSA_CRYPTO_CONFIG) */
-
-#if defined(MBEDTLS_PSA_CRYPTO_USER_CONFIG_FILE)
-#include MBEDTLS_PSA_CRYPTO_USER_CONFIG_FILE
-#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -56,12 +48,6 @@ extern "C" {
 #define PSA_WANT_ALG_ECDSA PSA_WANT_ALG_ECDSA_ANY
 #elif !defined(PSA_WANT_ALG_ECDSA_ANY) && defined(PSA_WANT_ALG_ECDSA)
 #define PSA_WANT_ALG_ECDSA_ANY PSA_WANT_ALG_ECDSA
-#endif
-
-#if defined(PSA_WANT_ALG_CCM_STAR_NO_TAG) && !defined(PSA_WANT_ALG_CCM)
-#define PSA_WANT_ALG_CCM PSA_WANT_ALG_CCM_STAR_NO_TAG
-#elif !defined(PSA_WANT_ALG_CCM_STAR_NO_TAG) && defined(PSA_WANT_ALG_CCM)
-#define PSA_WANT_ALG_CCM_STAR_NO_TAG PSA_WANT_ALG_CCM
 #endif
 
 #if defined(PSA_WANT_ALG_RSA_PKCS1V15_SIGN_RAW) && !defined(PSA_WANT_ALG_RSA_PKCS1V15_SIGN)
@@ -120,20 +106,6 @@ extern "C" {
 #define MBEDTLS_PSA_BUILTIN_ALG_HKDF 1
 #endif /* !MBEDTLS_PSA_ACCEL_ALG_HKDF */
 #endif /* PSA_WANT_ALG_HKDF */
-
-#if defined(PSA_WANT_ALG_HKDF_EXTRACT)
-#if !defined(MBEDTLS_PSA_ACCEL_ALG_HKDF_EXTRACT)
-#define MBEDTLS_PSA_BUILTIN_ALG_HMAC 1
-#define MBEDTLS_PSA_BUILTIN_ALG_HKDF_EXTRACT 1
-#endif /* !MBEDTLS_PSA_ACCEL_ALG_HKDF_EXTRACT */
-#endif /* PSA_WANT_ALG_HKDF_EXTRACT */
-
-#if defined(PSA_WANT_ALG_HKDF_EXPAND)
-#if !defined(MBEDTLS_PSA_ACCEL_ALG_HKDF_EXPAND)
-#define MBEDTLS_PSA_BUILTIN_ALG_HMAC 1
-#define MBEDTLS_PSA_BUILTIN_ALG_HKDF_EXPAND 1
-#endif /* !MBEDTLS_PSA_ACCEL_ALG_HKDF_EXPAND */
-#endif /* PSA_WANT_ALG_HKDF_EXPAND */
 
 #if defined(PSA_WANT_ALG_HMAC)
 #if !defined(MBEDTLS_PSA_ACCEL_ALG_HMAC)
@@ -282,6 +254,7 @@ extern "C" {
 #if (defined(PSA_WANT_ALG_CTR) && !defined(MBEDTLS_PSA_ACCEL_ALG_CTR)) || \
     (defined(PSA_WANT_ALG_CFB) && !defined(MBEDTLS_PSA_ACCEL_ALG_CFB)) || \
     (defined(PSA_WANT_ALG_OFB) && !defined(MBEDTLS_PSA_ACCEL_ALG_OFB)) || \
+    (defined(PSA_WANT_ALG_XTS) && !defined(MBEDTLS_PSA_ACCEL_ALG_XTS)) || \
     defined(PSA_WANT_ALG_ECB_NO_PADDING) || \
     (defined(PSA_WANT_ALG_CBC_NO_PADDING) && \
      !defined(MBEDTLS_PSA_ACCEL_ALG_CBC_NO_PADDING)) || \
@@ -403,8 +376,15 @@ extern "C" {
 #endif
 #endif /* PSA_WANT_ALG_OFB */
 
-#if defined(PSA_WANT_ALG_ECB_NO_PADDING) &&     \
-    !defined(MBEDTLS_PSA_ACCEL_ALG_ECB_NO_PADDING)
+#if defined(PSA_WANT_ALG_XTS)
+#if !defined(MBEDTLS_PSA_ACCEL_ALG_XTS) || \
+    defined(PSA_HAVE_SOFT_BLOCK_CIPHER)
+#define MBEDTLS_PSA_BUILTIN_ALG_XTS 1
+#define MBEDTLS_CIPHER_MODE_XTS
+#endif
+#endif /* PSA_WANT_ALG_XTS */
+
+#if defined(PSA_WANT_ALG_ECB_NO_PADDING)
 #define MBEDTLS_PSA_BUILTIN_ALG_ECB_NO_PADDING 1
 #endif
 
@@ -431,7 +411,6 @@ extern "C" {
     defined(PSA_HAVE_SOFT_KEY_TYPE_ARIA) || \
     defined(PSA_HAVE_SOFT_KEY_TYPE_CAMELLIA)
 #define MBEDTLS_PSA_BUILTIN_ALG_CCM 1
-#define MBEDTLS_PSA_BUILTIN_ALG_CCM_STAR_NO_TAG 1
 #define MBEDTLS_CCM_C
 #endif
 #endif /* PSA_WANT_ALG_CCM */
@@ -566,9 +545,7 @@ extern "C" {
 
 #if defined(MBEDTLS_CCM_C)
 #define MBEDTLS_PSA_BUILTIN_ALG_CCM 1
-#define MBEDTLS_PSA_BUILTIN_ALG_CCM_STAR_NO_TAG 1
 #define PSA_WANT_ALG_CCM 1
-#define PSA_WANT_ALG_CCM_STAR_NO_TAG 1
 #endif /* MBEDTLS_CCM_C */
 
 #if defined(MBEDTLS_CMAC_C)
@@ -737,6 +714,11 @@ extern "C" {
 #if defined(MBEDTLS_CIPHER_MODE_OFB)
 #define MBEDTLS_PSA_BUILTIN_ALG_OFB 1
 #define PSA_WANT_ALG_OFB 1
+#endif
+
+#if defined(MBEDTLS_CIPHER_MODE_XTS)
+#define MBEDTLS_PSA_BUILTIN_ALG_XTS 1
+#define PSA_WANT_ALG_XTS 1
 #endif
 
 #if defined(MBEDTLS_ECP_DP_BP256R1_ENABLED)

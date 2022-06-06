@@ -190,9 +190,7 @@ mbedtls_x509_subject_alternative_name;
 typedef struct mbedtls_x509_crt_profile
 {
     uint32_t allowed_mds;       /**< MDs for signatures         */
-    uint32_t allowed_pks;       /**< PK algs for public keys;
-                                 *   this applies to all certificates
-                                 *   in the provided chain.     */
+    uint32_t allowed_pks;       /**< PK algs for signatures     */
     uint32_t allowed_curves;    /**< Elliptic curves for ECDSA  */
     uint32_t rsa_min_bitlen;    /**< Minimum size for RSA keys  */
 }
@@ -956,6 +954,23 @@ void mbedtls_x509_crt_restart_init( mbedtls_x509_crt_restart_ctx *ctx );
 void mbedtls_x509_crt_restart_free( mbedtls_x509_crt_restart_ctx *ctx );
 #endif /* MBEDTLS_ECDSA_C && MBEDTLS_ECP_RESTARTABLE */
 #endif /* MBEDTLS_X509_CRT_PARSE_C */
+
+/**
+ * \brief               Query certificate for given extension type
+ *
+ * \param[in] ctx       Certificate context to be queried, must not be \c NULL
+ * \param ext_type      Extension type being queried for, must be a valid
+ *                      extension type. Must be one of the MBEDTLS_X509_EXT_XXX
+ *                      values
+ *
+ * \return              0 if the given extension type is not present,
+ *                      non-zero otherwise
+ */
+static inline int mbedtls_x509_crt_has_ext_type( const mbedtls_x509_crt *ctx,
+                                                 int ext_type )
+{
+    return ctx->MBEDTLS_PRIVATE(ext_types) & ext_type;
+}
 
 /** \} name Structures and functions for parsing and writing X.509 certificates */
 
