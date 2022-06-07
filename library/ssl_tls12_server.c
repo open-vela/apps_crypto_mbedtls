@@ -77,80 +77,6 @@ void mbedtls_ssl_conf_dtls_cookies( mbedtls_ssl_config *conf,
 }
 #endif /* MBEDTLS_SSL_DTLS_HELLO_VERIFY */
 
-#if defined(MBEDTLS_SSL_SERVER_NAME_INDICATION)
-static int ssl_parse_servername_ext( mbedtls_ssl_context *ssl,
-                                     const unsigned char *buf,
-                                     size_t len )
-{
-    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
-    size_t servername_list_size, hostname_len;
-    const unsigned char *p;
-
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "parse ServerName extension" ) );
-
-    if( len < 2 )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad client hello message" ) );
-        mbedtls_ssl_send_alert_message( ssl, MBEDTLS_SSL_ALERT_LEVEL_FATAL,
-                                       MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR );
-        return( MBEDTLS_ERR_SSL_DECODE_ERROR );
-    }
-    servername_list_size = ( ( buf[0] << 8 ) | ( buf[1] ) );
-    if( servername_list_size + 2 != len )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad client hello message" ) );
-        mbedtls_ssl_send_alert_message( ssl, MBEDTLS_SSL_ALERT_LEVEL_FATAL,
-                                        MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR );
-        return( MBEDTLS_ERR_SSL_DECODE_ERROR );
-    }
-
-    p = buf + 2;
-    while( servername_list_size > 2 )
-    {
-        hostname_len = ( ( p[1] << 8 ) | p[2] );
-        if( hostname_len + 3 > servername_list_size )
-        {
-            MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad client hello message" ) );
-            mbedtls_ssl_send_alert_message( ssl, MBEDTLS_SSL_ALERT_LEVEL_FATAL,
-                                            MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR );
-            return( MBEDTLS_ERR_SSL_DECODE_ERROR );
-        }
-
-        if( p[0] == MBEDTLS_TLS_EXT_SERVERNAME_HOSTNAME )
-        {
-            ssl->handshake->sni_name = p + 3;
-            ssl->handshake->sni_name_len = hostname_len;
-            if( ssl->conf->f_sni == NULL )
-                return( 0 );
-
-            ret = ssl->conf->f_sni( ssl->conf->p_sni,
-                                    ssl, p + 3, hostname_len );
-            if( ret != 0 )
-            {
-                MBEDTLS_SSL_DEBUG_RET( 1, "ssl_sni_wrapper", ret );
-                mbedtls_ssl_send_alert_message( ssl, MBEDTLS_SSL_ALERT_LEVEL_FATAL,
-                        MBEDTLS_SSL_ALERT_MSG_UNRECOGNIZED_NAME );
-                return( MBEDTLS_ERR_SSL_UNRECOGNIZED_NAME );
-            }
-            return( 0 );
-        }
-
-        servername_list_size -= hostname_len + 3;
-        p += hostname_len + 3;
-    }
-
-    if( servername_list_size != 0 )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad client hello message" ) );
-        mbedtls_ssl_send_alert_message( ssl, MBEDTLS_SSL_ALERT_LEVEL_FATAL,
-                                        MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR );
-        return( MBEDTLS_ERR_SSL_DECODE_ERROR );
-    }
-
-    return( 0 );
-}
-#endif /* MBEDTLS_SSL_SERVER_NAME_INDICATION */
-
 #if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
 static int ssl_conf_has_psk_or_cb( mbedtls_ssl_config const *conf )
 {
@@ -1483,7 +1409,8 @@ read_record_header:
 #if defined(MBEDTLS_SSL_SERVER_NAME_INDICATION)
             case MBEDTLS_TLS_EXT_SERVERNAME:
                 MBEDTLS_SSL_DEBUG_MSG( 3, ( "found ServerName extension" ) );
-                ret = ssl_parse_servername_ext( ssl, ext + 4, ext_size );
+                ret = mbedtls_ssl_parse_server_name_ext( ssl, ext + 4,
+                                                         ext + 4 + ext_size );
                 if( ret != 0 )
                     return( ret );
                 break;
@@ -2504,9 +2431,8 @@ static int ssl_write_server_hello( mbedtls_ssl_context *ssl )
 
 #if defined(MBEDTLS_ECDH_C) || defined(MBEDTLS_ECDSA_C) || \
     defined(MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED)
-    const mbedtls_ssl_ciphersuite_t *suite =
-        mbedtls_ssl_ciphersuite_from_id( ssl->session_negotiate->ciphersuite );
-    if ( suite != NULL && mbedtls_ssl_ciphersuite_uses_ec( suite) )
+    if ( mbedtls_ssl_ciphersuite_uses_ec(
+         mbedtls_ssl_ciphersuite_from_id( ssl->session_negotiate->ciphersuite ) ) )
     {
         ssl_write_supported_point_formats_ext( ssl, p + 2 + ext_len, &olen );
         ext_len += olen;
@@ -2826,14 +2752,7 @@ static int ssl_get_ecdh_params_from_cert( mbedtls_ssl_context *ssl )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
 
-    const mbedtls_pk_context *private_key = mbedtls_ssl_own_key( ssl );
-    if( private_key == NULL)
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "got no server private key" ) );
-        return( MBEDTLS_ERR_SSL_PRIVATE_KEY_REQUIRED );
-    }
-
-    if( ! mbedtls_pk_can_do( private_key, MBEDTLS_PK_ECKEY ) )
+    if( ! mbedtls_pk_can_do( mbedtls_ssl_own_key( ssl ), MBEDTLS_PK_ECKEY ) )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "server key not ECDH capable" ) );
         return( MBEDTLS_ERR_SSL_PK_TYPE_MISMATCH );
@@ -3168,12 +3087,6 @@ curve_matching_done:
 #if defined(MBEDTLS_KEY_EXCHANGE_WITH_SERVER_SIGNATURE_ENABLED)
     if( mbedtls_ssl_ciphersuite_uses_server_signature( ciphersuite_info ) )
     {
-        if( dig_signed == NULL )
-        {
-            MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
-            return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
-        }
-
         size_t dig_signed_len = ssl->out_msg + ssl->out_msglen - dig_signed;
         size_t hashlen = 0;
 #if defined(MBEDTLS_USE_PSA_CRYPTO)

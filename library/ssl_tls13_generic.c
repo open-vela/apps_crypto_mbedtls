@@ -560,7 +560,14 @@ static int ssl_tls13_validate_certificate( mbedtls_ssl_context *ssl )
      * from the configuration. */
 #if defined(MBEDTLS_SSL_SRV_C)
     if( ssl->conf->endpoint == MBEDTLS_SSL_IS_SERVER )
-        authmode = ssl->conf->authmode;
+    {
+#if defined(MBEDTLS_SSL_SERVER_NAME_INDICATION)
+        if( ssl->handshake->sni_authmode != MBEDTLS_SSL_VERIFY_UNSET )
+            authmode = ssl->handshake->sni_authmode;
+        else
+#endif
+            authmode = ssl->conf->authmode;
+    }
 #endif
 
     /*
@@ -1190,15 +1197,13 @@ int mbedtls_ssl_tls13_process_finished_message( mbedtls_ssl_context *ssl )
 
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> parse finished message" ) );
 
-    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_tls13_fetch_handshake_msg( ssl,
-                                              MBEDTLS_SSL_HS_FINISHED,
-                                              &buf, &buf_len ) );
-
     /* Preprocessing step: Compute handshake digest */
     MBEDTLS_SSL_PROC_CHK( ssl_tls13_preprocess_finished_message( ssl ) );
 
+    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_tls13_fetch_handshake_msg( ssl,
+                                              MBEDTLS_SSL_HS_FINISHED,
+                                              &buf, &buf_len ) );
     MBEDTLS_SSL_PROC_CHK( ssl_tls13_parse_finished_message( ssl, buf, buf + buf_len ) );
-
     mbedtls_ssl_add_hs_msg_to_checksum( ssl, MBEDTLS_SSL_HS_FINISHED,
                                         buf, buf_len );
 
