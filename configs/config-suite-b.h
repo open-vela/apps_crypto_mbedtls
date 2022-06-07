@@ -4,7 +4,7 @@
  * \brief Minimal configuration for TLS NSA Suite B Profile (RFC 6460)
  */
 /*
- *  Copyright The Mbed TLS Contributors
+ *  Copyright (C) 2006-2015, ARM Limited, All Rights Reserved
  *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -18,6 +18,8 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
+ *
+ *  This file is part of mbed TLS (https://tls.mbed.org)
  */
 /*
  * Minimal configuration for TLS NSA Suite B Profile (RFC 6460)
@@ -32,6 +34,9 @@
  *
  * See README.txt for usage instructions.
  */
+
+#ifndef MBEDTLS_CONFIG_H
+#define MBEDTLS_CONFIG_H
 
 /* System support */
 #define MBEDTLS_HAVE_ASM
@@ -60,12 +65,7 @@
 #define MBEDTLS_OID_C
 #define MBEDTLS_PK_C
 #define MBEDTLS_PK_PARSE_C
-/* The library does not currently support enabling SHA-224 without SHA-256.
- * A future version of the library will have this option disabled
- * by default. */
-#define MBEDTLS_SHA224_C
 #define MBEDTLS_SHA256_C
-#define MBEDTLS_SHA384_C
 #define MBEDTLS_SHA512_C
 #define MBEDTLS_SSL_CLI_C
 #define MBEDTLS_SSL_SRV_C
@@ -75,13 +75,15 @@
 
 /* For test certificates */
 #define MBEDTLS_BASE64_C
+#define MBEDTLS_CERTS_C
 #define MBEDTLS_PEM_PARSE_C
 
 /* Save RAM at the expense of ROM */
 #define MBEDTLS_AES_ROM_TABLES
 
 /* Save RAM by adjusting to our exact needs */
-#define MBEDTLS_MPI_MAX_SIZE    48 // 384-bit EC curve = 48 bytes
+#define MBEDTLS_ECP_MAX_BITS   384
+#define MBEDTLS_MPI_MAX_SIZE    48 // 384 bits is 48 bytes
 
 /* Save RAM at the expense of speed, see ecp.h */
 #define MBEDTLS_ECP_WINDOW_SIZE        2
@@ -108,15 +110,8 @@
  * The minimum size here depends on the certificate chain used as well as the
  * typical size of records.
  */
-#define MBEDTLS_SSL_IN_CONTENT_LEN             1024
-#define MBEDTLS_SSL_OUT_CONTENT_LEN             1024
+#define MBEDTLS_SSL_MAX_CONTENT_LEN             1024
 
-/* These defines are present so that the config modifying scripts can enable
- * them during tests/scripts/test-ref-configs.pl */
-//#define MBEDTLS_USE_PSA_CRYPTO
-//#define MBEDTLS_PSA_CRYPTO_C
+#include "mbedtls/check_config.h"
 
-/* Error messages and TLS debugging traces
- * (huge code size increase, needed for tests/ssl-opt.sh) */
-//#define MBEDTLS_DEBUG_C
-//#define MBEDTLS_ERROR_C
+#endif /* MBEDTLS_CONFIG_H */

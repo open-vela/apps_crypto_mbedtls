@@ -15,7 +15,7 @@ typedef struct
 
 int generic_write_start_step( generic_write_data_t *data )
 {
-    mbedtls_test_set_step( data->size );
+    test_set_step( data->size );
     ASSERT_ALLOC( data->output, data->size == 0 ? 1 : data->size );
     data->end = data->output + data->size;
     data->p = data->end;
@@ -304,7 +304,7 @@ void test_asn1_write_bitstrings( data_t *bitstring, int bits,
 {
     generic_write_data_t data = { NULL, NULL, NULL, NULL, 0 };
     int ret;
-    int ( *func )( unsigned char **p, const unsigned char *start,
+    int ( *func )( unsigned char **p, unsigned char *start,
                    const unsigned char *buf, size_t bits ) =
         ( is_named ? mbedtls_asn1_write_named_bitstring :
           mbedtls_asn1_write_bitstring );
@@ -431,7 +431,7 @@ exit:
 /* END_CASE */
 
 /* BEGIN_CASE */
-void store_named_data_val_new( int new_len, int set_new_val )
+void store_named_data_val_new( int new_len )
 {
     mbedtls_asn1_named_data *head = NULL;
     mbedtls_asn1_named_data *found = NULL;
@@ -439,8 +439,10 @@ void store_named_data_val_new( int new_len, int set_new_val )
     size_t oid_len = strlen( (const char *) oid );
     const unsigned char *new_val = (unsigned char *) "new value";
 
-    if( set_new_val == 0 )
+    if( new_len <= 0 )
         new_val = NULL;
+    if( new_len < 0 )
+        new_len = - new_len;
 
     found = mbedtls_asn1_store_named_data( &head,
                                            (const char *) oid, oid_len,
