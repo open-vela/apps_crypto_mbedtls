@@ -5,7 +5,7 @@
  */
 /*
  *
- *  Copyright The Mbed TLS Contributors
+ *  Copyright (C) 2006-2015, ARM Limited, All Rights Reserved
  *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -19,10 +19,12 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
+ *
+ *  This file is part of mbed TLS (https://tls.mbed.org)
  */
 
 /**
- * @mainpage mbed TLS v3.1.0 source code documentation
+ * @mainpage mbed TLS v2.22.0 source code documentation
  *
  * This documentation describes the internal structure of mbed TLS.  It was
  * automatically generated from specially formatted comment blocks in
@@ -38,7 +40,7 @@
  *
  * @section mainpage_modules Modules
  *
- * mbed TLS supports TLSv1.0 up to TLSv1.2 communication by providing the
+ * mbed TLS supports SSLv3 up to TLSv1.2 communication by providing the
  * following:
  * - TCP/IP communication functions: listen, connect, accept, read/write.
  * - SSL/TLS communication functions: init, handshake, read/write.

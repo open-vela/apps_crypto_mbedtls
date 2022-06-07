@@ -22,7 +22,7 @@ Each test case has a description which succinctly describes for a human audience
 * Make the description descriptive. “foo: x=2, y=4” is more descriptive than “foo #2”. “foo: 0<x<y, both even” is even better if these inequalities and parities are why this particular test data was chosen.
 * Avoid changing the description of an existing test case without a good reason. This breaks the tracking of failures across CI runs, since this tracking is based on the descriptions.
 
-`tests/scripts/check_test_cases.py` enforces some rules and warns if some guidelines are violated.
+`tests/scripts/check-test-cases.py` enforces some rules and warns if some guidelines are violated.
 
 ## TLS tests
 
@@ -32,7 +32,7 @@ Each test case has a description which succinctly describes for a human audience
 
 Each test case in `ssl-opt.sh` has a description which succinctly describes for a human audience what the test does. The test description is the first parameter to `run_tests`.
 
-The same rules and guidelines apply as for [unit test descriptions](#unit-test-descriptions). In addition, the description must be written on the same line as `run_test`, in double quotes, for the sake of `check_test_cases.py`.
+The same rules and guidelines apply as for [unit test descriptions](#unit-test-descriptions). In addition, the description must be written on the same line as `run_test`, in double quotes, for the sake of `check-test-cases.py`.
 
 ## Running tests
 
@@ -51,7 +51,7 @@ The outcome file is in a CSV format using `;` (semicolon) as the delimiter and n
 The outcome file has 6 fields:
 
 * **Platform**: a description of the platform, e.g. `Linux-x86_64` or `Linux-x86_64-gcc7-msan`.
-* **Configuration**: a unique description of the configuration (`mbedtls_config.h`).
+* **Configuration**: a unique description of the configuration (`config.h`).
 * **Test suite**: `test_suite_xxx` or `ssl-opt`.
 * **Test case**: the description of the test case.
 * **Result**: one of `PASS`, `SKIP` or `FAIL`.

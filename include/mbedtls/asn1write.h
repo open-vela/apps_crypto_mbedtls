@@ -4,7 +4,7 @@
  * \brief ASN.1 buffer writing functionality
  */
 /*
- *  Copyright The Mbed TLS Contributors
+ *  Copyright (C) 2006-2015, ARM Limited, All Rights Reserved
  *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -18,11 +18,17 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
+ *
+ *  This file is part of mbed TLS (https://tls.mbed.org)
  */
 #ifndef MBEDTLS_ASN1_WRITE_H
 #define MBEDTLS_ASN1_WRITE_H
 
-#include "mbedtls/build_info.h"
+#if !defined(MBEDTLS_CONFIG_FILE)
+#include "mbedtls/config.h"
+#else
+#include MBEDTLS_CONFIG_FILE
+#endif
 
 #include "mbedtls/asn1.h"
 
@@ -51,7 +57,7 @@ extern "C" {
  * \return          The number of bytes written to \p p on success.
  * \return          A negative \c MBEDTLS_ERR_ASN1_XXX error code on failure.
  */
-int mbedtls_asn1_write_len( unsigned char **p, const unsigned char *start,
+int mbedtls_asn1_write_len( unsigned char **p, unsigned char *start,
                             size_t len );
 /**
  * \brief           Write an ASN.1 tag in ASN.1 format.
@@ -65,7 +71,7 @@ int mbedtls_asn1_write_len( unsigned char **p, const unsigned char *start,
  * \return          The number of bytes written to \p p on success.
  * \return          A negative \c MBEDTLS_ERR_ASN1_XXX error code on failure.
  */
-int mbedtls_asn1_write_tag( unsigned char **p, const unsigned char *start,
+int mbedtls_asn1_write_tag( unsigned char **p, unsigned char *start,
                             unsigned char tag );
 
 /**
@@ -81,7 +87,7 @@ int mbedtls_asn1_write_tag( unsigned char **p, const unsigned char *start,
  * \return          The number of bytes written to \p p on success.
  * \return          A negative \c MBEDTLS_ERR_ASN1_XXX error code on failure.
  */
-int mbedtls_asn1_write_raw_buffer( unsigned char **p, const unsigned char *start,
+int mbedtls_asn1_write_raw_buffer( unsigned char **p, unsigned char *start,
                                    const unsigned char *buf, size_t size );
 
 #if defined(MBEDTLS_BIGNUM_C)
@@ -99,7 +105,7 @@ int mbedtls_asn1_write_raw_buffer( unsigned char **p, const unsigned char *start
  * \return          The number of bytes written to \p p on success.
  * \return          A negative \c MBEDTLS_ERR_ASN1_XXX error code on failure.
  */
-int mbedtls_asn1_write_mpi( unsigned char **p, const unsigned char *start,
+int mbedtls_asn1_write_mpi( unsigned char **p, unsigned char *start,
                             const mbedtls_mpi *X );
 #endif /* MBEDTLS_BIGNUM_C */
 
@@ -115,7 +121,7 @@ int mbedtls_asn1_write_mpi( unsigned char **p, const unsigned char *start,
  * \return          The number of bytes written to \p p on success.
  * \return          A negative \c MBEDTLS_ERR_ASN1_XXX error code on failure.
  */
-int mbedtls_asn1_write_null( unsigned char **p, const unsigned char *start );
+int mbedtls_asn1_write_null( unsigned char **p, unsigned char *start );
 
 /**
  * \brief           Write an OID tag (#MBEDTLS_ASN1_OID) and data
@@ -131,7 +137,7 @@ int mbedtls_asn1_write_null( unsigned char **p, const unsigned char *start );
  * \return          The number of bytes written to \p p on success.
  * \return          A negative \c MBEDTLS_ERR_ASN1_XXX error code on failure.
  */
-int mbedtls_asn1_write_oid( unsigned char **p, const unsigned char *start,
+int mbedtls_asn1_write_oid( unsigned char **p, unsigned char *start,
                             const char *oid, size_t oid_len );
 
 /**
@@ -150,7 +156,7 @@ int mbedtls_asn1_write_oid( unsigned char **p, const unsigned char *start,
  * \return          A negative \c MBEDTLS_ERR_ASN1_XXX error code on failure.
  */
 int mbedtls_asn1_write_algorithm_identifier( unsigned char **p,
-                                             const unsigned char *start,
+                                             unsigned char *start,
                                              const char *oid, size_t oid_len,
                                              size_t par_len );
 
@@ -167,7 +173,7 @@ int mbedtls_asn1_write_algorithm_identifier( unsigned char **p,
  * \return          The number of bytes written to \p p on success.
  * \return          A negative \c MBEDTLS_ERR_ASN1_XXX error code on failure.
  */
-int mbedtls_asn1_write_bool( unsigned char **p, const unsigned char *start,
+int mbedtls_asn1_write_bool( unsigned char **p, unsigned char *start,
                              int boolean );
 
 /**
@@ -184,7 +190,7 @@ int mbedtls_asn1_write_bool( unsigned char **p, const unsigned char *start,
  * \return          The number of bytes written to \p p on success.
  * \return          A negative \c MBEDTLS_ERR_ASN1_XXX error code on failure.
  */
-int mbedtls_asn1_write_int( unsigned char **p, const unsigned char *start, int val );
+int mbedtls_asn1_write_int( unsigned char **p, unsigned char *start, int val );
 
 /**
  * \brief           Write an enum tag (#MBEDTLS_ASN1_ENUMERATED) and value
@@ -199,7 +205,7 @@ int mbedtls_asn1_write_int( unsigned char **p, const unsigned char *start, int v
  * \return          The number of bytes written to \p p on success.
  * \return          A negative \c MBEDTLS_ERR_ASN1_XXX error code on failure.
  */
-int mbedtls_asn1_write_enum( unsigned char **p, const unsigned char *start, int val );
+int mbedtls_asn1_write_enum( unsigned char **p, unsigned char *start, int val );
 
 /**
  * \brief           Write a string in ASN.1 format using a specific
@@ -218,7 +224,7 @@ int mbedtls_asn1_write_enum( unsigned char **p, const unsigned char *start, int 
  * \return          The number of bytes written to \p p on success.
  * \return          A negative error code on failure.
  */
-int mbedtls_asn1_write_tagged_string( unsigned char **p, const unsigned char *start,
+int mbedtls_asn1_write_tagged_string( unsigned char **p, unsigned char *start,
                                       int tag, const char *text,
                                       size_t text_len );
 
@@ -238,7 +244,7 @@ int mbedtls_asn1_write_tagged_string( unsigned char **p, const unsigned char *st
  * \return          A negative error code on failure.
  */
 int mbedtls_asn1_write_printable_string( unsigned char **p,
-                                         const unsigned char *start,
+                                         unsigned char *start,
                                          const char *text, size_t text_len );
 
 /**
@@ -256,7 +262,7 @@ int mbedtls_asn1_write_printable_string( unsigned char **p,
  * \return          The number of bytes written to \p p on success.
  * \return          A negative error code on failure.
  */
-int mbedtls_asn1_write_utf8_string( unsigned char **p, const unsigned char *start,
+int mbedtls_asn1_write_utf8_string( unsigned char **p, unsigned char *start,
                                     const char *text, size_t text_len );
 
 /**
@@ -274,7 +280,7 @@ int mbedtls_asn1_write_utf8_string( unsigned char **p, const unsigned char *star
  * \return          The number of bytes written to \p p on success.
  * \return          A negative error code on failure.
  */
-int mbedtls_asn1_write_ia5_string( unsigned char **p, const unsigned char *start,
+int mbedtls_asn1_write_ia5_string( unsigned char **p, unsigned char *start,
                                    const char *text, size_t text_len );
 
 /**
@@ -291,7 +297,7 @@ int mbedtls_asn1_write_ia5_string( unsigned char **p, const unsigned char *start
  * \return          The number of bytes written to \p p on success.
  * \return          A negative error code on failure.
  */
-int mbedtls_asn1_write_bitstring( unsigned char **p, const unsigned char *start,
+int mbedtls_asn1_write_bitstring( unsigned char **p, unsigned char *start,
                                   const unsigned char *buf, size_t bits );
 
 /**
@@ -312,7 +318,7 @@ int mbedtls_asn1_write_bitstring( unsigned char **p, const unsigned char *start,
  * \return          A negative error code on failure.
  */
 int mbedtls_asn1_write_named_bitstring( unsigned char **p,
-                                        const unsigned char *start,
+                                        unsigned char *start,
                                         const unsigned char *buf,
                                         size_t bits );
 
@@ -330,7 +336,7 @@ int mbedtls_asn1_write_named_bitstring( unsigned char **p,
  * \return          The number of bytes written to \p p on success.
  * \return          A negative error code on failure.
  */
-int mbedtls_asn1_write_octet_string( unsigned char **p, const unsigned char *start,
+int mbedtls_asn1_write_octet_string( unsigned char **p, unsigned char *start,
                                      const unsigned char *buf, size_t size );
 
 /**
