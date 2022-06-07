@@ -1,7 +1,7 @@
 /*
  *  Query the Mbed TLS compile time configuration
  *
- *  Copyright The Mbed TLS Contributors
+ *  Copyright (C) 2018, Arm Limited, All Rights Reserved
  *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -15,9 +15,15 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
+ *
+ *  This file is part of Mbed TLS (https://tls.mbed.org)
  */
 
-#include "mbedtls/build_info.h"
+#if !defined(MBEDTLS_CONFIG_FILE)
+#include "mbedtls/config.h"
+#else
+#include MBEDTLS_CONFIG_FILE
+#endif
 
 #if defined(MBEDTLS_PLATFORM_C)
 #include "mbedtls/platform.h"
@@ -29,15 +35,14 @@
 #endif
 
 #define USAGE                                                                \
-    "usage: %s [ <MBEDTLS_CONFIG> | -l ]\n\n"                                \
+    "usage: %s <MBEDTLS_CONFIG>\n\n"                                         \
     "This program takes one command line argument which corresponds to\n"    \
     "the string representation of a Mbed TLS compile time configuration.\n"  \
     "The value 0 will be returned if this configuration is defined in the\n" \
     "Mbed TLS build and the macro expansion of that configuration will be\n" \
-    "printed (if any). Otherwise, 1 will be returned.\n"                     \
-    "-l\tPrint all available configuration.\n"
-#include <string.h>
-#include "query_config.h"
+    "printed (if any). Otherwise, 1 will be returned.\n"
+
+int query_config( const char *config );
 
 int main( int argc, char *argv[] )
 {
@@ -45,12 +50,6 @@ int main( int argc, char *argv[] )
     {
         mbedtls_printf( USAGE, argv[0] );
         return( MBEDTLS_EXIT_FAILURE );
-    }
-
-    if( strcmp( argv[1], "-l" ) == 0 )
-    {
-        list_config();
-        return( 0 );
     }
 
     return( query_config( argv[1] ) );

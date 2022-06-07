@@ -16,7 +16,7 @@
  *
  */
 /*
- *  Copyright The Mbed TLS Contributors
+ *  Copyright (C) 2018, Arm Limited (or its affiliates), All Rights Reserved
  *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -30,13 +30,18 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
+ *
+ *  This file is part of Mbed TLS (https://tls.mbed.org)
  */
 
 #ifndef MBEDTLS_NIST_KW_H
 #define MBEDTLS_NIST_KW_H
-#include "mbedtls/private_access.h"
 
-#include "mbedtls/build_info.h"
+#if !defined(MBEDTLS_CONFIG_FILE)
+#include "mbedtls/config.h"
+#else
+#include MBEDTLS_CONFIG_FILE
+#endif
 
 #include "mbedtls/cipher.h"
 
@@ -62,7 +67,7 @@ typedef enum
  *           Don't make any assumptions on this context!
  */
 typedef struct {
-    mbedtls_cipher_context_t MBEDTLS_PRIVATE(cipher_ctx);    /*!< The cipher context used. */
+    mbedtls_cipher_context_t cipher_ctx;    /*!< The cipher context used. */
 } mbedtls_nist_kw_context;
 
 #else  /* MBEDTLS_NIST_key wrapping_ALT */
