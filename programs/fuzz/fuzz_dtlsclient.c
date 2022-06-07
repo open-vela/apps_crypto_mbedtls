@@ -1,5 +1,3 @@
-#define MBEDTLS_ALLOW_PRIVATE_ACCESS
-
 #include <string.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -8,8 +6,9 @@
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
 #include "mbedtls/entropy.h"
 #include "mbedtls/ctr_drbg.h"
+#include "mbedtls/certs.h"
 #include "mbedtls/timing.h"
-#include "test/certs.h"
+
 
 #if defined(MBEDTLS_SSL_CLI_C) && \
     defined(MBEDTLS_ENTROPY_C) && \
