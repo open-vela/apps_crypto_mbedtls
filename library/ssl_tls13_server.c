@@ -335,6 +335,60 @@ static int ssl_tls13_check_ephemeral_key_exchange( mbedtls_ssl_context *ssl )
     return( 1 );
 }
 
+#if defined(MBEDTLS_X509_CRT_PARSE_C)
+/*
+ * Try picking a certificate for this ciphersuite,
+ * return 0 on success and -1 on failure.
+ */
+static int ssl_tls13_pick_cert( mbedtls_ssl_context *ssl )
+{
+    mbedtls_ssl_key_cert *cur, *list;
+
+#if defined(MBEDTLS_SSL_SERVER_NAME_INDICATION)
+    if( ssl->handshake->sni_key_cert != NULL )
+        list = ssl->handshake->sni_key_cert;
+    else
+#endif /* MBEDTLS_SSL_SERVER_NAME_INDICATION */
+        list = ssl->conf->key_cert;
+
+    if( list == NULL )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 3, ( "server has no certificate" ) );
+        return( -1 );
+    }
+
+    for( cur = list; cur != NULL; cur = cur->next )
+    {
+        MBEDTLS_SSL_DEBUG_CRT( 3, "candidate certificate chain, certificate",
+                               cur->cert );
+
+        /*
+         * This avoids sending the client a cert it'll reject based on
+         * keyUsage or other extensions.
+         */
+        if( mbedtls_x509_crt_check_key_usage( cur->cert, MBEDTLS_X509_KU_DIGITAL_SIGNATURE ) != 0 )
+        {
+            MBEDTLS_SSL_DEBUG_MSG( 3, ( "certificate mismatch: "
+                                      "(extended) key usage extension" ) );
+            continue;
+        }
+
+        break;
+    }
+
+    /* Do not update ssl->handshake->key_cert unless there is a match */
+    if( cur != NULL )
+    {
+        ssl->handshake->key_cert = cur;
+        MBEDTLS_SSL_DEBUG_CRT( 3, "selected certificate chain, certificate",
+                               ssl->handshake->key_cert->cert );
+        return( 0 );
+    }
+
+    return( -1 );
+}
+#endif /* MBEDTLS_X509_CRT_PARSE_C */
+
 /*
  *
  * STATE HANDLING: ClientHello
@@ -580,6 +634,21 @@ static int ssl_tls13_parse_client_hello( mbedtls_ssl_context *ssl,
 
         switch( extension_type )
         {
+#if defined(MBEDTLS_SSL_SERVER_NAME_INDICATION)
+            case MBEDTLS_TLS_EXT_SERVERNAME:
+                MBEDTLS_SSL_DEBUG_MSG( 3, ( "found ServerName extension" ) );
+                ret = mbedtls_ssl_parse_server_name_ext( ssl, p,
+                                                         extension_data_end );
+                if( ret != 0 )
+                {
+                    MBEDTLS_SSL_DEBUG_RET(
+                            1, "mbedtls_ssl_parse_servername_ext", ret );
+                    return( ret );
+                }
+                ssl->handshake->extensions_present |= MBEDTLS_SSL_EXT_SERVERNAME;
+                break;
+#endif /* MBEDTLS_SSL_SERVER_NAME_INDICATION */
+
 #if defined(MBEDTLS_ECDH_C)
             case MBEDTLS_TLS_EXT_SUPPORTED_GROUPS:
                 MBEDTLS_SSL_DEBUG_MSG( 3, ( "found supported group extension" ) );
@@ -672,6 +741,28 @@ static int ssl_tls13_parse_client_hello( mbedtls_ssl_context *ssl,
 
         p += extension_data_len;
     }
+
+    /*
+     * Server certification selection (after processing TLS extensions)
+     */
+    if( ssl->conf->f_cert_cb && ( ret = ssl->conf->f_cert_cb( ssl ) ) != 0 )
+    {
+        MBEDTLS_SSL_DEBUG_RET( 1, "f_cert_cb", ret );
+        return( ret );
+    }
+#if defined(MBEDTLS_SSL_SERVER_NAME_INDICATION)
+    ssl->handshake->sni_name = NULL;
+    ssl->handshake->sni_name_len = 0;
+#endif /* MBEDTLS_SSL_SERVER_NAME_INDICATION */
+
+#if defined(MBEDTLS_X509_CRT_PARSE_C)
+    if( (ssl_tls13_pick_cert( ssl ) != 0) )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 3, ( "ciphersuite mismatch: "
+                            "no suitable certificate" ) );
+        return( 0 );
+    }
+#endif /* MBEDTLS_X509_CRT_PARSE_C */
 
     /* Update checksum with either
      * - The entire content of the CH message, if no PSK extension is present
@@ -1337,10 +1428,17 @@ static int ssl_tls13_certificate_request_coordinate( mbedtls_ssl_context *ssl )
 {
     int authmode;
 
+#if defined(MBEDTLS_SSL_SERVER_NAME_INDICATION)
+    if( ssl->handshake->sni_authmode != MBEDTLS_SSL_VERIFY_UNSET )
+        authmode = ssl->handshake->sni_authmode;
+    else
+#endif
     authmode = ssl->conf->authmode;
 
     if( authmode == MBEDTLS_SSL_VERIFY_NONE )
         return( SSL_CERTIFICATE_REQUEST_SKIP );
+
+    ssl->handshake->certificate_request_sent = 1;
 
     return( SSL_CERTIFICATE_REQUEST_SEND_REQUEST );
 }
@@ -1477,6 +1575,78 @@ static int ssl_tls13_write_certificate_verify( mbedtls_ssl_context *ssl )
 #endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
 
 /*
+ * Handler for MBEDTLS_SSL_SERVER_FINISHED
+ */
+static int ssl_tls13_write_server_finished( mbedtls_ssl_context *ssl )
+{
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+
+    ret = mbedtls_ssl_tls13_write_finished_message( ssl );
+    if( ret != 0 )
+        return( ret );
+
+    ret = mbedtls_ssl_tls13_compute_application_transform( ssl );
+    if( ret != 0 )
+    {
+        MBEDTLS_SSL_PEND_FATAL_ALERT(
+                MBEDTLS_SSL_ALERT_MSG_HANDSHAKE_FAILURE,
+                MBEDTLS_ERR_SSL_HANDSHAKE_FAILURE );
+        return( ret );
+    }
+
+    if( ssl->handshake->certificate_request_sent )
+    {
+        mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CLIENT_CERTIFICATE );
+
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "Switch to handshake keys for inbound traffic" ) );
+        mbedtls_ssl_set_inbound_transform( ssl, ssl->handshake->transform_handshake );
+    }
+    else
+        mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CLIENT_FINISHED );
+    return( 0 );
+}
+
+/*
+ * Handler for MBEDTLS_SSL_CLIENT_FINISHED
+ */
+static int ssl_tls13_process_client_finished( mbedtls_ssl_context *ssl )
+{
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+
+    if( ! ssl->handshake->certificate_request_sent )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 1,
+            ( "Switch to handshake traffic keys for inbound traffic" ) );
+        mbedtls_ssl_set_inbound_transform( ssl, ssl->handshake->transform_handshake );
+    }
+    ret = mbedtls_ssl_tls13_process_finished_message( ssl );
+    if( ret != 0 )
+        return( ret );
+
+    ret = mbedtls_ssl_tls13_generate_resumption_master_secret( ssl );
+    if( ret != 0 )
+    {
+        MBEDTLS_SSL_DEBUG_RET( 1,
+            "mbedtls_ssl_tls13_generate_resumption_master_secret ", ret );
+    }
+
+    mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_HANDSHAKE_WRAPUP );
+    return( 0 );
+}
+
+/*
+ * Handler for MBEDTLS_SSL_HANDSHAKE_WRAPUP
+ */
+static int ssl_tls13_handshake_wrapup( mbedtls_ssl_context *ssl )
+{
+    MBEDTLS_SSL_DEBUG_MSG( 2, ( "handshake: done" ) );
+
+    mbedtls_ssl_tls13_handshake_wrapup( ssl );
+    mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_HANDSHAKE_OVER );
+    return( 0 );
+}
+
+/*
  * TLS 1.3 State Machine -- server side
  */
 int mbedtls_ssl_tls13_handshake_server_step( mbedtls_ssl_context *ssl )
@@ -1539,6 +1709,39 @@ int mbedtls_ssl_tls13_handshake_server_step( mbedtls_ssl_context *ssl )
             ret = ssl_tls13_write_certificate_verify( ssl );
             break;
 #endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
+
+        case MBEDTLS_SSL_SERVER_FINISHED:
+            ret = ssl_tls13_write_server_finished( ssl );
+            break;
+
+        case MBEDTLS_SSL_CLIENT_FINISHED:
+            ret = ssl_tls13_process_client_finished( ssl );
+            break;
+
+        case MBEDTLS_SSL_HANDSHAKE_WRAPUP:
+            ret = ssl_tls13_handshake_wrapup( ssl );
+            break;
+
+        case MBEDTLS_SSL_CLIENT_CERTIFICATE:
+            ret = mbedtls_ssl_tls13_process_certificate( ssl );
+            if( ret == 0 && ssl->session_negotiate->peer_cert != NULL )
+            {
+                mbedtls_ssl_handshake_set_state(
+                    ssl, MBEDTLS_SSL_CLIENT_CERTIFICATE_VERIFY );
+            }
+            else
+                mbedtls_ssl_handshake_set_state(
+                    ssl, MBEDTLS_SSL_CLIENT_FINISHED );
+            break;
+
+        case MBEDTLS_SSL_CLIENT_CERTIFICATE_VERIFY:
+            ret = mbedtls_ssl_tls13_process_certificate_verify( ssl );
+            if( ret == 0 )
+            {
+                mbedtls_ssl_handshake_set_state(
+                    ssl, MBEDTLS_SSL_CLIENT_FINISHED );
+            }
+            break;
 
         default:
             MBEDTLS_SSL_DEBUG_MSG( 1, ( "invalid state %d", ssl->state ) );
