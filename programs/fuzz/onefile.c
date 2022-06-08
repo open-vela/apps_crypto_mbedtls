@@ -47,7 +47,7 @@ int main(int argc, char** argv)
         return 2;
     }
 
-    //launch fuzzer
+    //lauch fuzzer
     LLVMFuzzerTestOneInput(Data, Size);
     free(Data);
     fclose(fp);
