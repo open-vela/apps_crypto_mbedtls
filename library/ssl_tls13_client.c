@@ -750,6 +750,11 @@ static int ssl_server_hello_is_hrr( mbedtls_ssl_context *ssl,
                                     const unsigned char *buf,
                                     const unsigned char *end )
 {
+    static const unsigned char magic_hrr_string[MBEDTLS_SERVER_HELLO_RANDOM_LEN] =
+        { 0xCF, 0x21, 0xAD, 0x74, 0xE5, 0x9A, 0x61, 0x11,
+          0xBE, 0x1D, 0x8C, 0x02, 0x1E, 0x65, 0xB8, 0x91,
+          0xC2, 0xA2, 0x11, 0x16, 0x7A, 0xBB, 0x8C, 0x5E,
+          0x07, 0x9E, 0x09, 0xE2, 0xC8, 0xA8, 0x33 ,0x9C };
 
     /* Check whether this message is a HelloRetryRequest ( HRR ) message.
      *
@@ -766,11 +771,9 @@ static int ssl_server_hello_is_hrr( mbedtls_ssl_context *ssl,
      * } ServerHello;
      *
      */
-    MBEDTLS_SSL_CHK_BUF_READ_PTR( buf, end,
-                    2 + sizeof( mbedtls_ssl_tls13_hello_retry_request_magic ) );
+    MBEDTLS_SSL_CHK_BUF_READ_PTR( buf, end, 2 + sizeof( magic_hrr_string ) );
 
-    if( memcmp( buf + 2, mbedtls_ssl_tls13_hello_retry_request_magic,
-                sizeof( mbedtls_ssl_tls13_hello_retry_request_magic ) ) == 0 )
+    if( memcmp( buf + 2, magic_hrr_string, sizeof( magic_hrr_string ) ) == 0 )
     {
         return( SSL_SERVER_HELLO_COORDINATE_HRR );
     }
@@ -1612,8 +1615,8 @@ static int ssl_tls13_parse_certificate_request( mbedtls_ssl_context *ssl,
             case MBEDTLS_TLS_EXT_SIG_ALG:
                 MBEDTLS_SSL_DEBUG_MSG( 3,
                         ( "found signature algorithms extension" ) );
-                ret = mbedtls_ssl_parse_sig_alg_ext( ssl, p,
-                                                     p + extension_data_len );
+                ret = mbedtls_ssl_tls13_parse_sig_alg_ext( ssl, p,
+                              p + extension_data_len );
                 if( ret != 0 )
                     return( ret );
                 if( ! sig_alg_ext_found )
@@ -1687,7 +1690,7 @@ static int ssl_tls13_process_certificate_request( mbedtls_ssl_context *ssl )
     }
     else if( ret == SSL_CERTIFICATE_REQUEST_SKIP )
     {
-        MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= skip tls13 parse certificate request" ) );
+        MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= skip parse certificate request" ) );
         ret = 0;
     }
     else
@@ -1750,15 +1753,6 @@ static int ssl_tls13_process_server_finished( mbedtls_ssl_context *ssl )
     if( ret != 0 )
         return( ret );
 
-    ret = mbedtls_ssl_tls13_compute_application_transform( ssl );
-    if( ret != 0 )
-    {
-        MBEDTLS_SSL_PEND_FATAL_ALERT(
-                MBEDTLS_SSL_ALERT_MSG_HANDSHAKE_FAILURE,
-                MBEDTLS_ERR_SSL_HANDSHAKE_FAILURE );
-        return( ret );
-    }
-
 #if defined(MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE)
     mbedtls_ssl_handshake_set_state(
         ssl,
@@ -1793,7 +1787,7 @@ static int ssl_tls13_write_client_certificate( mbedtls_ssl_context *ssl )
     }
     else
     {
-        MBEDTLS_SSL_DEBUG_MSG( 2, ( "skip write certificate" ) );
+        MBEDTLS_SSL_DEBUG_MSG( 2, ( "No certificate message to send." ) );
     }
 #endif
 
@@ -1834,14 +1828,6 @@ static int ssl_tls13_write_client_finished( mbedtls_ssl_context *ssl )
     if( ret != 0 )
         return( ret );
 
-    ret = mbedtls_ssl_tls13_generate_resumption_master_secret( ssl );
-    if( ret != 0 )
-    {
-        MBEDTLS_SSL_DEBUG_RET( 1,
-                "mbedtls_ssl_tls13_generate_resumption_master_secret ", ret );
-        return ( ret );
-    }
-
     mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_FLUSH_BUFFERS );
     return( 0 );
 }
@@ -1861,6 +1847,11 @@ static int ssl_tls13_flush_buffers( mbedtls_ssl_context *ssl )
  */
 static int ssl_tls13_handshake_wrapup( mbedtls_ssl_context *ssl )
 {
+    MBEDTLS_SSL_DEBUG_MSG( 1, ( "Switch to application keys for inbound traffic" ) );
+    mbedtls_ssl_set_inbound_transform ( ssl, ssl->transform_application );
+
+    MBEDTLS_SSL_DEBUG_MSG( 1, ( "Switch to application keys for outbound traffic" ) );
+    mbedtls_ssl_set_outbound_transform( ssl, ssl->transform_application );
 
     mbedtls_ssl_tls13_handshake_wrapup( ssl );
 
