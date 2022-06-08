@@ -335,60 +335,6 @@ static int ssl_tls13_check_ephemeral_key_exchange( mbedtls_ssl_context *ssl )
     return( 1 );
 }
 
-#if defined(MBEDTLS_X509_CRT_PARSE_C)
-/*
- * Try picking a certificate for this ciphersuite,
- * return 0 on success and -1 on failure.
- */
-static int ssl_tls13_pick_cert( mbedtls_ssl_context *ssl )
-{
-    mbedtls_ssl_key_cert *cur, *list;
-
-#if defined(MBEDTLS_SSL_SERVER_NAME_INDICATION)
-    if( ssl->handshake->sni_key_cert != NULL )
-        list = ssl->handshake->sni_key_cert;
-    else
-#endif /* MBEDTLS_SSL_SERVER_NAME_INDICATION */
-        list = ssl->conf->key_cert;
-
-    if( list == NULL )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 3, ( "server has no certificate" ) );
-        return( -1 );
-    }
-
-    for( cur = list; cur != NULL; cur = cur->next )
-    {
-        MBEDTLS_SSL_DEBUG_CRT( 3, "candidate certificate chain, certificate",
-                               cur->cert );
-
-        /*
-         * This avoids sending the client a cert it'll reject based on
-         * keyUsage or other extensions.
-         */
-        if( mbedtls_x509_crt_check_key_usage( cur->cert, MBEDTLS_X509_KU_DIGITAL_SIGNATURE ) != 0 )
-        {
-            MBEDTLS_SSL_DEBUG_MSG( 3, ( "certificate mismatch: "
-                                      "(extended) key usage extension" ) );
-            continue;
-        }
-
-        break;
-    }
-
-    /* Do not update ssl->handshake->key_cert unless there is a match */
-    if( cur != NULL )
-    {
-        ssl->handshake->key_cert = cur;
-        MBEDTLS_SSL_DEBUG_CRT( 3, "selected certificate chain, certificate",
-                               ssl->handshake->key_cert->cert );
-        return( 0 );
-    }
-
-    return( -1 );
-}
-#endif /* MBEDTLS_X509_CRT_PARSE_C */
-
 /*
  *
  * STATE HANDLING: ClientHello
@@ -634,21 +580,6 @@ static int ssl_tls13_parse_client_hello( mbedtls_ssl_context *ssl,
 
         switch( extension_type )
         {
-#if defined(MBEDTLS_SSL_SERVER_NAME_INDICATION)
-            case MBEDTLS_TLS_EXT_SERVERNAME:
-                MBEDTLS_SSL_DEBUG_MSG( 3, ( "found ServerName extension" ) );
-                ret = mbedtls_ssl_parse_server_name_ext( ssl, p,
-                                                         extension_data_end );
-                if( ret != 0 )
-                {
-                    MBEDTLS_SSL_DEBUG_RET(
-                            1, "mbedtls_ssl_parse_servername_ext", ret );
-                    return( ret );
-                }
-                ssl->handshake->extensions_present |= MBEDTLS_SSL_EXT_SERVERNAME;
-                break;
-#endif /* MBEDTLS_SSL_SERVER_NAME_INDICATION */
-
 #if defined(MBEDTLS_ECDH_C)
             case MBEDTLS_TLS_EXT_SUPPORTED_GROUPS:
                 MBEDTLS_SSL_DEBUG_MSG( 3, ( "found supported group extension" ) );
@@ -741,28 +672,6 @@ static int ssl_tls13_parse_client_hello( mbedtls_ssl_context *ssl,
 
         p += extension_data_len;
     }
-
-    /*
-     * Server certification selection (after processing TLS extensions)
-     */
-    if( ssl->conf->f_cert_cb && ( ret = ssl->conf->f_cert_cb( ssl ) ) != 0 )
-    {
-        MBEDTLS_SSL_DEBUG_RET( 1, "f_cert_cb", ret );
-        return( ret );
-    }
-#if defined(MBEDTLS_SSL_SERVER_NAME_INDICATION)
-    ssl->handshake->sni_name = NULL;
-    ssl->handshake->sni_name_len = 0;
-#endif /* MBEDTLS_SSL_SERVER_NAME_INDICATION */
-
-#if defined(MBEDTLS_X509_CRT_PARSE_C)
-    if( (ssl_tls13_pick_cert( ssl ) != 0) )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 3, ( "ciphersuite mismatch: "
-                            "no suitable certificate" ) );
-        return( 0 );
-    }
-#endif /* MBEDTLS_X509_CRT_PARSE_C */
 
     /* Update checksum with either
      * - The entire content of the CH message, if no PSK extension is present
@@ -1428,11 +1337,6 @@ static int ssl_tls13_certificate_request_coordinate( mbedtls_ssl_context *ssl )
 {
     int authmode;
 
-#if defined(MBEDTLS_SSL_SERVER_NAME_INDICATION)
-    if( ssl->handshake->sni_authmode != MBEDTLS_SSL_VERIFY_UNSET )
-        authmode = ssl->handshake->sni_authmode;
-    else
-#endif
     authmode = ssl->conf->authmode;
 
     if( authmode == MBEDTLS_SSL_VERIFY_NONE )
