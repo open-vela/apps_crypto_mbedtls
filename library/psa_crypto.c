@@ -913,7 +913,7 @@ static psa_status_t psa_get_and_lock_key_slot_with_policy(
         goto error;
     }
 
-    /* Enforce that the usage policy permits the requested algorithm. */
+    /* Enforce that the usage policy permits the requested algortihm. */
     if( alg != 0 )
     {
         status = psa_key_policy_permits( &slot->attr.policy,
@@ -4810,7 +4810,7 @@ static psa_status_t psa_generate_derived_ecc_key_weierstrass_helper(
 
         /* 4. If k > N - 2, discard the result and return to step 1.
         *    Result of comparison is returned. When it indicates error
-        *    then this function is called again.
+        *    then this fuction is called again.
         */
         MBEDTLS_MPI_CHK( mbedtls_mpi_lt_mpi_ct( &diff_N_2, &k, &key_out_of_range ) );
     }
@@ -5765,22 +5765,6 @@ psa_status_t psa_raw_key_agreement( psa_algorithm_t alg,
                  private_key, &slot, PSA_KEY_USAGE_DERIVE, alg );
     if( status != PSA_SUCCESS )
         goto exit;
-
-    /* PSA_RAW_KEY_AGREEMENT_OUTPUT_SIZE() is in general an upper bound
-     * for the output size. The PSA specification only guarantees that this
-     * function works if output_size >= PSA_RAW_KEY_AGREEMENT_OUTPUT_SIZE(...),
-     * but it might be nice to allow smaller buffers if the output fits.
-     * At the time of writing this comment, with only ECDH implemented,
-     * PSA_RAW_KEY_AGREEMENT_OUTPUT_SIZE() is exact so the point is moot.
-     * If FFDH is implemented, PSA_RAW_KEY_AGREEMENT_OUTPUT_SIZE() can easily
-     * be exact for it as well. */
-    size_t expected_length =
-        PSA_RAW_KEY_AGREEMENT_OUTPUT_SIZE( slot->attr.type, slot->attr.bits );
-    if( output_size < expected_length )
-    {
-        status = PSA_ERROR_BUFFER_TOO_SMALL;
-        goto exit;
-    }
 
     status = psa_key_agreement_raw_internal( alg, slot,
                                              peer_key, peer_key_length,
