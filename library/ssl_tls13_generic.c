@@ -31,6 +31,7 @@
 #include <string.h>
 
 #include "ssl_misc.h"
+#include "ssl_tls13_invasive.h"
 #include "ssl_tls13_keys.h"
 #include "ssl_debug_helpers.h"
 
@@ -156,6 +157,7 @@ static void ssl_tls13_create_verify_structure( const unsigned char *transcript_h
     *verify_buffer_len = idx;
 }
 
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_parse_certificate_verify( mbedtls_ssl_context *ssl,
                                                const unsigned char *buf,
                                                const unsigned char *end,
@@ -389,9 +391,11 @@ cleanup:
  */
 
 /* Parse certificate chain send by the server. */
-static int ssl_tls13_parse_certificate( mbedtls_ssl_context *ssl,
-                                        const unsigned char *buf,
-                                        const unsigned char *end )
+MBEDTLS_CHECK_RETURN_CRITICAL
+MBEDTLS_STATIC_TESTABLE
+int mbedtls_ssl_tls13_parse_certificate( mbedtls_ssl_context *ssl,
+                                         const unsigned char *buf,
+                                         const unsigned char *end )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     size_t certificate_request_context_len = 0;
@@ -521,9 +525,11 @@ exit:
     return( ret );
 }
 #else
-static int ssl_tls13_parse_certificate( mbedtls_ssl_context *ssl,
-                                        const unsigned char *buf,
-                                        const unsigned char *end )
+MBEDTLS_CHECK_RETURN_CRITICAL
+MBEDTLS_STATIC_TESTABLE
+int mbedtls_ssl_tls13_parse_certificate( mbedtls_ssl_context *ssl,
+                                         const unsigned char *buf,
+                                         const unsigned char *end )
 {
     ((void) ssl);
     ((void) buf);
@@ -536,6 +542,7 @@ static int ssl_tls13_parse_certificate( mbedtls_ssl_context *ssl,
 #if defined(MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED)
 #if defined(MBEDTLS_SSL_KEEP_PEER_CERTIFICATE)
 /* Validate certificate chain sent by the server. */
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_validate_certificate( mbedtls_ssl_context *ssl )
 {
     int ret = 0;
@@ -550,14 +557,7 @@ static int ssl_tls13_validate_certificate( mbedtls_ssl_context *ssl )
      * from the configuration. */
 #if defined(MBEDTLS_SSL_SRV_C)
     if( ssl->conf->endpoint == MBEDTLS_SSL_IS_SERVER )
-    {
-#if defined(MBEDTLS_SSL_SERVER_NAME_INDICATION)
-        if( ssl->handshake->sni_authmode != MBEDTLS_SSL_VERIFY_UNSET )
-            authmode = ssl->handshake->sni_authmode;
-        else
-#endif
-            authmode = ssl->conf->authmode;
-    }
+        authmode = ssl->conf->authmode;
 #endif
 
     /*
@@ -660,7 +660,8 @@ static int ssl_tls13_validate_certificate( mbedtls_ssl_context *ssl )
      * with details encoded in the verification flags. All other kinds
      * of error codes, including those from the user provided f_vrfy
      * functions, are treated as fatal and lead to a failure of
-     * ssl_tls13_parse_certificate even if verification was optional. */
+     * mbedtls_ssl_tls13_parse_certificate even if verification was optional.
+     */
     if( authmode == MBEDTLS_SSL_VERIFY_OPTIONAL &&
         ( ret == MBEDTLS_ERR_X509_CERT_VERIFY_FAILED ||
           ret == MBEDTLS_ERR_SSL_BAD_CERTIFICATE ) )
@@ -715,6 +716,7 @@ static int ssl_tls13_validate_certificate( mbedtls_ssl_context *ssl )
     return( ret );
 }
 #else /* MBEDTLS_SSL_KEEP_PEER_CERTIFICATE */
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_validate_certificate( mbedtls_ssl_context *ssl )
 {
     ((void) ssl);
@@ -737,8 +739,8 @@ int mbedtls_ssl_tls13_process_certificate( mbedtls_ssl_context *ssl )
                           &buf, &buf_len ) );
 
     /* Parse the certificate chain sent by the peer. */
-    MBEDTLS_SSL_PROC_CHK( ssl_tls13_parse_certificate( ssl, buf,
-                                                       buf + buf_len ) );
+    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_tls13_parse_certificate( ssl, buf,
+                                                               buf + buf_len ) );
     /* Validate the certificate chain and set the verification results. */
     MBEDTLS_SSL_PROC_CHK( ssl_tls13_validate_certificate( ssl ) );
 
@@ -776,6 +778,7 @@ cleanup:
  *        CertificateEntry certificate_list<0..2^24-1>;
  *    } Certificate;
  */
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_write_certificate_body( mbedtls_ssl_context *ssl,
                                              unsigned char *buf,
                                              unsigned char *end,
@@ -869,9 +872,10 @@ cleanup:
 /*
  * STATE HANDLING: Output Certificate Verify
  */
-int mbedtls_ssl_tls13_get_sig_alg_from_pk( mbedtls_ssl_context *ssl,
-                                           mbedtls_pk_context *own_key,
-                                           uint16_t *algorithm )
+MBEDTLS_CHECK_RETURN_CRITICAL
+static int ssl_tls13_get_sig_alg_from_pk( mbedtls_ssl_context *ssl,
+                                          mbedtls_pk_context *own_key,
+                                          uint16_t *algorithm )
 {
     mbedtls_pk_type_t sig = mbedtls_ssl_sig_from_pk( own_key );
     /* Determine the size of the key */
@@ -986,6 +990,7 @@ int mbedtls_ssl_tls13_get_sig_alg_from_pk( mbedtls_ssl_context *ssl,
     return( -1 );
 }
 
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_write_certificate_verify_body( mbedtls_ssl_context *ssl,
                                                     unsigned char *buf,
                                                     unsigned char *end,
@@ -1039,7 +1044,7 @@ static int ssl_tls13_write_certificate_verify_body( mbedtls_ssl_context *ssl,
      *    opaque signature<0..2^16-1>;
      *  } CertificateVerify;
      */
-    ret = mbedtls_ssl_tls13_get_sig_alg_from_pk( ssl, own_key, &algorithm );
+    ret = ssl_tls13_get_sig_alg_from_pk( ssl, own_key, &algorithm );
     if( ret != 0 || ! mbedtls_ssl_sig_alg_is_received( ssl, algorithm ) )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1,
@@ -1131,6 +1136,7 @@ cleanup:
  * Implementation
  */
 
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_preprocess_finished_message( mbedtls_ssl_context *ssl )
 {
     int ret;
@@ -1150,6 +1156,7 @@ static int ssl_tls13_preprocess_finished_message( mbedtls_ssl_context *ssl )
     return( 0 );
 }
 
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_parse_finished_message( mbedtls_ssl_context *ssl,
                                              const unsigned char *buf,
                                              const unsigned char *end )
@@ -1228,6 +1235,7 @@ cleanup:
  * Implement
  */
 
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_prepare_finished_message( mbedtls_ssl_context *ssl )
 {
     int ret;
@@ -1248,6 +1256,7 @@ static int ssl_tls13_prepare_finished_message( mbedtls_ssl_context *ssl )
     return( 0 );
 }
 
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_write_finished_message_body( mbedtls_ssl_context *ssl,
                                                   unsigned char *buf,
                                                   unsigned char *end,
@@ -1327,6 +1336,7 @@ void mbedtls_ssl_tls13_handshake_wrapup( mbedtls_ssl_context *ssl )
  *
  */
 #if defined(MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE)
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_write_change_cipher_spec_body( mbedtls_ssl_context *ssl,
                                                     unsigned char *buf,
                                                     unsigned char *end,
