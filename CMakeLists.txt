@@ -6,9 +6,9 @@
 #     command but rather at the target level using the
 #     target_include_directories command. That way, it is easier to guarantee
 #     that targets are built using the proper list of include directories.
-#   + Use the PUBLIC and PRIVATE keywords to specify the scope of include
+#   + Use the PUBLIC and PRIVATE keywords to specifiy the scope of include
 #     directories. That way, a target linking to a library (using the
-#     target_link_libraries command) inherits from the library PUBLIC include
+#     target_link_librairies command) inherits from the library PUBLIC include
 #     directories and not from the PRIVATE ones.
 # - MBEDTLS_TARGET_PREFIX: CMake targets are designed to be alterable by calling
 #   CMake in order to avoid target name clashes, via the use of
@@ -38,8 +38,6 @@ if(TEST_CPP)
 else()
     project("mbed TLS" C)
 endif()
-
-include(GNUInstallDirs)
 
 # Determine if mbed TLS is being built as a subproject using add_subdirectory()
 if(NOT DEFINED MBEDTLS_AS_SUBPROJECT)
@@ -172,9 +170,6 @@ string(REGEX MATCH "Clang" CMAKE_COMPILER_IS_CLANG "${CMAKE_C_COMPILER_ID}")
 
 include(CheckCCompilerFlag)
 
-set(CMAKE_C_EXTENSIONS OFF)
-set(CMAKE_C_STANDARD 99)
-
 if(CMAKE_COMPILER_IS_GNU)
     # some warnings we want are not available with old GCC versions
     # note: starting with CMake 2.8 we could use CMAKE_C_COMPILER_VERSION
@@ -254,7 +249,8 @@ if(CMAKE_BUILD_TYPE STREQUAL "Coverage")
 endif(CMAKE_BUILD_TYPE STREQUAL "Coverage")
 
 if(LIB_INSTALL_DIR)
-    set(CMAKE_INSTALL_LIBDIR "${LIB_INSTALL_DIR}")
+else()
+    set(LIB_INSTALL_DIR lib)
 endif()
 
 add_subdirectory(include)
