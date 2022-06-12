@@ -1234,7 +1234,7 @@ int mbedtls_ssl_decrypt_buf( mbedtls_ssl_context const *ssl,
                                add_data, add_data_len );
 
         /* Because of the check above, we know that there are
-         * explicit_iv_len Bytes preceeding data, and taglen
+         * explicit_iv_len Bytes preceding data, and taglen
          * bytes following data + data_len. This justifies
          * the debug message and the invocation of
          * mbedtls_cipher_auth_decrypt_ext() below. */
@@ -2404,7 +2404,7 @@ int mbedtls_ssl_start_handshake_msg( mbedtls_ssl_context *ssl, unsigned hs_type,
                                      unsigned char **buf, size_t *buf_len )
 {
     /*
-     * Reserve 4 bytes for hanshake header. ( Section 4,RFC 8446 )
+     * Reserve 4 bytes for handshake header. ( Section 4,RFC 8446 )
      *    ...
      *    HandshakeType msg_type;
      *    uint24 length;
@@ -3139,8 +3139,8 @@ void mbedtls_ssl_dtls_replay_update( mbedtls_ssl_context *ssl )
 
 #if defined(MBEDTLS_SSL_DTLS_CLIENT_PORT_REUSE) && defined(MBEDTLS_SSL_SRV_C)
 /*
- * Check if a datagram looks like a ClientHello with a valid cookie,
- * and if it doesn't, generate a HelloVerifyRequest message.
+ * Without any SSL context, check if a datagram looks like a ClientHello with
+ * a valid cookie, and if it doesn't, generate a HelloVerifyRequest message.
  * Both input and output include full DTLS headers.
  *
  * - if cookie is valid, return 0
@@ -3149,9 +3149,10 @@ void mbedtls_ssl_dtls_replay_update( mbedtls_ssl_context *ssl )
  *   return MBEDTLS_ERR_SSL_HELLO_VERIFY_REQUIRED
  * - otherwise return a specific error code
  */
-MBEDTLS_STATIC_TESTABLE
-int mbedtls_ssl_check_dtls_clihlo_cookie(
-                           mbedtls_ssl_context *ssl,
+static int ssl_check_dtls_clihlo_cookie(
+                           mbedtls_ssl_cookie_write_t *f_cookie_write,
+                           mbedtls_ssl_cookie_check_t *f_cookie_check,
+                           void *p_cookie,
                            const unsigned char *cli_id, size_t cli_id_len,
                            const unsigned char *in, size_t in_len,
                            unsigned char *obuf, size_t buf_len, size_t *olen )
@@ -3185,53 +3186,26 @@ int mbedtls_ssl_check_dtls_clihlo_cookie(
      *
      * Minimum length is 61 bytes.
      */
-    MBEDTLS_SSL_DEBUG_MSG( 4, ( "check cookie: in_len=%u",
-                                (unsigned) in_len ) );
-    MBEDTLS_SSL_DEBUG_BUF( 4, "cli_id", cli_id, cli_id_len );
-    if( in_len < 61 )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 4, ( "check cookie: record too short" ) );
-        return( MBEDTLS_ERR_SSL_DECODE_ERROR );
-    }
-    if( in[0] != MBEDTLS_SSL_MSG_HANDSHAKE ||
+    if( in_len < 61 ||
+        in[0] != MBEDTLS_SSL_MSG_HANDSHAKE ||
         in[3] != 0 || in[4] != 0 ||
         in[19] != 0 || in[20] != 0 || in[21] != 0 )
     {
-        MBEDTLS_SSL_DEBUG_MSG( 4, ( "check cookie: not a good ClientHello" ) );
-        MBEDTLS_SSL_DEBUG_MSG( 4, ( "    type=%u epoch=%u fragment_offset=%u",
-                                    in[0],
-                                    (unsigned) in[3] << 8 | in[4],
-                                    (unsigned) in[19] << 16 | in[20] << 8 | in[21] ) );
         return( MBEDTLS_ERR_SSL_DECODE_ERROR );
     }
 
     sid_len = in[59];
-    if( 59 + 1 + sid_len + 1 > in_len )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 4, ( "check cookie: sid_len=%u > %u",
-                                    (unsigned) sid_len,
-                                    (unsigned) in_len - 61 ) );
+    if( sid_len > in_len - 61 )
         return( MBEDTLS_ERR_SSL_DECODE_ERROR );
-    }
-    MBEDTLS_SSL_DEBUG_BUF( 4, "sid received from network",
-                           in + 60, sid_len );
 
     cookie_len = in[60 + sid_len];
-    if( 59 + 1 + sid_len + 1 + cookie_len > in_len )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 4, ( "check cookie: cookie_len=%u > %u",
-                                    (unsigned) cookie_len,
-                                    (unsigned) ( in_len - sid_len - 61 ) ) );
+    if( cookie_len > in_len - 60 )
         return( MBEDTLS_ERR_SSL_DECODE_ERROR );
-    }
 
-    MBEDTLS_SSL_DEBUG_BUF( 4, "cookie received from network",
-                           in + sid_len + 61, cookie_len );
-    if( ssl->conf->f_cookie_check( ssl->conf->p_cookie,
-                                   in + sid_len + 61, cookie_len,
-                                   cli_id, cli_id_len ) == 0 )
+    if( f_cookie_check( p_cookie, in + sid_len + 61, cookie_len,
+                        cli_id, cli_id_len ) == 0 )
     {
-        MBEDTLS_SSL_DEBUG_MSG( 4, ( "check cookie: valid" ) );
+        /* Valid cookie */
         return( 0 );
     }
 
@@ -3266,9 +3240,8 @@ int mbedtls_ssl_check_dtls_clihlo_cookie(
 
     /* Generate and write actual cookie */
     p = obuf + 28;
-    if( ssl->conf->f_cookie_write( ssl->conf->p_cookie,
-                                   &p, obuf + buf_len,
-                                   cli_id, cli_id_len ) != 0 )
+    if( f_cookie_write( p_cookie,
+                        &p, obuf + buf_len, cli_id, cli_id_len ) != 0 )
     {
         return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
     }
@@ -3322,13 +3295,15 @@ static int ssl_handle_possible_reconnect( mbedtls_ssl_context *ssl )
         return( 0 );
     }
 
-    ret = mbedtls_ssl_check_dtls_clihlo_cookie(
-            ssl,
+    ret = ssl_check_dtls_clihlo_cookie(
+            ssl->conf->f_cookie_write,
+            ssl->conf->f_cookie_check,
+            ssl->conf->p_cookie,
             ssl->cli_id, ssl->cli_id_len,
             ssl->in_buf, ssl->in_left,
             ssl->out_buf, MBEDTLS_SSL_OUT_CONTENT_LEN, &len );
 
-    MBEDTLS_SSL_DEBUG_RET( 2, "mbedtls_ssl_check_dtls_clihlo_cookie", ret );
+    MBEDTLS_SSL_DEBUG_RET( 2, "ssl_check_dtls_clihlo_cookie", ret );
 
     if( ret == MBEDTLS_ERR_SSL_HELLO_VERIFY_REQUIRED )
     {
@@ -3506,6 +3481,7 @@ static int ssl_parse_record_header( mbedtls_ssl_context const *ssl,
     /*
      * Parse and validate record version
      */
+
     rec->ver[0] = buf[ rec_hdr_version_offset + 0 ];
     rec->ver[1] = buf[ rec_hdr_version_offset + 1 ];
     tls_version = mbedtls_ssl_read_version( buf + rec_hdr_version_offset,
@@ -3513,12 +3489,10 @@ static int ssl_parse_record_header( mbedtls_ssl_context const *ssl,
 
     if( tls_version > ssl->conf->max_tls_version )
     {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "TLS version mismatch: got %u, expected max %u",
-                                    (unsigned) tls_version,
-                                    (unsigned) ssl->conf->max_tls_version) );
-
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "TLS version mismatch" ) );
         return( MBEDTLS_ERR_SSL_INVALID_RECORD );
     }
+
     /*
      * Parse/Copy record sequence number.
      */

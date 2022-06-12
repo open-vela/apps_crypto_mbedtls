@@ -37,7 +37,7 @@
 #include <string.h>
 
 /*
- * Initialze context
+ * Initialize context
  */
 void mbedtls_ssl_ticket_init( mbedtls_ssl_ticket_context *ctx )
 {
@@ -70,7 +70,7 @@ static int ssl_ticket_gen_key( mbedtls_ssl_ticket_context *ctx,
                                unsigned char index )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
-    unsigned char buf[MAX_KEY_BYTES];
+    unsigned char buf[MAX_KEY_BYTES] = {0};
     mbedtls_ssl_ticket_key *key = ctx->keys + index;
 
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
