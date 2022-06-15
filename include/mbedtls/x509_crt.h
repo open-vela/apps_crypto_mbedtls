@@ -114,7 +114,7 @@ mbedtls_x509_crt;
 typedef struct mbedtls_x509_san_other_name
 {
     /**
-     * The type_id is an OID as deifned in RFC 5280.
+     * The type_id is an OID as defined in RFC 5280.
      * To check the value of the type id, you should use
      * \p MBEDTLS_OID_CMP with a known OID mbedtls_x509_buf.
      */
@@ -957,6 +957,23 @@ void mbedtls_x509_crt_restart_free( mbedtls_x509_crt_restart_ctx *ctx );
 #endif /* MBEDTLS_ECDSA_C && MBEDTLS_ECP_RESTARTABLE */
 #endif /* MBEDTLS_X509_CRT_PARSE_C */
 
+/**
+ * \brief               Query certificate for given extension type
+ *
+ * \param[in] ctx       Certificate context to be queried, must not be \c NULL
+ * \param ext_type      Extension type being queried for, must be a valid
+ *                      extension type. Must be one of the MBEDTLS_X509_EXT_XXX
+ *                      values
+ *
+ * \return              0 if the given extension type is not present,
+ *                      non-zero otherwise
+ */
+static inline int mbedtls_x509_crt_has_ext_type( const mbedtls_x509_crt *ctx,
+                                                 int ext_type )
+{
+    return ctx->MBEDTLS_PRIVATE(ext_types) & ext_type;
+}
+
 /** \} name Structures and functions for parsing and writing X.509 certificates */
 
 #if defined(MBEDTLS_X509_CRT_WRITE_C)
@@ -1084,7 +1101,7 @@ int mbedtls_x509write_crt_set_extension( mbedtls_x509write_cert *ctx,
  * \param is_ca     is this a CA certificate
  * \param max_pathlen   maximum length of certificate chains below this
  *                      certificate (only for CA certificates, -1 is
- *                      inlimited)
+ *                      unlimited)
  *
  * \return          0 if successful, or a MBEDTLS_ERR_X509_ALLOC_FAILED
  */
