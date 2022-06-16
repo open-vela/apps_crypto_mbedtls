@@ -87,7 +87,7 @@ int ca_callback_fail( void *data, mbedtls_x509_crt const *child, mbedtls_x509_cr
 
     return -1;
 }
-
+#if defined(MBEDTLS_X509_CRT_PARSE_C)
 int ca_callback( void *data, mbedtls_x509_crt const *child,
                  mbedtls_x509_crt **candidates )
 {
@@ -141,6 +141,7 @@ exit:
     *candidates = first;
     return( ret );
 }
+#endif /* MBEDTLS_X509_CRT_PARSE_C */
 #endif /* MBEDTLS_X509_TRUSTED_CERTIFICATE_CALLBACK */
 
 int verify_fatal( void *data, mbedtls_x509_crt *crt, int certificate_depth, uint32_t *flags )
@@ -399,6 +400,22 @@ int parse_crt_ext_cb( void *p_ctx, mbedtls_x509_crt const *crt, mbedtls_x509_buf
  * depends_on:MBEDTLS_BIGNUM_C
  * END_DEPENDENCIES
  */
+
+/* BEGIN_CASE depends_on:MBEDTLS_X509_CRT_PARSE_C */
+void x509_accessor_ext_types( int ext_type, int has_ext_type )
+{
+    mbedtls_x509_crt crt;
+    int expected_result = ext_type & has_ext_type;
+
+    mbedtls_x509_crt_init( &crt );
+
+    crt.ext_types = ext_type;
+
+    TEST_ASSERT( mbedtls_x509_crt_has_ext_type( &crt, has_ext_type ) == expected_result );
+
+    mbedtls_x509_crt_free( &crt );
+}
+/* END_CASE */
 
 /* BEGIN_CASE depends_on:MBEDTLS_FS_IO:MBEDTLS_X509_CRT_PARSE_C */
 void x509_parse_san( char * crt_file, char * result_str )
