@@ -2270,14 +2270,12 @@ int mbedtls_ssl_validate_ciphersuite(
 int mbedtls_ssl_write_sig_alg_ext( mbedtls_ssl_context *ssl, unsigned char *buf,
                                    const unsigned char *end, size_t *out_len );
 
-#if defined(MBEDTLS_SSL_SERVER_NAME_INDICATION)
-int mbedtls_ssl_parse_server_name_ext( mbedtls_ssl_context *ssl,
-                                       const unsigned char *buf,
-                                       const unsigned char *end );
-#endif /* MBEDTLS_SSL_SERVER_NAME_INDICATION */
-
-int mbedtls_ssl_tls13_get_sig_alg_from_pk( mbedtls_ssl_context *ssl,
-                                           mbedtls_pk_context *own_key,
-                                           uint16_t *algorithm );
+#if defined(MBEDTLS_TEST_HOOKS)
+int mbedtls_ssl_check_dtls_clihlo_cookie(
+                           mbedtls_ssl_context *ssl,
+                           const unsigned char *cli_id, size_t cli_id_len,
+                           const unsigned char *in, size_t in_len,
+                           unsigned char *obuf, size_t buf_len, size_t *olen );
+#endif
 
 #endif /* ssl_misc.h */
