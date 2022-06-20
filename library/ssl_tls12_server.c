@@ -77,6 +77,80 @@ void mbedtls_ssl_conf_dtls_cookies( mbedtls_ssl_config *conf,
 }
 #endif /* MBEDTLS_SSL_DTLS_HELLO_VERIFY */
 
+#if defined(MBEDTLS_SSL_SERVER_NAME_INDICATION)
+static int ssl_parse_servername_ext( mbedtls_ssl_context *ssl,
+                                     const unsigned char *buf,
+                                     size_t len )
+{
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+    size_t servername_list_size, hostname_len;
+    const unsigned char *p;
+
+    MBEDTLS_SSL_DEBUG_MSG( 3, ( "parse ServerName extension" ) );
+
+    if( len < 2 )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad client hello message" ) );
+        mbedtls_ssl_send_alert_message( ssl, MBEDTLS_SSL_ALERT_LEVEL_FATAL,
+                                       MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR );
+        return( MBEDTLS_ERR_SSL_DECODE_ERROR );
+    }
+    servername_list_size = ( ( buf[0] << 8 ) | ( buf[1] ) );
+    if( servername_list_size + 2 != len )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad client hello message" ) );
+        mbedtls_ssl_send_alert_message( ssl, MBEDTLS_SSL_ALERT_LEVEL_FATAL,
+                                        MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR );
+        return( MBEDTLS_ERR_SSL_DECODE_ERROR );
+    }
+
+    p = buf + 2;
+    while( servername_list_size > 2 )
+    {
+        hostname_len = ( ( p[1] << 8 ) | p[2] );
+        if( hostname_len + 3 > servername_list_size )
+        {
+            MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad client hello message" ) );
+            mbedtls_ssl_send_alert_message( ssl, MBEDTLS_SSL_ALERT_LEVEL_FATAL,
+                                            MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR );
+            return( MBEDTLS_ERR_SSL_DECODE_ERROR );
+        }
+
+        if( p[0] == MBEDTLS_TLS_EXT_SERVERNAME_HOSTNAME )
+        {
+            ssl->handshake->sni_name = p + 3;
+            ssl->handshake->sni_name_len = hostname_len;
+            if( ssl->conf->f_sni == NULL )
+                return( 0 );
+
+            ret = ssl->conf->f_sni( ssl->conf->p_sni,
+                                    ssl, p + 3, hostname_len );
+            if( ret != 0 )
+            {
+                MBEDTLS_SSL_DEBUG_RET( 1, "ssl_sni_wrapper", ret );
+                mbedtls_ssl_send_alert_message( ssl, MBEDTLS_SSL_ALERT_LEVEL_FATAL,
+                        MBEDTLS_SSL_ALERT_MSG_UNRECOGNIZED_NAME );
+                return( MBEDTLS_ERR_SSL_UNRECOGNIZED_NAME );
+            }
+            return( 0 );
+        }
+
+        servername_list_size -= hostname_len + 3;
+        p += hostname_len + 3;
+    }
+
+    if( servername_list_size != 0 )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad client hello message" ) );
+        mbedtls_ssl_send_alert_message( ssl, MBEDTLS_SSL_ALERT_LEVEL_FATAL,
+                                        MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR );
+        return( MBEDTLS_ERR_SSL_DECODE_ERROR );
+    }
+
+    return( 0 );
+}
+#endif /* MBEDTLS_SSL_SERVER_NAME_INDICATION */
+
 #if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
 static int ssl_conf_has_psk_or_cb( mbedtls_ssl_config const *conf )
 {
@@ -1115,16 +1189,29 @@ read_record_header:
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad client hello message" ) );
         return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
     }
-
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "client hello v3, handshake len.: %d",
-                   ( buf[1] << 16 ) | ( buf[2] << 8 ) | buf[3] ) );
-
-    /* We don't support fragmentation of ClientHello (yet?) */
-    if( buf[1] != 0 ||
-        msg_len != mbedtls_ssl_hs_hdr_len( ssl ) + ( ( buf[2] << 8 ) | buf[3] ) )
     {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad client hello message" ) );
-        return( MBEDTLS_ERR_SSL_DECODE_ERROR );
+        size_t handshake_len = MBEDTLS_GET_UINT24_BE( buf, 1 );
+        MBEDTLS_SSL_DEBUG_MSG( 3, ( "client hello v3, handshake len.: %u",
+                       ( unsigned ) handshake_len ) );
+
+        /* The record layer has a record size limit of 2^14 - 1 and
+         * fragmentation is not supported, so buf[1] should be zero. */
+        if( buf[1] != 0 )
+        {
+            MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad client hello message: %u != 0",
+                                        (unsigned) buf[1] ) );
+            return( MBEDTLS_ERR_SSL_DECODE_ERROR );
+        }
+
+        /* We don't support fragmentation of ClientHello (yet?) */
+        if( msg_len != mbedtls_ssl_hs_hdr_len( ssl ) + handshake_len )
+        {
+            MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad client hello message: %u != %u + %u",
+                                    (unsigned) msg_len,
+                                    (unsigned) mbedtls_ssl_hs_hdr_len( ssl ),
+                                    (unsigned) handshake_len ) );
+            return( MBEDTLS_ERR_SSL_DECODE_ERROR );
+        }
     }
 
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
@@ -1159,16 +1246,24 @@ read_record_header:
             ssl->handshake->out_msg_seq = cli_msg_seq;
             ssl->handshake->in_msg_seq  = cli_msg_seq + 1;
         }
-
-        /*
-         * For now we don't support fragmentation, so make sure
-         * fragment_offset == 0 and fragment_length == length
-         */
-        if( ssl->in_msg[6] != 0 || ssl->in_msg[7] != 0 || ssl->in_msg[8] != 0 ||
-            memcmp( ssl->in_msg + 1, ssl->in_msg + 9, 3 ) != 0 )
         {
-            MBEDTLS_SSL_DEBUG_MSG( 1, ( "ClientHello fragmentation not supported" ) );
-            return( MBEDTLS_ERR_SSL_FEATURE_UNAVAILABLE );
+            /*
+             * For now we don't support fragmentation, so make sure
+             * fragment_offset == 0 and fragment_length == length
+             */
+            size_t fragment_offset, fragment_length, length;
+            fragment_offset = MBEDTLS_GET_UINT24_BE( ssl->in_msg, 6 );
+            fragment_length = MBEDTLS_GET_UINT24_BE( ssl->in_msg, 9 );
+            length = MBEDTLS_GET_UINT24_BE( ssl->in_msg, 1 );
+            MBEDTLS_SSL_DEBUG_MSG(
+                4, ( "fragment_offset=%u fragment_length=%u length=%u",
+                     (unsigned) fragment_offset, (unsigned) fragment_length,
+                     (unsigned) length ) );
+            if( fragment_offset != 0 || length != fragment_length )
+            {
+                MBEDTLS_SSL_DEBUG_MSG( 1, ( "ClientHello fragmentation not supported" ) );
+                return( MBEDTLS_ERR_SSL_FEATURE_UNAVAILABLE );
+            }
         }
     }
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
@@ -1409,8 +1504,7 @@ read_record_header:
 #if defined(MBEDTLS_SSL_SERVER_NAME_INDICATION)
             case MBEDTLS_TLS_EXT_SERVERNAME:
                 MBEDTLS_SSL_DEBUG_MSG( 3, ( "found ServerName extension" ) );
-                ret = mbedtls_ssl_parse_server_name_ext( ssl, ext + 4,
-                                                         ext + 4 + ext_size );
+                ret = ssl_parse_servername_ext( ssl, ext + 4, ext_size );
                 if( ret != 0 )
                     return( ret );
                 break;
