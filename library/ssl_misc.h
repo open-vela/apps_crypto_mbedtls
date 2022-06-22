@@ -1271,8 +1271,7 @@ static inline int mbedtls_ssl_write_handshake_msg( mbedtls_ssl_context *ssl )
 int mbedtls_ssl_finish_handshake_msg( mbedtls_ssl_context *ssl,
                                       size_t buf_len, size_t msg_len );
 
-int mbedtls_ssl_write_record( mbedtls_ssl_context *ssl, int force_flush,
-                              int encrypt );
+int mbedtls_ssl_write_record( mbedtls_ssl_context *ssl, int force_flush );
 int mbedtls_ssl_flush_output( mbedtls_ssl_context *ssl );
 
 int mbedtls_ssl_parse_certificate( mbedtls_ssl_context *ssl );
@@ -2270,27 +2269,5 @@ int mbedtls_ssl_validate_ciphersuite(
 
 int mbedtls_ssl_write_sig_alg_ext( mbedtls_ssl_context *ssl, unsigned char *buf,
                                    const unsigned char *end, size_t *out_len );
-
-#if defined(MBEDTLS_SSL_SERVER_NAME_INDICATION)
-int mbedtls_ssl_parse_server_name_ext( mbedtls_ssl_context *ssl,
-                                       const unsigned char *buf,
-                                       const unsigned char *end );
-#endif /* MBEDTLS_SSL_SERVER_NAME_INDICATION */
-
-int mbedtls_ssl_tls13_get_sig_alg_from_pk( mbedtls_ssl_context *ssl,
-                                           mbedtls_pk_context *own_key,
-                                           uint16_t *algorithm );
-
-#if defined(MBEDTLS_SSL_ALPN)
-int mbedtls_ssl_parse_alpn_ext( mbedtls_ssl_context *ssl,
-                                const unsigned char *buf,
-                                const unsigned char *end );
-
-
-int mbedtls_ssl_write_alpn_ext( mbedtls_ssl_context *ssl,
-                                unsigned char *buf,
-                                unsigned char *end,
-                                size_t *olen );
-#endif /* MBEDTLS_SSL_ALPN */
 
 #endif /* ssl_misc.h */
