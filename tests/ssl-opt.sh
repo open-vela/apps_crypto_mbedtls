@@ -5373,6 +5373,7 @@ run_test    "Certificate hash: client TLS 1.2 -> SHA-2" \
 # tests for SNI
 
 requires_config_disabled MBEDTLS_X509_REMOVE_INFO
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 run_test    "SNI: no SNI callback" \
             "$P_SRV debug_level=3 \
              crt_file=data_files/server5.crt key_file=data_files/server5.key" \
@@ -5382,6 +5383,7 @@ run_test    "SNI: no SNI callback" \
             -c "subject name *: C=NL, O=PolarSSL, CN=localhost"
 
 requires_config_disabled MBEDTLS_X509_REMOVE_INFO
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 run_test    "SNI: matching cert 1" \
             "$P_SRV debug_level=3 \
              crt_file=data_files/server5.crt key_file=data_files/server5.key \
@@ -5393,6 +5395,7 @@ run_test    "SNI: matching cert 1" \
             -c "subject name *: C=NL, O=PolarSSL, CN=localhost"
 
 requires_config_disabled MBEDTLS_X509_REMOVE_INFO
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 run_test    "SNI: matching cert 2" \
             "$P_SRV debug_level=3 \
              crt_file=data_files/server5.crt key_file=data_files/server5.key \
@@ -5404,6 +5407,7 @@ run_test    "SNI: matching cert 2" \
             -c "subject name *: C=NL, O=PolarSSL, CN=polarssl.example"
 
 requires_config_disabled MBEDTLS_X509_REMOVE_INFO
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 run_test    "SNI: no matching cert" \
             "$P_SRV debug_level=3 \
              crt_file=data_files/server5.crt key_file=data_files/server5.key \
@@ -5416,6 +5420,7 @@ run_test    "SNI: no matching cert" \
             -c "mbedtls_ssl_handshake returned" \
             -c "SSL - A fatal alert message was received from our peer"
 
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 run_test    "SNI: client auth no override: optional" \
             "$P_SRV debug_level=3 auth_mode=optional \
              crt_file=data_files/server5.crt key_file=data_files/server5.key \
@@ -5429,6 +5434,7 @@ run_test    "SNI: client auth no override: optional" \
             -C "skip write certificate verify" \
             -S "skip parse certificate verify"
 
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 run_test    "SNI: client auth override: none -> optional" \
             "$P_SRV debug_level=3 auth_mode=none \
              crt_file=data_files/server5.crt key_file=data_files/server5.key \
@@ -5442,6 +5448,7 @@ run_test    "SNI: client auth override: none -> optional" \
             -C "skip write certificate verify" \
             -S "skip parse certificate verify"
 
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 run_test    "SNI: client auth override: optional -> none" \
             "$P_SRV debug_level=3 auth_mode=optional \
              crt_file=data_files/server5.crt key_file=data_files/server5.key \
@@ -5451,8 +5458,11 @@ run_test    "SNI: client auth override: optional -> none" \
             -s "skip write certificate request" \
             -C "skip parse certificate request" \
             -c "got no certificate request" \
-            -c "skip write certificate"
+            -c "skip write certificate" \
+            -c "skip write certificate verify" \
+            -s "skip parse certificate verify"
 
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 run_test    "SNI: CA no override" \
             "$P_SRV debug_level=3 auth_mode=optional \
              crt_file=data_files/server5.crt key_file=data_files/server5.key \
@@ -5471,6 +5481,7 @@ run_test    "SNI: CA no override" \
             -s "! The certificate is not correctly signed by the trusted CA" \
             -S "The certificate has been revoked (is on a CRL)"
 
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 run_test    "SNI: CA override" \
             "$P_SRV debug_level=3 auth_mode=optional \
              crt_file=data_files/server5.crt key_file=data_files/server5.key \
@@ -5489,6 +5500,7 @@ run_test    "SNI: CA override" \
             -S "! The certificate is not correctly signed by the trusted CA" \
             -S "The certificate has been revoked (is on a CRL)"
 
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 run_test    "SNI: CA override with CRL" \
             "$P_SRV debug_level=3 auth_mode=optional \
              crt_file=data_files/server5.crt key_file=data_files/server5.key \
@@ -5901,6 +5913,7 @@ run_test    "Not supported version check: srv max TLS 1.1" \
 
 # Tests for ALPN extension
 
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 run_test    "ALPN: none" \
             "$P_SRV debug_level=3" \
             "$P_CLI debug_level=3" \
@@ -5908,11 +5921,12 @@ run_test    "ALPN: none" \
             -C "client hello, adding alpn extension" \
             -S "found alpn extension" \
             -C "got an alert message, type: \\[2:120]" \
-            -S "server side, adding alpn extension" \
+            -S "server hello, adding alpn extension" \
             -C "found alpn extension " \
             -C "Application Layer Protocol is" \
             -S "Application Layer Protocol is"
 
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 run_test    "ALPN: client only" \
             "$P_SRV debug_level=3" \
             "$P_CLI debug_level=3 alpn=abc,1234" \
@@ -5920,11 +5934,12 @@ run_test    "ALPN: client only" \
             -c "client hello, adding alpn extension" \
             -s "found alpn extension" \
             -C "got an alert message, type: \\[2:120]" \
-            -S "server side, adding alpn extension" \
+            -S "server hello, adding alpn extension" \
             -C "found alpn extension " \
             -c "Application Layer Protocol is (none)" \
             -S "Application Layer Protocol is"
 
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 run_test    "ALPN: server only" \
             "$P_SRV debug_level=3 alpn=abc,1234" \
             "$P_CLI debug_level=3" \
@@ -5932,11 +5947,12 @@ run_test    "ALPN: server only" \
             -C "client hello, adding alpn extension" \
             -S "found alpn extension" \
             -C "got an alert message, type: \\[2:120]" \
-            -S "server side, adding alpn extension" \
+            -S "server hello, adding alpn extension" \
             -C "found alpn extension " \
             -C "Application Layer Protocol is" \
             -s "Application Layer Protocol is (none)"
 
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 run_test    "ALPN: both, common cli1-srv1" \
             "$P_SRV debug_level=3 alpn=abc,1234" \
             "$P_CLI debug_level=3 alpn=abc,1234" \
@@ -5944,11 +5960,12 @@ run_test    "ALPN: both, common cli1-srv1" \
             -c "client hello, adding alpn extension" \
             -s "found alpn extension" \
             -C "got an alert message, type: \\[2:120]" \
-            -s "server side, adding alpn extension" \
+            -s "server hello, adding alpn extension" \
             -c "found alpn extension" \
             -c "Application Layer Protocol is abc" \
             -s "Application Layer Protocol is abc"
 
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 run_test    "ALPN: both, common cli2-srv1" \
             "$P_SRV debug_level=3 alpn=abc,1234" \
             "$P_CLI debug_level=3 alpn=1234,abc" \
@@ -5956,11 +5973,12 @@ run_test    "ALPN: both, common cli2-srv1" \
             -c "client hello, adding alpn extension" \
             -s "found alpn extension" \
             -C "got an alert message, type: \\[2:120]" \
-            -s "server side, adding alpn extension" \
+            -s "server hello, adding alpn extension" \
             -c "found alpn extension" \
             -c "Application Layer Protocol is abc" \
             -s "Application Layer Protocol is abc"
 
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 run_test    "ALPN: both, common cli1-srv2" \
             "$P_SRV debug_level=3 alpn=abc,1234" \
             "$P_CLI debug_level=3 alpn=1234,abcde" \
@@ -5968,11 +5986,12 @@ run_test    "ALPN: both, common cli1-srv2" \
             -c "client hello, adding alpn extension" \
             -s "found alpn extension" \
             -C "got an alert message, type: \\[2:120]" \
-            -s "server side, adding alpn extension" \
+            -s "server hello, adding alpn extension" \
             -c "found alpn extension" \
             -c "Application Layer Protocol is 1234" \
             -s "Application Layer Protocol is 1234"
 
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 run_test    "ALPN: both, no common" \
             "$P_SRV debug_level=3 alpn=abc,123" \
             "$P_CLI debug_level=3 alpn=1234,abcde" \
@@ -5980,7 +5999,7 @@ run_test    "ALPN: both, no common" \
             -c "client hello, adding alpn extension" \
             -s "found alpn extension" \
             -c "got an alert message, type: \\[2:120]" \
-            -S "server side, adding alpn extension" \
+            -S "server hello, adding alpn extension" \
             -C "found alpn extension" \
             -C "Application Layer Protocol is 1234" \
             -S "Application Layer Protocol is 1234"
@@ -5996,7 +6015,6 @@ run_test    "keyUsage srv: RSA, digitalSignature -> (EC)DHE-RSA" \
             "$P_CLI" \
             0 \
             -c "Ciphersuite is TLS-[EC]*DHE-RSA-WITH-"
-
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 run_test    "keyUsage srv: RSA, keyEncipherment -> RSA" \
@@ -6132,6 +6150,78 @@ run_test    "keyUsage cli: DigitalSignature, RSA: fail, soft" \
             -c "Ciphersuite is TLS-" \
             -c "! Usage does not match the keyUsage extension"
 
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
+requires_openssl_tls1_3
+requires_config_disabled MBEDTLS_SSL_PROTO_TLS1_2
+run_test    "keyUsage cli 1.3: DigitalSignature+KeyEncipherment, RSA: OK" \
+            "$O_NEXT_SRV_NO_CERT -tls1_3 -num_tickets=0 -key data_files/server2.key \
+             -cert data_files/server2.ku-ds_ke.crt" \
+            "$P_CLI debug_level=3" \
+            0 \
+            -C "bad certificate (usage extensions)" \
+            -C "Processing of the Certificate handshake message failed" \
+            -c "Ciphersuite is"
+
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
+requires_openssl_tls1_3
+requires_config_disabled MBEDTLS_SSL_PROTO_TLS1_2
+run_test    "keyUsage cli 1.3: KeyEncipherment, RSA: fail" \
+            "$O_NEXT_SRV_NO_CERT -tls1_3 -num_tickets=0 -key data_files/server2.key \
+             -cert data_files/server2.ku-ke.crt" \
+            "$P_CLI debug_level=1" \
+            1 \
+            -c "bad certificate (usage extensions)" \
+            -c "Processing of the Certificate handshake message failed" \
+            -C "Ciphersuite is"
+
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
+requires_openssl_tls1_3
+requires_config_disabled MBEDTLS_SSL_PROTO_TLS1_2
+run_test    "keyUsage cli 1.3: KeyAgreement, RSA: fail" \
+            "$O_NEXT_SRV_NO_CERT -tls1_3 -num_tickets=0 -key data_files/server2.key \
+             -cert data_files/server2.ku-ka.crt" \
+            "$P_CLI debug_level=1" \
+            1 \
+            -c "bad certificate (usage extensions)" \
+            -c "Processing of the Certificate handshake message failed" \
+            -C "Ciphersuite is"
+
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
+requires_openssl_tls1_3
+requires_config_disabled MBEDTLS_SSL_PROTO_TLS1_2
+run_test    "keyUsage cli 1.3: DigitalSignature, ECDSA: OK" \
+            "$O_NEXT_SRV_NO_CERT -tls1_3 -num_tickets=0 -key data_files/server5.key \
+             -cert data_files/server5.ku-ds.crt" \
+            "$P_CLI debug_level=3" \
+            0 \
+            -C "bad certificate (usage extensions)" \
+            -C "Processing of the Certificate handshake message failed" \
+            -c "Ciphersuite is"
+
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
+requires_openssl_tls1_3
+requires_config_disabled MBEDTLS_SSL_PROTO_TLS1_2
+run_test    "keyUsage cli 1.3: KeyEncipherment, ECDSA: fail" \
+            "$O_NEXT_SRV_NO_CERT -tls1_3 -num_tickets=0 -key data_files/server5.key \
+             -cert data_files/server5.ku-ke.crt" \
+            "$P_CLI debug_level=1" \
+            1 \
+            -c "bad certificate (usage extensions)" \
+            -c "Processing of the Certificate handshake message failed" \
+            -C "Ciphersuite is"
+
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
+requires_openssl_tls1_3
+requires_config_disabled MBEDTLS_SSL_PROTO_TLS1_2
+run_test    "keyUsage cli 1.3: KeyAgreement, ECDSA: fail" \
+            "$O_NEXT_SRV_NO_CERT -tls1_3 -num_tickets=0 -key data_files/server5.key \
+             -cert data_files/server5.ku-ka.crt" \
+            "$P_CLI debug_level=1" \
+            1 \
+            -c "bad certificate (usage extensions)" \
+            -c "Processing of the Certificate handshake message failed" \
+            -C "Ciphersuite is"
+
 # Tests for keyUsage in leaf certificates, part 3:
 # server-side checking of client cert
 
@@ -6175,6 +6265,50 @@ requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 run_test    "keyUsage cli-auth: ECDSA, KeyAgreement: fail (soft)" \
             "$P_SRV debug_level=1 auth_mode=optional" \
             "$O_CLI -key data_files/server5.key \
+             -cert data_files/server5.ku-ka.crt" \
+            0 \
+            -s "bad certificate (usage extensions)" \
+            -S "Processing of the Certificate handshake message failed"
+
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
+requires_openssl_tls1_3
+requires_config_disabled MBEDTLS_SSL_PROTO_TLS1_2
+run_test    "keyUsage cli-auth 1.3: RSA, DigitalSignature: OK" \
+            "$P_SRV debug_level=1 auth_mode=optional" \
+            "$O_NEXT_CLI_NO_CERT -key data_files/server2.key \
+             -cert data_files/server2.ku-ds.crt" \
+            0 \
+            -S "bad certificate (usage extensions)" \
+            -S "Processing of the Certificate handshake message failed"
+
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
+requires_openssl_tls1_3
+requires_config_disabled MBEDTLS_SSL_PROTO_TLS1_2
+run_test    "keyUsage cli-auth 1.3: RSA, KeyEncipherment: fail (soft)" \
+            "$P_SRV debug_level=1 auth_mode=optional" \
+            "$O_NEXT_CLI_NO_CERT -key data_files/server2.key \
+             -cert data_files/server2.ku-ke.crt" \
+            0 \
+            -s "bad certificate (usage extensions)" \
+            -S "Processing of the Certificate handshake message failed"
+
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
+requires_openssl_tls1_3
+requires_config_disabled MBEDTLS_SSL_PROTO_TLS1_2
+run_test    "keyUsage cli-auth 1.3: ECDSA, DigitalSignature: OK" \
+            "$P_SRV debug_level=1 auth_mode=optional" \
+            "$O_NEXT_CLI_NO_CERT -key data_files/server5.key \
+             -cert data_files/server5.ku-ds.crt" \
+            0 \
+            -S "bad certificate (usage extensions)" \
+            -S "Processing of the Certificate handshake message failed"
+
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
+requires_openssl_tls1_3
+requires_config_disabled MBEDTLS_SSL_PROTO_TLS1_2
+run_test    "keyUsage cli-auth 1.3: ECDSA, KeyAgreement: fail (soft)" \
+            "$P_SRV debug_level=1 auth_mode=optional" \
+            "$O_NEXT_CLI_NO_CERT -key data_files/server5.key \
              -cert data_files/server5.ku-ka.crt" \
             0 \
             -s "bad certificate (usage extensions)" \
@@ -6252,6 +6386,54 @@ run_test    "extKeyUsage cli: codeSign -> fail" \
             -c "Processing of the Certificate handshake message failed" \
             -C "Ciphersuite is TLS-"
 
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
+requires_openssl_tls1_3
+requires_config_disabled MBEDTLS_SSL_PROTO_TLS1_2
+run_test    "extKeyUsage cli 1.3: serverAuth -> OK" \
+            "$O_NEXT_SRV_NO_CERT -tls1_3 -num_tickets=0 -key data_files/server5.key \
+             -cert data_files/server5.eku-srv.crt" \
+            "$P_CLI debug_level=1" \
+            0 \
+            -C "bad certificate (usage extensions)" \
+            -C "Processing of the Certificate handshake message failed" \
+            -c "Ciphersuite is"
+
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
+requires_openssl_tls1_3
+requires_config_disabled MBEDTLS_SSL_PROTO_TLS1_2
+run_test    "extKeyUsage cli 1.3: serverAuth,clientAuth -> OK" \
+            "$O_NEXT_SRV_NO_CERT -tls1_3 -num_tickets=0 -key data_files/server5.key \
+             -cert data_files/server5.eku-srv_cli.crt" \
+            "$P_CLI debug_level=1" \
+            0 \
+            -C "bad certificate (usage extensions)" \
+            -C "Processing of the Certificate handshake message failed" \
+            -c "Ciphersuite is"
+
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
+requires_openssl_tls1_3
+requires_config_disabled MBEDTLS_SSL_PROTO_TLS1_2
+run_test    "extKeyUsage cli 1.3: codeSign,anyEKU -> OK" \
+            "$O_NEXT_SRV_NO_CERT -tls1_3 -num_tickets=0 -key data_files/server5.key \
+             -cert data_files/server5.eku-cs_any.crt" \
+            "$P_CLI debug_level=1" \
+            0 \
+            -C "bad certificate (usage extensions)" \
+            -C "Processing of the Certificate handshake message failed" \
+            -c "Ciphersuite is"
+
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
+requires_openssl_tls1_3
+requires_config_disabled MBEDTLS_SSL_PROTO_TLS1_2
+run_test    "extKeyUsage cli 1.3: codeSign -> fail" \
+            "$O_NEXT_SRV_NO_CERT -tls1_3 -num_tickets=0 -key data_files/server5.key \
+             -cert data_files/server5.eku-cs.crt" \
+            "$P_CLI debug_level=1" \
+            1 \
+            -c "bad certificate (usage extensions)" \
+            -c "Processing of the Certificate handshake message failed" \
+            -C "Ciphersuite is"
+
 # Tests for extendedKeyUsage, part 3: server-side checking of client cert
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
@@ -6298,6 +6480,50 @@ run_test    "extKeyUsage cli-auth: codeSign -> fail (hard)" \
             1 \
             -s "bad certificate (usage extensions)" \
             -s "Processing of the Certificate handshake message failed"
+
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
+requires_openssl_tls1_3
+requires_config_disabled MBEDTLS_SSL_PROTO_TLS1_2
+run_test    "extKeyUsage cli-auth 1.3: clientAuth -> OK" \
+            "$P_SRV debug_level=1 auth_mode=optional" \
+            "$O_NEXT_CLI_NO_CERT -key data_files/server5.key \
+             -cert data_files/server5.eku-cli.crt" \
+            0 \
+            -S "bad certificate (usage extensions)" \
+            -S "Processing of the Certificate handshake message failed"
+
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
+requires_openssl_tls1_3
+requires_config_disabled MBEDTLS_SSL_PROTO_TLS1_2
+run_test    "extKeyUsage cli-auth 1.3: serverAuth,clientAuth -> OK" \
+            "$P_SRV debug_level=1 auth_mode=optional" \
+            "$O_NEXT_CLI_NO_CERT -key data_files/server5.key \
+             -cert data_files/server5.eku-srv_cli.crt" \
+            0 \
+            -S "bad certificate (usage extensions)" \
+            -S "Processing of the Certificate handshake message failed"
+
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
+requires_openssl_tls1_3
+requires_config_disabled MBEDTLS_SSL_PROTO_TLS1_2
+run_test    "extKeyUsage cli-auth 1.3: codeSign,anyEKU -> OK" \
+            "$P_SRV debug_level=1 auth_mode=optional" \
+            "$O_NEXT_CLI_NO_CERT -key data_files/server5.key \
+             -cert data_files/server5.eku-cs_any.crt" \
+            0 \
+            -S "bad certificate (usage extensions)" \
+            -S "Processing of the Certificate handshake message failed"
+
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
+requires_openssl_tls1_3
+requires_config_disabled MBEDTLS_SSL_PROTO_TLS1_2
+run_test    "extKeyUsage cli-auth 1.3: codeSign -> fail (soft)" \
+            "$P_SRV debug_level=1 auth_mode=optional" \
+            "$O_NEXT_CLI_NO_CERT -key data_files/server5.key \
+             -cert data_files/server5.eku-cs.crt" \
+            0 \
+            -s "bad certificate (usage extensions)" \
+            -S "Processing of the Certificate handshake message failed"
 
 # Tests for DHM parameters loading
 
@@ -10510,32 +10736,6 @@ run_test    "TLS 1.3: alpn - gnutls" \
             -c "HTTP/1.0 200 OK" \
             -c "Application Layer Protocol is h2"
 
-requires_openssl_tls1_3
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
-requires_config_enabled MBEDTLS_DEBUG_C
-requires_config_enabled MBEDTLS_SSL_CLI_C
-requires_config_enabled MBEDTLS_SSL_ALPN
-run_test    "TLS 1.3: server alpn - openssl" \
-            "$P_SRV debug_level=3 tickets=0 crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13 alpn=h2" \
-            "$O_NEXT_CLI -msg -tls1_3 -no_middlebox -alpn h2" \
-            0 \
-            -s "server state: MBEDTLS_SSL_HELLO_REQUEST" \
-            -s "server state: MBEDTLS_SSL_SERVER_HELLO" \
-            -s "server state: MBEDTLS_SSL_ENCRYPTED_EXTENSIONS" \
-            -s "server state: MBEDTLS_SSL_CERTIFICATE_REQUEST" \
-            -s "server state: MBEDTLS_SSL_SERVER_CERTIFICATE" \
-            -s "server state: MBEDTLS_SSL_CERTIFICATE_VERIFY" \
-            -s "server state: MBEDTLS_SSL_SERVER_FINISHED" \
-            -s "server state: MBEDTLS_SSL_CLIENT_FINISHED" \
-            -s "server state: MBEDTLS_SSL_HANDSHAKE_WRAPUP" \
-            -s "<= parse client hello" \
-            -s "found alpn extension" \
-            -s "server side, adding alpn extension" \
-            -s "Protocol is TLSv1.3" \
-            -s "HTTP/1.0 200 OK" \
-            -s "Application Layer Protocol is h2"
-
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_DEBUG_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
@@ -11415,46 +11615,6 @@ run_test    "TLS 1.3: Server side check, no server certificate available" \
             -s "tls13 server state: MBEDTLS_SSL_SERVER_CERTIFICATE" \
             -s "No certificate available."
 
-requires_openssl_tls1_3
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
-requires_config_enabled MBEDTLS_DEBUG_C
-requires_config_enabled MBEDTLS_SSL_SRV_C
-run_test    "TLS 1.3: Server side check - openssl with sni" \
-            "$P_SRV debug_level=4 auth_mode=required crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13 tickets=0 \
-             sni=localhost,data_files/server5.crt,data_files/server5.key,data_files/test-ca_cat12.crt,-,-,polarssl.example,data_files/server1-nospace.crt,data_files/server1.key,-,-,-" \
-            "$O_NEXT_CLI -msg -debug -servername localhost -CAfile data_files/test-ca_cat12.crt -cert data_files/server5.crt -key data_files/server5.key -tls1_3" \
-            0 \
-            -s "parse ServerName extension" \
-            -s "HTTP/1.0 200 OK"
-
-requires_gnutls_tls1_3
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
-requires_config_enabled MBEDTLS_DEBUG_C
-requires_config_enabled MBEDTLS_SSL_SRV_C
-run_test    "TLS 1.3: Server side check - gnutls with sni" \
-            "$P_SRV debug_level=4 auth_mode=required crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13 tickets=0 \
-             sni=localhost,data_files/server5.crt,data_files/server5.key,data_files/test-ca_cat12.crt,-,-,polarssl.example,data_files/server1-nospace.crt,data_files/server1.key,-,-,-" \
-            "$G_NEXT_CLI localhost -d 4 --sni-hostname=localhost --x509certfile data_files/server5.crt --x509keyfile data_files/server5.key --priority=NORMAL:-VERS-ALL:+VERS-TLS1.3:%NO_TICKETS -V" \
-            0 \
-            -s "parse ServerName extension" \
-            -s "HTTP/1.0 200 OK"
-
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
-requires_config_enabled MBEDTLS_DEBUG_C
-requires_config_enabled MBEDTLS_SSL_SRV_C
-requires_config_enabled MBEDTLS_SSL_CLI_C
-run_test    "TLS 1.3: Server side check - mbedtls with sni" \
-            "$P_SRV debug_level=4 auth_mode=required crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13 tickets=0 \
-             sni=localhost,data_files/server2.crt,data_files/server2.key,-,-,-,polarssl.example,data_files/server1-nospace.crt,data_files/server1.key,-,-,-" \
-            "$P_CLI debug_level=4 server_name=localhost crt_file=data_files/server5.crt key_file=data_files/server5.key \
-            force_version=tls13" \
-            0 \
-            -s "parse ServerName extension" \
-            -s "HTTP/1.0 200 OK"
-
 for i in opt-testcases/*.sh
 do
     TEST_SUITE_NAME=${i##*/}
@@ -11463,35 +11623,6 @@ do
 done
 unset TEST_SUITE_NAME
 
-# Test 1.3 compatibility mode
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-requires_config_disabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
-requires_config_enabled MBEDTLS_DEBUG_C
-requires_config_enabled MBEDTLS_SSL_SRV_C
-requires_config_enabled MBEDTLS_SSL_CLI_C
-run_test    "TLS 1.3 m->m both peers do not support middlebox compatibility" \
-            "$P_SRV debug_level=4 force_version=tls13 tickets=0" \
-            "$P_CLI debug_level=4 force_version=tls13" \
-            0 \
-            -s "The SSL configuration is tls13 only." \
-            -c "The SSL configuration is tls13 only." \
-            -S "tls13 server state: MBEDTLS_SSL_SERVER_CCS_AFTER_SERVER_HELLO" \
-            -C "Ignore ChangeCipherSpec in TLS 1.3 compatibility mode"
-
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
-requires_config_enabled MBEDTLS_DEBUG_C
-requires_config_enabled MBEDTLS_SSL_SRV_C
-requires_config_enabled MBEDTLS_SSL_CLI_C
-run_test    "TLS 1.3 m->m both with middlebox compat support" \
-            "$P_SRV debug_level=4 force_version=tls13 tickets=0" \
-            "$P_CLI debug_level=4 force_version=tls13" \
-            0 \
-            -s "The SSL configuration is tls13 only." \
-            -c "The SSL configuration is tls13 only." \
-            -s "tls13 server state: MBEDTLS_SSL_SERVER_CCS_AFTER_SERVER_HELLO" \
-            -c "Ignore ChangeCipherSpec in TLS 1.3 compatibility mode"
-
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_disabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
@@ -11499,11 +11630,10 @@ requires_config_enabled MBEDTLS_DEBUG_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
 run_test    "TLS 1.3 m->O both peers do not support middlebox compatibility" \
             "$O_NEXT_SRV -msg -tls1_3 -no_middlebox -num_tickets 0 -no_resume_ephemeral -no_cache" \
-            "$P_CLI debug_level=4 force_version=tls13" \
+            "$P_CLI debug_level=3" \
             0 \
-            -c "The SSL configuration is tls13 only." \
-            -C "ChangeCipherSpec invalid in TLS 1.3 without compatibility mode" \
-            -C "Ignore ChangeCipherSpec in TLS 1.3 compatibility mode"
+            -c "Protocol is TLSv1.3" \
+            -c "HTTP/1.0 200 ok"
 
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
@@ -11512,22 +11642,9 @@ requires_config_enabled MBEDTLS_DEBUG_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
 run_test    "TLS 1.3 m->O server with middlebox compat support, not client" \
             "$O_NEXT_SRV -msg -tls1_3 -num_tickets 0 -no_resume_ephemeral -no_cache" \
-            "$P_CLI debug_level=4 force_version=tls13" \
+            "$P_CLI debug_level=3" \
             1 \
-            -c "The SSL configuration is tls13 only." \
             -c "ChangeCipherSpec invalid in TLS 1.3 without compatibility mode"
-
-requires_openssl_tls1_3
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
-requires_config_enabled MBEDTLS_DEBUG_C
-requires_config_enabled MBEDTLS_SSL_CLI_C
-run_test    "TLS 1.3 m->O both with middlebox compat support" \
-            "$O_NEXT_SRV -msg -tls1_3 -num_tickets 0 -no_resume_ephemeral -no_cache" \
-            "$P_CLI debug_level=4 force_version=tls13" \
-            0 \
-            -c "The SSL configuration is tls13 only." \
-            -c "Ignore ChangeCipherSpec in TLS 1.3 compatibility mode"
 
 requires_gnutls_tls1_3
 requires_gnutls_next_no_ticket
@@ -11538,11 +11655,10 @@ requires_config_enabled MBEDTLS_DEBUG_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
 run_test    "TLS 1.3 m->G both peers do not support middlebox compatibility" \
             "$G_NEXT_SRV --priority=NORMAL:-VERS-ALL:+VERS-TLS1.3:+CIPHER-ALL:%NO_TICKETS:%DISABLE_TLS13_COMPAT_MODE --disable-client-cert" \
-            "$P_CLI debug_level=4 force_version=tls13" \
+            "$P_CLI debug_level=3" \
             0 \
-            -c "The SSL configuration is tls13 only." \
-            -C "ChangeCipherSpec invalid in TLS 1.3 without compatibility mode" \
-            -C "Ignore ChangeCipherSpec in TLS 1.3 compatibility mode"
+            -c "Protocol is TLSv1.3" \
+            -c "HTTP/1.0 200 OK"
 
 requires_gnutls_tls1_3
 requires_gnutls_next_no_ticket
@@ -11552,303 +11668,9 @@ requires_config_enabled MBEDTLS_DEBUG_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
 run_test    "TLS 1.3 m->G server with middlebox compat support, not client" \
             "$G_NEXT_SRV --priority=NORMAL:-VERS-ALL:+VERS-TLS1.3:+CIPHER-ALL:%NO_TICKETS --disable-client-cert" \
-            "$P_CLI debug_level=4 force_version=tls13" \
+            "$P_CLI debug_level=3" \
             1 \
-            -c "The SSL configuration is tls13 only." \
             -c "ChangeCipherSpec invalid in TLS 1.3 without compatibility mode"
-
-requires_gnutls_tls1_3
-requires_gnutls_next_no_ticket
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
-requires_config_enabled MBEDTLS_DEBUG_C
-requires_config_enabled MBEDTLS_SSL_CLI_C
-run_test    "TLS 1.3 m->G both with middlebox compat support" \
-            "$G_NEXT_SRV --priority=NORMAL:-VERS-ALL:+VERS-TLS1.3:+CIPHER-ALL:%NO_TICKETS --disable-client-cert" \
-            "$P_CLI debug_level=4 force_version=tls13" \
-            0 \
-            -c "The SSL configuration is tls13 only." \
-            -c "Ignore ChangeCipherSpec in TLS 1.3 compatibility mode"
-
-requires_openssl_tls1_3
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-requires_config_disabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
-requires_config_enabled MBEDTLS_DEBUG_C
-requires_config_enabled MBEDTLS_SSL_SRV_C
-run_test    "TLS 1.3 O->m both peers do not support middlebox compatibility" \
-            "$P_SRV debug_level=4 crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13 tickets=0" \
-            "$O_NEXT_CLI -msg -debug -tls1_3 -no_middlebox" \
-            0 \
-            -s "The SSL configuration is tls13 only." \
-            -S "tls13 server state: MBEDTLS_SSL_SERVER_CCS_AFTER_SERVER_HELLO" \
-            -C "14 03 03 00 01"
-
-requires_openssl_tls1_3
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
-requires_config_enabled MBEDTLS_DEBUG_C
-requires_config_enabled MBEDTLS_SSL_SRV_C
-run_test    "TLS 1.3 O->m server with middlebox compat support, not client" \
-            "$P_SRV debug_level=4 crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13 tickets=0" \
-            "$O_NEXT_CLI -msg -debug -tls1_3 -no_middlebox" \
-            0 \
-            -s "The SSL configuration is tls13 only." \
-            -s "tls13 server state: MBEDTLS_SSL_SERVER_CCS_AFTER_SERVER_HELLO"
-
-requires_openssl_tls1_3
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
-requires_config_enabled MBEDTLS_DEBUG_C
-requires_config_enabled MBEDTLS_SSL_SRV_C
-run_test    "TLS 1.3 O->m both with middlebox compat support" \
-            "$P_SRV debug_level=4 crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13 tickets=0" \
-            "$O_NEXT_CLI -msg -debug -tls1_3" \
-            0 \
-            -s "The SSL configuration is tls13 only." \
-            -s "tls13 server state: MBEDTLS_SSL_SERVER_CCS_AFTER_SERVER_HELLO" \
-            -c "14 03 03 00 01"
-
-requires_gnutls_tls1_3
-requires_gnutls_next_no_ticket
-requires_gnutls_next_disable_tls13_compat
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-requires_config_disabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
-requires_config_enabled MBEDTLS_DEBUG_C
-requires_config_enabled MBEDTLS_SSL_SRV_C
-run_test    "TLS 1.3 G->m both peers do not support middlebox compatibility" \
-            "$P_SRV debug_level=4 crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13 tickets=0" \
-            "$G_NEXT_CLI localhost --priority=NORMAL:-VERS-ALL:+VERS-TLS1.3:%NO_TICKETS:%DISABLE_TLS13_COMPAT_MODE -V" \
-            0 \
-            -s "The SSL configuration is tls13 only." \
-            -S "tls13 server state: MBEDTLS_SSL_SERVER_CCS_AFTER_SERVER_HELLO" \
-            -C "SSL 3.3 ChangeCipherSpec packet received"
-
-requires_gnutls_tls1_3
-requires_gnutls_next_no_ticket
-requires_gnutls_next_disable_tls13_compat
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
-requires_config_enabled MBEDTLS_DEBUG_C
-requires_config_enabled MBEDTLS_SSL_SRV_C
-run_test    "TLS 1.3 G->m server with middlebox compat support, not client" \
-            "$P_SRV debug_level=4 crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13 tickets=0" \
-            "$G_NEXT_CLI localhost --debug=10 --priority=NORMAL:-VERS-ALL:+VERS-TLS1.3:%NO_TICKETS:%DISABLE_TLS13_COMPAT_MODE -V" \
-            0 \
-            -s "The SSL configuration is tls13 only." \
-            -s "tls13 server state: MBEDTLS_SSL_SERVER_CCS_AFTER_SERVER_HELLO" \
-            -c "SSL 3.3 ChangeCipherSpec packet received" \
-            -c "discarding change cipher spec in TLS1.3"
-
-requires_gnutls_tls1_3
-requires_gnutls_next_no_ticket
-requires_gnutls_next_disable_tls13_compat
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
-requires_config_enabled MBEDTLS_DEBUG_C
-requires_config_enabled MBEDTLS_SSL_SRV_C
-run_test    "TLS 1.3 G->m both with middlebox compat support" \
-            "$P_SRV debug_level=4 crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13 tickets=0" \
-            "$G_NEXT_CLI localhost --debug=10 --priority=NORMAL:-VERS-ALL:+VERS-TLS1.3:%NO_TICKETS:%DISABLE_TLS13_COMPAT_MODE -V" \
-            0 \
-            -s "The SSL configuration is tls13 only." \
-            -s "tls13 server state: MBEDTLS_SSL_SERVER_CCS_AFTER_SERVER_HELLO" \
-            -c "SSL 3.3 ChangeCipherSpec packet received"
-
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-requires_config_disabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
-requires_config_enabled MBEDTLS_DEBUG_C
-requires_config_enabled MBEDTLS_SSL_SRV_C
-requires_config_enabled MBEDTLS_SSL_CLI_C
-run_test    "TLS 1.3 m->m HRR both peers do not support middlebox compatibility" \
-            "$P_SRV debug_level=4 force_version=tls13 curves=secp384r1 tickets=0" \
-            "$P_CLI debug_level=4 force_version=tls13 curves=secp256r1,secp384r1" \
-            0 \
-            -s "The SSL configuration is tls13 only." \
-            -c "Protocol is TLSv1.3" \
-            -s "tls13 server state: MBEDTLS_SSL_HELLO_RETRY_REQUEST" \
-            -S "tls13 server state: MBEDTLS_SSL_SERVER_CCS_AFTER_HELLO_RETRY_REUEST" \
-            -C "Ignore ChangeCipherSpec in TLS 1.3 compatibility mode"
-
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
-requires_config_enabled MBEDTLS_DEBUG_C
-requires_config_enabled MBEDTLS_SSL_SRV_C
-requires_config_enabled MBEDTLS_SSL_CLI_C
-run_test    "TLS 1.3 m->m HRR both with middlebox compat support" \
-            "$P_SRV debug_level=4 force_version=tls13 curves=secp384r1 tickets=0" \
-            "$P_CLI debug_level=4 force_version=tls13 curves=secp256r1,secp384r1" \
-            0 \
-            -s "The SSL configuration is tls13 only." \
-            -c "Protocol is TLSv1.3" \
-            -s "tls13 server state: MBEDTLS_SSL_HELLO_RETRY_REQUEST" \
-            -s "tls13 server state: MBEDTLS_SSL_SERVER_CCS_AFTER_HELLO_RETRY_REUEST" \
-            -c "Ignore ChangeCipherSpec in TLS 1.3 compatibility mode"
-
-requires_openssl_tls1_3
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-requires_config_disabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
-requires_config_enabled MBEDTLS_DEBUG_C
-requires_config_enabled MBEDTLS_SSL_CLI_C
-run_test    "TLS 1.3 m->O HRR both peers do not support middlebox compatibility" \
-            "$O_NEXT_SRV -msg -tls1_3 -groups P-384 -no_middlebox -num_tickets 0 -no_cache" \
-            "$P_CLI debug_level=4 force_version=tls13 curves=secp256r1,secp384r1" \
-            0 \
-            -c "The SSL configuration is tls13 only." \
-            -c "received HelloRetryRequest message" \
-            -C "ChangeCipherSpec invalid in TLS 1.3 without compatibility mode" \
-            -C "Ignore ChangeCipherSpec in TLS 1.3 compatibility mode"
-
-requires_openssl_tls1_3
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-requires_config_disabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
-requires_config_enabled MBEDTLS_DEBUG_C
-requires_config_enabled MBEDTLS_SSL_CLI_C
-run_test    "TLS 1.3 m->O HRR server with middlebox compat support, not client" \
-            "$O_NEXT_SRV -msg -tls1_3 -groups P-384 -num_tickets 0 -no_cache" \
-            "$P_CLI debug_level=4 force_version=tls13 curves=secp256r1,secp384r1" \
-            1 \
-            -c "The SSL configuration is tls13 only." \
-            -c "received HelloRetryRequest message" \
-            -c "ChangeCipherSpec invalid in TLS 1.3 without compatibility mode"
-
-requires_openssl_tls1_3
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
-requires_config_enabled MBEDTLS_DEBUG_C
-requires_config_enabled MBEDTLS_SSL_CLI_C
-run_test    "TLS 1.3 m->O HRR both with middlebox compat support" \
-            "$O_NEXT_SRV -msg -tls1_3 -groups P-384 -num_tickets 0 -no_resume_ephemeral -no_cache" \
-            "$P_CLI debug_level=4 force_version=tls13 curves=secp256r1,secp384r1" \
-            0 \
-            -c "The SSL configuration is tls13 only." \
-            -c "Ignore ChangeCipherSpec in TLS 1.3 compatibility mode"
-
-requires_gnutls_tls1_3
-requires_gnutls_next_no_ticket
-requires_gnutls_next_disable_tls13_compat
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-requires_config_disabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
-requires_config_enabled MBEDTLS_DEBUG_C
-requires_config_enabled MBEDTLS_SSL_CLI_C
-run_test    "TLS 1.3 m->G HRR both peers do not support middlebox compatibility" \
-            "$G_NEXT_SRV --priority=NORMAL:-GROUP-ALL:+GROUP-SECP384R1:-VERS-ALL:+VERS-TLS1.3:%NO_TICKETS:%DISABLE_TLS13_COMPAT_MODE --disable-client-cert" \
-            "$P_CLI debug_level=4 force_version=tls13 curves=secp256r1,secp384r1" \
-            0 \
-            -c "The SSL configuration is tls13 only." \
-            -c "received HelloRetryRequest message" \
-            -C "ChangeCipherSpec invalid in TLS 1.3 without compatibility mode" \
-            -C "Ignore ChangeCipherSpec in TLS 1.3 compatibility mode"
-
-requires_gnutls_tls1_3
-requires_gnutls_next_no_ticket
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-requires_config_disabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
-requires_config_enabled MBEDTLS_DEBUG_C
-requires_config_enabled MBEDTLS_SSL_CLI_C
-run_test    "TLS 1.3 m->G HRR server with middlebox compat support, not client" \
-            "$G_NEXT_SRV --priority=NORMAL:-GROUP-ALL:+GROUP-SECP384R1:-VERS-ALL:+VERS-TLS1.3:%NO_TICKETS --disable-client-cert" \
-            "$P_CLI debug_level=4 force_version=tls13 curves=secp256r1,secp384r1" \
-            1 \
-            -c "The SSL configuration is tls13 only." \
-            -c "received HelloRetryRequest message" \
-            -c "ChangeCipherSpec invalid in TLS 1.3 without compatibility mode"
-
-requires_gnutls_tls1_3
-requires_gnutls_next_no_ticket
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
-requires_config_enabled MBEDTLS_DEBUG_C
-requires_config_enabled MBEDTLS_SSL_CLI_C
-run_test    "TLS 1.3 m->G HRR both with middlebox compat support" \
-            "$G_NEXT_SRV --priority=NORMAL:-GROUP-ALL:+GROUP-SECP384R1:-VERS-ALL:+VERS-TLS1.3:+CIPHER-ALL:%NO_TICKETS --disable-client-cert" \
-            "$P_CLI debug_level=4 force_version=tls13 curves=secp256r1,secp384r1" \
-            0 \
-            -c "The SSL configuration is tls13 only." \
-            -c "Ignore ChangeCipherSpec in TLS 1.3 compatibility mode"
-
-requires_openssl_tls1_3
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-requires_config_disabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
-requires_config_enabled MBEDTLS_DEBUG_C
-requires_config_enabled MBEDTLS_SSL_SRV_C
-run_test    "TLS 1.3 O->m HRR both peers do not support middlebox compatibility" \
-            "$P_SRV debug_level=4 crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13 curves=secp384r1 tickets=0" \
-            "$O_NEXT_CLI -msg -debug -tls1_3 -groups P-256:P-384 -no_middlebox" \
-            0 \
-            -s "The SSL configuration is tls13 only." \
-            -S "tls13 server state: MBEDTLS_SSL_SERVER_CCS_AFTER_HELLO_RETRY_REUEST" \
-            -C "14 03 03 00 01"
-
-requires_openssl_tls1_3
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
-requires_config_enabled MBEDTLS_DEBUG_C
-requires_config_enabled MBEDTLS_SSL_SRV_C
-run_test    "TLS 1.3 O->m HRR server with middlebox compat support, not client" \
-            "$P_SRV debug_level=4 crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13 curves=secp384r1 tickets=0" \
-            "$O_NEXT_CLI -msg -debug -tls1_3 -groups P-256:P-384 -no_middlebox" \
-            0 \
-            -s "The SSL configuration is tls13 only." \
-            -s "tls13 server state: MBEDTLS_SSL_SERVER_CCS_AFTER_HELLO_RETRY_REUEST" \
-
-requires_openssl_tls1_3
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
-requires_config_enabled MBEDTLS_DEBUG_C
-requires_config_enabled MBEDTLS_SSL_SRV_C
-run_test    "TLS 1.3 O->m HRR both with middlebox compat support" \
-            "$P_SRV debug_level=4 crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13 curves=secp384r1 tickets=0" \
-            "$O_NEXT_CLI -msg -debug -tls1_3 -groups P-256:P-384" \
-            0 \
-            -s "The SSL configuration is tls13 only." \
-            -s "tls13 server state: MBEDTLS_SSL_SERVER_CCS_AFTER_HELLO_RETRY_REUEST" \
-            -c "14 03 03 00 01"
-
-requires_gnutls_tls1_3
-requires_gnutls_next_no_ticket
-requires_gnutls_next_disable_tls13_compat
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-requires_config_disabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
-requires_config_enabled MBEDTLS_DEBUG_C
-requires_config_enabled MBEDTLS_SSL_SRV_C
-run_test    "TLS 1.3 G->m HRR both peers do not support middlebox compatibility" \
-            "$P_SRV debug_level=4 crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13 curves=secp384r1 tickets=0" \
-            "$G_NEXT_CLI localhost --priority=NORMAL:-GROUP-ALL:+GROUP-SECP256R1:+GROUP-SECP384R1:-VERS-ALL:+VERS-TLS1.3:%NO_TICKETS:%DISABLE_TLS13_COMPAT_MODE -V" \
-            0 \
-            -s "The SSL configuration is tls13 only." \
-            -S "tls13 server state: MBEDTLS_SSL_SERVER_CCS_AFTER_HELLO_RETRY_REUEST" \
-            -C "SSL 3.3 ChangeCipherSpec packet received"
-
-requires_gnutls_tls1_3
-requires_gnutls_next_no_ticket
-requires_gnutls_next_disable_tls13_compat
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
-requires_config_enabled MBEDTLS_DEBUG_C
-requires_config_enabled MBEDTLS_SSL_SRV_C
-run_test    "TLS 1.3 G->m HRR server with middlebox compat support, not client" \
-            "$P_SRV debug_level=4 crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13 curves=secp384r1 tickets=0" \
-            "$G_NEXT_CLI localhost --debug=10 --priority=NORMAL:-GROUP-ALL:+GROUP-SECP256R1:+GROUP-SECP384R1:-VERS-ALL:+VERS-TLS1.3:%NO_TICKETS:%DISABLE_TLS13_COMPAT_MODE -V" \
-            0 \
-            -s "The SSL configuration is tls13 only." \
-            -s "tls13 server state: MBEDTLS_SSL_SERVER_CCS_AFTER_HELLO_RETRY_REUEST" \
-            -c "SSL 3.3 ChangeCipherSpec packet received" \
-            -c "discarding change cipher spec in TLS1.3"
-
-requires_gnutls_tls1_3
-requires_gnutls_next_no_ticket
-requires_gnutls_next_disable_tls13_compat
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
-requires_config_enabled MBEDTLS_DEBUG_C
-requires_config_enabled MBEDTLS_SSL_SRV_C
-run_test    "TLS 1.3 G->m HRR both with middlebox compat support" \
-            "$P_SRV debug_level=4 crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13 curves=secp384r1 tickets=0" \
-            "$G_NEXT_CLI localhost --debug=10 --priority=NORMAL:-GROUP-ALL:+GROUP-SECP256R1:+GROUP-SECP384R1:-VERS-ALL:+VERS-TLS1.3:%NO_TICKETS:%DISABLE_TLS13_COMPAT_MODE -V" \
-            0 \
-            -s "The SSL configuration is tls13 only." \
-            -s "tls13 server state: MBEDTLS_SSL_SERVER_CCS_AFTER_HELLO_RETRY_REUEST" \
-            -c "SSL 3.3 ChangeCipherSpec packet received"
 
 # Test heap memory usage after handshake
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
