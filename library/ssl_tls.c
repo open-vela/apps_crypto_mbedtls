@@ -8210,4 +8210,186 @@ int mbedtls_ssl_write_sig_alg_ext( mbedtls_ssl_context *ssl, unsigned char *buf,
 }
 #endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
 
+#if defined(MBEDTLS_SSL_SERVER_NAME_INDICATION)
+/*
+ * mbedtls_ssl_parse_server_name_ext
+ *
+ * Structure of server_name extension:
+ *
+ *  enum {
+ *        host_name(0), (255)
+ *     } NameType;
+ *  opaque HostName<1..2^16-1>;
+ *
+ *  struct {
+ *          NameType name_type;
+ *          select (name_type) {
+ *             case host_name: HostName;
+ *           } name;
+ *     } ServerName;
+ *  struct {
+ *          ServerName server_name_list<1..2^16-1>
+ *     } ServerNameList;
+ */
+int mbedtls_ssl_parse_server_name_ext( mbedtls_ssl_context *ssl,
+                                       const unsigned char *buf,
+                                       const unsigned char *end )
+{
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+    const unsigned char *p = buf;
+    size_t server_name_list_len, hostname_len;
+    const unsigned char *server_name_list_end;
+
+    MBEDTLS_SSL_DEBUG_MSG( 3, ( "parse ServerName extension" ) );
+
+    MBEDTLS_SSL_CHK_BUF_READ_PTR( p, end, 2 );
+    server_name_list_len = MBEDTLS_GET_UINT16_BE( p, 0 );
+    p += 2;
+
+    MBEDTLS_SSL_CHK_BUF_READ_PTR( p, end, server_name_list_len );
+    server_name_list_end = p + server_name_list_len;
+    while( p < server_name_list_end )
+    {
+        MBEDTLS_SSL_CHK_BUF_READ_PTR( p, server_name_list_end, 3 );
+        hostname_len = MBEDTLS_GET_UINT16_BE( p, 1 );
+        MBEDTLS_SSL_CHK_BUF_READ_PTR( p, server_name_list_end,
+                                      hostname_len + 3 );
+
+        if( p[0] == MBEDTLS_TLS_EXT_SERVERNAME_HOSTNAME )
+        {
+            /* sni_name is intended to be used only during the parsing of the
+             * ClientHello message (it is reset to NULL before the end of
+             * the message parsing). Thus it is ok to just point to the
+             * reception buffer and not make a copy of it.
+             */
+            ssl->handshake->sni_name = p + 3;
+            ssl->handshake->sni_name_len = hostname_len;
+            if( ssl->conf->f_sni == NULL )
+                return( 0 );
+            ret = ssl->conf->f_sni( ssl->conf->p_sni,
+                                    ssl, p + 3, hostname_len );
+            if( ret != 0 )
+            {
+                MBEDTLS_SSL_DEBUG_RET( 1, "ssl_sni_wrapper", ret );
+                MBEDTLS_SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_UNRECOGNIZED_NAME,
+                                              MBEDTLS_ERR_SSL_UNRECOGNIZED_NAME );
+                return( MBEDTLS_ERR_SSL_UNRECOGNIZED_NAME );
+            }
+            return( 0 );
+        }
+
+        p += hostname_len + 3;
+    }
+
+    return( 0 );
+}
+#endif /* MBEDTLS_SSL_SERVER_NAME_INDICATION */
+
+#if defined(MBEDTLS_SSL_ALPN)
+int mbedtls_ssl_parse_alpn_ext( mbedtls_ssl_context *ssl,
+                                const unsigned char *buf,
+                                const unsigned char *end )
+{
+    const unsigned char *p = buf;
+    size_t protocol_name_list_len;
+
+    const unsigned char *protocol_name;
+    size_t protocol_name_len;
+
+    /* If ALPN not configured, just ignore the extension */
+    if( ssl->conf->alpn_list == NULL )
+        return( 0 );
+
+    /*
+     * RFC7301, section 3.1
+     *      opaque ProtocolName<1..2^8-1>;
+     *
+     *      struct {
+     *          ProtocolName protocol_name_list<2..2^16-1>
+     *      } ProtocolNameList;
+     */
+
+    /*
+     * protocal_name_list_len    2 bytes
+     * protocal_name_len         1 bytes
+     * protocal_name             >=1 byte
+     */
+    MBEDTLS_SSL_CHK_BUF_READ_PTR( p, end, 4 );
+
+    protocol_name_list_len = MBEDTLS_GET_UINT16_BE( p, 0 );
+    p += 2;
+    MBEDTLS_SSL_CHK_BUF_READ_PTR( p, end, protocol_name_list_len );
+
+    /* Validate peer's list (lengths) */
+    for( protocol_name = p; protocol_name != end;
+         protocol_name += protocol_name_len )
+    {
+        protocol_name_len = *protocol_name++;
+        MBEDTLS_SSL_CHK_BUF_READ_PTR( protocol_name, end, protocol_name_len );
+        if( protocol_name_len == 0 )
+            return( MBEDTLS_ERR_SSL_ILLEGAL_PARAMETER );
+    }
+
+    /* Use our order of preference */
+    for( const char **alpn = ssl->conf->alpn_list; *alpn != NULL; alpn++ )
+    {
+        size_t const alpn_len = strlen( *alpn );
+        for( protocol_name = p; protocol_name != end;
+             protocol_name += protocol_name_len )
+        {
+            protocol_name_len = *protocol_name++;
+
+            if( protocol_name_len == alpn_len &&
+                memcmp( protocol_name, *alpn, alpn_len ) == 0 )
+            {
+                ssl->alpn_chosen = *alpn;
+                return( 0 );
+            }
+        }
+    }
+
+    /* If we get hhere, no match was found */
+    MBEDTLS_SSL_PEND_FATAL_ALERT(
+            MBEDTLS_SSL_ALERT_MSG_NO_APPLICATION_PROTOCOL,
+            MBEDTLS_ERR_SSL_NO_APPLICATION_PROTOCOL );
+    return( MBEDTLS_ERR_SSL_NO_APPLICATION_PROTOCOL );
+}
+
+int mbedtls_ssl_write_alpn_ext( mbedtls_ssl_context *ssl,
+                                unsigned char *buf,
+                                unsigned char *end,
+                                size_t *out_len )
+{
+    unsigned char *p = buf;
+    *out_len = 0;
+
+    if( ssl->alpn_chosen == NULL )
+    {
+        return( 0 );
+    }
+
+    MBEDTLS_SSL_CHK_BUF_PTR( p, end, 7 + strlen( ssl->alpn_chosen ) );
+
+    MBEDTLS_SSL_DEBUG_MSG( 3, ( "server side, adding alpn extension" ) );
+    /*
+     * 0 . 1    ext identifier
+     * 2 . 3    ext length
+     * 4 . 5    protocol list length
+     * 6 . 6    protocol name length
+     * 7 . 7+n  protocol name
+     */
+    MBEDTLS_PUT_UINT16_BE( MBEDTLS_TLS_EXT_ALPN, p, 0 );
+
+    *out_len = 7 + strlen( ssl->alpn_chosen );
+
+    MBEDTLS_PUT_UINT16_BE( *out_len - 4, p, 2 );
+    MBEDTLS_PUT_UINT16_BE( *out_len - 6, p, 4 );
+    p[6] = MBEDTLS_BYTE_0( *out_len - 7 );
+    p += 7;
+
+    memcpy( p, ssl->alpn_chosen, *out_len - 7 );
+    return ( 0 );
+}
+#endif /* MBEDTLS_SSL_ALPN */
+
 #endif /* MBEDTLS_SSL_TLS_C */
