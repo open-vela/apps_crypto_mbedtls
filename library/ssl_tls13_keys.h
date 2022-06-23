@@ -121,7 +121,6 @@ extern const struct mbedtls_ssl_tls13_labels_struct mbedtls_ssl_tls13_labels;
  * \return           A negative error code on failure.
  */
 
-MBEDTLS_CHECK_RETURN_CRITICAL
 int mbedtls_ssl_tls13_hkdf_expand_label(
                      psa_algorithm_t hash_alg,
                      const unsigned char *secret, size_t secret_len,
@@ -160,7 +159,6 @@ int mbedtls_ssl_tls13_hkdf_expand_label(
  * \returns             A negative error code on failure.
  */
 
-MBEDTLS_CHECK_RETURN_CRITICAL
 int mbedtls_ssl_tls13_make_traffic_keys(
                      psa_algorithm_t hash_alg,
                      const unsigned char *client_secret,
@@ -207,7 +205,6 @@ int mbedtls_ssl_tls13_make_traffic_keys(
  * \returns        \c 0 on success.
  * \returns        A negative error code on failure.
  */
-MBEDTLS_CHECK_RETURN_CRITICAL
 int mbedtls_ssl_tls13_derive_secret(
                    psa_algorithm_t hash_alg,
                    const unsigned char *secret, size_t secret_len,
@@ -258,7 +255,6 @@ int mbedtls_ssl_tls13_derive_secret(
  * \returns        \c 0 on success.
  * \returns        A negative error code on failure.
  */
-MBEDTLS_CHECK_RETURN_CRITICAL
 int mbedtls_ssl_tls13_derive_early_secrets(
           psa_algorithm_t hash_alg,
           unsigned char const *early_secret,
@@ -304,7 +300,6 @@ int mbedtls_ssl_tls13_derive_early_secrets(
  * \returns        \c 0 on success.
  * \returns        A negative error code on failure.
  */
-MBEDTLS_CHECK_RETURN_CRITICAL
 int mbedtls_ssl_tls13_derive_handshake_secrets(
           psa_algorithm_t hash_alg,
           unsigned char const *handshake_secret,
@@ -355,7 +350,6 @@ int mbedtls_ssl_tls13_derive_handshake_secrets(
  * \returns        \c 0 on success.
  * \returns        A negative error code on failure.
  */
-MBEDTLS_CHECK_RETURN_CRITICAL
 int mbedtls_ssl_tls13_derive_application_secrets(
           psa_algorithm_t hash_alg,
           unsigned char const *master_secret,
@@ -386,7 +380,6 @@ int mbedtls_ssl_tls13_derive_application_secrets(
  * \returns        \c 0 on success.
  * \returns        A negative error code on failure.
  */
-MBEDTLS_CHECK_RETURN_CRITICAL
 int mbedtls_ssl_tls13_derive_resumption_master_secret(
           psa_algorithm_t hash_alg,
           unsigned char const *application_secret,
@@ -460,7 +453,6 @@ int mbedtls_ssl_tls13_derive_resumption_master_secret(
  * \returns           A negative error code on failure.
  */
 
-MBEDTLS_CHECK_RETURN_CRITICAL
 int mbedtls_ssl_tls13_evolve_secret(
                    psa_algorithm_t hash_alg,
                    const unsigned char *secret_old,
@@ -490,7 +482,6 @@ int mbedtls_ssl_tls13_evolve_secret(
  * \returns           \c 0 on success.
  * \returns           A negative error code on failure.
  */
-MBEDTLS_CHECK_RETURN_CRITICAL
 int mbedtls_ssl_tls13_create_psk_binder( mbedtls_ssl_context *ssl,
                                const psa_algorithm_t hash_alg,
                                unsigned char const *psk, size_t psk_len,
@@ -525,7 +516,6 @@ int mbedtls_ssl_tls13_create_psk_binder( mbedtls_ssl_context *ssl,
  *                     mbedtls_ssl_transform_encrypt().
  * \return             A negative error code on failure.
  */
-MBEDTLS_CHECK_RETURN_CRITICAL
 int mbedtls_ssl_tls13_populate_transform( mbedtls_ssl_transform *transform,
                                           int endpoint,
                                           int ciphersuite,
@@ -552,7 +542,6 @@ int mbedtls_ssl_tls13_populate_transform( mbedtls_ssl_transform *transform,
  * \returns    \c 0 on success.
  * \returns    A negative error code on failure.
  */
-MBEDTLS_CHECK_RETURN_CRITICAL
 int mbedtls_ssl_tls13_key_schedule_stage_early( mbedtls_ssl_context *ssl );
 
 /**
@@ -571,7 +560,6 @@ int mbedtls_ssl_tls13_key_schedule_stage_early( mbedtls_ssl_context *ssl );
  * \returns    \c 0 on success.
  * \returns    A negative error code on failure.
  */
-MBEDTLS_CHECK_RETURN_CRITICAL
 int mbedtls_ssl_tls13_key_schedule_stage_handshake( mbedtls_ssl_context *ssl );
 
 /**
@@ -586,7 +574,6 @@ int mbedtls_ssl_tls13_key_schedule_stage_handshake( mbedtls_ssl_context *ssl );
  * \returns    \c 0 on success.
  * \returns    A negative error code on failure.
  */
-MBEDTLS_CHECK_RETURN_CRITICAL
 int mbedtls_ssl_tls13_generate_handshake_keys( mbedtls_ssl_context *ssl,
                                                mbedtls_ssl_key_set *traffic_keys );
 
@@ -606,7 +593,6 @@ int mbedtls_ssl_tls13_generate_handshake_keys( mbedtls_ssl_context *ssl,
  * \returns    \c 0 on success.
  * \returns    A negative error code on failure.
  */
-MBEDTLS_CHECK_RETURN_CRITICAL
 int mbedtls_ssl_tls13_key_schedule_stage_application( mbedtls_ssl_context *ssl );
 
 /**
@@ -621,7 +607,6 @@ int mbedtls_ssl_tls13_key_schedule_stage_application( mbedtls_ssl_context *ssl )
  * \returns    \c 0 on success.
  * \returns    A negative error code on failure.
  */
-MBEDTLS_CHECK_RETURN_CRITICAL
 int mbedtls_ssl_tls13_generate_application_keys(
     mbedtls_ssl_context* ssl, mbedtls_ssl_key_set *traffic_keys );
 
@@ -635,7 +620,6 @@ int mbedtls_ssl_tls13_generate_application_keys(
  * \returns    \c 0 on success.
  * \returns    A negative error code on failure.
  */
-MBEDTLS_CHECK_RETURN_CRITICAL
 int mbedtls_ssl_tls13_generate_resumption_master_secret(
     mbedtls_ssl_context *ssl );
 
@@ -661,7 +645,6 @@ int mbedtls_ssl_tls13_generate_resumption_master_secret(
  * \returns    \c 0 on success.
  * \returns    A negative error code on failure.
  */
-MBEDTLS_CHECK_RETURN_CRITICAL
 int mbedtls_ssl_tls13_calculate_verify_data( mbedtls_ssl_context *ssl,
                                              unsigned char *dst,
                                              size_t dst_len,
@@ -677,7 +660,6 @@ int mbedtls_ssl_tls13_calculate_verify_data( mbedtls_ssl_context *ssl,
  * \returns    \c 0 on success.
  * \returns    A negative error code on failure.
  */
-MBEDTLS_CHECK_RETURN_CRITICAL
 int mbedtls_ssl_tls13_compute_handshake_transform( mbedtls_ssl_context *ssl );
 
 /**
@@ -689,7 +671,6 @@ int mbedtls_ssl_tls13_compute_handshake_transform( mbedtls_ssl_context *ssl );
  * \returns    \c 0 on success.
  * \returns    A negative error code on failure.
  */
-MBEDTLS_CHECK_RETURN_CRITICAL
 int mbedtls_ssl_tls13_compute_application_transform( mbedtls_ssl_context *ssl );
 
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
