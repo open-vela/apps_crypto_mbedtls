@@ -1983,7 +1983,6 @@ static inline int mbedtls_ssl_tls13_get_pk_type_and_md_alg_from_sig_alg(
 
     switch( sig_alg )
     {
-#if defined(MBEDTLS_X509_RSASSA_PSS_SUPPORT)
 #if defined(MBEDTLS_SHA256_C)
         case MBEDTLS_TLS1_3_SIG_RSA_PSS_RSAE_SHA256:
             *md_alg = MBEDTLS_MD_SHA256;
@@ -2002,7 +2001,6 @@ static inline int mbedtls_ssl_tls13_get_pk_type_and_md_alg_from_sig_alg(
             *pk_type = MBEDTLS_PK_RSASSA_PSS;
             break;
 #endif /* MBEDTLS_SHA512_C */
-#endif /* MBEDTLS_X509_RSASSA_PSS_SUPPORT */
 
             default:
                 return( MBEDTLS_ERR_SSL_FEATURE_UNAVAILABLE );
@@ -2011,7 +2009,7 @@ static inline int mbedtls_ssl_tls13_get_pk_type_and_md_alg_from_sig_alg(
 }
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3)
-static inline int mbedtls_ssl_tls13_sig_alg_is_supported_for_certificate(
+static inline int mbedtls_ssl_tls13_sig_alg_for_cert_verify_is_supported(
                                                     const uint16_t sig_alg )
 {
     switch( sig_alg )
@@ -2072,7 +2070,7 @@ static inline int mbedtls_ssl_tls13_sig_alg_is_supported(
 #endif /* MBEDTLS_SHA512_C */
 #endif /* MBEDTLS_PKCS1_V15 && MBEDTLS_RSA_C */
         default:
-            return( mbedtls_ssl_tls13_sig_alg_is_supported_for_certificate(
+            return( mbedtls_ssl_tls13_sig_alg_for_cert_verify_is_supported(
                                                                     sig_alg ) );
     }
     return( 1 );
