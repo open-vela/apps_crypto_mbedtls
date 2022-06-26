@@ -38,9 +38,8 @@
 
 /**
  * \name ASN1 Error codes
- * These error codes are combined with other error codes for
+ * These error codes are OR'ed to X509 error codes for
  * higher error granularity.
- * e.g. X.509 and PKCS #7 error codes
  * ASN1 is a standard to specify data structures.
  * \{
  */
@@ -625,6 +624,15 @@ void mbedtls_asn1_free_named_data( mbedtls_asn1_named_data *entry );
  *              sets \c *head to \c NULL.
  */
 void mbedtls_asn1_free_named_data_list( mbedtls_asn1_named_data **head );
+
+/**
+ * \brief       Free all shallow entries in a mbedtls_asn1_named_data list,
+ *              but do not free internal pointer targets.
+ *
+ * \param name  Head of the list of named data entries to free.
+ *              This function calls mbedtls_free() on each list element.
+ */
+void mbedtls_asn1_free_named_data_list_shallow( mbedtls_asn1_named_data *name );
 
 /** \} name Functions to parse ASN.1 data structures */
 /** \} addtogroup asn1_module */
