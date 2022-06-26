@@ -31,13 +31,7 @@
 #include "mbedtls/bignum.h"
 #endif
 
-#if defined(MBEDTLS_PLATFORM_C)
 #include "mbedtls/platform.h"
-#else
-#include <stdlib.h>
-#define mbedtls_calloc    calloc
-#define mbedtls_free       free
-#endif
 
 /*
  * ASN.1 DER decoding routines
@@ -458,6 +452,16 @@ void mbedtls_asn1_free_named_data_list( mbedtls_asn1_named_data **head )
         *head = cur->next;
         mbedtls_asn1_free_named_data( cur );
         mbedtls_free( cur );
+    }
+}
+
+void mbedtls_asn1_free_named_data_list_shallow( mbedtls_asn1_named_data *name )
+{
+    for( mbedtls_asn1_named_data *next; name != NULL; name = next )
+    {
+        next = name->next;
+        mbedtls_platform_zeroize( name, sizeof( *name ) );
+        mbedtls_free( name );
     }
 }
 

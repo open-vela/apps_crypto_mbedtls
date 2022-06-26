@@ -10,7 +10,7 @@
 #include "mbedtls/error.h"
 #include "string.h"
 
-#include "legacy_or_psa.h"
+#include "mbedtls/legacy_or_psa.h"
 
 #if MBEDTLS_X509_MAX_INTERMEDIATE_CA > 19
 #error "The value of MBEDTLS_X509_MAX_INTERMEDIATE_C is larger \
@@ -818,13 +818,37 @@ exit:
 }
 /* END_CASE */
 
+/* BEGIN_CASE depends_on:MBEDTLS_X509_CRT_PARSE_C */
+void mbedtls_x509_get_name( char * rdn_sequence, int exp_ret )
+{
+    unsigned char *name;
+    unsigned char *p;
+    size_t name_len;
+    mbedtls_x509_name head;
+    int ret;
+
+    memset( &head, 0, sizeof( head ) );
+
+    name = mbedtls_test_unhexify_alloc( rdn_sequence, &name_len );
+    p = name;
+
+    ret = mbedtls_x509_get_name( &p, ( name + name_len ), &head );
+    if( ret == 0 )
+        mbedtls_asn1_free_named_data_list_shallow( head.next );
+
+    TEST_EQUAL( ret, exp_ret );
+
+    mbedtls_free( name );
+}
+/* END_CASE */
+
 /* BEGIN_CASE depends_on:MBEDTLS_X509_CREATE_C:MBEDTLS_X509_USE_C:MBEDTLS_X509_CRT_PARSE_C:!MBEDTLS_X509_REMOVE_INFO */
 void mbedtls_x509_dn_get_next( char * name_str, int next_merged, char * expected_oids, int exp_count, char * exp_dn_gets )
 {
     int ret = 0, i;
     size_t len = 0, out_size;
     mbedtls_asn1_named_data *names = NULL;
-    mbedtls_x509_name parsed, *parsed_cur, *parsed_prv;
+    mbedtls_x509_name parsed, *parsed_cur;
     // Size of buf is maximum required for test cases
     unsigned char buf[80], *out = NULL, *c;
     const char *short_name;
@@ -878,14 +902,7 @@ void mbedtls_x509_dn_get_next( char * name_str, int next_merged, char * expected
 exit:
     mbedtls_free( out );
     mbedtls_asn1_free_named_data_list( &names );
-
-    parsed_cur = parsed.next;
-    while( parsed_cur != 0 )
-    {
-        parsed_prv = parsed_cur;
-        parsed_cur = parsed_cur->next;
-        mbedtls_free( parsed_prv );
-    }
+    mbedtls_asn1_free_named_data_list_shallow( parsed.next );
 }
 /* END_CASE */
 
