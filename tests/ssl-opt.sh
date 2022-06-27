@@ -81,12 +81,10 @@ fi
 if [ -n "${OPENSSL_NEXT:-}" ]; then
     O_NEXT_SRV="$OPENSSL_NEXT s_server -www -cert data_files/server5.crt -key data_files/server5.key"
     O_NEXT_SRV_NO_CERT="$OPENSSL_NEXT s_server -www "
-    O_NEXT_CLI="echo 'GET / HTTP/1.0' | $OPENSSL_NEXT s_client -CAfile data_files/test-ca_cat12.crt"
-    O_NEXT_CLI_NO_CERT="echo 'GET / HTTP/1.0' | $OPENSSL_NEXT s_client"
+    O_NEXT_CLI="echo 'GET / HTTP/1.0' | $OPENSSL_NEXT s_client"
 else
     O_NEXT_SRV=false
     O_NEXT_SRV_NO_CERT=false
-    O_NEXT_CLI_NO_CERT=false
     O_NEXT_CLI=false
 fi
 
@@ -100,10 +98,8 @@ fi
 
 if [ -n "${GNUTLS_NEXT_CLI:-}" ]; then
     G_NEXT_CLI="echo 'GET / HTTP/1.0' | $GNUTLS_NEXT_CLI --x509cafile data_files/test-ca_cat12.crt"
-    G_NEXT_CLI_NO_CERT="echo 'GET / HTTP/1.0' | $GNUTLS_NEXT_CLI"
 else
     G_NEXT_CLI=false
-    G_NEXT_CLI_NO_CERT=false
 fi
 
 TESTS=0
@@ -1217,11 +1213,7 @@ do_run_test_once() {
     wait_server_start "$SRV_PORT" "$SRV_PID"
 
     printf '# %s\n%s\n' "$NAME" "$CLI_CMD" > $CLI_OUT
-    # The client must be a subprocess of the script in order for killing it to
-    # work properly, that's why the ampersand is placed inside the eval command,
-    # not at the end of the line: the latter approach will spawn eval as a
-    # subprocess, and the $CLI_CMD as a grandchild.
-    eval "$CLI_CMD &" >> $CLI_OUT 2>&1
+    eval "$CLI_CMD" >> $CLI_OUT 2>&1 &
     wait_client_done
 
     sleep 0.05
@@ -1562,7 +1554,6 @@ if [ -n "${OPENSSL_NEXT:-}" ]; then
     O_NEXT_SRV="$O_NEXT_SRV -accept $SRV_PORT"
     O_NEXT_SRV_NO_CERT="$O_NEXT_SRV_NO_CERT -accept $SRV_PORT"
     O_NEXT_CLI="$O_NEXT_CLI -connect 127.0.0.1:+SRV_PORT"
-    O_NEXT_CLI_NO_CERT="$O_NEXT_CLI_NO_CERT -connect 127.0.0.1:+SRV_PORT"
 fi
 
 if [ -n "${GNUTLS_NEXT_SERV:-}" ]; then
@@ -1572,7 +1563,6 @@ fi
 
 if [ -n "${GNUTLS_NEXT_CLI:-}" ]; then
     G_NEXT_CLI="$G_NEXT_CLI -p +SRV_PORT"
-    G_NEXT_CLI_NO_CERT="$G_NEXT_CLI_NO_CERT -p +SRV_PORT localhost"
 fi
 
 # Allow SHA-1, because many of our test certificates use it
@@ -1750,36 +1740,6 @@ run_test    "TLS-DHE-RSA Opaque key for client authentication" \
             -c "Ciphersuite is TLS-DHE-RSA" \
             -s "Verifying peer X.509 certificate... ok" \
             -s "Ciphersuite is TLS-DHE-RSA" \
-            -S "error" \
-            -C "error"
-
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
-requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
-requires_config_enabled MBEDTLS_RSA_C
-run_test    "RSA opaque key on server configured for decryption" \
-            "$P_SRV debug_level=1 key_opaque=1 key_opaque_algs=rsa-decrypt,none" \
-            "$P_CLI force_ciphersuite=TLS-RSA-WITH-AES-128-CBC-SHA256" \
-            0 \
-            -c "Verifying peer X.509 certificate... ok" \
-            -c "Ciphersuite is TLS-RSA-" \
-            -s "key types: Opaque, Opaque" \
-            -s "Ciphersuite is TLS-RSA-" \
-            -S "error" \
-            -C "error"
-
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
-requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
-requires_config_enabled MBEDTLS_RSA_C
-run_test    "RSA-PSK opaque key on server configured for decryption" \
-            "$P_SRV debug_level=1 key_opaque=1 key_opaque_algs=rsa-decrypt,none \
-             psk=abc123 psk_identity=foo" \
-            "$P_CLI force_ciphersuite=TLS-RSA-PSK-WITH-AES-128-CBC-SHA256 \
-             psk=abc123 psk_identity=foo" \
-            0 \
-            -c "Verifying peer X.509 certificate... ok" \
-            -c "Ciphersuite is TLS-RSA-PSK-" \
-            -s "key types: Opaque, Opaque" \
-            -s "Ciphersuite is TLS-RSA-PSK-" \
             -S "error" \
             -C "error"
 
@@ -4620,7 +4580,7 @@ run_test    "Renegotiation: DTLS, gnutls server, client-initiated" \
             -C "error" \
             -s "Extra-header:"
 
-# Test for the "secure renegotiation" extension only (no actual renegotiation)
+# Test for the "secure renegotation" extension only (no actual renegotiation)
 
 requires_gnutls
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
@@ -5357,7 +5317,7 @@ run_test    "Authentication, CA callback: client max_int chain, server required"
             -s "use CA callback for X.509 CRT verification" \
             -S "X509 - A fatal error occurred"
 
-# Tests for certificate selection based on SHA version
+# Tests for certificate selection based on SHA verson
 
 requires_config_disabled MBEDTLS_X509_REMOVE_INFO
 run_test    "Certificate hash: client TLS 1.2 -> SHA-2" \
@@ -5373,6 +5333,7 @@ run_test    "Certificate hash: client TLS 1.2 -> SHA-2" \
 # tests for SNI
 
 requires_config_disabled MBEDTLS_X509_REMOVE_INFO
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 run_test    "SNI: no SNI callback" \
             "$P_SRV debug_level=3 \
              crt_file=data_files/server5.crt key_file=data_files/server5.key" \
@@ -5382,6 +5343,7 @@ run_test    "SNI: no SNI callback" \
             -c "subject name *: C=NL, O=PolarSSL, CN=localhost"
 
 requires_config_disabled MBEDTLS_X509_REMOVE_INFO
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 run_test    "SNI: matching cert 1" \
             "$P_SRV debug_level=3 \
              crt_file=data_files/server5.crt key_file=data_files/server5.key \
@@ -5393,6 +5355,7 @@ run_test    "SNI: matching cert 1" \
             -c "subject name *: C=NL, O=PolarSSL, CN=localhost"
 
 requires_config_disabled MBEDTLS_X509_REMOVE_INFO
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 run_test    "SNI: matching cert 2" \
             "$P_SRV debug_level=3 \
              crt_file=data_files/server5.crt key_file=data_files/server5.key \
@@ -5404,6 +5367,7 @@ run_test    "SNI: matching cert 2" \
             -c "subject name *: C=NL, O=PolarSSL, CN=polarssl.example"
 
 requires_config_disabled MBEDTLS_X509_REMOVE_INFO
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 run_test    "SNI: no matching cert" \
             "$P_SRV debug_level=3 \
              crt_file=data_files/server5.crt key_file=data_files/server5.key \
@@ -5416,6 +5380,7 @@ run_test    "SNI: no matching cert" \
             -c "mbedtls_ssl_handshake returned" \
             -c "SSL - A fatal alert message was received from our peer"
 
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 run_test    "SNI: client auth no override: optional" \
             "$P_SRV debug_level=3 auth_mode=optional \
              crt_file=data_files/server5.crt key_file=data_files/server5.key \
@@ -5429,6 +5394,7 @@ run_test    "SNI: client auth no override: optional" \
             -C "skip write certificate verify" \
             -S "skip parse certificate verify"
 
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 run_test    "SNI: client auth override: none -> optional" \
             "$P_SRV debug_level=3 auth_mode=none \
              crt_file=data_files/server5.crt key_file=data_files/server5.key \
@@ -5442,6 +5408,7 @@ run_test    "SNI: client auth override: none -> optional" \
             -C "skip write certificate verify" \
             -S "skip parse certificate verify"
 
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 run_test    "SNI: client auth override: optional -> none" \
             "$P_SRV debug_level=3 auth_mode=optional \
              crt_file=data_files/server5.crt key_file=data_files/server5.key \
@@ -5451,8 +5418,11 @@ run_test    "SNI: client auth override: optional -> none" \
             -s "skip write certificate request" \
             -C "skip parse certificate request" \
             -c "got no certificate request" \
-            -c "skip write certificate"
+            -c "skip write certificate" \
+            -c "skip write certificate verify" \
+            -s "skip parse certificate verify"
 
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 run_test    "SNI: CA no override" \
             "$P_SRV debug_level=3 auth_mode=optional \
              crt_file=data_files/server5.crt key_file=data_files/server5.key \
@@ -5471,6 +5441,7 @@ run_test    "SNI: CA no override" \
             -s "! The certificate is not correctly signed by the trusted CA" \
             -S "The certificate has been revoked (is on a CRL)"
 
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 run_test    "SNI: CA override" \
             "$P_SRV debug_level=3 auth_mode=optional \
              crt_file=data_files/server5.crt key_file=data_files/server5.key \
@@ -5489,6 +5460,7 @@ run_test    "SNI: CA override" \
             -S "! The certificate is not correctly signed by the trusted CA" \
             -S "The certificate has been revoked (is on a CRL)"
 
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 run_test    "SNI: CA override with CRL" \
             "$P_SRV debug_level=3 auth_mode=optional \
              crt_file=data_files/server5.crt key_file=data_files/server5.key \
@@ -5901,6 +5873,7 @@ run_test    "Not supported version check: srv max TLS 1.1" \
 
 # Tests for ALPN extension
 
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 run_test    "ALPN: none" \
             "$P_SRV debug_level=3" \
             "$P_CLI debug_level=3" \
@@ -5908,11 +5881,12 @@ run_test    "ALPN: none" \
             -C "client hello, adding alpn extension" \
             -S "found alpn extension" \
             -C "got an alert message, type: \\[2:120]" \
-            -S "server side, adding alpn extension" \
+            -S "server hello, adding alpn extension" \
             -C "found alpn extension " \
             -C "Application Layer Protocol is" \
             -S "Application Layer Protocol is"
 
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 run_test    "ALPN: client only" \
             "$P_SRV debug_level=3" \
             "$P_CLI debug_level=3 alpn=abc,1234" \
@@ -5920,11 +5894,12 @@ run_test    "ALPN: client only" \
             -c "client hello, adding alpn extension" \
             -s "found alpn extension" \
             -C "got an alert message, type: \\[2:120]" \
-            -S "server side, adding alpn extension" \
+            -S "server hello, adding alpn extension" \
             -C "found alpn extension " \
             -c "Application Layer Protocol is (none)" \
             -S "Application Layer Protocol is"
 
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 run_test    "ALPN: server only" \
             "$P_SRV debug_level=3 alpn=abc,1234" \
             "$P_CLI debug_level=3" \
@@ -5932,11 +5907,12 @@ run_test    "ALPN: server only" \
             -C "client hello, adding alpn extension" \
             -S "found alpn extension" \
             -C "got an alert message, type: \\[2:120]" \
-            -S "server side, adding alpn extension" \
+            -S "server hello, adding alpn extension" \
             -C "found alpn extension " \
             -C "Application Layer Protocol is" \
             -s "Application Layer Protocol is (none)"
 
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 run_test    "ALPN: both, common cli1-srv1" \
             "$P_SRV debug_level=3 alpn=abc,1234" \
             "$P_CLI debug_level=3 alpn=abc,1234" \
@@ -5944,11 +5920,12 @@ run_test    "ALPN: both, common cli1-srv1" \
             -c "client hello, adding alpn extension" \
             -s "found alpn extension" \
             -C "got an alert message, type: \\[2:120]" \
-            -s "server side, adding alpn extension" \
+            -s "server hello, adding alpn extension" \
             -c "found alpn extension" \
             -c "Application Layer Protocol is abc" \
             -s "Application Layer Protocol is abc"
 
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 run_test    "ALPN: both, common cli2-srv1" \
             "$P_SRV debug_level=3 alpn=abc,1234" \
             "$P_CLI debug_level=3 alpn=1234,abc" \
@@ -5956,11 +5933,12 @@ run_test    "ALPN: both, common cli2-srv1" \
             -c "client hello, adding alpn extension" \
             -s "found alpn extension" \
             -C "got an alert message, type: \\[2:120]" \
-            -s "server side, adding alpn extension" \
+            -s "server hello, adding alpn extension" \
             -c "found alpn extension" \
             -c "Application Layer Protocol is abc" \
             -s "Application Layer Protocol is abc"
 
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 run_test    "ALPN: both, common cli1-srv2" \
             "$P_SRV debug_level=3 alpn=abc,1234" \
             "$P_CLI debug_level=3 alpn=1234,abcde" \
@@ -5968,11 +5946,12 @@ run_test    "ALPN: both, common cli1-srv2" \
             -c "client hello, adding alpn extension" \
             -s "found alpn extension" \
             -C "got an alert message, type: \\[2:120]" \
-            -s "server side, adding alpn extension" \
+            -s "server hello, adding alpn extension" \
             -c "found alpn extension" \
             -c "Application Layer Protocol is 1234" \
             -s "Application Layer Protocol is 1234"
 
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 run_test    "ALPN: both, no common" \
             "$P_SRV debug_level=3 alpn=abc,123" \
             "$P_CLI debug_level=3 alpn=1234,abcde" \
@@ -5980,7 +5959,7 @@ run_test    "ALPN: both, no common" \
             -c "client hello, adding alpn extension" \
             -s "found alpn extension" \
             -c "got an alert message, type: \\[2:120]" \
-            -S "server side, adding alpn extension" \
+            -S "server hello, adding alpn extension" \
             -C "found alpn extension" \
             -C "Application Layer Protocol is 1234" \
             -S "Application Layer Protocol is 1234"
@@ -9089,7 +9068,7 @@ run_test    "DTLS fragmenting: gnutls server, DTLS 1.2" \
 # certificate obtained from the server. Here, however, it
 # connects to 127.0.0.1 while our test certificates use 'localhost'
 # as the server name in the certificate. This will make the
-# certificate validation fail, but passing --insecure makes
+# certifiate validation fail, but passing --insecure makes
 # GnuTLS continue the connection nonetheless.
 requires_config_enabled MBEDTLS_SSL_PROTO_DTLS
 requires_config_enabled MBEDTLS_RSA_C
@@ -10510,36 +10489,6 @@ run_test    "TLS 1.3: alpn - gnutls" \
             -c "HTTP/1.0 200 OK" \
             -c "Application Layer Protocol is h2"
 
-requires_openssl_tls1_3
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-requires_config_enabled MBEDTLS_DEBUG_C
-requires_config_enabled MBEDTLS_SSL_SRV_C
-requires_config_enabled MBEDTLS_SSL_ALPN
-run_test    "TLS 1.3: server alpn - openssl" \
-            "$P_SRV debug_level=3 tickets=0 crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13 alpn=h2" \
-            "$O_NEXT_CLI -msg -tls1_3 -no_middlebox -alpn h2" \
-            0 \
-            -s "found alpn extension" \
-            -s "server side, adding alpn extension" \
-            -s "Protocol is TLSv1.3" \
-            -s "HTTP/1.0 200 OK" \
-            -s "Application Layer Protocol is h2"
-
-requires_gnutls_tls1_3
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-requires_config_enabled MBEDTLS_DEBUG_C
-requires_config_enabled MBEDTLS_SSL_SRV_C
-requires_config_enabled MBEDTLS_SSL_ALPN
-run_test    "TLS 1.3: server alpn - gnutls" \
-            "$P_SRV debug_level=3 tickets=0 crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13 alpn=h2" \
-            "$G_NEXT_CLI localhost -d 4 --priority=NORMAL:-VERS-ALL:+VERS-TLS1.3:%NO_TICKETS:%DISABLE_TLS13_COMPAT_MODE -V --alpn h2" \
-            0 \
-            -s "found alpn extension" \
-            -s "server side, adding alpn extension" \
-            -s "Protocol is TLSv1.3" \
-            -s "HTTP/1.0 200 OK" \
-            -s "Application Layer Protocol is h2"
-
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_DEBUG_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
@@ -10890,7 +10839,7 @@ run_test    "TLS 1.3: Client authentication, client alg not in server list - ope
             -c "client state: MBEDTLS_SSL_CLIENT_CERTIFICATE" \
             -c "client state: MBEDTLS_SSL_CLIENT_CERTIFICATE_VERIFY" \
             -c "signature algorithm not in received or offered list." \
-            -C "unknown pk type"
+            -C "unkown pk type"
 
 requires_gnutls_tls1_3
 requires_gnutls_next_no_ticket
@@ -10908,7 +10857,7 @@ run_test    "TLS 1.3: Client authentication, client alg not in server list - gnu
             -c "client state: MBEDTLS_SSL_CLIENT_CERTIFICATE" \
             -c "client state: MBEDTLS_SSL_CLIENT_CERTIFICATE_VERIFY" \
             -c "signature algorithm not in received or offered list." \
-            -C "unknown pk type"
+            -C "unkown pk type"
 
 # Test using an opaque private key for client authentication
 requires_openssl_tls1_3
@@ -11245,22 +11194,21 @@ run_test    "TLS 1.3: HRR check, ciphersuite TLS_AES_256_GCM_SHA384 - gnutls" \
             -c "Protocol is TLSv1.3" \
             -c "HTTP/1.0 200 OK"
 
-requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_DEBUG_C
 requires_config_enabled MBEDTLS_SSL_SRV_C
+requires_openssl_tls1_3
 run_test    "TLS 1.3: Server side check - openssl" \
             "$P_SRV debug_level=4 crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13 tickets=0" \
-            "$O_NEXT_CLI -msg -debug -tls1_3 -no_middlebox" \
-            0 \
+            "$O_NEXT_CLI -msg -debug -tls1_3" \
+            1 \
             -s "tls13 server state: MBEDTLS_SSL_CLIENT_HELLO" \
             -s "tls13 server state: MBEDTLS_SSL_SERVER_HELLO" \
             -s "tls13 server state: MBEDTLS_SSL_ENCRYPTED_EXTENSIONS" \
             -s "tls13 server state: MBEDTLS_SSL_SERVER_CERTIFICATE" \
-            -s "tls13 server state: MBEDTLS_SSL_CERTIFICATE_VERIFY" \
-            -s "tls13 server state: MBEDTLS_SSL_SERVER_FINISHED" \
-            -s "tls13 server state: MBEDTLS_SSL_CLIENT_FINISHED" \
-            -s "tls13 server state: MBEDTLS_SSL_HANDSHAKE_WRAPUP"
+            -s "SSL - The requested feature is not available" \
+            -s "=> parse client hello" \
+            -s "<= parse client hello"
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_DEBUG_C
@@ -11268,16 +11216,15 @@ requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_openssl_tls1_3
 run_test    "TLS 1.3: Server side check - openssl with client authentication" \
             "$P_SRV debug_level=4 auth_mode=required crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13 tickets=0" \
-            "$O_NEXT_CLI -msg -debug -cert data_files/server5.crt -key data_files/server5.key -tls1_3 -no_middlebox" \
-            0 \
+            "$O_NEXT_CLI -msg -debug -cert data_files/server5.crt -key data_files/server5.key -tls1_3" \
+            1 \
             -s "tls13 server state: MBEDTLS_SSL_CLIENT_HELLO" \
             -s "tls13 server state: MBEDTLS_SSL_SERVER_HELLO" \
             -s "tls13 server state: MBEDTLS_SSL_ENCRYPTED_EXTENSIONS" \
             -s "tls13 server state: MBEDTLS_SSL_CERTIFICATE_REQUEST" \
             -s "tls13 server state: MBEDTLS_SSL_SERVER_CERTIFICATE" \
-            -s "tls13 server state: MBEDTLS_SSL_CERTIFICATE_VERIFY" \
-            -s "tls13 server state: MBEDTLS_SSL_SERVER_FINISHED" \
             -s "=> write certificate request" \
+            -s "SSL - The requested feature is not available" \
             -s "=> parse client hello" \
             -s "<= parse client hello"
 
@@ -11289,16 +11236,14 @@ requires_config_enabled MBEDTLS_SSL_SRV_C
 run_test    "TLS 1.3: Server side check - gnutls" \
             "$P_SRV debug_level=4 crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13 tickets=0" \
             "$G_NEXT_CLI localhost -d 4 --priority=NORMAL:-VERS-ALL:+VERS-TLS1.3:%NO_TICKETS:%DISABLE_TLS13_COMPAT_MODE -V" \
-            0 \
+            1 \
             -s "tls13 server state: MBEDTLS_SSL_CLIENT_HELLO" \
             -s "tls13 server state: MBEDTLS_SSL_SERVER_HELLO" \
             -s "tls13 server state: MBEDTLS_SSL_ENCRYPTED_EXTENSIONS" \
             -s "tls13 server state: MBEDTLS_SSL_SERVER_CERTIFICATE" \
-            -s "tls13 server state: MBEDTLS_SSL_CERTIFICATE_VERIFY" \
-            -s "tls13 server state: MBEDTLS_SSL_SERVER_FINISHED" \
-            -s "tls13 server state: MBEDTLS_SSL_CLIENT_FINISHED" \
-            -s "tls13 server state: MBEDTLS_SSL_HANDSHAKE_WRAPUP" \
-            -c "HTTP/1.0 200 OK"
+            -s "SSL - The requested feature is not available" \
+            -s "=> parse client hello" \
+            -s "<= parse client hello"
 
 requires_gnutls_tls1_3
 requires_gnutls_next_no_ticket
@@ -11308,15 +11253,14 @@ requires_config_enabled MBEDTLS_SSL_SRV_C
 run_test    "TLS 1.3: Server side check - gnutls with client authentication" \
             "$P_SRV debug_level=4 auth_mode=required crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13 tickets=0" \
             "$G_NEXT_CLI localhost -d 4 --x509certfile data_files/server5.crt --x509keyfile data_files/server5.key --priority=NORMAL:-VERS-ALL:+VERS-TLS1.3:%NO_TICKETS:%DISABLE_TLS13_COMPAT_MODE -V" \
-            0 \
+            1 \
             -s "tls13 server state: MBEDTLS_SSL_CLIENT_HELLO" \
             -s "tls13 server state: MBEDTLS_SSL_SERVER_HELLO" \
             -s "tls13 server state: MBEDTLS_SSL_ENCRYPTED_EXTENSIONS" \
             -s "tls13 server state: MBEDTLS_SSL_CERTIFICATE_REQUEST" \
             -s "tls13 server state: MBEDTLS_SSL_SERVER_CERTIFICATE" \
-            -s "tls13 server state: MBEDTLS_SSL_CERTIFICATE_VERIFY" \
-            -s "tls13 server state: MBEDTLS_SSL_SERVER_FINISHED" \
             -s "=> write certificate request" \
+            -s "SSL - The requested feature is not available" \
             -s "=> parse client hello" \
             -s "<= parse client hello"
 
@@ -11327,17 +11271,16 @@ requires_config_enabled MBEDTLS_SSL_CLI_C
 run_test    "TLS 1.3: Server side check - mbedtls" \
             "$P_SRV debug_level=4 crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13 tickets=0" \
             "$P_CLI debug_level=4 force_version=tls13" \
-            0 \
+            1 \
             -s "tls13 server state: MBEDTLS_SSL_CLIENT_HELLO" \
             -s "tls13 server state: MBEDTLS_SSL_SERVER_HELLO" \
             -s "tls13 server state: MBEDTLS_SSL_ENCRYPTED_EXTENSIONS" \
-            -s "tls13 server state: MBEDTLS_SSL_CERTIFICATE_REQUEST" \
             -s "tls13 server state: MBEDTLS_SSL_SERVER_CERTIFICATE" \
-            -s "tls13 server state: MBEDTLS_SSL_CERTIFICATE_VERIFY" \
-            -s "tls13 server state: MBEDTLS_SSL_SERVER_FINISHED" \
-            -s "tls13 server state: MBEDTLS_SSL_CLIENT_FINISHED" \
-            -s "tls13 server state: MBEDTLS_SSL_HANDSHAKE_WRAPUP" \
-            -c "HTTP/1.0 200 OK"
+            -s "=> write certificate request" \
+            -c "client state: MBEDTLS_SSL_CERTIFICATE_REQUEST" \
+            -s "SSL - The requested feature is not available" \
+            -s "=> parse client hello" \
+            -s "<= parse client hello"
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_DEBUG_C
@@ -11346,118 +11289,15 @@ requires_config_enabled MBEDTLS_SSL_CLI_C
 run_test    "TLS 1.3: Server side check - mbedtls with client authentication" \
             "$P_SRV debug_level=4 auth_mode=required crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13 tickets=0" \
             "$P_CLI debug_level=4 crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13" \
-            0 \
-            -s "tls13 server state: MBEDTLS_SSL_CLIENT_HELLO" \
-            -s "tls13 server state: MBEDTLS_SSL_SERVER_HELLO" \
-            -s "tls13 server state: MBEDTLS_SSL_ENCRYPTED_EXTENSIONS" \
-            -s "tls13 server state: MBEDTLS_SSL_SERVER_CERTIFICATE" \
-            -s "=> write certificate request" \
-            -c "client state: MBEDTLS_SSL_CERTIFICATE_REQUEST" \
-            -s "=> parse client hello" \
-            -s "<= parse client hello"
-
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-requires_config_enabled MBEDTLS_DEBUG_C
-requires_config_enabled MBEDTLS_SSL_SRV_C
-requires_config_enabled MBEDTLS_SSL_CLI_C
-run_test    "TLS 1.3: Server side check - mbedtls with client empty certificate" \
-            "$P_SRV debug_level=4 auth_mode=required crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13 tickets=0" \
-            "$P_CLI debug_level=4 crt_file=none key_file=none force_version=tls13" \
             1 \
             -s "tls13 server state: MBEDTLS_SSL_CLIENT_HELLO" \
             -s "tls13 server state: MBEDTLS_SSL_SERVER_HELLO" \
             -s "tls13 server state: MBEDTLS_SSL_ENCRYPTED_EXTENSIONS" \
             -s "tls13 server state: MBEDTLS_SSL_SERVER_CERTIFICATE" \
-            -s "=> write certificate request" \
-            -s "SSL - No client certification received from the client, but required by the authentication mode" \
             -c "client state: MBEDTLS_SSL_CERTIFICATE_REQUEST" \
+            -s "SSL - The requested feature is not available" \
             -s "=> parse client hello" \
             -s "<= parse client hello"
-
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-requires_config_enabled MBEDTLS_DEBUG_C
-requires_config_enabled MBEDTLS_SSL_SRV_C
-requires_config_enabled MBEDTLS_SSL_CLI_C
-run_test    "TLS 1.3: Server side check - mbedtls with optional client authentication" \
-            "$P_SRV debug_level=4 auth_mode=optional crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13 tickets=0" \
-            "$P_CLI debug_level=4 force_version=tls13 crt_file=none key_file=none" \
-            0 \
-            -s "tls13 server state: MBEDTLS_SSL_CLIENT_HELLO" \
-            -s "tls13 server state: MBEDTLS_SSL_SERVER_HELLO" \
-            -s "tls13 server state: MBEDTLS_SSL_ENCRYPTED_EXTENSIONS" \
-            -s "tls13 server state: MBEDTLS_SSL_SERVER_CERTIFICATE" \
-            -s "=> write certificate request" \
-            -c "client state: MBEDTLS_SSL_CERTIFICATE_REQUEST" \
-            -s "=> parse client hello" \
-            -s "<= parse client hello"
-
-requires_config_enabled MBEDTLS_DEBUG_C
-requires_config_enabled MBEDTLS_SSL_CLI_C
-requires_config_enabled MBEDTLS_SSL_SRV_C
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-run_test "TLS 1.3: server: HRR check - mbedtls" \
-         "$P_SRV debug_level=4 force_version=tls13 curves=secp384r1" \
-         "$P_CLI debug_level=4 force_version=tls13 curves=secp256r1,secp384r1" \
-         0 \
-        -s "tls13 server state: MBEDTLS_SSL_CLIENT_HELLO" \
-        -s "tls13 server state: MBEDTLS_SSL_SERVER_HELLO" \
-        -s "tls13 server state: MBEDTLS_SSL_ENCRYPTED_EXTENSIONS" \
-        -s "tls13 server state: MBEDTLS_SSL_HELLO_RETRY_REQUEST" \
-        -c "client state: MBEDTLS_SSL_ENCRYPTED_EXTENSIONS" \
-        -s "selected_group: secp384r1" \
-        -s "=> write hello retry request" \
-        -s "<= write hello retry request"
-
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-requires_config_enabled MBEDTLS_DEBUG_C
-requires_config_enabled MBEDTLS_SSL_SRV_C
-requires_config_enabled MBEDTLS_SSL_CLI_C
-run_test    "TLS 1.3: Server side check, no server certificate available" \
-            "$P_SRV debug_level=4 crt_file=none key_file=none force_version=tls13" \
-            "$P_CLI debug_level=4 force_version=tls13" \
-            1 \
-            -s "tls13 server state: MBEDTLS_SSL_SERVER_CERTIFICATE" \
-            -s "No certificate available."
-
-requires_openssl_tls1_3
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
-requires_config_enabled MBEDTLS_DEBUG_C
-requires_config_enabled MBEDTLS_SSL_SRV_C
-run_test    "TLS 1.3: Server side check - openssl with sni" \
-            "$P_SRV debug_level=4 auth_mode=required crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13 tickets=0 \
-             sni=localhost,data_files/server5.crt,data_files/server5.key,data_files/test-ca_cat12.crt,-,-,polarssl.example,data_files/server1-nospace.crt,data_files/server1.key,-,-,-" \
-            "$O_NEXT_CLI -msg -debug -servername localhost -CAfile data_files/test-ca_cat12.crt -cert data_files/server5.crt -key data_files/server5.key -tls1_3" \
-            0 \
-            -s "parse ServerName extension" \
-            -s "HTTP/1.0 200 OK"
-
-requires_gnutls_tls1_3
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
-requires_config_enabled MBEDTLS_DEBUG_C
-requires_config_enabled MBEDTLS_SSL_SRV_C
-run_test    "TLS 1.3: Server side check - gnutls with sni" \
-            "$P_SRV debug_level=4 auth_mode=required crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13 tickets=0 \
-             sni=localhost,data_files/server5.crt,data_files/server5.key,data_files/test-ca_cat12.crt,-,-,polarssl.example,data_files/server1-nospace.crt,data_files/server1.key,-,-,-" \
-            "$G_NEXT_CLI localhost -d 4 --sni-hostname=localhost --x509certfile data_files/server5.crt --x509keyfile data_files/server5.key --priority=NORMAL:-VERS-ALL:+VERS-TLS1.3:%NO_TICKETS -V" \
-            0 \
-            -s "parse ServerName extension" \
-            -s "HTTP/1.0 200 OK"
-
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
-requires_config_enabled MBEDTLS_DEBUG_C
-requires_config_enabled MBEDTLS_SSL_SRV_C
-requires_config_enabled MBEDTLS_SSL_CLI_C
-run_test    "TLS 1.3: Server side check - mbedtls with sni" \
-            "$P_SRV debug_level=4 auth_mode=required crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13 tickets=0 \
-             sni=localhost,data_files/server2.crt,data_files/server2.key,-,-,-,polarssl.example,data_files/server1-nospace.crt,data_files/server1.key,-,-,-" \
-            "$P_CLI debug_level=4 server_name=localhost crt_file=data_files/server5.crt key_file=data_files/server5.key \
-            force_version=tls13" \
-            0 \
-            -s "parse ServerName extension" \
-            -s "HTTP/1.0 200 OK"
 
 for i in opt-testcases/*.sh
 do
