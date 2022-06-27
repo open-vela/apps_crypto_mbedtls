@@ -75,7 +75,6 @@ int mbedtls_ssl_conf_has_static_psk( mbedtls_ssl_config const *conf )
 #endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
 
 #if defined(MBEDTLS_SSL_RENEGOTIATION)
-MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_write_renegotiation_ext( mbedtls_ssl_context *ssl,
                                         unsigned char *buf,
                                         const unsigned char *end,
@@ -117,7 +116,6 @@ static int ssl_write_renegotiation_ext( mbedtls_ssl_context *ssl,
 #if defined(MBEDTLS_ECDH_C) || defined(MBEDTLS_ECDSA_C) || \
     defined(MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED)
 
-MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_write_supported_point_formats_ext( mbedtls_ssl_context *ssl,
                                                   unsigned char *buf,
                                                   const unsigned char *end,
@@ -149,7 +147,6 @@ static int ssl_write_supported_point_formats_ext( mbedtls_ssl_context *ssl,
           MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED */
 
 #if defined(MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED)
-MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_write_ecjpake_kkpp_ext( mbedtls_ssl_context *ssl,
                                        unsigned char *buf,
                                        const unsigned char *end,
@@ -223,7 +220,6 @@ static int ssl_write_ecjpake_kkpp_ext( mbedtls_ssl_context *ssl,
 #endif /* MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED */
 
 #if defined(MBEDTLS_SSL_DTLS_CONNECTION_ID)
-MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_write_cid_ext( mbedtls_ssl_context *ssl,
                               unsigned char *buf,
                               const unsigned char *end,
@@ -270,7 +266,6 @@ static int ssl_write_cid_ext( mbedtls_ssl_context *ssl,
 #endif /* MBEDTLS_SSL_DTLS_CONNECTION_ID */
 
 #if defined(MBEDTLS_SSL_MAX_FRAGMENT_LENGTH)
-MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_write_max_fragment_length_ext( mbedtls_ssl_context *ssl,
                                               unsigned char *buf,
                                               const unsigned char *end,
@@ -303,7 +298,6 @@ static int ssl_write_max_fragment_length_ext( mbedtls_ssl_context *ssl,
 #endif /* MBEDTLS_SSL_MAX_FRAGMENT_LENGTH */
 
 #if defined(MBEDTLS_SSL_ENCRYPT_THEN_MAC)
-MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_write_encrypt_then_mac_ext( mbedtls_ssl_context *ssl,
                                            unsigned char *buf,
                                            const unsigned char *end,
@@ -334,7 +328,6 @@ static int ssl_write_encrypt_then_mac_ext( mbedtls_ssl_context *ssl,
 #endif /* MBEDTLS_SSL_ENCRYPT_THEN_MAC */
 
 #if defined(MBEDTLS_SSL_EXTENDED_MASTER_SECRET)
-MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_write_extended_ms_ext( mbedtls_ssl_context *ssl,
                                       unsigned char *buf,
                                       const unsigned char *end,
@@ -365,7 +358,6 @@ static int ssl_write_extended_ms_ext( mbedtls_ssl_context *ssl,
 #endif /* MBEDTLS_SSL_EXTENDED_MASTER_SECRET */
 
 #if defined(MBEDTLS_SSL_SESSION_TICKETS)
-MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_write_session_ticket_ext( mbedtls_ssl_context *ssl,
                                          unsigned char *buf,
                                          const unsigned char *end,
@@ -408,7 +400,6 @@ static int ssl_write_session_ticket_ext( mbedtls_ssl_context *ssl,
 #endif /* MBEDTLS_SSL_SESSION_TICKETS */
 
 #if defined(MBEDTLS_SSL_DTLS_SRTP)
-MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_write_use_srtp_ext( mbedtls_ssl_context *ssl,
                                    unsigned char *buf,
                                    const unsigned char *end,
@@ -638,7 +629,6 @@ int mbedtls_ssl_tls12_write_client_hello_exts( mbedtls_ssl_context *ssl,
     return( 0 );
 }
 
-MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_parse_renegotiation_info( mbedtls_ssl_context *ssl,
                                          const unsigned char *buf,
                                          size_t len )
@@ -683,7 +673,6 @@ static int ssl_parse_renegotiation_info( mbedtls_ssl_context *ssl,
 }
 
 #if defined(MBEDTLS_SSL_MAX_FRAGMENT_LENGTH)
-MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_parse_max_fragment_length_ext( mbedtls_ssl_context *ssl,
                                               const unsigned char *buf,
                                               size_t len )
@@ -710,7 +699,6 @@ static int ssl_parse_max_fragment_length_ext( mbedtls_ssl_context *ssl,
 #endif /* MBEDTLS_SSL_MAX_FRAGMENT_LENGTH */
 
 #if defined(MBEDTLS_SSL_DTLS_CONNECTION_ID)
-MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_parse_cid_ext( mbedtls_ssl_context *ssl,
                               const unsigned char *buf,
                               size_t len )
@@ -767,7 +755,6 @@ static int ssl_parse_cid_ext( mbedtls_ssl_context *ssl,
 #endif /* MBEDTLS_SSL_DTLS_CONNECTION_ID */
 
 #if defined(MBEDTLS_SSL_ENCRYPT_THEN_MAC)
-MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_parse_encrypt_then_mac_ext( mbedtls_ssl_context *ssl,
                                          const unsigned char *buf,
                                          size_t len )
@@ -793,7 +780,6 @@ static int ssl_parse_encrypt_then_mac_ext( mbedtls_ssl_context *ssl,
 #endif /* MBEDTLS_SSL_ENCRYPT_THEN_MAC */
 
 #if defined(MBEDTLS_SSL_EXTENDED_MASTER_SECRET)
-MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_parse_extended_ms_ext( mbedtls_ssl_context *ssl,
                                          const unsigned char *buf,
                                          size_t len )
@@ -819,7 +805,6 @@ static int ssl_parse_extended_ms_ext( mbedtls_ssl_context *ssl,
 #endif /* MBEDTLS_SSL_EXTENDED_MASTER_SECRET */
 
 #if defined(MBEDTLS_SSL_SESSION_TICKETS)
-MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_parse_session_ticket_ext( mbedtls_ssl_context *ssl,
                                          const unsigned char *buf,
                                          size_t len )
@@ -846,7 +831,6 @@ static int ssl_parse_session_ticket_ext( mbedtls_ssl_context *ssl,
 
 #if defined(MBEDTLS_ECDH_C) || defined(MBEDTLS_ECDSA_C) || \
     defined(MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED)
-MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_parse_supported_point_formats_ext( mbedtls_ssl_context *ssl,
                                                   const unsigned char *buf,
                                                   size_t len )
@@ -895,7 +879,6 @@ static int ssl_parse_supported_point_formats_ext( mbedtls_ssl_context *ssl,
           MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED */
 
 #if defined(MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED)
-MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_parse_ecjpake_kkpp( mbedtls_ssl_context *ssl,
                                    const unsigned char *buf,
                                    size_t len )
@@ -930,7 +913,6 @@ static int ssl_parse_ecjpake_kkpp( mbedtls_ssl_context *ssl,
 #endif /* MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED */
 
 #if defined(MBEDTLS_SSL_ALPN)
-MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_parse_alpn_ext( mbedtls_ssl_context *ssl,
                                const unsigned char *buf, size_t len )
 {
@@ -1001,7 +983,6 @@ static int ssl_parse_alpn_ext( mbedtls_ssl_context *ssl,
 #endif /* MBEDTLS_SSL_ALPN */
 
 #if defined(MBEDTLS_SSL_DTLS_SRTP)
-MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_parse_use_srtp_ext( mbedtls_ssl_context *ssl,
                                    const unsigned char *buf,
                                    size_t len )
@@ -1122,7 +1103,6 @@ static int ssl_parse_use_srtp_ext( mbedtls_ssl_context *ssl,
  * Parse HelloVerifyRequest.  Only called after verifying the HS type.
  */
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
-MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_parse_hello_verify_request( mbedtls_ssl_context *ssl )
 {
     const unsigned char *p = ssl->in_msg + mbedtls_ssl_hs_hdr_len( ssl );
@@ -1204,7 +1184,6 @@ static int ssl_parse_hello_verify_request( mbedtls_ssl_context *ssl )
 }
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
 
-MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_parse_server_hello( mbedtls_ssl_context *ssl )
 {
     int ret, i;
@@ -1729,7 +1708,6 @@ static int ssl_parse_server_hello( mbedtls_ssl_context *ssl )
 
 #if defined(MBEDTLS_KEY_EXCHANGE_DHE_RSA_ENABLED) ||                       \
     defined(MBEDTLS_KEY_EXCHANGE_DHE_PSK_ENABLED)
-MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_parse_server_dh_params( mbedtls_ssl_context *ssl,
                                        unsigned char **p,
                                        unsigned char *end )
@@ -1775,7 +1753,6 @@ static int ssl_parse_server_dh_params( mbedtls_ssl_context *ssl,
     defined(MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED) ||     \
     defined(MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED)
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
-MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_parse_server_ecdh_params( mbedtls_ssl_context *ssl,
                                              unsigned char **p,
                                              unsigned char *end )
@@ -1840,7 +1817,6 @@ static int ssl_parse_server_ecdh_params( mbedtls_ssl_context *ssl,
     return( 0 );
 }
 #else
-MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_check_server_ecdh_params( const mbedtls_ssl_context *ssl )
 {
     const mbedtls_ecp_curve_info *curve_info;
@@ -1869,7 +1845,6 @@ static int ssl_check_server_ecdh_params( const mbedtls_ssl_context *ssl )
     return( 0 );
 }
 
-MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_parse_server_ecdh_params( mbedtls_ssl_context *ssl,
                                          unsigned char **p,
                                          unsigned char *end )
@@ -1910,7 +1885,6 @@ static int ssl_parse_server_ecdh_params( mbedtls_ssl_context *ssl,
           MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED */
 
 #if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
-MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_parse_server_psk_hint( mbedtls_ssl_context *ssl,
                                       unsigned char **p,
                                       unsigned char *end )
@@ -1957,7 +1931,6 @@ static int ssl_parse_server_psk_hint( mbedtls_ssl_context *ssl,
 /*
  * Generate a pre-master secret and encrypt it with the server's RSA key
  */
-MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_write_encrypted_pms( mbedtls_ssl_context *ssl,
                                     size_t offset, size_t *olen,
                                     size_t pms_offset )
@@ -2040,7 +2013,6 @@ static int ssl_write_encrypted_pms( mbedtls_ssl_context *ssl,
 #if defined(MBEDTLS_KEY_EXCHANGE_DHE_RSA_ENABLED) ||                       \
     defined(MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED) ||                     \
     defined(MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED)
-MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_parse_signature_algorithm( mbedtls_ssl_context *ssl,
                                           unsigned char **p,
                                           unsigned char *end,
@@ -2099,7 +2071,6 @@ static int ssl_parse_signature_algorithm( mbedtls_ssl_context *ssl,
 
 #if defined(MBEDTLS_KEY_EXCHANGE_ECDH_RSA_ENABLED) || \
     defined(MBEDTLS_KEY_EXCHANGE_ECDH_ECDSA_ENABLED)
-MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_get_ecdh_params_from_cert( mbedtls_ssl_context *ssl )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
@@ -2118,8 +2089,6 @@ static int ssl_get_ecdh_params_from_cert( mbedtls_ssl_context *ssl )
     peer_pk = &ssl->session_negotiate->peer_cert->pk;
 #endif /* MBEDTLS_SSL_KEEP_PEER_CERTIFICATE */
 
-    /* This is a public key, so it can't be opaque, so can_do() is a good
-     * enough check to ensure pk_ec() is safe to use below. */
     if( ! mbedtls_pk_can_do( peer_pk, MBEDTLS_PK_ECKEY ) )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "server key not ECDH capable" ) );
@@ -2189,7 +2158,6 @@ static int ssl_get_ecdh_params_from_cert( mbedtls_ssl_context *ssl )
 #endif /* MBEDTLS_KEY_EXCHANGE_ECDH_RSA_ENABLED) ||
           MBEDTLS_KEY_EXCHANGE_ECDH_ECDSA_ENABLED */
 
-MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_parse_server_key_exchange( mbedtls_ssl_context *ssl )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
@@ -2537,7 +2505,6 @@ exit:
 }
 
 #if ! defined(MBEDTLS_KEY_EXCHANGE_CERT_REQ_ALLOWED_ENABLED)
-MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_parse_certificate_request( mbedtls_ssl_context *ssl )
 {
     const mbedtls_ssl_ciphersuite_t *ciphersuite_info =
@@ -2556,7 +2523,6 @@ static int ssl_parse_certificate_request( mbedtls_ssl_context *ssl )
     return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
 }
 #else /* MBEDTLS_KEY_EXCHANGE_CERT_REQ_ALLOWED_ENABLED */
-MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_parse_certificate_request( mbedtls_ssl_context *ssl )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
@@ -2722,7 +2688,6 @@ exit:
 }
 #endif /* MBEDTLS_KEY_EXCHANGE_CERT_REQ_ALLOWED_ENABLED */
 
-MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_parse_server_hello_done( mbedtls_ssl_context *ssl )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
@@ -2762,7 +2727,6 @@ static int ssl_parse_server_hello_done( mbedtls_ssl_context *ssl )
     return( 0 );
 }
 
-MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_write_client_key_exchange( mbedtls_ssl_context *ssl )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
@@ -3285,7 +3249,6 @@ ecdh_calc_secret:
 }
 
 #if !defined(MBEDTLS_KEY_EXCHANGE_CERT_REQ_ALLOWED_ENABLED)
-MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_write_certificate_verify( mbedtls_ssl_context *ssl )
 {
     const mbedtls_ssl_ciphersuite_t *ciphersuite_info =
@@ -3311,7 +3274,6 @@ static int ssl_write_certificate_verify( mbedtls_ssl_context *ssl )
     return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
 }
 #else /* !MBEDTLS_KEY_EXCHANGE_CERT_REQ_ALLOWED_ENABLED */
-MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_write_certificate_verify( mbedtls_ssl_context *ssl )
 {
     int ret = MBEDTLS_ERR_SSL_FEATURE_UNAVAILABLE;
@@ -3451,7 +3413,6 @@ sign:
 #endif /* MBEDTLS_KEY_EXCHANGE_CERT_REQ_ALLOWED_ENABLED */
 
 #if defined(MBEDTLS_SSL_SESSION_TICKETS)
-MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_parse_new_session_ticket( mbedtls_ssl_context *ssl )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
