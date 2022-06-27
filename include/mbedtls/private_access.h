@@ -1,7 +1,7 @@
  /**
  * \file private_access.h
  *
- * \brief Macro wrapper for struct's members.
+ * \brief Macro wrapper for struct's memebrs.
  */
 /*
  *  Copyright The Mbed TLS Contributors
