@@ -741,7 +741,7 @@ int mbedtls_x509_get_ext( unsigned char **p, const unsigned char *end,
 int mbedtls_x509_dn_gets( char *buf, size_t size, const mbedtls_x509_name *dn )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
-    size_t i, j, n;
+    size_t i, n;
     unsigned char c, merge = 0;
     const mbedtls_x509_name *name;
     const char *short_name = NULL;
@@ -775,24 +775,17 @@ int mbedtls_x509_dn_gets( char *buf, size_t size, const mbedtls_x509_name *dn )
             ret = mbedtls_snprintf( p, n, "\?\?=" );
         MBEDTLS_X509_SAFE_SNPRINTF;
 
-        for( i = 0, j = 0; i < name->val.len; i++, j++ )
+        for( i = 0; i < name->val.len; i++ )
         {
-            if( j >= sizeof( s ) - 1 )
-                return( MBEDTLS_ERR_X509_BUFFER_TOO_SMALL );
+            if( i >= sizeof( s ) - 1 )
+                break;
 
             c = name->val.p[i];
-            // Special characters requiring escaping, RFC 1779
-            if( c && strchr( ",=+<>#;\"\\", c ) )
-            {
-                if( j + 1 >= sizeof( s ) - 1 )
-                    return( MBEDTLS_ERR_X509_BUFFER_TOO_SMALL );
-                s[j++] = '\\';
-            }
             if( c < 32 || c >= 127 )
-                 s[j] = '?';
-            else s[j] = c;
+                 s[i] = '?';
+            else s[i] = c;
         }
-        s[j] = '\0';
+        s[i] = '\0';
         ret = mbedtls_snprintf( p, n, "%s", s );
         MBEDTLS_X509_SAFE_SNPRINTF;
 
@@ -801,15 +794,6 @@ int mbedtls_x509_dn_gets( char *buf, size_t size, const mbedtls_x509_name *dn )
     }
 
     return( (int) ( size - n ) );
-}
-
-/*
- * Return the next relative DN in an X509 name.
- */
-mbedtls_x509_name * mbedtls_x509_dn_get_next( mbedtls_x509_name * dn )
-{
-    for( ; dn->next != NULL && dn->next_merged; dn = dn->next );
-    return( dn->next );
 }
 
 /*
