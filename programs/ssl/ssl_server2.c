@@ -651,7 +651,7 @@ struct options
     int anti_replay;            /* Use anti-replay for DTLS? -1 for default */
     uint32_t hs_to_min;         /* Initial value of DTLS handshake timer    */
     uint32_t hs_to_max;         /* Max value of DTLS handshake timer        */
-    int dtls_mtu;               /* UDP Maximum tranport unit for DTLS       */
+    int dtls_mtu;               /* UDP Maximum transport unit for DTLS       */
     int dgram_packing;          /* allow/forbid datagram packing            */
     int badmac_limit;           /* Limit of records with bad MAC            */
     int eap_tls;                /* derive EAP-TLS keying material?          */
@@ -2382,6 +2382,22 @@ int main( int argc, char *argv[] )
             {
                 sig_alg_list[i++] = MBEDTLS_TLS1_3_SIG_ECDSA_SECP521R1_SHA512;
             }
+            else if( strcmp( q, "rsa_pss_rsae_sha256" ) == 0 )
+            {
+                sig_alg_list[i++] = MBEDTLS_TLS1_3_SIG_RSA_PSS_RSAE_SHA256;
+            }
+            else if( strcmp( q, "rsa_pss_rsae_sha384" ) == 0 )
+            {
+                sig_alg_list[i++] = MBEDTLS_TLS1_3_SIG_RSA_PSS_RSAE_SHA384;
+            }
+            else if( strcmp( q, "rsa_pss_rsae_sha512" ) == 0 )
+            {
+                sig_alg_list[i++] = MBEDTLS_TLS1_3_SIG_RSA_PSS_RSAE_SHA512;
+            }
+            else if( strcmp( q, "rsa_pkcs1_sha256" ) == 0 )
+            {
+                sig_alg_list[i++] = MBEDTLS_TLS1_3_SIG_RSA_PKCS1_SHA256;
+            }
             else
             {
                 mbedtls_printf( "unknown signature algorithm %s\n", q );
@@ -2389,6 +2405,10 @@ int main( int argc, char *argv[] )
                 mbedtls_printf( "ecdsa_secp256r1_sha256 " );
                 mbedtls_printf( "ecdsa_secp384r1_sha384 " );
                 mbedtls_printf( "ecdsa_secp521r1_sha512 " );
+                mbedtls_printf( "rsa_pss_rsae_sha256 " );
+                mbedtls_printf( "rsa_pss_rsae_sha384 " );
+                mbedtls_printf( "rsa_pss_rsae_sha512 " );
+                mbedtls_printf( "rsa_pkcs1_sha256 " );
                 mbedtls_printf( "\n" );
                 goto exit;
             }
@@ -4231,11 +4251,6 @@ exit:
     if( opt.query_config_mode == DFL_QUERY_CONFIG_MODE )
     {
         mbedtls_printf( " done.\n" );
-
-#if defined(_WIN32)
-        mbedtls_printf( "  + Press Enter to exit this program.\n" );
-        fflush( stdout ); getchar();
-#endif
     }
 
     // Shell can not handle large exit numbers -> 1 for errors
