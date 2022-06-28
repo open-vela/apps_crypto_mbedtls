@@ -256,13 +256,9 @@ static int ssl_tls13_parse_certificate_verify( mbedtls_ssl_context *ssl,
 #if defined(MBEDTLS_X509_RSASSA_PSS_SUPPORT)
     if( sig_alg == MBEDTLS_PK_RSASSA_PSS )
     {
-        const mbedtls_md_info_t* md_info;
         rsassa_pss_options.mgf1_hash_id = md_alg;
-        if( ( md_info = mbedtls_md_info_from_type( md_alg ) ) == NULL )
-        {
-            return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
-        }
-        rsassa_pss_options.expected_salt_len = mbedtls_md_get_size( md_info );
+
+        rsassa_pss_options.expected_salt_len = PSA_HASH_LENGTH( hash_alg );
         options = (const void*) &rsassa_pss_options;
     }
 #endif /* MBEDTLS_X509_RSASSA_PSS_SUPPORT */
@@ -567,7 +563,7 @@ static int ssl_tls13_validate_certificate( mbedtls_ssl_context *ssl )
      */
     if( ssl->session_negotiate->peer_cert == NULL )
     {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "peer has no certificate" ) );
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "peer has not sent a certificate" ) );
 
 #if defined(MBEDTLS_SSL_SRV_C)
         if( ssl->conf->endpoint == MBEDTLS_SSL_IS_SERVER )
@@ -812,7 +808,7 @@ static int ssl_tls13_write_certificate_body( mbedtls_ssl_context *ssl,
         /* Currently, we don't have any certificate extensions defined.
          * Hence, we are sending an empty extension with length zero.
          */
-        MBEDTLS_PUT_UINT16_BE( 0, p, 0 );
+        MBEDTLS_PUT_UINT24_BE( 0, p, 0 );
         p += 2;
     }
 
@@ -1437,12 +1433,12 @@ int mbedtls_ssl_tls13_read_public_ecdhe_share( mbedtls_ssl_context *ssl,
     mbedtls_ssl_handshake_params *handshake = ssl->handshake;
 
     /* Get size of the TLS opaque key_exchange field of the KeyShareEntry struct. */
-    MBEDTLS_SSL_CHK_BUF_READ_PTR( p, end, 2 );
+    MBEDTLS_SSL_CHK_BUF_PTR( p, end, 2 );
     uint16_t peerkey_len = MBEDTLS_GET_UINT16_BE( p, 0 );
     p += 2;
 
     /* Check if key size is consistent with given buffer length. */
-    MBEDTLS_SSL_CHK_BUF_READ_PTR( p, end, peerkey_len );
+    MBEDTLS_SSL_CHK_BUF_PTR( p, end, peerkey_len );
 
     /* Store peer's ECDH public key. */
     memcpy( handshake->ecdh_psa_peerkey, p, peerkey_len );
