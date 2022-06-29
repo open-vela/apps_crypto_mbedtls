@@ -31,8 +31,12 @@
 #include <string.h>
 
 #include "ssl_misc.h"
+#include "ssl_tls13_invasive.h"
 #include "ssl_tls13_keys.h"
 #include "ssl_debug_helpers.h"
+
+#include "psa/crypto.h"
+#include "mbedtls/psa_util.h"
 
 const uint8_t mbedtls_ssl_tls13_hello_retry_request_magic[
                 MBEDTLS_SERVER_HELLO_RANDOM_LEN ] =
@@ -153,6 +157,7 @@ static void ssl_tls13_create_verify_structure( const unsigned char *transcript_h
     *verify_buffer_len = idx;
 }
 
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_parse_certificate_verify( mbedtls_ssl_context *ssl,
                                                const unsigned char *buf,
                                                const unsigned char *end,
@@ -160,12 +165,14 @@ static int ssl_tls13_parse_certificate_verify( mbedtls_ssl_context *ssl,
                                                size_t verify_buffer_len )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+    psa_status_t status = PSA_ERROR_CORRUPTION_DETECTED;
     const unsigned char *p = buf;
     uint16_t algorithm;
     size_t signature_len;
     mbedtls_pk_type_t sig_alg;
     mbedtls_md_type_t md_alg;
-    unsigned char verify_hash[MBEDTLS_MD_MAX_SIZE];
+    psa_algorithm_t hash_alg = PSA_ALG_NONE;
+    unsigned char verify_hash[PSA_HASH_MAX_SIZE];
     size_t verify_hash_len;
 
     void const *options = NULL;
@@ -212,6 +219,12 @@ static int ssl_tls13_parse_certificate_verify( mbedtls_ssl_context *ssl,
         goto error;
     }
 
+    hash_alg = mbedtls_psa_translate_md( md_alg );
+    if( hash_alg == 0 )
+    {
+        goto error;
+    }
+
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "Certificate Verify: Signature algorithm ( %04x )",
                                 ( unsigned int ) algorithm ) );
 
@@ -229,38 +242,15 @@ static int ssl_tls13_parse_certificate_verify( mbedtls_ssl_context *ssl,
     p += 2;
     MBEDTLS_SSL_CHK_BUF_READ_PTR( p, end, signature_len );
 
-    /* Hash verify buffer with indicated hash function */
-    switch( md_alg )
+    status = psa_hash_compute( hash_alg,
+                               verify_buffer,
+                               verify_buffer_len,
+                               verify_hash,
+                               sizeof( verify_hash ),
+                               &verify_hash_len );
+    if( status != PSA_SUCCESS )
     {
-#if defined(MBEDTLS_SHA256_C)
-        case MBEDTLS_MD_SHA256:
-            verify_hash_len = 32;
-            ret = mbedtls_sha256( verify_buffer, verify_buffer_len, verify_hash, 0 );
-            break;
-#endif /* MBEDTLS_SHA256_C */
-
-#if defined(MBEDTLS_SHA384_C)
-        case MBEDTLS_MD_SHA384:
-            verify_hash_len = 48;
-            ret = mbedtls_sha512( verify_buffer, verify_buffer_len, verify_hash, 1 );
-            break;
-#endif /* MBEDTLS_SHA384_C */
-
-#if defined(MBEDTLS_SHA512_C)
-        case MBEDTLS_MD_SHA512:
-            verify_hash_len = 64;
-            ret = mbedtls_sha512( verify_buffer, verify_buffer_len, verify_hash, 0 );
-            break;
-#endif /* MBEDTLS_SHA512_C */
-
-        default:
-            ret = MBEDTLS_ERR_SSL_HANDSHAKE_FAILURE;
-            break;
-    }
-
-    if( ret != 0 )
-    {
-        MBEDTLS_SSL_DEBUG_RET( 1, "hash computation error", ret );
+        MBEDTLS_SSL_DEBUG_RET( 1, "hash computation PSA error", status );
         goto error;
     }
 
@@ -401,9 +391,11 @@ cleanup:
  */
 
 /* Parse certificate chain send by the server. */
-static int ssl_tls13_parse_certificate( mbedtls_ssl_context *ssl,
-                                        const unsigned char *buf,
-                                        const unsigned char *end )
+MBEDTLS_CHECK_RETURN_CRITICAL
+MBEDTLS_STATIC_TESTABLE
+int mbedtls_ssl_tls13_parse_certificate( mbedtls_ssl_context *ssl,
+                                         const unsigned char *buf,
+                                         const unsigned char *end )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     size_t certificate_request_context_len = 0;
@@ -454,6 +446,7 @@ static int ssl_tls13_parse_certificate( mbedtls_ssl_context *ssl,
 
     mbedtls_x509_crt_init( ssl->session_negotiate->peer_cert );
 
+    MBEDTLS_SSL_CHK_BUF_READ_PTR( p, end, certificate_list_len );
     certificate_list_end = p + certificate_list_len;
     while( p < certificate_list_end )
     {
@@ -533,9 +526,11 @@ exit:
     return( ret );
 }
 #else
-static int ssl_tls13_parse_certificate( mbedtls_ssl_context *ssl,
-                                        const unsigned char *buf,
-                                        const unsigned char *end )
+MBEDTLS_CHECK_RETURN_CRITICAL
+MBEDTLS_STATIC_TESTABLE
+int mbedtls_ssl_tls13_parse_certificate( mbedtls_ssl_context *ssl,
+                                         const unsigned char *buf,
+                                         const unsigned char *end )
 {
     ((void) ssl);
     ((void) buf);
@@ -548,12 +543,15 @@ static int ssl_tls13_parse_certificate( mbedtls_ssl_context *ssl,
 #if defined(MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED)
 #if defined(MBEDTLS_SSL_KEEP_PEER_CERTIFICATE)
 /* Validate certificate chain sent by the server. */
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_validate_certificate( mbedtls_ssl_context *ssl )
 {
     int ret = 0;
     int authmode = MBEDTLS_SSL_VERIFY_REQUIRED;
     mbedtls_x509_crt *ca_chain;
     mbedtls_x509_crl *ca_crl;
+    const char *ext_oid;
+    size_t ext_len;
     uint32_t verify_result = 0;
 
     /* If SNI was used, overwrite authentication mode
@@ -635,12 +633,25 @@ static int ssl_tls13_validate_certificate( mbedtls_ssl_context *ssl )
     /*
      * Secondary checks: always done, but change 'ret' only if it was 0
      */
-    if( mbedtls_ssl_check_cert_usage( ssl->session_negotiate->peer_cert,
-                                      ssl->handshake->ciphersuite_info,
-                                      !ssl->conf->endpoint,
-                                      &verify_result ) != 0 )
+    if( ssl->conf->endpoint == MBEDTLS_SSL_IS_CLIENT )
     {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad certificate ( usage extensions )" ) );
+        ext_oid = MBEDTLS_OID_SERVER_AUTH;
+        ext_len = MBEDTLS_OID_SIZE( MBEDTLS_OID_SERVER_AUTH );
+    }
+    else
+    {
+        ext_oid = MBEDTLS_OID_CLIENT_AUTH;
+        ext_len = MBEDTLS_OID_SIZE( MBEDTLS_OID_CLIENT_AUTH );
+    }
+
+    if( ( mbedtls_x509_crt_check_key_usage(
+              ssl->session_negotiate->peer_cert,
+              MBEDTLS_X509_KU_DIGITAL_SIGNATURE ) != 0 ) ||
+        ( mbedtls_x509_crt_check_extended_key_usage(
+              ssl->session_negotiate->peer_cert,
+              ext_oid, ext_len ) != 0 ) )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad certificate (usage extensions)" ) );
         if( ret == 0 )
             ret = MBEDTLS_ERR_SSL_BAD_CERTIFICATE;
     }
@@ -650,7 +661,8 @@ static int ssl_tls13_validate_certificate( mbedtls_ssl_context *ssl )
      * with details encoded in the verification flags. All other kinds
      * of error codes, including those from the user provided f_vrfy
      * functions, are treated as fatal and lead to a failure of
-     * ssl_tls13_parse_certificate even if verification was optional. */
+     * mbedtls_ssl_tls13_parse_certificate even if verification was optional.
+     */
     if( authmode == MBEDTLS_SSL_VERIFY_OPTIONAL &&
         ( ret == MBEDTLS_ERR_X509_CERT_VERIFY_FAILED ||
           ret == MBEDTLS_ERR_SSL_BAD_CERTIFICATE ) )
@@ -705,6 +717,7 @@ static int ssl_tls13_validate_certificate( mbedtls_ssl_context *ssl )
     return( ret );
 }
 #else /* MBEDTLS_SSL_KEEP_PEER_CERTIFICATE */
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_validate_certificate( mbedtls_ssl_context *ssl )
 {
     ((void) ssl);
@@ -727,8 +740,8 @@ int mbedtls_ssl_tls13_process_certificate( mbedtls_ssl_context *ssl )
                           &buf, &buf_len ) );
 
     /* Parse the certificate chain sent by the peer. */
-    MBEDTLS_SSL_PROC_CHK( ssl_tls13_parse_certificate( ssl, buf,
-                                                       buf + buf_len ) );
+    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_tls13_parse_certificate( ssl, buf,
+                                                               buf + buf_len ) );
     /* Validate the certificate chain and set the verification results. */
     MBEDTLS_SSL_PROC_CHK( ssl_tls13_validate_certificate( ssl ) );
 
@@ -766,6 +779,7 @@ cleanup:
  *        CertificateEntry certificate_list<0..2^24-1>;
  *    } Certificate;
  */
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_write_certificate_body( mbedtls_ssl_context *ssl,
                                              unsigned char *buf,
                                              unsigned char *end,
@@ -859,6 +873,7 @@ cleanup:
 /*
  * STATE HANDLING: Output Certificate Verify
  */
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_get_sig_alg_from_pk( mbedtls_ssl_context *ssl,
                                           mbedtls_pk_context *own_key,
                                           uint16_t *algorithm )
@@ -976,6 +991,7 @@ static int ssl_tls13_get_sig_alg_from_pk( mbedtls_ssl_context *ssl,
     return( -1 );
 }
 
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_write_certificate_verify_body( mbedtls_ssl_context *ssl,
                                                     unsigned char *buf,
                                                     unsigned char *end,
@@ -991,11 +1007,12 @@ static int ssl_tls13_write_certificate_verify_body( mbedtls_ssl_context *ssl,
     size_t verify_buffer_len;
     mbedtls_pk_type_t pk_type = MBEDTLS_PK_NONE;
     mbedtls_md_type_t md_alg = MBEDTLS_MD_NONE;
+    psa_algorithm_t psa_algorithm = PSA_ALG_NONE;
     uint16_t algorithm = MBEDTLS_TLS1_3_SIG_NONE;
     size_t signature_len = 0;
-    const mbedtls_md_info_t *md_info;
     unsigned char verify_hash[ MBEDTLS_MD_MAX_SIZE ];
     size_t verify_hash_len;
+    psa_status_t status = PSA_ERROR_CORRUPTION_DETECTED;
 
     *out_len = 0;
 
@@ -1056,15 +1073,15 @@ static int ssl_tls13_write_certificate_verify_body( mbedtls_ssl_context *ssl,
     p += 2;
 
     /* Hash verify buffer with indicated hash function */
-    md_info = mbedtls_md_info_from_type( md_alg );
-    if( md_info == NULL )
-        return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
+    psa_algorithm = mbedtls_psa_translate_md( md_alg );
+    status = psa_hash_compute( psa_algorithm,
+                               verify_buffer,
+                               verify_buffer_len,
+                               verify_hash,sizeof( verify_hash ),
+                               &verify_hash_len );
+    if( status != PSA_SUCCESS )
+        return( psa_ssl_status_to_mbedtls( status ) );
 
-    ret = mbedtls_md( md_info, verify_buffer, verify_buffer_len, verify_hash );
-    if( ret != 0 )
-        return( ret );
-
-    verify_hash_len = mbedtls_md_get_size( md_info );
     MBEDTLS_SSL_DEBUG_BUF( 3, "verify hash", verify_hash, verify_hash_len );
 
     if( ( ret = mbedtls_pk_sign_ext( pk_type, own_key,
@@ -1120,6 +1137,7 @@ cleanup:
  * Implementation
  */
 
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_preprocess_finished_message( mbedtls_ssl_context *ssl )
 {
     int ret;
@@ -1139,6 +1157,7 @@ static int ssl_tls13_preprocess_finished_message( mbedtls_ssl_context *ssl )
     return( 0 );
 }
 
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_parse_finished_message( mbedtls_ssl_context *ssl,
                                              const unsigned char *buf,
                                              const unsigned char *end )
@@ -1190,13 +1209,15 @@ int mbedtls_ssl_tls13_process_finished_message( mbedtls_ssl_context *ssl )
 
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> parse finished message" ) );
 
-    /* Preprocessing step: Compute handshake digest */
-    MBEDTLS_SSL_PROC_CHK( ssl_tls13_preprocess_finished_message( ssl ) );
-
     MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_tls13_fetch_handshake_msg( ssl,
                                               MBEDTLS_SSL_HS_FINISHED,
                                               &buf, &buf_len ) );
+
+    /* Preprocessing step: Compute handshake digest */
+    MBEDTLS_SSL_PROC_CHK( ssl_tls13_preprocess_finished_message( ssl ) );
+
     MBEDTLS_SSL_PROC_CHK( ssl_tls13_parse_finished_message( ssl, buf, buf + buf_len ) );
+
     mbedtls_ssl_add_hs_msg_to_checksum( ssl, MBEDTLS_SSL_HS_FINISHED,
                                         buf, buf_len );
 
@@ -1215,6 +1236,7 @@ cleanup:
  * Implement
  */
 
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_prepare_finished_message( mbedtls_ssl_context *ssl )
 {
     int ret;
@@ -1235,6 +1257,7 @@ static int ssl_tls13_prepare_finished_message( mbedtls_ssl_context *ssl )
     return( 0 );
 }
 
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_write_finished_message_body( mbedtls_ssl_context *ssl,
                                                   unsigned char *buf,
                                                   unsigned char *end,
@@ -1314,6 +1337,7 @@ void mbedtls_ssl_tls13_handshake_wrapup( mbedtls_ssl_context *ssl )
  *
  */
 #if defined(MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE)
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_write_change_cipher_spec_body( mbedtls_ssl_context *ssl,
                                                     unsigned char *buf,
                                                     unsigned char *end,
