@@ -34,9 +34,6 @@
 #include "ssl_tls13_keys.h"
 #include "ssl_debug_helpers.h"
 
-#include "psa/crypto.h"
-#include "mbedtls/psa_util.h"
-
 const uint8_t mbedtls_ssl_tls13_hello_retry_request_magic[
                 MBEDTLS_SERVER_HELLO_RANDOM_LEN ] =
                     { 0xCF, 0x21, 0xAD, 0x74, 0xE5, 0x9A, 0x61, 0x11,
@@ -163,14 +160,12 @@ static int ssl_tls13_parse_certificate_verify( mbedtls_ssl_context *ssl,
                                                size_t verify_buffer_len )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
-    psa_status_t status = PSA_ERROR_CORRUPTION_DETECTED;
     const unsigned char *p = buf;
     uint16_t algorithm;
     size_t signature_len;
     mbedtls_pk_type_t sig_alg;
     mbedtls_md_type_t md_alg;
-    psa_algorithm_t hash_alg = PSA_ALG_NONE;
-    unsigned char verify_hash[PSA_HASH_MAX_SIZE];
+    unsigned char verify_hash[MBEDTLS_MD_MAX_SIZE];
     size_t verify_hash_len;
 
     void const *options = NULL;
@@ -217,12 +212,6 @@ static int ssl_tls13_parse_certificate_verify( mbedtls_ssl_context *ssl,
         goto error;
     }
 
-    hash_alg = mbedtls_psa_translate_md( md_alg );
-    if( hash_alg == 0 )
-    {
-        goto error;
-    }
-
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "Certificate Verify: Signature algorithm ( %04x )",
                                 ( unsigned int ) algorithm ) );
 
@@ -240,15 +229,38 @@ static int ssl_tls13_parse_certificate_verify( mbedtls_ssl_context *ssl,
     p += 2;
     MBEDTLS_SSL_CHK_BUF_READ_PTR( p, end, signature_len );
 
-    status = psa_hash_compute( hash_alg,
-                               verify_buffer,
-                               verify_buffer_len,
-                               verify_hash,
-                               sizeof( verify_hash ),
-                               &verify_hash_len );
-    if( status != PSA_SUCCESS )
+    /* Hash verify buffer with indicated hash function */
+    switch( md_alg )
     {
-        MBEDTLS_SSL_DEBUG_RET( 1, "hash computation PSA error", status );
+#if defined(MBEDTLS_SHA256_C)
+        case MBEDTLS_MD_SHA256:
+            verify_hash_len = 32;
+            ret = mbedtls_sha256( verify_buffer, verify_buffer_len, verify_hash, 0 );
+            break;
+#endif /* MBEDTLS_SHA256_C */
+
+#if defined(MBEDTLS_SHA384_C)
+        case MBEDTLS_MD_SHA384:
+            verify_hash_len = 48;
+            ret = mbedtls_sha512( verify_buffer, verify_buffer_len, verify_hash, 1 );
+            break;
+#endif /* MBEDTLS_SHA384_C */
+
+#if defined(MBEDTLS_SHA512_C)
+        case MBEDTLS_MD_SHA512:
+            verify_hash_len = 64;
+            ret = mbedtls_sha512( verify_buffer, verify_buffer_len, verify_hash, 0 );
+            break;
+#endif /* MBEDTLS_SHA512_C */
+
+        default:
+            ret = MBEDTLS_ERR_SSL_HANDSHAKE_FAILURE;
+            break;
+    }
+
+    if( ret != 0 )
+    {
+        MBEDTLS_SSL_DEBUG_RET( 1, "hash computation error", ret );
         goto error;
     }
 
@@ -548,14 +560,7 @@ static int ssl_tls13_validate_certificate( mbedtls_ssl_context *ssl )
      * from the configuration. */
 #if defined(MBEDTLS_SSL_SRV_C)
     if( ssl->conf->endpoint == MBEDTLS_SSL_IS_SERVER )
-    {
-#if defined(MBEDTLS_SSL_SERVER_NAME_INDICATION)
-        if( ssl->handshake->sni_authmode != MBEDTLS_SSL_VERIFY_UNSET )
-            authmode = ssl->handshake->sni_authmode;
-        else
-#endif
-            authmode = ssl->conf->authmode;
-    }
+        authmode = ssl->conf->authmode;
 #endif
 
     /*
@@ -567,7 +572,7 @@ static int ssl_tls13_validate_certificate( mbedtls_ssl_context *ssl )
      */
     if( ssl->session_negotiate->peer_cert == NULL )
     {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "peer has no certificate" ) );
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "peer has not sent a certificate" ) );
 
 #if defined(MBEDTLS_SSL_SRV_C)
         if( ssl->conf->endpoint == MBEDTLS_SSL_IS_SERVER )
@@ -812,7 +817,7 @@ static int ssl_tls13_write_certificate_body( mbedtls_ssl_context *ssl,
         /* Currently, we don't have any certificate extensions defined.
          * Hence, we are sending an empty extension with length zero.
          */
-        MBEDTLS_PUT_UINT16_BE( 0, p, 0 );
+        MBEDTLS_PUT_UINT24_BE( 0, p, 0 );
         p += 2;
     }
 
@@ -854,9 +859,9 @@ cleanup:
 /*
  * STATE HANDLING: Output Certificate Verify
  */
-int mbedtls_ssl_tls13_get_sig_alg_from_pk( mbedtls_ssl_context *ssl,
-                                           mbedtls_pk_context *own_key,
-                                           uint16_t *algorithm )
+static int ssl_tls13_get_sig_alg_from_pk( mbedtls_ssl_context *ssl,
+                                          mbedtls_pk_context *own_key,
+                                          uint16_t *algorithm )
 {
     mbedtls_pk_type_t sig = mbedtls_ssl_sig_from_pk( own_key );
     /* Determine the size of the key */
@@ -986,12 +991,11 @@ static int ssl_tls13_write_certificate_verify_body( mbedtls_ssl_context *ssl,
     size_t verify_buffer_len;
     mbedtls_pk_type_t pk_type = MBEDTLS_PK_NONE;
     mbedtls_md_type_t md_alg = MBEDTLS_MD_NONE;
-    psa_algorithm_t psa_algorithm = PSA_ALG_NONE;
     uint16_t algorithm = MBEDTLS_TLS1_3_SIG_NONE;
     size_t signature_len = 0;
+    const mbedtls_md_info_t *md_info;
     unsigned char verify_hash[ MBEDTLS_MD_MAX_SIZE ];
     size_t verify_hash_len;
-    psa_status_t status = PSA_ERROR_CORRUPTION_DETECTED;
 
     *out_len = 0;
 
@@ -1024,7 +1028,7 @@ static int ssl_tls13_write_certificate_verify_body( mbedtls_ssl_context *ssl,
      *    opaque signature<0..2^16-1>;
      *  } CertificateVerify;
      */
-    ret = mbedtls_ssl_tls13_get_sig_alg_from_pk( ssl, own_key, &algorithm );
+    ret = ssl_tls13_get_sig_alg_from_pk( ssl, own_key, &algorithm );
     if( ret != 0 || ! mbedtls_ssl_sig_alg_is_received( ssl, algorithm ) )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1,
@@ -1052,15 +1056,15 @@ static int ssl_tls13_write_certificate_verify_body( mbedtls_ssl_context *ssl,
     p += 2;
 
     /* Hash verify buffer with indicated hash function */
-    psa_algorithm = mbedtls_psa_translate_md( md_alg );
-    status = psa_hash_compute( psa_algorithm,
-                               verify_buffer,
-                               verify_buffer_len,
-                               verify_hash,sizeof( verify_hash ),
-                               &verify_hash_len );
-    if( status != PSA_SUCCESS )
-        return( psa_ssl_status_to_mbedtls( status ) );
+    md_info = mbedtls_md_info_from_type( md_alg );
+    if( md_info == NULL )
+        return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
 
+    ret = mbedtls_md( md_info, verify_buffer, verify_buffer_len, verify_hash );
+    if( ret != 0 )
+        return( ret );
+
+    verify_hash_len = mbedtls_md_get_size( md_info );
     MBEDTLS_SSL_DEBUG_BUF( 3, "verify hash", verify_hash, verify_hash_len );
 
     if( ( ret = mbedtls_pk_sign_ext( pk_type, own_key,
@@ -1186,15 +1190,13 @@ int mbedtls_ssl_tls13_process_finished_message( mbedtls_ssl_context *ssl )
 
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> parse finished message" ) );
 
-    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_tls13_fetch_handshake_msg( ssl,
-                                              MBEDTLS_SSL_HS_FINISHED,
-                                              &buf, &buf_len ) );
-
     /* Preprocessing step: Compute handshake digest */
     MBEDTLS_SSL_PROC_CHK( ssl_tls13_preprocess_finished_message( ssl ) );
 
+    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_tls13_fetch_handshake_msg( ssl,
+                                              MBEDTLS_SSL_HS_FINISHED,
+                                              &buf, &buf_len ) );
     MBEDTLS_SSL_PROC_CHK( ssl_tls13_parse_finished_message( ssl, buf, buf + buf_len ) );
-
     mbedtls_ssl_add_hs_msg_to_checksum( ssl, MBEDTLS_SSL_HS_FINISHED,
                                         buf, buf_len );
 
@@ -1437,12 +1439,12 @@ int mbedtls_ssl_tls13_read_public_ecdhe_share( mbedtls_ssl_context *ssl,
     mbedtls_ssl_handshake_params *handshake = ssl->handshake;
 
     /* Get size of the TLS opaque key_exchange field of the KeyShareEntry struct. */
-    MBEDTLS_SSL_CHK_BUF_READ_PTR( p, end, 2 );
+    MBEDTLS_SSL_CHK_BUF_PTR( p, end, 2 );
     uint16_t peerkey_len = MBEDTLS_GET_UINT16_BE( p, 0 );
     p += 2;
 
     /* Check if key size is consistent with given buffer length. */
-    MBEDTLS_SSL_CHK_BUF_READ_PTR( p, end, peerkey_len );
+    MBEDTLS_SSL_CHK_BUF_PTR( p, end, peerkey_len );
 
     /* Store peer's ECDH public key. */
     memcpy( handshake->ecdh_psa_peerkey, p, peerkey_len );
