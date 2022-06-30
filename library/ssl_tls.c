@@ -6139,7 +6139,7 @@ static int ssl_srv_check_client_no_crt_notification( mbedtls_ssl_context *ssl )
         ssl->in_msg[0]  == MBEDTLS_SSL_HS_CERTIFICATE   &&
         memcmp( ssl->in_msg + mbedtls_ssl_hs_hdr_len( ssl ), "\0\0\0", 3 ) == 0 )
     {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "TLSv1 client has no certificate" ) );
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "peer has no certificate" ) );
         return( 0 );
     }
     return( -1 );
@@ -7691,10 +7691,53 @@ unsigned int mbedtls_ssl_tls12_get_preferred_hash_for_sig_alg(
 
     for( i = 0; received_sig_algs[i] != MBEDTLS_TLS_SIG_NONE; i++ )
     {
-        if( sig_alg == MBEDTLS_SSL_TLS12_SIG_ALG_FROM_SIG_AND_HASH_ALG(
-                            received_sig_algs[i] ) )
-            return( MBEDTLS_SSL_TLS12_HASH_ALG_FROM_SIG_AND_HASH_ALG(
-                        received_sig_algs[i] ) );
+        unsigned int hash_alg_received =
+                    MBEDTLS_SSL_TLS12_HASH_ALG_FROM_SIG_AND_HASH_ALG(
+                        received_sig_algs[i] );
+        unsigned int sig_alg_received =
+                    MBEDTLS_SSL_TLS12_SIG_ALG_FROM_SIG_AND_HASH_ALG(
+                        received_sig_algs[i] );
+
+        if( sig_alg == sig_alg_received )
+        {
+#if defined(MBEDTLS_USE_PSA_CRYPTO)
+            if( ssl->handshake->key_cert && ssl->handshake->key_cert->key )
+            {
+                psa_algorithm_t alg = PSA_ALG_NONE;
+                psa_algorithm_t alg2 = PSA_ALG_NONE;
+                psa_key_usage_t usage = 0;
+                psa_key_usage_t usage2 = 0;
+
+                if( sig_alg_received == MBEDTLS_SSL_SIG_ECDSA )
+                {
+
+                    alg = PSA_ALG_ECDSA(
+                                mbedtls_psa_translate_md( hash_alg_received ) );
+                    usage = PSA_KEY_USAGE_SIGN_HASH;
+                    alg2 = PSA_ALG_ECDH;
+                    usage2 = PSA_KEY_USAGE_DERIVE;
+                }
+                else if( sig_alg_received == MBEDTLS_SSL_SIG_RSA )
+                {
+                    alg = PSA_ALG_RSA_PKCS1V15_SIGN(
+                                mbedtls_psa_translate_md( hash_alg_received ) );
+                    usage = PSA_KEY_USAGE_SIGN_HASH;
+                    alg2 = PSA_ALG_RSA_PKCS1V15_CRYPT;
+                    usage2 = PSA_KEY_USAGE_DECRYPT;
+                }
+                else
+                    continue;
+
+                if( ! mbedtls_pk_can_do_ext( ssl->handshake->key_cert->key,
+                                             alg, usage ) &&
+                    ! mbedtls_pk_can_do_ext( ssl->handshake->key_cert->key,
+                                             alg2, usage2 ) )
+                    continue;
+            }
+
+#endif /* MBEDTLS_USE_PSA_CRYPTO */
+            return( hash_alg_received );
+        }
     }
 
     return( MBEDTLS_SSL_HASH_NONE );
