@@ -385,20 +385,6 @@
 #error "MBEDTLS_PLATFORM_EXIT_MACRO and MBEDTLS_PLATFORM_STD_EXIT/MBEDTLS_PLATFORM_EXIT_ALT cannot be defined simultaneously"
 #endif
 
-#if defined(MBEDTLS_PLATFORM_SETBUF_ALT) && !defined(MBEDTLS_PLATFORM_C)
-#error "MBEDTLS_PLATFORM_SETBUF_ALT defined, but not all prerequisites"
-#endif
-
-#if defined(MBEDTLS_PLATFORM_SETBUF_MACRO) && !defined(MBEDTLS_PLATFORM_C)
-#error "MBEDTLS_PLATFORM_SETBUF_MACRO defined, but not all prerequisites"
-#endif
-
-#if defined(MBEDTLS_PLATFORM_SETBUF_MACRO) &&\
-    ( defined(MBEDTLS_PLATFORM_STD_SETBUF) ||\
-        defined(MBEDTLS_PLATFORM_SETBUF_ALT) )
-#error "MBEDTLS_PLATFORM_SETBUF_MACRO and MBEDTLS_PLATFORM_STD_SETBUF/MBEDTLS_PLATFORM_SETBUF_ALT cannot be defined simultaneously"
-#endif
-
 #if defined(MBEDTLS_PLATFORM_TIME_ALT) &&\
     ( !defined(MBEDTLS_PLATFORM_C) ||\
         !defined(MBEDTLS_HAVE_TIME) )
@@ -741,13 +727,6 @@
       ( !defined(MBEDTLS_SHA256_C) && !defined(MBEDTLS_SHA384_C) ) || \
       ( !defined(MBEDTLS_PSA_CRYPTO_C) ) )
 #error "MBEDTLS_SSL_PROTO_TLS1_3 defined, but not all prerequisites"
-#endif
-
-/*
- * The current implementation of TLS 1.3 requires MBEDTLS_SSL_KEEP_PEER_CERTIFICATE.
- */
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3) && !defined(MBEDTLS_SSL_KEEP_PEER_CERTIFICATE)
-#error "MBEDTLS_SSL_PROTO_TLS1_3 defined without MBEDTLS_SSL_KEEP_PEER_CERTIFICATE"
 #endif
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_2) &&                                    \

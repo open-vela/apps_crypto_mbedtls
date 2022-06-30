@@ -225,7 +225,6 @@
  * Uncomment a macro to enable alternate implementation of specific base
  * platform function
  */
-//#define MBEDTLS_PLATFORM_SETBUF_ALT
 //#define MBEDTLS_PLATFORM_EXIT_ALT
 //#define MBEDTLS_PLATFORM_TIME_ALT
 //#define MBEDTLS_PLATFORM_FPRINTF_ALT
@@ -1445,8 +1444,6 @@
  *       still ensure that certificates do not change during renegotiation,
  *       for example by keeping a hash of the peer's certificate.
  *
- * \note This option is required if MBEDTLS_SSL_PROTO_TLS1_3 is set.
- *
  * Comment this macro to disable storing the peer's certificate
  * after the handshake.
  */
@@ -1504,8 +1501,6 @@
  *       pre-shared keys are not supported.
  *       See docs/architecture/tls13-support.md for a description of the TLS
  *       1.3 support that this option enables.
- *
- * Requires: MBEDTLS_SSL_KEEP_PEER_CERTIFICATE
  *
  * Uncomment this macro to enable the support for TLS 1.3.
  *
@@ -2818,9 +2813,9 @@
 /**
  * \def MBEDTLS_SHA256_USE_A64_CRYPTO_IF_PRESENT
  *
- * Enable acceleration of the SHA-256 and SHA-224 cryptographic hash algorithms
- * with the ARMv8 cryptographic extensions if they are available at runtime.
- * If not, the library will fall back to the C implementation.
+ * Enable acceleration of the SHA-256 cryptographic hash algorithm with the
+ * Arm A64 cryptographic extensions if they are available at runtime. If not,
+ * it will fall back to the C implementation.
  *
  * \note If MBEDTLS_SHA256_USE_A64_CRYPTO_IF_PRESENT is defined when building
  * for a non-Aarch64 build it will be silently ignored.
@@ -2843,9 +2838,9 @@
 /**
  * \def MBEDTLS_SHA256_USE_A64_CRYPTO_ONLY
  *
- * Enable acceleration of the SHA-256 and SHA-224 cryptographic hash algorithms
- * with the ARMv8 cryptographic extensions, which must be available at runtime
- * or else an illegal instruction fault will occur.
+ * Enable acceleration of the SHA-256 cryptographic hash algorithm with the
+ * Arm A64 cryptographic extensions, which must be available at runtime (or
+ * an illegal instruction fault will occur).
  *
  * \note This allows builds with a smaller code size than with
  * MBEDTLS_SHA256_USE_A64_CRYPTO_IF_PRESENT
@@ -2901,9 +2896,9 @@
 /**
  * \def MBEDTLS_SHA512_USE_A64_CRYPTO_IF_PRESENT
  *
- * Enable acceleration of the SHA-512 and SHA-384 cryptographic hash algorithms
- * with the ARMv8 cryptographic extensions if they are available at runtime.
- * If not, the library will fall back to the C implementation.
+ * Enable acceleration of the SHA-512 cryptographic hash algorithm with the
+ * Arm A64 cryptographic extensions if they are available at runtime. If not,
+ * it will fall back to the C implementation.
  *
  * \note If MBEDTLS_SHA512_USE_A64_CRYPTO_IF_PRESENT is defined when building
  * for a non-Aarch64 build it will be silently ignored.
@@ -2928,9 +2923,9 @@
 /**
  * \def MBEDTLS_SHA512_USE_A64_CRYPTO_ONLY
  *
- * Enable acceleration of the SHA-512 and SHA-384 cryptographic hash algorithms
- * with the ARMv8 cryptographic extensions, which must be available at runtime
- * or else an illegal instruction fault will occur.
+ * Enable acceleration of the SHA-512 cryptographic hash algorithm with the
+ * Arm A64 cryptographic extensions, which must be available at runtime (or
+ * an illegal instruction fault will occur).
  *
  * \note This allows builds with a smaller code size than with
  * MBEDTLS_SHA512_USE_A64_CRYPTO_IF_PRESENT
@@ -3323,7 +3318,6 @@
 //#define MBEDTLS_PLATFORM_STD_MEM_HDR   <stdlib.h> /**< Header to include if MBEDTLS_PLATFORM_NO_STD_FUNCTIONS is defined. Don't define if no header is needed. */
 //#define MBEDTLS_PLATFORM_STD_CALLOC        calloc /**< Default allocator to use, can be undefined */
 //#define MBEDTLS_PLATFORM_STD_FREE            free /**< Default free to use, can be undefined */
-//#define MBEDTLS_PLATFORM_STD_SETBUF      setbuf /**< Default setbuf to use, can be undefined */
 //#define MBEDTLS_PLATFORM_STD_EXIT            exit /**< Default exit to use, can be undefined */
 //#define MBEDTLS_PLATFORM_STD_TIME            time /**< Default time to use, can be undefined. MBEDTLS_HAVE_TIME must be enabled */
 //#define MBEDTLS_PLATFORM_STD_FPRINTF      fprintf /**< Default fprintf to use, can be undefined */
@@ -3341,7 +3335,6 @@
 //#define MBEDTLS_PLATFORM_CALLOC_MACRO        calloc /**< Default allocator macro to use, can be undefined */
 //#define MBEDTLS_PLATFORM_FREE_MACRO            free /**< Default free macro to use, can be undefined */
 //#define MBEDTLS_PLATFORM_EXIT_MACRO            exit /**< Default exit macro to use, can be undefined */
-//#define MBEDTLS_PLATFORM_SETBUF_MACRO      setbuf /**< Default setbuf macro to use, can be undefined */
 //#define MBEDTLS_PLATFORM_TIME_MACRO            time /**< Default time macro to use, can be undefined. MBEDTLS_HAVE_TIME must be enabled */
 //#define MBEDTLS_PLATFORM_TIME_TYPE_MACRO       time_t /**< Default time macro to use, can be undefined. MBEDTLS_HAVE_TIME must be enabled */
 //#define MBEDTLS_PLATFORM_FPRINTF_MACRO      fprintf /**< Default fprintf macro to use, can be undefined */
