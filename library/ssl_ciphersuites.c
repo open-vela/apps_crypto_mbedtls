@@ -1876,26 +1876,15 @@ int mbedtls_ssl_get_ciphersuite_id( const char *ciphersuite_name )
 
 size_t mbedtls_ssl_ciphersuite_get_cipher_key_bitlen( const mbedtls_ssl_ciphersuite_t *info )
 {
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
-    psa_status_t status = PSA_ERROR_CORRUPTION_DETECTED;
-    psa_key_type_t key_type;
-    psa_algorithm_t alg;
-    size_t key_bits;
-
-    status = mbedtls_ssl_cipher_to_psa( info->cipher,
-                        info->flags & MBEDTLS_CIPHERSUITE_SHORT_TAG ? 8 : 16,
-                        &alg, &key_type, &key_bits );
-
-    if( status != PSA_SUCCESS )
-        return 0;
-
-    return key_bits;
-#else
+#if defined(MBEDTLS_CIPHER_C)
     const mbedtls_cipher_info_t * const cipher_info =
       mbedtls_cipher_info_from_type( info->cipher );
 
     return( mbedtls_cipher_info_get_key_bitlen( cipher_info ) );
-#endif /* MBEDTLS_USE_PSA_CRYPTO */
+#else
+    (void)info;
+    return( 0 );
+#endif
 }
 
 #if defined(MBEDTLS_PK_C)
@@ -1920,53 +1909,6 @@ mbedtls_pk_type_t mbedtls_ssl_get_ciphersuite_sig_pk_alg( const mbedtls_ssl_ciph
             return( MBEDTLS_PK_NONE );
     }
 }
-
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
-psa_algorithm_t mbedtls_ssl_get_ciphersuite_sig_pk_psa_alg( const mbedtls_ssl_ciphersuite_t *info )
-{
-    switch( info->key_exchange )
-    {
-        case MBEDTLS_KEY_EXCHANGE_RSA:
-        case MBEDTLS_KEY_EXCHANGE_RSA_PSK:
-            return( PSA_ALG_RSA_PKCS1V15_CRYPT );
-        case MBEDTLS_KEY_EXCHANGE_DHE_RSA:
-        case MBEDTLS_KEY_EXCHANGE_ECDHE_RSA:
-            return( PSA_ALG_RSA_PKCS1V15_SIGN(
-                        mbedtls_psa_translate_md( info->mac ) ) );
-
-        case MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA:
-            return( PSA_ALG_ECDSA( mbedtls_psa_translate_md( info->mac ) ) );
-
-        case MBEDTLS_KEY_EXCHANGE_ECDH_RSA:
-        case MBEDTLS_KEY_EXCHANGE_ECDH_ECDSA:
-            return( PSA_ALG_ECDH );
-
-        default:
-            return( PSA_ALG_NONE );
-    }
-}
-
-psa_key_usage_t mbedtls_ssl_get_ciphersuite_sig_pk_psa_usage( const mbedtls_ssl_ciphersuite_t *info )
-{
-    switch( info->key_exchange )
-    {
-        case MBEDTLS_KEY_EXCHANGE_RSA:
-        case MBEDTLS_KEY_EXCHANGE_RSA_PSK:
-            return( PSA_KEY_USAGE_DECRYPT );
-        case MBEDTLS_KEY_EXCHANGE_DHE_RSA:
-        case MBEDTLS_KEY_EXCHANGE_ECDHE_RSA:
-        case MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA:
-            return( PSA_KEY_USAGE_SIGN_HASH );
-
-        case MBEDTLS_KEY_EXCHANGE_ECDH_RSA:
-        case MBEDTLS_KEY_EXCHANGE_ECDH_ECDSA:
-            return( PSA_KEY_USAGE_DERIVE );
-
-        default:
-            return( 0 );
-    }
-}
-#endif /* MBEDTLS_USE_PSA_CRYPTO */
 
 mbedtls_pk_type_t mbedtls_ssl_get_ciphersuite_sig_alg( const mbedtls_ssl_ciphersuite_t *info )
 {
