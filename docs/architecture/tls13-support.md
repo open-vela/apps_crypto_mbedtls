@@ -136,16 +136,10 @@ MVP definition
 
 - Compatibility with existing SSL/TLS build options:
 
-  The TLS 1.3 MVP is compatible with nearly all TLS 1.2 configuration options
-  in the sense that when enabling the TLS 1.3 MVP in the library there is rarely
-  any need to modify the configuration from that used for TLS 1.2.
-
-  The exceptions to this are:
-
-  - The TLS 1.3 MVP is not compatible with MBEDTLS_USE_PSA_CRYPTO, so this option
-    must be disabled.
-  - The TLS 1.3 MVP requires MBEDTLS_PSA_CRYPTO_C and MBEDTLS_SSL_KEEP_PEER_CERTIFICATE,
-    so these options must be enabled.
+  The TLS 1.3 MVP is compatible with all TLS 1.2 configuration options in the
+  sense that when enabling the TLS 1.3 MVP in the library there is no need to
+  modify the configuration for TLS 1.2. The MBEDTLS_USE_PSA_CRYPTO configuration
+  option is an exception though, the TLS 1.3 MVP is not compatible with it.
 
   Mbed TLS SSL/TLS related features are not supported or not applicable to the
   TLS 1.3 MVP:
@@ -158,11 +152,12 @@ MVP definition
   | MBEDTLS_SSL_DEBUG_ALL                    | no      |
   | MBEDTLS_SSL_ENCRYPT_THEN_MAC             | n/a     |
   | MBEDTLS_SSL_EXTENDED_MASTER_SECRET       | n/a     |
-  | MBEDTLS_SSL_KEEP_PEER_CERTIFICATE        | no (1)  |
+  | MBEDTLS_SSL_KEEP_PEER_CERTIFICATE        | no      |
   | MBEDTLS_SSL_RENEGOTIATION                | n/a     |
   | MBEDTLS_SSL_MAX_FRAGMENT_LENGTH          | no      |
   |                                          |         |
   | MBEDTLS_SSL_SESSION_TICKETS              | no      |
+  | MBEDTLS_SSL_EXPORT_KEYS                  | no (1)  |
   | MBEDTLS_SSL_SERVER_NAME_INDICATION       | no      |
   | MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH       | no      |
   |                                          |         |
@@ -181,10 +176,9 @@ MVP definition
   | MBEDTLS_KEY_EXCHANGE_ECDH_RSA_ENABLED    | n/a     |
   | MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED     | n/a     |
   |                                          |         |
-  | MBEDTLS_PSA_CRYPTO_C                     | no (1)  |
   | MBEDTLS_USE_PSA_CRYPTO                   | no      |
 
-  (1) These options must remain in their default state of enabled.
+  (1) Some support has already been upstreamed but it is incomplete.
   (2) Key exchange configuration options for TLS 1.3 will likely to be
       organized around the notion of key exchange mode along the line
       of the MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_NONE/PSK/PSK_EPHEMERAL/EPHEMERAL
@@ -415,3 +409,101 @@ General coding rules:
                                      buf_len );
     ```
     even if it fits.
+
+
+Overview of handshake code organization
+---------------------------------------
+
+The TLS 1.3 handshake protocol is implemented as a state machine. The
+functions `mbedtls_ssl_tls13_handshake_{client,server}_step` are the top level
+functions of that implementation. They are implemented as a switch over all the
+possible states of the state machine.
+
+Most of the states are either dedicated to the processing or writing of an
+handshake message.
+
+The implementation does not go systematically through all states as this would
+result in too many checks of whether something needs to be done or not in a
+given state to be duplicated across several state handlers. For example, on
+client side, the states related to certificate parsing and validation are
+bypassed if the handshake is based on a pre-shared key and thus does not
+involve certificates.
+
+On the contrary, the implementation goes systematically though some states
+even if they could be bypassed if it helps in minimizing when and where inbound
+and outbound keys are updated. The `MBEDTLS_SSL_CLIENT_CERTIFICATE` state on
+client side is a example of that.
+
+The names of the handlers processing/writing an handshake message are
+prefixed with `(mbedtls_)ssl_tls13_{process,write}`. To ease the maintenance and
+reduce the risk of bugs, the code of the message processing and writing
+handlers is split into a sequence of stages.
+
+The sending of data to the peer only occurs in `mbedtls_ssl_handshake_step`
+between the calls to the handlers and as a consequence handlers do not have to
+care about the MBEDTLS_ERR_SSL_WANT_WRITE error code. Furthermore, all pending
+data are flushed before to call the next handler. That way, handlers do not
+have to worry about pending data when changing outbound keys.
+
+### Message processing handlers
+For message processing handlers, the stages are:
+
+* coordination stage: check if the state should be bypassed. This stage is
+optional. The check is either purely based on the reading of the value of some
+fields of the SSL context or based on the reading of the type of the next
+message. The latter occurs when it is not known what the next handshake message
+will be, an example of that on client side being if we are going to receive a
+CertificateRequest message or not. The intent is, apart from the next record
+reading to not modify the SSL context as this stage may be repeated if the
+next handshake message has not been received yet.
+
+* fetching stage: at this stage we are sure of the type of the handshake
+message we must receive next and we try to fetch it. If we did not go through
+a coordination stage involving the next record type reading, the next
+handshake message may not have been received yet, the handler returns with
+`MBEDTLS_ERR_SSL_WANT_READ` without changing the current state and it will be
+called again later.
+
+* pre-processing stage: prepare the SSL context for the message parsing. This
+stage is optional. Any processing that must be done before the parsing of the
+message or that can be done to simplify the parsing code. Some simple and
+partial parsing of the handshake message may append at that stage like in the
+ServerHello message pre-processing.
+
+* parsing stage: parse the message and restrict as much as possible any
+update of the SSL context. The idea of the pre-processing/parsing/post-processing
+organization is to concentrate solely on the parsing in the parsing function to
+reduce the size of its code and to simplify it.
+
+* post-processing stage: following the parsing, further update of the SSL
+context to prepare for the next incoming and outgoing messages. This stage is
+optional. For example, secret and key computations occur at this stage, as well
+as handshake messages checksum update.
+
+* state change: the state change is done in the main state handler to ease the
+navigation of the state machine transitions.
+
+
+### Message writing handlers
+For message writing handlers, the stages are:
+
+* coordination stage: check if the state should be bypassed. This stage is
+optional. The check is based on the value of some fields of the SSL context.
+
+* preparation stage: prepare for the message writing. This stage is optional.
+Any processing that must be done before the writing of the message or that can
+be done to simplify the writing code.
+
+* writing stage: write the message and restrict as much as possible any update
+of the SSL context. The idea of the preparation/writing/finalization
+organization is to concentrate solely on the writing in the writing function to
+reduce the size of its code and simplify it.
+
+* finalization stage: following the writing, further update of the SSL
+context to prepare for the next incoming and outgoing messages. This stage is
+optional. For example, handshake secret and key computation occur at that
+stage (ServerHello writing finalization), switching to handshake keys for
+outbound message on server side as well.
+
+* state change: the state change is done in the main state handler to ease
+the navigation of the state machine transitions.
