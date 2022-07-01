@@ -1702,11 +1702,11 @@ requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
 requires_config_enabled MBEDTLS_X509_CRT_PARSE_C
 requires_config_enabled MBEDTLS_ECDSA_C
 requires_config_enabled MBEDTLS_SHA256_C
-run_test    "TLS-ECDHE-ECDSA Opaque key for client authentication" \
+run_test    "Opaque key for client authentication: ECDHE-ECDSA" \
             "$P_SRV auth_mode=required crt_file=data_files/server5.crt \
              key_file=data_files/server5.key" \
             "$P_CLI key_opaque=1 crt_file=data_files/server5.crt \
-             key_file=data_files/server5.key" \
+             key_file=data_files/server5.key key_opaque_algs=ecdsa-sign,none" \
             0 \
             -c "key type: Opaque" \
             -c "Ciphersuite is TLS-ECDHE-ECDSA" \
@@ -1722,11 +1722,11 @@ requires_config_enabled MBEDTLS_X509_CRT_PARSE_C
 requires_config_enabled MBEDTLS_ECDSA_C
 requires_config_enabled MBEDTLS_RSA_C
 requires_config_enabled MBEDTLS_SHA256_C
-run_test    "TLS-ECDHE-RSA Opaque key for client authentication" \
+run_test    "Opaque key for client authentication: ECDHE-RSA" \
             "$P_SRV auth_mode=required crt_file=data_files/server2-sha256.crt \
              key_file=data_files/server2.key" \
             "$P_CLI key_opaque=1 crt_file=data_files/server2-sha256.crt \
-             key_file=data_files/server2.key" \
+             key_file=data_files/server2.key key_opaque_algs=rsa-sign-pkcs1,none" \
             0 \
             -c "key type: Opaque" \
             -c "Ciphersuite is TLS-ECDHE-RSA" \
@@ -1740,46 +1740,17 @@ requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
 requires_config_enabled MBEDTLS_X509_CRT_PARSE_C
 requires_config_enabled MBEDTLS_RSA_C
 requires_config_enabled MBEDTLS_SHA256_C
-run_test    "TLS-DHE-RSA Opaque key for client authentication" \
+run_test    "Opaque key for client authentication: DHE-RSA" \
             "$P_SRV auth_mode=required crt_file=data_files/server2-sha256.crt \
              key_file=data_files/server2.key" \
             "$P_CLI key_opaque=1 crt_file=data_files/server2-sha256.crt \
-             key_file=data_files/server2.key force_ciphersuite=TLS-DHE-RSA-WITH-AES-128-CBC-SHA" \
+             key_file=data_files/server2.key force_ciphersuite=TLS-DHE-RSA-WITH-AES-128-CBC-SHA \
+             key_opaque_algs=rsa-sign-pkcs1,none" \
             0 \
             -c "key type: Opaque" \
             -c "Ciphersuite is TLS-DHE-RSA" \
             -s "Verifying peer X.509 certificate... ok" \
             -s "Ciphersuite is TLS-DHE-RSA" \
-            -S "error" \
-            -C "error"
-
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
-requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
-requires_config_enabled MBEDTLS_RSA_C
-run_test    "RSA opaque key on server configured for decryption" \
-            "$P_SRV debug_level=1 key_opaque=1 key_opaque_algs=rsa-decrypt,none" \
-            "$P_CLI force_ciphersuite=TLS-RSA-WITH-AES-128-CBC-SHA256" \
-            0 \
-            -c "Verifying peer X.509 certificate... ok" \
-            -c "Ciphersuite is TLS-RSA-" \
-            -s "key types: Opaque, Opaque" \
-            -s "Ciphersuite is TLS-RSA-" \
-            -S "error" \
-            -C "error"
-
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
-requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
-requires_config_enabled MBEDTLS_RSA_C
-run_test    "RSA-PSK opaque key on server configured for decryption" \
-            "$P_SRV debug_level=1 key_opaque=1 key_opaque_algs=rsa-decrypt,none \
-             psk=abc123 psk_identity=foo" \
-            "$P_CLI force_ciphersuite=TLS-RSA-PSK-WITH-AES-128-CBC-SHA256 \
-             psk=abc123 psk_identity=foo" \
-            0 \
-            -c "Verifying peer X.509 certificate... ok" \
-            -c "Ciphersuite is TLS-RSA-PSK-" \
-            -s "key types: Opaque, Opaque" \
-            -s "Ciphersuite is TLS-RSA-PSK-" \
             -S "error" \
             -C "error"
 
@@ -1789,11 +1760,10 @@ requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
 requires_config_enabled MBEDTLS_X509_CRT_PARSE_C
 requires_config_enabled MBEDTLS_ECDSA_C
 requires_config_enabled MBEDTLS_SHA256_C
-run_test    "TLS-ECDHE-ECDSA Opaque key for server authentication" \
-            "$P_SRV auth_mode=required key_opaque=1 crt_file=data_files/server5.crt \
-             key_file=data_files/server5.key" \
-            "$P_CLI crt_file=data_files/server5.crt \
-             key_file=data_files/server5.key" \
+run_test    "Opaque key for server authentication: ECDHE-ECDSA" \
+            "$P_SRV key_opaque=1 crt_file=data_files/server5.crt \
+             key_file=data_files/server5.key  key_opaque_algs=ecdsa-sign,none" \
+            "$P_CLI" \
             0 \
             -c "Verifying peer X.509 certificate... ok" \
             -c "Ciphersuite is TLS-ECDHE-ECDSA" \
@@ -1807,16 +1777,130 @@ requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
 requires_config_enabled MBEDTLS_X509_CRT_PARSE_C
 requires_config_enabled MBEDTLS_ECDSA_C
 requires_config_enabled MBEDTLS_SHA256_C
-run_test    "Opaque key for server authentication (ECDH-)" \
+run_test    "Opaque key for server authentication: ECDH-" \
             "$P_SRV force_version=tls12 auth_mode=required key_opaque=1\
              crt_file=data_files/server5.ku-ka.crt\
-             key_file=data_files/server5.key" \
+             key_file=data_files/server5.key key_opaque_algs=ecdh,none" \
             "$P_CLI" \
             0 \
             -c "Verifying peer X.509 certificate... ok" \
             -c "Ciphersuite is TLS-ECDH-" \
             -s "key types: Opaque, none" \
             -s "Ciphersuite is TLS-ECDH-" \
+            -S "error" \
+            -C "error"
+
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
+requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
+requires_config_enabled MBEDTLS_X509_CRT_PARSE_C
+requires_config_enabled MBEDTLS_ECDSA_C
+requires_config_enabled MBEDTLS_SHA256_C
+run_test    "Opaque key for server authentication: invalid alg: decrypt with ECC key" \
+            "$P_SRV key_opaque=1 crt_file=data_files/server5.crt \
+             key_file=data_files/server5.key key_opaque_algs=rsa-decrypt,none \
+             debug_level=1" \
+            "$P_CLI" \
+            1 \
+            -s "key types: Opaque, none" \
+            -s "got ciphersuites in common, but none of them usable" \
+            -s "error" \
+            -c "error"
+
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
+requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
+requires_config_enabled MBEDTLS_X509_CRT_PARSE_C
+requires_config_enabled MBEDTLS_ECDSA_C
+requires_config_enabled MBEDTLS_RSA_C
+requires_config_enabled MBEDTLS_SHA256_C
+run_test    "Opaque key for server authentication: invalid alg: ecdh with RSA key" \
+            "$P_SRV key_opaque=1 crt_file=data_files/server2-sha256.crt \
+             key_file=data_files/server2.key key_opaque_algs=ecdh,none \
+             debug_level=1" \
+            "$P_CLI" \
+            1 \
+            -s "key types: Opaque, none" \
+            -s "got ciphersuites in common, but none of them usable" \
+            -s "error" \
+            -c "error"
+
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
+requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
+requires_config_enabled MBEDTLS_X509_CRT_PARSE_C
+requires_config_enabled MBEDTLS_ECDSA_C
+requires_config_enabled MBEDTLS_SHA256_C
+requires_config_enabled MBEDTLS_CCM_C
+run_test    "Opaque key for server authentication: invalid alg: ECDHE-ECDSA with ecdh" \
+            "$P_SRV key_opaque=1 crt_file=data_files/server5.crt \
+             key_file=data_files/server5.key key_opaque_algs=ecdh,none \
+             debug_level=1" \
+            "$P_CLI force_ciphersuite=TLS-ECDHE-ECDSA-WITH-AES-256-CCM" \
+            1 \
+            -s "key types: Opaque, none" \
+            -s "got ciphersuites in common, but none of them usable" \
+            -s "error" \
+            -c "error"
+
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
+requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
+requires_config_enabled MBEDTLS_X509_CRT_PARSE_C
+requires_config_enabled MBEDTLS_ECDSA_C
+requires_config_enabled MBEDTLS_SHA256_C
+requires_config_disabled MBEDTLS_X509_REMOVE_INFO
+run_test    "Opaque keys for server authentication: EC keys with different algs, force ECDHE-ECDSA" \
+            "$P_SRV key_opaque=1 crt_file=data_files/server7.crt \
+             key_file=data_files/server7.key key_opaque_algs=ecdh,none \
+             crt_file2=data_files/server5.crt key_file2=data_files/server5.key \
+             key_opaque_algs2=ecdsa-sign,none" \
+            "$P_CLI" \
+            0 \
+            -c "Verifying peer X.509 certificate... ok" \
+            -c "Ciphersuite is TLS-ECDHE-ECDSA" \
+            -c "CN=Polarssl Test EC CA" \
+            -s "key types: Opaque, Opaque" \
+            -s "Ciphersuite is TLS-ECDHE-ECDSA" \
+            -S "error" \
+            -C "error"
+
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
+requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
+requires_config_enabled MBEDTLS_X509_CRT_PARSE_C
+requires_config_enabled MBEDTLS_ECDSA_C
+requires_config_enabled MBEDTLS_SHA384_C
+requires_config_disabled MBEDTLS_X509_REMOVE_INFO
+run_test    "Opaque keys for server authentication: EC keys with different algs, force ECDH-ECDSA" \
+            "$P_SRV key_opaque=1 crt_file=data_files/server7.crt \
+             key_file=data_files/server7.key key_opaque_algs=ecdsa-sign,none \
+             crt_file2=data_files/server5.crt key_file2=data_files/server5.key \
+             key_opaque_algs2=ecdh,none debug_level=3" \
+            "$P_CLI force_ciphersuite=TLS-ECDH-ECDSA-WITH-CAMELLIA-256-CBC-SHA384" \
+            0 \
+            -c "Verifying peer X.509 certificate... ok" \
+            -c "Ciphersuite is TLS-ECDH-ECDSA" \
+            -c "CN=Polarssl Test EC CA" \
+            -s "key types: Opaque, Opaque" \
+            -s "Ciphersuite is TLS-ECDH-ECDSA" \
+            -S "error" \
+            -C "error"
+
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
+requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
+requires_config_enabled MBEDTLS_X509_CRT_PARSE_C
+requires_config_enabled MBEDTLS_ECDSA_C
+requires_config_enabled MBEDTLS_SHA384_C
+requires_config_enabled MBEDTLS_CCM_C
+requires_config_disabled MBEDTLS_X509_REMOVE_INFO
+run_test    "Opaque keys for server authentication: EC + RSA, force ECDHE-ECDSA" \
+            "$P_SRV key_opaque=1 crt_file=data_files/server5.crt \
+             key_file=data_files/server5.key key_opaque_algs=ecdsa-sign,none \
+             crt_file2=data_files/server2-sha256.crt \
+             key_file2=data_files/server2.key key_opaque_algs2=rsa-sign-pkcs1,none" \
+            "$P_CLI force_ciphersuite=TLS-ECDHE-ECDSA-WITH-AES-256-CCM" \
+            0 \
+            -c "Verifying peer X.509 certificate... ok" \
+            -c "Ciphersuite is TLS-ECDHE-ECDSA" \
+            -c "CN=Polarssl Test EC CA" \
+            -s "key types: Opaque, Opaque" \
+            -s "Ciphersuite is TLS-ECDHE-ECDSA" \
             -S "error" \
             -C "error"
 
@@ -1827,11 +1911,10 @@ requires_config_enabled MBEDTLS_X509_CRT_PARSE_C
 requires_config_enabled MBEDTLS_ECDSA_C
 requires_config_enabled MBEDTLS_RSA_C
 requires_config_enabled MBEDTLS_SHA256_C
-run_test    "TLS-ECDHE-RSA Opaque key for server authentication" \
-            "$P_SRV auth_mode=required key_opaque=1 crt_file=data_files/server2-sha256.crt \
-             key_file=data_files/server2.key" \
-            "$P_CLI crt_file=data_files/server2-sha256.crt \
-             key_file=data_files/server2.key" \
+run_test    "Opaque key for server authentication: ECDHE-RSA" \
+            "$P_SRV key_opaque=1 crt_file=data_files/server2-sha256.crt \
+             key_file=data_files/server2.key key_opaque_algs=rsa-sign-pkcs1,none" \
+            "$P_CLI" \
             0 \
             -c "Verifying peer X.509 certificate... ok" \
             -c "Ciphersuite is TLS-ECDHE-RSA" \
@@ -1846,15 +1929,110 @@ requires_config_enabled MBEDTLS_X509_CRT_PARSE_C
 requires_config_enabled MBEDTLS_ECDSA_C
 requires_config_enabled MBEDTLS_RSA_C
 requires_config_enabled MBEDTLS_SHA256_C
-run_test    "TLS-DHE-RSA Opaque key for server authentication" \
-            "$P_SRV auth_mode=required key_opaque=1 crt_file=data_files/server2-sha256.crt \
-             key_file=data_files/server2.key" \
-            "$P_CLI crt_file=data_files/server2-sha256.crt \
-             key_file=data_files/server2.key force_ciphersuite=TLS-DHE-RSA-WITH-AES-128-CBC-SHA" \
+run_test    "Opaque key for server authentication: DHE-RSA" \
+            "$P_SRV key_opaque=1 crt_file=data_files/server2-sha256.crt \
+             key_file=data_files/server2.key key_opaque_algs=rsa-sign-pkcs1,none" \
+            "$P_CLI force_ciphersuite=TLS-DHE-RSA-WITH-AES-128-CBC-SHA" \
             0 \
             -c "Verifying peer X.509 certificate... ok" \
             -c "Ciphersuite is TLS-DHE-RSA" \
             -s "key types: Opaque, none" \
+            -s "Ciphersuite is TLS-DHE-RSA" \
+            -S "error" \
+            -C "error"
+
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
+requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
+requires_config_enabled MBEDTLS_X509_CRT_PARSE_C
+requires_config_enabled MBEDTLS_RSA_C
+requires_config_enabled MBEDTLS_SHA256_C
+run_test    "Opaque key for server authentication: RSA-PSK" \
+            "$P_SRV debug_level=1 key_opaque=1 key_opaque_algs=rsa-decrypt,none \
+             psk=abc123 psk_identity=foo" \
+            "$P_CLI force_ciphersuite=TLS-RSA-PSK-WITH-AES-128-CBC-SHA256 \
+             psk=abc123 psk_identity=foo" \
+            0 \
+            -c "Verifying peer X.509 certificate... ok" \
+            -c "Ciphersuite is TLS-RSA-PSK-" \
+            -s "key types: Opaque, Opaque" \
+            -s "Ciphersuite is TLS-RSA-PSK-" \
+            -S "error" \
+            -C "error"
+
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
+requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
+requires_config_enabled MBEDTLS_X509_CRT_PARSE_C
+requires_config_enabled MBEDTLS_RSA_C
+requires_config_enabled MBEDTLS_SHA256_C
+run_test    "Opaque key for server authentication: RSA-" \
+            "$P_SRV debug_level=3 key_opaque=1 key_opaque_algs=rsa-decrypt,none " \
+            "$P_CLI force_ciphersuite=TLS-RSA-WITH-AES-256-CBC-SHA256" \
+            0 \
+            -c "Verifying peer X.509 certificate... ok" \
+            -c "Ciphersuite is TLS-RSA-" \
+            -s "key types: Opaque, Opaque" \
+            -s "Ciphersuite is TLS-RSA-" \
+            -S "error" \
+            -C "error"
+
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
+requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
+requires_config_enabled MBEDTLS_X509_CRT_PARSE_C
+requires_config_enabled MBEDTLS_ECDSA_C
+requires_config_enabled MBEDTLS_RSA_C
+requires_config_enabled MBEDTLS_SHA256_C
+run_test    "Opaque key for server authentication: DHE-RSA, PSS instead of PKCS1" \
+            "$P_SRV auth_mode=required key_opaque=1 crt_file=data_files/server2-sha256.crt \
+             key_file=data_files/server2.key key_opaque_algs=rsa-sign-pss,none debug_level=1" \
+            "$P_CLI crt_file=data_files/server2-sha256.crt \
+             key_file=data_files/server2.key force_ciphersuite=TLS-DHE-RSA-WITH-AES-128-CBC-SHA" \
+            1 \
+            -s "key types: Opaque, none" \
+            -s "got ciphersuites in common, but none of them usable" \
+            -s "error" \
+            -c "error"
+
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
+requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
+requires_config_enabled MBEDTLS_X509_CRT_PARSE_C
+requires_config_enabled MBEDTLS_ECDSA_C
+requires_config_enabled MBEDTLS_RSA_C
+requires_config_enabled MBEDTLS_SHA256_C
+requires_config_disabled MBEDTLS_X509_REMOVE_INFO
+run_test    "Opaque keys for server authentication: RSA keys with different algs" \
+            "$P_SRV auth_mode=required key_opaque=1 crt_file=data_files/server2-sha256.crt \
+             key_file=data_files/server2.key key_opaque_algs=rsa-sign-pss,none \
+             crt_file2=data_files/server4.crt \
+             key_file2=data_files/server4.key key_opaque_algs2=rsa-sign-pkcs1,none" \
+            "$P_CLI" \
+            0 \
+            -c "Verifying peer X.509 certificate... ok" \
+            -c "Ciphersuite is TLS-ECDHE-RSA" \
+            -c "CN=Polarssl Test EC CA" \
+            -s "key types: Opaque, Opaque" \
+            -s "Ciphersuite is TLS-ECDHE-RSA" \
+            -S "error" \
+            -C "error"
+
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
+requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
+requires_config_enabled MBEDTLS_X509_CRT_PARSE_C
+requires_config_enabled MBEDTLS_ECDSA_C
+requires_config_enabled MBEDTLS_RSA_C
+requires_config_enabled MBEDTLS_SHA384_C
+requires_config_enabled MBEDTLS_GCM_C
+requires_config_disabled MBEDTLS_X509_REMOVE_INFO
+run_test    "Opaque keys for server authentication: EC + RSA, force DHE-RSA" \
+            "$P_SRV auth_mode=required key_opaque=1 crt_file=data_files/server5.crt \
+             key_file=data_files/server5.key key_opaque_algs=ecdsa-sign,none \
+             crt_file2=data_files/server4.crt \
+             key_file2=data_files/server4.key key_opaque_algs2=rsa-sign-pkcs1,none" \
+            "$P_CLI force_ciphersuite=TLS-DHE-RSA-WITH-AES-128-CBC-SHA" \
+            0 \
+            -c "Verifying peer X.509 certificate... ok" \
+            -c "Ciphersuite is TLS-DHE-RSA" \
+            -c "CN=Polarssl Test EC CA" \
+            -s "key types: Opaque, Opaque" \
             -s "Ciphersuite is TLS-DHE-RSA" \
             -S "error" \
             -C "error"
@@ -1865,11 +2043,11 @@ requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
 requires_config_enabled MBEDTLS_X509_CRT_PARSE_C
 requires_config_enabled MBEDTLS_ECDSA_C
 requires_config_enabled MBEDTLS_SHA256_C
-run_test    "TLS-ECDHE-ECDSA Opaque key for client/server authentication" \
+run_test    "Opaque key for client/server authentication: ECDHE-ECDSA" \
             "$P_SRV auth_mode=required key_opaque=1 crt_file=data_files/server5.crt \
-             key_file=data_files/server5.key" \
+             key_file=data_files/server5.key key_opaque_algs=ecdsa-sign,none" \
             "$P_CLI key_opaque=1 crt_file=data_files/server5.crt \
-             key_file=data_files/server5.key" \
+             key_file=data_files/server5.key key_opaque_algs=ecdsa-sign,none" \
             0 \
             -c "key type: Opaque" \
             -c "Verifying peer X.509 certificate... ok" \
@@ -1887,11 +2065,11 @@ requires_config_enabled MBEDTLS_X509_CRT_PARSE_C
 requires_config_enabled MBEDTLS_ECDSA_C
 requires_config_enabled MBEDTLS_RSA_C
 requires_config_enabled MBEDTLS_SHA256_C
-run_test    "TLS-ECDHE-RSA Opaque key for client/server authentication" \
+run_test    "Opaque key for client/server authentication: ECDHE-RSA" \
             "$P_SRV auth_mode=required key_opaque=1 crt_file=data_files/server2-sha256.crt \
-             key_file=data_files/server2.key" \
+             key_file=data_files/server2.key  key_opaque_algs=rsa-sign-pkcs1,none" \
             "$P_CLI key_opaque=1 crt_file=data_files/server2-sha256.crt \
-             key_file=data_files/server2.key" \
+             key_file=data_files/server2.key  key_opaque_algs=rsa-sign-pkcs1,none" \
             0 \
             -c "key type: Opaque" \
             -c "Verifying peer X.509 certificate... ok" \
@@ -1908,11 +2086,12 @@ requires_config_enabled MBEDTLS_X509_CRT_PARSE_C
 requires_config_enabled MBEDTLS_ECDSA_C
 requires_config_enabled MBEDTLS_RSA_C
 requires_config_enabled MBEDTLS_SHA256_C
-run_test    "TLS-DHE-RSA Opaque key for client/server authentication" \
+run_test    "Opaque key for client/server authentication: DHE-RSA" \
             "$P_SRV auth_mode=required key_opaque=1 crt_file=data_files/server2-sha256.crt \
-             key_file=data_files/server2.key" \
+             key_file=data_files/server2.key  key_opaque_algs=rsa-sign-pkcs1,none" \
             "$P_CLI key_opaque=1 crt_file=data_files/server2-sha256.crt \
-             key_file=data_files/server2.key force_ciphersuite=TLS-DHE-RSA-WITH-AES-128-CBC-SHA" \
+             key_file=data_files/server2.key  key_opaque_algs=rsa-sign-pkcs1,none \
+             force_ciphersuite=TLS-DHE-RSA-WITH-AES-128-CBC-SHA" \
             0 \
             -c "key type: Opaque" \
             -c "Verifying peer X.509 certificate... ok" \
@@ -1922,6 +2101,7 @@ run_test    "TLS-DHE-RSA Opaque key for client/server authentication" \
             -s "Ciphersuite is TLS-DHE-RSA" \
             -S "error" \
             -C "error"
+
 
 # Test ciphersuites which we expect to be fully supported by PSA Crypto
 # and check that we don't fall back to Mbed TLS' internal crypto primitives.
@@ -11499,35 +11679,6 @@ do
 done
 unset TEST_SUITE_NAME
 
-# Test 1.3 compatibility mode
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-requires_config_disabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
-requires_config_enabled MBEDTLS_DEBUG_C
-requires_config_enabled MBEDTLS_SSL_SRV_C
-requires_config_enabled MBEDTLS_SSL_CLI_C
-run_test    "TLS 1.3 m->m both peers do not support middlebox compatibility" \
-            "$P_SRV debug_level=4 force_version=tls13 tickets=0" \
-            "$P_CLI debug_level=4" \
-            0 \
-            -s "Protocol is TLSv1.3" \
-            -c "Protocol is TLSv1.3" \
-            -S "tls13 server state: MBEDTLS_SSL_SERVER_CCS_AFTER_SERVER_HELLO" \
-            -C "Ignore ChangeCipherSpec in TLS 1.3 compatibility mode"
-
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
-requires_config_enabled MBEDTLS_DEBUG_C
-requires_config_enabled MBEDTLS_SSL_SRV_C
-requires_config_enabled MBEDTLS_SSL_CLI_C
-run_test    "TLS 1.3 m->m both with middlebox compat support" \
-            "$P_SRV debug_level=4 force_version=tls13 tickets=0" \
-            "$P_CLI debug_level=4" \
-            0 \
-            -s "Protocol is TLSv1.3" \
-            -c "Protocol is TLSv1.3" \
-            -s "tls13 server state: MBEDTLS_SSL_SERVER_CCS_AFTER_SERVER_HELLO" \
-            -c "Ignore ChangeCipherSpec in TLS 1.3 compatibility mode"
-
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_disabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
@@ -11535,11 +11686,10 @@ requires_config_enabled MBEDTLS_DEBUG_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
 run_test    "TLS 1.3 m->O both peers do not support middlebox compatibility" \
             "$O_NEXT_SRV -msg -tls1_3 -no_middlebox -num_tickets 0 -no_resume_ephemeral -no_cache" \
-            "$P_CLI debug_level=4" \
+            "$P_CLI debug_level=3" \
             0 \
             -c "Protocol is TLSv1.3" \
-            -C "ChangeCipherSpec invalid in TLS 1.3 without compatibility mode" \
-            -C "Ignore ChangeCipherSpec in TLS 1.3 compatibility mode"
+            -c "HTTP/1.0 200 ok"
 
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
@@ -11548,21 +11698,9 @@ requires_config_enabled MBEDTLS_DEBUG_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
 run_test    "TLS 1.3 m->O server with middlebox compat support, not client" \
             "$O_NEXT_SRV -msg -tls1_3 -num_tickets 0 -no_resume_ephemeral -no_cache" \
-            "$P_CLI debug_level=4" \
+            "$P_CLI debug_level=3" \
             1 \
             -c "ChangeCipherSpec invalid in TLS 1.3 without compatibility mode"
-
-requires_openssl_tls1_3
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
-requires_config_enabled MBEDTLS_DEBUG_C
-requires_config_enabled MBEDTLS_SSL_CLI_C
-run_test    "TLS 1.3 m->O both with middlebox compat support" \
-            "$O_NEXT_SRV -msg -tls1_3 -num_tickets 0 -no_resume_ephemeral -no_cache" \
-            "$P_CLI debug_level=4" \
-            0 \
-            -c "Protocol is TLSv1.3" \
-            -c "Ignore ChangeCipherSpec in TLS 1.3 compatibility mode"
 
 requires_gnutls_tls1_3
 requires_gnutls_next_no_ticket
@@ -11573,11 +11711,10 @@ requires_config_enabled MBEDTLS_DEBUG_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
 run_test    "TLS 1.3 m->G both peers do not support middlebox compatibility" \
             "$G_NEXT_SRV --priority=NORMAL:-VERS-ALL:+VERS-TLS1.3:+CIPHER-ALL:%NO_TICKETS:%DISABLE_TLS13_COMPAT_MODE --disable-client-cert" \
-            "$P_CLI debug_level=4" \
+            "$P_CLI debug_level=3" \
             0 \
             -c "Protocol is TLSv1.3" \
-            -C "ChangeCipherSpec invalid in TLS 1.3 without compatibility mode" \
-            -C "Ignore ChangeCipherSpec in TLS 1.3 compatibility mode"
+            -c "HTTP/1.0 200 OK"
 
 requires_gnutls_tls1_3
 requires_gnutls_next_no_ticket
@@ -11587,300 +11724,9 @@ requires_config_enabled MBEDTLS_DEBUG_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
 run_test    "TLS 1.3 m->G server with middlebox compat support, not client" \
             "$G_NEXT_SRV --priority=NORMAL:-VERS-ALL:+VERS-TLS1.3:+CIPHER-ALL:%NO_TICKETS --disable-client-cert" \
-            "$P_CLI debug_level=4" \
+            "$P_CLI debug_level=3" \
             1 \
             -c "ChangeCipherSpec invalid in TLS 1.3 without compatibility mode"
-
-requires_gnutls_tls1_3
-requires_gnutls_next_no_ticket
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
-requires_config_enabled MBEDTLS_DEBUG_C
-requires_config_enabled MBEDTLS_SSL_CLI_C
-run_test    "TLS 1.3 m->G both with middlebox compat support" \
-            "$G_NEXT_SRV --priority=NORMAL:-VERS-ALL:+VERS-TLS1.3:+CIPHER-ALL:%NO_TICKETS --disable-client-cert" \
-            "$P_CLI debug_level=4" \
-            0 \
-            -c "Protocol is TLSv1.3" \
-            -c "Ignore ChangeCipherSpec in TLS 1.3 compatibility mode"
-
-requires_openssl_tls1_3
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-requires_config_disabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
-requires_config_enabled MBEDTLS_DEBUG_C
-requires_config_enabled MBEDTLS_SSL_SRV_C
-run_test    "TLS 1.3 O->m both peers do not support middlebox compatibility" \
-            "$P_SRV debug_level=4 crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13 tickets=0" \
-            "$O_NEXT_CLI -msg -debug -no_middlebox" \
-            0 \
-            -s "Protocol is TLSv1.3" \
-            -S "tls13 server state: MBEDTLS_SSL_SERVER_CCS_AFTER_SERVER_HELLO" \
-            -C "14 03 03 00 01"
-
-requires_openssl_tls1_3
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
-requires_config_enabled MBEDTLS_DEBUG_C
-requires_config_enabled MBEDTLS_SSL_SRV_C
-run_test    "TLS 1.3 O->m server with middlebox compat support, not client" \
-            "$P_SRV debug_level=4 crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13 tickets=0" \
-            "$O_NEXT_CLI -msg -debug -no_middlebox" \
-            0 \
-            -s "Protocol is TLSv1.3" \
-            -s "tls13 server state: MBEDTLS_SSL_SERVER_CCS_AFTER_SERVER_HELLO"
-
-requires_openssl_tls1_3
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
-requires_config_enabled MBEDTLS_DEBUG_C
-requires_config_enabled MBEDTLS_SSL_SRV_C
-run_test    "TLS 1.3 O->m both with middlebox compat support" \
-            "$P_SRV debug_level=4 crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13 tickets=0" \
-            "$O_NEXT_CLI -msg -debug" \
-            0 \
-            -s "Protocol is TLSv1.3" \
-            -s "tls13 server state: MBEDTLS_SSL_SERVER_CCS_AFTER_SERVER_HELLO" \
-            -c "14 03 03 00 01"
-
-requires_gnutls_tls1_3
-requires_gnutls_next_no_ticket
-requires_gnutls_next_disable_tls13_compat
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-requires_config_disabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
-requires_config_enabled MBEDTLS_DEBUG_C
-requires_config_enabled MBEDTLS_SSL_SRV_C
-run_test    "TLS 1.3 G->m both peers do not support middlebox compatibility" \
-            "$P_SRV debug_level=4 crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13 tickets=0" \
-            "$G_NEXT_CLI localhost --priority=NORMAL:%NO_TICKETS:%DISABLE_TLS13_COMPAT_MODE -V" \
-            0 \
-            -s "Protocol is TLSv1.3" \
-            -S "tls13 server state: MBEDTLS_SSL_SERVER_CCS_AFTER_SERVER_HELLO" \
-            -C "SSL 3.3 ChangeCipherSpec packet received"
-
-requires_gnutls_tls1_3
-requires_gnutls_next_no_ticket
-requires_gnutls_next_disable_tls13_compat
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
-requires_config_enabled MBEDTLS_DEBUG_C
-requires_config_enabled MBEDTLS_SSL_SRV_C
-run_test    "TLS 1.3 G->m server with middlebox compat support, not client" \
-            "$P_SRV debug_level=4 crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13 tickets=0" \
-            "$G_NEXT_CLI localhost --debug=10 --priority=NORMAL:%NO_TICKETS:%DISABLE_TLS13_COMPAT_MODE -V" \
-            0 \
-            -s "Protocol is TLSv1.3" \
-            -s "tls13 server state: MBEDTLS_SSL_SERVER_CCS_AFTER_SERVER_HELLO" \
-            -c "SSL 3.3 ChangeCipherSpec packet received" \
-            -c "discarding change cipher spec in TLS1.3"
-
-requires_gnutls_tls1_3
-requires_gnutls_next_no_ticket
-requires_gnutls_next_disable_tls13_compat
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
-requires_config_enabled MBEDTLS_DEBUG_C
-requires_config_enabled MBEDTLS_SSL_SRV_C
-run_test    "TLS 1.3 G->m both with middlebox compat support" \
-            "$P_SRV debug_level=4 crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13 tickets=0" \
-            "$G_NEXT_CLI localhost --debug=10 --priority=NORMAL:%NO_TICKETS:%DISABLE_TLS13_COMPAT_MODE -V" \
-            0 \
-            -s "Protocol is TLSv1.3" \
-            -s "tls13 server state: MBEDTLS_SSL_SERVER_CCS_AFTER_SERVER_HELLO" \
-            -c "SSL 3.3 ChangeCipherSpec packet received"
-
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-requires_config_disabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
-requires_config_enabled MBEDTLS_DEBUG_C
-requires_config_enabled MBEDTLS_SSL_SRV_C
-requires_config_enabled MBEDTLS_SSL_CLI_C
-run_test    "TLS 1.3 m->m HRR both peers do not support middlebox compatibility" \
-            "$P_SRV debug_level=4 force_version=tls13 curves=secp384r1 tickets=0" \
-            "$P_CLI debug_level=4 curves=secp256r1,secp384r1" \
-            0 \
-            -s "Protocol is TLSv1.3" \
-            -c "Protocol is TLSv1.3" \
-            -s "tls13 server state: MBEDTLS_SSL_HELLO_RETRY_REQUEST" \
-            -S "tls13 server state: MBEDTLS_SSL_SERVER_CCS_AFTER_HELLO_RETRY_REQUEST" \
-            -C "Ignore ChangeCipherSpec in TLS 1.3 compatibility mode"
-
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
-requires_config_enabled MBEDTLS_DEBUG_C
-requires_config_enabled MBEDTLS_SSL_SRV_C
-requires_config_enabled MBEDTLS_SSL_CLI_C
-run_test    "TLS 1.3 m->m HRR both with middlebox compat support" \
-            "$P_SRV debug_level=4 force_version=tls13 curves=secp384r1 tickets=0" \
-            "$P_CLI debug_level=4 curves=secp256r1,secp384r1" \
-            0 \
-            -s "Protocol is TLSv1.3" \
-            -c "Protocol is TLSv1.3" \
-            -s "tls13 server state: MBEDTLS_SSL_HELLO_RETRY_REQUEST" \
-            -s "tls13 server state: MBEDTLS_SSL_SERVER_CCS_AFTER_HELLO_RETRY_REQUEST" \
-            -c "Ignore ChangeCipherSpec in TLS 1.3 compatibility mode"
-
-requires_openssl_tls1_3
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-requires_config_disabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
-requires_config_enabled MBEDTLS_DEBUG_C
-requires_config_enabled MBEDTLS_SSL_CLI_C
-run_test    "TLS 1.3 m->O HRR both peers do not support middlebox compatibility" \
-            "$O_NEXT_SRV -msg -tls1_3 -groups P-384 -no_middlebox -num_tickets 0 -no_cache" \
-            "$P_CLI debug_level=4 curves=secp256r1,secp384r1" \
-            0 \
-            -c "Protocol is TLSv1.3" \
-            -c "received HelloRetryRequest message" \
-            -C "ChangeCipherSpec invalid in TLS 1.3 without compatibility mode" \
-            -C "Ignore ChangeCipherSpec in TLS 1.3 compatibility mode"
-
-requires_openssl_tls1_3
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-requires_config_disabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
-requires_config_enabled MBEDTLS_DEBUG_C
-requires_config_enabled MBEDTLS_SSL_CLI_C
-run_test    "TLS 1.3 m->O HRR server with middlebox compat support, not client" \
-            "$O_NEXT_SRV -msg -tls1_3 -groups P-384 -num_tickets 0 -no_cache" \
-            "$P_CLI debug_level=4 curves=secp256r1,secp384r1" \
-            1 \
-            -c "received HelloRetryRequest message" \
-            -c "ChangeCipherSpec invalid in TLS 1.3 without compatibility mode"
-
-requires_openssl_tls1_3
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
-requires_config_enabled MBEDTLS_DEBUG_C
-requires_config_enabled MBEDTLS_SSL_CLI_C
-run_test    "TLS 1.3 m->O HRR both with middlebox compat support" \
-            "$O_NEXT_SRV -msg -tls1_3 -groups P-384 -num_tickets 0 -no_resume_ephemeral -no_cache" \
-            "$P_CLI debug_level=4 curves=secp256r1,secp384r1" \
-            0 \
-            -c "Protocol is TLSv1.3" \
-            -c "Ignore ChangeCipherSpec in TLS 1.3 compatibility mode"
-
-requires_gnutls_tls1_3
-requires_gnutls_next_no_ticket
-requires_gnutls_next_disable_tls13_compat
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-requires_config_disabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
-requires_config_enabled MBEDTLS_DEBUG_C
-requires_config_enabled MBEDTLS_SSL_CLI_C
-run_test    "TLS 1.3 m->G HRR both peers do not support middlebox compatibility" \
-            "$G_NEXT_SRV --priority=NORMAL:-GROUP-ALL:+GROUP-SECP384R1:-VERS-ALL:+VERS-TLS1.3:%NO_TICKETS:%DISABLE_TLS13_COMPAT_MODE --disable-client-cert" \
-            "$P_CLI debug_level=4 curves=secp256r1,secp384r1" \
-            0 \
-            -c "Protocol is TLSv1.3" \
-            -c "received HelloRetryRequest message" \
-            -C "ChangeCipherSpec invalid in TLS 1.3 without compatibility mode" \
-            -C "Ignore ChangeCipherSpec in TLS 1.3 compatibility mode"
-
-requires_gnutls_tls1_3
-requires_gnutls_next_no_ticket
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-requires_config_disabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
-requires_config_enabled MBEDTLS_DEBUG_C
-requires_config_enabled MBEDTLS_SSL_CLI_C
-run_test    "TLS 1.3 m->G HRR server with middlebox compat support, not client" \
-            "$G_NEXT_SRV --priority=NORMAL:-GROUP-ALL:+GROUP-SECP384R1:-VERS-ALL:+VERS-TLS1.3:%NO_TICKETS --disable-client-cert" \
-            "$P_CLI debug_level=4 curves=secp256r1,secp384r1" \
-            1 \
-            -c "received HelloRetryRequest message" \
-            -c "ChangeCipherSpec invalid in TLS 1.3 without compatibility mode"
-
-requires_gnutls_tls1_3
-requires_gnutls_next_no_ticket
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
-requires_config_enabled MBEDTLS_DEBUG_C
-requires_config_enabled MBEDTLS_SSL_CLI_C
-run_test    "TLS 1.3 m->G HRR both with middlebox compat support" \
-            "$G_NEXT_SRV --priority=NORMAL:-GROUP-ALL:+GROUP-SECP384R1:-VERS-ALL:+VERS-TLS1.3:+CIPHER-ALL:%NO_TICKETS --disable-client-cert" \
-            "$P_CLI debug_level=4 curves=secp256r1,secp384r1" \
-            0 \
-            -c "Protocol is TLSv1.3" \
-            -c "Ignore ChangeCipherSpec in TLS 1.3 compatibility mode"
-
-requires_openssl_tls1_3
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-requires_config_disabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
-requires_config_enabled MBEDTLS_DEBUG_C
-requires_config_enabled MBEDTLS_SSL_SRV_C
-run_test    "TLS 1.3 O->m HRR both peers do not support middlebox compatibility" \
-            "$P_SRV debug_level=4 crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13 curves=secp384r1 tickets=0" \
-            "$O_NEXT_CLI -msg -debug -groups P-256:P-384 -no_middlebox" \
-            0 \
-            -s "Protocol is TLSv1.3" \
-            -S "tls13 server state: MBEDTLS_SSL_SERVER_CCS_AFTER_HELLO_RETRY_REQUEST" \
-            -C "14 03 03 00 01"
-
-requires_openssl_tls1_3
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
-requires_config_enabled MBEDTLS_DEBUG_C
-requires_config_enabled MBEDTLS_SSL_SRV_C
-run_test    "TLS 1.3 O->m HRR server with middlebox compat support, not client" \
-            "$P_SRV debug_level=4 crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13 curves=secp384r1 tickets=0" \
-            "$O_NEXT_CLI -msg -debug -groups P-256:P-384 -no_middlebox" \
-            0 \
-            -s "Protocol is TLSv1.3" \
-            -s "tls13 server state: MBEDTLS_SSL_SERVER_CCS_AFTER_HELLO_RETRY_REQUEST" \
-
-requires_openssl_tls1_3
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
-requires_config_enabled MBEDTLS_DEBUG_C
-requires_config_enabled MBEDTLS_SSL_SRV_C
-run_test    "TLS 1.3 O->m HRR both with middlebox compat support" \
-            "$P_SRV debug_level=4 crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13 curves=secp384r1 tickets=0" \
-            "$O_NEXT_CLI -msg -debug -groups P-256:P-384" \
-            0 \
-            -s "Protocol is TLSv1.3" \
-            -s "tls13 server state: MBEDTLS_SSL_SERVER_CCS_AFTER_HELLO_RETRY_REQUEST" \
-            -c "14 03 03 00 01"
-
-requires_gnutls_tls1_3
-requires_gnutls_next_no_ticket
-requires_gnutls_next_disable_tls13_compat
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-requires_config_disabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
-requires_config_enabled MBEDTLS_DEBUG_C
-requires_config_enabled MBEDTLS_SSL_SRV_C
-run_test    "TLS 1.3 G->m HRR both peers do not support middlebox compatibility" \
-            "$P_SRV debug_level=4 crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13 curves=secp384r1 tickets=0" \
-            "$G_NEXT_CLI localhost --priority=NORMAL:-GROUP-ALL:+GROUP-SECP256R1:+GROUP-SECP384R1:%NO_TICKETS:%DISABLE_TLS13_COMPAT_MODE -V" \
-            0 \
-            -s "Protocol is TLSv1.3" \
-            -S "tls13 server state: MBEDTLS_SSL_SERVER_CCS_AFTER_HELLO_RETRY_REQUEST" \
-            -C "SSL 3.3 ChangeCipherSpec packet received"
-
-requires_gnutls_tls1_3
-requires_gnutls_next_no_ticket
-requires_gnutls_next_disable_tls13_compat
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
-requires_config_enabled MBEDTLS_DEBUG_C
-requires_config_enabled MBEDTLS_SSL_SRV_C
-run_test    "TLS 1.3 G->m HRR server with middlebox compat support, not client" \
-            "$P_SRV debug_level=4 crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13 curves=secp384r1 tickets=0" \
-            "$G_NEXT_CLI localhost --debug=10 --priority=NORMAL:-GROUP-ALL:+GROUP-SECP256R1:+GROUP-SECP384R1:%NO_TICKETS:%DISABLE_TLS13_COMPAT_MODE -V" \
-            0 \
-            -s "Protocol is TLSv1.3" \
-            -s "tls13 server state: MBEDTLS_SSL_SERVER_CCS_AFTER_HELLO_RETRY_REQUEST" \
-            -c "SSL 3.3 ChangeCipherSpec packet received" \
-            -c "discarding change cipher spec in TLS1.3"
-
-requires_gnutls_tls1_3
-requires_gnutls_next_no_ticket
-requires_gnutls_next_disable_tls13_compat
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
-requires_config_enabled MBEDTLS_DEBUG_C
-requires_config_enabled MBEDTLS_SSL_SRV_C
-run_test    "TLS 1.3 G->m HRR both with middlebox compat support" \
-            "$P_SRV debug_level=4 crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13 curves=secp384r1 tickets=0" \
-            "$G_NEXT_CLI localhost --debug=10 --priority=NORMAL:-GROUP-ALL:+GROUP-SECP256R1:+GROUP-SECP384R1:%NO_TICKETS:%DISABLE_TLS13_COMPAT_MODE -V" \
-            0 \
-            -s "Protocol is TLSv1.3" \
-            -s "tls13 server state: MBEDTLS_SSL_SERVER_CCS_AFTER_HELLO_RETRY_REQUEST" \
-            -c "SSL 3.3 ChangeCipherSpec packet received"
 
 # Test heap memory usage after handshake
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
