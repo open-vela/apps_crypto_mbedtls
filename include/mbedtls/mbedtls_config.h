@@ -1184,8 +1184,9 @@
  *
  * Requires: MBEDTLS_PSA_CRYPTO_C
  *
- * \warning This interface is experimental and may change or be removed
- * without notice.
+ * \warning This interface is experimental. We intend to maintain backward
+ *          compatibility with application code that relies on drivers,
+ *          but the driver interfaces may change without notice.
  */
 //#define MBEDTLS_PSA_CRYPTO_DRIVERS
 
@@ -1444,6 +1445,8 @@
  *       still ensure that certificates do not change during renegotiation,
  *       for example by keeping a hash of the peer's certificate.
  *
+ * \note This option is required if MBEDTLS_SSL_PROTO_TLS1_3 is set.
+ *
  * Comment this macro to disable storing the peer's certificate
  * after the handshake.
  */
@@ -1501,6 +1504,8 @@
  *       pre-shared keys are not supported.
  *       See docs/architecture/tls13-support.md for a description of the TLS
  *       1.3 support that this option enables.
+ *
+ * Requires: MBEDTLS_SSL_KEEP_PEER_CERTIFICATE
  *
  * Uncomment this macro to enable the support for TLS 1.3.
  *
@@ -2686,11 +2691,11 @@
 /**
  * \def MBEDTLS_PSA_CRYPTO_SE_C
  *
- * Enable secure element support in the Platform Security Architecture
+ * Enable dynamic secure element support in the Platform Security Architecture
  * cryptography API.
  *
- * \warning This feature is not yet suitable for production. It is provided
- *          for API evaluation and testing purposes only.
+ * \deprecated This feature is deprecated. Please switch to the driver
+ *             interface enabled by #MBEDTLS_PSA_CRYPTO_DRIVERS.
  *
  * Module:  library/psa_crypto_se.c
  *
