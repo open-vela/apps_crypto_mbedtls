@@ -324,9 +324,6 @@ def crypto_adapter(adapter):
         return adapter(name, active, section)
     return continuation
 
-DEPRECATED = frozenset([
-    'MBEDTLS_PSA_CRYPTO_SE_C',
-])
 def no_deprecated_adapter(adapter):
     """Modify an adapter to disable deprecated symbols.
 
@@ -337,8 +334,6 @@ def no_deprecated_adapter(adapter):
     def continuation(name, active, section):
         if name == 'MBEDTLS_DEPRECATED_REMOVED':
             return True
-        if name in DEPRECATED:
-            return False
         if adapter is None:
             return active
         return adapter(name, active, section)
@@ -423,7 +418,7 @@ class ConfigFile(Config):
         value = setting.value
         if value is None:
             value = ''
-        # Normally the whitespace to separate the symbol name from the
+        # Normally the whitespace to separte the symbol name from the
         # value is part of middle, and there's no whitespace for a symbol
         # with no value. But if a symbol has been changed from having a
         # value to not having one, the whitespace is wrong, so fix it.
