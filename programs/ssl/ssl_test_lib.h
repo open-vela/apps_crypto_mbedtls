@@ -35,7 +35,6 @@
 #define mbedtls_fprintf    fprintf
 #define mbedtls_snprintf   snprintf
 #define mbedtls_exit            exit
-#define mbedtls_setbuf     setbuf
 #define MBEDTLS_EXIT_SUCCESS    EXIT_SUCCESS
 #define MBEDTLS_EXIT_FAILURE    EXIT_FAILURE
 #endif
@@ -242,7 +241,7 @@ int rng_get( void *p_rng, unsigned char *output, size_t output_len );
 int key_opaque_alg_parse( const char *arg, const char **alg1, const char **alg2 );
 
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
-/** Parse given opaque key algoritms to obtain psa algs and usage
+/** Parse given opaque key algorithms to obtain psa algs and usage
  *  that will be passed to mbedtls_pk_wrap_as_opaque().
  *
  *
@@ -279,7 +278,7 @@ int ca_callback( void *data, mbedtls_x509_crt const *child,
 
 /*
  * Test recv/send functions that make sure each try returns
- * WANT_READ/WANT_WRITE at least once before sucesseding
+ * WANT_READ/WANT_WRITE at least once before succeeding
  */
 int delayed_recv( void *ctx, unsigned char *buf, size_t len );
 int delayed_send( void *ctx, const unsigned char *buf, size_t len );
