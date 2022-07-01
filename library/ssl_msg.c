@@ -1234,7 +1234,7 @@ int mbedtls_ssl_decrypt_buf( mbedtls_ssl_context const *ssl,
                                add_data, add_data_len );
 
         /* Because of the check above, we know that there are
-         * explicit_iv_len Bytes preceding data, and taglen
+         * explicit_iv_len Bytes preceeding data, and taglen
          * bytes following data + data_len. This justifies
          * the debug message and the invocation of
          * mbedtls_cipher_auth_decrypt_ext() below. */
@@ -1634,8 +1634,8 @@ int mbedtls_ssl_decrypt_buf( mbedtls_ssl_context const *ssl,
 #if defined(MBEDTLS_SSL_SOME_SUITES_USE_MAC)
     if( auth_done == 0 )
     {
-        unsigned char mac_expect[MBEDTLS_SSL_MAC_ADD] = { 0 };
-        unsigned char mac_peer[MBEDTLS_SSL_MAC_ADD] = { 0 };
+        unsigned char mac_expect[MBEDTLS_SSL_MAC_ADD];
+        unsigned char mac_peer[MBEDTLS_SSL_MAC_ADD];
 
         /* If the initial value of padlen was such that
          * data_len < maclen + padlen + 1, then padlen
@@ -2404,7 +2404,7 @@ int mbedtls_ssl_start_handshake_msg( mbedtls_ssl_context *ssl, unsigned hs_type,
                                      unsigned char **buf, size_t *buf_len )
 {
     /*
-     * Reserve 4 bytes for handshake header. ( Section 4,RFC 8446 )
+     * Reserve 4 bytes for hanshake header. ( Section 4,RFC 8446 )
      *    ...
      *    HandshakeType msg_type;
      *    uint24 length;
@@ -2720,7 +2720,7 @@ int mbedtls_ssl_write_record( mbedtls_ssl_context *ssl, int force_flush )
             if( ++ssl->cur_out_ctr[i - 1] != 0 )
                 break;
 
-        /* The loop goes to its end if the counter is wrapping */
+        /* The loop goes to its end iff the counter is wrapping */
         if( i == mbedtls_ssl_ep_len( ssl ) )
         {
             MBEDTLS_SSL_DEBUG_MSG( 1, ( "outgoing message counter would wrap" ) );
