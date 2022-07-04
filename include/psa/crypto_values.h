@@ -12,6 +12,11 @@
  * designations of cryptographic algorithms, and error codes returned by
  * the library.
  *
+ * Note that many of the constants defined in this file are embedded in
+ * the persistent key store, as part of key metadata (including usage
+ * policies). As a consequence, they must not be changed (unless the storage
+ * format version changes).
+ *
  * This header file only defines preprocessor macros.
  */
 /*
@@ -40,6 +45,18 @@
  */
 
 /* PSA error codes */
+
+/* Error codes are standardized across PSA domains (framework, crypto, storage,
+ * etc.). Do not change the values in this section or even the expansions
+ * of each macro: it must be possible to `#include` both this header
+ * and some other PSA component's headers in the same C source,
+ * which will lead to duplicate definitions of the `PSA_SUCCESS` and
+ * `PSA_ERROR_xxx` macros, which is ok if and only if the macros expand
+ * to the same sequence of tokens.
+ *
+ * If you must add a new
+ * value, check with the Arm PSA framework group to pick one that other
+ * domains aren't already using. */
 
 /** The action was completed successfully. */
 #define PSA_SUCCESS ((psa_status_t)0)
@@ -315,6 +332,12 @@
 
 /** \defgroup crypto_types Key and algorithm types
  * @{
+ */
+
+/* Note that key type values, including ECC family and DH group values, are
+ * embedded in the persistent key store, as part of key metadata. As a
+ * consequence, they must not be changed (unless the storage format version
+ * changes).
  */
 
 /** An invalid key type value.
@@ -718,6 +741,11 @@
     (((type) & PSA_KEY_TYPE_CATEGORY_MASK) == PSA_KEY_TYPE_CATEGORY_SYMMETRIC ? \
      1u << PSA_GET_KEY_TYPE_BLOCK_SIZE_EXPONENT(type) :                         \
      0u)
+
+/* Note that algorithm values are embedded in the persistent key store,
+ * as part of key metadata. As a consequence, they must not be changed
+ * (unless the storage format version changes).
+ */
 
 /** Vendor-defined algorithm flag.
  *
@@ -1741,6 +1769,12 @@
  * You may pass #PSA_KEY_DERIVATION_INPUT_INFO at any time after steup and before
  * starting to generate output.
  *
+ *  \warning  HKDF processes the salt as follows: first hash it with hash_alg
+ *  if the salt is longer than the block size of the hash algorithm; then
+ *  pad with null bytes up to the block size. As a result, it is possible
+ *  for distinct salt inputs to result in the same outputs. To ensure
+ *  unique outputs, it is recommended to use a fixed length for salt values.
+ *
  * \param hash_alg      A hash algorithm (\c PSA_ALG_XXX value such that
  *                      #PSA_ALG_IS_HASH(\p hash_alg) is true).
  *
@@ -1765,6 +1799,112 @@
     (((alg) & ~PSA_ALG_HASH_MASK) == PSA_ALG_HKDF_BASE)
 #define PSA_ALG_HKDF_GET_HASH(hkdf_alg)                         \
     (PSA_ALG_CATEGORY_HASH | ((hkdf_alg) & PSA_ALG_HASH_MASK))
+
+#define PSA_ALG_HKDF_EXTRACT_BASE                       ((psa_algorithm_t)0x08000400)
+/** Macro to build an HKDF-Extract algorithm.
+ *
+ * For example, `PSA_ALG_HKDF_EXTRACT(PSA_ALG_SHA256)` is
+ * HKDF-Extract using HMAC-SHA-256.
+ *
+ * This key derivation algorithm uses the following inputs:
+ *  - PSA_KEY_DERIVATION_INPUT_SALT is the salt.
+ *  - PSA_KEY_DERIVATION_INPUT_SECRET is the input keying material used in the
+ *    "extract" step.
+ * The inputs are mandatory and must be passed in the order above.
+ * Each input may only be passed once.
+ *
+ *  \warning HKDF-Extract is not meant to be used on its own. PSA_ALG_HKDF
+ *  should be used instead if possible. PSA_ALG_HKDF_EXTRACT is provided
+ *  as a separate algorithm for the sake of protocols that use it as a
+ *  building block. It may also be a slight performance optimization
+ *  in applications that use HKDF with the same salt and key but many
+ *  different info strings.
+ *
+ *  \warning  HKDF processes the salt as follows: first hash it with hash_alg
+ *  if the salt is longer than the block size of the hash algorithm; then
+ *  pad with null bytes up to the block size. As a result, it is possible
+ *  for distinct salt inputs to result in the same outputs. To ensure
+ *  unique outputs, it is recommended to use a fixed length for salt values.
+ *
+ * \param hash_alg      A hash algorithm (\c PSA_ALG_XXX value such that
+ *                      #PSA_ALG_IS_HASH(\p hash_alg) is true).
+ *
+ * \return              The corresponding HKDF-Extract algorithm.
+ * \return              Unspecified if \p hash_alg is not a supported
+ *                      hash algorithm.
+ */
+#define PSA_ALG_HKDF_EXTRACT(hash_alg)                                  \
+    (PSA_ALG_HKDF_EXTRACT_BASE | ((hash_alg) & PSA_ALG_HASH_MASK))
+/** Whether the specified algorithm is an HKDF-Extract algorithm.
+ *
+ * HKDF-Extract is a family of key derivation algorithms that are based
+ * on a hash function and the HMAC construction.
+ *
+ * \param alg An algorithm identifier (value of type #psa_algorithm_t).
+ *
+ * \return 1 if \c alg is an HKDF-Extract algorithm, 0 otherwise.
+ *         This macro may return either 0 or 1 if \c alg is not a supported
+ *         key derivation algorithm identifier.
+ */
+#define PSA_ALG_IS_HKDF_EXTRACT(alg)                            \
+    (((alg) & ~PSA_ALG_HASH_MASK) == PSA_ALG_HKDF_EXTRACT_BASE)
+
+#define PSA_ALG_HKDF_EXPAND_BASE                       ((psa_algorithm_t)0x08000500)
+/** Macro to build an HKDF-Expand algorithm.
+ *
+ * For example, `PSA_ALG_HKDF_EXPAND(PSA_ALG_SHA256)` is
+ * HKDF-Expand using HMAC-SHA-256.
+ *
+ * This key derivation algorithm uses the following inputs:
+ *  - PSA_KEY_DERIVATION_INPUT_SECRET is the pseudorandom key (PRK).
+ *  - PSA_KEY_DERIVATION_INPUT_INFO is the info string.
+ *
+ *  The inputs are mandatory and must be passed in the order above.
+ *  Each input may only be passed once.
+ *
+ *  \warning HKDF-Expand is not meant to be used on its own. `PSA_ALG_HKDF`
+ *  should be used instead if possible. `PSA_ALG_HKDF_EXPAND` is provided as
+ *  a separate algorithm for the sake of protocols that use it as a building
+ *  block. It may also be a slight performance optimization in applications
+ *  that use HKDF with the same salt and key but many different info strings.
+ *
+ * \param hash_alg      A hash algorithm (\c PSA_ALG_XXX value such that
+ *                      #PSA_ALG_IS_HASH(\p hash_alg) is true).
+ *
+ * \return              The corresponding HKDF-Expand algorithm.
+ * \return              Unspecified if \p hash_alg is not a supported
+ *                      hash algorithm.
+ */
+#define PSA_ALG_HKDF_EXPAND(hash_alg)                                  \
+    (PSA_ALG_HKDF_EXPAND_BASE | ((hash_alg) & PSA_ALG_HASH_MASK))
+/** Whether the specified algorithm is an HKDF-Expand algorithm.
+ *
+ * HKDF-Expand is a family of key derivation algorithms that are based
+ * on a hash function and the HMAC construction.
+ *
+ * \param alg An algorithm identifier (value of type #psa_algorithm_t).
+ *
+ * \return 1 if \c alg is an HKDF-Expand algorithm, 0 otherwise.
+ *         This macro may return either 0 or 1 if \c alg is not a supported
+ *         key derivation algorithm identifier.
+ */
+#define PSA_ALG_IS_HKDF_EXPAND(alg)                            \
+    (((alg) & ~PSA_ALG_HASH_MASK) == PSA_ALG_HKDF_EXPAND_BASE)
+
+/** Whether the specified algorithm is an HKDF or HKDF-Extract or
+ *  HKDF-Expand algorithm.
+ *
+ *
+ * \param alg An algorithm identifier (value of type #psa_algorithm_t).
+ *
+ * \return 1 if \c alg is any HKDF type algorithm, 0 otherwise.
+ *         This macro may return either 0 or 1 if \c alg is not a supported
+ *         key derivation algorithm identifier.
+ */
+#define PSA_ALG_IS_ANY_HKDF(alg)                                   \
+    (((alg) & ~PSA_ALG_HASH_MASK) == PSA_ALG_HKDF_BASE ||          \
+     ((alg) & ~PSA_ALG_HASH_MASK) == PSA_ALG_HKDF_EXTRACT_BASE ||  \
+     ((alg) & ~PSA_ALG_HASH_MASK) == PSA_ALG_HKDF_EXPAND_BASE)
 
 #define PSA_ALG_TLS12_PRF_BASE                  ((psa_algorithm_t)0x08000200)
 /** Macro to build a TLS-1.2 PRF algorithm.
@@ -2095,6 +2235,11 @@
  * @{
  */
 
+/* Note that location and persistence level values are embedded in the
+ * persistent key store, as part of key metadata. As a consequence, they
+ * must not be changed (unless the storage format version changes).
+ */
+
 /** The default lifetime for volatile keys.
  *
  * A volatile key only exists as long as the identifier to it is not destroyed.
@@ -2210,6 +2355,11 @@
 
 #define PSA_KEY_LOCATION_VENDOR_FLAG            ((psa_key_location_t)0x800000)
 
+/* Note that key identifier values are embedded in the
+ * persistent key store, as part of key metadata. As a consequence, they
+ * must not be changed (unless the storage format version changes).
+ */
+
 /** The null key identifier.
  */
 #define PSA_KEY_ID_NULL                         ((psa_key_id_t)0)
@@ -2319,6 +2469,11 @@ static inline int mbedtls_svc_key_id_is_null( mbedtls_svc_key_id_t key )
 
 /** \defgroup policy Key policies
  * @{
+ */
+
+/* Note that key usage flags are embedded in the
+ * persistent key store, as part of key metadata. As a consequence, they
+ * must not be changed (unless the storage format version changes).
  */
 
 /** Whether the key may be exported.
@@ -2446,6 +2601,9 @@ static inline int mbedtls_svc_key_id_is_null( mbedtls_svc_key_id_t key )
 /** \defgroup derivation Key derivation
  * @{
  */
+
+/* Key input steps are not embedded in the persistent storage, so you can
+ * change them if needed: it's only an ABI change. */
 
 /** A secret input for key derivation.
  *
