@@ -31,6 +31,7 @@
 #include <string.h>
 
 #include "ssl_misc.h"
+#include "ssl_tls13_invasive.h"
 #include "ssl_tls13_keys.h"
 #include "ssl_debug_helpers.h"
 
@@ -156,6 +157,7 @@ static void ssl_tls13_create_verify_structure( const unsigned char *transcript_h
     *verify_buffer_len = idx;
 }
 
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_parse_certificate_verify( mbedtls_ssl_context *ssl,
                                                const unsigned char *buf,
                                                const unsigned char *end,
@@ -256,9 +258,13 @@ static int ssl_tls13_parse_certificate_verify( mbedtls_ssl_context *ssl,
 #if defined(MBEDTLS_X509_RSASSA_PSS_SUPPORT)
     if( sig_alg == MBEDTLS_PK_RSASSA_PSS )
     {
+        const mbedtls_md_info_t* md_info;
         rsassa_pss_options.mgf1_hash_id = md_alg;
-
-        rsassa_pss_options.expected_salt_len = PSA_HASH_LENGTH( hash_alg );
+        if( ( md_info = mbedtls_md_info_from_type( md_alg ) ) == NULL )
+        {
+            return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
+        }
+        rsassa_pss_options.expected_salt_len = mbedtls_md_get_size( md_info );
         options = (const void*) &rsassa_pss_options;
     }
 #endif /* MBEDTLS_X509_RSASSA_PSS_SUPPORT */
@@ -385,9 +391,11 @@ cleanup:
  */
 
 /* Parse certificate chain send by the server. */
-static int ssl_tls13_parse_certificate( mbedtls_ssl_context *ssl,
-                                        const unsigned char *buf,
-                                        const unsigned char *end )
+MBEDTLS_CHECK_RETURN_CRITICAL
+MBEDTLS_STATIC_TESTABLE
+int mbedtls_ssl_tls13_parse_certificate( mbedtls_ssl_context *ssl,
+                                         const unsigned char *buf,
+                                         const unsigned char *end )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     size_t certificate_request_context_len = 0;
@@ -438,6 +446,7 @@ static int ssl_tls13_parse_certificate( mbedtls_ssl_context *ssl,
 
     mbedtls_x509_crt_init( ssl->session_negotiate->peer_cert );
 
+    MBEDTLS_SSL_CHK_BUF_READ_PTR( p, end, certificate_list_len );
     certificate_list_end = p + certificate_list_len;
     while( p < certificate_list_end )
     {
@@ -517,9 +526,11 @@ exit:
     return( ret );
 }
 #else
-static int ssl_tls13_parse_certificate( mbedtls_ssl_context *ssl,
-                                        const unsigned char *buf,
-                                        const unsigned char *end )
+MBEDTLS_CHECK_RETURN_CRITICAL
+MBEDTLS_STATIC_TESTABLE
+int mbedtls_ssl_tls13_parse_certificate( mbedtls_ssl_context *ssl,
+                                         const unsigned char *buf,
+                                         const unsigned char *end )
 {
     ((void) ssl);
     ((void) buf);
@@ -532,26 +543,22 @@ static int ssl_tls13_parse_certificate( mbedtls_ssl_context *ssl,
 #if defined(MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED)
 #if defined(MBEDTLS_SSL_KEEP_PEER_CERTIFICATE)
 /* Validate certificate chain sent by the server. */
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_validate_certificate( mbedtls_ssl_context *ssl )
 {
     int ret = 0;
     int authmode = MBEDTLS_SSL_VERIFY_REQUIRED;
     mbedtls_x509_crt *ca_chain;
     mbedtls_x509_crl *ca_crl;
+    const char *ext_oid;
+    size_t ext_len;
     uint32_t verify_result = 0;
 
     /* If SNI was used, overwrite authentication mode
      * from the configuration. */
 #if defined(MBEDTLS_SSL_SRV_C)
     if( ssl->conf->endpoint == MBEDTLS_SSL_IS_SERVER )
-    {
-#if defined(MBEDTLS_SSL_SERVER_NAME_INDICATION)
-        if( ssl->handshake->sni_authmode != MBEDTLS_SSL_VERIFY_UNSET )
-            authmode = ssl->handshake->sni_authmode;
-        else
-#endif
-            authmode = ssl->conf->authmode;
-    }
+        authmode = ssl->conf->authmode;
 #endif
 
     /*
@@ -563,7 +570,7 @@ static int ssl_tls13_validate_certificate( mbedtls_ssl_context *ssl )
      */
     if( ssl->session_negotiate->peer_cert == NULL )
     {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "peer has no certificate" ) );
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "peer has not sent a certificate" ) );
 
 #if defined(MBEDTLS_SSL_SRV_C)
         if( ssl->conf->endpoint == MBEDTLS_SSL_IS_SERVER )
@@ -626,12 +633,25 @@ static int ssl_tls13_validate_certificate( mbedtls_ssl_context *ssl )
     /*
      * Secondary checks: always done, but change 'ret' only if it was 0
      */
-    if( mbedtls_ssl_check_cert_usage( ssl->session_negotiate->peer_cert,
-                                      ssl->handshake->ciphersuite_info,
-                                      !ssl->conf->endpoint,
-                                      &verify_result ) != 0 )
+    if( ssl->conf->endpoint == MBEDTLS_SSL_IS_CLIENT )
     {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad certificate ( usage extensions )" ) );
+        ext_oid = MBEDTLS_OID_SERVER_AUTH;
+        ext_len = MBEDTLS_OID_SIZE( MBEDTLS_OID_SERVER_AUTH );
+    }
+    else
+    {
+        ext_oid = MBEDTLS_OID_CLIENT_AUTH;
+        ext_len = MBEDTLS_OID_SIZE( MBEDTLS_OID_CLIENT_AUTH );
+    }
+
+    if( ( mbedtls_x509_crt_check_key_usage(
+              ssl->session_negotiate->peer_cert,
+              MBEDTLS_X509_KU_DIGITAL_SIGNATURE ) != 0 ) ||
+        ( mbedtls_x509_crt_check_extended_key_usage(
+              ssl->session_negotiate->peer_cert,
+              ext_oid, ext_len ) != 0 ) )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad certificate (usage extensions)" ) );
         if( ret == 0 )
             ret = MBEDTLS_ERR_SSL_BAD_CERTIFICATE;
     }
@@ -641,7 +661,8 @@ static int ssl_tls13_validate_certificate( mbedtls_ssl_context *ssl )
      * with details encoded in the verification flags. All other kinds
      * of error codes, including those from the user provided f_vrfy
      * functions, are treated as fatal and lead to a failure of
-     * ssl_tls13_parse_certificate even if verification was optional. */
+     * mbedtls_ssl_tls13_parse_certificate even if verification was optional.
+     */
     if( authmode == MBEDTLS_SSL_VERIFY_OPTIONAL &&
         ( ret == MBEDTLS_ERR_X509_CERT_VERIFY_FAILED ||
           ret == MBEDTLS_ERR_SSL_BAD_CERTIFICATE ) )
@@ -696,6 +717,7 @@ static int ssl_tls13_validate_certificate( mbedtls_ssl_context *ssl )
     return( ret );
 }
 #else /* MBEDTLS_SSL_KEEP_PEER_CERTIFICATE */
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_validate_certificate( mbedtls_ssl_context *ssl )
 {
     ((void) ssl);
@@ -718,8 +740,8 @@ int mbedtls_ssl_tls13_process_certificate( mbedtls_ssl_context *ssl )
                           &buf, &buf_len ) );
 
     /* Parse the certificate chain sent by the peer. */
-    MBEDTLS_SSL_PROC_CHK( ssl_tls13_parse_certificate( ssl, buf,
-                                                       buf + buf_len ) );
+    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_tls13_parse_certificate( ssl, buf,
+                                                               buf + buf_len ) );
     /* Validate the certificate chain and set the verification results. */
     MBEDTLS_SSL_PROC_CHK( ssl_tls13_validate_certificate( ssl ) );
 
@@ -757,6 +779,7 @@ cleanup:
  *        CertificateEntry certificate_list<0..2^24-1>;
  *    } Certificate;
  */
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_write_certificate_body( mbedtls_ssl_context *ssl,
                                              unsigned char *buf,
                                              unsigned char *end,
@@ -808,7 +831,7 @@ static int ssl_tls13_write_certificate_body( mbedtls_ssl_context *ssl,
         /* Currently, we don't have any certificate extensions defined.
          * Hence, we are sending an empty extension with length zero.
          */
-        MBEDTLS_PUT_UINT16_BE( 0, p, 0 );
+        MBEDTLS_PUT_UINT24_BE( 0, p, 0 );
         p += 2;
     }
 
@@ -850,87 +873,125 @@ cleanup:
 /*
  * STATE HANDLING: Output Certificate Verify
  */
-
-int mbedtls_ssl_tls13_check_sig_alg_cert_key_match( uint16_t sig_alg,
-                                                    mbedtls_pk_context *key )
-{
-    mbedtls_pk_type_t pk_type = mbedtls_ssl_sig_from_pk( key );
-    size_t key_size = mbedtls_pk_get_bitlen( key );
-
-    switch( pk_type )
-    {
-        case MBEDTLS_SSL_SIG_ECDSA:
-            switch( key_size )
-            {
-                case 256:
-                    return(
-                        sig_alg == MBEDTLS_TLS1_3_SIG_ECDSA_SECP256R1_SHA256 );
-
-                case 384:
-                    return(
-                        sig_alg == MBEDTLS_TLS1_3_SIG_ECDSA_SECP384R1_SHA384 );
-
-                case 521:
-                    return(
-                        sig_alg == MBEDTLS_TLS1_3_SIG_ECDSA_SECP521R1_SHA512 );
-                default:
-                    break;
-            }
-            break;
-
-        case MBEDTLS_SSL_SIG_RSA:
-            switch( sig_alg )
-            {
-                case MBEDTLS_TLS1_3_SIG_RSA_PSS_RSAE_SHA256:
-                    return( key_size <= 3072 );
-
-                case MBEDTLS_TLS1_3_SIG_RSA_PSS_RSAE_SHA384:
-                    return( key_size <= 7680 );
-
-                case MBEDTLS_TLS1_3_SIG_RSA_PSS_RSAE_SHA512:
-                    return( 1 );
-
-                default:
-                    break;
-            }
-            break;
-
-        default:
-            break;
-    }
-
-    return( 0 );
-}
-
-static int ssl_tls13_select_sig_alg_for_certificate_verify(
-                                          mbedtls_ssl_context *ssl,
+MBEDTLS_CHECK_RETURN_CRITICAL
+static int ssl_tls13_get_sig_alg_from_pk( mbedtls_ssl_context *ssl,
                                           mbedtls_pk_context *own_key,
                                           uint16_t *algorithm )
 {
-    uint16_t *sig_alg = ssl->handshake->received_sig_algs;
-
+    mbedtls_pk_type_t sig = mbedtls_ssl_sig_from_pk( own_key );
+    /* Determine the size of the key */
+    size_t own_key_size = mbedtls_pk_get_bitlen( own_key );
     *algorithm = MBEDTLS_TLS1_3_SIG_NONE;
-    for( ; *sig_alg != MBEDTLS_TLS1_3_SIG_NONE ; sig_alg++ )
+    ((void) own_key_size);
+
+    switch( sig )
     {
-        if( mbedtls_ssl_sig_alg_is_offered( ssl, *sig_alg ) &&
-            mbedtls_ssl_tls13_sig_alg_for_cert_verify_is_supported( *sig_alg ) &&
-            mbedtls_ssl_tls13_check_sig_alg_cert_key_match( *sig_alg, own_key ) )
-        {
-            MBEDTLS_SSL_DEBUG_MSG( 3,
-                                   ( "select_sig_alg_for_certificate_verify:"
-                                     "selected signature algorithm %s [%04x]",
-                                     mbedtls_ssl_sig_alg_to_str( *sig_alg ),
-                                     *sig_alg ) );
-            *algorithm = *sig_alg;
-            return( 0 );
-        }
+#if defined(MBEDTLS_ECDSA_C)
+        case MBEDTLS_SSL_SIG_ECDSA:
+            switch( own_key_size )
+            {
+                case 256:
+                    *algorithm = MBEDTLS_TLS1_3_SIG_ECDSA_SECP256R1_SHA256;
+                    return( 0 );
+                case 384:
+                    *algorithm = MBEDTLS_TLS1_3_SIG_ECDSA_SECP384R1_SHA384;
+                    return( 0 );
+                case 521:
+                    *algorithm = MBEDTLS_TLS1_3_SIG_ECDSA_SECP521R1_SHA512;
+                    return( 0 );
+                default:
+                    MBEDTLS_SSL_DEBUG_MSG( 3,
+                                           ( "unknown key size: %"
+                                             MBEDTLS_PRINTF_SIZET " bits",
+                                             own_key_size ) );
+                    break;
+            }
+            break;
+#endif /* MBEDTLS_ECDSA_C */
+
+#if defined(MBEDTLS_RSA_C)
+        case MBEDTLS_SSL_SIG_RSA:
+#if defined(MBEDTLS_PKCS1_V21)
+#if defined(MBEDTLS_SHA256_C)
+            if( own_key_size <= 2048 &&
+                mbedtls_ssl_sig_alg_is_received( ssl,
+                                    MBEDTLS_TLS1_3_SIG_RSA_PSS_RSAE_SHA256 ) )
+            {
+                *algorithm = MBEDTLS_TLS1_3_SIG_RSA_PSS_RSAE_SHA256;
+                return( 0 );
+            }
+            else
+#endif /* MBEDTLS_SHA256_C */
+#if defined(MBEDTLS_SHA384_C)
+            if( own_key_size <= 3072 &&
+                mbedtls_ssl_sig_alg_is_received( ssl,
+                                    MBEDTLS_TLS1_3_SIG_RSA_PSS_RSAE_SHA384 ) )
+            {
+                *algorithm = MBEDTLS_TLS1_3_SIG_RSA_PSS_RSAE_SHA384;
+                return( 0 );
+            }
+            else
+#endif /* MBEDTLS_SHA384_C */
+#if defined(MBEDTLS_SHA512_C)
+            if( own_key_size <= 4096 &&
+                mbedtls_ssl_sig_alg_is_received( ssl,
+                                    MBEDTLS_TLS1_3_SIG_RSA_PSS_RSAE_SHA512 ) )
+            {
+                *algorithm = MBEDTLS_TLS1_3_SIG_RSA_PSS_RSAE_SHA512;
+                return( 0 );
+            }
+            else
+#endif /* MBEDTLS_SHA512_C */
+#endif /* MBEDTLS_PKCS1_V21 */
+#if defined(MBEDTLS_PKCS1_V15)
+#if defined(MBEDTLS_SHA256_C)
+            if( own_key_size <= 2048 &&
+                mbedtls_ssl_sig_alg_is_received( ssl,
+                                    MBEDTLS_TLS1_3_SIG_RSA_PKCS1_SHA256 ) )
+            {
+                *algorithm = MBEDTLS_TLS1_3_SIG_RSA_PKCS1_SHA256;
+                return( 0 );
+            }
+            else
+#endif /* MBEDTLS_SHA256_C */
+#if defined(MBEDTLS_SHA384_C)
+            if( own_key_size <= 3072 &&
+                mbedtls_ssl_sig_alg_is_received( ssl,
+                                    MBEDTLS_TLS1_3_SIG_RSA_PKCS1_SHA384 ) )
+            {
+                *algorithm = MBEDTLS_TLS1_3_SIG_RSA_PKCS1_SHA384;
+                return( 0 );
+            }
+            else
+#endif /* MBEDTLS_SHA384_C */
+#if defined(MBEDTLS_SHA512_C)
+            if( own_key_size <= 4096 &&
+                mbedtls_ssl_sig_alg_is_received( ssl,
+                                    MBEDTLS_TLS1_3_SIG_RSA_PKCS1_SHA512 ) )
+            {
+                *algorithm = MBEDTLS_TLS1_3_SIG_RSA_PKCS1_SHA512;
+                return( 0 );
+            }
+            else
+#endif /* MBEDTLS_SHA512_C */
+#endif /* MBEDTLS_PKCS1_V15 */
+            {
+                MBEDTLS_SSL_DEBUG_MSG( 3,
+                                       ( "unknown key size: %"
+                                         MBEDTLS_PRINTF_SIZET " bits",
+                                         own_key_size ) );
+            }
+            break;
+#endif /* MBEDTLS_RSA_C */
+        default:
+            MBEDTLS_SSL_DEBUG_MSG( 1,
+                                   ( "unknown signature type : %u", sig ) );
+            break;
     }
-    MBEDTLS_SSL_DEBUG_MSG( 2,
-                           ( "select_sig_alg_for_certificate_verify:"
-                             "no suitable signature algorithm found" ) );
     return( -1 );
 }
 
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_write_certificate_verify_body( mbedtls_ssl_context *ssl,
                                                     unsigned char *buf,
                                                     unsigned char *end,
@@ -984,9 +1045,8 @@ static int ssl_tls13_write_certificate_verify_body( mbedtls_ssl_context *ssl,
      *    opaque signature<0..2^16-1>;
      *  } CertificateVerify;
      */
-    ret = ssl_tls13_select_sig_alg_for_certificate_verify( ssl, own_key,
-                                                           &algorithm );
-    if( ret != 0 )
+    ret = ssl_tls13_get_sig_alg_from_pk( ssl, own_key, &algorithm );
+    if( ret != 0 || ! mbedtls_ssl_sig_alg_is_received( ssl, algorithm ) )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1,
                     ( "signature algorithm not in received or offered list." ) );
@@ -998,9 +1058,6 @@ static int ssl_tls13_write_certificate_verify_body( mbedtls_ssl_context *ssl,
                                       MBEDTLS_ERR_SSL_HANDSHAKE_FAILURE );
         return( MBEDTLS_ERR_SSL_HANDSHAKE_FAILURE );
     }
-
-    MBEDTLS_SSL_DEBUG_MSG( 2, ( "CertificateVerify with %s",
-                                mbedtls_ssl_sig_alg_to_str( algorithm )) );
 
     if( mbedtls_ssl_tls13_get_pk_type_and_md_alg_from_sig_alg(
                                         algorithm, &pk_type, &md_alg ) != 0 )
@@ -1080,6 +1137,7 @@ cleanup:
  * Implementation
  */
 
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_preprocess_finished_message( mbedtls_ssl_context *ssl )
 {
     int ret;
@@ -1099,6 +1157,7 @@ static int ssl_tls13_preprocess_finished_message( mbedtls_ssl_context *ssl )
     return( 0 );
 }
 
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_parse_finished_message( mbedtls_ssl_context *ssl,
                                              const unsigned char *buf,
                                              const unsigned char *end )
@@ -1177,6 +1236,7 @@ cleanup:
  * Implement
  */
 
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_prepare_finished_message( mbedtls_ssl_context *ssl )
 {
     int ret;
@@ -1197,6 +1257,7 @@ static int ssl_tls13_prepare_finished_message( mbedtls_ssl_context *ssl )
     return( 0 );
 }
 
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_write_finished_message_body( mbedtls_ssl_context *ssl,
                                                   unsigned char *buf,
                                                   unsigned char *end,
@@ -1276,6 +1337,7 @@ void mbedtls_ssl_tls13_handshake_wrapup( mbedtls_ssl_context *ssl )
  *
  */
 #if defined(MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE)
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_write_change_cipher_spec_body( mbedtls_ssl_context *ssl,
                                                     unsigned char *buf,
                                                     unsigned char *end,
@@ -1401,12 +1463,12 @@ int mbedtls_ssl_tls13_read_public_ecdhe_share( mbedtls_ssl_context *ssl,
     mbedtls_ssl_handshake_params *handshake = ssl->handshake;
 
     /* Get size of the TLS opaque key_exchange field of the KeyShareEntry struct. */
-    MBEDTLS_SSL_CHK_BUF_READ_PTR( p, end, 2 );
+    MBEDTLS_SSL_CHK_BUF_PTR( p, end, 2 );
     uint16_t peerkey_len = MBEDTLS_GET_UINT16_BE( p, 0 );
     p += 2;
 
     /* Check if key size is consistent with given buffer length. */
-    MBEDTLS_SSL_CHK_BUF_READ_PTR( p, end, peerkey_len );
+    MBEDTLS_SSL_CHK_BUF_PTR( p, end, peerkey_len );
 
     /* Store peer's ECDH public key. */
     memcpy( handshake->ecdh_psa_peerkey, p, peerkey_len );
