@@ -12,19 +12,14 @@ G3. Allow isolation of short-term secrets (for example, TLS session keys).
 G4. Have a clean, unified API for Crypto (retire the legacy API).
 G5. Code size: compile out our implementation when a driver is available.
 
-Currently, some parts of (G1) and (G2) are implemented when
+As of Mbed TLS 3.2, most of (G1) and all of (G2) is implemented when
 `MBEDTLS_USE_PSA_CRYPTO` is enabled. For (G2) to take effect, the application
-needs to be changed to use new APIs.
+needs to be changed to use new APIs. For a more detailled account of what's
+implemented, see `docs/use-psa-crypto.md`, where new APIs are about (G2), and
+internal changes implement (G1).
 
 Generally speaking, the numbering above doesn't mean that each goal requires
-the preceding ones to be completed, for example G2-G5 could be done in any
-order; however they all either depend on G1 or are just much more convenient
-if G1 is done before (note that this is not a dependency on G1 being complete,
-it's more like each bit of G2-G5 is helped by some specific bit in G1).
-
-So, a solid intermediate goal would be to complete (G1) when
-`MBEDTLS_USA_PSA_CRYPTO` is enabled - that is, all crypto operations in X.509
-and TLS would be done via the PSA Crypto API.
+the preceding ones to be completed.
 
 Compile-time options
 ====================
@@ -40,16 +35,14 @@ We currently have two compile-time options that are relevant to the migration:
 The reasons why `MBEDTLS_USE_PSA_CRYPTO` is optional and disabled by default
 are:
 - it's incompatible with `MBEDTLS_ECP_RESTARTABLE`;
-- historical: used to be incompatible
-  `MBEDTLS_PSA_CRYPTO_KEY_ID_ENCODES_OWNER` (fixed early 2022, see
-    <https://github.com/Mbed-TLS/mbedtls/issues/5259>);
 - it does not work well with `MBEDTLS_PSA_CRYPTO_CONFIG` (could compile with
   both of them, but then `MBEDTLS_PSA_CRYPTO_CONFIG` won't have the desired
 effect)
 - to avoid a hard/default dependency of TLS, X.509 and PK on
   `MBEDTLS_PSA_CRYPTO_C`, for backward compatibility reasons:
-  - when `MBEDTLS_PSA_CRYPTO_C` is enabled and used, applications need to call
-    `psa_crypto_init()` before TLS/X.509 uses PSA functions
+  - When `MBEDTLS_PSA_CRYPTO_C` is enabled and used, applications need to call
+    `psa_crypto_init()` before TLS/X.509 uses PSA functions. (This prevents us
+from even enabling the option by default.)
   - `MBEDTLS_PSA_CRYPTO_C` has a hard depend on `MBEDTLS_ENTROPY_C ||
     MBEDTLS_PSA_CRYPTO_EXTERNAL_RNG` but it's
     currently possible to compilte TLS and X.509 without any of the options.
@@ -58,15 +51,18 @@ effect)
     `MBEDTLS_PSA_CRYPTO_EXTERNAL_RNG` as it requires a user-provided RNG
     function.
 
-The downside of this approach is that until we feel ready to make
+The downside of this approach is that until we are able to make
 `MBDEDTLS_USE_PSA_CRYPTO` non-optional (always enabled), we have to maintain
 two versions of some parts of the code: one using PSA, the other using the
 legacy APIs. However, see next section for strategies that can lower that
 cost. The rest of this section explains the reasons for the
 incompatibilities mentioned above.
 
-In the medium term (writing this in early 2020), we're going to look for ways
-to make `MBEDTLS_USE_PSA_CRYPTO` non-optional (always enabled).
+At the time of writing (early 2022) it is unclear what could be done about the
+backward compatibility issues, and in particular if the cost of implementing
+solutions to these problems would be higher or lower than the cost of
+maintaining dual code paths until the next major version. (Note: these
+solutions would probably also solve other problems at the same time.)
 
 ### `MBEDTLS_ECP_RESTARTABLE`
 
@@ -76,15 +72,11 @@ Crypto does not support restartable operations, there's a clear conflict: the
 TLS and X.509 layers can't both use only PSA APIs and get restartable
 behaviour.
 
-Supporting this in PSA is on our roadmap (it's been requested). But it's way
-below generalizing support for `MBEDTLS_USE_PSA_CRYPTO` for “mainstream” use
-cases on our priority list. So in the medium term `MBEDTLS_ECP_RESTARTABLE` is
-incompatible with `MBEDTLS_USE_PSA_CRYPTO`.
+Supporting this in PSA is on our roadmap and currently planned for end of
+2022, see <https://github.com/orgs/Mbed-TLS/projects/1#column-18883250>.
 
-Note: it is possible to make the options compatible at build time simply by
-deciding that when `USE_PSA_CRYPTO` is enabled, PSA APIs are used except if
-restartable behaviour was requested at run-time (in addition to enabling
-`MBEDTLS_ECP_RESTARTABLE` in the build).
+It will then require follow-up work to make use of the new PSA API in
+PK/X.509/TLS in all places where we currently allow restartable operations.
 
 ### `MBEDTLS_PSA_CRYPTO_CONFIG`
 
@@ -114,13 +106,13 @@ to the existing code and the less code there is at this point the better,
 whereas extending to more protocol features will require the same amount of
 work either way.
 
-### Backward compatibility issues with making it always on
+### Backward compatibility issues with making `MBEDTLS_USE_PSA_CRYPTO` always on
 
 1. Existing applications may not be calling `psa_crypto_init()` before using
    TLS, X.509 or PK. We can try to work around that by calling (the relevant
 part of) it ourselves under the hood as needed, but that would likely require
 splitting init between the parts that can fail and the parts that can't (see
-https://github.com/ARM-software/psa-crypto-api/pull/536 for that).
+<https://github.com/ARM-software/psa-crypto-api/pull/536> for that).
 2. It's currently not possible to enable `MBEDTLS_PSA_CRYPTO_C` in
    configurations that don't have `MBEDTLS_ENTROPY_C`, and we can't just
 auto-enable the latter, as it won't build or work out of the box on all
@@ -138,7 +130,7 @@ available in entropy-less builds. (Then code using those functions still needs
 to have one version using it, for entropy-less builds, and one version using
 the standard function, for driver support in build with entropy.)
 
-See https://github.com/Mbed-TLS/mbedtls/issues/5156
+See <https://github.com/Mbed-TLS/mbedtls/issues/5156>.
 
 Taking advantage of the existing abstractions layers - or not
 =============================================================
@@ -174,9 +166,8 @@ crypto API.
 - Downside: tricky to implement if the PSA implementation is currently done on
   top of that layer (dependency loop).
 
-This strategy is currently (late 2021) used for ECDSA signature
-verification in the PK layer, and could be extended to all operations in the
-PK layer.
+This strategy is currently (early 2022) used for all operations in the PK
+layer.
 
 This strategy is not very well suited to the Cipher layer, as the PSA
 implementation is currently done on top of that layer.
@@ -184,9 +175,9 @@ implementation is currently done on top of that layer.
 This strategy will probably be used for some time for the PK layer, while we
 figure out what the future of that layer is: parts of it (parse/write, ECDSA
 signatures in the format that X.509 & TLS want) are not covered by PSA, so
-they will need to keep existing in some way. Also the PK layer is also a good
+they will need to keep existing in some way. (Also, the PK layer is a good
 place for dispatching to either PSA or `mbedtls_xxx_restartable` while that
-part is not covered by PSA yet.
+part is not covered by PSA yet, if we decide to do that.)
 
 Replace calls for each operation
 --------------------------------
@@ -199,10 +190,8 @@ Replace calls for each operation
   code size.
 - Downside: TLS/X.509 code has to be done for each operation.
 
-This strategy is currently (late 2021) used for the MD layer. (Currently only
-a subset of calling places, but will be extended to all of them.)
-
-In the future (early 2022) we're going to use it for the Cipher layer as well.
+This strategy is currently (early 2022) used for the MD layer and the Cipher
+layer.
 
 Opt-in use of PSA from the abstraction layer
 --------------------------------------------
@@ -225,20 +214,16 @@ function also allows for key isolation (the key is only held by PSA,
 supporting both G1 and G2 in that area), and one without isolation (the key is
 still stored outside of PSA most of the time, supporting only G1).
 
-This strategy, with support for key isolation, is currently (end of 2021) used for ECDSA
-signature generation in the PK layer - see `mbedtls_pk_setup_opaque()`. This
+This strategy, with support for key isolation, is currently (early 2022) used for
+private-key operations in the PK layer - see `mbedtls_pk_setup_opaque()`. This
 allows use of PSA-held private ECDSA keys in TLS and X.509 with no change to
-the TLS/X.509 code, but a contained change in the application. If could be
-extended to other private key operations in the PK layer, which is the plan as
-of early 2022.
+the TLS/X.509 code, but a contained change in the application.
 
-This strategy, without key isolation, is also currently used in the Cipher
-layer - see `mbedtls_cipher_setup_psa()`. This allows use of PSA for cipher
-operations in TLS with no change to the application code, and a
-contained change in TLS code. (It currently only supports a subset of
-ciphers.) However, we'll move to the "Replace calls for each operation"
-strategy (early 2022), in the hope of being able to build without this layer
-in order to save some code size in the future.
+This strategy, without key isolation, was also previously used (until 3.1
+included) in the Cipher layer - see `mbedtls_cipher_setup_psa()`. This allowed
+use of PSA for cipher operations in TLS with no change to the application
+code, and a contained change in TLS code. (It only supported a subset of
+ciphers.)
 
 Note: for private key operations in the PK layer, both the "silent" and the
 "opt-in" strategy can apply, and can complement each other, as one provides
@@ -249,13 +234,11 @@ support for drivers, but fails to provide isolation support.
 Summary
 -------
 
-Strategies currently used with each abstraction layer:
+Strategies currently (early 2022) used with each abstraction layer:
 
 - PK (for G1): silently call PSA
 - PK (for G2): opt-in use of PSA (new key type)
-- Cipher (G1):
-  - late 2021: opt-in use of PSA (new setup function)
-  - early 2022: moving to "replace calls at each call site"
+- Cipher (G1): replace calls at each call site
 - MD (G1): replace calls at each call site
 
 Migrating away from the legacy API
@@ -267,7 +250,7 @@ mainly as they relate to choices in previous stages.
 The role of the PK/Cipher/MD APIs in user migration
 ---------------------------------------------------
 
-We're currently taking advantage of the existing PK and Cipher layers in order
+We're currently taking advantage of the existing PK layer in order
 to reduce the number of places where library code needs to be changed. It's
 only natural to consider using the same strategy (with the PK, MD and Cipher
 layers) for facilitating migration of application code.
@@ -281,7 +264,7 @@ The most favourable case is if we can have a zero-cost abstraction (no
 runtime, RAM usage or code size penalty), for example just a bunch of
 `#define`s, essentially mapping `mbedtls_` APIs to their `psa_` equivalent.
 
-Unfortunately that's unlikely fully work. For example, the MD layer uses the
+Unfortunately that's unlikely to fully work. For example, the MD layer uses the
 same context type for hashes and HMACs, while the PSA API (rightfully) has
 distinct operation types. Similarly, the Cipher layer uses the same context
 type for unauthenticated and AEAD ciphers, which again the PSA API
@@ -373,5 +356,5 @@ An question that needs careful consideration when we come around to removing
 the low-level crypto APIs and making PK, MD and Cipher optional compatibility
 layers is to be sure to preserve testing quality. A lot of the existing test
 cases use the low level crypto APIs; we would need to either keep using that
-API for tests, or manually migrated test to the PSA Crypto API. Perhaps a
+API for tests, or manually migrate tests to the PSA Crypto API. Perhaps a
 combination of both, perhaps evolving gradually over time.
