@@ -1680,8 +1680,8 @@ cleanup:
                 {
                     if( errno == ENOENT )
                     {
-                        /* Broken link */
-                        ret++;
+                        /* Broken link - ignore this entry */
+                        continue;
                     }
                     else
                     {
