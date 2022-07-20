@@ -46,7 +46,6 @@
 #include "mbedtls/error.h"
 #include "constant_time_internal.h"
 #include "mbedtls/constant_time.h"
-#include "hash_info.h"
 
 #include <string.h>
 
@@ -498,7 +497,6 @@ int mbedtls_rsa_set_padding( mbedtls_rsa_context *ctx, int padding,
             return( MBEDTLS_ERR_RSA_INVALID_PADDING );
     }
 
-#if defined(MBEDTLS_PKCS1_V21)
     if( ( padding == MBEDTLS_RSA_PKCS_V21 ) &&
         ( hash_id != MBEDTLS_MD_NONE ) )
     {
@@ -508,7 +506,6 @@ int mbedtls_rsa_set_padding( mbedtls_rsa_context *ctx, int padding,
         if( md_info == NULL )
             return( MBEDTLS_ERR_RSA_INVALID_PADDING );
     }
-#endif /* MBEDTLS_PKCS1_V21 */
 
     ctx->padding = padding;
     ctx->hash_id = hash_id;
@@ -1736,14 +1733,14 @@ static int rsa_rsassa_pkcs1_v15_encode( mbedtls_md_type_t md_alg,
     /* Are we signing hashed or raw data? */
     if( md_alg != MBEDTLS_MD_NONE )
     {
-        unsigned char md_size = mbedtls_hash_info_get_size( md_alg );
-        if( md_size == 0 )
+        const mbedtls_md_info_t *md_info = mbedtls_md_info_from_type( md_alg );
+        if( md_info == NULL )
             return( MBEDTLS_ERR_RSA_BAD_INPUT_DATA );
 
         if( mbedtls_oid_get_oid_by_md( md_alg, &oid, &oid_size ) != 0 )
             return( MBEDTLS_ERR_RSA_BAD_INPUT_DATA );
 
-        if( hashlen != md_size )
+        if( hashlen != mbedtls_md_get_size( md_info ) )
             return( MBEDTLS_ERR_RSA_BAD_INPUT_DATA );
 
         /* Double-check that 8 + hashlen + oid_size can be used as a

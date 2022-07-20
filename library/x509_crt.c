@@ -47,7 +47,6 @@
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
 #include "psa/crypto.h"
 #include "mbedtls/psa_util.h"
-#include "hash_info.h"
 #endif /* MBEDTLS_USE_PSA_CRYPTO */
 
 #if defined(MBEDTLS_PLATFORM_C)
@@ -82,7 +81,6 @@
 #else
 #include <dirent.h>
 #endif /* __MBED__ */
-#include <errno.h>
 #endif /* !_WIN32 || EFIX64 || EFI32 */
 #endif
 
@@ -1657,38 +1655,10 @@ cleanup:
             ret = MBEDTLS_ERR_X509_BUFFER_TOO_SMALL;
             goto cleanup;
         }
-        else
+        else if( stat( entry_name, &sb ) == -1 )
         {
-            /* Determine if the file entry could be a link. Using lstat(2)
-             * is safer than just stat(2), otherwise a broken link will
-             * give us a false positive. */
-            if( lstat( entry_name, &sb ) == -1 )
-            {
-                ret = MBEDTLS_ERR_X509_FILE_IO_ERROR;
-                goto cleanup;
-            }
-
-            /* If the file is a symbolic link, we need to validate the real
-             * information using stat(2). */
-            if( S_ISLNK( sb.st_mode ) )
-            {
-                /* If stat(2) fails it could be a broken link or a generic
-                 * error. If the link is broken, ignore it, otherwise
-                 * just set a MBEDTLS_ERR_X509_FILE_IO_ERROR. */
-                if( stat( entry_name, &sb ) == -1 )
-                {
-                    if( errno == ENOENT )
-                    {
-                        /* Broken link - ignore this entry */
-                        continue;
-                    }
-                    else
-                    {
-                        ret = MBEDTLS_ERR_X509_FILE_IO_ERROR;
-                        goto cleanup;
-                    }
-                }
-            }
+            ret = MBEDTLS_ERR_X509_FILE_IO_ERROR;
+            goto cleanup;
         }
 
         if( !S_ISREG( sb.st_mode ) )
@@ -2409,7 +2379,7 @@ static int x509_crt_verifycrl( mbedtls_x509_crt *crt, mbedtls_x509_crt *ca,
             flags |= MBEDTLS_X509_BADCRL_BAD_PK;
 
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
-        psa_algorithm = mbedtls_hash_info_psa_from_md( crl_list->sig_md );
+        psa_algorithm = mbedtls_psa_translate_md( crl_list->sig_md );
         if( psa_hash_compute( psa_algorithm,
                               crl_list->tbs.p,
                               crl_list->tbs.len,
@@ -2490,7 +2460,7 @@ static int x509_crt_check_signature( const mbedtls_x509_crt *child,
         return( -1 );
 #else
     unsigned char hash[PSA_HASH_MAX_SIZE];
-    psa_algorithm_t hash_alg = mbedtls_hash_info_psa_from_md( child->sig_md );
+    psa_algorithm_t hash_alg = mbedtls_psa_translate_md( child->sig_md );
     psa_status_t status = PSA_ERROR_CORRUPTION_DETECTED;
 
     status = psa_hash_compute( hash_alg,
