@@ -131,10 +131,7 @@ function(link_to_source base_name)
         set(target "${CMAKE_CURRENT_SOURCE_DIR}/${base_name}")
     endif()
 
-    # Linking to non-existent file is not desirable. At best you will have a
-    # dangling link, but when building in tree, this can create a symbolic link
-    # to itself.
-    if (EXISTS ${target} AND NOT EXISTS ${link})
+    if (NOT EXISTS ${link})
         if (CMAKE_HOST_UNIX)
             set(command ln -s ${target} ${link})
         else()
