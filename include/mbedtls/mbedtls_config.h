@@ -1542,6 +1542,15 @@
 //#define MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 
 /**
+ * \def MBEDTLS_SSL_TLS1_3_TICKET_NONCE_LENGTH
+ *
+ * Size in bytes of a ticket nonce. This is not used in TLS 1.2.
+ *
+ * This must be less than 256.
+ */
+#define MBEDTLS_SSL_TLS1_3_TICKET_NONCE_LENGTH 32
+
+/**
  * \def MBEDTLS_SSL_PROTO_DTLS
  *
  * Enable support for DTLS (all available versions).
@@ -2423,9 +2432,6 @@
  *
  * Enable the generic message digest layer.
  *
- * Requires: one of: MBEDTLS_MD5_C, MBEDTLS_RIPEMD160_C, MBEDTLS_SHA1_C,
- *                   MBEDTLS_SHA224_C, MBEDTLS_SHA256_C, MBEDTLS_SHA384_C,
- *                   MBEDTLS_SHA512_C.
  * Module:  library/md.c
  * Caller:  library/constant_time.c
  *          library/ecdsa.c
