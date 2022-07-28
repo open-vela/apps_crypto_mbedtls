@@ -38,7 +38,6 @@ set(src_crypto
     entropy_poll.c
     error.c
     gcm.c
-    hash_info.c
     hkdf.c
     hmac_drbg.c
     md.c
