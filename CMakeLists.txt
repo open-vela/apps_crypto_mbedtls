@@ -131,10 +131,7 @@ function(link_to_source base_name)
         set(target "${CMAKE_CURRENT_SOURCE_DIR}/${base_name}")
     endif()
 
-    # Linking to non-existent file is not desirable. At best you will have a
-    # dangling link, but when building in tree, this can create a symbolic link
-    # to itself.
-    if (EXISTS ${target} AND NOT EXISTS ${link})
+    if (NOT EXISTS ${link})
         if (CMAKE_HOST_UNIX)
             set(command ln -s ${target} ${link})
         else()
@@ -351,7 +348,7 @@ if(NOT DISABLE_PACKAGE_CONFIG_AND_INSTALL)
     write_basic_package_version_file(
         "cmake/MbedTLSConfigVersion.cmake"
             COMPATIBILITY SameMajorVersion
-            VERSION 3.2.1)
+            VERSION 3.1.0)
 
     install(
         FILES "${CMAKE_CURRENT_BINARY_DIR}/cmake/MbedTLSConfig.cmake"
