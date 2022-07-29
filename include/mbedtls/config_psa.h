@@ -179,7 +179,6 @@ extern "C" {
 #define MBEDTLS_BIGNUM_C
 #define MBEDTLS_OID_C
 #define MBEDTLS_PKCS1_V15
-#define MBEDTLS_MD_C
 #endif /* !MBEDTLS_PSA_ACCEL_ALG_RSA_PKCS1V15_SIGN */
 #endif /* PSA_WANT_ALG_RSA_PKCS1V15_SIGN */
 
@@ -606,6 +605,10 @@ extern "C" {
 #define PSA_WANT_ALG_GCM 1
 #endif /* MBEDTLS_GCM_C */
 
+/* Enable PSA HKDF algorithm if mbedtls HKDF is supported.
+ * PSA HKDF EXTRACT and PSA HKDF EXPAND have minimal cost when
+ * PSA HKDF is enabled, so enable both algorithms together
+ * with PSA HKDF. */
 #if defined(MBEDTLS_HKDF_C)
 #define MBEDTLS_PSA_BUILTIN_ALG_HMAC 1
 #define PSA_WANT_ALG_HMAC 1
