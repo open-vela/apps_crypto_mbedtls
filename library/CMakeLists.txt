@@ -18,6 +18,8 @@ set(src_crypto
     asn1write.c
     base64.c
     bignum.c
+    bignum_new.c
+    bignum_core.c
     camellia.c
     ccm.c
     chacha20.c
