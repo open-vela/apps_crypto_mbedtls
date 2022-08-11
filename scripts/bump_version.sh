@@ -1,19 +1,8 @@
 #!/bin/bash
 #
-# Copyright The Mbed TLS Contributors
-# SPDX-License-Identifier: Apache-2.0
+# This file is part of mbed TLS (https://tls.mbed.org)
 #
-# Licensed under the Apache License, Version 2.0 (the "License"); you may
-# not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-# http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+# Copyright (c) 2012-2016, ARM Limited, All Rights Reserved
 #
 # Purpose
 #
@@ -23,8 +12,6 @@
 #                           [ --so-x509 <version> ] [ --so-tls <version> ]
 #                           [ -v | --verbose ] [ -h | --help ]
 #
-
-set -e
 
 VERSION=""
 SOVERSION=""
@@ -81,10 +68,6 @@ then
   exit 1
 fi
 
-[ $VERBOSE ] && echo "Bumping VERSION in CMakeLists.txt"
-sed -e "s/ VERSION [0-9.]\{1,\}/ VERSION $VERSION/g" < CMakeLists.txt > tmp
-mv tmp CMakeLists.txt
-
 [ $VERBOSE ] && echo "Bumping VERSION in library/CMakeLists.txt"
 sed -e "s/ VERSION [0-9.]\{1,\}/ VERSION $VERSION/g" < library/CMakeLists.txt > tmp
 mv tmp library/CMakeLists.txt
@@ -122,18 +105,18 @@ then
   mv tmp library/Makefile
 fi
 
-[ $VERBOSE ] && echo "Bumping VERSION in include/mbedtls/build_info.h"
+[ $VERBOSE ] && echo "Bumping VERSION in include/mbedtls/version.h"
 read MAJOR MINOR PATCH <<<$(IFS="."; echo $VERSION)
 VERSION_NR="$( printf "0x%02X%02X%02X00" $MAJOR $MINOR $PATCH )"
-cat include/mbedtls/build_info.h |                                    \
-    sed -e "s/\(# *define  *[A-Z]*_VERSION\)_MAJOR .\{1,\}/\1_MAJOR  $MAJOR/" |    \
-    sed -e "s/\(# *define  *[A-Z]*_VERSION\)_MINOR .\{1,\}/\1_MINOR  $MINOR/" |    \
-    sed -e "s/\(# *define  *[A-Z]*_VERSION\)_PATCH .\{1,\}/\1_PATCH  $PATCH/" |    \
-    sed -e "s/\(# *define  *[A-Z]*_VERSION\)_NUMBER .\{1,\}/\1_NUMBER         $VERSION_NR/" |    \
-    sed -e "s/\(# *define  *[A-Z]*_VERSION\)_STRING .\{1,\}/\1_STRING         \"$VERSION\"/" |    \
-    sed -e "s/\(# *define  *[A-Z]*_VERSION\)_STRING_FULL .\{1,\}/\1_STRING_FULL    \"mbed TLS $VERSION\"/" \
+cat include/mbedtls/version.h |                                    \
+    sed -e "s/_VERSION_MAJOR .\{1,\}/_VERSION_MAJOR  $MAJOR/" |    \
+    sed -e "s/_VERSION_MINOR .\{1,\}/_VERSION_MINOR  $MINOR/" |    \
+    sed -e "s/_VERSION_PATCH .\{1,\}/_VERSION_PATCH  $PATCH/" |    \
+    sed -e "s/_VERSION_NUMBER .\{1,\}/_VERSION_NUMBER         $VERSION_NR/" |    \
+    sed -e "s/_VERSION_STRING .\{1,\}/_VERSION_STRING         \"$VERSION\"/" |    \
+    sed -e "s/_VERSION_STRING_FULL .\{1,\}/_VERSION_STRING_FULL    \"mbed TLS $VERSION\"/" \
     > tmp
-mv tmp include/mbedtls/build_info.h
+mv tmp include/mbedtls/version.h
 
 [ $VERBOSE ] && echo "Bumping version in tests/suites/test_suite_version.data"
 sed -e "s/version:\".\{1,\}/version:\"$VERSION\"/g" < tests/suites/test_suite_version.data > tmp
