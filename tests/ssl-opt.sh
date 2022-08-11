@@ -223,6 +223,34 @@ requires_config_disabled() {
     esac
 }
 
+requires_all_configs_enabled() {
+    if ! $P_QUERY -all $*
+    then
+        SKIP_NEXT="YES"
+    fi
+}
+
+requires_all_configs_disabled() {
+    if $P_QUERY -any $*
+    then
+        SKIP_NEXT="YES"
+    fi
+}
+
+requires_any_configs_enabled() {
+    if ! $P_QUERY -any $*
+    then
+        SKIP_NEXT="YES"
+    fi
+}
+
+requires_any_configs_disabled() {
+    if $P_QUERY -all $*
+    then
+        SKIP_NEXT="YES"
+    fi
+}
+
 get_config_value_or_default() {
     # This function uses the query_config command line option to query the
     # required Mbed TLS compile time configuration from the ssl_server2
@@ -874,11 +902,13 @@ wait_client_done() {
     ( sleep $CLI_DELAY; echo "===CLIENT_TIMEOUT===" >> $CLI_OUT; kill $CLI_PID ) &
     DOG_PID=$!
 
-    wait $CLI_PID
+    # For Ubuntu 22.04, `Terminated` message is outputed by wait command.
+    # To remove it from stdout, redirect stdout/stderr to CLI_OUT
+    wait $CLI_PID >> $CLI_OUT 2>&1
     CLI_EXIT=$?
 
     kill $DOG_PID >/dev/null 2>&1
-    wait $DOG_PID
+    wait $DOG_PID >> $CLI_OUT 2>&1
 
     echo "EXIT: $CLI_EXIT" >> $CLI_OUT
 
@@ -1228,7 +1258,9 @@ do_run_test_once() {
 
     # terminate the server (and the proxy)
     kill $SRV_PID
-    wait $SRV_PID
+    # For Ubuntu 22.04, `Terminated` message is outputed by wait command.
+    # To remove it from stdout, redirect stdout/stderr to SRV_OUT
+    wait $SRV_PID >> $SRV_OUT 2>&1
     SRV_RET=$?
 
     if [ -n "$PXY_CMD" ]; then
@@ -2229,40 +2261,91 @@ run_test    "SHA-256 allowed by default in client certificate" \
 # ssl_client2/ssl_server2 example programs works.
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
+requires_config_enabled MBEDTLS_SSL_CLI_C
+requires_config_enabled MBEDTLS_SSL_SRV_C
 run_test    "TLS 1.3: key exchange mode parameter passing: PSK only" \
             "$P_SRV tls13_kex_modes=psk debug_level=4" \
             "$P_CLI tls13_kex_modes=psk debug_level=4" \
             0
+
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
+requires_config_enabled MBEDTLS_SSL_CLI_C
+requires_config_enabled MBEDTLS_SSL_SRV_C
 run_test    "TLS 1.3: key exchange mode parameter passing: PSK-ephemeral only" \
             "$P_SRV tls13_kex_modes=psk_ephemeral" \
             "$P_CLI tls13_kex_modes=psk_ephemeral" \
             0
+
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
+requires_config_enabled MBEDTLS_SSL_CLI_C
+requires_config_enabled MBEDTLS_SSL_SRV_C
 run_test    "TLS 1.3: key exchange mode parameter passing: Pure-ephemeral only" \
             "$P_SRV tls13_kex_modes=ephemeral" \
             "$P_CLI tls13_kex_modes=ephemeral" \
             0
+
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
+requires_config_enabled MBEDTLS_SSL_CLI_C
+requires_config_enabled MBEDTLS_SSL_SRV_C
 run_test    "TLS 1.3: key exchange mode parameter passing: All ephemeral" \
             "$P_SRV tls13_kex_modes=ephemeral_all" \
             "$P_CLI tls13_kex_modes=ephemeral_all" \
             0
+
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
+requires_config_enabled MBEDTLS_SSL_CLI_C
+requires_config_enabled MBEDTLS_SSL_SRV_C
 run_test    "TLS 1.3: key exchange mode parameter passing: All PSK" \
             "$P_SRV tls13_kex_modes=psk_all" \
             "$P_CLI tls13_kex_modes=psk_all" \
             0
+
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
+requires_config_enabled MBEDTLS_SSL_CLI_C
+requires_config_enabled MBEDTLS_SSL_SRV_C
 run_test    "TLS 1.3: key exchange mode parameter passing: All" \
             "$P_SRV tls13_kex_modes=all" \
             "$P_CLI tls13_kex_modes=all" \
             0
+
+requires_openssl_tls1_3
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
+requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
+requires_config_enabled MBEDTLS_KEY_EXCHANGE_PSK_ENABLED
+requires_config_enabled MBEDTLS_SSL_SRV_C
+requires_config_enabled MBEDTLS_DEBUG_C
+run_test    "TLS 1.3: PSK: basic check, O->m" \
+            "$P_SRV force_version=tls13 tls13_kex_modes=psk debug_level=5 psk=6162636465666768696a6b6c6d6e6f70" \
+            "$O_NEXT_CLI -tls1_3 -psk 1234 -psk 6162636465666768696a6b6c6d6e6f70 -allow_no_dhe_kex" \
+            1 \
+            -s "found psk key exchange modes extension" \
+            -s "found pre_shared_key extension" \
+            -s "Found PSK_EPHEMERAL KEX MODE" \
+            -s "Found PSK KEX MODE" \
+            -s "Pre shared key found"
+
+requires_gnutls_tls1_3
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
+requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
+requires_config_enabled MBEDTLS_KEY_EXCHANGE_PSK_ENABLED
+requires_config_enabled MBEDTLS_SSL_SRV_C
+requires_config_enabled MBEDTLS_DEBUG_C
+run_test    "TLS 1.3: PSK: basic check, G->m" \
+            "$P_SRV force_version=tls13 tls13_kex_modes=psk debug_level=5 psk=6162636465666768696a6b6c6d6e6f70" \
+            "$G_NEXT_CLI --priority NORMAL:-VERS-ALL:+KX-ALL:+PSK:+DHE-PSK:+VERS-TLS1.3 \
+                         --pskusername Client_identity --pskkey=6162636465666768696a6b6c6d6e6f70 \
+                         localhost" \
+            1 \
+            -s "found psk key exchange modes extension" \
+            -s "found pre_shared_key extension" \
+            -s "Found PSK_EPHEMERAL KEX MODE" \
+            -s "Found PSK KEX MODE" \
+            -s "Pre shared key found"
 
 # Tests for datagram packing
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
@@ -11938,6 +12021,52 @@ run_test    "TLS 1.3: Server side check - mbedtls with sni" \
             -s "parse ServerName extension" \
             -s "HTTP/1.0 200 OK"
 
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
+requires_config_enabled MBEDTLS_SSL_SRV_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
+run_test    "TLS 1.3, default suite, PSK" \
+            "$P_SRV nbio=2 debug_level=5 force_version=tls13 psk=010203 psk_identity=0a0b0c tls13_kex_modes=psk" \
+            "$P_CLI nbio=2 debug_level=5 force_version=tls13 psk=010203 psk_identity=0a0b0c tls13_kex_modes=psk" \
+            1 \
+            -c "=> write client hello" \
+            -c "client hello, adding pre_shared_key extension, omitting PSK binder list" \
+            -c "client hello, adding psk_key_exchange_modes extension" \
+            -c "client hello, adding PSK binder list" \
+            -c "<= write client hello"
+
+requires_openssl_tls1_3
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
+requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
+requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
+run_test    "TLS 1.3, default suite, PSK - openssl" \
+            "$O_NEXT_SRV -msg -debug -tls1_3 -psk_identity 0a0b0c -psk 010203 -allow_no_dhe_kex -nocert" \
+            "$P_CLI debug_level=4 psk=010203 psk_identity=0a0b0c tls13_kex_modes=psk" \
+            1 \
+            -c "=> write client hello" \
+            -c "client hello, adding pre_shared_key extension, omitting PSK binder list" \
+            -c "client hello, adding psk_key_exchange_modes extension" \
+            -c "client hello, adding PSK binder list" \
+            -c "<= write client hello"
+
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
+requires_gnutls_tls1_3
+requires_gnutls_next_no_ticket
+requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
+requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
+run_test    "TLS 1.3, default suite, PSK - gnutls" \
+            "$G_NEXT_SRV -d 4 --priority=NORMAL:-VERS-ALL:+VERS-TLS1.3:+PSK:+CIPHER-ALL:%NO_TICKETS --pskhint=0a0b0c" \
+            "$P_CLI debug_level=4 psk=010203 psk_identity=0a0b0c tls13_kex_modes=psk" \
+            1 \
+            -c "=> write client hello" \
+            -c "client hello, adding pre_shared_key extension, omitting PSK binder list" \
+            -c "client hello, adding psk_key_exchange_modes extension" \
+            -c "client hello, adding PSK binder list" \
+            -s "Parsing extension 'PSK Key Exchange Modes/45'" \
+            -s "Parsing extension 'Pre Shared Key/41'" \
+            -c "<= write client hello"
+
 for i in opt-testcases/*.sh
 do
     TEST_SUITE_NAME=${i##*/}
@@ -12551,6 +12680,112 @@ run_test    "TLS 1.3: Check client no signature algorithm, m->m" \
                     sig_algs=rsa_pkcs1_sha512,rsa_pss_rsae_sha512,rsa_pss_rsae_sha384,ecdsa_secp256r1_sha256" \
             1 \
             -c "select_sig_alg_for_certificate_verify:no suitable signature algorithm found"
+
+requires_openssl_tls1_3
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
+requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
+requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
+run_test    "TLS 1.3: NewSessionTicket: Basic check, m->O" \
+            "$O_NEXT_SRV -msg -tls1_3 -no_resume_ephemeral -no_cache " \
+            "$P_CLI debug_level=4 reco_mode=1 reconnect=1" \
+            0 \
+            -c "Protocol is TLSv1.3" \
+            -c "MBEDTLS_SSL_NEW_SESSION_TICKET" \
+            -c "got new session ticket." \
+            -c "Saving session for reuse... ok" \
+            -c "HTTP/1.0 200 ok"
+
+requires_gnutls_tls1_3
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
+requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
+requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
+run_test    "TLS 1.3: NewSessionTicket: Basic check, m->G" \
+            "$G_NEXT_SRV --priority=NORMAL:-VERS-ALL:+VERS-TLS1.3:+CIPHER-ALL:+PSK --disable-client-cert" \
+            "$P_CLI debug_level=4 reco_mode=1 reconnect=1" \
+            0 \
+            -c "Protocol is TLSv1.3" \
+            -c "MBEDTLS_SSL_NEW_SESSION_TICKET" \
+            -c "got new session ticket." \
+            -c "Saving session for reuse... ok" \
+            -c "HTTP/1.0 200 OK"
+
+requires_openssl_tls1_3
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
+requires_config_enabled MBEDTLS_SSL_SESSION_TICKETS
+requires_config_enabled MBEDTLS_SSL_SRV_C
+requires_config_enabled MBEDTLS_DEBUG_C
+run_test    "TLS 1.3: NewSessionTicket: Basic check, O->m" \
+            "$P_SRV debug_level=4 crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13 tickets=1" \
+            "$O_NEXT_CLI -msg -debug -tls1_3 -no_middlebox" \
+            0 \
+            -s "=> write NewSessionTicket msg" \
+            -s "server state: MBEDTLS_SSL_NEW_SESSION_TICKET" \
+            -s "server state: MBEDTLS_SSL_NEW_SESSION_TICKET_FLUSH"
+
+requires_gnutls_tls1_3
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
+requires_config_enabled MBEDTLS_SSL_SESSION_TICKETS
+requires_config_enabled MBEDTLS_SSL_SRV_C
+requires_config_enabled MBEDTLS_DEBUG_C
+run_test    "TLS 1.3: NewSessionTicket: Basic check, G->m" \
+            "$P_SRV debug_level=4 crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13 tickets=1" \
+            "$G_NEXT_CLI localhost -d 4 --priority=NORMAL:-VERS-ALL:+VERS-TLS1.3:%DISABLE_TLS13_COMPAT_MODE -V" \
+            0 \
+            -s "=> write NewSessionTicket msg" \
+            -s "server state: MBEDTLS_SSL_NEW_SESSION_TICKET" \
+            -s "server state: MBEDTLS_SSL_NEW_SESSION_TICKET_FLUSH" \
+            -c "NEW SESSION TICKET (4) was received"
+
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
+requires_config_enabled MBEDTLS_SSL_SESSION_TICKETS
+requires_config_enabled MBEDTLS_SSL_SRV_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
+requires_config_enabled MBEDTLS_DEBUG_C
+run_test    "TLS 1.3: NewSessionTicket: Basic check, m->m" \
+            "$P_SRV debug_level=4 crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13 tickets=1" \
+            "$P_CLI debug_level=4 reco_mode=1 reconnect=1" \
+            0 \
+            -c "Protocol is TLSv1.3" \
+            -c "MBEDTLS_SSL_NEW_SESSION_TICKET" \
+            -c "got new session ticket." \
+            -c "Saving session for reuse... ok" \
+            -c "HTTP/1.0 200 OK"    \
+            -s "=> write NewSessionTicket msg" \
+            -s "server state: MBEDTLS_SSL_NEW_SESSION_TICKET" \
+            -s "server state: MBEDTLS_SSL_NEW_SESSION_TICKET_FLUSH"
+
+requires_openssl_tls1_3
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
+requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
+run_test    "TLS 1.2: Check rsa_pss_rsae compatibility issue, m->O" \
+            "$O_NEXT_SRV_NO_CERT -cert data_files/server2-sha256.crt -key data_files/server2.key
+                                 -msg -tls1_2
+                                 -Verify 10 " \
+            "$P_CLI debug_level=4 crt_file=data_files/server2-sha256.crt key_file=data_files/server2.key
+                    sig_algs=rsa_pss_rsae_sha512,rsa_pkcs1_sha512
+                    min_version=tls12 max_version=tls13 " \
+            0 \
+            -c "Protocol is TLSv1.2" \
+            -c "HTTP/1.0 200 [Oo][Kk]"
+
+
+requires_gnutls_tls1_3
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
+requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
+run_test    "TLS 1.2: Check rsa_pss_rsae compatibility issue, m->G" \
+            "$G_NEXT_SRV_NO_CERT --x509certfile data_files/server2-sha256.crt --x509keyfile data_files/server2.key
+                    -d 4
+                    --priority=NORMAL:-VERS-ALL:+VERS-TLS1.2" \
+            "$P_CLI debug_level=4 crt_file=data_files/server2-sha256.crt key_file=data_files/server2.key
+                    sig_algs=rsa_pss_rsae_sha512,rsa_pkcs1_sha512
+                    min_version=tls12 max_version=tls13 " \
+            0 \
+            -c "Protocol is TLSv1.2" \
+            -c "HTTP/1.0 200 [Oo][Kk]"
 
 # Test heap memory usage after handshake
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
