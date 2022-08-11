@@ -1,7 +1,7 @@
 /*
- *  UDP proxy: emulate an unreliable UDP connexion for DTLS testing
+ *  UDP proxy: emulate an unreliable UDP connection for DTLS testing
  *
- *  Copyright (C) 2006-2015, ARM Limited, All Rights Reserved
+ *  Copyright The Mbed TLS Contributors
  *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -15,8 +15,6 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
- *
- *  This file is part of mbed TLS (https://tls.mbed.org)
  */
 
 /*
@@ -25,20 +23,20 @@
  * example of good general usage.
  */
 
-#if !defined(MBEDTLS_CONFIG_FILE)
-#include "mbedtls/config.h"
-#else
-#include MBEDTLS_CONFIG_FILE
-#endif
+#define MBEDTLS_ALLOW_PRIVATE_ACCESS
+
+#include "mbedtls/build_info.h"
 
 #if defined(MBEDTLS_PLATFORM_C)
 #include "mbedtls/platform.h"
 #else
 #include <stdio.h>
 #include <stdlib.h>
+#if defined(MBEDTLS_HAVE_TIME)
 #include <time.h>
 #define mbedtls_time            time
 #define mbedtls_time_t          time_t
+#endif
 #define mbedtls_printf          printf
 #define mbedtls_calloc          calloc
 #define mbedtls_free            free
@@ -75,7 +73,10 @@ int main( void )
 #endif
 #endif /* _MSC_VER */
 #else /* ( _WIN32 || _WIN32_WCE ) && !EFIX64 && !EFI32 */
+#if defined(MBEDTLS_HAVE_TIME) || (defined(MBEDTLS_TIMING_C) && !defined(MBEDTLS_TIMING_ALT))
 #include <sys/time.h>
+#endif
+#include <sys/select.h>
 #include <sys/types.h>
 #include <unistd.h>
 #endif /* ( _WIN32 || _WIN32_WCE ) && !EFIX64 && !EFI32 */
@@ -685,26 +686,21 @@ int send_delayed()
 }
 
 /*
- * Avoid dropping or delaying a packet that was already dropped twice: this
- * only results in uninteresting timeouts. We can't rely on type to identify
- * packets, since during renegotiation they're all encrypted.  So, rely on
- * size mod 2048 (which is usually just size).
- */
-static unsigned char dropped[2048] = { 0 };
-#define DROP_MAX 2
-
-/* We only drop packets at the level of entire datagrams, not at the level
+ * Avoid dropping or delaying a packet that was already dropped or delayed
+ * ("held") twice: this only results in uninteresting timeouts. We can't rely
+ * on type to identify packets, since during renegotiation they're all
+ * encrypted. So, rely on size mod 2048 (which is usually just size).
+ *
+ * We only hold packets at the level of entire datagrams, not at the level
  * of records. In particular, if the peer changes the way it packs multiple
  * records into a single datagram, we don't necessarily count the number of
- * times a record has been dropped correctly. However, the only known reason
+ * times a record has been held correctly. However, the only known reason
  * why a peer would change datagram packing is disabling the latter on
- * retransmission, in which case we'd drop involved records at most
- * DROP_MAX + 1 times. */
-void update_dropped( const packet *p )
-{
-    size_t id = p->len % sizeof( dropped );
-    ++dropped[id];
-}
+ * retransmission, in which case we'd hold involved records at most
+ * HOLD_MAX + 1 times.
+ */
+static unsigned char held[2048] = { 0 };
+#define HOLD_MAX 2
 
 int handle_message( const char *way,
                     mbedtls_net_context *dst,
@@ -731,7 +727,7 @@ int handle_message( const char *way,
     cur.dst  = dst;
     print_packet( &cur, NULL );
 
-    id = cur.len % sizeof( dropped );
+    id = cur.len % sizeof( held );
 
     if( strcmp( way, "S <- C" ) == 0 )
     {
@@ -773,10 +769,10 @@ int handle_message( const char *way,
           ! ( opt.protect_hvr &&
               strcmp( cur.type, "HelloVerifyRequest" ) == 0 ) &&
           cur.len != (size_t) opt.protect_len &&
-          dropped[id] < DROP_MAX &&
+          held[id] < HOLD_MAX &&
           rand() % opt.drop == 0 ) )
     {
-        update_dropped( &cur );
+        ++held[id];
     }
     else if( ( opt.delay_ccs == 1 &&
                strcmp( cur.type, "ChangeCipherSpec" ) == 0 ) ||
@@ -786,9 +782,10 @@ int handle_message( const char *way,
                ! ( opt.protect_hvr &&
                    strcmp( cur.type, "HelloVerifyRequest" ) == 0 ) &&
                cur.len != (size_t) opt.protect_len &&
-               dropped[id] < DROP_MAX &&
+               held[id] < HOLD_MAX &&
                rand() % opt.delay == 0 ) )
     {
+        ++held[id];
         delay_packet( &cur );
     }
     else
@@ -839,7 +836,11 @@ int main( int argc, char *argv[] )
      */
     if( opt.seed == 0 )
     {
-        opt.seed = (unsigned int) time( NULL );
+#if defined(MBEDTLS_HAVE_TIME)
+        opt.seed = (unsigned int) mbedtls_time( NULL );
+#else
+        opt.seed = 1;
+#endif /* MBEDTLS_HAVE_TIME */
         mbedtls_printf( "  . Pseudo-random seed: %u\n", opt.seed );
     }
 
@@ -899,7 +900,7 @@ accept:
      * 3. Forward packets forever (kill the process to terminate it)
      */
     clear_pending();
-    memset( dropped, 0, sizeof( dropped ) );
+    memset( held, 0, sizeof( held ) );
 
     nb_fds = client_fd.fd;
     if( nb_fds < server_fd.fd )
@@ -1007,18 +1008,13 @@ exit:
 
     for( delay_idx = 0; delay_idx < MAX_DELAYED_HS; delay_idx++ )
     {
-        mbedtls_free( opt.delay_cli + delay_idx );
-        mbedtls_free( opt.delay_srv + delay_idx );
+        mbedtls_free( opt.delay_cli[delay_idx] );
+        mbedtls_free( opt.delay_srv[delay_idx] );
     }
 
     mbedtls_net_free( &client_fd );
     mbedtls_net_free( &server_fd );
     mbedtls_net_free( &listen_fd );
-
-#if defined(_WIN32)
-    mbedtls_printf( "  Press Enter to exit this program.\n" );
-    fflush( stdout ); getchar();
-#endif
 
     mbedtls_exit( exit_code );
 }
