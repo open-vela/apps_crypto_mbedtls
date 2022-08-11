@@ -2,20 +2,9 @@
 
 # context-info.sh
 #
-# Copyright The Mbed TLS Contributors
-# SPDX-License-Identifier: Apache-2.0
+# This file is part of mbed TLS (https://tls.mbed.org)
 #
-# Licensed under the Apache License, Version 2.0 (the "License"); you may
-# not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-# http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+# Copyright (c) 2012-2020, ARM Limited, All Rights Reserved
 #
 # This program is intended for testing the ssl_context_info program
 #
@@ -210,9 +199,11 @@ run_test "Default configuration, server" \
          -u "MBEDTLS_HAVE_TIME$" \
          -u "MBEDTLS_X509_CRT_PARSE_C$" \
          -u "MBEDTLS_SSL_MAX_FRAGMENT_LENGTH$" \
+         -u "MBEDTLS_SSL_TRUNCATED_HMAC$" \
          -u "MBEDTLS_SSL_ENCRYPT_THEN_MAC$" \
          -u "MBEDTLS_SSL_SESSION_TICKETS$" \
          -u "MBEDTLS_SSL_SESSION_TICKETS and client$" \
+         -u "MBEDTLS_SSL_DTLS_BADMAC_LIMIT$" \
          -u "MBEDTLS_SSL_DTLS_ANTI_REPLAY$" \
          -u "MBEDTLS_SSL_ALPN$" \
          -u "ciphersuite.* TLS-ECDHE-RSA-WITH-CHACHA20-POLY1305-SHA256$" \
@@ -232,9 +223,11 @@ run_test "Default configuration, client" \
          -u "MBEDTLS_HAVE_TIME$" \
          -u "MBEDTLS_X509_CRT_PARSE_C$" \
          -u "MBEDTLS_SSL_MAX_FRAGMENT_LENGTH$" \
+         -u "MBEDTLS_SSL_TRUNCATED_HMAC$" \
          -u "MBEDTLS_SSL_ENCRYPT_THEN_MAC$" \
          -u "MBEDTLS_SSL_SESSION_TICKETS$" \
          -u "MBEDTLS_SSL_SESSION_TICKETS and client$" \
+         -u "MBEDTLS_SSL_DTLS_BADMAC_LIMIT$" \
          -u "MBEDTLS_SSL_DTLS_ANTI_REPLAY$" \
          -u "MBEDTLS_SSL_ALPN$" \
          -u "ciphersuite.* TLS-ECDHE-RSA-WITH-CHACHA20-POLY1305-SHA256$" \
@@ -337,9 +330,11 @@ run_test "Minimal configuration, server" \
          "srv_min_cfg.txt" \
          -n "ERROR" \
          -n "MBEDTLS_SSL_MAX_FRAGMENT_LENGTH$" \
+         -n "MBEDTLS_SSL_TRUNCATED_HMAC$" \
          -n "MBEDTLS_SSL_ENCRYPT_THEN_MAC$" \
          -n "MBEDTLS_SSL_SESSION_TICKETS$" \
          -n "MBEDTLS_SSL_SESSION_TICKETS and client$" \
+         -n "MBEDTLS_SSL_DTLS_BADMAC_LIMIT$" \
          -n "MBEDTLS_SSL_DTLS_ANTI_REPLAY$" \
          -n "MBEDTLS_SSL_ALPN$" \
 
@@ -347,9 +342,11 @@ run_test "Minimal configuration, client" \
          "cli_min_cfg.txt" \
          -n "ERROR" \
          -n "MBEDTLS_SSL_MAX_FRAGMENT_LENGTH$" \
+         -n "MBEDTLS_SSL_TRUNCATED_HMAC$" \
          -n "MBEDTLS_SSL_ENCRYPT_THEN_MAC$" \
          -n "MBEDTLS_SSL_SESSION_TICKETS$" \
          -n "MBEDTLS_SSL_SESSION_TICKETS and client$" \
+         -n "MBEDTLS_SSL_DTLS_BADMAC_LIMIT$" \
          -n "MBEDTLS_SSL_DTLS_ANTI_REPLAY$" \
          -n "MBEDTLS_SSL_ALPN$" \
 
@@ -422,19 +419,13 @@ run_test "Binary file instead of text file" \
          -u "Too many bad symbols detected. File check aborted" \
          -n "Deserializing"
 
-run_test "Decoder continues past 0xff character" \
-         "def_b64_ff.bin" \
-         -n "No valid base64" \
-         -u "ciphersuite.* TLS-"
-
 
 # End of tests
 
-echo
 if [ $T_FAILED -eq 0 ]; then
-    echo "PASSED ( $T_COUNT tests )"
+    printf "\nPASSED ( $T_COUNT tests )\n"
 else
-    echo "FAILED ( $T_FAILED / $T_COUNT tests )"
+    printf "\nFAILED ( $T_FAILED / $T_COUNT tests )\n"
 fi
 
 exit $T_FAILED
