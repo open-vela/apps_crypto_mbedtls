@@ -1110,7 +1110,7 @@
  * Include backtrace information with each allocated block.
  *
  * Requires: MBEDTLS_MEMORY_BUFFER_ALLOC_C
- *           GLIBC-compatible backtrace() an backtrace_symbols() support
+ *           GLIBC-compatible backtrace() and backtrace_symbols() support
  *
  * Uncomment this macro to include backtrace information
  */
@@ -1141,7 +1141,10 @@
  *
  * Enable support for PKCS#1 v2.1 encoding.
  *
- * Requires: MBEDTLS_MD_C, MBEDTLS_RSA_C
+ * Requires: MBEDTLS_RSA_C and (MBEDTLS_MD_C or MBEDTLS_PSA_CRYPTO_C).
+ *
+ * \warning If building without MBEDTLS_MD_C, you must call psa_crypto_init()
+ * before doing any PKCS#1 v2.1 operation.
  *
  * This enables support for RSAES-OAEP and RSASSA-PSS operations.
  */
@@ -1540,6 +1543,15 @@
  *
  */
 //#define MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
+
+/**
+ * \def MBEDTLS_SSL_TLS1_3_TICKET_NONCE_LENGTH
+ *
+ * Size in bytes of a ticket nonce. This is not used in TLS 1.2.
+ *
+ * This must be less than 256.
+ */
+#define MBEDTLS_SSL_TLS1_3_TICKET_NONCE_LENGTH 32
 
 /**
  * \def MBEDTLS_SSL_PROTO_DTLS
@@ -2423,6 +2435,9 @@
  *
  * Enable the generic message digest layer.
  *
+ * Requires: one of: MBEDTLS_MD5_C, MBEDTLS_RIPEMD160_C, MBEDTLS_SHA1_C,
+ *                   MBEDTLS_SHA224_C, MBEDTLS_SHA256_C, MBEDTLS_SHA384_C,
+ *                   MBEDTLS_SHA512_C.
  * Module:  library/md.c
  * Caller:  library/constant_time.c
  *          library/ecdsa.c
