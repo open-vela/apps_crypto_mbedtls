@@ -30,7 +30,6 @@
 #if defined(MBEDTLS_USE_PSA_CRYPTO) || defined(MBEDTLS_SSL_PROTO_TLS1_3)
 #include "psa/crypto.h"
 #include "mbedtls/psa_util.h"
-#include "hash_info.h"
 #endif
 
 #if defined(MBEDTLS_MD5_C)
@@ -612,19 +611,14 @@ struct mbedtls_ssl_handshake_params
      * Handshake specific crypto variables
      */
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3)
-    uint8_t key_exchange_mode; /*!< Selected key exchange mode */
+    int tls13_kex_modes; /*!< key exchange modes for TLS 1.3 */
 
     /** Number of HelloRetryRequest messages received/sent from/to the server. */
     int hello_retry_request_count;
-
 #if defined(MBEDTLS_SSL_SRV_C)
     /** selected_group of key_share extension in HelloRetryRequest message. */
     uint16_t hrr_selected_group;
-#if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
-    uint8_t tls13_kex_modes; /*!< Key exchange modes supported by the client */
-#endif
 #endif /* MBEDTLS_SSL_SRV_C */
-
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
 #if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
@@ -681,7 +675,6 @@ struct mbedtls_ssl_handshake_params
     unsigned char *psk;                 /*!<  PSK from the callback         */
     size_t psk_len;                     /*!<  Length of PSK from callback   */
 #endif /* MBEDTLS_USE_PSA_CRYPTO */
-    uint16_t    selected_identity;
 #endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
 
 #if defined(MBEDTLS_SSL_ECP_RESTARTABLE_ENABLED)
@@ -1351,10 +1344,6 @@ void mbedtls_ssl_add_hs_msg_to_checksum( mbedtls_ssl_context *ssl,
                                          unsigned char const *msg,
                                          size_t msg_len );
 
-void mbedtls_ssl_add_hs_hdr_to_checksum( mbedtls_ssl_context *ssl,
-                                         unsigned hs_type,
-                                         size_t total_hs_len );
-
 #if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
 #if !defined(MBEDTLS_USE_PSA_CRYPTO)
 MBEDTLS_CHECK_RETURN_CRITICAL
@@ -1780,7 +1769,6 @@ static inline int mbedtls_ssl_conf_tls13_some_psk_enabled( mbedtls_ssl_context *
                    MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_ALL ) );
 }
 
-#if defined(MBEDTLS_SSL_SRV_C) && defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
 /**
  * Given a list of key exchange modes, check if at least one of them is
  * supported.
@@ -1826,30 +1814,6 @@ static inline int mbedtls_ssl_tls13_some_psk_enabled( mbedtls_ssl_context *ssl )
 {
     return( ! mbedtls_ssl_tls13_check_kex_modes( ssl,
                    MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_ALL ) );
-}
-#endif /* MBEDTLS_SSL_SRV_C && MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
-
-/*
- * Helper functions to check the selected key exchange mode.
- */
-static inline int mbedtls_ssl_tls13_key_exchange_mode_check(
-    mbedtls_ssl_context *ssl, int kex_mask )
-{
-    return( ( ssl->handshake->key_exchange_mode & kex_mask ) != 0 );
-}
-
-static inline int mbedtls_ssl_tls13_key_exchange_mode_with_psk(
-    mbedtls_ssl_context *ssl )
-{
-    return( mbedtls_ssl_tls13_key_exchange_mode_check( ssl,
-                   MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_ALL ) );
-}
-
-static inline int mbedtls_ssl_tls13_key_exchange_mode_with_ephemeral(
-    mbedtls_ssl_context *ssl )
-{
-    return( mbedtls_ssl_tls13_key_exchange_mode_check( ssl,
-                   MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ALL ) );
 }
 
 /*
@@ -2092,7 +2056,7 @@ static inline int mbedtls_ssl_sig_alg_is_offered( const mbedtls_ssl_context *ssl
     return( 0 );
 }
 
-static inline int mbedtls_ssl_get_pk_type_and_md_alg_from_sig_alg(
+static inline int mbedtls_ssl_tls13_get_pk_type_and_md_alg_from_sig_alg(
     uint16_t sig_alg, mbedtls_pk_type_t *pk_type, mbedtls_md_type_t *md_alg )
 {
     *pk_type = mbedtls_ssl_pk_alg_from_sig( sig_alg & 0xff );
@@ -2454,50 +2418,5 @@ int mbedtls_ssl_check_dtls_clihlo_cookie(
                            const unsigned char *in, size_t in_len,
                            unsigned char *obuf, size_t buf_len, size_t *olen );
 #endif
-
-#if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
-/* Check if we have any PSK to offer, returns 0 if PSK is available.
- * Assign the psk and ticket if pointers are present.
- */
-MBEDTLS_CHECK_RETURN_CRITICAL
-int mbedtls_ssl_get_psk_to_offer(
-        const mbedtls_ssl_context *ssl,
-        int *psk_type,
-        const unsigned char **psk, size_t *psk_len,
-        const unsigned char **psk_identity, size_t *psk_identity_len );
-
-/**
- * \brief Given an SSL context and its associated configuration, write the TLS
- *        1.3 specific Pre-Shared key extension.
- *
- * \param[in]   ssl     SSL context
- * \param[in]   buf     Base address of the buffer where to write the extension
- * \param[in]   end     End address of the buffer where to write the extension
- * \param[out]  out_len Length in bytes of the Pre-Shared key extension: data
- *                      written into the buffer \p buf by this function plus
- *                      the length of the binders to be written.
- * \param[out]  binders_len Length of the binders to be written at the end of
- *                          the extension.
- */
-MBEDTLS_CHECK_RETURN_CRITICAL
-int mbedtls_ssl_tls13_write_identities_of_pre_shared_key_ext(
-    mbedtls_ssl_context *ssl,
-    unsigned char *buf, unsigned char *end,
-    size_t *out_len, size_t *binders_len );
-
-/**
- * \brief Given an SSL context and its associated configuration, write the TLS
- *        1.3 specific Pre-Shared key extension binders at the end of the
- *        ClientHello.
- *
- * \param[in]   ssl     SSL context
- * \param[in]   buf     Base address of the buffer where to write the binders
- * \param[in]   end     End address of the buffer where to write the binders
- */
-MBEDTLS_CHECK_RETURN_CRITICAL
-int mbedtls_ssl_tls13_write_binders_of_pre_shared_key_ext(
-    mbedtls_ssl_context *ssl,
-    unsigned char *buf, unsigned char *end );
-#endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
 
 #endif /* ssl_misc.h */
