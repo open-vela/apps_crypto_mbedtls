@@ -131,10 +131,7 @@ function(link_to_source base_name)
         set(target "${CMAKE_CURRENT_SOURCE_DIR}/${base_name}")
     endif()
 
-    # Linking to non-existent file is not desirable. At best you will have a
-    # dangling link, but when building in tree, this can create a symbolic link
-    # to itself.
-    if (EXISTS ${target} AND NOT EXISTS ${link})
+    if (NOT EXISTS ${link})
         if (CMAKE_HOST_UNIX)
             set(command ln -s ${target} ${link})
         else()
@@ -227,7 +224,7 @@ if(CMAKE_COMPILER_IS_CLANG)
 endif(CMAKE_COMPILER_IS_CLANG)
 
 if(CMAKE_COMPILER_IS_IAR)
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} --warn_about_c_style_casts -Ohz")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} --warn_about_c_style_casts --warnings_are_errors -Ohz")
 endif(CMAKE_COMPILER_IS_IAR)
 
 if(CMAKE_COMPILER_IS_MSVC)
@@ -248,10 +245,6 @@ if(MBEDTLS_FATAL_WARNINGS)
             set(CMAKE_C_FLAGS_ASANDBG "${CMAKE_C_FLAGS_ASANDBG} -Wno-error=cpp")
         endif(UNSAFE_BUILD)
     endif(CMAKE_COMPILER_IS_CLANG OR CMAKE_COMPILER_IS_GNU)
-
-    if (CMAKE_COMPILER_IS_IAR)
-        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} --warning_are_errors")
-    endif(CMAKE_COMPILER_IS_IAR)
 endif(MBEDTLS_FATAL_WARNINGS)
 
 if(CMAKE_BUILD_TYPE STREQUAL "Coverage")
