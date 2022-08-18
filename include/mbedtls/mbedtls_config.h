@@ -1493,7 +1493,12 @@
  * Enable support for TLS 1.2 (and DTLS 1.2 if DTLS is enabled).
  *
  * Requires: MBEDTLS_SHA1_C or MBEDTLS_SHA256_C or MBEDTLS_SHA512_C
- *           (Depends on ciphersuites)
+ *           (Depends on ciphersuites) when MBEDTLS_USE_PSA_CRYPTO
+ *           is not defined, PSA_WANT_ALG_SHA_1 or PSA_WANT_ALG_SHA_256 or
+ *           PSA_WANT_ALG_SHA_512 when MBEDTLS_USE_PSA_CRYPTO is defined.
+ *
+ * \warning If building without MBEDTLS_MD_C, you must call psa_crypto_init()
+ * before doing any TLS operation.
  *
  * Comment this macro to disable support for TLS 1.2 / DTLS 1.2
  */
@@ -2013,9 +2018,6 @@
  * Enable the multi-precision integer library.
  *
  * Module:  library/bignum.c
- *          library/bignum_core.c
- *          library/bignum_mod.c
- *          library/bignum_mod_raw.c
  * Caller:  library/dhm.c
  *          library/ecp.c
  *          library/ecdsa.c
@@ -2681,7 +2683,7 @@
  * above to be specified at runtime or compile time respectively.
  *
  * \note This abstraction layer must be enabled on Windows (including MSYS2)
- * as other modules rely on it for a fixed snprintf implementation.
+ * as other module rely on it for a fixed snprintf implementation.
  *
  * Module:  library/platform.c
  * Caller:  Most other .c files
