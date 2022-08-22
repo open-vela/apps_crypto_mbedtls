@@ -1599,3 +1599,275 @@ run_test    "TLS 1.3: O->m: psk_ephemeral group(x448) check, good" \
             -S "key exchange mode: psk$"  \
             -s "key exchange mode: psk_ephemeral"  \
             -S "key exchange mode: ephemeral"
+
+requires_all_configs_enabled MBEDTLS_SSL_PROTO_TLS1_3 MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE MBEDTLS_SSL_SRV_C MBEDTLS_DEBUG_C
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_RSA_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_DHE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_openssl_tls1_3
+run_test "TLS 1.3 O->m: psk_ephemeral group(secp256r1->secp384r1) check, good" \
+         "$P_SRV force_version=tls13 tls13_kex_modes=psk_ephemeral debug_level=5 psk_list=Client_identity,6162636465666768696a6b6c6d6e6f70,abc,dead,def,beef curves=secp384r1" \
+         "$O_NEXT_CLI_NO_CERT -tls1_3 -msg -allow_no_dhe_kex -psk_identity Client_identity -psk 6162636465666768696a6b6c6d6e6f70 -groups P-256:P-384" \
+         0 \
+         -s "write selected_group: secp384r1" \
+         -s "HRR selected_group: secp384r1" \
+         -S "key exchange mode: psk$" \
+         -s "key exchange mode: psk_ephemeral" \
+         -S "key exchange mode: ephemeral"
+
+requires_all_configs_enabled MBEDTLS_SSL_PROTO_TLS1_3 MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE MBEDTLS_SSL_SRV_C MBEDTLS_DEBUG_C
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_RSA_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_DHE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_gnutls_tls1_3
+requires_gnutls_next_no_ticket
+requires_gnutls_next_disable_tls13_compat
+run_test "TLS 1.3 G->m: psk_ephemeral group(secp256r1->secp384r1) check, good" \
+         "$P_SRV force_version=tls13 tls13_kex_modes=psk_ephemeral debug_level=5 psk_list=Client_identity,6162636465666768696a6b6c6d6e6f70,abc,dead,def,beef curves=secp384r1" \
+         "$G_NEXT_CLI_NO_CERT --debug=4 --single-key-share --priority NORMAL:-VERS-ALL:-KX-ALL:+ECDHE-PSK:+DHE-PSK:+PSK:+VERS-TLS1.3:-GROUP-ALL:+GROUP-SECP256R1:+GROUP-SECP384R1 --pskusername Client_identity --pskkey 6162636465666768696a6b6c6d6e6f70 localhost" \
+         0 \
+         -s "write selected_group: secp384r1" \
+         -s "HRR selected_group: secp384r1" \
+         -S "key exchange mode: psk$" \
+         -s "key exchange mode: psk_ephemeral" \
+         -S "key exchange mode: ephemeral"
+
+
+# Add psk test cases for mbedtls client code
+
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
+requires_config_enabled MBEDTLS_SSL_SRV_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
+run_test    "TLS 1.3Client: PSK: psk: with matched key and identity, with psk_ke and psk_dhe_ke. m->m" \
+            "$P_SRV nbio=2 debug_level=5 force_version=tls13 psk=010203 psk_identity=0a0b0c tls13_kex_modes=psk" \
+            "$P_CLI nbio=2 debug_level=5 force_version=tls13 psk=010203 psk_identity=0a0b0c tls13_kex_modes=psk" \
+            0 \
+            -c "=> write client hello" \
+            -c "client hello, adding pre_shared_key extension, omitting PSK binder list" \
+            -c "client hello, adding psk_key_exchange_modes extension" \
+            -c "client hello, adding PSK binder list" \
+            -c "<= write client hello" \
+            -c "HTTP/1.0 200 OK"
+
+requires_openssl_tls1_3
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
+requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
+requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED \
+                             MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+run_test    "TLS 1.3Client: PSK: psk: with matched key and identity, with psk_ke and psk_dhe_ke. m->O" \
+            "$O_NEXT_SRV -msg -debug -tls1_3 -psk_identity 0a0b0c -psk 010203 -allow_no_dhe_kex -nocert" \
+            "$P_CLI debug_level=4 psk=010203 psk_identity=0a0b0c tls13_kex_modes=psk" \
+            0 \
+            -c "=> write client hello" \
+            -c "client hello, adding pre_shared_key extension, omitting PSK binder list" \
+            -c "client hello, adding psk_key_exchange_modes extension" \
+            -c "client hello, adding PSK binder list" \
+            -c "<= write client hello" \
+            -c "HTTP/1.0 200 ok"
+
+requires_openssl_tls1_3
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
+requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
+requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED \
+                             MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+run_test    "TLS 1.3Client: PSK: psk: with matched key and identity, with psk_dhe_ke. m->O" \
+            "$O_NEXT_SRV -msg -debug -tls1_3 -psk_identity 0a0b0c -psk 010203" \
+            "$P_CLI debug_level=4 sig_algs=ecdsa_secp256r1_sha256 psk=010203 psk_identity=0a0b0c tls13_kex_modes=psk" \
+            0 \
+            -c "=> write client hello" \
+            -c "client hello, adding pre_shared_key extension, omitting PSK binder list" \
+            -c "client hello, adding psk_key_exchange_modes extension" \
+            -c "client hello, adding PSK binder list" \
+            -c "<= write client hello" \
+            -c "HTTP/1.0 200 ok"
+
+requires_openssl_tls1_3
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
+requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
+requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED \
+                             MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+run_test    "TLS 1.3Client: PSK: psk: with mismatched identity, with psk_ke and psk_dhe_ke. m->O" \
+            "$O_NEXT_SRV -msg -debug -tls1_3 -psk_identity 0a0b0c -psk 010203 -allow_no_dhe_kex -nocert" \
+            "$P_CLI debug_level=4 psk=010203 psk_identity=0c0d0e tls13_kex_modes=psk" \
+            0 \
+            -c "=> write client hello" \
+            -c "client hello, adding pre_shared_key extension, omitting PSK binder list" \
+            -c "client hello, adding psk_key_exchange_modes extension" \
+            -c "client hello, adding PSK binder list" \
+            -c "<= write client hello" \
+            -s "PSK warning: client identity not what we expected" \
+            -c "HTTP/1.0 200 ok"
+
+requires_openssl_tls1_3
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
+requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
+requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED \
+                             MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+run_test    "TLS 1.3Client: PSK: psk: with mismatched identity, with psk_dhe_ke. m->O" \
+            "$O_NEXT_SRV -msg -debug -tls1_3 -psk_identity 0a0b0c -psk 010203" \
+            "$P_CLI debug_level=4 psk=010203 psk_identity=0d0e0f tls13_kex_modes=psk" \
+            0 \
+            -c "=> write client hello" \
+            -c "client hello, adding pre_shared_key extension, omitting PSK binder list" \
+            -c "client hello, adding psk_key_exchange_modes extension" \
+            -c "client hello, adding PSK binder list" \
+            -c "<= write client hello" \
+            -c "client state: MBEDTLS_SSL_SERVER_CERTIFICATE" \
+            -c "HTTP/1.0 200 ok"
+
+requires_openssl_tls1_3
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
+requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
+requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED \
+                             MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+run_test    "TLS 1.3Client: PSK: psk: without pre-share key, with psk_ke and psk_dhe_ke. m->O" \
+            "$O_NEXT_SRV -msg -debug -tls1_3 -psk_identity 0a0b0c -psk 010203 -nocert" \
+            "$P_CLI debug_level=4 psk_identity=0a0b0c tls13_kex_modes=psk" \
+            1 \
+            -c "=> write client hello" \
+            -c "client hello, adding psk_key_exchange_modes extension" \
+            -c "skip pre_shared_key extensions" \
+            -c "Last error was: -0x7780 - SSL - A fatal alert message was received from our peer" \
+            -c "<= write client hello"
+
+#GNUTLS-SERVER cases
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
+requires_gnutls_tls1_3
+requires_gnutls_next_no_ticket
+requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
+requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
+run_test    "TLS 1.3Client: PSK: psk: with matched key and identity, with psk_ke and psk_dhe_ke. m->G" \
+            "$G_NEXT_SRV -d 4 --priority=NORMAL:-VERS-ALL:+VERS-TLS1.3:-KX-ALL:+ECDHE-PSK:+DHE-PSK:+PSK:+CIPHER-ALL:%NO_TICKETS --pskhint=0a0b0c --pskpasswd=data_files/simplepass.psk" \
+            "$P_CLI debug_level=4 psk=010203 psk_identity=0a0b0c tls13_kex_modes=psk" \
+            0 \
+            -c "=> write client hello" \
+            -c "client hello, adding pre_shared_key extension, omitting PSK binder list" \
+            -c "client hello, adding psk_key_exchange_modes extension" \
+            -c "client hello, adding PSK binder list" \
+            -s "Parsing extension 'PSK Key Exchange Modes/45'" \
+            -s "Parsing extension 'Pre Shared Key/41'" \
+            -c "<= write client hello" \
+            -c "HTTP/1.0 200 OK"
+
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
+requires_gnutls_tls1_3
+requires_gnutls_next_no_ticket
+requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
+requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
+run_test    "TLS 1.3Client: PSK: psk: with matched key and identity, with psk_ke. m->G" \
+            "$G_NEXT_SRV -d 4 --priority=NORMAL:-VERS-ALL:+VERS-TLS1.3:-KX-ALL:-ECDHE-PSK:-DHE-PSK:+PSK:+CIPHER-ALL:%NO_TICKETS --pskhint=0a0b0c --pskpasswd=data_files/simplepass.psk" \
+            "$P_CLI debug_level=4 psk=010203 psk_identity=0a0b0c tls13_kex_modes=psk" \
+            0 \
+            -c "=> write client hello" \
+            -c "client hello, adding pre_shared_key extension, omitting PSK binder list" \
+            -c "client hello, adding psk_key_exchange_modes extension" \
+            -c "client hello, adding PSK binder list" \
+            -s "Parsing extension 'PSK Key Exchange Modes/45'" \
+            -s "Parsing extension 'Pre Shared Key/41'" \
+            -c "<= write client hello" \
+            -c "HTTP/1.0 200 OK"
+
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
+requires_gnutls_tls1_3
+requires_gnutls_next_no_ticket
+requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
+requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
+run_test    "TLS 1.3Client: PSK: psk: with matched key and identity, with psk_dhe_ke. m->G" \
+            "$G_NEXT_SRV -d 4 --priority=NORMAL:-VERS-ALL:+VERS-TLS1.3:-KX-ALL:+ECDHE-PSK:+DHE-PSK:-PSK:+CIPHER-ALL:%NO_TICKETS --pskhint=0a0b0c --pskpasswd=data_files/simplepass.psk" \
+            "$P_CLI debug_level=4 psk=010203 psk_identity=0a0b0c tls13_kex_modes=psk" \
+            0 \
+            -c "=> write client hello" \
+            -c "client hello, adding pre_shared_key extension, omitting PSK binder list" \
+            -c "client hello, adding psk_key_exchange_modes extension" \
+            -c "client hello, adding PSK binder list" \
+            -s "Parsing extension 'PSK Key Exchange Modes/45'" \
+            -s "Parsing extension 'Pre Shared Key/41'" \
+            -c "<= write client hello" \
+            -c "HTTP/1.0 200 OK"
+
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
+requires_gnutls_tls1_3
+requires_gnutls_next_no_ticket
+requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
+requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
+run_test    "TLS 1.3Client: PSK: psk: with mismatched identity, with psk_ke and psk_dhe_ke. m->G" \
+            "$G_NEXT_SRV -d 4 --priority=NORMAL:-VERS-ALL:+VERS-TLS1.3:-KX-ALL:+ECDHE-PSK:+DHE-PSK:+PSK:+CIPHER-ALL:%NO_TICKETS --pskhint=0a0b0c --pskpasswd=data_files/simplepass.psk" \
+            "$P_CLI debug_level=4 psk=010203 psk_identity=0d0e0f tls13_kex_modes=psk" \
+            1 \
+            -c "=> write client hello" \
+            -c "client hello, adding pre_shared_key extension, omitting PSK binder list" \
+            -c "client hello, adding psk_key_exchange_modes extension" \
+            -c "client hello, adding PSK binder list" \
+            -s "Parsing extension 'PSK Key Exchange Modes/45'" \
+            -s "Parsing extension 'Pre Shared Key/41'" \
+            -c "<= write client hello" \
+            -c "Last error was: -0x7780 - SSL - A fatal alert message was received from our peer"
+
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
+requires_gnutls_tls1_3
+requires_gnutls_next_no_ticket
+requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
+requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
+run_test    "TLS 1.3Client: PSK: psk: with mismatched identity, with psk_ke. m->G" \
+            "$G_NEXT_SRV -d 4 --priority=NORMAL:-VERS-ALL:+VERS-TLS1.3:-KX-ALL:-ECDHE-PSK:-DHE-PSK:+PSK:+CIPHER-ALL:%NO_TICKETS --pskhint=0a0b0c --pskpasswd=data_files/simplepass.psk" \
+            "$P_CLI debug_level=4 psk=010203 psk_identity=0d0e0f tls13_kex_modes=psk" \
+            1 \
+            -c "=> write client hello" \
+            -c "client hello, adding pre_shared_key extension, omitting PSK binder list" \
+            -c "client hello, adding psk_key_exchange_modes extension" \
+            -c "client hello, adding PSK binder list" \
+            -s "Parsing extension 'PSK Key Exchange Modes/45'" \
+            -s "Parsing extension 'Pre Shared Key/41'" \
+            -c "<= write client hello" \
+            -c "Last error was: -0x7780 - SSL - A fatal alert message was received from our peer"
+
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
+requires_gnutls_tls1_3
+requires_gnutls_next_no_ticket
+requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
+requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
+run_test    "TLS 1.3Client: PSK: psk: with mismatched identity, with psk_dhe_ke. m->G" \
+            "$G_NEXT_SRV -d 4 --priority=NORMAL:-VERS-ALL:+VERS-TLS1.3:-KX-ALL:+ECDHE-PSK:+DHE-PSK:-PSK:+CIPHER-ALL:%NO_TICKETS --pskhint=0a0b0c --pskpasswd=data_files/simplepass.psk" \
+            "$P_CLI debug_level=4 psk=010203 psk_identity=0d0e0f tls13_kex_modes=psk" \
+            0 \
+            -c "=> write client hello" \
+            -c "client hello, adding pre_shared_key extension, omitting PSK binder list" \
+            -c "client hello, adding psk_key_exchange_modes extension" \
+            -c "client hello, adding PSK binder list" \
+            -s "Parsing extension 'PSK Key Exchange Modes/45'" \
+            -s "Parsing extension 'Pre Shared Key/41'" \
+            -c "<= write client hello" \
+            -c "client state: MBEDTLS_SSL_SERVER_CERTIFICATE"
+            -c "HTTP/1.0 200 OK"
+
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
+requires_gnutls_tls1_3
+requires_gnutls_next_no_ticket
+requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
+requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
+run_test    "TLS 1.3Client: PSK: psk: without pre-share key, with psk_ke and psk_dhe_ke. m->G" \
+            "$G_NEXT_SRV -d 4 --priority=NORMAL:-VERS-ALL:+VERS-TLS1.3:-KX-ALL:+ECDHE-PSK:+DHE-PSK:-PSK:+CIPHER-ALL:%NO_TICKETS --pskhint=0a0b0c --pskpasswd=data_files/simplepass.psk" \
+            "$P_CLI debug_level=4 psk_identity=0d0e0f tls13_kex_modes=psk" \
+            0 \
+            -c "=> write client hello" \
+            -c "client hello, adding psk_key_exchange_modes extension" \
+            -c "skip pre_shared_key extensions" \
+            -s "Parsing extension 'PSK Key Exchange Modes/45'" \
+            -c "<= write client hello" \
+            -c "client state: MBEDTLS_SSL_SERVER_CERTIFICATE"
+            -c "HTTP/1.0 200 OK"
