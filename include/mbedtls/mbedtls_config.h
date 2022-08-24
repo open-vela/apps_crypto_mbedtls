@@ -2460,20 +2460,6 @@
 #define MBEDTLS_HMAC_DRBG_C
 
 /**
- * \def MBEDTLS_LMOTS_C
- *
- * Enable the LMOTS one-time asymmetric hash signature algorithm.
- *
- * Module:  library/lm_ots.c
- * Caller:
- *
- * Requires: MBEDTLS_SHA256_C
- *
- * Uncomment to enable the LMOTS signature algorithm.
- */
-#define MBEDTLS_LMOTS_C
-
-/**
  * \def MBEDTLS_LMS_C
  *
  * Enable the LMS stateful-hash asymmetric signature algorithm.
@@ -2481,7 +2467,7 @@
  * Module:  library/lms.c
  * Caller:
  *
- * Requires: MBEDTLS_LMS_C
+ * Requires: MBEDTLS_MD_C
  *
  * Uncomment to enable the LMS signature algorithm.
  */
