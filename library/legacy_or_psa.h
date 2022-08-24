@@ -90,9 +90,6 @@
 #define MBEDTLS_OR_PSA_HELPERS_H
 
 #include "common.h"
-#if defined(MBEDTLS_PSA_CRYPTO_C)
-#include "psa/crypto.h"
-#endif /* MBEDTLS_PSA_CRYPTO_C */
 
 /*
  * Hashes

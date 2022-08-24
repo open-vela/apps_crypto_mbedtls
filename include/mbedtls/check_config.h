@@ -108,8 +108,7 @@
 #endif
 
 #if defined(MBEDTLS_ECJPAKE_C) &&           \
-    ( !defined(MBEDTLS_ECP_C) ||            \
-      !( defined(MBEDTLS_MD_C) || defined(MBEDTLS_PSA_CRYPTO_C) ) )
+    ( !defined(MBEDTLS_ECP_C) || !defined(MBEDTLS_MD_C) )
 #error "MBEDTLS_ECJPAKE_C defined, but not all prerequisites"
 #endif
 
@@ -890,16 +889,14 @@
 #endif
 
 #if defined(MBEDTLS_X509_USE_C) && ( !defined(MBEDTLS_BIGNUM_C) ||  \
-    !defined(MBEDTLS_OID_C) || !defined(MBEDTLS_ASN1_PARSE_C) ||    \
-    !defined(MBEDTLS_PK_PARSE_C) ||                                 \
-    ( !defined(MBEDTLS_MD_C) && !defined(MBEDTLS_USE_PSA_CRYPTO) ) )
+    !defined(MBEDTLS_OID_C) || !defined(MBEDTLS_ASN1_PARSE_C) ||      \
+    !defined(MBEDTLS_PK_PARSE_C) )
 #error "MBEDTLS_X509_USE_C defined, but not all prerequisites"
 #endif
 
 #if defined(MBEDTLS_X509_CREATE_C) && ( !defined(MBEDTLS_BIGNUM_C) ||  \
     !defined(MBEDTLS_OID_C) || !defined(MBEDTLS_ASN1_WRITE_C) ||       \
-    !defined(MBEDTLS_PK_PARSE_C) ||                                    \
-    ( !defined(MBEDTLS_MD_C) && !defined(MBEDTLS_USE_PSA_CRYPTO) ) )
+    !defined(MBEDTLS_PK_WRITE_C) )
 #error "MBEDTLS_X509_CREATE_C defined, but not all prerequisites"
 #endif
 
