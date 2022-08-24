@@ -223,34 +223,6 @@ requires_config_disabled() {
     esac
 }
 
-requires_all_configs_enabled() {
-    if ! $P_QUERY -all $*
-    then
-        SKIP_NEXT="YES"
-    fi
-}
-
-requires_all_configs_disabled() {
-    if $P_QUERY -any $*
-    then
-        SKIP_NEXT="YES"
-    fi
-}
-
-requires_any_configs_enabled() {
-    if ! $P_QUERY -any $*
-    then
-        SKIP_NEXT="YES"
-    fi
-}
-
-requires_any_configs_disabled() {
-    if $P_QUERY -all $*
-    then
-        SKIP_NEXT="YES"
-    fi
-}
-
 get_config_value_or_default() {
     # This function uses the query_config command line option to query the
     # required Mbed TLS compile time configuration from the ssl_server2
@@ -902,12 +874,12 @@ wait_client_done() {
     ( sleep $CLI_DELAY; echo "===CLIENT_TIMEOUT===" >> $CLI_OUT; kill $CLI_PID ) &
     DOG_PID=$!
 
-    # For Ubuntu 22.04, `Terminated` message is outputed by wait command.
-    # To remove it from stdout, redirect stdout/stderr to CLI_OUT
-    wait $CLI_PID >> $CLI_OUT 2>&1
+    wait $CLI_PID
     CLI_EXIT=$?
 
     kill $DOG_PID >/dev/null 2>&1
+    # For Ubuntu 22.04, `Terminated` message is outputed by wait command.
+    # To remove it from stdout, redirect stdout/stderr to CLI_OUT
     wait $DOG_PID >> $CLI_OUT 2>&1
 
     echo "EXIT: $CLI_EXIT" >> $CLI_OUT
@@ -1258,9 +1230,7 @@ do_run_test_once() {
 
     # terminate the server (and the proxy)
     kill $SRV_PID
-    # For Ubuntu 22.04, `Terminated` message is outputed by wait command.
-    # To remove it from stdout, redirect stdout/stderr to SRV_OUT
-    wait $SRV_PID >> $SRV_OUT 2>&1
+    wait $SRV_PID
     SRV_RET=$?
 
     if [ -n "$PXY_CMD" ]; then
@@ -9732,9 +9702,12 @@ run_test    "DTLS fragmenting: 3d, gnutls client, DTLS 1.2" \
             0 \
             -s "fragmenting handshake message"
 
-## The test below requires 1.1.1a or higher version of openssl, otherwise
-## it might trigger a bug due to openssl server (https://github.com/openssl/openssl/issues/6902)
-requires_openssl_next
+## Interop test with OpenSSL might trigger a bug in recent versions (including
+## all versions installed on the CI machines), reported here:
+## Bug report: https://github.com/openssl/openssl/issues/6902
+## They should be re-enabled once a fixed version of OpenSSL is available
+## (this should happen in some 1.1.1_ release according to the ticket).
+skip_next_test
 requires_config_enabled MBEDTLS_SSL_PROTO_DTLS
 requires_config_enabled MBEDTLS_RSA_C
 requires_config_enabled MBEDTLS_ECDSA_C
@@ -9742,7 +9715,7 @@ client_needs_more_time 4
 requires_max_content_len 2048
 run_test    "DTLS fragmenting: 3d, openssl server, DTLS 1.2" \
             -p "$P_PXY drop=8 delay=8 duplicate=8" \
-            "$O_NEXT_SRV -dtls1_2 -verify 10" \
+            "$O_SRV -dtls1_2 -verify 10" \
             "$P_CLI dtls=1 debug_level=2 \
              crt_file=data_files/server8_int-ca2.crt \
              key_file=data_files/server8.key \
@@ -9751,8 +9724,6 @@ run_test    "DTLS fragmenting: 3d, openssl server, DTLS 1.2" \
             -c "fragmenting handshake message" \
             -C "error"
 
-## the test below will time out with certain seed.
-## The cause is an openssl bug (https://github.com/openssl/openssl/issues/18887)
 skip_next_test
 requires_config_enabled MBEDTLS_SSL_PROTO_DTLS
 requires_config_enabled MBEDTLS_RSA_C
@@ -10830,38 +10801,40 @@ run_test    "DTLS proxy: 3d, min handshake, server-initiated renego, nbio" \
             -s "Extra-header:" \
             -c "HTTP/1.0 200 OK"
 
-## The three tests below require 1.1.1a or higher version of openssl, otherwise
-## it might trigger a bug due to openssl (https://github.com/openssl/openssl/issues/6902)
-## Besides, openssl should use dtls1_2 or dtls, otherwise it will cause "SSL alert number 70" error
-requires_openssl_next
+## Interop tests with OpenSSL might trigger a bug in recent versions (including
+## all versions installed on the CI machines), reported here:
+## Bug report: https://github.com/openssl/openssl/issues/6902
+## They should be re-enabled once a fixed version of OpenSSL is available
+## (this should happen in some 1.1.1_ release according to the ticket).
+skip_next_test
 client_needs_more_time 6
 not_with_valgrind # risk of non-mbedtls peer timing out
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 run_test    "DTLS proxy: 3d, openssl server" \
             -p "$P_PXY drop=5 delay=5 duplicate=5 protect_hvr=1" \
-            "$O_NEXT_SRV -dtls1_2 -mtu 2048" \
+            "$O_SRV -dtls1 -mtu 2048" \
             "$P_CLI dgram_packing=0 dtls=1 hs_timeout=500-60000 tickets=0" \
             0 \
             -c "HTTP/1.0 200 OK"
 
-requires_openssl_next
+skip_next_test # see above
 client_needs_more_time 8
 not_with_valgrind # risk of non-mbedtls peer timing out
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 run_test    "DTLS proxy: 3d, openssl server, fragmentation" \
             -p "$P_PXY drop=5 delay=5 duplicate=5 protect_hvr=1" \
-            "$O_NEXT_SRV -dtls1_2 -mtu 768" \
+            "$O_SRV -dtls1 -mtu 768" \
             "$P_CLI dgram_packing=0 dtls=1 hs_timeout=500-60000 tickets=0" \
             0 \
             -c "HTTP/1.0 200 OK"
 
-requires_openssl_next
+skip_next_test # see above
 client_needs_more_time 8
 not_with_valgrind # risk of non-mbedtls peer timing out
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 run_test    "DTLS proxy: 3d, openssl server, fragmentation, nbio" \
             -p "$P_PXY drop=5 delay=5 duplicate=5 protect_hvr=1" \
-            "$O_NEXT_SRV -dtls1_2 -mtu 768" \
+            "$O_SRV -dtls1 -mtu 768" \
             "$P_CLI dgram_packing=0 dtls=1 hs_timeout=500-60000 nbio=2 tickets=0" \
             0 \
             -c "HTTP/1.0 200 OK"
@@ -12752,37 +12725,6 @@ run_test    "TLS 1.3: NewSessionTicket: Basic check, m->m" \
             -s "=> write NewSessionTicket msg" \
             -s "server state: MBEDTLS_SSL_NEW_SESSION_TICKET" \
             -s "server state: MBEDTLS_SSL_NEW_SESSION_TICKET_FLUSH"
-
-requires_openssl_tls1_3
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
-requires_config_enabled MBEDTLS_DEBUG_C
-requires_config_enabled MBEDTLS_SSL_CLI_C
-run_test    "TLS 1.2: Check rsa_pss_rsae compatibility issue, m->O" \
-            "$O_NEXT_SRV_NO_CERT -cert data_files/server2-sha256.crt -key data_files/server2.key
-                                 -msg -tls1_2
-                                 -Verify 10 " \
-            "$P_CLI debug_level=4 crt_file=data_files/server2-sha256.crt key_file=data_files/server2.key
-                    sig_algs=rsa_pss_rsae_sha512,rsa_pkcs1_sha512
-                    min_version=tls12 max_version=tls13 " \
-            0 \
-            -c "Protocol is TLSv1.2" \
-            -c "HTTP/1.0 200 [Oo][Kk]"
-
-
-requires_gnutls_tls1_3
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
-requires_config_enabled MBEDTLS_DEBUG_C
-requires_config_enabled MBEDTLS_SSL_CLI_C
-run_test    "TLS 1.2: Check rsa_pss_rsae compatibility issue, m->G" \
-            "$G_NEXT_SRV_NO_CERT --x509certfile data_files/server2-sha256.crt --x509keyfile data_files/server2.key
-                    -d 4
-                    --priority=NORMAL:-VERS-ALL:+VERS-TLS1.2" \
-            "$P_CLI debug_level=4 crt_file=data_files/server2-sha256.crt key_file=data_files/server2.key
-                    sig_algs=rsa_pss_rsae_sha512,rsa_pkcs1_sha512
-                    min_version=tls12 max_version=tls13 " \
-            0 \
-            -c "Protocol is TLSv1.2" \
-            -c "HTTP/1.0 200 [Oo][Kk]"
 
 # Test heap memory usage after handshake
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
