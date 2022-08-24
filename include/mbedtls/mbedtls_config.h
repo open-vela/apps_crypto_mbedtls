@@ -1141,10 +1141,7 @@
  *
  * Enable support for PKCS#1 v2.1 encoding.
  *
- * Requires: MBEDTLS_RSA_C and (MBEDTLS_MD_C or MBEDTLS_PSA_CRYPTO_C).
- *
- * \warning If building without MBEDTLS_MD_C, you must call psa_crypto_init()
- * before doing any PKCS#1 v2.1 operation.
+ * Requires: MBEDTLS_MD_C, MBEDTLS_RSA_C
  *
  * This enables support for RSAES-OAEP and RSASSA-PSS operations.
  */
