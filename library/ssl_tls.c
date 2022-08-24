@@ -1898,7 +1898,7 @@ mbedtls_ssl_mode_t mbedtls_ssl_get_mode_from_ciphersuite(
  *     struct {
  *       uint64 ticket_received;
  *       uint32 ticket_lifetime;
- *       opaque ticket<1..2^16-1>;
+ *       opaque ticket<0..2^16>;
  *     } ClientOnlyData;
  *
  *     struct {
@@ -1915,23 +1915,16 @@ mbedtls_ssl_mode_t mbedtls_ssl_get_mode_from_ciphersuite(
  *
  */
 #if defined(MBEDTLS_SSL_SESSION_TICKETS)
-MBEDTLS_CHECK_RETURN_CRITICAL
-static int ssl_tls13_session_save( const mbedtls_ssl_session *session,
-                                   unsigned char *buf,
-                                   size_t buf_len,
-                                   size_t *olen )
+static size_t ssl_tls13_session_save( const mbedtls_ssl_session *session,
+                                      unsigned char *buf,
+                                      size_t buf_len )
 {
     unsigned char *p = buf;
     size_t needed =   1                             /* endpoint */
                     + 2                             /* ciphersuite */
                     + 4                             /* ticket_age_add */
-                    + 1                             /* ticket_flags */
-                    + 1;                            /* resumption_key length */
-    *olen = 0;
-
-    if( session->resumption_key_len > MBEDTLS_SSL_TLS1_3_TICKET_RESUMPTION_KEY_LEN )
-        return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
-    needed += session->resumption_key_len;  /* resumption_key */
+                    + 2                             /* resumption_key length */
+                    + session->resumption_key_len;  /* resumption_key */
 
 #if defined(MBEDTLS_HAVE_TIME)
     needed += 8; /* start_time or ticket_received */
@@ -1941,19 +1934,13 @@ static int ssl_tls13_session_save( const mbedtls_ssl_session *session,
     if( session->endpoint == MBEDTLS_SSL_IS_CLIENT )
     {
         needed +=   4                       /* ticket_lifetime */
-                  + 2;                      /* ticket_len */
-
-        /* Check size_t overflow */
-        if( session->ticket_len > SIZE_MAX - needed )
-            return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
-
-        needed += session->ticket_len;      /* ticket */
+                  + 2                       /* ticket_len */
+                  + session->ticket_len;    /* ticket */
     }
 #endif /* MBEDTLS_SSL_CLI_C */
 
-    *olen = needed;
     if( needed > buf_len )
-        return( MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL );
+        return( needed );
 
     p[0] = session->endpoint;
     MBEDTLS_PUT_UINT16_BE( session->ciphersuite, p, 1 );
@@ -1986,15 +1973,14 @@ static int ssl_tls13_session_save( const mbedtls_ssl_session *session,
 
         MBEDTLS_PUT_UINT16_BE( session->ticket_len, p, 0 );
         p += 2;
-
-        if( session->ticket != NULL && session->ticket_len > 0 )
+        if( session->ticket_len > 0 )
         {
             memcpy( p, session->ticket, session->ticket_len );
             p += session->ticket_len;
         }
     }
 #endif /* MBEDTLS_SSL_CLI_C */
-    return( 0 );
+    return( needed );
 }
 
 MBEDTLS_CHECK_RETURN_CRITICAL
@@ -2070,17 +2056,14 @@ static int ssl_tls13_session_load( mbedtls_ssl_session *session,
 
 }
 #else /* MBEDTLS_SSL_SESSION_TICKETS */
-MBEDTLS_CHECK_RETURN_CRITICAL
-static int ssl_tls13_session_save( const mbedtls_ssl_session *session,
-                                   unsigned char *buf,
-                                   size_t buf_len,
-                                   size_t *olen )
+static size_t ssl_tls13_session_save( const mbedtls_ssl_session *session,
+                                      unsigned char *buf,
+                                      size_t buf_len )
 {
     ((void) session);
     ((void) buf);
     ((void) buf_len);
-    *olen = 0;
-    return( MBEDTLS_ERR_SSL_FEATURE_UNAVAILABLE );
+    return( 0 );
 }
 
 static int ssl_tls13_session_load( const mbedtls_ssl_session *session,
@@ -3024,10 +3007,7 @@ static int ssl_session_save( const mbedtls_ssl_session *session,
     unsigned char *p = buf;
     size_t used = 0;
     size_t remaining_len;
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
-    size_t out_len;
-    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
-#endif
+
     if( session == NULL )
         return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
 
@@ -3067,10 +3047,7 @@ static int ssl_session_save( const mbedtls_ssl_session *session,
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3)
     case MBEDTLS_SSL_VERSION_TLS1_3:
-        ret = ssl_tls13_session_save( session, p, remaining_len, &out_len );
-        if( ret != 0 && ret != MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL )
-            return( ret );
-        used += out_len;
+        used += ssl_tls13_session_save( session, p, remaining_len );
         break;
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
@@ -4925,7 +4902,14 @@ int mbedtls_ssl_check_curve_tls_id( const mbedtls_ssl_context *ssl, uint16_t tls
  */
 int mbedtls_ssl_check_curve( const mbedtls_ssl_context *ssl, mbedtls_ecp_group_id grp_id )
 {
-    uint16_t tls_id = mbedtls_ecp_curve_info_from_grp_id( grp_id )->tls_id;
+    const mbedtls_ecp_curve_info *grp_info =
+        mbedtls_ecp_curve_info_from_grp_id(grp_id);
+
+    if (grp_info == NULL)
+        return -1;
+
+    uint16_t tls_id = grp_info->tls_id;
+
     return mbedtls_ssl_check_curve_tls_id( ssl, tls_id );
 }
 #endif /* MBEDTLS_ECP_C */
@@ -6568,14 +6552,27 @@ static int ssl_parse_certificate_verify( mbedtls_ssl_context *ssl,
         /* If certificate uses an EC key, make sure the curve is OK.
          * This is a public key, so it can't be opaque, so can_do() is a good
          * enough check to ensure pk_ec() is safe to use here. */
-        if( mbedtls_pk_can_do( pk, MBEDTLS_PK_ECKEY ) &&
-            mbedtls_ssl_check_curve( ssl, mbedtls_pk_ec( *pk )->grp.id ) != 0 )
+        if( mbedtls_pk_can_do( pk, MBEDTLS_PK_ECKEY ) )
         {
-            ssl->session_negotiate->verify_result |= MBEDTLS_X509_BADCERT_BAD_KEY;
+            /* and in the unlikely case the above assumption no longer holds
+             * we are making sure that pk_ec() here does not return a NULL
+             */
+            const mbedtls_ecp_keypair *ec = mbedtls_pk_ec( *pk );
+            if( ec == NULL )
+            {
+                MBEDTLS_SSL_DEBUG_MSG( 1, ( "mbedtls_pk_ec() returned NULL" ) );
+                return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
+            }
 
-            MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad certificate (EC key curve)" ) );
-            if( ret == 0 )
-                ret = MBEDTLS_ERR_SSL_BAD_CERTIFICATE;
+            if( mbedtls_ssl_check_curve( ssl, ec->grp.id ) != 0 )
+            {
+                ssl->session_negotiate->verify_result |=
+                    MBEDTLS_X509_BADCERT_BAD_KEY;
+
+                MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad certificate (EC key curve)" ) );
+                if( ret == 0 )
+                    ret = MBEDTLS_ERR_SSL_BAD_CERTIFICATE;
+            }
         }
     }
 #endif /* MBEDTLS_ECP_C */
