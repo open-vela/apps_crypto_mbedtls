@@ -1720,6 +1720,378 @@ exit:
 }
 /* END_CASE */
 
+/* BEGIN_CASE */
+void mbedtls_mpi_core_add_if( char * input_l, char * input_r,
+                              char * input_X4, int carry4,
+                              char * input_X8, int carry8 )
+{
+    mbedtls_mpi X4, X8, l, r;
+    mbedtls_mpi_uint *la = NULL;
+    mbedtls_mpi_uint *ra = NULL;
+    mbedtls_mpi_uint *Xa = NULL;
+    mbedtls_mpi_uint *da = NULL;
+
+    mbedtls_mpi_init( &X4 );
+    mbedtls_mpi_init( &X8 );
+    mbedtls_mpi_init( &l );
+    mbedtls_mpi_init( &r );
+
+    TEST_EQUAL( mbedtls_test_read_mpi( &l, input_l ), 0 );
+    TEST_EQUAL( mbedtls_test_read_mpi( &r, input_r ), 0 );
+    TEST_EQUAL( mbedtls_test_read_mpi( &X4, input_X4 ), 0 );
+    TEST_EQUAL( mbedtls_test_read_mpi( &X8, input_X8 ), 0 );
+
+    /* We only need to work with one of (X4, carry4) or (X8, carry8) depending
+     * on sizeof(mbedtls_mpi_uint)
+     */
+    mbedtls_mpi *X = ( sizeof(mbedtls_mpi_uint) == 4 ) ? &X4 : &X8;
+    mbedtls_mpi_uint carry = ( sizeof(mbedtls_mpi_uint) == 4 ) ? carry4 : carry8;
+
+    /* All of the inputs are +ve (or zero) */
+    TEST_EQUAL( l.s, 1 );
+    TEST_EQUAL( r.s, 1 );
+    TEST_EQUAL( X->s, 1 );
+
+    /* Test cases are such that l <= r, so #limbs should be <= */
+    TEST_ASSERT( l.n <= r.n );
+    TEST_ASSERT( X->n <= r.n );
+
+    /* Now let's get arrays of mbedtls_mpi_uints, rather than MPI structures */
+    la = mbedtls_calloc( r.n, sizeof(mbedtls_mpi_uint) );
+    ra = mbedtls_calloc( r.n, sizeof(mbedtls_mpi_uint) );
+    Xa = mbedtls_calloc( r.n, sizeof(mbedtls_mpi_uint) );
+    da = mbedtls_calloc( r.n, sizeof(mbedtls_mpi_uint) );
+
+    TEST_ASSERT( la != NULL );
+    TEST_ASSERT( ra != NULL );
+    TEST_ASSERT( Xa != NULL );
+    TEST_ASSERT( da != NULL );
+
+    /* Populate the arrays. As the mbedtls_mpi_uint[]s in mbedtls_mpis (and as
+     * processed by mbedtls_mpi_core_add_if()) are little endian, we can just
+     * copy what we have as long as MSBs are 0 (which they are from calloc())
+     */
+    memcpy( la, l.p, l.n * sizeof(mbedtls_mpi_uint) );
+    memcpy( ra, r.p, r.n * sizeof(mbedtls_mpi_uint) );
+    memcpy( Xa, X->p, X->n * sizeof(mbedtls_mpi_uint) );
+
+    /* 1a) a += b, cond = 0 => there should be no carry */
+    memcpy( da, la, r.n * sizeof(mbedtls_mpi_uint) );
+    TEST_EQUAL( mbedtls_mpi_core_add_if( da, ra, r.n, 0 ), 0 );
+
+    /* 1b) and a should be unchanged */
+    TEST_EQUAL( memcmp( da, la, r.n * sizeof(mbedtls_mpi_uint) ), 0 );
+
+    /* 2a) a += b, cond = 1 => we should get the correct carry */
+    TEST_EQUAL( mbedtls_mpi_core_add_if( da, ra, r.n, 1 ), carry );
+
+    /* 2b) and a should have the correct result */
+    TEST_EQUAL( memcmp( da, Xa, r.n * sizeof(mbedtls_mpi_uint) ), 0 );
+
+    /* 3a) b += a, cond = 0 => there should be no carry */
+    memcpy( da, ra, r.n * sizeof(mbedtls_mpi_uint) );
+    TEST_EQUAL( mbedtls_mpi_core_add_if( da, la, r.n, 0 ), 0 );
+
+    /* 3b) and b should be unchanged */
+    TEST_EQUAL( memcmp( da, ra, r.n * sizeof(mbedtls_mpi_uint) ), 0 );
+
+    /* 4a) b += a, cond = 1 => we should get the correct carry */
+    TEST_EQUAL( mbedtls_mpi_core_add_if( da, la, r.n, 1 ), carry );
+
+    /* 4b) and b should have the correct result */
+    TEST_EQUAL( memcmp( da, Xa, r.n * sizeof(mbedtls_mpi_uint) ), 0 );
+
+exit:
+    mbedtls_free( la );
+    mbedtls_free( ra );
+    mbedtls_free( Xa );
+    mbedtls_free( da );
+
+    mbedtls_mpi_free( &X4 );
+    mbedtls_mpi_free( &X8 );
+    mbedtls_mpi_free( &l );
+    mbedtls_mpi_free( &r );
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void mbedtls_mpi_core_sub( char * input_l, char * input_r,
+                           char * input_X4, char * input_X8,
+                           int carry )
+{
+    mbedtls_mpi l, r, X4, X8;
+    mbedtls_mpi_uint *la = NULL;
+    mbedtls_mpi_uint *ra = NULL;
+    mbedtls_mpi_uint *Xa = NULL;
+    mbedtls_mpi_uint *da = NULL;
+
+    mbedtls_mpi_init( &l );
+    mbedtls_mpi_init( &r );
+    mbedtls_mpi_init( &X4 );
+    mbedtls_mpi_init( &X8 );
+
+    TEST_EQUAL( mbedtls_test_read_mpi( &l, input_l ), 0 );
+    TEST_EQUAL( mbedtls_test_read_mpi( &r, input_r ), 0 );
+    TEST_EQUAL( mbedtls_test_read_mpi( &X4, input_X4 ), 0 );
+    TEST_EQUAL( mbedtls_test_read_mpi( &X8, input_X8 ), 0 );
+
+    /* All of the inputs are +ve (or zero) */
+    TEST_EQUAL( l.s, 1 );
+    TEST_EQUAL( r.s, 1 );
+    TEST_EQUAL( X4.s, 1 );
+    TEST_EQUAL( X8.s, 1 );
+
+    /* Get the number of limbs we will need */
+    size_t limbs = ( l.n < r.n ) ? r.n : l.n;
+
+    /* We only need to work with X4 or X8, depending on sizeof(mbedtls_mpi_uint) */
+    mbedtls_mpi *X = ( sizeof(mbedtls_mpi_uint) == 4 ) ? &X4 : &X8;
+
+    /* The result shouldn't have more limbs than the longest input */
+    TEST_ASSERT( X->n <= limbs );
+
+    /* Now let's get arrays of mbedtls_mpi_uints, rather than MPI structures */
+    la = mbedtls_calloc( limbs, sizeof(mbedtls_mpi_uint) );
+    ra = mbedtls_calloc( limbs, sizeof(mbedtls_mpi_uint) );
+    Xa = mbedtls_calloc( limbs, sizeof(mbedtls_mpi_uint) );
+    da = mbedtls_calloc( limbs, sizeof(mbedtls_mpi_uint) );
+
+    TEST_ASSERT( la != NULL );
+    TEST_ASSERT( ra != NULL );
+    TEST_ASSERT( Xa != NULL );
+    TEST_ASSERT( da != NULL );
+
+    /* Populate the arrays. As the mbedtls_mpi_uint[]s in mbedtls_mpis (and as
+     * processed by mbedtls_mpi_core_add_if()) are little endian, we can just
+     * copy what we have as long as MSBs are 0 (which they are from calloc())
+     */
+    memcpy( la, l.p, l.n * sizeof(mbedtls_mpi_uint) );
+    memcpy( ra, r.p, r.n * sizeof(mbedtls_mpi_uint) );
+    memcpy( Xa, X->p, X->n * sizeof(mbedtls_mpi_uint) );
+
+    /* 1a) d = l - r => we should get the correct carry */
+    TEST_EQUAL( mbedtls_mpi_core_sub( da, la, ra, limbs ), (mbedtls_mpi_uint) carry );
+
+    /* 1b) d = l - r => we should get the correct result */
+    TEST_EQUAL( memcmp( da, Xa, limbs * sizeof(mbedtls_mpi_uint) ), 0 );
+
+    /* 2 and 3 test "d may be aliased to l or r" */
+    /* 2a) l -= r => we should get the correct carry (use d to avoid clobbering l) */
+    memcpy( da, la, limbs * sizeof(mbedtls_mpi_uint) );
+    TEST_EQUAL( mbedtls_mpi_core_sub( da, da, ra, limbs ), (mbedtls_mpi_uint) carry );
+
+    /* 2b) l -= r => we should get the correct result */
+    TEST_EQUAL( memcmp( da, Xa, limbs * sizeof(mbedtls_mpi_uint) ), 0 );
+
+    /* 3a) r = l - r => we should get the correct carry (use d to avoid clobbering r) */
+    memcpy( da, ra, limbs * sizeof(mbedtls_mpi_uint) );
+    TEST_EQUAL( mbedtls_mpi_core_sub( da, la, da, limbs ), (mbedtls_mpi_uint) carry );
+
+    /* 3b) r = l - r => we should get the correct result */
+    TEST_EQUAL( memcmp( da, Xa, limbs * sizeof(mbedtls_mpi_uint) ), 0 );
+
+exit:
+    mbedtls_free( la );
+    mbedtls_free( ra );
+    mbedtls_free( Xa );
+    mbedtls_free( da );
+
+    mbedtls_mpi_free( &X4 );
+    mbedtls_mpi_free( &X8 );
+    mbedtls_mpi_free( &l );
+    mbedtls_mpi_free( &r );
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void mbedtls_mpi_core_mla( char * input_d, char * input_s, char * input_b,
+                           char * input_X4, char * input_cy4,
+                           char * input_X8, char * input_cy8 )
+{
+    /* We are testing d += s * b; d, s are MPIs, b is a scalar.
+     *
+     * However, we encode b as an MPI in the .data file for ease of handling.
+     *
+     * We also have the different results for sizeof(mbedtls_mpi_uint) == 4 or 8.
+     */
+    mbedtls_mpi d, s, b, X4, X8, cy4, cy8;
+    mbedtls_mpi_uint *da = NULL;
+    mbedtls_mpi_uint *Xa = NULL;
+
+    mbedtls_mpi_init( &d );
+    mbedtls_mpi_init( &s );
+    mbedtls_mpi_init( &b );
+    mbedtls_mpi_init( &X4 );
+    mbedtls_mpi_init( &X8 );
+    mbedtls_mpi_init( &cy4 );
+    mbedtls_mpi_init( &cy8 );
+
+    TEST_EQUAL( mbedtls_test_read_mpi( &d, input_d ), 0 );
+    TEST_EQUAL( mbedtls_test_read_mpi( &s, input_s ), 0 );
+    TEST_EQUAL( mbedtls_test_read_mpi( &b, input_b ), 0 );
+    TEST_EQUAL( mbedtls_test_read_mpi( &X4, input_X4 ), 0 );
+    TEST_EQUAL( mbedtls_test_read_mpi( &cy4, input_cy4 ), 0 );
+    TEST_EQUAL( mbedtls_test_read_mpi( &X8, input_X8 ), 0 );
+    TEST_EQUAL( mbedtls_test_read_mpi( &cy8, input_cy8 ), 0 );
+
+    /* The MPI encoding of scalar b must be only 1 limb */
+    TEST_EQUAL( b.n, 1 );
+
+    /* We only need to work with X4 or X8, and cy4 or cy8, depending on sizeof(mbedtls_mpi_uint) */
+    mbedtls_mpi *X = ( sizeof(mbedtls_mpi_uint) == 4 ) ? &X4 : &X8;
+    mbedtls_mpi *cy = ( sizeof(mbedtls_mpi_uint) == 4 ) ? &cy4 : &cy8;
+
+    /* The carry should only have one limb */
+    TEST_EQUAL( cy->n, 1 );
+
+    /* All of the inputs are +ve (or zero) */
+    TEST_EQUAL( d.s, 1 );
+    TEST_EQUAL( s.s, 1 );
+    TEST_EQUAL( b.s, 1 );
+    TEST_EQUAL( X->s, 1 );
+    TEST_EQUAL( cy->s, 1 );
+
+    /* Get the (max) number of limbs we will need */
+    size_t limbs = ( d.n < s.n ) ? s.n : d.n;
+
+    /* The result shouldn't have more limbs than the longest input */
+    TEST_ASSERT( X->n <= limbs );
+
+    /* Now let's get arrays of mbedtls_mpi_uints, rather than MPI structures */
+    da = mbedtls_calloc( limbs, sizeof(mbedtls_mpi_uint) );
+    Xa = mbedtls_calloc( limbs, sizeof(mbedtls_mpi_uint) );
+
+    TEST_ASSERT( da != NULL );
+    TEST_ASSERT( Xa != NULL );
+
+    /* Populate the arrays. As the mbedtls_mpi_uint[]s in mbedtls_mpis (and as
+     * processed by mbedtls_mpi_core_add_if()) are little endian, we can just
+     * copy what we have as long as MSBs are 0 (which they are from calloc())
+     */
+    memcpy( da, d.p, d.n * sizeof(mbedtls_mpi_uint) );
+    memcpy( Xa, X->p, X->n * sizeof(mbedtls_mpi_uint) );
+
+    /* 1a) d += s * b => we should get the correct carry */
+    TEST_EQUAL( mbedtls_mpi_core_mla( da, limbs, s.p, s.n, *b.p ), *cy->p );
+
+    /* 1b) d += s * b => we should get the correct result */
+    TEST_EQUAL( memcmp( da, Xa, limbs * sizeof(mbedtls_mpi_uint) ), 0 );
+
+exit:
+    mbedtls_free( da );
+    mbedtls_free( Xa );
+
+    mbedtls_mpi_free( &cy4 );
+    mbedtls_mpi_free( &cy8 );
+    mbedtls_mpi_free( &X4 );
+    mbedtls_mpi_free( &X8 );
+    mbedtls_mpi_free( &b );
+    mbedtls_mpi_free( &s );
+    mbedtls_mpi_free( &d );
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void mbedtls_mpi_montg_init( char * input_N, char * input_mm )
+{
+    mbedtls_mpi N, mm;
+
+    mbedtls_mpi_init( &N );
+    mbedtls_mpi_init( &mm );
+
+    TEST_EQUAL( mbedtls_test_read_mpi( &N, input_N ), 0 );
+    TEST_EQUAL( mbedtls_test_read_mpi( &mm, input_mm ), 0 );
+
+    /* The MPI encoding of mm should be 1 limb (sizeof(mbedtls_mpi_uint) == 8) or
+     * 2 limbs (sizeof(mbedtls_mpi_uint) == 4).
+     *
+     * The data file contains the expected result for sizeof(mbedtls_mpi_uint) == 8;
+     * for sizeof(mbedtls_mpi_uint) == 4 it's just the LSW of this.
+     */
+    TEST_ASSERT( mm.n == 1  || mm.n == 2 );
+
+    /* All of the inputs are +ve (or zero) */
+    TEST_EQUAL( N.s, 1 );
+    TEST_EQUAL( mm.s, 1 );
+
+    /* mbedtls_mpi_montg_init() only returns a result, no error possible */
+    mbedtls_mpi_uint result = mbedtls_mpi_montg_init( N.p );
+
+    /* Check we got the correct result */
+    TEST_EQUAL( result, mm.p[0] );
+
+exit:
+    mbedtls_mpi_free( &N );
+    mbedtls_mpi_free( &mm );
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void mbedtls_mpi_core_montmul( int limbs_AN4, int limbs_B4,
+                               int limbs_AN8, int limbs_B8,
+                               char * input_A,
+                               char * input_B,
+                               char * input_N,
+                               char * input_X4,
+                               char * input_X8 )
+{
+    mbedtls_mpi A, B, N, X4, X8, T, R;
+
+    mbedtls_mpi_init( &A );
+    mbedtls_mpi_init( &B );
+    mbedtls_mpi_init( &N );
+    mbedtls_mpi_init( &X4 );    /* expected result, sizeof(mbedtls_mpi_uint) == 4 */
+    mbedtls_mpi_init( &X8 );    /* expected result, sizeof(mbedtls_mpi_uint) == 8 */
+    mbedtls_mpi_init( &T );
+    mbedtls_mpi_init( &R );     /* for the result */
+
+    TEST_EQUAL( mbedtls_test_read_mpi( &A, input_A ), 0 );
+    TEST_EQUAL( mbedtls_test_read_mpi( &B, input_B ), 0 );
+    TEST_EQUAL( mbedtls_test_read_mpi( &N, input_N ), 0 );
+    TEST_EQUAL( mbedtls_test_read_mpi( &X4, input_X4 ), 0 );
+    TEST_EQUAL( mbedtls_test_read_mpi( &X8, input_X8 ), 0 );
+
+    mbedtls_mpi *X = ( sizeof(mbedtls_mpi_uint) == 4 ) ? &X4 : &X8;
+
+    int limbs_AN = ( sizeof(mbedtls_mpi_uint) == 4 ) ? limbs_AN4 : limbs_AN8;
+    int limbs_B = ( sizeof(mbedtls_mpi_uint) == 4 ) ? limbs_B4 : limbs_B8;
+
+    TEST_ASSERT( (size_t)limbs_AN >= A.n && (size_t)limbs_AN >= X->n );
+    TEST_ASSERT( (size_t)limbs_B >= B.n );
+    TEST_ASSERT( limbs_B <= limbs_AN );
+
+    /* All of the inputs are +ve (or zero) */
+    TEST_EQUAL( A.s, 1 );
+    TEST_EQUAL( B.s, 1 );
+    TEST_EQUAL( N.s, 1 );
+    TEST_EQUAL( X->s, 1 );
+
+    TEST_EQUAL( mbedtls_mpi_grow( &A, limbs_AN ), 0 );
+    TEST_EQUAL( mbedtls_mpi_grow( &N, limbs_AN ), 0 );
+    TEST_EQUAL( mbedtls_mpi_grow( X, limbs_AN ), 0 );
+    TEST_EQUAL( mbedtls_mpi_grow( &B, limbs_B ), 0 );
+
+    TEST_EQUAL( mbedtls_mpi_grow( &T, limbs_AN * 2 + 1 ), 0 );
+
+    /* Calculate the Montgomery constant (this is unit tested separately) */
+    mbedtls_mpi_uint mm = mbedtls_mpi_montg_init( N.p );
+
+    TEST_EQUAL( mbedtls_mpi_grow( &R, limbs_AN ), 0 ); /* ensure it's got the right number of limbs */
+
+    mbedtls_mpi_core_montmul( R.p, A.p, B.p, B.n, N.p, N.n, mm, T.p );
+    TEST_EQUAL( memcmp( R.p, X->p, N.n * sizeof(mbedtls_mpi_uint) ), 0 );
+
+exit:
+    mbedtls_mpi_free( &A );
+    mbedtls_mpi_free( &B );
+    mbedtls_mpi_free( &N );
+    mbedtls_mpi_free( &X4 );
+    mbedtls_mpi_free( &X8 );
+    mbedtls_mpi_free( &T );
+    mbedtls_mpi_free( &R );
+}
+/* END_CASE */
+
 /* BEGIN_CASE depends_on:MBEDTLS_SELF_TEST */
 void mpi_selftest(  )
 {
