@@ -1208,8 +1208,10 @@ component_test_crypto_full_no_md () {
     scripts/config.py crypto_full
     scripts/config.py unset MBEDTLS_MD_C
     # Direct dependencies
+    scripts/config.py unset MBEDTLS_ECJPAKE_C
     scripts/config.py unset MBEDTLS_HKDF_C
     scripts/config.py unset MBEDTLS_HMAC_DRBG_C
+    scripts/config.py unset MBEDTLS_PKCS1_V21
     scripts/config.py unset MBEDTLS_PKCS5_C
     scripts/config.py unset MBEDTLS_PKCS12_C
     # Indirect dependencies
@@ -1758,8 +1760,6 @@ component_test_psa_crypto_config_accel_rsa_signature () {
 
     scripts/config.py -f tests/include/test/drivers/config_test_driver.h set MBEDTLS_SHA1_C
     scripts/config.py -f tests/include/test/drivers/config_test_driver.h set MBEDTLS_SHA512_C
-    # We need to define either MD_C or all of the PSA_WANT_ALG_SHAxxx.
-    scripts/config.py -f tests/include/test/drivers/config_test_driver.h set MBEDTLS_MD_C
     # We need PEM parsing in the test library as well to support the import
     # of PEM encoded RSA keys.
     scripts/config.py -f tests/include/test/drivers/config_test_driver.h set MBEDTLS_PEM_PARSE_C
@@ -1772,7 +1772,6 @@ component_test_psa_crypto_config_accel_rsa_signature () {
     # Restore test driver base configuration
     scripts/config.py -f tests/include/test/drivers/config_test_driver.h unset MBEDTLS_SHA1_C
     scripts/config.py -f tests/include/test/drivers/config_test_driver.h unset MBEDTLS_SHA512_C
-    scripts/config.py -f tests/include/test/drivers/config_test_driver.h unset MBEDTLS_MD_C
     scripts/config.py -f tests/include/test/drivers/config_test_driver.h unset MBEDTLS_PEM_PARSE_C
     scripts/config.py -f tests/include/test/drivers/config_test_driver.h unset MBEDTLS_BASE64_C
 
@@ -1868,17 +1867,53 @@ component_test_psa_crypto_config_accel_hash_use_psa () {
     # Also unset MD_C and things that depend on it;
     # see component_test_crypto_full_no_md.
     scripts/config.py unset MBEDTLS_MD_C
+    scripts/config.py unset MBEDTLS_ECJPAKE_C
     scripts/config.py unset MBEDTLS_HKDF_C
     scripts/config.py unset MBEDTLS_HMAC_DRBG_C
+    scripts/config.py unset MBEDTLS_PKCS1_V21
+    scripts/config.py unset MBEDTLS_X509_RSASSA_PSS_SUPPORT
+    scripts/config.py -f include/psa/crypto_config.h unset PSA_WANT_ALG_RSA_PSS
+    scripts/config.py -f include/psa/crypto_config.h unset PSA_WANT_ALG_RSA_OAEP
     scripts/config.py unset MBEDTLS_PKCS5_C
     scripts/config.py unset MBEDTLS_PKCS12_C
     scripts/config.py unset MBEDTLS_ECDSA_DETERMINISTIC
     scripts/config.py -f include/psa/crypto_config.h unset PSA_WANT_ALG_DETERMINISTIC_ECDSA
+    # X.509 currently depends on MD_C
+    scripts/config.py unset MBEDTLS_X509_CREATE_C
+    scripts/config.py unset MBEDTLS_X509_CRL_PARSE_C
+    scripts/config.py unset MBEDTLS_X509_CRT_PARSE_C
+    scripts/config.py unset MBEDTLS_X509_CRT_WRITE_C
+    scripts/config.py unset MBEDTLS_X509_CSR_PARSE_C
+    scripts/config.py unset MBEDTLS_X509_CSR_WRITE_C
+    scripts/config.py unset MBEDTLS_X509_USE_C
+    # TLS currently depends on MD_C
+    scripts/config.py unset MBEDTLS_KEY_EXCHANGE_DHE_RSA_ENABLED
+    scripts/config.py unset MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED
+    scripts/config.py unset MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED
+    scripts/config.py unset MBEDTLS_KEY_EXCHANGE_ECDH_ECDSA_ENABLED
+    scripts/config.py unset MBEDTLS_KEY_EXCHANGE_ECDH_RSA_ENABLED
+    scripts/config.py unset MBEDTLS_KEY_EXCHANGE_RSA_ENABLED
+    scripts/config.py unset MBEDTLS_KEY_EXCHANGE_RSA_PSK_ENABLED
+    scripts/config.py unset MBEDTLS_SSL_CLI_C
+    scripts/config.py unset MBEDTLS_SSL_DTLS_ANTI_REPLAY
+    scripts/config.py unset MBEDTLS_SSL_SERVER_NAME_INDICATION
+    scripts/config.py unset MBEDTLS_SSL_SRV_C
+    scripts/config.py unset MBEDTLS_SSL_TLS_C
+    # TLS 1.2 currently depends on SHA1_C || SHA256_C || SHA512_C
+    scripts/config.py unset MBEDTLS_SSL_PROTO_TLS1_2
+    scripts/config.py unset MBEDTLS_SSL_ENCRYPT_THEN_MAC
+    scripts/config.py unset MBEDTLS_SSL_EXTENDED_MASTER_SECRET
+    scripts/config.py unset MBEDTLS_SSL_PROTO_DTLS
+    scripts/config.py unset MBEDTLS_SSL_DTLS_ANTI_REPLAY
+    scripts/config.py unset MBEDTLS_SSL_DTLS_HELLO_VERIFY
+    scripts/config.py unset MBEDTLS_SSL_DTLS_CLIENT_PORT_REUSE
+    # DTLS cookies currently depend on SHA1_C || SHA224_C || SHA384_C
+    scripts/config.py unset MBEDTLS_SSL_COOKIE_C
     # TLS 1.3 currently depends on SHA256_C || SHA384_C
     # but is already disabled in the default config
 
     loc_accel_flags="$loc_accel_flags $( echo "$loc_accel_list" | sed 's/[^ ]* */-DMBEDTLS_PSA_ACCEL_&/g' )"
-    make CFLAGS="$ASAN_CFLAGS -Werror -I../tests/include -I../tests -I../../tests -DPSA_CRYPTO_DRIVER_TEST -DMBEDTLS_TEST_LIBTESTDRIVER1 $loc_accel_flags" LDFLAGS="-ltestdriver1 $ASAN_CFLAGS" all
+    make CFLAGS="$ASAN_CFLAGS -Werror -I../tests/include -I../tests -DPSA_CRYPTO_DRIVER_TEST -DMBEDTLS_TEST_LIBTESTDRIVER1 $loc_accel_flags" LDFLAGS="-ltestdriver1 $ASAN_CFLAGS" tests
 
     # There's a risk of something getting re-enabled via config_psa.h;
     # make sure it did not happen.
@@ -2915,7 +2950,6 @@ component_build_armcc () {
     scripts/config.py baremetal
     # armc[56] don't support SHA-512 intrinsics
     scripts/config.py unset MBEDTLS_SHA512_USE_A64_CRYPTO_IF_PRESENT
-    scripts/config.py set MBEDTLS_HAVE_ASM
 
     make CC="$ARMC5_CC" AR="$ARMC5_AR" WARNING_CFLAGS='--strict --c99' lib
 
@@ -2924,25 +2958,20 @@ component_build_armcc () {
 
     make clean
 
-    # Compile with -O1 since some Arm inline assembly is disabled for -O0.
-
     # ARM Compiler 6 - Target ARMv7-A
-    armc6_build_test "-O1 --target=arm-arm-none-eabi -march=armv7-a"
+    armc6_build_test "--target=arm-arm-none-eabi -march=armv7-a"
 
     # ARM Compiler 6 - Target ARMv7-M
-    armc6_build_test "-O1 --target=arm-arm-none-eabi -march=armv7-m"
-
-    # ARM Compiler 6 - Target ARMv7-M+DSP
-    armc6_build_test "-O1 --target=arm-arm-none-eabi -march=armv7-m+dsp"
+    armc6_build_test "--target=arm-arm-none-eabi -march=armv7-m"
 
     # ARM Compiler 6 - Target ARMv8-A - AArch32
-    armc6_build_test "-O1 --target=arm-arm-none-eabi -march=armv8.2-a"
+    armc6_build_test "--target=arm-arm-none-eabi -march=armv8.2-a"
 
     # ARM Compiler 6 - Target ARMv8-M
-    armc6_build_test "-O1 --target=arm-arm-none-eabi -march=armv8-m.main"
+    armc6_build_test "--target=arm-arm-none-eabi -march=armv8-m.main"
 
     # ARM Compiler 6 - Target ARMv8.2-A - AArch64
-    armc6_build_test "-O1 --target=aarch64-arm-none-eabi -march=armv8.2-a+crypto"
+    armc6_build_test "--target=aarch64-arm-none-eabi -march=armv8.2-a+crypto"
 }
 
 component_test_tls13_only () {
