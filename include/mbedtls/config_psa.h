@@ -146,15 +146,6 @@ extern "C" {
 #define MBEDTLS_MD5_C
 #endif
 
-#if defined(PSA_WANT_ALG_JPAKE)
-#define MBEDTLS_PSA_BUILTIN_PAKE 1
-#define MBEDTLS_PSA_BUILTIN_ALG_JPAKE 1
-#define MBEDTLS_ECP_DP_SECP256R1_ENABLED
-#define MBEDTLS_BIGNUM_C
-#define MBEDTLS_ECP_C
-#define MBEDTLS_ECJPAKE_C
-#endif /* PSA_WANT_ALG_JPAKE */
-
 #if defined(PSA_WANT_ALG_RIPEMD160) && !defined(MBEDTLS_PSA_ACCEL_ALG_RIPEMD160)
 #define MBEDTLS_PSA_BUILTIN_ALG_RIPEMD160 1
 #define MBEDTLS_RIPEMD160_C
@@ -167,6 +158,7 @@ extern "C" {
 #define MBEDTLS_BIGNUM_C
 #define MBEDTLS_OID_C
 #define MBEDTLS_PKCS1_V21
+#define MBEDTLS_MD_C
 #endif /* !MBEDTLS_PSA_ACCEL_ALG_RSA_OAEP */
 #endif /* PSA_WANT_ALG_RSA_OAEP */
 
@@ -197,6 +189,7 @@ extern "C" {
 #define MBEDTLS_BIGNUM_C
 #define MBEDTLS_OID_C
 #define MBEDTLS_PKCS1_V21
+#define MBEDTLS_MD_C
 #endif /* !MBEDTLS_PSA_ACCEL_ALG_RSA_PSS */
 #endif /* PSA_WANT_ALG_RSA_PSS */
 
@@ -642,12 +635,6 @@ extern "C" {
 #if defined(MBEDTLS_MD5_C)
 #define MBEDTLS_PSA_BUILTIN_ALG_MD5 1
 #define PSA_WANT_ALG_MD5 1
-#endif
-
-#if defined(MBEDTLS_ECJPAKE_C)
-#define MBEDTLS_PSA_BUILTIN_PAKE 1
-#define MBEDTLS_PSA_BUILTIN_ALG_JPAKE 1
-#define PSA_WANT_ALG_JPAKE 1
 #endif
 
 #if defined(MBEDTLS_RIPEMD160_C)
