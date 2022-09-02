@@ -1210,6 +1210,8 @@ component_test_crypto_full_no_md () {
     # Direct dependencies
     scripts/config.py unset MBEDTLS_HKDF_C
     scripts/config.py unset MBEDTLS_HMAC_DRBG_C
+    scripts/config.py unset MBEDTLS_PKCS5_C
+    scripts/config.py unset MBEDTLS_PKCS12_C
     # Indirect dependencies
     scripts/config.py unset MBEDTLS_ECDSA_DETERMINISTIC
     make
@@ -1868,13 +1870,38 @@ component_test_psa_crypto_config_accel_hash_use_psa () {
     scripts/config.py unset MBEDTLS_MD_C
     scripts/config.py unset MBEDTLS_HKDF_C
     scripts/config.py unset MBEDTLS_HMAC_DRBG_C
+    scripts/config.py unset MBEDTLS_PKCS5_C
+    scripts/config.py unset MBEDTLS_PKCS12_C
     scripts/config.py unset MBEDTLS_ECDSA_DETERMINISTIC
     scripts/config.py -f include/psa/crypto_config.h unset PSA_WANT_ALG_DETERMINISTIC_ECDSA
+    # TLS currently depends on MD_C
+    scripts/config.py unset MBEDTLS_KEY_EXCHANGE_DHE_RSA_ENABLED
+    scripts/config.py unset MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED
+    scripts/config.py unset MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED
+    scripts/config.py unset MBEDTLS_KEY_EXCHANGE_ECDH_ECDSA_ENABLED
+    scripts/config.py unset MBEDTLS_KEY_EXCHANGE_ECDH_RSA_ENABLED
+    scripts/config.py unset MBEDTLS_KEY_EXCHANGE_RSA_ENABLED
+    scripts/config.py unset MBEDTLS_KEY_EXCHANGE_RSA_PSK_ENABLED
+    scripts/config.py unset MBEDTLS_SSL_CLI_C
+    scripts/config.py unset MBEDTLS_SSL_DTLS_ANTI_REPLAY
+    scripts/config.py unset MBEDTLS_SSL_SERVER_NAME_INDICATION
+    scripts/config.py unset MBEDTLS_SSL_SRV_C
+    scripts/config.py unset MBEDTLS_SSL_TLS_C
+    # TLS 1.2 currently depends on SHA1_C || SHA256_C || SHA512_C
+    scripts/config.py unset MBEDTLS_SSL_PROTO_TLS1_2
+    scripts/config.py unset MBEDTLS_SSL_ENCRYPT_THEN_MAC
+    scripts/config.py unset MBEDTLS_SSL_EXTENDED_MASTER_SECRET
+    scripts/config.py unset MBEDTLS_SSL_PROTO_DTLS
+    scripts/config.py unset MBEDTLS_SSL_DTLS_ANTI_REPLAY
+    scripts/config.py unset MBEDTLS_SSL_DTLS_HELLO_VERIFY
+    scripts/config.py unset MBEDTLS_SSL_DTLS_CLIENT_PORT_REUSE
+    # DTLS cookies currently depend on SHA1_C || SHA224_C || SHA384_C
+    scripts/config.py unset MBEDTLS_SSL_COOKIE_C
     # TLS 1.3 currently depends on SHA256_C || SHA384_C
     # but is already disabled in the default config
 
     loc_accel_flags="$loc_accel_flags $( echo "$loc_accel_list" | sed 's/[^ ]* */-DMBEDTLS_PSA_ACCEL_&/g' )"
-    make CFLAGS="$ASAN_CFLAGS -Werror -I../tests/include -I../tests -I../../tests -DPSA_CRYPTO_DRIVER_TEST -DMBEDTLS_TEST_LIBTESTDRIVER1 $loc_accel_flags" LDFLAGS="-ltestdriver1 $ASAN_CFLAGS" all
+    make CFLAGS="$ASAN_CFLAGS -Werror -I../tests/include -I../tests -DPSA_CRYPTO_DRIVER_TEST -DMBEDTLS_TEST_LIBTESTDRIVER1 $loc_accel_flags" LDFLAGS="-ltestdriver1 $ASAN_CFLAGS" tests
 
     # There's a risk of something getting re-enabled via config_psa.h;
     # make sure it did not happen.
