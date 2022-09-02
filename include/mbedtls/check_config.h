@@ -154,14 +154,12 @@
 #error "MBEDTLS_PKCS12_C defined, but not all prerequisites"
 #endif
 
-#if defined(MBEDTLS_PKCS5_C) && \
-    ( !( defined(MBEDTLS_MD_C) || defined(MBEDTLS_PSA_CRYPTO_C) ) || \
-        !defined(MBEDTLS_CIPHER_C) )
+#if defined(MBEDTLS_PKCS5_C) && (!defined(MBEDTLS_MD_C) || \
+                                 !defined(MBEDTLS_CIPHER_C))
 #error "MBEDTLS_PKCS5_C defined, but not all prerequisites"
 #endif
 
-#if defined(MBEDTLS_PKCS12_C) && \
-    !( defined(MBEDTLS_MD_C) || defined(MBEDTLS_PSA_CRYPTO_C) )
+#if defined(MBEDTLS_PKCS12_C) && !defined(MBEDTLS_MD_C)
 #error "MBEDTLS_PKCS12_C defined, but not all prerequisites"
 #endif
 
@@ -745,8 +743,8 @@
 #error "MBEDTLS_SHA256_USE_A64_CRYPTO_ONLY defined on non-Aarch64 system"
 #endif
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_2) && !defined(MBEDTLS_USE_PSA_CRYPTO) && \
-    !( defined(MBEDTLS_SHA1_C) || defined(MBEDTLS_SHA256_C) || defined(MBEDTLS_SHA512_C) )
+#if defined(MBEDTLS_SSL_PROTO_TLS1_2) && ( !defined(MBEDTLS_SHA1_C) &&     \
+    !defined(MBEDTLS_SHA256_C) && !defined(MBEDTLS_SHA512_C) )
 #error "MBEDTLS_SSL_PROTO_TLS1_2 defined, but not all prerequisites"
 #endif
 
@@ -795,7 +793,7 @@
 #endif
 
 #if defined(MBEDTLS_SSL_TLS_C) && ( !defined(MBEDTLS_CIPHER_C) ||     \
-    ( !defined(MBEDTLS_MD_C) && !defined(MBEDTLS_USE_PSA_CRYPTO) ) )
+    !defined(MBEDTLS_MD_C) )
 #error "MBEDTLS_SSL_TLS_C defined, but not all prerequisites"
 #endif
 
@@ -989,13 +987,6 @@
 
 #if defined(MBEDTLS_SSL_TRUNCATED_HMAC) //no-check-names
 #error "MBEDTLS_SSL_TRUNCATED_HMAC was removed in Mbed TLS 3.0. See https://github.com/Mbed-TLS/mbedtls/issues/4341"
-#endif
-
-#if defined(MBEDTLS_PKCS7_C) && ( ( !defined(MBEDTLS_ASN1_PARSE_C) ) || \
-    ( !defined(MBEDTLS_OID_C) ) || ( !defined(MBEDTLS_PK_PARSE_C) ) || \
-    ( !defined(MBEDTLS_X509_CRT_PARSE_C) ) ||\
-    ( !defined(MBEDTLS_X509_CRL_PARSE_C) ) || ( !defined(MBEDTLS_BIGNUM_C) ) )
-#error  "MBEDTLS_PKCS7_C is defined, but not all prerequisites"
 #endif
 
 /*
