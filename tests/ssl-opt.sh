@@ -440,14 +440,6 @@ requires_max_content_len() {
     requires_config_value_at_least "MBEDTLS_SSL_OUT_CONTENT_LEN" $1
 }
 
-CID_MODE=$( get_config_value_or_default "MBEDTLS_SSL_DTLS_CONNECTION_ID_COMPAT" )
-
-requires_cid_compat() {
-    if [ "$CID_MODE" = "0" ]; then
-        SKIP_NEXT="YES"
-    fi
-}
-
 # skip next test if GnuTLS isn't available
 requires_gnutls() {
     if [ -z "${GNUTLS_AVAILABLE:-}" ]; then
@@ -2321,6 +2313,40 @@ run_test    "TLS 1.3: key exchange mode parameter passing: All" \
             "$P_CLI tls13_kex_modes=all" \
             0
 
+requires_openssl_tls1_3
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
+requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
+requires_config_enabled MBEDTLS_KEY_EXCHANGE_PSK_ENABLED
+requires_config_enabled MBEDTLS_SSL_SRV_C
+requires_config_enabled MBEDTLS_DEBUG_C
+run_test    "TLS 1.3: PSK: basic check, O->m" \
+            "$P_SRV force_version=tls13 tls13_kex_modes=psk debug_level=5 psk=6162636465666768696a6b6c6d6e6f70" \
+            "$O_NEXT_CLI -tls1_3 -psk 1234 -psk 6162636465666768696a6b6c6d6e6f70 -allow_no_dhe_kex" \
+            1 \
+            -s "found psk key exchange modes extension" \
+            -s "found pre_shared_key extension" \
+            -s "Found PSK_EPHEMERAL KEX MODE" \
+            -s "Found PSK KEX MODE" \
+            -s "Pre shared key found"
+
+requires_gnutls_tls1_3
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
+requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
+requires_config_enabled MBEDTLS_KEY_EXCHANGE_PSK_ENABLED
+requires_config_enabled MBEDTLS_SSL_SRV_C
+requires_config_enabled MBEDTLS_DEBUG_C
+run_test    "TLS 1.3: PSK: basic check, G->m" \
+            "$P_SRV force_version=tls13 tls13_kex_modes=psk debug_level=5 psk=6162636465666768696a6b6c6d6e6f70" \
+            "$G_NEXT_CLI --priority NORMAL:-VERS-ALL:+KX-ALL:+PSK:+DHE-PSK:+VERS-TLS1.3 \
+                         --pskusername Client_identity --pskkey=6162636465666768696a6b6c6d6e6f70 \
+                         localhost" \
+            1 \
+            -s "found psk key exchange modes extension" \
+            -s "found pre_shared_key extension" \
+            -s "Found PSK_EPHEMERAL KEX MODE" \
+            -s "Found PSK KEX MODE" \
+            -s "Pre shared key found"
+
 # Tests for datagram packing
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 run_test    "DTLS: multiple records in same datagram, client and server" \
@@ -2395,17 +2421,6 @@ run_test    "Context serialization, client serializes, with CID" \
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 requires_config_enabled MBEDTLS_SSL_CONTEXT_SERIALIZATION
-requires_config_enabled MBEDTLS_SSL_DTLS_CONNECTION_ID
-requires_cid_compat
-run_test    "Context serialization, client serializes, with CID (legacy)" \
-            "$P_SRV dtls=1 serialize=0 exchanges=2 cid=1 cid_val=dead" \
-            "$P_CLI dtls=1 serialize=1 exchanges=2 cid=1 cid_val=beef" \
-            0 \
-            -c "Deserializing connection..." \
-            -S "Deserializing connection..."
-
-
-requires_config_enabled MBEDTLS_SSL_CONTEXT_SERIALIZATION
 run_test    "Context serialization, server serializes, CCM" \
             "$P_SRV dtls=1 serialize=1 exchanges=2" \
             "$P_CLI dtls=1 serialize=0 exchanges=2 force_ciphersuite=TLS-ECDHE-ECDSA-WITH-AES-128-CCM-8" \
@@ -2435,16 +2450,6 @@ requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 requires_config_enabled MBEDTLS_SSL_CONTEXT_SERIALIZATION
 requires_config_enabled MBEDTLS_SSL_DTLS_CONNECTION_ID
 run_test    "Context serialization, server serializes, with CID" \
-            "$P_SRV dtls=1 serialize=1 exchanges=2 cid=1 cid_val=dead" \
-            "$P_CLI dtls=1 serialize=0 exchanges=2 cid=1 cid_val=beef" \
-            0 \
-            -C "Deserializing connection..." \
-            -s "Deserializing connection..."
-
-requires_config_enabled MBEDTLS_SSL_CONTEXT_SERIALIZATION
-requires_config_enabled MBEDTLS_SSL_DTLS_CONNECTION_ID
-requires_cid_compat
-run_test    "Context serialization, server serializes, with CID (legacy)" \
             "$P_SRV dtls=1 serialize=1 exchanges=2 cid=1 cid_val=dead" \
             "$P_CLI dtls=1 serialize=0 exchanges=2 cid=1 cid_val=beef" \
             0 \
@@ -2490,17 +2495,6 @@ run_test    "Context serialization, both serialize, with CID" \
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 requires_config_enabled MBEDTLS_SSL_CONTEXT_SERIALIZATION
-requires_config_enabled MBEDTLS_SSL_DTLS_CONNECTION_ID
-requires_cid_compat
-run_test    "Context serialization, both serialize, with CID (legacy)" \
-            "$P_SRV dtls=1 serialize=1 exchanges=2 cid=1 cid_val=dead" \
-            "$P_CLI dtls=1 serialize=1 exchanges=2 cid=1 cid_val=beef" \
-            0 \
-            -c "Deserializing connection..." \
-            -s "Deserializing connection..."
-
-
-requires_config_enabled MBEDTLS_SSL_CONTEXT_SERIALIZATION
 run_test    "Context serialization, re-init, client serializes, CCM" \
             "$P_SRV dtls=1 serialize=0 exchanges=2" \
             "$P_CLI dtls=1 serialize=2 exchanges=2 force_ciphersuite=TLS-ECDHE-ECDSA-WITH-AES-128-CCM-8" \
@@ -2537,16 +2531,6 @@ run_test    "Context serialization, re-init, client serializes, with CID" \
             -S "Deserializing connection..."
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
-requires_config_enabled MBEDTLS_SSL_CONTEXT_SERIALIZATION
-requires_config_enabled MBEDTLS_SSL_DTLS_CONNECTION_ID
-requires_cid_compat
-run_test    "Context serialization, re-init, client serializes, with CID (legacy)" \
-            "$P_SRV dtls=1 serialize=0 exchanges=2 cid=1 cid_val=dead" \
-            "$P_CLI dtls=1 serialize=2 exchanges=2 cid=1 cid_val=beef" \
-            0 \
-            -c "Deserializing connection..." \
-            -S "Deserializing connection..."
-
 requires_config_enabled MBEDTLS_SSL_CONTEXT_SERIALIZATION
 run_test    "Context serialization, re-init, server serializes, CCM" \
             "$P_SRV dtls=1 serialize=2 exchanges=2" \
