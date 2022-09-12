@@ -1108,7 +1108,7 @@ int mbedtls_x509write_crt_set_extension( mbedtls_x509write_cert *ctx,
 int mbedtls_x509write_crt_set_basic_constraints( mbedtls_x509write_cert *ctx,
                                          int is_ca, int max_pathlen );
 
-#if defined(MBEDTLS_SHA1_C) || ( defined(MBEDTLS_PSA_CRYPTO_C) && defined(PSA_WANT_ALG_SHA_1) )
+#if defined(MBEDTLS_SHA1_C)
 /**
  * \brief           Set the subjectKeyIdentifier extension for a CRT
  *                  Requires that mbedtls_x509write_crt_set_subject_key() has been
@@ -1130,7 +1130,7 @@ int mbedtls_x509write_crt_set_subject_key_identifier( mbedtls_x509write_cert *ct
  * \return          0 if successful, or a MBEDTLS_ERR_X509_ALLOC_FAILED
  */
 int mbedtls_x509write_crt_set_authority_key_identifier( mbedtls_x509write_cert *ctx );
-#endif /* MBEDTLS_SHA1_C || (MBEDTLS_PSA_CRYPTO_C && PSA_WANT_ALG_SHA_1)*/
+#endif /* MBEDTLS_SHA1_C */
 
 /**
  * \brief           Set the Key Usage Extension flags
@@ -1143,19 +1143,6 @@ int mbedtls_x509write_crt_set_authority_key_identifier( mbedtls_x509write_cert *
  */
 int mbedtls_x509write_crt_set_key_usage( mbedtls_x509write_cert *ctx,
                                          unsigned int key_usage );
-
-/**
- * \brief           Set the Extended Key Usage Extension
- *                  (e.g. MBEDTLS_OID_SERVER_AUTH)
- *
- * \param ctx       CRT context to use
- * \param exts      extended key usage extensions to set, a sequence of
- *                  MBEDTLS_ASN1_OID objects
- *
- * \return          0 if successful, or MBEDTLS_ERR_X509_ALLOC_FAILED
- */
-int mbedtls_x509write_crt_set_ext_key_usage( mbedtls_x509write_cert *ctx,
-                                             const mbedtls_asn1_sequence *exts );
 
 /**
  * \brief           Set the Netscape Cert Type flags
