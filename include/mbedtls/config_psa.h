@@ -158,6 +158,7 @@ extern "C" {
 #define MBEDTLS_BIGNUM_C
 #define MBEDTLS_OID_C
 #define MBEDTLS_PKCS1_V21
+#define MBEDTLS_MD_C
 #endif /* !MBEDTLS_PSA_ACCEL_ALG_RSA_OAEP */
 #endif /* PSA_WANT_ALG_RSA_OAEP */
 
@@ -188,6 +189,7 @@ extern "C" {
 #define MBEDTLS_BIGNUM_C
 #define MBEDTLS_OID_C
 #define MBEDTLS_PKCS1_V21
+#define MBEDTLS_MD_C
 #endif /* !MBEDTLS_PSA_ACCEL_ALG_RSA_PSS */
 #endif /* PSA_WANT_ALG_RSA_PSS */
 
@@ -620,11 +622,10 @@ extern "C" {
 #define PSA_WANT_ALG_HKDF_EXPAND 1
 #endif /* MBEDTLS_HKDF_C */
 
+#if defined(MBEDTLS_MD_C)
 #define MBEDTLS_PSA_BUILTIN_ALG_HMAC 1
 #define PSA_WANT_ALG_HMAC 1
 #define PSA_WANT_KEY_TYPE_HMAC
-
-#if defined(MBEDTLS_MD_C)
 #define MBEDTLS_PSA_BUILTIN_ALG_TLS12_PRF 1
 #define PSA_WANT_ALG_TLS12_PRF 1
 #define MBEDTLS_PSA_BUILTIN_ALG_TLS12_PSK_TO_MS 1
