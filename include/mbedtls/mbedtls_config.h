@@ -1493,12 +1493,7 @@
  * Enable support for TLS 1.2 (and DTLS 1.2 if DTLS is enabled).
  *
  * Requires: MBEDTLS_SHA1_C or MBEDTLS_SHA256_C or MBEDTLS_SHA512_C
- *           (Depends on ciphersuites) when MBEDTLS_USE_PSA_CRYPTO
- *           is not defined, PSA_WANT_ALG_SHA_1 or PSA_WANT_ALG_SHA_256 or
- *           PSA_WANT_ALG_SHA_512 when MBEDTLS_USE_PSA_CRYPTO is defined.
- *
- * \warning If building without MBEDTLS_MD_C, you must call psa_crypto_init()
- * before doing any TLS operation.
+ *           (Depends on ciphersuites)
  *
  * Comment this macro to disable support for TLS 1.2 / DTLS 1.2
  */
@@ -1548,26 +1543,6 @@
  *
  */
 //#define MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
-
-/**
- * \def MBEDTLS_SSL_TLS1_3_TICKET_AGE_TOLERANCE
- *
- * Maximum time difference in milliseconds tolerated between the age of a
- * ticket from the server and client point of view.
- * From the client point of view, the age of a ticket is the time difference
- * between the time when the client proposes to the server to use the ticket
- * (time of writing of the Pre-Shared Key Extension including the ticket) and
- * the time the client received the ticket from the server.
- * From the server point of view, the age of a ticket is the time difference
- * between the time when the server receives a proposition from the client
- * to use the ticket and the time when the ticket was created by the server.
- * The server age is expected to be always greater than the client one and
- * MBEDTLS_SSL_TLS1_3_TICKET_AGE_TOLERANCE defines the
- * maximum difference tolerated for the server to accept the ticket.
- * This is not used in TLS 1.2.
- *
- */
-#define MBEDTLS_SSL_TLS1_3_TICKET_AGE_TOLERANCE 6000
 
 /**
  * \def MBEDTLS_SSL_TLS1_3_TICKET_NONCE_LENGTH
