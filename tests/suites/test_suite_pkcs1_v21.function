@@ -1,10 +1,10 @@
 /* BEGIN_HEADER */
 #include "mbedtls/rsa.h"
-#include "legacy_or_psa.h"
+#include "mbedtls/md.h"
 /* END_HEADER */
 
 /* BEGIN_DEPENDENCIES
- * depends_on:MBEDTLS_PKCS1_V21:MBEDTLS_RSA_C
+ * depends_on:MBEDTLS_PKCS1_V21:MBEDTLS_RSA_C:MBEDTLS_SHA1_C
  * END_DEPENDENCIES
  */
 
