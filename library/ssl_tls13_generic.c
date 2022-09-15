@@ -213,7 +213,7 @@ static int ssl_tls13_parse_certificate_verify( mbedtls_ssl_context *ssl,
         goto error;
     }
 
-    if( mbedtls_ssl_get_pk_type_and_md_alg_from_sig_alg(
+    if( mbedtls_ssl_tls13_get_pk_type_and_md_alg_from_sig_alg(
                                         algorithm, &sig_alg, &md_alg ) != 0 )
     {
         goto error;
@@ -1029,7 +1029,7 @@ static int ssl_tls13_write_certificate_verify_body( mbedtls_ssl_context *ssl,
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "CertificateVerify with %s",
                                 mbedtls_ssl_sig_alg_to_str( algorithm )) );
 
-    if( mbedtls_ssl_get_pk_type_and_md_alg_from_sig_alg(
+    if( mbedtls_ssl_tls13_get_pk_type_and_md_alg_from_sig_alg(
                                         algorithm, &pk_type, &md_alg ) != 0 )
     {
         return( MBEDTLS_ERR_SSL_INTERNAL_ERROR  );
@@ -1410,7 +1410,7 @@ int mbedtls_ssl_reset_transcript_for_hrr( mbedtls_ssl_context *ssl )
         psa_hash_abort( &ssl->handshake->fin_sha384_psa );
         psa_hash_setup( &ssl->handshake->fin_sha384_psa, PSA_ALG_SHA_384 );
 #else
-        mbedtls_sha512_starts( &ssl->handshake->fin_sha384, 1 );
+        mbedtls_sha512_starts( &ssl->handshake->fin_sha512, 1 );
 #endif
 #endif /* MBEDTLS_SHA384_C */
     }
