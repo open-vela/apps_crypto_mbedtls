@@ -1674,10 +1674,6 @@ static int ssl_tls13_write_key_share_ext( mbedtls_ssl_context *ssl,
 
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "server hello, adding key share extension" ) );
 
-    MBEDTLS_SSL_DEBUG_MSG( 2, ( "server hello, write selected_group: %s (%04x)",
-                                mbedtls_ssl_named_group_to_str( group ),
-                                group ) );
-
     /* Check if we have space for header and length fields:
      * - extension_type         (2 bytes)
      * - extension_data_length  (2 bytes)
@@ -1898,7 +1894,7 @@ static int ssl_tls13_write_server_hello_body( mbedtls_ssl_context *ssl,
     }
 
 #if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
-    if( !is_hrr && mbedtls_ssl_tls13_key_exchange_mode_with_psk( ssl ) )
+    if( mbedtls_ssl_tls13_key_exchange_mode_with_psk( ssl ) )
     {
         ret = ssl_tls13_write_server_pre_shared_key_ext( ssl, p, end, &output_len );
         if( ret != 0 )
