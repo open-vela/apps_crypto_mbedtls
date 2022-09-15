@@ -636,8 +636,7 @@ int mbedtls_ssl_tls13_generate_application_keys(
  * \returns    A negative error code on failure.
  */
 MBEDTLS_CHECK_RETURN_CRITICAL
-int mbedtls_ssl_tls13_generate_resumption_master_secret(
-    mbedtls_ssl_context *ssl );
+int mbedtls_ssl_tls13_compute_resumption_master_secret( mbedtls_ssl_context *ssl );
 
 /**
  * \brief Calculate the verify_data value for the client or server TLS 1.3
@@ -691,6 +690,24 @@ int mbedtls_ssl_tls13_compute_handshake_transform( mbedtls_ssl_context *ssl );
  */
 MBEDTLS_CHECK_RETURN_CRITICAL
 int mbedtls_ssl_tls13_compute_application_transform( mbedtls_ssl_context *ssl );
+
+#if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
+/**
+ * \brief Export TLS 1.3 PSK from handshake context
+ *
+ * \param[in]   ssl  The SSL context to operate on.
+ * \param[out]  psk  PSK output pointer.
+ * \param[out]  psk_len Length of PSK.
+ *
+ * \returns     \c 0 if there is a configured PSK and it was exported
+ *              successfully.
+ * \returns     A negative error code on failure.
+ */
+MBEDTLS_CHECK_RETURN_CRITICAL
+int mbedtls_ssl_tls13_export_handshake_psk( mbedtls_ssl_context *ssl,
+                                            unsigned char **psk,
+                                            size_t *psk_len );
+#endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
 
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
