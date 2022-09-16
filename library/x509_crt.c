@@ -50,7 +50,15 @@
 #include "hash_info.h"
 #endif /* MBEDTLS_USE_PSA_CRYPTO */
 
+#if defined(MBEDTLS_PLATFORM_C)
 #include "mbedtls/platform.h"
+#else
+#include <stdio.h>
+#include <stdlib.h>
+#define mbedtls_free       free
+#define mbedtls_calloc    calloc
+#define mbedtls_snprintf   snprintf
+#endif
 
 #if defined(MBEDTLS_THREADING_C)
 #include "mbedtls/threading.h"
