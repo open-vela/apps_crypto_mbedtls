@@ -1493,7 +1493,12 @@
  * Enable support for TLS 1.2 (and DTLS 1.2 if DTLS is enabled).
  *
  * Requires: MBEDTLS_SHA1_C or MBEDTLS_SHA256_C or MBEDTLS_SHA512_C
- *           (Depends on ciphersuites)
+ *           (Depends on ciphersuites) when MBEDTLS_USE_PSA_CRYPTO
+ *           is not defined, PSA_WANT_ALG_SHA_1 or PSA_WANT_ALG_SHA_256 or
+ *           PSA_WANT_ALG_SHA_512 when MBEDTLS_USE_PSA_CRYPTO is defined.
+ *
+ * \warning If building without MBEDTLS_MD_C, you must call psa_crypto_init()
+ * before doing any TLS operation.
  *
  * Comment this macro to disable support for TLS 1.2 / DTLS 1.2
  */
@@ -2664,7 +2669,11 @@
  * Module:  library/pkcs12.c
  * Caller:  library/pkparse.c
  *
- * Requires: MBEDTLS_ASN1_PARSE_C, MBEDTLS_CIPHER_C, MBEDTLS_MD_C
+ * Requires: MBEDTLS_ASN1_PARSE_C, MBEDTLS_CIPHER_C and either
+ * MBEDTLS_MD_C or MBEDTLS_PSA_CRYPTO_C.
+ *
+ * \warning If building without MBEDTLS_MD_C, you must call psa_crypto_init()
+ * before doing any PKCS12 operation.
  *
  * This module enables PKCS#12 functions.
  */
