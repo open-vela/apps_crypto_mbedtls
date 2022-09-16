@@ -18,9 +18,6 @@ set(src_crypto
     asn1write.c
     base64.c
     bignum.c
-    bignum_core.c
-    bignum_mod.c
-    bignum_mod_raw.c
     camellia.c
     ccm.c
     chacha20.c
@@ -89,7 +86,6 @@ set(src_crypto
 )
 
 set(src_x509
-    pkcs7.c
     x509.c
     x509_create.c
     x509_crl.c
