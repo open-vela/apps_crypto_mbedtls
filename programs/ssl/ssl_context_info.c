@@ -42,9 +42,7 @@ int main( void )
 #include <stdint.h>
 #include <stdarg.h>
 #include <string.h>
-#if defined(MBEDTLS_HAVE_TIME)
 #include <time.h>
-#endif
 #include "mbedtls/ssl.h"
 #include "mbedtls/error.h"
 #include "mbedtls/base64.h"
@@ -309,11 +307,10 @@ void print_hex( const uint8_t *b, size_t len,
 /*
  *  Print the value of time_t in format e.g. 2020-01-23 13:05:59
  */
-void print_time( const uint64_t *time )
+void print_time( const time_t *time )
 {
-#if defined(MBEDTLS_HAVE_TIME)
     char buf[20];
-    struct tm *t = gmtime( (time_t*) time );
+    struct tm *t = gmtime( time );
     static const char format[] = "%Y-%m-%d %H:%M:%S";
     if( NULL != t )
     {
@@ -324,10 +321,6 @@ void print_time( const uint64_t *time )
     {
         printf( "unknown\n" );
     }
-#else
-    (void) time;
-    printf( "not supported\n" );
-#endif
 }
 
 /*
@@ -615,7 +608,7 @@ void print_deserialized_ssl_session( const uint8_t *ssl, uint32_t len,
                 ( (uint64_t) ssl[7] );
         ssl += 8;
         printf( "\tstart time     : " );
-        print_time( &start );
+        print_time( (time_t*) &start );
     }
 
     CHECK_SSL_END( 2 );
@@ -631,9 +624,7 @@ void print_deserialized_ssl_session( const uint8_t *ssl, uint32_t len,
     else
     {
         const mbedtls_cipher_info_t *cipher_info;
-#if defined(MBEDTLS_MD_C)
         const mbedtls_md_info_t *md_info;
-#endif
 
         printf( "\tciphersuite    : %s\n", ciphersuite_info->name );
         printf( "\tcipher flags   : 0x%02X\n", ciphersuite_info->flags );
@@ -647,7 +638,7 @@ void print_deserialized_ssl_session( const uint8_t *ssl, uint32_t len,
         {
             printf( "\tcipher         : %s\n", cipher_info->name );
         }
-#if defined(MBEDTLS_MD_C)
+
         md_info = mbedtls_md_info_from_type( ciphersuite_info->mac );
         if( md_info == NULL )
         {
@@ -657,7 +648,6 @@ void print_deserialized_ssl_session( const uint8_t *ssl, uint32_t len,
         {
             printf( "\tMessage-Digest : %s\n", mbedtls_md_get_name( md_info ) );
         }
-#endif /* MBEDTLS_MD_C */
     }
 
     CHECK_SSL_END( 1 );
