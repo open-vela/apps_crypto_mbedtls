@@ -21,7 +21,13 @@
 
 #if defined(MBEDTLS_SSL_CLI_C) && defined(MBEDTLS_SSL_PROTO_TLS1_2)
 
+#if defined(MBEDTLS_PLATFORM_C)
 #include "mbedtls/platform.h"
+#else
+#include <stdlib.h>
+#define mbedtls_calloc    calloc
+#define mbedtls_free      free
+#endif
 
 #include "mbedtls/ssl.h"
 #include "ssl_client.h"
@@ -46,6 +52,8 @@
 #if defined(MBEDTLS_SSL_SESSION_TICKETS)
 #include "mbedtls/platform_util.h"
 #endif
+
+#include "hash_info.h"
 
 #if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
 int mbedtls_ssl_conf_has_static_psk( mbedtls_ssl_config const *conf )
@@ -2447,14 +2455,13 @@ start_processing:
 #if defined(MBEDTLS_X509_RSASSA_PSS_SUPPORT)
         if( pk_alg == MBEDTLS_PK_RSASSA_PSS )
         {
-            const mbedtls_md_info_t* md_info;
             mbedtls_pk_rsassa_pss_options rsassa_pss_options;
             rsassa_pss_options.mgf1_hash_id = md_alg;
-            if( ( md_info = mbedtls_md_info_from_type( md_alg ) ) == NULL )
-            {
+            rsassa_pss_options.expected_salt_len =
+                                    mbedtls_hash_info_get_size( md_alg );
+            if( rsassa_pss_options.expected_salt_len == 0 )
                 return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
-            }
-            rsassa_pss_options.expected_salt_len = mbedtls_md_get_size( md_info );
+
             ret = mbedtls_pk_verify_ext( pk_alg, &rsassa_pss_options,
                                          peer_pk,
                                          md_alg, hash, hashlen,
