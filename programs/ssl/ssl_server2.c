@@ -458,20 +458,23 @@ int main( void )
 #endif
 
 #define USAGE_KEY_OPAQUE_ALGS \
-    "    key_opaque_algs=%%s  Allowed opaque key 1 algorithms.\n"                    \
-    "                        comma-separated pair of values among the following:\n"  \
-    "                        rsa-sign-pkcs1, rsa-sign-pss, rsa-decrypt,\n"           \
-    "                        ecdsa-sign, ecdh, none (only acceptable for\n"          \
-    "                        the second value).\n"                                   \
-    "    key_opaque_algs2=%%s Allowed opaque key 2 algorithms.\n"                    \
-    "                        comma-separated pair of values among the following:\n"  \
-    "                        rsa-sign-pkcs1, rsa-sign-pss, rsa-decrypt,\n"           \
-    "                        ecdsa-sign, ecdh, none (only acceptable for\n"          \
+    "    key_opaque_algs=%%s  Allowed opaque key 1 algorithms.\n"                      \
+    "                        comma-separated pair of values among the following:\n"    \
+    "                        rsa-sign-pkcs1, rsa-sign-pss, rsa-sign-pss-sha256,\n"     \
+    "                        rsa-sign-pss-sha384, rsa-sign-pss-sha512, rsa-decrypt,\n" \
+    "                        ecdsa-sign, ecdh, none (only acceptable for\n"            \
+    "                        the second value).\n"                                     \
+    "    key_opaque_algs2=%%s Allowed opaque key 2 algorithms.\n"                      \
+    "                        comma-separated pair of values among the following:\n"    \
+    "                        rsa-sign-pkcs1, rsa-sign-pss, rsa-sign-pss-sha256,\n"     \
+    "                        rsa-sign-pss-sha384, rsa-sign-pss-sha512, rsa-decrypt,\n" \
+    "                        ecdsa-sign, ecdh, none (only acceptable for\n"            \
     "                        the second value).\n"
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3)
 #define USAGE_TLS1_3_KEY_EXCHANGE_MODES \
     "    tls13_kex_modes=%%s   default: all\n"     \
-    "                          options: psk, psk_ephemeral, ephemeral, ephemeral_all, psk_all, all\n"
+    "                          options: psk, psk_ephemeral, psk_all, ephemeral,\n"  \
+    "                                   ephemeral_all, all, psk_or_ephemeral\n"
 #else
 #define USAGE_TLS1_3_KEY_EXCHANGE_MODES ""
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
@@ -1859,6 +1862,16 @@ int main( int argc, char *argv[] )
                 opt.tls13_kex_modes = MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_ALL;
             else if( strcmp( q, "all" ) == 0 )
                 opt.tls13_kex_modes = MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_ALL;
+            /* The purpose of `psk_or_ephemeral` is to improve test coverage. That
+             * is not recommended in practice.
+             * `psk_or_ephemeral` exists in theory, we need this mode to test if
+             * this setting work correctly. With this key exchange setting, server
+             * should always perform `ephemeral` handshake. `psk` or `psk_ephermal`
+             * is not expected.
+             */
+            else if( strcmp( q, "psk_or_ephemeral" ) == 0 )
+                opt.tls13_kex_modes = MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK |
+                                      MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL ;
             else goto usage;
         }
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
@@ -2250,11 +2263,11 @@ int main( int argc, char *argv[] )
         if( opt.psk_opaque != 0 || opt.psk_list_opaque != 0 )
         {
             /* Determine KDF algorithm the opaque PSK will be used in. */
-#if defined(MBEDTLS_SHA384_C)
+#if defined(HAS_ALG_SHA_384_VIA_MD_OR_PSA_BASED_ON_USE_PSA)
             if( ciphersuite_info->mac == MBEDTLS_MD_SHA384 )
                 alg = PSA_ALG_TLS12_PSK_TO_MS(PSA_ALG_SHA_384);
             else
-#endif /* MBEDTLS_SHA384_C */
+#endif /* HAS_ALG_SHA_384_VIA_MD_OR_PSA_BASED_ON_USE_PSA */
                 alg = PSA_ALG_TLS12_PSK_TO_MS(PSA_ALG_SHA_256);
         }
 #endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
@@ -2753,6 +2766,7 @@ int main( int argc, char *argv[] )
     }
 
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
+#if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
     /* The default algorithms profile disables SHA-1, but our tests still
        rely on it heavily. Hence we allow it here. A real-world server
        should use the default profile unless there is a good reason not to. */
@@ -2762,6 +2776,7 @@ int main( int argc, char *argv[] )
         mbedtls_ssl_conf_cert_profile( &conf, &crt_profile_for_test );
         mbedtls_ssl_conf_sig_algs( &conf, ssl_sig_algs_for_test );
     }
+#endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
 #endif /* MBEDTLS_X509_CRT_PARSE_C */
 
     if( opt.auth_mode != DFL_AUTH_MODE )
