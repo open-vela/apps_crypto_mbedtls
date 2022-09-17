@@ -1,4 +1,4 @@
-"""Library for constructing an Mbed TLS test case.
+"""Library for generating Mbed TLS test data.
 """
 
 # Copyright The Mbed TLS Contributors
@@ -21,7 +21,7 @@ import os
 import sys
 from typing import Iterable, List, Optional
 
-from . import typing_util
+from mbedtls_dev import typing_util
 
 def hex_string(data: bytes) -> str:
     return '"' + binascii.hexlify(data).decode('ascii') + '"'
