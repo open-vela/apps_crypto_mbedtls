@@ -958,7 +958,7 @@
  * might still happen. For this reason, this is disabled by default.
  *
  * Requires: MBEDTLS_ECJPAKE_C
- *           SHA-256 (via MD if present, or via PSA, see MBEDTLS_ECJPAKE_C)
+ *           MBEDTLS_SHA256_C
  *           MBEDTLS_ECP_DP_SECP256R1_ENABLED
  *
  * This enables the following ciphersuites (if other requisites are
@@ -1577,14 +1577,6 @@
  * This must be less than 256.
  */
 #define MBEDTLS_SSL_TLS1_3_TICKET_NONCE_LENGTH 32
-
-/**
- * \def MBEDTLS_SSL_TLS1_3_DEFAULT_NEW_SESSION_TICKETS
- *
- * Default number of NewSessionTicket. This is not used in TLS 1.2.
- *
- */
-#define MBEDTLS_SSL_TLS1_3_DEFAULT_NEW_SESSION_TICKETS 1
 
 /**
  * \def MBEDTLS_SSL_PROTO_DTLS

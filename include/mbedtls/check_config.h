@@ -320,17 +320,8 @@
 #endif
 
 #if defined(MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED) &&                    \
-    ( !defined(MBEDTLS_ECJPAKE_C) ||                                    \
+    ( !defined(MBEDTLS_ECJPAKE_C) || !defined(MBEDTLS_SHA256_C) ||      \
       !defined(MBEDTLS_ECP_DP_SECP256R1_ENABLED) )
-#error "MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED defined, but not all prerequisites"
-#endif
-
-/* Use of EC J-PAKE in TLS requires SHA-256.
- * This will be taken from MD if it is present, or from PSA if MD is absent.
- * Note: ECJPAKE_C depends on MD_C || PSA_CRYPTO_C. */
-#if defined(MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED) &&                    \
-    !( defined(MBEDTLS_MD_C) && defined(MBEDTLS_SHA256_C) ) &&          \
-    !( !defined(MBEDTLS_MD_C) && defined(PSA_WANT_ALG_SHA_256) )
 #error "MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED defined, but not all prerequisites"
 #endif
 
@@ -521,20 +512,6 @@
     ( defined(MBEDTLS_PLATFORM_STD_SNPRINTF) ||\
         defined(MBEDTLS_PLATFORM_SNPRINTF_ALT) )
 #error "MBEDTLS_PLATFORM_SNPRINTF_MACRO and MBEDTLS_PLATFORM_STD_SNPRINTF/MBEDTLS_PLATFORM_SNPRINTF_ALT cannot be defined simultaneously"
-#endif
-
-#if defined(MBEDTLS_PLATFORM_VSNPRINTF_ALT) && !defined(MBEDTLS_PLATFORM_C)
-#error "MBEDTLS_PLATFORM_VSNPRINTF_ALT defined, but not all prerequisites"
-#endif
-
-#if defined(MBEDTLS_PLATFORM_VSNPRINTF_MACRO) && !defined(MBEDTLS_PLATFORM_C)
-#error "MBEDTLS_PLATFORM_VSNPRINTF_MACRO defined, but not all prerequisites"
-#endif
-
-#if defined(MBEDTLS_PLATFORM_VSNPRINTF_MACRO) &&\
-    ( defined(MBEDTLS_PLATFORM_STD_VSNPRINTF) ||\
-        defined(MBEDTLS_PLATFORM_VSNPRINTF_ALT) )
-#error "MBEDTLS_PLATFORM_VSNPRINTF_MACRO and MBEDTLS_PLATFORM_STD_VSNPRINTF/MBEDTLS_PLATFORM_VSNPRINTF_ALT cannot be defined simultaneously"
 #endif
 
 #if defined(MBEDTLS_PLATFORM_STD_MEM_HDR) &&\
