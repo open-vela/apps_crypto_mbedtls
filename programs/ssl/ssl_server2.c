@@ -1997,7 +1997,7 @@ int main( int argc, char *argv[] )
         else if( strcmp( p, "tickets" ) == 0 )
         {
             opt.tickets = atoi( q );
-            if( opt.tickets < 0 )
+            if( opt.tickets < 0 || opt.tickets > 1 )
                 goto usage;
         }
         else if( strcmp( p, "ticket_rotate" ) == 0 )
@@ -2261,11 +2261,11 @@ int main( int argc, char *argv[] )
         if( opt.psk_opaque != 0 || opt.psk_list_opaque != 0 )
         {
             /* Determine KDF algorithm the opaque PSK will be used in. */
-#if defined(HAS_ALG_SHA_384_VIA_MD_OR_PSA_BASED_ON_USE_PSA)
+#if defined(MBEDTLS_SHA384_C)
             if( ciphersuite_info->mac == MBEDTLS_MD_SHA384 )
                 alg = PSA_ALG_TLS12_PSK_TO_MS(PSA_ALG_SHA_384);
             else
-#endif /* HAS_ALG_SHA_384_VIA_MD_OR_PSA_BASED_ON_USE_PSA */
+#endif /* MBEDTLS_SHA384_C */
                 alg = PSA_ALG_TLS12_PSK_TO_MS(PSA_ALG_SHA_256);
         }
 #endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
@@ -2915,7 +2915,7 @@ int main( int argc, char *argv[] )
 #endif
 
 #if defined(MBEDTLS_SSL_SESSION_TICKETS)
-    if( opt.tickets != MBEDTLS_SSL_SESSION_TICKETS_DISABLED )
+    if( opt.tickets == MBEDTLS_SSL_SESSION_TICKETS_ENABLED )
     {
         if( ( ret = mbedtls_ssl_ticket_setup( &ticket_ctx,
                         rng_get, &rng,
@@ -2930,9 +2930,7 @@ int main( int argc, char *argv[] )
                 mbedtls_ssl_ticket_write,
                 mbedtls_ssl_ticket_parse,
                 &ticket_ctx );
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
-        mbedtls_ssl_conf_new_session_tickets( &conf, opt.tickets );
-#endif
+
         /* exercise manual ticket rotation (not required for typical use)
          * (used for external synchronization of session ticket encryption keys)
          */
