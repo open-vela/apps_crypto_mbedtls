@@ -1426,11 +1426,11 @@ int main( int argc, char *argv[] )
         if( opt.psk_opaque != 0 )
         {
             /* Determine KDF algorithm the opaque PSK will be used in. */
-#if defined(HAS_ALG_SHA_384_VIA_MD_OR_PSA_BASED_ON_USE_PSA)
+#if defined(MBEDTLS_SHA384_C)
             if( ciphersuite_info->mac == MBEDTLS_MD_SHA384 )
                 alg = PSA_ALG_TLS12_PSK_TO_MS(PSA_ALG_SHA_384);
             else
-#endif /* HAS_ALG_SHA_384_VIA_MD_OR_PSA_BASED_ON_USE_PSA */
+#endif /* MBEDTLS_SHA384_C */
                 alg = PSA_ALG_TLS12_PSK_TO_MS(PSA_ALG_SHA_256);
         }
 #endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
@@ -1769,8 +1769,7 @@ int main( int argc, char *argv[] )
 #endif /* MBEDTLS_USE_PSA_CRYPTO */
 
     mbedtls_printf( " ok (key type: %s)\n",
-                    strlen( opt.key_file ) || strlen( opt.key_opaque_alg1 ) ?
-                            mbedtls_pk_get_name( &pkey ) : "none" );
+                    strlen( opt.key_file ) ? mbedtls_pk_get_name( &pkey ) : "none" );
 #endif /* MBEDTLS_X509_CRT_PARSE_C */
 
     /*
@@ -1790,7 +1789,6 @@ int main( int argc, char *argv[] )
     }
 
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
-#if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
     /* The default algorithms profile disables SHA-1, but our tests still
        rely on it heavily. */
     if( opt.allow_sha1 > 0 )
@@ -1799,11 +1797,11 @@ int main( int argc, char *argv[] )
         mbedtls_ssl_conf_cert_profile( &conf, &crt_profile_for_test );
         mbedtls_ssl_conf_sig_algs( &conf, ssl_sig_algs_for_test );
     }
+
     if( opt.context_crt_cb == 0 )
         mbedtls_ssl_conf_verify( &conf, my_verify, NULL );
 
     memset( peer_crt_info, 0, sizeof( peer_crt_info ) );
-#endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
 #endif /* MBEDTLS_X509_CRT_PARSE_C */
 
 #if defined(MBEDTLS_SSL_DTLS_CONNECTION_ID)

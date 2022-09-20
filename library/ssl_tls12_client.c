@@ -53,8 +53,6 @@
 #include "mbedtls/platform_util.h"
 #endif
 
-#include "hash_info.h"
-
 #if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
 int mbedtls_ssl_conf_has_static_psk( mbedtls_ssl_config const *conf )
 {
@@ -2330,8 +2328,11 @@ start_processing:
     if( mbedtls_ssl_ciphersuite_uses_server_signature( ciphersuite_info ) )
     {
         size_t sig_len, hashlen;
-        unsigned char hash[MBEDTLS_HASH_MAX_SIZE];
-
+#if defined(MBEDTLS_USE_PSA_CRYPTO)
+        unsigned char hash[PSA_HASH_MAX_SIZE];
+#else
+        unsigned char hash[MBEDTLS_MD_MAX_SIZE];
+#endif
         mbedtls_md_type_t md_alg = MBEDTLS_MD_NONE;
         mbedtls_pk_type_t pk_alg = MBEDTLS_PK_NONE;
         unsigned char *params = ssl->in_msg + mbedtls_ssl_hs_hdr_len( ssl );
@@ -2452,13 +2453,14 @@ start_processing:
 #if defined(MBEDTLS_X509_RSASSA_PSS_SUPPORT)
         if( pk_alg == MBEDTLS_PK_RSASSA_PSS )
         {
+            const mbedtls_md_info_t* md_info;
             mbedtls_pk_rsassa_pss_options rsassa_pss_options;
             rsassa_pss_options.mgf1_hash_id = md_alg;
-            rsassa_pss_options.expected_salt_len =
-                                    mbedtls_hash_info_get_size( md_alg );
-            if( rsassa_pss_options.expected_salt_len == 0 )
+            if( ( md_info = mbedtls_md_info_from_type( md_alg ) ) == NULL )
+            {
                 return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
-
+            }
+            rsassa_pss_options.expected_salt_len = mbedtls_md_get_size( md_info );
             ret = mbedtls_pk_verify_ext( pk_alg, &rsassa_pss_options,
                                          peer_pk,
                                          md_alg, hash, hashlen,
