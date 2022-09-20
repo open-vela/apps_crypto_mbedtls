@@ -81,7 +81,7 @@ extern const struct mbedtls_ssl_tls13_labels_struct mbedtls_ssl_tls13_labels;
  * Since contexts are always hashes of message transcripts, this can
  * be approximated from above by the maximum hash size. */
 #define MBEDTLS_SSL_TLS1_3_KEY_SCHEDULE_MAX_CONTEXT_LEN  \
-    PSA_HASH_MAX_SIZE
+    MBEDTLS_MD_MAX_SIZE
 
 /* Maximum desired length for expanded key material generated
  * by HKDF-Expand-Label.
@@ -691,24 +691,6 @@ int mbedtls_ssl_tls13_compute_handshake_transform( mbedtls_ssl_context *ssl );
  */
 MBEDTLS_CHECK_RETURN_CRITICAL
 int mbedtls_ssl_tls13_compute_application_transform( mbedtls_ssl_context *ssl );
-
-#if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
-/**
- * \brief Export TLS 1.3 PSK from handshake context
- *
- * \param[in]   ssl  The SSL context to operate on.
- * \param[out]  psk  PSK output pointer.
- * \param[out]  psk_len Length of PSK.
- *
- * \returns     \c 0 if there is a configured PSK and it was exported
- *              successfully.
- * \returns     A negative error code on failure.
- */
-MBEDTLS_CHECK_RETURN_CRITICAL
-int mbedtls_ssl_tls13_export_handshake_psk( mbedtls_ssl_context *ssl,
-                                            unsigned char **psk,
-                                            size_t *psk_len );
-#endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
 
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
