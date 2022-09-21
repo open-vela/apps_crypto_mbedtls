@@ -54,7 +54,7 @@
 #include "mbedtls/psa_util.h"
 #include "psa/crypto.h"
 #endif
-#include "mbedtls/legacy_or_psa.h"
+#include "legacy_or_psa.h"
 
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
 #include "mbedtls/oid.h"
@@ -3242,10 +3242,6 @@ int mbedtls_ssl_handshake_step( mbedtls_ssl_context *ssl )
     ret = mbedtls_ssl_handle_pending_alert( ssl );
     if( ret != 0 )
         goto cleanup;
-
-    /* If ssl->conf->endpoint is not one of MBEDTLS_SSL_IS_CLIENT or
-     * MBEDTLS_SSL_IS_SERVER, this is the return code we give */
-    ret = MBEDTLS_ERR_SSL_BAD_INPUT_DATA;
 
 #if defined(MBEDTLS_SSL_CLI_C)
     if( ssl->conf->endpoint == MBEDTLS_SSL_IS_CLIENT )
