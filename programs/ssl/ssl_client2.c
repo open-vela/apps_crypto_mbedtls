@@ -346,11 +346,10 @@ int main( void )
 
 #define USAGE_KEY_OPAQUE_ALGS \
     "    key_opaque_algs=%%s  Allowed opaque key algorithms.\n"                      \
-    "                        comma-separated pair of values among the following:\n"    \
-    "                        rsa-sign-pkcs1, rsa-sign-pss, rsa-sign-pss-sha256,\n"     \
-    "                        rsa-sign-pss-sha384, rsa-sign-pss-sha512, rsa-decrypt,\n" \
-    "                        ecdsa-sign, ecdh, none (only acceptable for\n"            \
-    "                        the second value).\n"                                     \
+    "                        comma-separated pair of values among the following:\n"   \
+    "                        rsa-sign-pkcs1, rsa-sign-pss, rsa-decrypt,\n"           \
+    "                        ecdsa-sign, ecdh, none (only acceptable for\n"          \
+    "                        the second value).\n"                                   \
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3)
 #define USAGE_TLS1_3_KEY_EXCHANGE_MODES \
@@ -657,6 +656,58 @@ int report_cid_usage( mbedtls_ssl_context *ssl,
     return( 0 );
 }
 #endif /* MBEDTLS_SSL_DTLS_CONNECTION_ID */
+
+static int ssl_save_session_serialize( mbedtls_ssl_context *ssl,
+                                       unsigned char **session_data,
+                                       size_t *session_data_len )
+{
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+    mbedtls_ssl_session exported_session;
+
+    /* free any previously saved data */
+    if( *session_data != NULL )
+    {
+        mbedtls_platform_zeroize( *session_data, *session_data_len );
+        mbedtls_free( *session_data );
+        *session_data = NULL;
+        *session_data_len = 0;
+    }
+
+    mbedtls_ssl_session_init( &exported_session );
+    ret = mbedtls_ssl_get_session( ssl, &exported_session );
+    if( ret != 0 )
+    {
+        mbedtls_printf(
+            "failed\n  ! mbedtls_ssl_get_session() returned -%#02x\n",
+            (unsigned) -ret );
+        goto exit;
+    }
+
+    /* get size of the buffer needed */
+    mbedtls_ssl_session_save( &exported_session, NULL, 0, session_data_len );
+    *session_data = mbedtls_calloc( 1, *session_data_len );
+    if( *session_data == NULL )
+    {
+        mbedtls_printf( " failed\n  ! alloc %u bytes for session data\n",
+                        (unsigned) *session_data_len );
+        ret = MBEDTLS_ERR_SSL_ALLOC_FAILED;
+        goto exit;
+    }
+
+    /* actually save session data */
+    if( ( ret = mbedtls_ssl_session_save( &exported_session,
+                                          *session_data, *session_data_len,
+                                          session_data_len ) ) != 0 )
+    {
+        mbedtls_printf( " failed\n  ! mbedtls_ssl_session_saved returned -0x%04x\n\n",
+                        (unsigned int) -ret );
+        goto exit;
+    }
+
+exit:
+    mbedtls_ssl_session_free( &exported_session );
+    return( ret );
+}
 
 int main( int argc, char *argv[] )
 {
@@ -1770,8 +1821,7 @@ int main( int argc, char *argv[] )
 #endif /* MBEDTLS_USE_PSA_CRYPTO */
 
     mbedtls_printf( " ok (key type: %s)\n",
-                    strlen( opt.key_file ) || strlen( opt.key_opaque_alg1 ) ?
-                            mbedtls_pk_get_name( &pkey ) : "none" );
+                    strlen( opt.key_file ) ? mbedtls_pk_get_name( &pkey ) : "none" );
 #endif /* MBEDTLS_X509_CRT_PARSE_C */
 
     /*
@@ -2362,57 +2412,21 @@ int main( int argc, char *argv[] )
         }
     }
 #endif /* MBEDTLS_SSL_DTLS_SRTP */
-    if( opt.reconnect != 0 )
+    if( opt.reconnect != 0 && ssl.tls_version != MBEDTLS_SSL_VERSION_TLS1_3 )
     {
         mbedtls_printf("  . Saving session for reuse..." );
         fflush( stdout );
 
         if( opt.reco_mode == 1 )
         {
-            mbedtls_ssl_session exported_session;
-
-            /* free any previously saved data */
-            if( session_data != NULL )
+            if( ( ret = ssl_save_session_serialize( &ssl,
+                            &session_data, &session_data_len ) ) != 0 )
             {
-                mbedtls_platform_zeroize( session_data, session_data_len );
-                mbedtls_free( session_data );
-                session_data = NULL;
-            }
-
-            mbedtls_ssl_session_init( &exported_session );
-            ret = mbedtls_ssl_get_session( &ssl, &exported_session );
-            if( ret != 0 )
-            {
-                mbedtls_printf(
-                    "failed\n  ! mbedtls_ssl_get_session() returned -%#02x\n",
-                    (unsigned) -ret );
-                goto exit;
-            }
-
-            /* get size of the buffer needed */
-            mbedtls_ssl_session_save( &exported_session, NULL, 0, &session_data_len );
-            session_data = mbedtls_calloc( 1, session_data_len );
-            if( session_data == NULL )
-            {
-                mbedtls_printf( " failed\n  ! alloc %u bytes for session data\n",
-                                (unsigned) session_data_len );
-                mbedtls_ssl_session_free( &exported_session );
-                ret = MBEDTLS_ERR_SSL_ALLOC_FAILED;
-                goto exit;
-            }
-
-            /* actually save session data */
-            if( ( ret = mbedtls_ssl_session_save( &exported_session,
-                                                  session_data, session_data_len,
-                                                  &session_data_len ) ) != 0 )
-            {
-                mbedtls_printf( " failed\n  ! mbedtls_ssl_session_saved returned -0x%04x\n\n",
+                mbedtls_printf( " failed\n  ! ssl_save_session_serialize returned -0x%04x\n\n",
                                 (unsigned int) -ret );
-                mbedtls_ssl_session_free( &exported_session );
                 goto exit;
             }
 
-            mbedtls_ssl_session_free( &exported_session );
         }
         else
         {
@@ -2702,6 +2716,40 @@ send_request:
                         /* We were waiting for application data but got
                          * a NewSessionTicket instead. */
                         mbedtls_printf( " got new session ticket.\n" );
+                        if( opt.reconnect != 0 )
+                        {
+                            mbedtls_printf("  . Saving session for reuse..." );
+                            fflush( stdout );
+
+                            if( opt.reco_mode == 1 )
+                            {
+                                if( ( ret = ssl_save_session_serialize( &ssl,
+                                                &session_data, &session_data_len ) ) != 0 )
+                                {
+                                    mbedtls_printf( " failed\n  ! ssl_save_session_serialize returned -0x%04x\n\n",
+                                                    (unsigned int) -ret );
+                                    goto exit;
+                                }
+                            }
+                            else
+                            {
+                                if( ( ret = mbedtls_ssl_get_session( &ssl, &saved_session ) ) != 0 )
+                                {
+                                    mbedtls_printf( " failed\n  ! mbedtls_ssl_get_session returned -0x%x\n\n",
+                                                    (unsigned int) -ret );
+                                    goto exit;
+                                }
+                            }
+
+                            mbedtls_printf( " ok\n" );
+
+                            if( opt.reco_mode == 1 )
+                            {
+                                mbedtls_printf( "    [ Saved %u bytes of session data]\n",
+                                                (unsigned) session_data_len );
+                            }
+                        }
+
                         continue;
 #endif /* MBEDTLS_SSL_SESSION_TICKETS */
 
