@@ -1327,11 +1327,11 @@ static int ssl_tls13_parse_server_pre_shared_key_ext( mbedtls_ssl_context *ssl,
     int ret = 0;
     size_t selected_identity;
 
+    int psk_type;
     const unsigned char *psk;
     size_t psk_len;
     const unsigned char *psk_identity;
     size_t psk_identity_len;
-    int psk_type;
 
     /* Check which PSK we've offered.
      *
@@ -1708,6 +1708,12 @@ static int ssl_tls13_postprocess_server_hello( mbedtls_ssl_context *ssl )
             ret = MBEDTLS_ERR_SSL_HANDSHAKE_FAILURE;
             goto cleanup;
     }
+
+    MBEDTLS_SSL_DEBUG_MSG( 3,
+            ( "Server selected key exchange mode: %s",
+              handshake->key_exchange_mode == 1 ? "psk" :
+              (handshake->key_exchange_mode == 2 ? "ephemeral" :
+              "psk_ephemeral")) );
 
     /* Start the TLS 1.3 key schedule: Set the PSK and derive early secret.
      *
