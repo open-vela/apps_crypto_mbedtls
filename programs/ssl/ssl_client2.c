@@ -1139,7 +1139,7 @@ int main( int argc, char *argv[] )
         else if( strcmp( p, "tickets" ) == 0 )
         {
             opt.tickets = atoi( q );
-            if( opt.tickets < 0 || opt.tickets > 2 )
+            if( opt.tickets < 0 )
                 goto usage;
         }
         else if( strcmp( p, "alpn" ) == 0 )
@@ -1478,11 +1478,11 @@ int main( int argc, char *argv[] )
         if( opt.psk_opaque != 0 )
         {
             /* Determine KDF algorithm the opaque PSK will be used in. */
-#if defined(MBEDTLS_HAS_ALG_SHA_384_VIA_MD_OR_PSA_BASED_ON_USE_PSA)
+#if defined(HAS_ALG_SHA_384_VIA_MD_OR_PSA_BASED_ON_USE_PSA)
             if( ciphersuite_info->mac == MBEDTLS_MD_SHA384 )
                 alg = PSA_ALG_TLS12_PSK_TO_MS(PSA_ALG_SHA_384);
             else
-#endif /* MBEDTLS_HAS_ALG_SHA_384_VIA_MD_OR_PSA_BASED_ON_USE_PSA */
+#endif /* HAS_ALG_SHA_384_VIA_MD_OR_PSA_BASED_ON_USE_PSA */
                 alg = PSA_ALG_TLS12_PSK_TO_MS(PSA_ALG_SHA_256);
         }
 #endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
@@ -2668,6 +2668,9 @@ send_request:
      */
     if( opt.transport == MBEDTLS_SSL_TRANSPORT_STREAM )
     {
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3) && defined(MBEDTLS_SSL_SESSION_TICKETS)
+        int ticket_id = 0;
+#endif
         do
         {
             len = sizeof( buf ) - 1;
@@ -2715,7 +2718,8 @@ send_request:
                     case MBEDTLS_ERR_SSL_RECEIVED_NEW_SESSION_TICKET:
                         /* We were waiting for application data but got
                          * a NewSessionTicket instead. */
-                        mbedtls_printf( " got new session ticket.\n" );
+                        mbedtls_printf( " got new session ticket ( %d ).\n",
+                                        ticket_id++ );
                         if( opt.reconnect != 0 )
                         {
                             mbedtls_printf("  . Saving session for reuse..." );
@@ -2749,7 +2753,6 @@ send_request:
                                                 (unsigned) session_data_len );
                             }
                         }
-
                         continue;
 #endif /* MBEDTLS_SSL_SESSION_TICKETS */
 
