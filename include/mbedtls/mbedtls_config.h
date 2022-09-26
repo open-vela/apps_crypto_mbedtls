@@ -2661,21 +2661,6 @@
 #define MBEDTLS_PKCS5_C
 
 /**
- * \def MBEDTLS_PKCS7_C
- *
- * Enable PKCS7 core for using PKCS7 formatted signatures.
- * RFC Link - https://tools.ietf.org/html/rfc2315
- *
- * Module:  library/pkcs7.c
- *
- * Requires: MBEDTLS_ASN1_PARSE_C, MBEDTLS_OID_C, MBEDTLS_PK_PARSE_C,
- *           MBEDTLS_X509_CRT_PARSE_C MBEDTLS_X509_CRL_PARSE_C, MBEDTLS_BIGNUM_C
- *
- * This module is required for the PKCS7 parsing modules.
- */
-#define MBEDTLS_PKCS7_C
-
-/**
  * \def MBEDTLS_PKCS12_C
  *
  * Enable PKCS#12 PBE functions.
@@ -2684,7 +2669,11 @@
  * Module:  library/pkcs12.c
  * Caller:  library/pkparse.c
  *
- * Requires: MBEDTLS_ASN1_PARSE_C, MBEDTLS_CIPHER_C, MBEDTLS_MD_C
+ * Requires: MBEDTLS_ASN1_PARSE_C, MBEDTLS_CIPHER_C and either
+ * MBEDTLS_MD_C or MBEDTLS_PSA_CRYPTO_C.
+ *
+ * \warning If building without MBEDTLS_MD_C, you must call psa_crypto_init()
+ * before doing any PKCS12 operation.
  *
  * This module enables PKCS#12 functions.
  */
