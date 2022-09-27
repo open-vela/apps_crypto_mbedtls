@@ -458,15 +458,17 @@ int main( void )
 #endif
 
 #define USAGE_KEY_OPAQUE_ALGS \
-    "    key_opaque_algs=%%s  Allowed opaque key 1 algorithms.\n"                    \
-    "                        comma-separated pair of values among the following:\n"  \
-    "                        rsa-sign-pkcs1, rsa-sign-pss, rsa-decrypt,\n"           \
-    "                        ecdsa-sign, ecdh, none (only acceptable for\n"          \
-    "                        the second value).\n"                                   \
-    "    key_opaque_algs2=%%s Allowed opaque key 2 algorithms.\n"                    \
-    "                        comma-separated pair of values among the following:\n"  \
-    "                        rsa-sign-pkcs1, rsa-sign-pss, rsa-decrypt,\n"           \
-    "                        ecdsa-sign, ecdh, none (only acceptable for\n"          \
+    "    key_opaque_algs=%%s  Allowed opaque key 1 algorithms.\n"                      \
+    "                        comma-separated pair of values among the following:\n"    \
+    "                        rsa-sign-pkcs1, rsa-sign-pss, rsa-sign-pss-sha256,\n"     \
+    "                        rsa-sign-pss-sha384, rsa-sign-pss-sha512, rsa-decrypt,\n" \
+    "                        ecdsa-sign, ecdh, none (only acceptable for\n"            \
+    "                        the second value).\n"                                     \
+    "    key_opaque_algs2=%%s Allowed opaque key 2 algorithms.\n"                      \
+    "                        comma-separated pair of values among the following:\n"    \
+    "                        rsa-sign-pkcs1, rsa-sign-pss, rsa-sign-pss-sha256,\n"     \
+    "                        rsa-sign-pss-sha384, rsa-sign-pss-sha512, rsa-decrypt,\n" \
+    "                        ecdsa-sign, ecdh, none (only acceptable for\n"            \
     "                        the second value).\n"
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3)
 #define USAGE_TLS1_3_KEY_EXCHANGE_MODES \
@@ -2261,11 +2263,11 @@ int main( int argc, char *argv[] )
         if( opt.psk_opaque != 0 || opt.psk_list_opaque != 0 )
         {
             /* Determine KDF algorithm the opaque PSK will be used in. */
-#if defined(MBEDTLS_HAS_ALG_SHA_384_VIA_MD_OR_PSA_BASED_ON_USE_PSA)
+#if defined(HAS_ALG_SHA_384_VIA_MD_OR_PSA_BASED_ON_USE_PSA)
             if( ciphersuite_info->mac == MBEDTLS_MD_SHA384 )
                 alg = PSA_ALG_TLS12_PSK_TO_MS(PSA_ALG_SHA_384);
             else
-#endif /* MBEDTLS_HAS_ALG_SHA_384_VIA_MD_OR_PSA_BASED_ON_USE_PSA */
+#endif /* HAS_ALG_SHA_384_VIA_MD_OR_PSA_BASED_ON_USE_PSA */
                 alg = PSA_ALG_TLS12_PSK_TO_MS(PSA_ALG_SHA_256);
         }
 #endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
