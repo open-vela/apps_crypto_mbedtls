@@ -1111,36 +1111,6 @@ static int ssl_tls13_determine_key_exchange_mode( mbedtls_ssl_context *ssl )
 
 #if defined(MBEDTLS_X509_CRT_PARSE_C) && \
     defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
-
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
-static psa_algorithm_t ssl_tls13_iana_sig_alg_to_psa_alg( uint16_t sig_alg )
-{
-    switch( sig_alg )
-    {
-        case MBEDTLS_TLS1_3_SIG_ECDSA_SECP256R1_SHA256:
-            return( PSA_ALG_ECDSA( PSA_ALG_SHA_256 ) );
-        case MBEDTLS_TLS1_3_SIG_ECDSA_SECP384R1_SHA384:
-            return( PSA_ALG_ECDSA( PSA_ALG_SHA_384 ) );
-        case MBEDTLS_TLS1_3_SIG_ECDSA_SECP521R1_SHA512:
-            return( PSA_ALG_ECDSA( PSA_ALG_SHA_512 ) );
-        case MBEDTLS_TLS1_3_SIG_RSA_PSS_RSAE_SHA256:
-            return( PSA_ALG_RSA_PSS( PSA_ALG_SHA_256 ) );
-        case MBEDTLS_TLS1_3_SIG_RSA_PSS_RSAE_SHA384:
-            return( PSA_ALG_RSA_PSS( PSA_ALG_SHA_384 ) );
-        case MBEDTLS_TLS1_3_SIG_RSA_PSS_RSAE_SHA512:
-            return( PSA_ALG_RSA_PSS( PSA_ALG_SHA_512 ) );
-        case MBEDTLS_TLS1_3_SIG_RSA_PKCS1_SHA256:
-            return( PSA_ALG_RSA_PKCS1V15_SIGN( PSA_ALG_SHA_256 ) );
-        case MBEDTLS_TLS1_3_SIG_RSA_PKCS1_SHA384:
-            return( PSA_ALG_RSA_PKCS1V15_SIGN( PSA_ALG_SHA_384 ) );
-        case MBEDTLS_TLS1_3_SIG_RSA_PKCS1_SHA512:
-            return( PSA_ALG_RSA_PKCS1V15_SIGN( PSA_ALG_SHA_512 ) );
-        default:
-            return( PSA_ALG_NONE );
-    }
-}
-#endif /* MBEDTLS_USE_PSA_CRYPTO */
-
 /*
  * Pick best ( private key, certificate chain ) pair based on the signature
  * algorithms supported by the client.
@@ -1166,19 +1136,9 @@ static int ssl_tls13_pick_key_cert( mbedtls_ssl_context *ssl )
 
     for( ; *sig_alg != MBEDTLS_TLS1_3_SIG_NONE; sig_alg++ )
     {
-        if( !mbedtls_ssl_sig_alg_is_offered( ssl, *sig_alg ) )
-            continue;
-
-        if( !mbedtls_ssl_tls13_sig_alg_for_cert_verify_is_supported( *sig_alg ) )
-            continue;
-
         for( key_cert = key_cert_list; key_cert != NULL;
              key_cert = key_cert->next )
         {
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
-            psa_algorithm_t psa_alg = PSA_ALG_NONE;
-#endif /* MBEDTLS_USE_PSA_CRYPTO */
-
             MBEDTLS_SSL_DEBUG_CRT( 3, "certificate (chain) candidate",
                                    key_cert->cert );
 
@@ -1202,18 +1162,8 @@ static int ssl_tls13_pick_key_cert( mbedtls_ssl_context *ssl )
                                      "check signature algorithm %s [%04x]",
                                      mbedtls_ssl_sig_alg_to_str( *sig_alg ),
                                      *sig_alg ) );
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
-            psa_alg = ssl_tls13_iana_sig_alg_to_psa_alg( *sig_alg );
-#endif /* MBEDTLS_USE_PSA_CRYPTO */
-
             if( mbedtls_ssl_tls13_check_sig_alg_cert_key_match(
-                                            *sig_alg, &key_cert->cert->pk )
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
-                && psa_alg != PSA_ALG_NONE &&
-                mbedtls_pk_can_do_ext( &key_cert->cert->pk, psa_alg,
-                                       PSA_KEY_USAGE_SIGN_HASH ) == 1
-#endif /* MBEDTLS_USE_PSA_CRYPTO */
-                )
+                                            *sig_alg, &key_cert->cert->pk ) )
             {
                 ssl->handshake->key_cert = key_cert;
                 MBEDTLS_SSL_DEBUG_MSG( 3,
@@ -2669,21 +2619,7 @@ static int ssl_tls13_write_new_session_ticket_coordinate( mbedtls_ssl_context *s
     /* Check whether the use of session tickets is enabled */
     if( ssl->conf->f_ticket_write == NULL )
     {
-        MBEDTLS_SSL_DEBUG_MSG( 2, ( "NewSessionTicket: disabled,"
-                                        " callback is not set" ) );
-        return( SSL_NEW_SESSION_TICKET_SKIP );
-    }
-    if( ssl->conf->new_session_tickets_count == 0 )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 2, ( "NewSessionTicket: disabled,"
-                                        " configured count is zero" ) );
-        return( SSL_NEW_SESSION_TICKET_SKIP );
-    }
-
-    if( ssl->handshake->new_session_tickets_count == 0 )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 2, ( "NewSessionTicket: all tickets have "
-                                        "been sent." ) );
+        MBEDTLS_SSL_DEBUG_MSG( 2, ( "new session ticket is not enabled" ) );
         return( SSL_NEW_SESSION_TICKET_SKIP );
     }
 
@@ -2916,15 +2852,6 @@ static int ssl_tls13_write_new_session_ticket( mbedtls_ssl_context *ssl )
         MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_finish_handshake_msg(
                                   ssl, buf_len, msg_len ) );
 
-        /* Limit session tickets count to one when resumption connection.
-         *
-         * See document of mbedtls_ssl_conf_new_session_tickets.
-         */
-        if( ssl->handshake->resume == 1 )
-            ssl->handshake->new_session_tickets_count = 0;
-        else
-            ssl->handshake->new_session_tickets_count--;
-
         mbedtls_ssl_handshake_set_state( ssl,
                                          MBEDTLS_SSL_NEW_SESSION_TICKET_FLUSH );
     }
@@ -3075,11 +3002,7 @@ int mbedtls_ssl_tls13_handshake_server_step( mbedtls_ssl_context *ssl )
              * as part of ssl_prepare_handshake_step.
              */
             ret = 0;
-
-            if( ssl->handshake->new_session_tickets_count == 0 )
-                mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_HANDSHAKE_OVER );
-            else
-                mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_NEW_SESSION_TICKET );
+            mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_HANDSHAKE_OVER );
             break;
 
 #endif /* MBEDTLS_SSL_SESSION_TICKETS */
