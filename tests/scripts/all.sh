@@ -1291,6 +1291,7 @@ component_test_crypto_default_stream_cipher_only () {
     scripts/config.py unset MBEDTLS_CTR_DRBG_C
     scripts/config.py unset MBEDTLS_CMAC_C
     scripts/config.py unset MBEDTLS_NIST_KW_C
+    scripts/config.py unset MBEDTLS_SSL_SESSION_TICKETS
 
     # Enable stream(null) cipher only
     scripts/config.py set MBEDTLS_CIPHER_NULL_CIPHER
