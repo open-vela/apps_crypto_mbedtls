@@ -458,17 +458,15 @@ int main( void )
 #endif
 
 #define USAGE_KEY_OPAQUE_ALGS \
-    "    key_opaque_algs=%%s  Allowed opaque key 1 algorithms.\n"                      \
-    "                        comma-separated pair of values among the following:\n"    \
-    "                        rsa-sign-pkcs1, rsa-sign-pss, rsa-sign-pss-sha256,\n"     \
-    "                        rsa-sign-pss-sha384, rsa-sign-pss-sha512, rsa-decrypt,\n" \
-    "                        ecdsa-sign, ecdh, none (only acceptable for\n"            \
-    "                        the second value).\n"                                     \
-    "    key_opaque_algs2=%%s Allowed opaque key 2 algorithms.\n"                      \
-    "                        comma-separated pair of values among the following:\n"    \
-    "                        rsa-sign-pkcs1, rsa-sign-pss, rsa-sign-pss-sha256,\n"     \
-    "                        rsa-sign-pss-sha384, rsa-sign-pss-sha512, rsa-decrypt,\n" \
-    "                        ecdsa-sign, ecdh, none (only acceptable for\n"            \
+    "    key_opaque_algs=%%s  Allowed opaque key 1 algorithms.\n"                    \
+    "                        comma-separated pair of values among the following:\n"  \
+    "                        rsa-sign-pkcs1, rsa-sign-pss, rsa-decrypt,\n"           \
+    "                        ecdsa-sign, ecdh, none (only acceptable for\n"          \
+    "                        the second value).\n"                                   \
+    "    key_opaque_algs2=%%s Allowed opaque key 2 algorithms.\n"                    \
+    "                        comma-separated pair of values among the following:\n"  \
+    "                        rsa-sign-pkcs1, rsa-sign-pss, rsa-decrypt,\n"           \
+    "                        ecdsa-sign, ecdh, none (only acceptable for\n"          \
     "                        the second value).\n"
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3)
 #define USAGE_TLS1_3_KEY_EXCHANGE_MODES \
@@ -1999,7 +1997,7 @@ int main( int argc, char *argv[] )
         else if( strcmp( p, "tickets" ) == 0 )
         {
             opt.tickets = atoi( q );
-            if( opt.tickets < 0 )
+            if( opt.tickets < 0 || opt.tickets > 1 )
                 goto usage;
         }
         else if( strcmp( p, "ticket_rotate" ) == 0 )
@@ -2917,7 +2915,7 @@ int main( int argc, char *argv[] )
 #endif
 
 #if defined(MBEDTLS_SSL_SESSION_TICKETS)
-    if( opt.tickets != MBEDTLS_SSL_SESSION_TICKETS_DISABLED )
+    if( opt.tickets == MBEDTLS_SSL_SESSION_TICKETS_ENABLED )
     {
         if( ( ret = mbedtls_ssl_ticket_setup( &ticket_ctx,
                         rng_get, &rng,
@@ -2932,9 +2930,7 @@ int main( int argc, char *argv[] )
                 mbedtls_ssl_ticket_write,
                 mbedtls_ssl_ticket_parse,
                 &ticket_ctx );
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
-        mbedtls_ssl_conf_new_session_tickets( &conf, opt.tickets );
-#endif
+
         /* exercise manual ticket rotation (not required for typical use)
          * (used for external synchronization of session ticket encryption keys)
          */
