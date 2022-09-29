@@ -120,9 +120,6 @@
 # Treat uninitialised variables as errors.
 set -e -o pipefail -u
 
-# Enable ksh/bash extended file matching patterns
-shopt -s extglob
-
 pre_check_environment () {
     if [ -d library -a -d include -a -d tests ]; then :; else
         echo "Must be run from mbed TLS root" >&2
@@ -298,7 +295,7 @@ cleanup()
               -iname CMakeCache.txt -o \
               -path './cmake/*.cmake' \) -exec rm -f {} \+
     # Recover files overwritten by in-tree CMake builds
-    rm -f include/Makefile include/mbedtls/Makefile programs/!(fuzz)/Makefile
+    rm -f include/Makefile include/mbedtls/Makefile programs/*/Makefile
 
     # Remove any artifacts from the component_test_cmake_as_subdirectory test.
     rm -rf programs/test/cmake_subproject/build
@@ -317,9 +314,7 @@ cleanup()
 
     # Restore files that may have been clobbered by the job
     for x in $files_to_back_up; do
-        if [[ -e "$x$backup_suffix" ]]; then
-            cp -p "$x$backup_suffix" "$x"
-        fi
+        cp -p "$x$backup_suffix" "$x"
     done
 }
 
@@ -1272,159 +1267,6 @@ component_test_crypto_full_no_cipher () {
 
     msg "test: crypto_full minus CIPHER"
     make test
-}
-
-component_test_tls1_2_default_stream_cipher_only () {
-    msg "build: default with only stream cipher"
-
-    # Disable AEAD (controlled by the presence of one of GCM_C, CCM_C, CHACHAPOLY_C
-    scripts/config.py unset MBEDTLS_GCM_C
-    scripts/config.py unset MBEDTLS_CCM_C
-    scripts/config.py unset MBEDTLS_CHACHAPOLY_C
-    # Disable CBC-legacy (controlled by MBEDTLS_CIPHER_MODE_CBC plus at least one block cipher (AES, ARIA, Camellia, DES))
-    scripts/config.py unset MBEDTLS_CIPHER_MODE_CBC
-    # Disable CBC-EtM (controlled by the same as CBC-legacy plus MBEDTLS_SSL_ENCRYPT_THEN_MAC)
-    scripts/config.py unset MBEDTLS_SSL_ENCRYPT_THEN_MAC
-    # Enable stream (currently that's just the NULL pseudo-cipher (controlled by MBEDTLS_CIPHER_NULL_CIPHER))
-    scripts/config.py set MBEDTLS_CIPHER_NULL_CIPHER
-    # Indirect dependencies
-    scripts/config.py unset MBEDTLS_SSL_CONTEXT_SERIALIZATION
-    scripts/config.py unset MBEDTLS_SSL_SESSION_TICKETS
-
-    make
-
-    msg "test: default with only stream cipher"
-    make test
-}
-
-component_test_tls1_2_default_stream_cipher_only_use_psa () {
-    msg "build: deafult with only stream cipher use psa"
-
-    scripts/config.py set MBEDTLS_USE_PSA_CRYPTO
-    # Disable AEAD (controlled by the presence of one of GCM_C, CCM_C, CHACHAPOLY_C)
-    scripts/config.py unset MBEDTLS_GCM_C
-    scripts/config.py unset MBEDTLS_CCM_C
-    scripts/config.py unset MBEDTLS_CHACHAPOLY_C
-    # Disable CBC-legacy (controlled by MBEDTLS_CIPHER_MODE_CBC plus at least one block cipher (AES, ARIA, Camellia, DES))
-    scripts/config.py unset MBEDTLS_CIPHER_MODE_CBC
-    # Disable CBC-EtM (controlled by the same as CBC-legacy plus MBEDTLS_SSL_ENCRYPT_THEN_MAC)
-    scripts/config.py unset MBEDTLS_SSL_ENCRYPT_THEN_MAC
-    # Enable stream (currently that's just the NULL pseudo-cipher (controlled by MBEDTLS_CIPHER_NULL_CIPHER))
-    scripts/config.py set MBEDTLS_CIPHER_NULL_CIPHER
-    # Indirect dependencies
-    scripts/config.py unset MBEDTLS_SSL_CONTEXT_SERIALIZATION
-    scripts/config.py unset MBEDTLS_SSL_SESSION_TICKETS
-
-    make
-
-    msg "test: deafult with only stream cipher use psa"
-    make test
-}
-
-component_test_tls1_2_default_cbc_legacy_cipher_only () {
-    msg "build: default with only CBC-legacy cipher"
-
-    # Disable AEAD (controlled by the presence of one of GCM_C, CCM_C, CHACHAPOLY_C)
-    scripts/config.py unset MBEDTLS_GCM_C
-    scripts/config.py unset MBEDTLS_CCM_C
-    scripts/config.py unset MBEDTLS_CHACHAPOLY_C
-    # Enable CBC-legacy (controlled by MBEDTLS_CIPHER_MODE_CBC plus at least one block cipher (AES, ARIA, Camellia, DES))
-    scripts/config.py set MBEDTLS_CIPHER_MODE_CBC
-    # Disable CBC-EtM (controlled by the same as CBC-legacy plus MBEDTLS_SSL_ENCRYPT_THEN_MAC)
-    scripts/config.py unset MBEDTLS_SSL_ENCRYPT_THEN_MAC
-    # Disable stream (currently that's just the NULL pseudo-cipher (controlled by MBEDTLS_CIPHER_NULL_CIPHER))
-    scripts/config.py unset MBEDTLS_CIPHER_NULL_CIPHER
-    # Indirect dependencies
-    scripts/config.py unset MBEDTLS_SSL_CONTEXT_SERIALIZATION
-    scripts/config.py unset MBEDTLS_SSL_SESSION_TICKETS
-
-    make
-
-    msg "test: default with only CBC-legacy cipher"
-    make test
-
-    msg "test: default with only CBC-legacy cipher - ssl-opt.sh (subset)"
-    tests/ssl-opt.sh -f "TLS 1.2"
-}
-
-component_test_tls1_2_deafult_cbc_legacy_cipher_only_use_psa () {
-    msg "build: default with only CBC-legacy cipher use psa"
-
-    scripts/config.py set MBEDTLS_USE_PSA_CRYPTO
-    # Disable AEAD (controlled by the presence of one of GCM_C, CCM_C, CHACHAPOLY_C)
-    scripts/config.py unset MBEDTLS_GCM_C
-    scripts/config.py unset MBEDTLS_CCM_C
-    scripts/config.py unset MBEDTLS_CHACHAPOLY_C
-    # Enable CBC-legacy (controlled by MBEDTLS_CIPHER_MODE_CBC plus at least one block cipher (AES, ARIA, Camellia, DES))
-    scripts/config.py set MBEDTLS_CIPHER_MODE_CBC
-    # Disable CBC-EtM (controlled by the same as CBC-legacy plus MBEDTLS_SSL_ENCRYPT_THEN_MAC)
-    scripts/config.py unset MBEDTLS_SSL_ENCRYPT_THEN_MAC
-    # Disable stream (currently that's just the NULL pseudo-cipher (controlled by MBEDTLS_CIPHER_NULL_CIPHER))
-    scripts/config.py unset MBEDTLS_CIPHER_NULL_CIPHER
-    # Indirect dependencies
-    scripts/config.py unset MBEDTLS_SSL_CONTEXT_SERIALIZATION
-    scripts/config.py unset MBEDTLS_SSL_SESSION_TICKETS
-
-    make
-
-    msg "test: default with only CBC-legacy cipher use psa"
-    make test
-
-    msg "test: default with only CBC-legacy cipher use psa - ssl-opt.sh (subset)"
-    tests/ssl-opt.sh -f "TLS 1.2"
-}
-
-component_test_tls1_2_default_cbc_legacy_cbc_etm_cipher_only () {
-    msg "build: default with only CBC-legacy and CBC-EtM ciphers"
-
-    # Disable AEAD (controlled by the presence of one of GCM_C, CCM_C, CHACHAPOLY_C)
-    scripts/config.py unset MBEDTLS_GCM_C
-    scripts/config.py unset MBEDTLS_CCM_C
-    scripts/config.py unset MBEDTLS_CHACHAPOLY_C
-    # Enable CBC-legacy (controlled by MBEDTLS_CIPHER_MODE_CBC plus at least one block cipher (AES, ARIA, Camellia, DES))
-    scripts/config.py set MBEDTLS_CIPHER_MODE_CBC
-    # Enable CBC-EtM (controlled by the same as CBC-legacy plus MBEDTLS_SSL_ENCRYPT_THEN_MAC)
-    scripts/config.py set MBEDTLS_SSL_ENCRYPT_THEN_MAC
-    # Disable stream (currently that's just the NULL pseudo-cipher (controlled by MBEDTLS_CIPHER_NULL_CIPHER))
-    scripts/config.py unset MBEDTLS_CIPHER_NULL_CIPHER
-    # Indirect dependencies
-    scripts/config.py unset MBEDTLS_SSL_CONTEXT_SERIALIZATION
-    scripts/config.py unset MBEDTLS_SSL_SESSION_TICKETS
-
-    make
-
-    msg "test: default with only CBC-legacy and CBC-EtM ciphers"
-    make test
-
-    msg "test: default with only CBC-legacy and CBC-EtM ciphers - ssl-opt.sh (subset)"
-    tests/ssl-opt.sh -f "TLS 1.2"
-}
-
-component_test_tls1_2_default_cbc_legacy_cbc_etm_cipher_only_use_psa () {
-    msg "build: default with only CBC-legacy and CBC-EtM ciphers use psa"
-
-    scripts/config.py set MBEDTLS_USE_PSA_CRYPTO
-    # Disable AEAD (controlled by the presence of one of GCM_C, CCM_C, CHACHAPOLY_C)
-    scripts/config.py unset MBEDTLS_GCM_C
-    scripts/config.py unset MBEDTLS_CCM_C
-    scripts/config.py unset MBEDTLS_CHACHAPOLY_C
-    # Enable CBC-legacy (controlled by MBEDTLS_CIPHER_MODE_CBC plus at least one block cipher (AES, ARIA, Camellia, DES))
-    scripts/config.py set MBEDTLS_CIPHER_MODE_CBC
-    # Enable CBC-EtM (controlled by the same as CBC-legacy plus MBEDTLS_SSL_ENCRYPT_THEN_MAC)
-    scripts/config.py set MBEDTLS_SSL_ENCRYPT_THEN_MAC
-    # Disable stream (currently that's just the NULL pseudo-cipher (controlled by MBEDTLS_CIPHER_NULL_CIPHER))
-    scripts/config.py unset MBEDTLS_CIPHER_NULL_CIPHER
-    # Indirect dependencies
-    scripts/config.py unset MBEDTLS_SSL_CONTEXT_SERIALIZATION
-    scripts/config.py unset MBEDTLS_SSL_SESSION_TICKETS
-
-    make
-
-    msg "test: default with only CBC-legacy and CBC-EtM ciphers use psa"
-    make test
-
-    msg "test: default with only CBC-legacy and CBC-EtM ciphers use psa - ssl-opt.sh (subset)"
-    tests/ssl-opt.sh -f "TLS 1.2"
 }
 
 component_test_psa_external_rng_use_psa_crypto () {

@@ -7,7 +7,7 @@
  * END_DEPENDENCIES
  */
 
-/* BEGIN_CASE */
+/* BEGIN_CASE depends_on:NOT_DEFINED */
 void camellia_invalid_param( )
 {
     mbedtls_camellia_context ctx;

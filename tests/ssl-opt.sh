@@ -12090,6 +12090,52 @@ run_test    "TLS 1.3: Server side check - mbedtls with sni" \
             -s "parse ServerName extension" \
             -s "HTTP/1.0 200 OK"
 
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
+requires_config_enabled MBEDTLS_SSL_SRV_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
+run_test    "TLS 1.3, default suite, PSK" \
+            "$P_SRV nbio=2 debug_level=5 force_version=tls13 psk=010203 psk_identity=0a0b0c tls13_kex_modes=psk" \
+            "$P_CLI nbio=2 debug_level=5 force_version=tls13 psk=010203 psk_identity=0a0b0c tls13_kex_modes=psk" \
+            0 \
+            -c "=> write client hello" \
+            -c "client hello, adding pre_shared_key extension, omitting PSK binder list" \
+            -c "client hello, adding psk_key_exchange_modes extension" \
+            -c "client hello, adding PSK binder list" \
+            -c "<= write client hello"
+
+requires_openssl_tls1_3
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
+requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
+requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
+run_test    "TLS 1.3, default suite, PSK - openssl" \
+            "$O_NEXT_SRV -msg -debug -tls1_3 -psk_identity 0a0b0c -psk 010203 -allow_no_dhe_kex -nocert" \
+            "$P_CLI debug_level=4 psk=010203 psk_identity=0a0b0c tls13_kex_modes=psk" \
+            0 \
+            -c "=> write client hello" \
+            -c "client hello, adding pre_shared_key extension, omitting PSK binder list" \
+            -c "client hello, adding psk_key_exchange_modes extension" \
+            -c "client hello, adding PSK binder list" \
+            -c "<= write client hello"
+
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
+requires_gnutls_tls1_3
+requires_gnutls_next_no_ticket
+requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
+requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
+run_test    "TLS 1.3, default suite, PSK - gnutls" \
+            "$G_NEXT_SRV -d 4 --priority=NORMAL:-VERS-ALL:+VERS-TLS1.3:+PSK:+CIPHER-ALL:%NO_TICKETS --pskhint=0a0b0c" \
+            "$P_CLI debug_level=4 psk=010203 psk_identity=0a0b0c tls13_kex_modes=psk" \
+            1 \
+            -c "=> write client hello" \
+            -c "client hello, adding pre_shared_key extension, omitting PSK binder list" \
+            -c "client hello, adding psk_key_exchange_modes extension" \
+            -c "client hello, adding PSK binder list" \
+            -s "Parsing extension 'PSK Key Exchange Modes/45'" \
+            -s "Parsing extension 'Pre Shared Key/41'" \
+            -c "<= write client hello"
+
 for i in opt-testcases/*.sh
 do
     TEST_SUITE_NAME=${i##*/}
@@ -12735,32 +12781,14 @@ run_test    "TLS 1.3: NewSessionTicket: Basic check, m->G" \
             -c "HTTP/1.0 200 OK" \
             -s "This is a resumed session"
 
-requires_openssl_tls1_3
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-requires_config_enabled MBEDTLS_SSL_SESSION_TICKETS
-requires_config_enabled MBEDTLS_SSL_SRV_C
-requires_config_enabled MBEDTLS_DEBUG_C
-requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
-# https://github.com/openssl/openssl/issues/10714
-# Until now, OpenSSL client does not support reconnect.
-skip_next_test
-run_test    "TLS 1.3: NewSessionTicket: Basic check, O->m" \
-            "$P_SRV debug_level=4 crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13 tickets=4" \
-            "$O_NEXT_CLI -msg -debug -tls1_3 -reconnect" \
-            0 \
-            -s "=> write NewSessionTicket msg" \
-            -s "server state: MBEDTLS_SSL_NEW_SESSION_TICKET" \
-            -s "server state: MBEDTLS_SSL_NEW_SESSION_TICKET_FLUSH"
-
 requires_gnutls_tls1_3
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_SESSION_TICKETS
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
-requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test    "TLS 1.3: NewSessionTicket: Basic check, G->m" \
-            "$P_SRV debug_level=4 crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13 tickets=4" \
-            "$G_NEXT_CLI localhost -d 4 --priority=NORMAL:-VERS-ALL:+VERS-TLS1.3 -V -r" \
+            "$P_SRV debug_level=4 crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13 tickets=1" \
+            "$G_NEXT_CLI localhost -d 4 --priority=NORMAL:-VERS-ALL:+VERS-TLS1.3:%DISABLE_TLS13_COMPAT_MODE -V -r" \
             0 \
             -c "Connecting again- trying to resume previous session" \
             -c "NEW SESSION TICKET (4) was received" \
@@ -12777,11 +12805,11 @@ requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
 run_test    "TLS 1.3: NewSessionTicket: Basic check, m->m" \
-            "$P_SRV debug_level=4 crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13 tickets=4" \
+            "$P_SRV debug_level=4 crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13 tickets=1" \
             "$P_CLI debug_level=4 reco_mode=1 reconnect=1" \
             0 \
             -c "Protocol is TLSv1.3" \
-            -c "got new session ticket ( 3 )" \
+            -c "got new session ticket." \
             -c "Saving session for reuse... ok" \
             -c "Reconnecting with saved session" \
             -c "HTTP/1.0 200 OK"    \
