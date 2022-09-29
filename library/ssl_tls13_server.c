@@ -2111,7 +2111,7 @@ static int ssl_tls13_write_server_hello_body( mbedtls_ssl_context *ssl,
     }
 
 #if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
-    if( !is_hrr && mbedtls_ssl_tls13_key_exchange_mode_with_psk( ssl ) )
+    if( mbedtls_ssl_tls13_key_exchange_mode_with_psk( ssl ) )
     {
         ret = ssl_tls13_write_server_pre_shared_key_ext( ssl, p, end, &output_len );
         if( ret != 0 )
@@ -2619,21 +2619,7 @@ static int ssl_tls13_write_new_session_ticket_coordinate( mbedtls_ssl_context *s
     /* Check whether the use of session tickets is enabled */
     if( ssl->conf->f_ticket_write == NULL )
     {
-        MBEDTLS_SSL_DEBUG_MSG( 2, ( "NewSessionTicket: disabled,"
-                                        " callback is not set" ) );
-        return( SSL_NEW_SESSION_TICKET_SKIP );
-    }
-    if( ssl->conf->new_session_tickets_count == 0 )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 2, ( "NewSessionTicket: disabled,"
-                                        " configured count is zero" ) );
-        return( SSL_NEW_SESSION_TICKET_SKIP );
-    }
-
-    if( ssl->handshake->new_session_tickets_count == 0 )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 2, ( "NewSessionTicket: all tickets have "
-                                        "been sent." ) );
+        MBEDTLS_SSL_DEBUG_MSG( 2, ( "new session ticket is not enabled" ) );
         return( SSL_NEW_SESSION_TICKET_SKIP );
     }
 
@@ -2866,15 +2852,6 @@ static int ssl_tls13_write_new_session_ticket( mbedtls_ssl_context *ssl )
         MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_finish_handshake_msg(
                                   ssl, buf_len, msg_len ) );
 
-        /* Limit session tickets count to one when resumption connection.
-         *
-         * See document of mbedtls_ssl_conf_new_session_tickets.
-         */
-        if( ssl->handshake->resume == 1 )
-            ssl->handshake->new_session_tickets_count = 0;
-        else
-            ssl->handshake->new_session_tickets_count--;
-
         mbedtls_ssl_handshake_set_state( ssl,
                                          MBEDTLS_SSL_NEW_SESSION_TICKET_FLUSH );
     }
@@ -3025,11 +3002,7 @@ int mbedtls_ssl_tls13_handshake_server_step( mbedtls_ssl_context *ssl )
              * as part of ssl_prepare_handshake_step.
              */
             ret = 0;
-
-            if( ssl->handshake->new_session_tickets_count == 0 )
-                mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_HANDSHAKE_OVER );
-            else
-                mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_NEW_SESSION_TICKET );
+            mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_HANDSHAKE_OVER );
             break;
 
 #endif /* MBEDTLS_SSL_SESSION_TICKETS */
