@@ -52,7 +52,9 @@
 #include "mbedtls/platform_time.h"
 #endif
 
+#if defined(MBEDTLS_USE_PSA_CRYPTO)
 #include "psa/crypto.h"
+#endif /* MBEDTLS_USE_PSA_CRYPTO */
 
 /*
  * SSL Error codes
@@ -627,7 +629,11 @@ union mbedtls_ssl_premaster_secret
 
 #define MBEDTLS_PREMASTER_SIZE     sizeof( union mbedtls_ssl_premaster_secret )
 
+#if defined(MBEDTLS_USE_PSA_CRYPTO)
 #define MBEDTLS_TLS1_3_MD_MAX_SIZE         PSA_HASH_MAX_SIZE
+#else
+#define MBEDTLS_TLS1_3_MD_MAX_SIZE         MBEDTLS_MD_MAX_SIZE
+#endif /* MBEDTLS_USE_PSA_CRYPTO */
 
 
 /* Length in number of bytes of the TLS sequence number */
