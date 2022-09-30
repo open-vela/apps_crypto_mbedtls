@@ -338,11 +338,11 @@
 #define MBEDTLS_SSL_SRV_CIPHERSUITE_ORDER_SERVER  0
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3) && defined(MBEDTLS_SSL_SESSION_TICKETS)
-#if defined(PSA_WANT_ALG_SHA_384)
+#if defined(MBEDTLS_SHA384_C)
 #define MBEDTLS_SSL_TLS1_3_TICKET_RESUMPTION_KEY_LEN        48
-#elif defined(PSA_WANT_ALG_SHA_256)
+#elif defined(MBEDTLS_SHA256_C)
 #define MBEDTLS_SSL_TLS1_3_TICKET_RESUMPTION_KEY_LEN        32
-#endif
+#endif /* MBEDTLS_SHA256_C  */
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3 && MBEDTLS_SSL_SESSION_TICKETS */
 /*
  * Default range for DTLS retransmission timer value, in milliseconds.
@@ -629,12 +629,7 @@ union mbedtls_ssl_premaster_secret
 
 #define MBEDTLS_PREMASTER_SIZE     sizeof( union mbedtls_ssl_premaster_secret )
 
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
-#define MBEDTLS_TLS1_3_MD_MAX_SIZE         PSA_HASH_MAX_SIZE
-#else
 #define MBEDTLS_TLS1_3_MD_MAX_SIZE         MBEDTLS_MD_MAX_SIZE
-#endif /* MBEDTLS_USE_PSA_CRYPTO */
-
 
 /* Length in number of bytes of the TLS sequence number */
 #define MBEDTLS_SSL_SEQUENCE_NUMBER_LEN 8

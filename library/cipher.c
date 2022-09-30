@@ -519,7 +519,7 @@ int mbedtls_cipher_update_ad( mbedtls_cipher_context_t *ctx,
     }
 #endif
 
-    return( MBEDTLS_ERR_CIPHER_FEATURE_UNAVAILABLE );
+    return( 0 );
 }
 #endif /* MBEDTLS_GCM_C || MBEDTLS_CHACHAPOLY_C */
 
@@ -1159,7 +1159,7 @@ int mbedtls_cipher_write_tag( mbedtls_cipher_context_t *ctx,
     }
 #endif
 
-    return( MBEDTLS_ERR_CIPHER_FEATURE_UNAVAILABLE );
+    return( 0 );
 }
 
 int mbedtls_cipher_check_tag( mbedtls_cipher_context_t *ctx,
@@ -1188,8 +1188,11 @@ int mbedtls_cipher_check_tag( mbedtls_cipher_context_t *ctx,
     }
 #endif /* MBEDTLS_USE_PSA_CRYPTO */
 
-    /* Status to return on a non-authenticated algorithm. */
-    ret = MBEDTLS_ERR_CIPHER_FEATURE_UNAVAILABLE;
+    /* Status to return on a non-authenticated algorithm. It would make sense
+     * to return MBEDTLS_ERR_CIPHER_INVALID_CONTEXT or perhaps
+     * MBEDTLS_ERR_CIPHER_BAD_INPUT_DATA, but at the time I write this our
+     * unit tests assume 0. */
+    ret = 0;
 
 #if defined(MBEDTLS_GCM_C)
     if( MBEDTLS_MODE_GCM == ctx->cipher_info->mode )
