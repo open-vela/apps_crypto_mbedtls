@@ -664,10 +664,59 @@ static int ssl_tls13_write_psk_key_exchange_modes_ext( mbedtls_ssl_context *ssl,
     ssl->handshake->extensions_present |= MBEDTLS_SSL_EXT_PSK_KEY_EXCHANGE_MODES;
     return ( 0 );
 }
-#endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
+
+/* Check if we have any PSK to offer, returns 0 if a PSK is available. */
+MBEDTLS_CHECK_RETURN_CRITICAL
+static int ssl_tls13_get_psk_to_offer(
+        const mbedtls_ssl_context *ssl,
+        int *psk_type,
+        const unsigned char **psk, size_t *psk_len,
+        const unsigned char **psk_identity, size_t *psk_identity_len )
+{
+    *psk = NULL;
+    *psk_len = 0;
+    *psk_identity = NULL;
+    *psk_identity_len = 0;
+    *psk_type = MBEDTLS_SSL_TLS1_3_PSK_EXTERNAL;
+
+#if defined(MBEDTLS_SSL_SESSION_TICKETS)
+    /* Check if a ticket has been configured. */
+    if( ssl->session_negotiate != NULL &&
+        ssl->session_negotiate->ticket != NULL )
+    {
+#if defined(MBEDTLS_HAVE_TIME)
+        mbedtls_time_t now = mbedtls_time( NULL );
+        if( ssl->session_negotiate->ticket_received <= now &&
+            (uint64_t)( now - ssl->session_negotiate->ticket_received )
+                    <= ssl->session_negotiate->ticket_lifetime )
+        {
+            *psk_type = MBEDTLS_SSL_TLS1_3_PSK_RESUMPTION;
+            *psk = ssl->session_negotiate->resumption_key;
+            *psk_len = ssl->session_negotiate->resumption_key_len;
+            *psk_identity = ssl->session_negotiate->ticket;
+            *psk_identity_len = ssl->session_negotiate->ticket_len;
+            return( 0 );
+        }
+#endif /* MBEDTLS_HAVE_TIME */
+        MBEDTLS_SSL_DEBUG_MSG( 3, ( "ticket expired" ) );
+    }
+#endif
+
+    /* Check if an external PSK has been configured. */
+    if( ssl->conf->psk != NULL )
+    {
+        *psk = ssl->conf->psk;
+        *psk_len = ssl->conf->psk_len;
+        *psk_identity = ssl->conf->psk_identity;
+        *psk_identity_len = ssl->conf->psk_identity_len;
+        return( 0 );
+    }
+
+    return( MBEDTLS_ERR_ERROR_GENERIC_ERROR );
+}
 
 /*
- * mbedtls_ssl_tls13_write_pre_shared_key_ext() structure:
+ * mbedtls_ssl_tls13_write_identities_of_pre_shared_key_ext() structure:
  *
  * struct {
  *   opaque identity<1..2^16-1>;
@@ -689,9 +738,6 @@ static int ssl_tls13_write_psk_key_exchange_modes_ext( mbedtls_ssl_context *ssl,
  * } PreSharedKeyExtension;
  *
  */
-
-#if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
-
 int mbedtls_ssl_tls13_write_identities_of_pre_shared_key_ext(
     mbedtls_ssl_context *ssl,
     unsigned char *buf, unsigned char *end,
@@ -725,9 +771,8 @@ int mbedtls_ssl_tls13_write_identities_of_pre_shared_key_ext(
      *   configured, offer that.
      * - Otherwise, skip the PSK extension.
      */
-
-    if( mbedtls_ssl_get_psk_to_offer( ssl, &psk_type, &psk, &psk_len,
-                                      &psk_identity, &psk_identity_len ) != 0 )
+    if( ssl_tls13_get_psk_to_offer( ssl, &psk_type, &psk, &psk_len,
+                                    &psk_identity, &psk_identity_len ) != 0 )
     {
         MBEDTLS_SSL_DEBUG_MSG( 3, ( "skip pre_shared_key extensions" ) );
         return( 0 );
@@ -757,6 +802,26 @@ int mbedtls_ssl_tls13_write_identities_of_pre_shared_key_ext(
             break;
         }
     }
+    else
+#if defined(MBEDTLS_SSL_SESSION_TICKETS)
+    if( psk_type == MBEDTLS_SSL_TLS1_3_PSK_RESUMPTION )
+    {
+#if defined(MBEDTLS_HAVE_TIME)
+        mbedtls_time_t now = mbedtls_time( NULL );
+
+        obfuscated_ticket_age =
+            ( (uint32_t)( now - ssl->session_negotiate->ticket_received ) * 1000 )
+              + ssl->session_negotiate->ticket_age_add;
+#endif
+    }
+    else
+#endif /* MBEDTLS_SSL_SESSION_TICKETS */
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "write_identities_of_pre_shared_key_ext: "
+                                    "should never happen" ) );
+        return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
+    }
+
 
     ciphersuite_info = mbedtls_ssl_ciphersuite_from_id(
             ssl->session_negotiate->ciphersuite );
@@ -831,8 +896,8 @@ int mbedtls_ssl_tls13_write_binders_of_pre_shared_key_ext(
     unsigned char transcript[MBEDTLS_MD_MAX_SIZE];
     size_t transcript_len;
 
-    if( mbedtls_ssl_get_psk_to_offer( ssl, &psk_type, &psk, &psk_len,
-                                      &psk_identity, &psk_identity_len ) != 0 )
+    if( ssl_tls13_get_psk_to_offer( ssl, &psk_type, &psk, &psk_len,
+                                    &psk_identity, &psk_identity_len ) != 0 )
     {
         return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
     }
@@ -1262,19 +1327,19 @@ static int ssl_tls13_parse_server_pre_shared_key_ext( mbedtls_ssl_context *ssl,
     int ret = 0;
     size_t selected_identity;
 
+    int psk_type;
     const unsigned char *psk;
     size_t psk_len;
     const unsigned char *psk_identity;
     size_t psk_identity_len;
-
 
     /* Check which PSK we've offered.
      *
      * NOTE: Ultimately, we want to offer multiple PSKs, and in this
      *       case, we need to iterate over them here.
      */
-    if( mbedtls_ssl_get_psk_to_offer( ssl, NULL, &psk, &psk_len,
-                                      &psk_identity, &psk_identity_len ) != 0 )
+    if( ssl_tls13_get_psk_to_offer( ssl, &psk_type, &psk, &psk_len,
+                                    &psk_identity, &psk_identity_len ) != 0 )
     {
         /* If we haven't offered a PSK, the server must not send
          * a PSK identity extension. */
@@ -1602,6 +1667,23 @@ cleanup:
     return( ret );
 }
 
+#if defined(MBEDTLS_DEBUG_C)
+static const char *ssl_tls13_get_kex_mode_str(int mode)
+{
+    switch( mode )
+    {
+        case MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK:
+            return "psk";
+        case MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL:
+            return "ephemeral";
+        case MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_EPHEMERAL:
+            return "psk_ephemeral";
+        default:
+            return "unknown mode";
+    }
+}
+#endif /* MBEDTLS_DEBUG_C */
+
 MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_postprocess_server_hello( mbedtls_ssl_context *ssl )
 {
@@ -1640,6 +1722,19 @@ static int ssl_tls13_postprocess_server_hello( mbedtls_ssl_context *ssl )
             ret = MBEDTLS_ERR_SSL_HANDSHAKE_FAILURE;
             goto cleanup;
     }
+
+    if( !mbedtls_ssl_conf_tls13_check_kex_modes( ssl, handshake->key_exchange_mode ) )
+    {
+        ret = MBEDTLS_ERR_SSL_HANDSHAKE_FAILURE;
+        MBEDTLS_SSL_DEBUG_MSG( 2,
+                ( "Key exchange mode(%s) is not supported.",
+                ssl_tls13_get_kex_mode_str( handshake->key_exchange_mode ) ) );
+        goto cleanup;
+    }
+
+    MBEDTLS_SSL_DEBUG_MSG( 3,
+            ( "Selected key exchange mode: %s",
+              ssl_tls13_get_kex_mode_str( handshake->key_exchange_mode ) ) );
 
     /* Start the TLS 1.3 key schedule: Set the PSK and derive early secret.
      *
@@ -1819,7 +1914,12 @@ static int ssl_tls13_parse_encrypted_extensions( mbedtls_ssl_context *ssl,
          */
         switch( extension_type )
         {
+            case MBEDTLS_TLS_EXT_SERVERNAME:
+                MBEDTLS_SSL_DEBUG_MSG( 3, ( "found server_name extension" ) );
 
+                /* The server_name extension should be an empty extension */
+
+                break;
             case MBEDTLS_TLS_EXT_SUPPORTED_GROUPS:
                 MBEDTLS_SSL_DEBUG_MSG( 3, ( "found extensions supported groups" ) );
                 break;
@@ -2237,11 +2337,11 @@ static int ssl_tls13_write_client_finished( mbedtls_ssl_context *ssl )
     if( ret != 0 )
         return( ret );
 
-    ret = mbedtls_ssl_tls13_generate_resumption_master_secret( ssl );
+    ret = mbedtls_ssl_tls13_compute_resumption_master_secret( ssl );
     if( ret != 0 )
     {
         MBEDTLS_SSL_DEBUG_RET( 1,
-                "mbedtls_ssl_tls13_generate_resumption_master_secret ", ret );
+                "mbedtls_ssl_tls13_compute_resumption_master_secret ", ret );
         return ( ret );
     }
 
@@ -2404,6 +2504,9 @@ static int ssl_tls13_parse_new_session_ticket( mbedtls_ssl_context *ssl,
                                ret );
         return( ret );
     }
+
+    /* session has been updated, allow export */
+    session->exported = 0;
 
     return( 0 );
 }
