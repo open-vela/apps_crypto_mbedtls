@@ -52,9 +52,7 @@
 #include "mbedtls/platform_time.h"
 #endif
 
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
 #include "psa/crypto.h"
-#endif /* MBEDTLS_USE_PSA_CRYPTO */
 
 /*
  * SSL Error codes
@@ -629,11 +627,7 @@ union mbedtls_ssl_premaster_secret
 
 #define MBEDTLS_PREMASTER_SIZE     sizeof( union mbedtls_ssl_premaster_secret )
 
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
 #define MBEDTLS_TLS1_3_MD_MAX_SIZE         PSA_HASH_MAX_SIZE
-#else
-#define MBEDTLS_TLS1_3_MD_MAX_SIZE         MBEDTLS_MD_MAX_SIZE
-#endif /* MBEDTLS_USE_PSA_CRYPTO */
 
 
 /* Length in number of bytes of the TLS sequence number */
@@ -1329,9 +1323,17 @@ struct mbedtls_ssl_config
 #if defined(MBEDTLS_SSL_RENEGOTIATION)
     uint8_t MBEDTLS_PRIVATE(disable_renegotiation); /*!< disable renegotiation?     */
 #endif
-#if defined(MBEDTLS_SSL_SESSION_TICKETS)
-    uint8_t MBEDTLS_PRIVATE(session_tickets);   /*!< use session tickets?           */
+#if defined(MBEDTLS_SSL_SESSION_TICKETS) && \
+    defined(MBEDTLS_SSL_CLI_C)
+    uint8_t MBEDTLS_PRIVATE(session_tickets);   /*!< use session tickets? */
 #endif
+
+#if defined(MBEDTLS_SSL_SESSION_TICKETS) && \
+    defined(MBEDTLS_SSL_SRV_C) && \
+    defined(MBEDTLS_SSL_PROTO_TLS1_3)
+    uint16_t MBEDTLS_PRIVATE(new_session_tickets_count);   /*!< number of NewSessionTicket */
+#endif
+
 #if defined(MBEDTLS_SSL_SRV_C)
     uint8_t MBEDTLS_PRIVATE(cert_req_ca_list);  /*!< enable sending CA list in
                                                      Certificate Request messages? */
@@ -4109,7 +4111,8 @@ int mbedtls_ssl_conf_max_frag_len( mbedtls_ssl_config *conf, unsigned char mfl_c
 void mbedtls_ssl_conf_preference_order( mbedtls_ssl_config *conf, int order );
 #endif /* MBEDTLS_SSL_SRV_C */
 
-#if defined(MBEDTLS_SSL_SESSION_TICKETS) && defined(MBEDTLS_SSL_CLI_C)
+#if defined(MBEDTLS_SSL_SESSION_TICKETS) && \
+    defined(MBEDTLS_SSL_CLI_C)
 /**
  * \brief          Enable / Disable session tickets (client only).
  *                 (Default: MBEDTLS_SSL_SESSION_TICKETS_ENABLED.)
@@ -4121,7 +4124,34 @@ void mbedtls_ssl_conf_preference_order( mbedtls_ssl_config *conf, int order );
  *                                         MBEDTLS_SSL_SESSION_TICKETS_DISABLED)
  */
 void mbedtls_ssl_conf_session_tickets( mbedtls_ssl_config *conf, int use_tickets );
-#endif /* MBEDTLS_SSL_SESSION_TICKETS && MBEDTLS_SSL_CLI_C */
+#endif /* MBEDTLS_SSL_SESSION_TICKETS &&
+          MBEDTLS_SSL_CLI_C */
+
+#if defined(MBEDTLS_SSL_SESSION_TICKETS) && \
+    defined(MBEDTLS_SSL_SRV_C) && \
+    defined(MBEDTLS_SSL_PROTO_TLS1_3)
+/**
+ * \brief   Number of NewSessionTicket messages for the server to send
+ *          after handshake completion.
+ *
+ * \note    The default value is
+ *          \c MBEDTLS_SSL_TLS1_3_DEFAULT_NEW_SESSION_TICKETS.
+ *
+ * \note    In case of a session resumption, this setting only partially apply.
+ *          At most one ticket is sent in that case to just renew the pool of
+ *          tickets of the client. The rationale is to avoid the number of
+ *          tickets on the server to become rapidly out of control when the
+ *          server has the same configuration for all its connection instances.
+ *
+ * \param conf    SSL configuration
+ * \param num_tickets    Number of NewSessionTicket.
+ *
+ */
+void mbedtls_ssl_conf_new_session_tickets( mbedtls_ssl_config *conf,
+                                           uint16_t num_tickets );
+#endif /* MBEDTLS_SSL_SESSION_TICKETS &&
+          MBEDTLS_SSL_SRV_C &&
+          MBEDTLS_SSL_PROTO_TLS1_3*/
 
 #if defined(MBEDTLS_SSL_RENEGOTIATION)
 /**
