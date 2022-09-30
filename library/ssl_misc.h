@@ -32,7 +32,7 @@
 #include "mbedtls/psa_util.h"
 #include "hash_info.h"
 #endif
-#include "legacy_or_psa.h"
+#include "mbedtls/legacy_or_psa.h"
 
 #if defined(MBEDTLS_MD5_C)
 #include "mbedtls/md5.h"
@@ -623,6 +623,9 @@ struct mbedtls_ssl_handshake_params
     uint16_t hrr_selected_group;
 #if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
     uint8_t tls13_kex_modes; /*!< Key exchange modes supported by the client */
+#endif
+#if defined(MBEDTLS_SSL_SESSION_TICKETS)
+    uint16_t new_session_tickets_count;         /*!< number of session tickets */
 #endif
 #endif /* MBEDTLS_SSL_SRV_C */
 
@@ -2457,16 +2460,6 @@ int mbedtls_ssl_check_dtls_clihlo_cookie(
 #endif
 
 #if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
-/* Check if we have any PSK to offer, returns 0 if PSK is available.
- * Assign the psk and ticket if pointers are present.
- */
-MBEDTLS_CHECK_RETURN_CRITICAL
-int mbedtls_ssl_get_psk_to_offer(
-        const mbedtls_ssl_context *ssl,
-        int *psk_type,
-        const unsigned char **psk, size_t *psk_len,
-        const unsigned char **psk_identity, size_t *psk_identity_len );
-
 /**
  * \brief Given an SSL context and its associated configuration, write the TLS
  *        1.3 specific Pre-Shared key extension.
