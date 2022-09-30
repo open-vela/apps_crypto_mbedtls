@@ -1380,8 +1380,6 @@
  * saved after the handshake to allow for more efficient serialization, so if
  * you don't need this feature you'll save RAM by disabling it.
  *
- * Requires: MBEDTLS_GCM_C or MBEDTLS_CCM_C or MBEDTLS_CHACHAPOLY_C
- *
  * Comment to disable the context serialization APIs.
  */
 #define MBEDTLS_SSL_CONTEXT_SERIALIZATION
@@ -1702,8 +1700,6 @@
  * Server-side, you also need to provide callbacks for writing and parsing
  * tickets, including authenticated encryption and key management. Example
  * callbacks are provided by MBEDTLS_SSL_TICKET_C.
- *
- * Requires: MBEDTLS_GCM_C or MBEDTLS_CCM_C or MBEDTLS_CHACHAPOLY_C
  *
  * Comment this macro to disable support for SSL session tickets
  */
