@@ -445,6 +445,8 @@ psa_status_t psa_validate_unstructured_key_bit_size( psa_key_type_t type,
         case PSA_KEY_TYPE_RAW_DATA:
         case PSA_KEY_TYPE_HMAC:
         case PSA_KEY_TYPE_DERIVE:
+        case PSA_KEY_TYPE_PASSWORD:
+        case PSA_KEY_TYPE_PASSWORD_HASH:
             break;
 #if defined(PSA_WANT_KEY_TYPE_AES)
         case PSA_KEY_TYPE_AES:
@@ -3590,6 +3592,7 @@ static psa_status_t psa_aead_check_nonce_length( psa_algorithm_t alg,
             break;
 #endif /* PSA_WANT_ALG_CHACHA20_POLY1305 */
         default:
+            (void) nonce_length;
             return( PSA_ERROR_NOT_SUPPORTED );
     }
 
