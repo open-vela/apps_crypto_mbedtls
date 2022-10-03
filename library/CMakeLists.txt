@@ -70,6 +70,7 @@ set(src_crypto
     psa_crypto_ecp.c
     psa_crypto_hash.c
     psa_crypto_mac.c
+    psa_crypto_pake.c
     psa_crypto_rsa.c
     psa_crypto_se.c
     psa_crypto_slot_management.c
@@ -89,7 +90,6 @@ set(src_crypto
 )
 
 set(src_x509
-    pkcs7.c
     x509.c
     x509_create.c
     x509_crl.c
