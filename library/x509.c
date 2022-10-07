@@ -468,11 +468,6 @@ static int x509_get_attr_type_value( unsigned char **p,
  * For the general case we still use a flat list, but we mark elements of the
  * same set so that they are "merged" together in the functions that consume
  * this list, eg mbedtls_x509_dn_gets().
- *
- * On success, this function allocates a linked list starting at cur->next
- * that must later be free'd by the caller using mbedtls_free(). In error
- * cases, this function frees all allocated memory internally and the caller
- * has no freeing responsibilities.
  */
 int mbedtls_x509_get_name( unsigned char **p, const unsigned char *end,
                    mbedtls_x509_name *cur )
@@ -480,8 +475,6 @@ int mbedtls_x509_get_name( unsigned char **p, const unsigned char *end,
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     size_t set_len;
     const unsigned char *end_set;
-    mbedtls_x509_name *head = cur;
-    mbedtls_x509_name *prev, *allocated;
 
     /* don't use recursion, we'd risk stack overflow if not optimized */
     while( 1 )
@@ -491,17 +484,14 @@ int mbedtls_x509_get_name( unsigned char **p, const unsigned char *end,
          */
         if( ( ret = mbedtls_asn1_get_tag( p, end, &set_len,
                 MBEDTLS_ASN1_CONSTRUCTED | MBEDTLS_ASN1_SET ) ) != 0 )
-        {
-            ret = MBEDTLS_ERROR_ADD( MBEDTLS_ERR_X509_INVALID_NAME, ret );
-            goto error;
-        }
+            return( MBEDTLS_ERROR_ADD( MBEDTLS_ERR_X509_INVALID_NAME, ret ) );
 
         end_set  = *p + set_len;
 
         while( 1 )
         {
             if( ( ret = x509_get_attr_type_value( p, end_set, cur ) ) != 0 )
-                goto error;
+                return( ret );
 
             if( *p == end_set )
                 break;
@@ -512,10 +502,7 @@ int mbedtls_x509_get_name( unsigned char **p, const unsigned char *end,
             cur->next = mbedtls_calloc( 1, sizeof( mbedtls_x509_name ) );
 
             if( cur->next == NULL )
-            {
-                ret = MBEDTLS_ERR_X509_ALLOC_FAILED;
-                goto error;
-            }
+                return( MBEDTLS_ERR_X509_ALLOC_FAILED );
 
             cur = cur->next;
         }
@@ -529,35 +516,10 @@ int mbedtls_x509_get_name( unsigned char **p, const unsigned char *end,
         cur->next = mbedtls_calloc( 1, sizeof( mbedtls_x509_name ) );
 
         if( cur->next == NULL )
-        {
-            ret = MBEDTLS_ERR_X509_ALLOC_FAILED;
-            goto error;
-        }
+            return( MBEDTLS_ERR_X509_ALLOC_FAILED );
 
         cur = cur->next;
     }
-
-error:
-    prev = NULL;
-
-    /* Skip the first element as we did not allocate it */
-    allocated = head->next;
-
-    /* Make sure we cannot be followed along this list */
-    head->next = NULL;
-
-    while( allocated != NULL )
-    {
-        prev = allocated;
-        allocated = allocated->next;
-
-        mbedtls_platform_zeroize( prev, sizeof( *prev ) );
-        mbedtls_free( prev );
-    }
-
-    mbedtls_platform_zeroize( head, sizeof( *head ) );
-
-    return ret;
 }
 
 static int x509_parse_int( unsigned char **p, size_t n, int *res )

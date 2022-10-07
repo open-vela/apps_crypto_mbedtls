@@ -1211,11 +1211,9 @@ int mbedtls_ssl_session_reset_int( mbedtls_ssl_context *ssl, int partial )
 #endif
 
 #if defined(MBEDTLS_SSL_DTLS_HELLO_VERIFY) && defined(MBEDTLS_SSL_SRV_C)
-    int free_cli_id = 1;
 #if defined(MBEDTLS_SSL_DTLS_CLIENT_PORT_REUSE)
-    free_cli_id = ( partial == 0 );
+    if( partial == 0 )
 #endif
-    if( free_cli_id )
     {
         mbedtls_free( ssl->cli_id );
         ssl->cli_id = NULL;
@@ -1374,15 +1372,6 @@ int mbedtls_ssl_set_session( mbedtls_ssl_context *ssl, const mbedtls_ssl_session
 
     if( ssl->handshake->resume == 1 )
         return( MBEDTLS_ERR_SSL_FEATURE_UNAVAILABLE );
-
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
-    if( session->tls_version == MBEDTLS_SSL_VERSION_TLS1_3 &&
-        ( ( ret = mbedtls_ssl_tls13_ciphersuite_to_alg(
-                      ssl, session->ciphersuite, NULL ) ) != 0 ) )
-    {
-        return( ret );
-    }
-#endif
 
     if( ( ret = mbedtls_ssl_session_copy( ssl->session_negotiate,
                                           session ) ) != 0 )
@@ -1806,7 +1795,6 @@ int mbedtls_ssl_set_hs_psk_opaque( mbedtls_ssl_context *ssl,
 }
 #endif /* MBEDTLS_USE_PSA_CRYPTO */
 
-#if defined(MBEDTLS_SSL_SRV_C)
 void mbedtls_ssl_conf_psk_cb( mbedtls_ssl_config *conf,
                      int (*f_psk)(void *, mbedtls_ssl_context *, const unsigned char *,
                      size_t),
@@ -1815,8 +1803,6 @@ void mbedtls_ssl_conf_psk_cb( mbedtls_ssl_config *conf,
     conf->f_psk = f_psk;
     conf->p_psk = p_psk;
 }
-#endif /* MBEDTLS_SSL_SRV_C */
-
 #endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
 
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
@@ -7615,16 +7601,11 @@ static int ssl_tls12_populate_transform( mbedtls_ssl_transform *transform,
          *   sequence number).
          */
         transform->ivlen = 12;
-
-        int is_chachapoly = 0;
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
-        is_chachapoly = ( key_type == PSA_KEY_TYPE_CHACHA20 );
+        if( key_type == PSA_KEY_TYPE_CHACHA20 )
 #else
-        is_chachapoly = ( mbedtls_cipher_info_get_mode( cipher_info )
-                == MBEDTLS_MODE_CHACHAPOLY );
+        if( mbedtls_cipher_info_get_mode( cipher_info ) == MBEDTLS_MODE_CHACHAPOLY )
 #endif /* MBEDTLS_USE_PSA_CRYPTO */
-
-        if( is_chachapoly )
             transform->fixed_ivlen = 12;
         else
             transform->fixed_ivlen = 4;
