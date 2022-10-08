@@ -186,8 +186,9 @@ static int ssl_tls13_offered_psks_check_identity_match_ticket(
     if( now < session->start )
     {
         MBEDTLS_SSL_DEBUG_MSG(
-            3, ( "Ticket expired: now=%" MBEDTLS_PRINTF_LONGLONG
-                    ", start=%" MBEDTLS_PRINTF_LONGLONG,
+            3, ( "Ticket expired: start is in future "
+                    "( now=%" MBEDTLS_PRINTF_LONGLONG
+                    ", start=%" MBEDTLS_PRINTF_LONGLONG " )",
                     (long long)now, (long long)session->start ) );
         goto exit;
     }
@@ -680,13 +681,11 @@ static int ssl_tls13_write_server_pre_shared_key_ext( mbedtls_ssl_context *ssl,
 
     *olen = 0;
 
-    int not_using_psk = 0;
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
-    not_using_psk = ( mbedtls_svc_key_id_is_null( ssl->handshake->psk_opaque ) );
+    if( mbedtls_svc_key_id_is_null( ssl->handshake->psk_opaque ) )
 #else
-    not_using_psk = ( ssl->handshake->psk == NULL );
+    if( ssl->handshake->psk == NULL )
 #endif
-    if( not_using_psk )
     {
         /* We shouldn't have called this extension writer unless we've
          * chosen to use a PSK. */
