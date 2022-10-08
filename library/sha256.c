@@ -665,11 +665,9 @@ int mbedtls_sha256_finish( mbedtls_sha256_context *ctx,
     MBEDTLS_PUT_UINT32_BE( ctx->state[5], output, 20 );
     MBEDTLS_PUT_UINT32_BE( ctx->state[6], output, 24 );
 
-    int truncated = 0;
 #if defined(MBEDTLS_SHA224_C)
-    truncated = ctx->is224;
+    if( ctx->is224 == 0 )
 #endif
-    if( !truncated )
         MBEDTLS_PUT_UINT32_BE( ctx->state[7], output, 28 );
 
     return( 0 );
