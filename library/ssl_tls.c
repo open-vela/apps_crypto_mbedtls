@@ -1361,7 +1361,6 @@ void mbedtls_ssl_conf_session_cache( mbedtls_ssl_config *conf,
 int mbedtls_ssl_set_session( mbedtls_ssl_context *ssl, const mbedtls_ssl_session *session )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
-    const mbedtls_ssl_ciphersuite_t *ciphersuite_info;
 
     if( ssl == NULL ||
         session == NULL ||
@@ -1373,16 +1372,6 @@ int mbedtls_ssl_set_session( mbedtls_ssl_context *ssl, const mbedtls_ssl_session
 
     if( ssl->handshake->resume == 1 )
         return( MBEDTLS_ERR_SSL_FEATURE_UNAVAILABLE );
-
-    ciphersuite_info = mbedtls_ssl_ciphersuite_from_id( session->ciphersuite );
-    if( mbedtls_ssl_validate_ciphersuite( ssl, ciphersuite_info,
-                                          session->tls_version,
-                                          session->tls_version ) != 0 )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 4, ( "%d is not a valid ciphersuite.",
-                                    session->ciphersuite ) );
-        return( MBEDTLS_ERR_SSL_INVALID_MAC );
-    }
 
     if( ( ret = mbedtls_ssl_session_copy( ssl->session_negotiate,
                                           session ) ) != 0 )
@@ -1806,7 +1795,6 @@ int mbedtls_ssl_set_hs_psk_opaque( mbedtls_ssl_context *ssl,
 }
 #endif /* MBEDTLS_USE_PSA_CRYPTO */
 
-#if defined(MBEDTLS_SSL_SRV_C)
 void mbedtls_ssl_conf_psk_cb( mbedtls_ssl_config *conf,
                      int (*f_psk)(void *, mbedtls_ssl_context *, const unsigned char *,
                      size_t),
@@ -1815,8 +1803,6 @@ void mbedtls_ssl_conf_psk_cb( mbedtls_ssl_config *conf,
     conf->f_psk = f_psk;
     conf->p_psk = p_psk;
 }
-#endif /* MBEDTLS_SSL_SRV_C */
-
 #endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
 
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
