@@ -30,7 +30,6 @@
 
 #if defined(MBEDTLS_BIGNUM_C)
 #include "mbedtls/bignum.h"
-#include "bignum_core.h"
 #endif
 
 #if defined(MBEDTLS_SSL_TLS_C)
@@ -679,19 +678,21 @@ int mbedtls_mpi_safe_cond_assign( mbedtls_mpi *X,
                                   unsigned char assign )
 {
     int ret = 0;
+    size_t i;
+    mbedtls_mpi_uint limb_mask;
     MPI_VALIDATE_RET( X != NULL );
     MPI_VALIDATE_RET( Y != NULL );
 
     /* all-bits 1 if assign is 1, all-bits 0 if assign is 0 */
-    mbedtls_mpi_uint limb_mask = mbedtls_ct_mpi_uint_mask( assign );
+    limb_mask = mbedtls_ct_mpi_uint_mask( assign );;
 
     MBEDTLS_MPI_CHK( mbedtls_mpi_grow( X, Y->n ) );
 
     X->s = mbedtls_ct_cond_select_sign( assign, Y->s, X->s );
 
-    mbedtls_mpi_core_cond_assign( X->p, Y->p, Y->n, assign );
+    mbedtls_ct_mpi_uint_cond_assign( Y->n, X->p, Y->p, assign );
 
-    for( size_t i = Y->n; i < X->n; i++ )
+    for( i = Y->n; i < X->n; i++ )
         X->p[i] &= ~limb_mask;
 
 cleanup:
@@ -708,13 +709,18 @@ int mbedtls_mpi_safe_cond_swap( mbedtls_mpi *X,
                                 mbedtls_mpi *Y,
                                 unsigned char swap )
 {
-    int ret = 0;
-    int s;
+    int ret, s;
+    size_t i;
+    mbedtls_mpi_uint limb_mask;
+    mbedtls_mpi_uint tmp;
     MPI_VALIDATE_RET( X != NULL );
     MPI_VALIDATE_RET( Y != NULL );
 
     if( X == Y )
         return( 0 );
+
+    /* all-bits 1 if swap is 1, all-bits 0 if swap is 0 */
+    limb_mask = mbedtls_ct_mpi_uint_mask( swap );
 
     MBEDTLS_MPI_CHK( mbedtls_mpi_grow( X, Y->n ) );
     MBEDTLS_MPI_CHK( mbedtls_mpi_grow( Y, X->n ) );
@@ -723,7 +729,13 @@ int mbedtls_mpi_safe_cond_swap( mbedtls_mpi *X,
     X->s = mbedtls_ct_cond_select_sign( swap, Y->s, X->s );
     Y->s = mbedtls_ct_cond_select_sign( swap, s, Y->s );
 
-    mbedtls_mpi_core_cond_swap( X->p, Y->p, X->n, swap );
+
+    for( i = 0; i < X->n; i++ )
+    {
+        tmp = X->p[i];
+        X->p[i] = ( X->p[i] & ~limb_mask ) | ( Y->p[i] & limb_mask );
+        Y->p[i] = ( Y->p[i] & ~limb_mask ) | (     tmp & limb_mask );
+    }
 
 cleanup:
     return( ret );
