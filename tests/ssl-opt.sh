@@ -12842,6 +12842,7 @@ run_test    "TLS 1.3: NewSessionTicket: Basic check, m->m" \
             -s "key exchange mode: psk_ephemeral" \
             -s "found pre_shared_key extension"
 
+
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 requires_config_enabled MBEDTLS_DEBUG_C
