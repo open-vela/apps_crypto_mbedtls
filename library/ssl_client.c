@@ -376,11 +376,9 @@ static int ssl_write_client_hello_cipher_suites(
     /*
      * Add TLS_EMPTY_RENEGOTIATION_INFO_SCSV
      */
-    int renegotiating = 0;
 #if defined(MBEDTLS_SSL_RENEGOTIATION)
-    renegotiating = ( ssl->renego_status != MBEDTLS_SSL_INITIAL_HANDSHAKE );
+    if( ssl->renego_status == MBEDTLS_SSL_INITIAL_HANDSHAKE )
 #endif
-    if( !renegotiating )
     {
         MBEDTLS_SSL_DEBUG_MSG( 3, ( "adding EMPTY_RENEGOTIATION_INFO_SCSV" ) );
         MBEDTLS_SSL_CHK_BUF_PTR( p, end, 2 );
@@ -792,11 +790,9 @@ static int ssl_prepare_client_hello( mbedtls_ssl_context *ssl )
      * RFC 5077 section 3.4: "When presenting a ticket, the client MAY
      * generate and include a Session ID in the TLS ClientHello."
      */
-        int renegotiating = 0;
 #if defined(MBEDTLS_SSL_RENEGOTIATION)
-        renegotiating = ( ssl->renego_status != MBEDTLS_SSL_INITIAL_HANDSHAKE );
+        if( ssl->renego_status == MBEDTLS_SSL_INITIAL_HANDSHAKE )
 #endif
-        if( !renegotiating )
         {
             if( ( ssl->session_negotiate->ticket != NULL ) &&
                 ( ssl->session_negotiate->ticket_len != 0 ) )
@@ -846,33 +842,6 @@ static int ssl_prepare_client_hello( mbedtls_ssl_context *ssl )
             }
         }
     }
-
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3) && \
-    defined(MBEDTLS_SSL_SESSION_TICKETS) && \
-    defined(MBEDTLS_HAVE_TIME)
-    /* Check if a tls13 ticket has been configured. */
-    if( ssl->session_negotiate->tls_version == MBEDTLS_SSL_VERSION_TLS1_3 &&
-        ssl->handshake->resume != 0 &&
-        ssl->session_negotiate != NULL &&
-        ssl->session_negotiate->ticket != NULL )
-    {
-        mbedtls_time_t now = mbedtls_time( NULL );
-        if( ssl->session_negotiate->ticket_received > now ||
-            (uint64_t)( now - ssl->session_negotiate->ticket_received )
-                    > ssl->session_negotiate->ticket_lifetime )
-        {
-            MBEDTLS_SSL_DEBUG_MSG( 3, ( "ticket expired" ) );
-            mbedtls_platform_zeroize( ssl->session_negotiate->ticket,
-                                      ssl->session_negotiate->ticket_len );
-            mbedtls_free( ssl->session_negotiate->ticket );
-            ssl->session_negotiate->ticket = NULL;
-            ssl->session_negotiate->ticket_len = 0;
-        }
-
-    }
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3 &&
-          MBEDTLS_SSL_SESSION_TICKETS &&
-          MBEDTLS_HAVE_TIME */
 
     return( 0 );
 }
