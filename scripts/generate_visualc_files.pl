@@ -5,21 +5,6 @@
 #
 # Must be run from mbedTLS root or scripts directory.
 # Takes no argument.
-#
-# Copyright The Mbed TLS Contributors
-# SPDX-License-Identifier: Apache-2.0
-#
-# Licensed under the Apache License, Version 2.0 (the "License"); you may
-# not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-# http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
 
 use warnings;
 use strict;
@@ -37,10 +22,6 @@ my $programs_dir = 'programs';
 my $mbedtls_header_dir = 'include/mbedtls';
 my $psa_header_dir = 'include/psa';
 my $source_dir = 'library';
-my $test_source_dir = 'tests/src';
-my $test_header_dir = 'tests/include/test';
-my $test_drivers_header_dir = 'tests/include/test/drivers';
-my $test_drivers_source_dir = 'tests/src/drivers';
 
 my @thirdparty_header_dirs = qw(
     3rdparty/everest/include/everest
@@ -60,18 +41,8 @@ my @include_directories = qw(
     3rdparty/everest/include/everest
     3rdparty/everest/include/everest/vs2010
     3rdparty/everest/include/everest/kremlib
-    tests/include
 );
 my $include_directories = join(';', map {"../../$_"} @include_directories);
-
-# Directories to add to the include path when building the library, but not
-# when building tests or applications.
-my @library_include_directories = qw(
-    library
-);
-my $library_include_directories =
-  join(';', map {"../../$_"} (@library_include_directories,
-                              @include_directories));
 
 my @excluded_files = qw(
     3rdparty/everest/library/Hacl_Curve25519.c
@@ -79,30 +50,31 @@ my @excluded_files = qw(
 my %excluded_files = ();
 foreach (@excluded_files) { $excluded_files{$_} = 1 }
 
+# Need windows line endings!
 my $vsx_hdr_tpl = <<EOT;
-    <ClInclude Include="..\\..\\{NAME}" />
+    <ClInclude Include="..\\..\\{NAME}" />\r
 EOT
 my $vsx_src_tpl = <<EOT;
-    <ClCompile Include="..\\..\\{NAME}" />
+    <ClCompile Include="..\\..\\{NAME}" />\r
 EOT
 
 my $vsx_sln_app_entry_tpl = <<EOT;
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "{APPNAME}", "{APPNAME}.vcxproj", "{GUID}"
-	ProjectSection(ProjectDependencies) = postProject
-		{46CF2D25-6A36-4189-B59C-E4815388E554} = {46CF2D25-6A36-4189-B59C-E4815388E554}
-	EndProjectSection
-EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "{APPNAME}", "{APPNAME}.vcxproj", "{GUID}"\r
+	ProjectSection(ProjectDependencies) = postProject\r
+		{46CF2D25-6A36-4189-B59C-E4815388E554} = {46CF2D25-6A36-4189-B59C-E4815388E554}\r
+	EndProjectSection\r
+EndProject\r
 EOT
 
 my $vsx_sln_conf_entry_tpl = <<EOT;
-		{GUID}.Debug|Win32.ActiveCfg = Debug|Win32
-		{GUID}.Debug|Win32.Build.0 = Debug|Win32
-		{GUID}.Debug|x64.ActiveCfg = Debug|x64
-		{GUID}.Debug|x64.Build.0 = Debug|x64
-		{GUID}.Release|Win32.ActiveCfg = Release|Win32
-		{GUID}.Release|Win32.Build.0 = Release|Win32
-		{GUID}.Release|x64.ActiveCfg = Release|x64
-		{GUID}.Release|x64.Build.0 = Release|x64
+		{GUID}.Debug|Win32.ActiveCfg = Debug|Win32\r
+		{GUID}.Debug|Win32.Build.0 = Debug|Win32\r
+		{GUID}.Debug|x64.ActiveCfg = Debug|x64\r
+		{GUID}.Debug|x64.Build.0 = Debug|x64\r
+		{GUID}.Release|Win32.ActiveCfg = Release|Win32\r
+		{GUID}.Release|Win32.Build.0 = Release|Win32\r
+		{GUID}.Release|x64.ActiveCfg = Release|x64\r
+		{GUID}.Release|x64.Build.0 = Release|x64\r
 EOT
 
 exit( main() );
@@ -115,10 +87,6 @@ sub check_dirs {
         && -d $mbedtls_header_dir
         && -d $psa_header_dir
         && -d $source_dir
-        && -d $test_source_dir
-        && -d $test_drivers_source_dir
-        && -d $test_header_dir
-        && -d $test_drivers_header_dir
         && -d $programs_dir;
 }
 
@@ -126,7 +94,7 @@ sub slurp_file {
     my ($filename) = @_;
 
     local $/ = undef;
-    open my $fh, '<:crlf', $filename or die "Could not read $filename\n";
+    open my $fh, '<', $filename or die "Could not read $filename\n";
     my $content = <$fh>;
     close $fh;
 
@@ -136,7 +104,7 @@ sub slurp_file {
 sub content_to_file {
     my ($content, $filename) = @_;
 
-    open my $fh, '>:crlf', $filename or die "Could not write to $filename\n";
+    open my $fh, '>', $filename or die "Could not write to $filename\n";
     print $fh $content;
     close $fh;
 }
@@ -160,26 +128,23 @@ sub gen_app {
     my $srcs = "<ClCompile Include=\"..\\..\\programs\\$path.c\" \/>";
     if( $appname eq "ssl_client2" or $appname eq "ssl_server2" or
         $appname eq "query_compile_time_config" ) {
-        $srcs .= "\n    <ClCompile Include=\"..\\..\\programs\\test\\query_config.c\" \/>";
-    }
-    if( $appname eq "ssl_client2" or $appname eq "ssl_server2" ) {
-        $srcs .= "\n    <ClCompile Include=\"..\\..\\programs\\ssl\\ssl_test_lib.c\" \/>";
+        $srcs .= "\r\n    <ClCompile Include=\"..\\..\\programs\\test\\query_config.c\" \/>";
     }
 
     my $content = $template;
     $content =~ s/<SOURCES>/$srcs/g;
     $content =~ s/<APPNAME>/$appname/g;
     $content =~ s/<GUID>/$guid/g;
-    $content =~ s/INCLUDE_DIRECTORIES\n/$include_directories/g;
+    $content =~ s/INCLUDE_DIRECTORIES\r\n/$include_directories/g;
 
     content_to_file( $content, "$dir/$appname.$ext" );
 }
 
 sub get_app_list {
-    my $makefile_contents = slurp_file('programs/Makefile');
-    $makefile_contents =~ /\n\s*APPS\s*=[\\\s]*(.*?)(?<!\\)[\#\n]/s
-      or die "Cannot find APPS = ... in programs/Makefile\n";
-    return split /(?:\s|\\)+/, $1;
+    my $app_list = `cd $programs_dir && make list`;
+    die "make list failed: $!\n" if $?;
+
+    return split /\s+/, $app_list;
 }
 
 sub gen_app_files {
@@ -213,9 +178,9 @@ sub gen_main_file {
     my $source_entries = gen_entry_list( $src_tpl, @$sources );
 
     my $out = slurp_file( $main_tpl );
-    $out =~ s/SOURCE_ENTRIES\n/$source_entries/m;
-    $out =~ s/HEADER_ENTRIES\n/$header_entries/m;
-    $out =~ s/INCLUDE_DIRECTORIES\n/$library_include_directories/g;
+    $out =~ s/SOURCE_ENTRIES\r\n/$source_entries/m;
+    $out =~ s/HEADER_ENTRIES\r\n/$header_entries/m;
+    $out =~ s/INCLUDE_DIRECTORIES\r\n/$include_directories/g;
 
     content_to_file( $out, $main_out );
 }
@@ -241,8 +206,8 @@ sub gen_vsx_solution {
     }
 
     my $out = slurp_file( $vsx_sln_tpl_file );
-    $out =~ s/APP_ENTRIES\n/$app_entries/m;
-    $out =~ s/CONF_ENTRIES\n/$conf_entries/m;
+    $out =~ s/APP_ENTRIES\r\n/$app_entries/m;
+    $out =~ s/CONF_ENTRIES\r\n/$conf_entries/m;
 
     content_to_file( $out, $vsx_sln_file );
 }
@@ -267,16 +232,12 @@ sub main {
     my @header_dirs = (
                        $mbedtls_header_dir,
                        $psa_header_dir,
-                       $test_header_dir,
-                       $test_drivers_header_dir,
                        $source_dir,
                        @thirdparty_header_dirs,
                       );
     my @headers = (map { <$_/*.h> } @header_dirs);
     my @source_dirs = (
                        $source_dir,
-                       $test_source_dir,
-                       $test_drivers_source_dir,
                        @thirdparty_source_dirs,
                       );
     my @sources = (map { <$_/*.c> } @source_dirs);

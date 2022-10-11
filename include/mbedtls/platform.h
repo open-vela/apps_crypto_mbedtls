@@ -13,7 +13,7 @@
  *        dynamically configured at runtime.
  */
 /*
- *  Copyright The Mbed TLS Contributors
+ *  Copyright (C) 2006-2018, Arm Limited (or its affiliates), All Rights Reserved
  *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -27,16 +27,24 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
+ *
+ *  This file is part of Mbed TLS (https://tls.mbed.org)
  */
 #ifndef MBEDTLS_PLATFORM_H
 #define MBEDTLS_PLATFORM_H
-#include "mbedtls/private_access.h"
 
-#include "mbedtls/build_info.h"
+#if !defined(MBEDTLS_CONFIG_FILE)
+#include "mbedtls/config.h"
+#else
+#include MBEDTLS_CONFIG_FILE
+#endif
 
 #if defined(MBEDTLS_HAVE_TIME)
 #include "mbedtls/platform_time.h"
 #endif
+
+#define MBEDTLS_ERR_PLATFORM_HW_ACCEL_FAILED     -0x0070 /**< Hardware accelerator failed */
+#define MBEDTLS_ERR_PLATFORM_FEATURE_UNSUPPORTED -0x0072 /**< The requested feature is not supported by the platform */
 
 #ifdef __cplusplus
 extern "C" {
@@ -46,7 +54,7 @@ extern "C" {
  * \name SECTION: Module settings
  *
  * The configuration options you can set for this module are in this section.
- * Either change them in mbedtls_config.h or define them on the compiler command line.
+ * Either change them in config.h or define them on the compiler command line.
  * \{
  */
 
@@ -62,9 +70,7 @@ extern "C" {
 #if !defined(MBEDTLS_PLATFORM_NO_STD_FUNCTIONS)
 #include <stdio.h>
 #include <stdlib.h>
-#if defined(MBEDTLS_HAVE_TIME)
 #include <time.h>
-#endif
 #if !defined(MBEDTLS_PLATFORM_STD_SNPRINTF)
 #if defined(MBEDTLS_PLATFORM_HAS_NON_CONFORMING_SNPRINTF)
 #define MBEDTLS_PLATFORM_STD_SNPRINTF   mbedtls_platform_win32_snprintf /**< The default \c snprintf function to use.  */
@@ -90,9 +96,6 @@ extern "C" {
 #endif
 #if !defined(MBEDTLS_PLATFORM_STD_FREE)
 #define MBEDTLS_PLATFORM_STD_FREE       free /**< The default \c free function to use. */
-#endif
-#if !defined(MBEDTLS_PLATFORM_STD_SETBUF)
-#define MBEDTLS_PLATFORM_STD_SETBUF   setbuf /**< The default \c setbuf function to use. */
 #endif
 #if !defined(MBEDTLS_PLATFORM_STD_EXIT)
 #define MBEDTLS_PLATFORM_STD_EXIT      exit /**< The default \c exit function to use. */
@@ -124,7 +127,7 @@ extern "C" {
 #endif /* MBEDTLS_PLATFORM_NO_STD_FUNCTIONS */
 
 
-/** \} name SECTION: Module settings */
+/* \} name SECTION: Module settings */
 
 /*
  * The function pointers for calloc and free.
@@ -280,56 +283,6 @@ int mbedtls_platform_set_vsnprintf( int (*vsnprintf_func)( char * s, size_t n,
 #endif /* MBEDTLS_PLATFORM_VSNPRINTF_ALT */
 
 /*
- * The function pointers for setbuf
- */
-#if defined(MBEDTLS_PLATFORM_SETBUF_ALT)
-#include <stdio.h>
-/**
- * \brief                  Function pointer to call for `setbuf()` functionality
- *                         (changing the internal buffering on stdio calls).
- *
- * \note                   The library calls this function to disable
- *                         buffering when reading or writing sensitive data,
- *                         to avoid having extra copies of sensitive data
- *                         remaining in stdio buffers after the file is
- *                         closed. If this is not a concern, for example if
- *                         your platform's stdio doesn't have any buffering,
- *                         you can set mbedtls_setbuf to a function that
- *                         does nothing.
- *
- *                         The library always calls this function with
- *                         `buf` equal to `NULL`.
- */
-extern void (*mbedtls_setbuf)( FILE *stream, char *buf );
-
-/**
- * \brief                  Dynamically configure the function that is called
- *                         when the mbedtls_setbuf() function is called by the
- *                         library.
- *
- * \param   setbuf_func   The \c setbuf function implementation
- *
- * \return                 \c 0
- */
-int mbedtls_platform_set_setbuf( void (*setbuf_func)(
-                                     FILE *stream, char *buf ) );
-#elif defined(MBEDTLS_PLATFORM_SETBUF_MACRO)
-/**
- * \brief                  Macro defining the function for the library to
- *                         call for `setbuf` functionality (changing the
- *                         internal buffering on stdio calls).
- *
- * \note                   See extra comments on the mbedtls_setbuf() function
- *                         pointer above.
- *
- * \return                 \c 0 on success, negative on error.
- */
-#define mbedtls_setbuf    MBEDTLS_PLATFORM_SETBUF_MACRO
-#else
-#define mbedtls_setbuf    setbuf
-#endif /* MBEDTLS_PLATFORM_SETBUF_ALT / MBEDTLS_PLATFORM_SETBUF_MACRO */
-
-/*
  * The function pointers for exit
  */
 #if defined(MBEDTLS_PLATFORM_EXIT_ALT)
@@ -419,7 +372,7 @@ int mbedtls_platform_set_nv_seed(
  */
 typedef struct mbedtls_platform_context
 {
-    char MBEDTLS_PRIVATE(dummy); /**< A placeholder member, as empty structs are not portable. */
+    char dummy; /**< A placeholder member, as empty structs are not portable. */
 }
 mbedtls_platform_context;
 
