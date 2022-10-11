@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # Test suites code generator.
 #
-# Copyright The Mbed TLS Contributors
+# Copyright (C) 2018, Arm Limited, All Rights Reserved
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -15,6 +15,8 @@
 # WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
+# This file is part of Mbed TLS (https://tls.mbed.org)
 
 """
 This script is a key part of Mbed TLS test suites framework. For
@@ -106,6 +108,10 @@ Platform file:
 Platform file contains platform specific setup code and test case
 dispatch code. For example, host_test.function reads test data
 file from host's file system and dispatches tests.
+In case of on-target target_test.function tests are not dispatched
+on target. Target code is kept minimum and only test functions are
+dispatched. Test case dispatch is done on the host using tools like
+Greentea.
 
 Template file:
 ---------

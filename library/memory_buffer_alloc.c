@@ -1,7 +1,7 @@
 /*
  *  Buffer-based memory allocator
  *
- *  Copyright The Mbed TLS Contributors
+ *  Copyright (C) 2006-2015, ARM Limited, All Rights Reserved
  *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -15,9 +15,15 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
+ *
+ *  This file is part of mbed TLS (https://tls.mbed.org)
  */
 
-#include "common.h"
+#if !defined(MBEDTLS_CONFIG_FILE)
+#include "mbedtls/config.h"
+#else
+#include MBEDTLS_CONFIG_FILE
+#endif
 
 #if defined(MBEDTLS_MEMORY_BUFFER_ALLOC_C)
 #include "mbedtls/memory_buffer_alloc.h"
@@ -522,12 +528,6 @@ void mbedtls_memory_buffer_alloc_status( void )
     }
 }
 
-void mbedtls_memory_buffer_alloc_count_get( size_t *alloc_count, size_t *free_count )
-{
-    *alloc_count = heap.alloc_count;
-    *free_count = heap.free_count;
-}
-
 void mbedtls_memory_buffer_alloc_max_get( size_t *max_used, size_t *max_blocks )
 {
     *max_used   = heap.maximum_used;
@@ -561,8 +561,8 @@ static void *buffer_alloc_calloc_mutexed( size_t n, size_t size )
 
 static void buffer_alloc_free_mutexed( void *ptr )
 {
-    /* We have no good option here, but corrupting the heap seems
-     * worse than losing memory. */
+    /* We have to good option here, but corrupting the heap seems
+     * worse than loosing memory. */
     if( mbedtls_mutex_lock( &heap.mutex ) )
         return;
     buffer_alloc_free( ptr );
