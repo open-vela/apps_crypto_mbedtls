@@ -89,8 +89,8 @@ List of certificates:
     _int-ca.crt: S7 + I1
     _int-ca_ca2.crt: S7 + I1 + 2
     _all_space.crt: S7 + I1 both with misplaced spaces (invalid PEM)
-    _pem_space.crt: S7 with misplace space (invalid PEM) + I1
-    _trailing_space.crt: S7 + I1 both with trainling space (valid PEM)
+    _pem_space.crt: S7 with misplaced space (invalid PEM) + I1
+    _trailing_space.crt: S7 + I1 both with trailing space (valid PEM)
     _spurious_int-ca.crt: S7 + I2(spurious) + I1
 - server8*.crt: I2 R L: RSA signed by EC signed by RSA (P1 for _int-ca2)
 - server9*.crt: 1 R C* L P1*: signed using RSASSA-PSS
@@ -111,7 +111,7 @@ Signing CA in parentheses (same meaning as certificates).
 - crl-ec-sha*.pem: (2) server6.crt
 - crl-future.pem: (2) server6.crt + unknown
 - crl-rsa-pss-*.pem: (1) server9{,badsign,with-ca}.crt + cert_sha384.crt + unknown
-- crl.pem, crl_expired.pem: (1) server1{,.cert_type,.key_usage,.v1}.crt + unknown
+- crl.pem, crl-futureRevocationDate.pem, crl_expired.pem: (1) server1{,.cert_type,.key_usage,.v1}.crt + unknown
 - crl_md*.pem: crl_sha*.pem: (1) same as crl.pem
 - crt_cat_*.pem: (1+2) concatenations in various orders:
     ec = crl-ec-sha256.pem, ecfut = crl-future.pem
