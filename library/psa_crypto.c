@@ -52,10 +52,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include "mbedtls/platform.h"
-#if !defined(MBEDTLS_PLATFORM_C)
-#define mbedtls_calloc calloc
-#define mbedtls_free   free
-#endif
 
 #include "mbedtls/aes.h"
 #include "mbedtls/asn1.h"
@@ -3592,6 +3588,7 @@ static psa_status_t psa_aead_check_nonce_length( psa_algorithm_t alg,
             break;
 #endif /* PSA_WANT_ALG_CHACHA20_POLY1305 */
         default:
+            (void) nonce_length;
             return( PSA_ERROR_NOT_SUPPORTED );
     }
 
