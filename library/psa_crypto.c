@@ -52,6 +52,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include "mbedtls/platform.h"
+#if !defined(MBEDTLS_PLATFORM_C)
+#define mbedtls_calloc calloc
+#define mbedtls_free   free
+#endif
 
 #include "mbedtls/aes.h"
 #include "mbedtls/asn1.h"
@@ -3588,7 +3592,6 @@ static psa_status_t psa_aead_check_nonce_length( psa_algorithm_t alg,
             break;
 #endif /* PSA_WANT_ALG_CHACHA20_POLY1305 */
         default:
-            (void) nonce_length;
             return( PSA_ERROR_NOT_SUPPORTED );
     }
 
@@ -3705,34 +3708,39 @@ exit:
     return( status );
 }
 
-static psa_status_t psa_validate_tag_length( psa_algorithm_t alg ) {
-    const uint8_t tag_len = PSA_ALG_AEAD_GET_TAG_LENGTH( alg );
+static psa_status_t psa_validate_tag_length( psa_aead_operation_t *operation,
+                                             psa_algorithm_t alg ) {
+    uint8_t tag_len = 0;
+    if( psa_driver_get_tag_len( operation, &tag_len ) != PSA_SUCCESS )
+    {
+        return( PSA_ERROR_INVALID_ARGUMENT );
+    }
 
     switch( PSA_ALG_AEAD_WITH_SHORTENED_TAG( alg, 0 ) )
     {
-#if defined(PSA_WANT_ALG_CCM)
+#if defined(MBEDTLS_PSA_BUILTIN_ALG_CCM)
         case PSA_ALG_AEAD_WITH_SHORTENED_TAG( PSA_ALG_CCM, 0 ):
             /* CCM allows the following tag lengths: 4, 6, 8, 10, 12, 14, 16.*/
             if( tag_len < 4 || tag_len > 16 || tag_len % 2 )
                 return( PSA_ERROR_INVALID_ARGUMENT );
             break;
-#endif /* PSA_WANT_ALG_CCM */
+#endif /* MBEDTLS_PSA_BUILTIN_ALG_CCM */
 
-#if defined(PSA_WANT_ALG_GCM)
+#if defined(MBEDTLS_PSA_BUILTIN_ALG_GCM)
         case PSA_ALG_AEAD_WITH_SHORTENED_TAG( PSA_ALG_GCM, 0 ):
             /* GCM allows the following tag lengths: 4, 8, 12, 13, 14, 15, 16. */
             if( tag_len != 4 && tag_len != 8 && ( tag_len < 12 || tag_len > 16 ) )
                 return( PSA_ERROR_INVALID_ARGUMENT );
             break;
-#endif /* PSA_WANT_ALG_GCM */
+#endif /* MBEDTLS_PSA_BUILTIN_ALG_GCM */
 
-#if defined(PSA_WANT_ALG_CHACHA20_POLY1305)
+#if defined(MBEDTLS_PSA_BUILTIN_ALG_CHACHA20_POLY1305)
         case PSA_ALG_AEAD_WITH_SHORTENED_TAG( PSA_ALG_CHACHA20_POLY1305, 0 ):
             /* We only support the default tag length. */
             if( tag_len != 16 )
                 return( PSA_ERROR_INVALID_ARGUMENT );
             break;
-#endif /* PSA_WANT_ALG_CHACHA20_POLY1305 */
+#endif /* MBEDTLS_PSA_BUILTIN_ALG_CHACHA20_POLY1305 */
 
         default:
             (void) tag_len;
@@ -3783,9 +3791,6 @@ static psa_status_t psa_aead_setup( psa_aead_operation_t *operation,
         .core = slot->attr
     };
 
-    if( ( status = psa_validate_tag_length( alg ) ) != PSA_SUCCESS )
-        goto exit;
-
     if( is_encrypt )
         status = psa_driver_wrapper_aead_encrypt_setup( operation,
                                                         &attributes,
@@ -3799,6 +3804,9 @@ static psa_status_t psa_aead_setup( psa_aead_operation_t *operation,
                                                         slot->key.bytes,
                                                         alg );
     if( status != PSA_SUCCESS )
+        goto exit;
+
+    if( ( status = psa_validate_tag_length( operation, alg ) ) != PSA_SUCCESS )
         goto exit;
 
     operation->key_type = psa_get_key_type( &attributes );
@@ -4237,7 +4245,8 @@ psa_status_t psa_aead_abort( psa_aead_operation_t *operation )
 
 #if defined(BUILTIN_ALG_ANY_HKDF) || \
     defined(MBEDTLS_PSA_BUILTIN_ALG_TLS12_PRF) || \
-    defined(MBEDTLS_PSA_BUILTIN_ALG_TLS12_PSK_TO_MS)
+    defined(MBEDTLS_PSA_BUILTIN_ALG_TLS12_PSK_TO_MS) || \
+    defined(MBEDTLS_PSA_BUILTIN_ALG_TLS12_ECJPAKE_TO_PMS)
 #define AT_LEAST_ONE_BUILTIN_KDF
 #endif /* At least one builtin KDF */
 
@@ -4344,6 +4353,14 @@ psa_status_t psa_key_derivation_abort( psa_key_derivation_operation_t *operation
     else
 #endif /* defined(MBEDTLS_PSA_BUILTIN_ALG_TLS12_PRF) ||
         * defined(MBEDTLS_PSA_BUILTIN_ALG_TLS12_PSK_TO_MS) */
+#if defined(MBEDTLS_PSA_BUILTIN_ALG_TLS12_ECJPAKE_TO_PMS)
+    if( kdf_alg == PSA_ALG_TLS12_ECJPAKE_TO_PMS )
+    {
+        mbedtls_platform_zeroize( operation->ctx.tls12_ecjpake_to_pms.data,
+            sizeof( operation->ctx.tls12_ecjpake_to_pms.data ) );
+    }
+    else
+#endif /* defined(MBEDTLS_PSA_BUILTIN_ALG_TLS12_ECJPAKE_TO_PMS) */
     {
         status = PSA_ERROR_BAD_STATE;
     }
@@ -4625,6 +4642,31 @@ static psa_status_t psa_key_derivation_tls12_prf_read(
 #endif /* MBEDTLS_PSA_BUILTIN_ALG_TLS12_PRF ||
         * MBEDTLS_PSA_BUILTIN_ALG_TLS12_PSK_TO_MS */
 
+#if defined(MBEDTLS_PSA_BUILTIN_ALG_TLS12_ECJPAKE_TO_PMS)
+static psa_status_t psa_key_derivation_tls12_ecjpake_to_pms_read(
+    psa_tls12_ecjpake_to_pms_t *ecjpake,
+    uint8_t *output,
+    size_t output_length )
+{
+    psa_status_t status = PSA_ERROR_CORRUPTION_DETECTED;
+    size_t output_size = 0;
+
+    if( output_length != 32 )
+        return ( PSA_ERROR_INVALID_ARGUMENT );
+
+    status = psa_hash_compute( PSA_ALG_SHA_256, ecjpake->data,
+        PSA_TLS12_ECJPAKE_TO_PMS_DATA_SIZE, output, output_length,
+        &output_size );
+    if( status != PSA_SUCCESS )
+        return ( status );
+
+    if( output_size != output_length )
+        return ( PSA_ERROR_GENERIC_ERROR );
+
+    return ( PSA_SUCCESS );
+}
+#endif
+
 psa_status_t psa_key_derivation_output_bytes(
     psa_key_derivation_operation_t *operation,
     uint8_t *output,
@@ -4679,6 +4721,15 @@ psa_status_t psa_key_derivation_output_bytes(
     else
 #endif /* MBEDTLS_PSA_BUILTIN_ALG_TLS12_PRF ||
         * MBEDTLS_PSA_BUILTIN_ALG_TLS12_PSK_TO_MS */
+#if defined(MBEDTLS_PSA_BUILTIN_ALG_TLS12_ECJPAKE_TO_PMS)
+    if( kdf_alg == PSA_ALG_TLS12_ECJPAKE_TO_PMS )
+    {
+        status = psa_key_derivation_tls12_ecjpake_to_pms_read(
+            &operation->ctx.tls12_ecjpake_to_pms, output, output_length );
+    }
+    else
+#endif /* MBEDTLS_PSA_BUILTIN_ALG_TLS12_ECJPAKE_TO_PMS */
+
     {
         (void) kdf_alg;
         return( PSA_ERROR_BAD_STATE );
@@ -5071,6 +5122,10 @@ static int is_kdf_alg_supported( psa_algorithm_t kdf_alg )
     if( PSA_ALG_IS_TLS12_PSK_TO_MS( kdf_alg ) )
         return( 1 );
 #endif
+#if defined(MBEDTLS_PSA_BUILTIN_ALG_TLS12_ECJPAKE_TO_PMS)
+    if( kdf_alg == PSA_ALG_TLS12_ECJPAKE_TO_PMS )
+        return( 1 );
+#endif
     return( 0 );
 }
 
@@ -5094,19 +5149,26 @@ static psa_status_t psa_key_derivation_setup_kdf(
     if( ! is_kdf_alg_supported( kdf_alg ) )
         return( PSA_ERROR_NOT_SUPPORTED );
 
-    /* All currently supported key derivation algorithms are based on a
-     * hash algorithm. */
+    /* All currently supported key derivation algorithms (apart from
+     * ecjpake to pms) are based on a hash algorithm. */
     psa_algorithm_t hash_alg = PSA_ALG_HKDF_GET_HASH( kdf_alg );
     size_t hash_size = PSA_HASH_LENGTH( hash_alg );
-    if( hash_size == 0 )
-        return( PSA_ERROR_NOT_SUPPORTED );
+    if( kdf_alg != PSA_ALG_TLS12_ECJPAKE_TO_PMS )
+    {
+        if( hash_size == 0 )
+            return( PSA_ERROR_NOT_SUPPORTED );
 
-    /* Make sure that hash_alg is a supported hash algorithm. Otherwise
-     * we might fail later, which is somewhat unfriendly and potentially
-     * risk-prone. */
-    psa_status_t status = psa_hash_try_support( hash_alg );
-    if( status != PSA_SUCCESS )
-        return( status );
+        /* Make sure that hash_alg is a supported hash algorithm. Otherwise
+         * we might fail later, which is somewhat unfriendly and potentially
+         * risk-prone. */
+        psa_status_t status = psa_hash_try_support( hash_alg );
+        if( status != PSA_SUCCESS )
+            return( status );
+    }
+    else
+    {
+        hash_size = PSA_HASH_LENGTH( PSA_ALG_SHA_256 );
+    }
 
     if( ( PSA_ALG_IS_TLS12_PRF( kdf_alg ) ||
           PSA_ALG_IS_TLS12_PSK_TO_MS( kdf_alg ) ) &&
@@ -5114,11 +5176,14 @@ static psa_status_t psa_key_derivation_setup_kdf(
     {
         return( PSA_ERROR_NOT_SUPPORTED );
     }
-#if defined(MBEDTLS_PSA_BUILTIN_ALG_HKDF_EXTRACT)
-    if( PSA_ALG_IS_HKDF_EXTRACT( kdf_alg ) )
+#if defined(MBEDTLS_PSA_BUILTIN_ALG_HKDF_EXTRACT) || \
+    defined(MBEDTLS_PSA_BUILTIN_ALG_TLS12_ECJPAKE_TO_PMS)
+    if( PSA_ALG_IS_HKDF_EXTRACT( kdf_alg ) ||
+        ( kdf_alg == PSA_ALG_TLS12_ECJPAKE_TO_PMS ) )
         operation->capacity = hash_size;
     else
-#endif /* MBEDTLS_PSA_BUILTIN_ALG_HKDF_EXTRACT */
+#endif /* MBEDTLS_PSA_BUILTIN_ALG_HKDF_EXTRACT ||
+          MBEDTLS_PSA_BUILTIN_ALG_TLS12_ECJPAKE_TO_PMS */
         operation->capacity = 255 * hash_size;
     return( PSA_SUCCESS );
 }
@@ -5507,6 +5572,29 @@ static psa_status_t psa_tls12_prf_psk_to_ms_input(
 }
 #endif /* MBEDTLS_PSA_BUILTIN_ALG_TLS12_PSK_TO_MS */
 
+#if defined(MBEDTLS_PSA_BUILTIN_ALG_TLS12_ECJPAKE_TO_PMS)
+static psa_status_t psa_tls12_ecjpake_to_pms_input(
+    psa_tls12_ecjpake_to_pms_t *ecjpake,
+    psa_key_derivation_step_t step,
+    const uint8_t *data,
+    size_t data_length )
+{
+    if( data_length != PSA_TLS12_ECJPAKE_TO_PMS_INPUT_SIZE ||
+        step != PSA_KEY_DERIVATION_INPUT_SECRET )
+    {
+        return( PSA_ERROR_INVALID_ARGUMENT );
+    }
+
+    /* Check if the passed point is in an uncompressed form */
+    if( data[0] != 0x04 )
+        return( PSA_ERROR_INVALID_ARGUMENT );
+
+    /* Only K.X has to be extracted - bytes 1 to 32 inclusive. */
+    memcpy( ecjpake->data, data + 1, PSA_TLS12_ECJPAKE_TO_PMS_DATA_SIZE );
+
+    return( PSA_SUCCESS );
+}
+#endif /* MBEDTLS_PSA_BUILTIN_ALG_TLS12_ECJPAKE_TO_PMS */
 /** Check whether the given key type is acceptable for the given
  * input step of a key derivation.
  *
@@ -5585,6 +5673,14 @@ static psa_status_t psa_key_derivation_input_internal(
     }
     else
 #endif /* MBEDTLS_PSA_BUILTIN_ALG_TLS12_PSK_TO_MS */
+#if defined(MBEDTLS_PSA_BUILTIN_ALG_TLS12_ECJPAKE_TO_PMS)
+    if( kdf_alg == PSA_ALG_TLS12_ECJPAKE_TO_PMS )
+    {
+        status = psa_tls12_ecjpake_to_pms_input(
+            &operation->ctx.tls12_ecjpake_to_pms, step, data, data_length );
+    }
+    else
+#endif /* MBEDTLS_PSA_BUILTIN_ALG_TLS12_ECJPAKE_TO_PMS */
     {
         /* This can't happen unless the operation object was not initialized */
         (void) data;
