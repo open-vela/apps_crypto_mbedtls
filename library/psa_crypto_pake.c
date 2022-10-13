@@ -230,7 +230,7 @@ psa_status_t psa_pake_setup( psa_pake_operation_t *operation,
         operation->input_step = PSA_PAKE_STEP_X1_X2;
         operation->output_step = PSA_PAKE_STEP_X1_X2;
 
-        mbedtls_platform_zeroize( operation->buffer, PSA_PAKE_BUFFER_SIZE );
+        mbedtls_platform_zeroize( operation->buffer, MBEDTLS_PSA_PAKE_BUFFER_SIZE );
         operation->buffer_length = 0;
         operation->buffer_offset = 0;
 
@@ -489,7 +489,7 @@ static psa_status_t psa_pake_output_internal(
         {
             ret = mbedtls_ecjpake_write_round_one( &operation->ctx.ecjpake,
                                                    operation->buffer,
-                                                   PSA_PAKE_BUFFER_SIZE,
+                                                   MBEDTLS_PSA_PAKE_BUFFER_SIZE,
                                                    &operation->buffer_length,
                                                    mbedtls_psa_get_random,
                                                    MBEDTLS_PSA_RANDOM_STATE );
@@ -503,7 +503,7 @@ static psa_status_t psa_pake_output_internal(
         {
             ret = mbedtls_ecjpake_write_round_two( &operation->ctx.ecjpake,
                                                    operation->buffer,
-                                                   PSA_PAKE_BUFFER_SIZE,
+                                                   MBEDTLS_PSA_PAKE_BUFFER_SIZE,
                                                    &operation->buffer_length,
                                                    mbedtls_psa_get_random,
                                                    MBEDTLS_PSA_RANDOM_STATE );
@@ -514,51 +514,36 @@ static psa_status_t psa_pake_output_internal(
         }
 
         /*
-         * Steps sequences are stored as:
-         * struct {
-         *     opaque point <1..2^8-1>;
-         * } ECPoint;
+         * mbedtls_ecjpake_write_round_xxx() outputs thing in the format
+         * defined by draft-cragie-tls-ecjpake-01 section 7. The summary is
+         * that the data for each step is prepended with a length byte, and
+         * then they're concatenated. Additionally, the server's second round
+         * output is prepended with a 3-bytes ECParameters structure.
          *
-         * Where byte 0 stores the ECPoint curve point length.
-         *
-         * The sequence length is equal to:
-         * - data length extracted from byte 0
-         * - byte 0 size (1)
+         * In PSA, we output each step separately, and don't prepend the
+         * output with a length byte, even less a curve identifier, as that
+         * information is already available.
          */
         if( operation->state == PSA_PAKE_OUTPUT_X2S &&
-            operation->sequence == PSA_PAKE_X1_STEP_KEY_SHARE )
+            operation->sequence == PSA_PAKE_X1_STEP_KEY_SHARE &&
+            operation->role == PSA_PAKE_ROLE_SERVER )
         {
-            if( operation->role == PSA_PAKE_ROLE_SERVER )
-                /*
-                 * The X2S KEY SHARE Server steps sequence is stored as:
-                 * struct {
-                 *     ECPoint X;
-                 *    opaque r <1..2^8-1>;
-                 * } ECSchnorrZKP;
-                 *
-                 * And MbedTLS uses a 3 bytes Ephemeral public key ECPoint,
-                 * so byte 3 stores the r Schnorr signature length.
-                 *
-                 * The sequence length is equal to:
-                 * - curve storage size (3)
-                 * - data length extracted from byte 3
-                 * - byte 3 size (1)
-                 */
-                length = 3 + operation->buffer[3] + 1;
-            else
-                length = operation->buffer[0] + 1;
+            /* Skip ECParameters, with is 3 bytes (RFC 8422) */
+            operation->buffer_offset += 3;
         }
-        else
-            length = operation->buffer[operation->buffer_offset] + 1;
 
-        if( length > operation->buffer_length )
+        /* Read the length byte then move past it to the data */
+        length = operation->buffer[operation->buffer_offset];
+        operation->buffer_offset += 1;
+
+        if( operation->buffer_offset + length > operation->buffer_length )
             return( PSA_ERROR_DATA_CORRUPT );
 
         if( output_size < length )
             return( PSA_ERROR_BUFFER_TOO_SMALL );
 
         memcpy( output,
-                operation->buffer +  operation->buffer_offset,
+                operation->buffer + operation->buffer_offset,
                 length );
         *output_length = length;
 
@@ -570,7 +555,7 @@ static psa_status_t psa_pake_output_internal(
             ( operation->state == PSA_PAKE_OUTPUT_X2S &&
               operation->sequence == PSA_PAKE_X1_STEP_ZK_PROOF ) )
         {
-            mbedtls_platform_zeroize( operation->buffer, PSA_PAKE_BUFFER_SIZE );
+            mbedtls_platform_zeroize( operation->buffer, MBEDTLS_PSA_PAKE_BUFFER_SIZE );
             operation->buffer_length = 0;
             operation->buffer_offset = 0;
 
@@ -611,7 +596,6 @@ static psa_status_t psa_pake_input_internal(
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     psa_status_t status = PSA_ERROR_CORRUPTION_DETECTED;
-    size_t buffer_remain;
 
     if( operation->alg == PSA_ALG_NONE ||
         operation->state == PSA_PAKE_STATE_INVALID )
@@ -641,6 +625,11 @@ static psa_status_t psa_pake_input_internal(
         if( step != PSA_PAKE_STEP_KEY_SHARE &&
             step != PSA_PAKE_STEP_ZK_PUBLIC &&
             step != PSA_PAKE_STEP_ZK_PROOF )
+            return( PSA_ERROR_INVALID_ARGUMENT );
+
+        const psa_pake_primitive_t prim = PSA_PAKE_PRIMITIVE(
+                PSA_PAKE_PRIMITIVE_TYPE_ECC, PSA_ECC_FAMILY_SECP_R1, 256 );
+        if( input_length > (size_t) PSA_PAKE_INPUT_SIZE( PSA_ALG_JPAKE, prim, step ) )
             return( PSA_ERROR_INVALID_ARGUMENT );
 
         if( operation->state == PSA_PAKE_STATE_SETUP )
@@ -677,15 +666,6 @@ static psa_status_t psa_pake_input_internal(
             operation->sequence = PSA_PAKE_X1_STEP_KEY_SHARE;
         }
 
-        buffer_remain = PSA_PAKE_BUFFER_SIZE - operation->buffer_length;
-
-        if( input_length == 0 ||
-            input_length > buffer_remain )
-        {
-            psa_pake_abort( operation );
-            return( PSA_ERROR_INSUFFICIENT_MEMORY );
-        }
-
         /* Check if step matches current sequence */
         switch( operation->sequence )
         {
@@ -711,7 +691,35 @@ static psa_status_t psa_pake_input_internal(
                 return( PSA_ERROR_BAD_STATE );
         }
 
-        /* Copy input to local buffer */
+        /*
+         * Copy input to local buffer and format it as the Mbed TLS API
+         * expects, i.e. as defined by draft-cragie-tls-ecjpake-01 section 7.
+         * The summary is that the data for each step is prepended with a
+         * length byte, and then they're concatenated. Additionally, the
+         * server's second round output is prepended with a 3-bytes
+         * ECParameters structure - which means we have to prepend that when
+         * we're a client.
+         */
+        if( operation->state == PSA_PAKE_INPUT_X4S &&
+            operation->sequence == PSA_PAKE_X1_STEP_KEY_SHARE &&
+            operation->role == PSA_PAKE_ROLE_CLIENT )
+        {
+            /* We only support secp256r1. */
+            /* This is the ECParameters structure defined by RFC 8422. */
+            unsigned char ecparameters[3] = {
+                3, /* named_curve */
+                0, 23 /* secp256r1 */
+            };
+            memcpy( operation->buffer + operation->buffer_length,
+                    ecparameters, sizeof( ecparameters ) );
+            operation->buffer_length += sizeof( ecparameters );
+        }
+
+        /* Write the length byte */
+        operation->buffer[operation->buffer_length] = (uint8_t) input_length;
+        operation->buffer_length += 1;
+
+        /* Finally copy the data */
         memcpy( operation->buffer + operation->buffer_length,
                 input, input_length );
         operation->buffer_length += input_length;
@@ -724,7 +732,7 @@ static psa_status_t psa_pake_input_internal(
                                                   operation->buffer,
                                                   operation->buffer_length );
 
-            mbedtls_platform_zeroize( operation->buffer, PSA_PAKE_BUFFER_SIZE );
+            mbedtls_platform_zeroize( operation->buffer, MBEDTLS_PSA_PAKE_BUFFER_SIZE );
             operation->buffer_length = 0;
 
             if( ret != 0 )
@@ -737,7 +745,7 @@ static psa_status_t psa_pake_input_internal(
                                                   operation->buffer,
                                                   operation->buffer_length );
 
-            mbedtls_platform_zeroize( operation->buffer, PSA_PAKE_BUFFER_SIZE );
+            mbedtls_platform_zeroize( operation->buffer, MBEDTLS_PSA_PAKE_BUFFER_SIZE );
             operation->buffer_length = 0;
 
             if( ret != 0 )
@@ -794,7 +802,7 @@ psa_status_t psa_pake_get_implicit_key(psa_pake_operation_t *operation,
     {
         ret = mbedtls_ecjpake_write_shared_key( &operation->ctx.ecjpake,
                                                 operation->buffer,
-                                                PSA_PAKE_BUFFER_SIZE,
+                                                MBEDTLS_PSA_PAKE_BUFFER_SIZE,
                                                 &operation->buffer_length,
                                                 mbedtls_psa_get_random,
                                                 MBEDTLS_PSA_RANDOM_STATE );
@@ -809,7 +817,7 @@ psa_status_t psa_pake_get_implicit_key(psa_pake_operation_t *operation,
                                                  operation->buffer,
                                                  operation->buffer_length );
 
-        mbedtls_platform_zeroize( operation->buffer, PSA_PAKE_BUFFER_SIZE );
+        mbedtls_platform_zeroize( operation->buffer, MBEDTLS_PSA_PAKE_BUFFER_SIZE );
 
         psa_pake_abort( operation );
 
@@ -834,7 +842,7 @@ psa_status_t psa_pake_abort(psa_pake_operation_t * operation)
         operation->output_step = PSA_PAKE_STEP_INVALID;
         operation->password = MBEDTLS_SVC_KEY_ID_INIT;
         operation->role = PSA_PAKE_ROLE_NONE;
-        mbedtls_platform_zeroize( operation->buffer, PSA_PAKE_BUFFER_SIZE );
+        mbedtls_platform_zeroize( operation->buffer, MBEDTLS_PSA_PAKE_BUFFER_SIZE );
         operation->buffer_length = 0;
         operation->buffer_offset = 0;
         mbedtls_ecjpake_free( &operation->ctx.ecjpake );
