@@ -874,11 +874,6 @@
 #error "MBEDTLS_SSL_TICKET_C defined, but not all prerequisites"
 #endif
 
-#if defined(MBEDTLS_SSL_TICKET_C) && \
-    !( defined(MBEDTLS_GCM_C) || defined(MBEDTLS_CCM_C) || defined(MBEDTLS_CHACHAPOLY_C) )
-#error "MBEDTLS_SSL_TICKET_C defined, but not all prerequisites"
-#endif
-
 #if defined(MBEDTLS_SSL_TLS1_3_TICKET_NONCE_LENGTH) && \
     MBEDTLS_SSL_TLS1_3_TICKET_NONCE_LENGTH >= 256
 #error "MBEDTLS_SSL_TLS1_3_TICKET_NONCE_LENGTH must be less than 256"
@@ -967,9 +962,7 @@
 #error "MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH defined, but not all prerequisites"
 #endif
 
-#if defined(MBEDTLS_SSL_CONTEXT_SERIALIZATION) && !( defined(MBEDTLS_GCM_C) || defined(MBEDTLS_CCM_C) || defined(MBEDTLS_CHACHAPOLY_C) )
-#error "MBEDTLS_SSL_CONTEXT_SERIALIZATION defined, but not all prerequisites"
-#endif
+
 
 /* Reject attempts to enable options that have been removed and that could
  * cause a build to succeed but with features removed. */
