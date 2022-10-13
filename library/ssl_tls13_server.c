@@ -34,13 +34,7 @@
 #include "mbedtls/ecp.h"
 #endif /* MBEDTLS_ECP_C */
 
-#if defined(MBEDTLS_PLATFORM_C)
 #include "mbedtls/platform.h"
-#else
-#include <stdlib.h>
-#define mbedtls_calloc    calloc
-#define mbedtls_free       free
-#endif /* MBEDTLS_PLATFORM_C */
 
 #include "ssl_misc.h"
 #include "ssl_tls13_keys.h"
@@ -186,9 +180,9 @@ static int ssl_tls13_offered_psks_check_identity_match_ticket(
     if( now < session->start )
     {
         MBEDTLS_SSL_DEBUG_MSG(
-            3, ( "Ticket expired: now=%" MBEDTLS_PRINTF_LONGLONG
-                    ", start=%" MBEDTLS_PRINTF_LONGLONG,
-                    (long long)now, (long long)session->start ) );
+            3, ( "Invalid ticket start time ( now=%" MBEDTLS_PRINTF_LONGLONG
+                     ", start=%" MBEDTLS_PRINTF_LONGLONG " )",
+                 (long long)now, (long long)session->start ) );
         goto exit;
     }
 
@@ -208,7 +202,7 @@ static int ssl_tls13_offered_psks_check_identity_match_ticket(
     if( age_in_s > 604800 )
     {
         MBEDTLS_SSL_DEBUG_MSG(
-            3, ( "Ticket expired: Ticket age exceed limitation ticket_age=%lu",
+            3, ( "Ticket age exceeds limitation ticket_age=%lu",
                  (long unsigned int)age_in_s ) );
         goto exit;
     }
@@ -231,8 +225,8 @@ static int ssl_tls13_offered_psks_check_identity_match_ticket(
         age_diff_in_ms > MBEDTLS_SSL_TLS1_3_TICKET_AGE_TOLERANCE )
     {
         MBEDTLS_SSL_DEBUG_MSG(
-            3, ( "Ticket expired: Ticket age outside tolerance window "
-                     "( diff=%d )", (int)age_diff_in_ms ) );
+            3, ( "Ticket age outside tolerance window ( diff=%d )",
+                 (int)age_diff_in_ms ) );
         goto exit;
     }
 
@@ -2848,7 +2842,8 @@ static int ssl_tls13_write_new_session_ticket_body( mbedtls_ssl_context *ssl,
      *      MAY treat a ticket as valid for a shorter period of time than what
      *      is stated in the ticket_lifetime.
      */
-    ticket_lifetime %= 604800;
+    if( ticket_lifetime > 604800 )
+        ticket_lifetime = 604800;
     MBEDTLS_PUT_UINT32_BE( ticket_lifetime, p, 0 );
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "ticket_lifetime: %u",
                                 ( unsigned int )ticket_lifetime ) );
