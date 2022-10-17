@@ -665,6 +665,20 @@ exit:
 /* END_CASE */
 
 /* BEGIN_CASE */
+void mpi_core_bitlen( char *input_X, int nr_bits )
+{
+    mbedtls_mpi_uint *X = NULL;
+    size_t limbs;
+
+    TEST_EQUAL( mbedtls_test_read_mpi_core( &X, &limbs, input_X ), 0 );
+    TEST_EQUAL( mbedtls_mpi_core_bitlen( X, limbs ), nr_bits );
+
+exit:
+    mbedtls_free( X );
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
 void mpi_bitlen( char * input_X, int nr_bits )
 {
     mbedtls_mpi X;
@@ -728,348 +742,29 @@ exit:
 /* END_CASE */
 
 /* BEGIN_CASE */
-void mpi_core_lt_ct( data_t * input_X, data_t * input_Y, int input_ret )
+void mpi_core_lt_ct( char *input_X, char *input_Y, int exp_ret )
 {
-    #define MAX_LEN 64
-    mbedtls_mpi_uint X[MAX_LEN];
-    mbedtls_mpi_uint Y[MAX_LEN];
-    unsigned exp_ret = input_ret;
-    unsigned ret;
-    size_t len = CHARS_TO_LIMBS(
-                    input_X->len > input_Y->len ? input_X->len : input_Y->len );
+    mbedtls_mpi_uint *X = NULL;
+    size_t X_limbs;
+    mbedtls_mpi_uint *Y = NULL;
+    size_t Y_limbs;
+    int ret;
 
-    TEST_LE_U( len, MAX_LEN );
+    TEST_EQUAL( 0, mbedtls_test_read_mpi_core( &X, &X_limbs, input_X ) );
+    TEST_EQUAL( 0, mbedtls_test_read_mpi_core( &Y, &Y_limbs, input_Y ) );
 
-    TEST_ASSERT( mbedtls_mpi_core_read_be( X, len, input_X->x, input_X->len )
-                 == 0 );
-    TEST_ASSERT( mbedtls_mpi_core_read_be( Y, len, input_Y->x, input_Y->len )
-                 == 0 );
+    /* We need two same-length limb arrays */
+    TEST_EQUAL( X_limbs, Y_limbs );
 
-    TEST_CF_SECRET( X, len * sizeof( mbedtls_mpi_uint ) );
-    TEST_CF_SECRET( Y, len * sizeof( mbedtls_mpi_uint ) );
+    TEST_CF_SECRET( X, X_limbs * sizeof( mbedtls_mpi_uint ) );
+    TEST_CF_SECRET( Y, X_limbs * sizeof( mbedtls_mpi_uint ) );
 
-    ret = mbedtls_mpi_core_lt_ct( X, Y, len );
-
-    TEST_CF_PUBLIC( X, len * sizeof( mbedtls_mpi_uint ) );
-    TEST_CF_PUBLIC( Y, len * sizeof( mbedtls_mpi_uint ) );
-    TEST_CF_PUBLIC( &ret, sizeof( ret ) );
-
+    ret = mbedtls_mpi_core_lt_ct( X, Y, X_limbs );
     TEST_EQUAL( ret, exp_ret );
 
 exit:
-    ;
-
-    #undef MAX_LEN
-}
-/* END_CASE */
-
-/* BEGIN_CASE */
-void mpi_core_cond_assign( data_t * input_X,
-                           data_t * input_Y,
-                           int input_bytes )
-{
-    mbedtls_mpi_uint *X = NULL;
-    mbedtls_mpi_uint *Y = NULL;
-    size_t limbs_X = CHARS_TO_LIMBS( input_X->len );
-    size_t limbs_Y = CHARS_TO_LIMBS( input_Y->len );
-    size_t limbs = limbs_X;
-    size_t copy_limbs = CHARS_TO_LIMBS( input_bytes );
-    size_t bytes = limbs * sizeof( mbedtls_mpi_uint );
-    size_t copy_bytes = copy_limbs * sizeof( mbedtls_mpi_uint );
-
-    TEST_EQUAL( limbs_X, limbs_Y );
-    TEST_ASSERT( copy_limbs <= limbs );
-
-    ASSERT_ALLOC( X, limbs );
-    ASSERT_ALLOC( Y, limbs );
-
-    TEST_ASSERT( mbedtls_mpi_core_read_be( X, limbs, input_X->x, input_X->len )
-                 == 0 );
-
-    TEST_ASSERT( mbedtls_mpi_core_read_be( Y, limbs, input_Y->x, input_Y->len )
-                 == 0 );
-
-    /* condition is false */
-    TEST_CF_SECRET( X, bytes );
-    TEST_CF_SECRET( Y, bytes );
-
-    mbedtls_mpi_core_cond_assign( X, Y, copy_limbs, 0 );
-
-    TEST_CF_PUBLIC( X, bytes );
-    TEST_CF_PUBLIC( Y, bytes );
-
-    TEST_ASSERT( memcmp( X, Y, bytes ) != 0 );
-
-    /* condition is true */
-    TEST_CF_SECRET( X, bytes );
-    TEST_CF_SECRET( Y, bytes );
-
-    mbedtls_mpi_core_cond_assign( X, Y, copy_limbs, 1 );
-
-    TEST_CF_PUBLIC( X, bytes );
-    TEST_CF_PUBLIC( Y, bytes );
-
-    /* Check if the given length is copied even it is smaller
-       than the bytesgth of the given MPIs. */
-    if( copy_limbs < limbs )
-    {
-        ASSERT_COMPARE( X, copy_bytes, Y, copy_bytes );
-        TEST_ASSERT( memcmp( X, Y, bytes ) != 0 );
-    }
-    else
-        ASSERT_COMPARE( X, bytes, Y, bytes );
-
-exit:
     mbedtls_free( X );
     mbedtls_free( Y );
-}
-/* END_CASE */
-
-/* BEGIN_CASE */
-void mpi_core_cond_swap( data_t * input_X,
-                         data_t * input_Y,
-                         int input_bytes )
-{
-    mbedtls_mpi_uint *tmp_X = NULL;
-    mbedtls_mpi_uint *tmp_Y = NULL;
-    mbedtls_mpi_uint *X = NULL;
-    mbedtls_mpi_uint *Y = NULL;
-    size_t limbs_X = CHARS_TO_LIMBS( input_X->len );
-    size_t limbs_Y = CHARS_TO_LIMBS( input_Y->len );
-    size_t limbs = limbs_X;
-    size_t copy_limbs = CHARS_TO_LIMBS( input_bytes );
-    size_t bytes = limbs * sizeof( mbedtls_mpi_uint );
-    size_t copy_bytes = copy_limbs * sizeof( mbedtls_mpi_uint );
-
-    TEST_EQUAL( limbs_X, limbs_Y );
-    TEST_ASSERT( copy_limbs <= limbs );
-
-    ASSERT_ALLOC( tmp_X, limbs );
-    ASSERT_ALLOC( tmp_Y, limbs );
-
-    TEST_ASSERT( mbedtls_mpi_core_read_be( tmp_X, limbs,
-                                           input_X->x, input_X->len )
-                 == 0 );
-    ASSERT_ALLOC( X, limbs );
-    memcpy( X, tmp_X, bytes );
-
-    TEST_ASSERT( mbedtls_mpi_core_read_be( tmp_Y, limbs,
-                                           input_Y->x, input_Y->len )
-                 == 0 );
-    ASSERT_ALLOC( Y, limbs );
-    memcpy( Y, tmp_Y, bytes );
-
-    /* condition is false */
-    TEST_CF_SECRET( X, bytes );
-    TEST_CF_SECRET( Y, bytes );
-
-    mbedtls_mpi_core_cond_swap( X, Y, copy_limbs, 0 );
-
-    TEST_CF_PUBLIC( X, bytes );
-    TEST_CF_PUBLIC( Y, bytes );
-
-    ASSERT_COMPARE( X, bytes, tmp_X, bytes );
-    ASSERT_COMPARE( Y, bytes, tmp_Y, bytes );
-
-    /* condition is true */
-    TEST_CF_SECRET( X, bytes );
-    TEST_CF_SECRET( Y, bytes );
-
-    mbedtls_mpi_core_cond_swap( X, Y, copy_limbs, 1 );
-
-    TEST_CF_PUBLIC( X, bytes );
-    TEST_CF_PUBLIC( Y, bytes );
-
-    /* Check if the given length is copied even it is smaller
-       than the length of the given MPIs. */
-    if( copy_limbs < limbs )
-    {
-        ASSERT_COMPARE( X, copy_bytes, tmp_Y, copy_bytes );
-        ASSERT_COMPARE( Y, copy_bytes, tmp_X, copy_bytes );
-        TEST_ASSERT( memcmp( X, tmp_X, bytes ) != 0 );
-        TEST_ASSERT( memcmp( X, tmp_Y, bytes ) != 0 );
-        TEST_ASSERT( memcmp( Y, tmp_X, bytes ) != 0 );
-        TEST_ASSERT( memcmp( Y, tmp_Y, bytes ) != 0 );
-    }
-    else
-    {
-        ASSERT_COMPARE( X, bytes, tmp_Y, bytes );
-        ASSERT_COMPARE( Y, bytes, tmp_X, bytes );
-    }
-
-exit:
-    mbedtls_free( tmp_X );
-    mbedtls_free( tmp_Y );
-    mbedtls_free( X );
-    mbedtls_free( Y );
-}
-/* END_CASE */
-
-/* BEGIN_CASE */
-void mpi_mod_raw_cond_assign( data_t * input_X,
-                              data_t * input_Y,
-                              int input_bytes )
-{
-    mbedtls_mpi_uint *X = NULL;
-    mbedtls_mpi_uint *Y = NULL;
-    mbedtls_mpi_uint *buff_m = NULL;
-    mbedtls_mpi_mod_modulus m;
-    size_t limbs_X = CHARS_TO_LIMBS( input_X->len );
-    size_t limbs_Y = CHARS_TO_LIMBS( input_Y->len );
-    size_t limbs = limbs_X;
-    size_t copy_limbs = CHARS_TO_LIMBS( input_bytes );
-    size_t bytes = limbs * sizeof( mbedtls_mpi_uint );
-    size_t copy_bytes = copy_limbs * sizeof( mbedtls_mpi_uint );
-
-    TEST_EQUAL( limbs_X, limbs_Y );
-    TEST_ASSERT( copy_limbs <= limbs );
-
-    ASSERT_ALLOC( X, limbs );
-    ASSERT_ALLOC( Y, limbs );
-
-    ASSERT_ALLOC( buff_m, limbs );
-    mbedtls_mpi_mod_modulus_init( &m );
-    TEST_ASSERT( mbedtls_mpi_mod_modulus_setup(
-                        &m, buff_m, copy_limbs,
-                        MBEDTLS_MPI_MOD_EXT_REP_BE,
-                        MBEDTLS_MPI_MOD_REP_MONTGOMERY )
-                 == 0 );
-
-    TEST_ASSERT( mbedtls_mpi_core_read_be( X, limbs,
-                                           input_X->x, input_X->len )
-                 == 0 );
-
-    TEST_ASSERT( mbedtls_mpi_core_read_be( Y, limbs,
-                                           input_Y->x, input_Y->len )
-                 == 0 );
-
-    /* condition is false */
-    TEST_CF_SECRET( X, bytes );
-    TEST_CF_SECRET( Y, bytes );
-
-    mbedtls_mpi_mod_raw_cond_assign( X, Y, &m, 0 );
-
-    TEST_CF_PUBLIC( X, bytes );
-    TEST_CF_PUBLIC( Y, bytes );
-
-    TEST_ASSERT( memcmp( X, Y, bytes ) != 0 );
-
-    /* condition is true */
-    TEST_CF_SECRET( X, bytes );
-    TEST_CF_SECRET( Y, bytes );
-
-    mbedtls_mpi_mod_raw_cond_assign( X, Y, &m, 1 );
-
-    TEST_CF_PUBLIC( X, bytes );
-    TEST_CF_PUBLIC( Y, bytes );
-
-    /* Check if the given length is copied even it is smaller
-       than the length of the given MPIs. */
-    if( copy_limbs <limbs )
-    {
-        ASSERT_COMPARE( X, copy_bytes, Y, copy_bytes );
-        TEST_ASSERT( memcmp( X, Y, bytes ) != 0 );
-    }
-    else
-        ASSERT_COMPARE( X, bytes, Y, bytes );
-
-exit:
-    mbedtls_free( X );
-    mbedtls_free( Y );
-
-    mbedtls_mpi_mod_modulus_free( &m );
-    mbedtls_free( buff_m );
-}
-/* END_CASE */
-
-/* BEGIN_CASE */
-void mpi_mod_raw_cond_swap( data_t * input_X,
-                            data_t * input_Y,
-                            int input_bytes )
-{
-    mbedtls_mpi_uint *tmp_X = NULL;
-    mbedtls_mpi_uint *tmp_Y = NULL;
-    mbedtls_mpi_uint *X = NULL;
-    mbedtls_mpi_uint *Y = NULL;
-    mbedtls_mpi_uint *buff_m = NULL;
-    mbedtls_mpi_mod_modulus m;
-    size_t limbs_X = CHARS_TO_LIMBS( input_X->len );
-    size_t limbs_Y = CHARS_TO_LIMBS( input_Y->len );
-    size_t limbs = limbs_X;
-    size_t copy_limbs = CHARS_TO_LIMBS( input_bytes );
-    size_t bytes = limbs * sizeof( mbedtls_mpi_uint );
-    size_t copy_bytes = copy_limbs * sizeof( mbedtls_mpi_uint );
-
-    TEST_EQUAL( limbs_X, limbs_Y );
-    TEST_ASSERT( copy_limbs <= limbs );
-
-    ASSERT_ALLOC( tmp_X, limbs );
-    ASSERT_ALLOC( tmp_Y, limbs );
-
-    ASSERT_ALLOC( buff_m, copy_limbs );
-    mbedtls_mpi_mod_modulus_init( &m );
-    TEST_ASSERT( mbedtls_mpi_mod_modulus_setup(
-                        &m, buff_m, copy_limbs,
-                        MBEDTLS_MPI_MOD_EXT_REP_BE,
-                        MBEDTLS_MPI_MOD_REP_MONTGOMERY )
-                 == 0 );
-
-    TEST_ASSERT( mbedtls_mpi_core_read_be( tmp_X, limbs, input_X->x, input_X->len )
-                 == 0 );
-    ASSERT_ALLOC( X, limbs );
-    memcpy( X, tmp_X, bytes );
-
-    TEST_ASSERT( mbedtls_mpi_core_read_be( tmp_Y, limbs, input_Y->x, input_Y->len )
-                 == 0 );
-    ASSERT_ALLOC( Y, bytes );
-    memcpy( Y, tmp_Y, bytes );
-
-    /* condition is false */
-    TEST_CF_SECRET( X, bytes );
-    TEST_CF_SECRET( Y, bytes );
-
-    mbedtls_mpi_mod_raw_cond_swap( X, Y, &m, 0 );
-
-    TEST_CF_PUBLIC( X, bytes );
-    TEST_CF_PUBLIC( Y, bytes );
-
-    ASSERT_COMPARE( X, bytes, tmp_X, bytes );
-    ASSERT_COMPARE( Y, bytes, tmp_Y, bytes );
-
-    /* condition is true */
-    TEST_CF_SECRET( X, bytes );
-    TEST_CF_SECRET( Y, bytes );
-
-    mbedtls_mpi_mod_raw_cond_swap( X, Y, &m, 1 );
-
-    TEST_CF_PUBLIC( X, bytes );
-    TEST_CF_PUBLIC( Y, bytes );
-
-    /* Check if the given length is copied even it is smaller
-       than the length of the given MPIs. */
-    if( copy_limbs < limbs )
-    {
-        ASSERT_COMPARE( X, copy_bytes, tmp_Y, copy_bytes );
-        ASSERT_COMPARE( Y, copy_bytes, tmp_X, copy_bytes );
-        TEST_ASSERT( memcmp( X, tmp_X, bytes ) != 0 );
-        TEST_ASSERT( memcmp( X, tmp_Y, bytes ) != 0 );
-        TEST_ASSERT( memcmp( Y, tmp_X, bytes ) != 0 );
-        TEST_ASSERT( memcmp( Y, tmp_Y, bytes ) != 0 );
-    }
-    else
-    {
-        ASSERT_COMPARE( X, bytes, tmp_Y, bytes );
-        ASSERT_COMPARE( Y, bytes, tmp_X, bytes );
-    }
-
-exit:
-    mbedtls_free( tmp_X );
-    mbedtls_free( tmp_Y );
-    mbedtls_free( X );
-    mbedtls_free( Y );
-
-    mbedtls_mpi_mod_modulus_free( &m );
-    mbedtls_free( buff_m );
 }
 /* END_CASE */
 

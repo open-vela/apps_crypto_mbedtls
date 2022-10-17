@@ -52,10 +52,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include "mbedtls/platform.h"
-#if !defined(MBEDTLS_PLATFORM_C)
-#define mbedtls_calloc calloc
-#define mbedtls_free   free
-#endif
 
 #include "mbedtls/aes.h"
 #include "mbedtls/asn1.h"
@@ -3592,6 +3588,7 @@ static psa_status_t psa_aead_check_nonce_length( psa_algorithm_t alg,
             break;
 #endif /* PSA_WANT_ALG_CHACHA20_POLY1305 */
         default:
+            (void) nonce_length;
             return( PSA_ERROR_NOT_SUPPORTED );
     }
 
@@ -3708,39 +3705,34 @@ exit:
     return( status );
 }
 
-static psa_status_t psa_validate_tag_length( psa_aead_operation_t *operation,
-                                             psa_algorithm_t alg ) {
-    uint8_t tag_len = 0;
-    if( psa_driver_get_tag_len( operation, &tag_len ) != PSA_SUCCESS )
-    {
-        return( PSA_ERROR_INVALID_ARGUMENT );
-    }
+static psa_status_t psa_validate_tag_length( psa_algorithm_t alg ) {
+    const uint8_t tag_len = PSA_ALG_AEAD_GET_TAG_LENGTH( alg );
 
     switch( PSA_ALG_AEAD_WITH_SHORTENED_TAG( alg, 0 ) )
     {
-#if defined(MBEDTLS_PSA_BUILTIN_ALG_CCM)
+#if defined(PSA_WANT_ALG_CCM)
         case PSA_ALG_AEAD_WITH_SHORTENED_TAG( PSA_ALG_CCM, 0 ):
             /* CCM allows the following tag lengths: 4, 6, 8, 10, 12, 14, 16.*/
             if( tag_len < 4 || tag_len > 16 || tag_len % 2 )
                 return( PSA_ERROR_INVALID_ARGUMENT );
             break;
-#endif /* MBEDTLS_PSA_BUILTIN_ALG_CCM */
+#endif /* PSA_WANT_ALG_CCM */
 
-#if defined(MBEDTLS_PSA_BUILTIN_ALG_GCM)
+#if defined(PSA_WANT_ALG_GCM)
         case PSA_ALG_AEAD_WITH_SHORTENED_TAG( PSA_ALG_GCM, 0 ):
             /* GCM allows the following tag lengths: 4, 8, 12, 13, 14, 15, 16. */
             if( tag_len != 4 && tag_len != 8 && ( tag_len < 12 || tag_len > 16 ) )
                 return( PSA_ERROR_INVALID_ARGUMENT );
             break;
-#endif /* MBEDTLS_PSA_BUILTIN_ALG_GCM */
+#endif /* PSA_WANT_ALG_GCM */
 
-#if defined(MBEDTLS_PSA_BUILTIN_ALG_CHACHA20_POLY1305)
+#if defined(PSA_WANT_ALG_CHACHA20_POLY1305)
         case PSA_ALG_AEAD_WITH_SHORTENED_TAG( PSA_ALG_CHACHA20_POLY1305, 0 ):
             /* We only support the default tag length. */
             if( tag_len != 16 )
                 return( PSA_ERROR_INVALID_ARGUMENT );
             break;
-#endif /* MBEDTLS_PSA_BUILTIN_ALG_CHACHA20_POLY1305 */
+#endif /* PSA_WANT_ALG_CHACHA20_POLY1305 */
 
         default:
             (void) tag_len;
@@ -3791,6 +3783,9 @@ static psa_status_t psa_aead_setup( psa_aead_operation_t *operation,
         .core = slot->attr
     };
 
+    if( ( status = psa_validate_tag_length( alg ) ) != PSA_SUCCESS )
+        goto exit;
+
     if( is_encrypt )
         status = psa_driver_wrapper_aead_encrypt_setup( operation,
                                                         &attributes,
@@ -3804,9 +3799,6 @@ static psa_status_t psa_aead_setup( psa_aead_operation_t *operation,
                                                         slot->key.bytes,
                                                         alg );
     if( status != PSA_SUCCESS )
-        goto exit;
-
-    if( ( status = psa_validate_tag_length( operation, alg ) ) != PSA_SUCCESS )
         goto exit;
 
     operation->key_type = psa_get_key_type( &attributes );
@@ -5801,26 +5793,28 @@ exit:
 
 #define PSA_KEY_AGREEMENT_MAX_SHARED_SECRET_SIZE MBEDTLS_ECP_MAX_BYTES
 
-static psa_status_t psa_key_agreement_raw_internal( psa_algorithm_t alg,
-                                                    psa_key_slot_t *private_key,
-                                                    const uint8_t *peer_key,
-                                                    size_t peer_key_length,
-                                                    uint8_t *shared_secret,
-                                                    size_t shared_secret_size,
-                                                    size_t *shared_secret_length )
+psa_status_t psa_key_agreement_raw_builtin( const psa_key_attributes_t *attributes,
+                                            const uint8_t *key_buffer,
+                                            size_t key_buffer_size,
+                                            psa_algorithm_t alg,
+                                            const uint8_t *peer_key,
+                                            size_t peer_key_length,
+                                            uint8_t *shared_secret,
+                                            size_t shared_secret_size,
+                                            size_t *shared_secret_length )
 {
     switch( alg )
     {
 #if defined(MBEDTLS_PSA_BUILTIN_ALG_ECDH)
         case PSA_ALG_ECDH:
-            if( ! PSA_KEY_TYPE_IS_ECC_KEY_PAIR( private_key->attr.type ) )
+            if( ! PSA_KEY_TYPE_IS_ECC_KEY_PAIR( attributes->core.type ) )
                 return( PSA_ERROR_INVALID_ARGUMENT );
             mbedtls_ecp_keypair *ecp = NULL;
             psa_status_t status = mbedtls_psa_ecp_load_representation(
-                                      private_key->attr.type,
-                                      private_key->attr.bits,
-                                      private_key->key.data,
-                                      private_key->key.bytes,
+                                      attributes->core.type,
+                                      attributes->core.bits,
+                                      key_buffer,
+                                      key_buffer_size,
                                       &ecp );
             if( status != PSA_SUCCESS )
                 return( status );
@@ -5833,7 +5827,9 @@ static psa_status_t psa_key_agreement_raw_internal( psa_algorithm_t alg,
             return( status );
 #endif /* MBEDTLS_PSA_BUILTIN_ALG_ECDH */
         default:
-            (void) private_key;
+            (void) attributes;
+            (void) key_buffer;
+            (void) key_buffer_size;
             (void) peer_key;
             (void) peer_key_length;
             (void) shared_secret;
@@ -5841,6 +5837,34 @@ static psa_status_t psa_key_agreement_raw_internal( psa_algorithm_t alg,
             (void) shared_secret_length;
             return( PSA_ERROR_NOT_SUPPORTED );
     }
+}
+
+/** Internal function for raw key agreement
+ *  Calls the driver wrapper which will hand off key agreement task
+ *  to the driver's implementation if a driver is present.
+ *  Fallback specified in the driver wrapper is built-in raw key agreement
+ *  (psa_key_agreement_raw_builtin).
+ */
+static psa_status_t psa_key_agreement_raw_internal( psa_algorithm_t alg,
+                                                    psa_key_slot_t *private_key,
+                                                    const uint8_t *peer_key,
+                                                    size_t peer_key_length,
+                                                    uint8_t *shared_secret,
+                                                    size_t shared_secret_size,
+                                                    size_t *shared_secret_length )
+{
+    if( !PSA_ALG_IS_RAW_KEY_AGREEMENT(alg) )
+        return( PSA_ERROR_NOT_SUPPORTED );
+
+    psa_key_attributes_t attributes = {
+      .core = private_key->attr
+    };
+
+    return( psa_driver_wrapper_key_agreement( &attributes, private_key->key.data,
+                                                  private_key->key.bytes,
+                                                  alg, peer_key, peer_key_length,
+                                                  shared_secret, shared_secret_size,
+                                                  shared_secret_length ) );
 }
 
 /* Note that if this function fails, you must call psa_key_derivation_abort()

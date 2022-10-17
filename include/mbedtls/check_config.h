@@ -523,6 +523,20 @@
 #error "MBEDTLS_PLATFORM_SNPRINTF_MACRO and MBEDTLS_PLATFORM_STD_SNPRINTF/MBEDTLS_PLATFORM_SNPRINTF_ALT cannot be defined simultaneously"
 #endif
 
+#if defined(MBEDTLS_PLATFORM_VSNPRINTF_ALT) && !defined(MBEDTLS_PLATFORM_C)
+#error "MBEDTLS_PLATFORM_VSNPRINTF_ALT defined, but not all prerequisites"
+#endif
+
+#if defined(MBEDTLS_PLATFORM_VSNPRINTF_MACRO) && !defined(MBEDTLS_PLATFORM_C)
+#error "MBEDTLS_PLATFORM_VSNPRINTF_MACRO defined, but not all prerequisites"
+#endif
+
+#if defined(MBEDTLS_PLATFORM_VSNPRINTF_MACRO) &&\
+    ( defined(MBEDTLS_PLATFORM_STD_VSNPRINTF) ||\
+        defined(MBEDTLS_PLATFORM_VSNPRINTF_ALT) )
+#error "MBEDTLS_PLATFORM_VSNPRINTF_MACRO and MBEDTLS_PLATFORM_STD_VSNPRINTF/MBEDTLS_PLATFORM_VSNPRINTF_ALT cannot be defined simultaneously"
+#endif
+
 #if defined(MBEDTLS_PLATFORM_STD_MEM_HDR) &&\
     !defined(MBEDTLS_PLATFORM_NO_STD_FUNCTIONS)
 #error "MBEDTLS_PLATFORM_STD_MEM_HDR defined, but not all prerequisites"
@@ -874,6 +888,11 @@
 #error "MBEDTLS_SSL_TICKET_C defined, but not all prerequisites"
 #endif
 
+#if defined(MBEDTLS_SSL_TICKET_C) && \
+    !( defined(MBEDTLS_GCM_C) || defined(MBEDTLS_CCM_C) || defined(MBEDTLS_CHACHAPOLY_C) )
+#error "MBEDTLS_SSL_TICKET_C defined, but not all prerequisites"
+#endif
+
 #if defined(MBEDTLS_SSL_TLS1_3_TICKET_NONCE_LENGTH) && \
     MBEDTLS_SSL_TLS1_3_TICKET_NONCE_LENGTH >= 256
 #error "MBEDTLS_SSL_TLS1_3_TICKET_NONCE_LENGTH must be less than 256"
@@ -962,7 +981,9 @@
 #error "MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH defined, but not all prerequisites"
 #endif
 
-
+#if defined(MBEDTLS_SSL_CONTEXT_SERIALIZATION) && !( defined(MBEDTLS_GCM_C) || defined(MBEDTLS_CCM_C) || defined(MBEDTLS_CHACHAPOLY_C) )
+#error "MBEDTLS_SSL_CONTEXT_SERIALIZATION defined, but not all prerequisites"
+#endif
 
 /* Reject attempts to enable options that have been removed and that could
  * cause a build to succeed but with features removed. */
