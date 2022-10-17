@@ -2462,6 +2462,32 @@
 #define MBEDTLS_HMAC_DRBG_C
 
 /**
+ * \def MBEDTLS_LMS_C
+ *
+ * Enable the LMS stateful-hash asymmetric signature algorithm.
+ *
+ * Module:  library/lms.c
+ * Caller:
+ *
+ * Requires: MBEDTLS_PSA_CRYPTO_C
+ *
+ * Uncomment to enable the LMS verification algorithm and public key operations.
+ */
+#define MBEDTLS_LMS_C
+
+/**
+ * \def MBEDTLS_LMS_PRIVATE
+ *
+ * Enable LMS private-key operations and signing code. Functions enabled by this
+ * option are experimental, and should not be used in production.
+ *
+ * Requires: MBEDTLS_LMS_C
+ *
+ * Uncomment to enable the LMS signature algorithm and private key operations.
+ */
+//#define MBEDTLS_LMS_PRIVATE
+
+/**
  * \def MBEDTLS_NIST_KW_C
  *
  * Enable the Key Wrapping mode for 128-bit block ciphers,
@@ -2554,7 +2580,7 @@
  *
  * \note See also our Knowledge Base article about porting to a new
  * environment:
- * https://tls.mbed.org/kb/how-to/how-do-i-port-mbed-tls-to-a-new-environment-OS
+ * https://mbed-tls.readthedocs.io/en/latest/kb/how-to/how-do-i-port-mbed-tls-to-a-new-environment-OS
  *
  * Module:  library/net_sockets.c
  *
@@ -3111,7 +3137,7 @@
  * contexts are not shared between threads. If you do intend to use contexts
  * between threads, you will need to enable this layer to prevent race
  * conditions. See also our Knowledge Base article about threading:
- * https://tls.mbed.org/kb/development/thread-safety-and-multi-threading
+ * https://mbed-tls.readthedocs.io/en/latest/kb/development/thread-safety-and-multi-threading
  *
  * Module:  library/threading.c
  *
@@ -3143,7 +3169,7 @@
  *
  * \note See also our Knowledge Base article about porting to a new
  * environment:
- * https://tls.mbed.org/kb/how-to/how-do-i-port-mbed-tls-to-a-new-environment-OS
+ * https://mbed-tls.readthedocs.io/en/latest/kb/how-to/how-do-i-port-mbed-tls-to-a-new-environment-OS
  *
  * Module:  library/timing.c
  */
