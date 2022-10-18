@@ -25,11 +25,6 @@
 #include "test/psa_crypto_helpers.h"
 #endif /* MBEDTLS_USE_PSA_CRYPTO || MBEDTLS_SSL_PROTO_TLS1_3 */
 
-#if defined(MBEDTLS_VERSION_C)
-#include "mbedtls/build_info.h"
-#include "mbedtls/version.h"
-#endif /* MBEDTLS_VERSION_C */
-
 #if defined(MBEDTLS_SSL_TEST_IMPOSSIBLE)
 int main( void )
 {
@@ -365,14 +360,6 @@ int main( void )
 #define USAGE_TLS1_3_KEY_EXCHANGE_MODES ""
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
-#if defined(MBEDTLS_VERSION_C)
-#define USAGE_BUILD_VERSION                                 \
-    "    build_version=%%d    default: none (disabled)\n"   \
-    "                        option: 1 (print the build version only a stop)\n"
-#else
-#define USAGE_BUILD_VERSION ""
-#endif /* MBEDTLS_VERSION_C */
-
 /* USAGE is arbitrarily split to stay under the portable string literal
  * length limit: 4095 bytes in C99. */
 #define USAGE1 \
@@ -388,7 +375,6 @@ int main( void )
     "                        application data message is sent followed by\n" \
     "                        a second non-empty message before attempting\n" \
     "                        to read a response from the server\n"           \
-    USAGE_BUILD_VERSION                                     \
     "    debug_level=%%d      default: 0 (disabled)\n"             \
     "    nbio=%%d             default: 0 (blocking I/O)\n"         \
     "                        options: 1 (non-blocking), 2 (added delays)\n"   \
@@ -419,6 +405,7 @@ int main( void )
     "    exchanges=%%d        default: 1\n"                 \
     "    reconnect=%%d        number of reconnections using session resumption\n" \
     "                        default: 0 (disabled)\n"      \
+    "    reco_server_name=%%s  default: localhost\n"         \
     "    reco_delay=%%d       default: 0 seconds\n"         \
     "    reco_mode=%%d        0: copy session, 1: serialize session\n" \
     "                        default: 1\n"      \
@@ -512,6 +499,7 @@ struct options
     int recsplit;               /* enable record splitting?                 */
     int dhmlen;                 /* minimum DHM params len in bits           */
     int reconnect;              /* attempt to resume session                */
+    const char *reco_server_name;     /* hostname of the server (re-connect)     */
     int reco_delay;             /* delay in seconds before resuming session */
     int reco_mode;              /* how to keep the session around           */
     int reconnect_hard;         /* unexpectedly reconnect from the same port */
@@ -937,6 +925,7 @@ int main( int argc, char *argv[] )
     opt.recsplit            = DFL_RECSPLIT;
     opt.dhmlen              = DFL_DHMLEN;
     opt.reconnect           = DFL_RECONNECT;
+    opt.reco_server_name    = DFL_SERVER_NAME;
     opt.reco_delay          = DFL_RECO_DELAY;
     opt.reco_mode           = DFL_RECO_MODE;
     opt.reconnect_hard      = DFL_RECONNECT_HARD;
@@ -995,18 +984,6 @@ int main( int argc, char *argv[] )
             if( opt.debug_level < 0 || opt.debug_level > 65535 )
                 goto usage;
         }
-#if defined(MBEDTLS_VERSION_C)
-        else if( strcmp( p, "build_version" ) == 0 )
-        {
-            if( strcmp( q, "1" ) == 0 )
-            {
-                mbedtls_printf( "build version: %s (build %u)\n",
-                                MBEDTLS_VERSION_STRING,
-                                mbedtls_version_get_number() );
-                goto exit;
-            }
-        }
-#endif /* MBEDTLS_VERSION_C */
         else if( strcmp( p, "context_crt_cb" ) == 0 )
         {
             opt.context_crt_cb = atoi( q );
@@ -1145,6 +1122,8 @@ int main( int argc, char *argv[] )
             if( opt.reconnect < 0 || opt.reconnect > 2 )
                 goto usage;
         }
+        else if( strcmp( p, "rec_server_name" ) == 0 )
+            opt.reco_server_name = q;
         else if( strcmp( p, "reco_delay" ) == 0 )
         {
             opt.reco_delay = atoi( q );
@@ -2475,11 +2454,6 @@ int main( int argc, char *argv[] )
         }
     }
 
-#if defined(MBEDTLS_VERSION_C)
-    mbedtls_printf( "build version: %s (build %u)\n",
-                    MBEDTLS_VERSION_STRING, mbedtls_version_get_number() );
-#endif /* MBEDTLS_VERSION_C */
-
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
     /*
      * 5. Verify the server certificate
@@ -3143,6 +3117,16 @@ reconnect:
                             (unsigned int) -ret );
             goto exit;
         }
+
+#if defined(MBEDTLS_X509_CRT_PARSE_C)
+        if( ( ret = mbedtls_ssl_set_hostname( &ssl,
+                                              opt.reco_server_name ) ) != 0 )
+        {
+            mbedtls_printf( " failed\n  ! mbedtls_ssl_set_hostname returned %d\n\n",
+                            ret );
+            goto exit;
+        }
+#endif
 
         if( ( ret = mbedtls_net_connect( &server_fd,
                         opt.server_addr, opt.server_port,
