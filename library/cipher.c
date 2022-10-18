@@ -63,7 +63,12 @@
 #include "mbedtls/nist_kw.h"
 #endif
 
+#if defined(MBEDTLS_PLATFORM_C)
 #include "mbedtls/platform.h"
+#else
+#define mbedtls_calloc calloc
+#define mbedtls_free   free
+#endif
 
 static int supported_init = 0;
 
