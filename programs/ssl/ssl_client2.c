@@ -27,6 +27,7 @@
 
 #if defined(MBEDTLS_VERSION_C)
 #include "mbedtls/build_info.h"
+#include "mbedtls/version.h"
 #endif /* MBEDTLS_VERSION_C */
 
 #if defined(MBEDTLS_SSL_TEST_IMPOSSIBLE)
@@ -1001,7 +1002,7 @@ int main( int argc, char *argv[] )
             {
                 mbedtls_printf( "build version: %s (build %u)\n",
                                 MBEDTLS_VERSION_STRING,
-                                MBEDTLS_VERSION_NUMBER );
+                                mbedtls_version_get_number() );
                 goto exit;
             }
         }
@@ -2476,7 +2477,7 @@ int main( int argc, char *argv[] )
 
 #if defined(MBEDTLS_VERSION_C)
     mbedtls_printf( "build version: %s (build %u)\n",
-                    MBEDTLS_VERSION_STRING, MBEDTLS_VERSION_NUMBER );
+                    MBEDTLS_VERSION_STRING, mbedtls_version_get_number() );
 #endif /* MBEDTLS_VERSION_C */
 
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
