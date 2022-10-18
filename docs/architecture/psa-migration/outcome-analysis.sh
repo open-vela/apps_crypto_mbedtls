@@ -31,25 +31,13 @@ DRIVER_COMPONENT=test_psa_crypto_config_accel_hash_use_psa
 # A similar configuration to that of the component, except without drivers,
 # for comparison.
 reference_config () {
-    # start with full
-    scripts/config.py full
-    # use PSA config and disable driver-less algs as in the component
-    scripts/config.py set MBEDTLS_PSA_CRYPTO_CONFIG
-    scripts/config.py -f include/psa/crypto_config.h unset PSA_WANT_ALG_STREAM_CIPHER
-    scripts/config.py -f include/psa/crypto_config.h unset PSA_WANT_ALG_ECB_NO_PADDING
-    # disable options as in the component
-    # (no need to disable whole modules, we'll just skip their test suite)
+    scripts/config.py set MBEDTLS_USE_PSA_CRYPTO
+    scripts/config.py unset MBEDTLS_PKCS1_V21
+    scripts/config.py unset MBEDTLS_X509_RSASSA_PSS_SUPPORT
     scripts/config.py unset MBEDTLS_ECDSA_DETERMINISTIC
-    scripts/config.py -f include/psa/crypto_config.h unset PSA_WANT_ALG_DETERMINISTIC_ECDSA
 }
-# Space-separated list of test suites to ignore:
-# if SSS is in that list, test_suite_SSS and test_suite_SSS.* are ignored.
-IGNORE="md mdx shax" # accelerated
-IGNORE="$IGNORE entropy hmac_drbg random" # disabled (ext. RNG)
-IGNORE="$IGNORE psa_crypto_init" # needs internal RNG
-IGNORE="$IGNORE hkdf" # disabled
-# Compare only "reference vs driver" or also "before vs after"?
-BEFORE_AFTER=1 # 0 or 1
+# Space-separated list of test suites of interest.
+SUITES="rsa pkcs1_v15 pk pkparse pkwrite"
 # ----- END edit this -----
 
 set -eu
@@ -65,28 +53,26 @@ record() {
     make check
 }
 
-if [ "$BEFORE_AFTER" -eq 1 ]; then
-    # save current HEAD
-    HEAD=$(git branch --show-current)
+# save current HEAD
+HEAD=$(git branch --show-current)
 
-    # get the numbers before this PR for default and full
-    cleanup
-    git checkout $(git merge-base HEAD development)
-    record "before-default"
+# get the numbers before this PR for default and full
+cleanup
+git checkout $(git merge-base HEAD development)
+record "before-default"
 
-    cleanup
-    scripts/config.py full
-    record "before-full"
+cleanup
+scripts/config.py full
+record "before-full"
 
-    # get the numbers now for default and full
-    cleanup
-    git checkout $HEAD
-    record "after-default"
+# get the numbers now for default and full
+cleanup
+git checkout $HEAD
+record "after-default"
 
-    cleanup
-    scripts/config.py full
-    record "after-full"
-fi
+cleanup
+scripts/config.py full
+record "after-full"
 
 # get the numbers now for driver-only and reference
 cleanup
@@ -95,26 +81,9 @@ record "reference"
 
 cleanup
 export MBEDTLS_TEST_OUTCOME_FILE="$PWD/outcome-drivers.csv"
-export SKIP_SSL_OPT_COMPAT_SH=1
 tests/scripts/all.sh -k test_psa_crypto_config_accel_hash_use_psa
 
 # analysis
-
-populate_suites () {
-    SUITES=''
-    make generated_files >/dev/null
-    data_files=$(cd tests/suites && echo *.data)
-    for data in $data_files; do
-        suite=${data#test_suite_}
-        suite=${suite%.data}
-        suite_base=${suite%%.*}
-        case " $IGNORE " in
-            *" $suite_base "*) :;;
-            *) SUITES="$SUITES $suite";;
-        esac
-    done
-    make neat
-}
 
 compare_suite () {
     ref="outcome-$1.csv"
@@ -129,35 +98,19 @@ compare_suite () {
     nb_ref=$(wc -l <skipped-ref)
     nb_new=$(wc -l <skipped-new)
 
-    printf "%36s: total %4d; skipped %4d -> %4d\n" \
+    printf "%12s: total %3d; skipped %3d -> %3d\n" \
             $suite      $total       $nb_ref $nb_new
-    if diff skipped-ref skipped-new | grep '^> '; then
-        ret=1
-    else
-        ret=0
-    fi
+    diff skipped-ref skipped-new | grep '^> ' || true
     rm skipped-ref skipped-new
-    return $ret
 }
 
 compare_builds () {
     printf "\n*** Comparing $1 -> $2 ***\n"
-    failed=''
     for suite in $SUITES; do
-        if compare_suite "$1" "$2" "$suite"; then :; else
-            failed="$failed $suite"
-        fi
+        compare_suite "$1" "$2" "$suite"
     done
-    if [ -z "$failed" ]; then
-        printf "No coverage gap found.\n"
-    else
-        printf "Suites with less coverage:%s\n" "$failed"
-    fi
 }
 
-populate_suites
-if [ "$BEFORE_AFTER" -eq 1 ]; then
-    compare_builds before-default after-default
-    compare_builds before-full after-full
-fi
+compare_builds before-default after-default
+compare_builds before-full after-full
 compare_builds reference drivers

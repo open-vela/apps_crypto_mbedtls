@@ -25,11 +25,6 @@
 #include "test/psa_crypto_helpers.h"
 #endif /* MBEDTLS_USE_PSA_CRYPTO || MBEDTLS_SSL_PROTO_TLS1_3 */
 
-#if defined(MBEDTLS_VERSION_C)
-#include "mbedtls/build_info.h"
-#include "mbedtls/version.h"
-#endif /* MBEDTLS_VERSION_C */
-
 #if defined(MBEDTLS_SSL_TEST_IMPOSSIBLE)
 int main( void )
 {
@@ -365,14 +360,6 @@ int main( void )
 #define USAGE_TLS1_3_KEY_EXCHANGE_MODES ""
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
-#if defined(MBEDTLS_VERSION_C)
-#define USAGE_BUILD_VERSION                                 \
-    "    build_version=%%d    default: none (disabled)\n"   \
-    "                        option: 1 (print the build version only a stop)\n"
-#else
-#define USAGE_BUILD_VERSION ""
-#endif /* MBEDTLS_VERSION_C */
-
 /* USAGE is arbitrarily split to stay under the portable string literal
  * length limit: 4095 bytes in C99. */
 #define USAGE1 \
@@ -388,7 +375,6 @@ int main( void )
     "                        application data message is sent followed by\n" \
     "                        a second non-empty message before attempting\n" \
     "                        to read a response from the server\n"           \
-    USAGE_BUILD_VERSION                                     \
     "    debug_level=%%d      default: 0 (disabled)\n"             \
     "    nbio=%%d             default: 0 (blocking I/O)\n"         \
     "                        options: 1 (non-blocking), 2 (added delays)\n"   \
@@ -995,18 +981,6 @@ int main( int argc, char *argv[] )
             if( opt.debug_level < 0 || opt.debug_level > 65535 )
                 goto usage;
         }
-#if defined(MBEDTLS_VERSION_C)
-        else if( strcmp( p, "build_version" ) == 0 )
-        {
-            if( strcmp( q, "1" ) == 0 )
-            {
-                mbedtls_printf( "build version: %s (build %u)\n",
-                                MBEDTLS_VERSION_STRING,
-                                mbedtls_version_get_number() );
-                goto exit;
-            }
-        }
-#endif /* MBEDTLS_VERSION_C */
         else if( strcmp( p, "context_crt_cb" ) == 0 )
         {
             opt.context_crt_cb = atoi( q );
@@ -2474,11 +2448,6 @@ int main( int argc, char *argv[] )
                             (unsigned) session_data_len );
         }
     }
-
-#if defined(MBEDTLS_VERSION_C)
-    mbedtls_printf( "build version: %s (build %u)\n",
-                    MBEDTLS_VERSION_STRING, mbedtls_version_get_number() );
-#endif /* MBEDTLS_VERSION_C */
 
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
     /*
