@@ -1188,6 +1188,10 @@ struct mbedtls_ssl_session
     uint8_t MBEDTLS_PRIVATE(resumption_key_len);            /*!< resumption_key length */
     unsigned char MBEDTLS_PRIVATE(resumption_key)[MBEDTLS_SSL_TLS1_3_TICKET_RESUMPTION_KEY_LEN];
 
+#if defined(MBEDTLS_SSL_SERVER_NAME_INDICATION) && defined(MBEDTLS_SSL_CLI_C)
+    char *MBEDTLS_PRIVATE(hostname);             /*!< host name binded with tickets */
+#endif /* MBEDTLS_SSL_SERVER_NAME_INDICATION && MBEDTLS_SSL_CLI_C */
+
 #if defined(MBEDTLS_HAVE_TIME) && defined(MBEDTLS_SSL_CLI_C)
     mbedtls_time_t MBEDTLS_PRIVATE(ticket_received);        /*!< time ticket was received */
 #endif /* MBEDTLS_HAVE_TIME && MBEDTLS_SSL_CLI_C */
@@ -1390,9 +1394,11 @@ struct mbedtls_ssl_config
 #endif
 
 #if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
+#if defined(MBEDTLS_SSL_SRV_C)
     /** Callback to retrieve PSK key from identity                          */
     int (*MBEDTLS_PRIVATE(f_psk))(void *, mbedtls_ssl_context *, const unsigned char *, size_t);
     void *MBEDTLS_PRIVATE(p_psk);                    /*!< context for PSK callback           */
+#endif
 #endif
 
 #if defined(MBEDTLS_SSL_DTLS_HELLO_VERIFY) && defined(MBEDTLS_SSL_SRV_C)
@@ -2322,7 +2328,7 @@ int mbedtls_ssl_check_record( mbedtls_ssl_context const *ssl,
  *                 here, except if using an event-driven style.
  *
  * \note           See also the "DTLS tutorial" article in our knowledge base.
- *                 https://tls.mbed.org/kb/how-to/dtls-tutorial
+ *                 https://mbed-tls.readthedocs.io/en/latest/kb/how-to/dtls-tutorial
  */
 void mbedtls_ssl_set_timer_cb( mbedtls_ssl_context *ssl,
                                void *p_timer,
@@ -3415,6 +3421,7 @@ int mbedtls_ssl_set_hs_psk_opaque( mbedtls_ssl_context *ssl,
                                    mbedtls_svc_key_id_t psk );
 #endif /* MBEDTLS_USE_PSA_CRYPTO */
 
+#if defined(MBEDTLS_SSL_SRV_C)
 /**
  * \brief          Set the PSK callback (server-side only).
  *
@@ -3457,6 +3464,7 @@ void mbedtls_ssl_conf_psk_cb( mbedtls_ssl_config *conf,
                      int (*f_psk)(void *, mbedtls_ssl_context *, const unsigned char *,
                                   size_t),
                      void *p_psk );
+#endif /* MBEDTLS_SSL_SRV_C */
 #endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
 
 #if defined(MBEDTLS_DHM_C) && defined(MBEDTLS_SSL_SRV_C)

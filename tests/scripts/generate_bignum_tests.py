@@ -31,7 +31,7 @@ following:
         function.
   - arguments(): a method to generate the list of arguments required for the
         test_function.
-  - generate_function_test(): a method to generate TestCases for the function.
+  - generate_function_tests(): a method to generate TestCases for the function.
         This should create instances of the class with required input data, and
         call `.create_test_case()` to yield the TestCase.
 
@@ -189,7 +189,7 @@ class BignumOperation(BignumTarget, metaclass=ABCMeta):
 class BignumCmp(BignumOperation):
     """Test cases for bignum value comparison."""
     count = 0
-    test_function = "mbedtls_mpi_cmp_mpi"
+    test_function = "mpi_cmp_mpi"
     test_name = "MPI compare"
     input_cases = [
         ("-2", "-3"),
@@ -210,7 +210,7 @@ class BignumCmp(BignumOperation):
 class BignumCmpAbs(BignumCmp):
     """Test cases for absolute bignum value comparison."""
     count = 0
-    test_function = "mbedtls_mpi_cmp_abs"
+    test_function = "mpi_cmp_abs"
     test_name = "MPI compare (abs)"
 
     def __init__(self, val_a, val_b) -> None:
@@ -221,7 +221,7 @@ class BignumAdd(BignumOperation):
     """Test cases for bignum value addition."""
     count = 0
     symbol = "+"
-    test_function = "mbedtls_mpi_add_mpi"
+    test_function = "mpi_add_mpi"
     test_name = "MPI add"
     input_cases = combination_pairs(
         [
