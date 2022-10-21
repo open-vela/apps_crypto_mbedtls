@@ -29,6 +29,47 @@ class BignumCoreTarget(test_data_generation.BaseTarget, metaclass=ABCMeta):
     target_basename = 'test_suite_bignum_core.generated'
 
 
+class BignumCoreShiftR(BignumCoreTarget, metaclass=ABCMeta):
+    """Test cases for mbedtls_bignum_core_shift_r()."""
+    count = 0
+    test_function = "mpi_core_shift_r"
+    test_name = "Core shift right"
+
+    DATA = [
+        ('00', '0', [0, 1, 8]),
+        ('01', '1', [0, 1, 2, 8, 64]),
+        ('dee5ca1a7ef10a75', '64-bit',
+         list(range(11)) + [31, 32, 33, 63, 64, 65, 71, 72]),
+        ('002e7ab0070ad57001', '[leading 0 limb]',
+         [0, 1, 8, 63, 64]),
+        ('a1055eb0bb1efa1150ff', '80-bit',
+         [0, 1, 8, 63, 64, 65, 72, 79, 80, 81, 88, 128, 129, 136]),
+        ('020100000000000000001011121314151617', '138-bit',
+         [0, 1, 8, 9, 16, 72, 73, 136, 137, 138, 144]),
+    ]
+
+    def __init__(self, input_hex: str, descr: str, count: int) -> None:
+        self.input_hex = input_hex
+        self.number_description = descr
+        self.shift_count = count
+        self.result = bignum_common.hex_to_int(input_hex) >> count
+
+    def arguments(self) -> List[str]:
+        return ['"{}"'.format(self.input_hex),
+                str(self.shift_count),
+                '"{:0{}x}"'.format(self.result, len(self.input_hex))]
+
+    def description(self) -> str:
+        return 'Core shift {} >> {}'.format(self.number_description,
+                                            self.shift_count)
+
+    @classmethod
+    def generate_function_tests(cls) -> Iterator[test_case.TestCase]:
+        for input_hex, descr, counts in cls.DATA:
+            for count in counts:
+                yield cls(input_hex, descr, count).create_test_case()
+
+
 class BignumCoreOperation(bignum_common.OperationCommon, BignumCoreTarget, metaclass=ABCMeta):
     #pylint: disable=abstract-method
     """Common features for bignum core operations."""
@@ -61,8 +102,8 @@ class BignumCoreOperation(bignum_common.OperationCommon, BignumCoreTarget, metac
         generated to provide some context to the test case.
         """
         if not self.case_description:
-            self.case_description = "{:x} {} {:x}".format(
-                self.int_a, self.symbol, self.int_b
+            self.case_description = "{} {} {}".format(
+                self.arg_a, self.symbol, self.arg_b
             )
         return super().description()
 
@@ -72,38 +113,8 @@ class BignumCoreOperation(bignum_common.OperationCommon, BignumCoreTarget, metac
             yield cls(a_value, b_value).create_test_case()
 
 
-class BignumCoreOperationArchSplit(BignumCoreOperation):
-    #pylint: disable=abstract-method
-    """Common features for bignum core operations where the result depends on
-    the limb size."""
 
-    def __init__(self, val_a: str, val_b: str, bits_in_limb: int) -> None:
-        super().__init__(val_a, val_b)
-        bound_val = max(self.int_a, self.int_b)
-        self.bits_in_limb = bits_in_limb
-        self.bound = bignum_common.bound_mpi(bound_val, self.bits_in_limb)
-        limbs = bignum_common.limbs_mpi(bound_val, self.bits_in_limb)
-        byte_len = limbs * self.bits_in_limb // 8
-        self.hex_digits = 2 * byte_len
-        if self.bits_in_limb == 32:
-            self.dependencies = ["MBEDTLS_HAVE_INT32"]
-        elif self.bits_in_limb == 64:
-            self.dependencies = ["MBEDTLS_HAVE_INT64"]
-        else:
-            raise ValueError("Invalid number of bits in limb!")
-        self.arg_a = self.arg_a.zfill(self.hex_digits)
-        self.arg_b = self.arg_b.zfill(self.hex_digits)
-
-    def pad_to_limbs(self, val) -> str:
-        return "{:x}".format(val).zfill(self.hex_digits)
-
-    @classmethod
-    def generate_function_tests(cls) -> Iterator[test_case.TestCase]:
-        for a_value, b_value in cls.get_value_pairs():
-            yield cls(a_value, b_value, 32).create_test_case()
-            yield cls(a_value, b_value, 64).create_test_case()
-
-class BignumCoreAddIf(BignumCoreOperationArchSplit):
+class BignumCoreAddIf(BignumCoreOperation):
     """Test cases for bignum core add if."""
     count = 0
     symbol = "+"
@@ -111,14 +122,19 @@ class BignumCoreAddIf(BignumCoreOperationArchSplit):
     test_name = "mbedtls_mpi_core_add_if"
 
     def result(self) -> List[str]:
-        result = self.int_a + self.int_b
-
-        carry, result = divmod(result, self.bound)
-
+        tmp = self.int_a + self.int_b
+        bound_val = max(self.int_a, self.int_b)
+        bound_4 = bignum_common.bound_mpi(bound_val, 32)
+        bound_8 = bignum_common.bound_mpi(bound_val, 64)
+        carry_4, remainder_4 = divmod(tmp, bound_4)
+        carry_8, remainder_8 = divmod(tmp, bound_8)
         return [
-            bignum_common.quote_str(self.pad_to_limbs(result)),
-            str(carry)
+            "\"{:x}\"".format(remainder_4),
+            str(carry_4),
+            "\"{:x}\"".format(remainder_8),
+            str(carry_8)
         ]
+
 
 class BignumCoreSub(BignumCoreOperation):
     """Test cases for bignum core sub."""
