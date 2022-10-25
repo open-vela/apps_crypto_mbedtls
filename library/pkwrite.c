@@ -51,7 +51,13 @@
 #include "psa/crypto.h"
 #include "mbedtls/psa_util.h"
 #endif
+#if defined(MBEDTLS_PLATFORM_C)
 #include "mbedtls/platform.h"
+#else
+#include <stdlib.h>
+#define mbedtls_calloc    calloc
+#define mbedtls_free       free
+#endif
 
 #if defined(MBEDTLS_RSA_C)
 /*
