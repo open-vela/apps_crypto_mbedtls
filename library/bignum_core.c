@@ -316,6 +316,8 @@ int mbedtls_mpi_core_write_be( const mbedtls_mpi_uint *X,
     return( 0 );
 }
 
+
+
 void mbedtls_mpi_core_shift_r( mbedtls_mpi_uint *X, size_t limbs,
                                size_t count )
 {
@@ -358,24 +360,7 @@ void mbedtls_mpi_core_shift_r( mbedtls_mpi_uint *X, size_t limbs,
     }
 }
 
-mbedtls_mpi_uint mbedtls_mpi_core_add( mbedtls_mpi_uint *X,
-                                       const mbedtls_mpi_uint *A,
-                                       const mbedtls_mpi_uint *B,
-                                       size_t limbs )
-{
-    mbedtls_mpi_uint c = 0;
 
-    for( size_t i = 0; i < limbs; i++ )
-    {
-        mbedtls_mpi_uint t = c + A[i];
-        c = ( t < A[i] );
-        t += B[i];
-        c += ( t < B[i] );
-        X[i] = t;
-    }
-
-    return( c );
-}
 
 mbedtls_mpi_uint mbedtls_mpi_core_add_if( mbedtls_mpi_uint *X,
                                           const mbedtls_mpi_uint *A,
@@ -524,20 +509,6 @@ void mbedtls_mpi_core_montmul( mbedtls_mpi_uint *X,
      * but is in (the lower AN_limbs limbs of) T if (carry ^ borrow) = 1.
      */
     mbedtls_ct_mpi_uint_cond_assign( AN_limbs, X, T, (unsigned char) ( carry ^ borrow ) );
-}
-
-int mbedtls_mpi_core_get_mont_r2_unsafe( mbedtls_mpi *X,
-                                         const mbedtls_mpi *N )
-{
-    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
-
-    MBEDTLS_MPI_CHK( mbedtls_mpi_lset( X, 1 ) );
-    MBEDTLS_MPI_CHK( mbedtls_mpi_shift_l( X, N->n * 2 * biL ) );
-    MBEDTLS_MPI_CHK( mbedtls_mpi_mod_mpi( X, X, N ) );
-    MBEDTLS_MPI_CHK( mbedtls_mpi_shrink( X, N->n ) );
-
-cleanup:
-    return( ret );
 }
 
 #endif /* MBEDTLS_BIGNUM_C */
