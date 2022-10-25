@@ -278,28 +278,6 @@ void mbedtls_mpi_core_shift_r( mbedtls_mpi_uint *X, size_t limbs,
                                size_t count );
 
 /**
- * \brief Add two fixed-size large unsigned integers, returning the carry.
- *
- * Calculates `A + B` where `A` and `B` have the same size.
- *
- * This function operates modulo `2^(biL*limbs)` and returns the carry
- * (1 if there was a wraparound, and 0 otherwise).
- *
- * \p X may be aliased to \p A or \p B.
- *
- * \param[out] X    The result of the addition.
- * \param[in] A     Little-endian presentation of the left operand.
- * \param[in] B     Little-endian presentation of the right operand.
- * \param limbs     Number of limbs of \p X, \p A and \p B.
- *
- * \return          1 if `A + B >= 2^(biL*limbs)`, 0 otherwise.
- */
-mbedtls_mpi_uint mbedtls_mpi_core_add( mbedtls_mpi_uint *X,
-                                       const mbedtls_mpi_uint *A,
-                                       const mbedtls_mpi_uint *B,
-                                       size_t limbs );
-
-/**
  * \brief Conditional addition of two fixed-size large unsigned integers,
  *        returning the carry.
  *
@@ -433,23 +411,5 @@ void mbedtls_mpi_core_montmul( mbedtls_mpi_uint *X,
                                const mbedtls_mpi_uint *B, size_t B_limbs,
                                const mbedtls_mpi_uint *N, size_t AN_limbs,
                                mbedtls_mpi_uint mm, mbedtls_mpi_uint *T );
-
-/**
- * \brief Calculate the square of the Montgomery constant. (Needed
- *        for conversion and operations in Montgomery form.)
- *
- * \param[out] X  A pointer to the result of the calculation of
- *                the square of the Montgomery constant:
- *                2^{2*n*biL} mod N.
- * \param[in]  N  Little-endian presentation of the modulus, which must be odd.
- *
- * \return        0 if successful.
- * \return        #MBEDTLS_ERR_MPI_ALLOC_FAILED if there is not enough space
- *                to store the value of Montgomery constant squared.
- * \return        #MBEDTLS_ERR_MPI_DIVISION_BY_ZERO if \p N modulus is zero.
- * \return        #MBEDTLS_ERR_MPI_NEGATIVE_VALUE if \p N modulus is negative.
- */
-int mbedtls_mpi_core_get_mont_r2_unsafe( mbedtls_mpi *X,
-                                         const mbedtls_mpi *N );
 
 #endif /* MBEDTLS_BIGNUM_CORE_H */
