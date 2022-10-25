@@ -1633,21 +1633,6 @@
 #define MBEDTLS_SSL_TLS1_3_DEFAULT_NEW_SESSION_TICKETS 1
 
 /**
-* \def MBEDTLS_SSL_EARLY_DATA
-*
-* Enable support for RFC 8446 TLS 1.3 early data.
-*
-* Requires: MBEDTLS_SSL_PROTO_TLS1_3
-*
-* Comment this to disable support for early data.
-*
-* This feature is experimental, not completed and thus not ready for
-* production.
-*
-*/
-//#define MBEDTLS_SSL_EARLY_DATA
-
-/**
  * \def MBEDTLS_SSL_PROTO_DTLS
  *
  * Enable support for DTLS (all available versions).
