@@ -329,6 +329,9 @@
 #define MBEDTLS_SSL_CERT_REQ_CA_LIST_ENABLED       1
 #define MBEDTLS_SSL_CERT_REQ_CA_LIST_DISABLED      0
 
+#define MBEDTLS_SSL_EARLY_DATA_DISABLED        0
+#define MBEDTLS_SSL_EARLY_DATA_ENABLED         1
+
 #define MBEDTLS_SSL_DTLS_SRTP_MKI_UNSUPPORTED    0
 #define MBEDTLS_SSL_DTLS_SRTP_MKI_SUPPORTED      1
 
@@ -1188,6 +1191,10 @@ struct mbedtls_ssl_session
     uint8_t MBEDTLS_PRIVATE(resumption_key_len);            /*!< resumption_key length */
     unsigned char MBEDTLS_PRIVATE(resumption_key)[MBEDTLS_SSL_TLS1_3_TICKET_RESUMPTION_KEY_LEN];
 
+#if defined(MBEDTLS_SSL_SERVER_NAME_INDICATION) && defined(MBEDTLS_SSL_CLI_C)
+    char *MBEDTLS_PRIVATE(hostname);             /*!< host name binded with tickets */
+#endif /* MBEDTLS_SSL_SERVER_NAME_INDICATION && MBEDTLS_SSL_CLI_C */
+
 #if defined(MBEDTLS_HAVE_TIME) && defined(MBEDTLS_SSL_CLI_C)
     mbedtls_time_t MBEDTLS_PRIVATE(ticket_received);        /*!< time ticket was received */
 #endif /* MBEDTLS_HAVE_TIME && MBEDTLS_SSL_CLI_C */
@@ -1389,10 +1396,12 @@ struct mbedtls_ssl_config
     void *MBEDTLS_PRIVATE(p_vrfy);                   /*!< context for X.509 verify calllback */
 #endif
 
-#if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
+#if defined(MBEDTLS_SSL_HANDSHAKE_WITH_PSK_ENABLED)
+#if defined(MBEDTLS_SSL_SRV_C)
     /** Callback to retrieve PSK key from identity                          */
     int (*MBEDTLS_PRIVATE(f_psk))(void *, mbedtls_ssl_context *, const unsigned char *, size_t);
     void *MBEDTLS_PRIVATE(p_psk);                    /*!< context for PSK callback           */
+#endif
 #endif
 
 #if defined(MBEDTLS_SSL_DTLS_HELLO_VERIFY) && defined(MBEDTLS_SSL_SRV_C)
@@ -1438,13 +1447,13 @@ struct mbedtls_ssl_config
     void *MBEDTLS_PRIVATE(p_async_config_data); /*!< Configuration data set by mbedtls_ssl_conf_async_private_cb(). */
 #endif /* MBEDTLS_SSL_ASYNC_PRIVATE */
 
-#if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
+#if defined(MBEDTLS_SSL_HANDSHAKE_WITH_CERT_ENABLED)
 
 #if !defined(MBEDTLS_DEPRECATED_REMOVED)
     const int *MBEDTLS_PRIVATE(sig_hashes);         /*!< allowed signature hashes           */
 #endif
     const uint16_t *MBEDTLS_PRIVATE(sig_algs);      /*!< allowed signature algorithms       */
-#endif
+#endif /* MBEDTLS_SSL_HANDSHAKE_WITH_CERT_ENABLED */
 
 #if defined(MBEDTLS_ECP_C) && !defined(MBEDTLS_DEPRECATED_REMOVED)
     const mbedtls_ecp_group_id *MBEDTLS_PRIVATE(curve_list); /*!< allowed curves             */
@@ -1457,7 +1466,7 @@ struct mbedtls_ssl_config
     mbedtls_mpi MBEDTLS_PRIVATE(dhm_G);              /*!< generator for DHM                  */
 #endif
 
-#if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
+#if defined(MBEDTLS_SSL_HANDSHAKE_WITH_PSK_ENABLED)
 
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
     mbedtls_svc_key_id_t MBEDTLS_PRIVATE(psk_opaque); /*!< PSA key slot holding opaque PSK. This field
@@ -1488,7 +1497,13 @@ struct mbedtls_ssl_config
                                      *   Its value is non-zero if and only if
                                      *   \c psk is not \c NULL or \c psk_opaque
                                      *   is not \c 0. */
-#endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
+#endif /* MBEDTLS_SSL_HANDSHAKE_WITH_PSK_ENABLED */
+
+#if defined(MBEDTLS_SSL_EARLY_DATA)
+    int MBEDTLS_PRIVATE(early_data_enabled);     /*!< Early data enablement:
+                                                  *   - MBEDTLS_SSL_EARLY_DATA_DISABLED,
+                                                  *   - MBEDTLS_SSL_EARLY_DATA_ENABLED */
+#endif /* MBEDTLS_SSL_EARLY_DATA */
 
 #if defined(MBEDTLS_SSL_ALPN)
     const char **MBEDTLS_PRIVATE(alpn_list);         /*!< ordered list of protocols          */
@@ -1898,6 +1913,30 @@ void mbedtls_ssl_conf_transport( mbedtls_ssl_config *conf, int transport );
  * against the "triple handshake" attack even before it was found.
  */
 void mbedtls_ssl_conf_authmode( mbedtls_ssl_config *conf, int authmode );
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3) && defined(MBEDTLS_SSL_EARLY_DATA)
+/**
+* \brief    Set the early data mode
+*           Default: disabled on server and client
+*
+* \param conf   The SSL configuration to use.
+* \param early_data_enabled can be:
+*
+*  MBEDTLS_SSL_EARLY_DATA_DISABLED:  early data functionality is disabled
+*                                    This is the default on client and server.
+*
+*  MBEDTLS_SSL_EARLY_DATA_ENABLED:  early data functionality is enabled and
+*                        may be negotiated in the handshake. Application using
+*                        early data functionality needs to be aware of the
+*                        lack of replay protection of the early data application
+*                        payloads.
+*
+* \warning This interface is experimental and may change without notice.
+*
+*/
+void mbedtls_ssl_tls13_conf_early_data( mbedtls_ssl_config *conf,
+                                  int early_data_enabled );
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3 && MBEDTLS_SSL_EARLY_DATA */
 
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
 /**
@@ -2322,7 +2361,7 @@ int mbedtls_ssl_check_record( mbedtls_ssl_context const *ssl,
  *                 here, except if using an event-driven style.
  *
  * \note           See also the "DTLS tutorial" article in our knowledge base.
- *                 https://tls.mbed.org/kb/how-to/dtls-tutorial
+ *                 https://mbed-tls.readthedocs.io/en/latest/kb/how-to/dtls-tutorial
  */
 void mbedtls_ssl_set_timer_cb( mbedtls_ssl_context *ssl,
                                void *p_timer,
@@ -3290,7 +3329,7 @@ int mbedtls_ssl_conf_own_cert( mbedtls_ssl_config *conf,
                               mbedtls_pk_context *pk_key );
 #endif /* MBEDTLS_X509_CRT_PARSE_C */
 
-#if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
+#if defined(MBEDTLS_SSL_HANDSHAKE_WITH_PSK_ENABLED)
 /**
  * \brief          Configure pre-shared keys (PSKs) and their
  *                 identities to be used in PSK-based ciphersuites.
@@ -3415,6 +3454,7 @@ int mbedtls_ssl_set_hs_psk_opaque( mbedtls_ssl_context *ssl,
                                    mbedtls_svc_key_id_t psk );
 #endif /* MBEDTLS_USE_PSA_CRYPTO */
 
+#if defined(MBEDTLS_SSL_SRV_C)
 /**
  * \brief          Set the PSK callback (server-side only).
  *
@@ -3457,7 +3497,8 @@ void mbedtls_ssl_conf_psk_cb( mbedtls_ssl_config *conf,
                      int (*f_psk)(void *, mbedtls_ssl_context *, const unsigned char *,
                                   size_t),
                      void *p_psk );
-#endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
+#endif /* MBEDTLS_SSL_SRV_C */
+#endif /* MBEDTLS_SSL_HANDSHAKE_WITH_PSK_ENABLED */
 
 #if defined(MBEDTLS_DHM_C) && defined(MBEDTLS_SSL_SRV_C)
 /**
@@ -3590,7 +3631,7 @@ void MBEDTLS_DEPRECATED mbedtls_ssl_conf_curves( mbedtls_ssl_config *conf,
 void mbedtls_ssl_conf_groups( mbedtls_ssl_config *conf,
                               const uint16_t *groups );
 
-#if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
+#if defined(MBEDTLS_SSL_HANDSHAKE_WITH_CERT_ENABLED)
 #if !defined(MBEDTLS_DEPRECATED_REMOVED) && defined(MBEDTLS_SSL_PROTO_TLS1_2)
 /**
  * \brief          Set the allowed hashes for signatures during the handshake.
@@ -3636,7 +3677,7 @@ void MBEDTLS_DEPRECATED mbedtls_ssl_conf_sig_hashes( mbedtls_ssl_config *conf,
  */
 void mbedtls_ssl_conf_sig_algs( mbedtls_ssl_config *conf,
                                 const uint16_t* sig_algs );
-#endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
+#endif /* MBEDTLS_SSL_HANDSHAKE_WITH_CERT_ENABLED */
 
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
 /**
