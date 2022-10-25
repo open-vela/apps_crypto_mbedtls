@@ -35,7 +35,9 @@
 #if defined(MBEDTLS_TIMING_C)
 #include "mbedtls/timing.h"
 #endif
+#if defined(MBEDTLS_ENTROPY_NV_SEED) || !defined(HAVE_SYSCTL_ARND)
 #include "mbedtls/platform.h"
+#endif
 
 #if !defined(MBEDTLS_NO_PLATFORM_ENTROPY)
 
