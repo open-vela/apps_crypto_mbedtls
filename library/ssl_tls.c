@@ -1425,14 +1425,6 @@ void mbedtls_ssl_conf_tls13_key_exchange_modes( mbedtls_ssl_config *conf,
 {
     conf->tls13_kex_modes = kex_modes & MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_ALL;
 }
-
-#if defined(MBEDTLS_SSL_EARLY_DATA)
-void mbedtls_ssl_tls13_conf_early_data( mbedtls_ssl_config *conf,
-                                  int early_data_enabled )
-{
-    conf->early_data_enabled = early_data_enabled;
-}
-#endif /* MBEDTLS_SSL_EARLY_DATA */
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
@@ -5275,13 +5267,6 @@ int mbedtls_ssl_get_handshake_transcript( mbedtls_ssl_context *ssl,
 #endif /* MBEDTLS_HAS_ALG_SHA_256_VIA_MD_OR_PSA_BASED_ON_USE_PSA*/
 
     default:
-#if !defined(MBEDTLS_HAS_ALG_SHA_384_VIA_MD_OR_PSA_BASED_ON_USE_PSA) && \
-    !defined(MBEDTLS_HAS_ALG_SHA_256_VIA_MD_OR_PSA_BASED_ON_USE_PSA)
-    (void) ssl;
-    (void) dst;
-    (void) dst_len;
-    (void) olen;
-#endif
         break;
     }
     return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
@@ -5468,8 +5453,8 @@ static psa_status_t setup_psa_key_derivation( psa_key_derivation_operation_t* de
     return( PSA_SUCCESS );
 }
 
-#if defined(PSA_WANT_ALG_SHA_384) || \
-    defined(PSA_WANT_ALG_SHA_256)
+#if defined(MBEDTLS_HAS_ALG_SHA_384_VIA_MD_OR_PSA_BASED_ON_USE_PSA) || \
+    defined(MBEDTLS_HAS_ALG_SHA_256_VIA_MD_OR_PSA_BASED_ON_USE_PSA)
 MBEDTLS_CHECK_RETURN_CRITICAL
 static int tls_prf_generic( mbedtls_md_type_t md_type,
                             const unsigned char *secret, size_t slen,
@@ -5544,12 +5529,9 @@ static int tls_prf_generic( mbedtls_md_type_t md_type,
 
     return( 0 );
 }
-#endif /* PSA_WANT_ALG_SHA_256 || PSA_WANT_ALG_SHA_384 */
+#endif
 #else /* MBEDTLS_USE_PSA_CRYPTO */
 
-#if defined(MBEDTLS_MD_C) &&       \
-    ( defined(MBEDTLS_SHA256_C) || \
-      defined(MBEDTLS_SHA384_C) )
 MBEDTLS_CHECK_RETURN_CRITICAL
 static int tls_prf_generic( mbedtls_md_type_t md_type,
                             const unsigned char *secret, size_t slen,
@@ -5640,7 +5622,6 @@ exit:
 
     return( ret );
 }
-#endif /* MBEDTLS_MD_C && ( MBEDTLS_SHA256_C || MBEDTLS_SHA384_C ) */
 #endif /* MBEDTLS_USE_PSA_CRYPTO */
 
 #if defined(MBEDTLS_HAS_ALG_SHA_256_VIA_MD_OR_PSA_BASED_ON_USE_PSA)
