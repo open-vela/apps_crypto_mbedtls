@@ -1130,7 +1130,7 @@
  *
  * Enable support for PKCS#1 v1.5 encoding.
  *
- * Requires: MBEDTLS_MD_C, MBEDTLS_RSA_C
+ * Requires: MBEDTLS_RSA_C
  *
  * This enables support for PKCS#1 v1.5 operations.
  */
@@ -1631,23 +1631,6 @@
  *
  */
 #define MBEDTLS_SSL_TLS1_3_DEFAULT_NEW_SESSION_TICKETS 1
-
-/**
-* \def MBEDTLS_SSL_EARLY_DATA
-*
-* Enable support for RFC 8446 TLS 1.3 early data.
-*
-* Requires: MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_ENABLED or
-*           MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_EPHEMERAL_ENABLED
-*
-* Comment this to disable support for early data. If MBEDTLS_SSL_PROTO_TLS1_3
-* is not enabled, this option does not have any effect on the build.
-*
-* This feature is experimental, not completed and thus not ready for
-* production.
-*
-*/
-//#define MBEDTLS_SSL_EARLY_DATA
 
 /**
  * \def MBEDTLS_SSL_PROTO_DTLS
