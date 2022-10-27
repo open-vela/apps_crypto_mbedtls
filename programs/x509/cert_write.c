@@ -56,6 +56,9 @@ int main( void )
 #define USAGE_CSR ""
 #endif /* MBEDTLS_X509_CSR_PARSE_C */
 
+#define FORMAT_PEM              0
+#define FORMAT_DER              1
+
 #define DFL_ISSUER_CRT          ""
 #define DFL_REQUEST_FILE        ""
 #define DFL_SUBJECT_KEY         "subject.key"
@@ -78,6 +81,7 @@ int main( void )
 #define DFL_SUBJ_IDENT          1
 #define DFL_CONSTRAINTS         1
 #define DFL_DIGEST              MBEDTLS_MD_SHA256
+#define DFL_FORMAT              FORMAT_PEM
 
 #define USAGE \
     "\n usage: cert_write param=<>...\n"                \
@@ -138,6 +142,7 @@ int main( void )
     "                            ssl_ca\n"                \
     "                            email_ca\n"              \
     "                            object_signing_ca\n"     \
+    "   format=pem|der           default: pem\n"         \
     "\n"
 
 
@@ -168,6 +173,7 @@ struct options
     mbedtls_md_type_t md;       /* Hash used for signing                */
     unsigned char key_usage;    /* key usage flags                      */
     unsigned char ns_cert_type; /* NS cert type                         */
+    int format;                 /* format                               */
 } opt;
 
 int write_certificate( mbedtls_x509write_cert *crt, const char *output_file,
@@ -177,19 +183,33 @@ int write_certificate( mbedtls_x509write_cert *crt, const char *output_file,
     int ret;
     FILE *f;
     unsigned char output_buf[4096];
+    unsigned char *output_start;
     size_t len = 0;
 
     memset( output_buf, 0, 4096 );
-    if( ( ret = mbedtls_x509write_crt_pem( crt, output_buf, 4096,
-                                           f_rng, p_rng ) ) < 0 )
-        return( ret );
+    if ( opt.format == FORMAT_DER )
+    {
+        ret = mbedtls_x509write_crt_der( crt, output_buf, 4096,
+                                           f_rng, p_rng );
+        if( ret < 0 )
+            return( ret );
 
-    len = strlen( (char *) output_buf );
+        len = ret;
+        output_start = output_buf + 4096 - len;
+    } else {
+        ret = mbedtls_x509write_crt_pem( crt, output_buf, 4096,
+                                           f_rng, p_rng );
+        if( ret < 0 )
+            return( ret );
+
+        len = strlen( (char *) output_buf );
+        output_start = output_buf;
+    }
 
     if( ( f = fopen( output_file, "w" ) ) == NULL )
         return( -1 );
 
-    if( fwrite( output_buf, 1, len, f ) != len )
+    if( fwrite( output_start, 1, len, f ) != len )
     {
         fclose( f );
         return( -1 );
@@ -266,6 +286,7 @@ int main( int argc, char *argv[] )
     opt.subject_identifier   = DFL_SUBJ_IDENT;
     opt.authority_identifier = DFL_AUTH_IDENT;
     opt.basic_constraints    = DFL_CONSTRAINTS;
+    opt.format              = DFL_FORMAT;
 
     for( i = 1; i < argc; i++ )
     {
@@ -445,6 +466,16 @@ int main( int argc, char *argv[] )
                 }
 
                 q = r;
+            }
+        }
+        else if( strcmp( p, "format" ) == 0 )
+        {
+            if      ( strcmp(q, "der" ) == 0 ) opt.format = FORMAT_DER;
+            else if ( strcmp(q, "pem" ) == 0 ) opt.format = FORMAT_PEM;
+            else
+            {
+                mbedtls_printf( "Invalid argument for option %s\n", p );
+                goto usage;
             }
         }
         else
