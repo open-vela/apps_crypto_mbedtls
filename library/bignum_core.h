@@ -262,6 +262,21 @@ int mbedtls_mpi_core_write_be( const mbedtls_mpi_uint *A,
                                unsigned char *output,
                                size_t output_length );
 
+/** \brief              Shift an MPI right in place by a number of bits.
+ *
+ *                      Shifting by more bits than there are bit positions
+ *                      in \p X is valid and results in setting \p X to 0.
+ *
+ *                      This function's execution time depends on the value
+ *                      of \p count (and of course \p limbs).
+ *
+ * \param[in,out] X     The number to shift.
+ * \param limbs         The number of limbs of \p X. This must be at least 1.
+ * \param count         The number of bits to shift by.
+ */
+void mbedtls_mpi_core_shift_r( mbedtls_mpi_uint *X, size_t limbs,
+                               size_t count );
+
 /**
  * \brief Conditional addition of two fixed-size large unsigned integers,
  *        returning the carry.
@@ -396,5 +411,23 @@ void mbedtls_mpi_core_montmul( mbedtls_mpi_uint *X,
                                const mbedtls_mpi_uint *B, size_t B_limbs,
                                const mbedtls_mpi_uint *N, size_t AN_limbs,
                                mbedtls_mpi_uint mm, mbedtls_mpi_uint *T );
+
+/**
+ * \brief Calculate the square of the Montgomery constant. (Needed
+ *        for conversion and operations in Montgomery form.)
+ *
+ * \param[out] X  A pointer to the result of the calculation of
+ *                the square of the Montgomery constant:
+ *                2^{2*n*biL} mod N.
+ * \param[in]  N  Little-endian presentation of the modulus, which must be odd.
+ *
+ * \return        0 if successful.
+ * \return        #MBEDTLS_ERR_MPI_ALLOC_FAILED if there is not enough space
+ *                to store the value of Montgomery constant squared.
+ * \return        #MBEDTLS_ERR_MPI_DIVISION_BY_ZERO if \p N modulus is zero.
+ * \return        #MBEDTLS_ERR_MPI_NEGATIVE_VALUE if \p N modulus is negative.
+ */
+int mbedtls_mpi_core_get_mont_r2_unsafe( mbedtls_mpi *X,
+                                         const mbedtls_mpi *N );
 
 #endif /* MBEDTLS_BIGNUM_CORE_H */
