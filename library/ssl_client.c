@@ -24,7 +24,13 @@
 #if defined(MBEDTLS_SSL_CLI_C)
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3) || defined(MBEDTLS_SSL_PROTO_TLS1_2)
 
+#if defined(MBEDTLS_PLATFORM_C)
 #include "mbedtls/platform.h"
+#else
+#include <stdlib.h>
+#define mbedtls_calloc    calloc
+#define mbedtls_free      free
+#endif
 
 #include <string.h>
 
@@ -370,11 +376,9 @@ static int ssl_write_client_hello_cipher_suites(
     /*
      * Add TLS_EMPTY_RENEGOTIATION_INFO_SCSV
      */
-    int renegotiating = 0;
 #if defined(MBEDTLS_SSL_RENEGOTIATION)
-    renegotiating = ( ssl->renego_status != MBEDTLS_SSL_INITIAL_HANDSHAKE );
+    if( ssl->renego_status == MBEDTLS_SSL_INITIAL_HANDSHAKE )
 #endif
-    if( !renegotiating )
     {
         MBEDTLS_SSL_DEBUG_MSG( 3, ( "adding EMPTY_RENEGOTIATION_INFO_SCSV" ) );
         MBEDTLS_SSL_CHK_BUF_PTR( p, end, 2 );
@@ -610,7 +614,7 @@ static int ssl_write_client_hello_body( mbedtls_ssl_context *ssl,
     }
 #endif /* MBEDTLS_ECDH_C || MBEDTLS_ECDSA_C || MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED */
 
-#if defined(MBEDTLS_SSL_HANDSHAKE_WITH_CERT_ENABLED)
+#if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
     if(
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3)
         ( propose_tls13 && mbedtls_ssl_conf_tls13_ephemeral_enabled( ssl ) ) ||
@@ -625,7 +629,7 @@ static int ssl_write_client_hello_body( mbedtls_ssl_context *ssl,
             return( ret );
         p += output_len;
     }
-#endif /* MBEDTLS_SSL_HANDSHAKE_WITH_CERT_ENABLED */
+#endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_2)
     if( propose_tls12 )
@@ -639,7 +643,8 @@ static int ssl_write_client_hello_body( mbedtls_ssl_context *ssl,
     }
 #endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
 
-#if defined(MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_SOME_PSK_ENABLED)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3) && \
+    defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
     /* The "pre_shared_key" extension (RFC 8446 Section 4.2.11)
      * MUST be the last extension in the ClientHello.
      */
@@ -651,7 +656,7 @@ static int ssl_write_client_hello_body( mbedtls_ssl_context *ssl,
             return( ret );
         p += output_len;
     }
-#endif /* MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_SOME_PSK_ENABLED */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3 && MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
 
     /* Write the length of the list of extensions. */
     extensions_len = p - p_extensions_len - 2;
@@ -714,34 +719,6 @@ static int ssl_prepare_client_hello( mbedtls_ssl_context *ssl )
 {
     int ret;
     size_t session_id_len;
-    mbedtls_ssl_session *session_negotiate = ssl->session_negotiate;
-
-    if( session_negotiate == NULL )
-        return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
-
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3) && \
-    defined(MBEDTLS_SSL_SESSION_TICKETS) && \
-    defined(MBEDTLS_HAVE_TIME)
-
-    /* Check if a tls13 ticket has been configured. */
-    if( ssl->handshake->resume != 0 &&
-        session_negotiate->tls_version == MBEDTLS_SSL_VERSION_TLS1_3 &&
-        session_negotiate->ticket != NULL )
-    {
-        mbedtls_time_t now = mbedtls_time( NULL );
-        uint64_t age = (uint64_t)( now - session_negotiate->ticket_received );
-        if( session_negotiate->ticket_received > now ||
-            age > session_negotiate->ticket_lifetime )
-        {
-            /* Without valid ticket, disable session resumption.*/
-            MBEDTLS_SSL_DEBUG_MSG(
-                3, ( "Ticket expired, disable session resumption" ) );
-            ssl->handshake->resume = 0;
-        }
-    }
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3 &&
-          MBEDTLS_SSL_SESSION_TICKETS &&
-          MBEDTLS_HAVE_TIME */
 
     if( ssl->conf->f_rng == NULL )
     {
@@ -760,7 +737,7 @@ static int ssl_prepare_client_hello( mbedtls_ssl_context *ssl )
     {
         if( ssl->handshake->resume )
         {
-             ssl->tls_version = session_negotiate->tls_version;
+             ssl->tls_version = ssl->session_negotiate->tls_version;
              ssl->handshake->min_tls_version = ssl->tls_version;
         }
         else
@@ -794,7 +771,7 @@ static int ssl_prepare_client_hello( mbedtls_ssl_context *ssl )
      * to zero, except in the case of a TLS 1.2 session renegotiation or
      * session resumption.
      */
-    session_id_len = session_negotiate->id_len;
+    session_id_len = ssl->session_negotiate->id_len;
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_2)
     if( ssl->tls_version == MBEDTLS_SSL_VERSION_TLS1_2 )
@@ -813,15 +790,12 @@ static int ssl_prepare_client_hello( mbedtls_ssl_context *ssl )
      * RFC 5077 section 3.4: "When presenting a ticket, the client MAY
      * generate and include a Session ID in the TLS ClientHello."
      */
-        int renegotiating = 0;
 #if defined(MBEDTLS_SSL_RENEGOTIATION)
-        if( ssl->renego_status != MBEDTLS_SSL_INITIAL_HANDSHAKE )
-            renegotiating = 1;
+        if( ssl->renego_status == MBEDTLS_SSL_INITIAL_HANDSHAKE )
 #endif
-        if( !renegotiating )
         {
-            if( ( session_negotiate->ticket != NULL ) &&
-                ( session_negotiate->ticket_len != 0 ) )
+            if( ( ssl->session_negotiate->ticket != NULL ) &&
+                ( ssl->session_negotiate->ticket_len != 0 ) )
             {
                 session_id_len = 32;
             }
@@ -853,13 +827,13 @@ static int ssl_prepare_client_hello( mbedtls_ssl_context *ssl )
     }
 #endif /* MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE */
 
-    if( session_id_len != session_negotiate->id_len )
+    if( session_id_len != ssl->session_negotiate->id_len )
     {
-        session_negotiate->id_len = session_id_len;
+        ssl->session_negotiate->id_len = session_id_len;
         if( session_id_len > 0 )
         {
             ret = ssl->conf->f_rng( ssl->conf->p_rng,
-                                    session_negotiate->id,
+                                    ssl->session_negotiate->id,
                                     session_id_len );
             if( ret != 0 )
             {
@@ -869,39 +843,9 @@ static int ssl_prepare_client_hello( mbedtls_ssl_context *ssl )
         }
     }
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3) && \
-    defined(MBEDTLS_SSL_SESSION_TICKETS) && \
-    defined(MBEDTLS_SSL_SERVER_NAME_INDICATION)
-    if( ssl->tls_version == MBEDTLS_SSL_VERSION_TLS1_3  &&
-        ssl->handshake->resume )
-    {
-        int hostname_mismatch = ssl->hostname != NULL ||
-                                session_negotiate->hostname != NULL;
-        if( ssl->hostname != NULL && session_negotiate->hostname != NULL )
-        {
-            hostname_mismatch = strcmp(
-                ssl->hostname, session_negotiate->hostname ) != 0;
-        }
-
-        if( hostname_mismatch )
-        {
-            MBEDTLS_SSL_DEBUG_MSG(
-                1, ( "Hostname mismatch the session ticket, "
-                     "disable session resumption." ) );
-            return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
-        }
-    }
-    else
-    {
-        return mbedtls_ssl_session_set_hostname( session_negotiate,
-                                                 ssl->hostname );
-    }
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3 &&
-          MBEDTLS_SSL_SESSION_TICKETS &&
-          MBEDTLS_SSL_SERVER_NAME_INDICATION */
-
     return( 0 );
 }
+
 /*
  * Write ClientHello handshake message.
  * Handler for MBEDTLS_SSL_CLIENT_HELLO
@@ -961,7 +905,8 @@ int mbedtls_ssl_write_client_hello( mbedtls_ssl_context *ssl )
         mbedtls_ssl_add_hs_hdr_to_checksum( ssl, MBEDTLS_SSL_HS_CLIENT_HELLO,
                                             msg_len );
         ssl->handshake->update_checksum( ssl, buf, msg_len - binders_len );
-#if defined(MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_SOME_PSK_ENABLED)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3) && \
+    defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
         if( binders_len > 0 )
         {
             MBEDTLS_SSL_PROC_CHK(
@@ -970,7 +915,7 @@ int mbedtls_ssl_write_client_hello( mbedtls_ssl_context *ssl )
             ssl->handshake->update_checksum( ssl, buf + msg_len - binders_len,
                                              binders_len );
         }
-#endif /* MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_SOME_PSK_ENABLED */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3 && MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
 
         MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_finish_handshake_msg( ssl,
                                                                 buf_len,
