@@ -109,8 +109,6 @@ OBJS_CRYPTO= \
 	     hash_info.o \
 	     hkdf.o \
 	     hmac_drbg.o \
-	     lmots.o \
-	     lms.o \
 	     md.o \
 	     md5.o \
 	     memory_buffer_alloc.o \
@@ -137,7 +135,6 @@ OBJS_CRYPTO= \
 	     psa_crypto_ecp.o \
 	     psa_crypto_hash.o \
 	     psa_crypto_mac.o \
-	     psa_crypto_pake.o \
 	     psa_crypto_rsa.o \
 	     psa_crypto_se.o \
 	     psa_crypto_slot_management.o \
@@ -168,6 +165,7 @@ OBJS_X509= \
 	   x509_csr.o \
 	   x509write_crt.o \
 	   x509write_csr.o \
+	   pkcs7.o \
 	   # This line is intentionally left blank
 
 OBJS_TLS= \
@@ -199,7 +197,6 @@ all: shared static
 endif
 
 static: libmbedcrypto.a libmbedx509.a libmbedtls.a
-	cd ../tests && echo "This is a seedfile that contains 64 bytes (65 on Windows)......" > seedfile
 
 shared: libmbedcrypto.$(DLEXT) libmbedx509.$(DLEXT) libmbedtls.$(DLEXT)
 
