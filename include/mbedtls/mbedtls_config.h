@@ -958,7 +958,7 @@
  * might still happen. For this reason, this is disabled by default.
  *
  * Requires: MBEDTLS_ECJPAKE_C
- *           SHA-256 (via MD if present, or via PSA, see MBEDTLS_ECJPAKE_C)
+ *           MBEDTLS_SHA256_C
  *           MBEDTLS_ECP_DP_SECP256R1_ENABLED
  *
  * This enables the following ciphersuites (if other requisites are
@@ -1380,8 +1380,6 @@
  * saved after the handshake to allow for more efficient serialization, so if
  * you don't need this feature you'll save RAM by disabling it.
  *
- * Requires: MBEDTLS_GCM_C or MBEDTLS_CCM_C or MBEDTLS_CHACHAPOLY_C
- *
  * Comment to disable the context serialization APIs.
  */
 #define MBEDTLS_SSL_CONTEXT_SERIALIZATION
@@ -1494,14 +1492,8 @@
  *
  * Enable support for TLS 1.2 (and DTLS 1.2 if DTLS is enabled).
  *
- * Requires: Without MBEDTLS_USE_PSA_CRYPTO: MBEDTLS_MD_C and
- *              (MBEDTLS_SHA1_C or MBEDTLS_SHA256_C or MBEDTLS_SHA512_C)
- *           With MBEDTLS_USE_PSA_CRYPTO:
- *              PSA_WANT_ALG_SHA_1 or PSA_WANT_ALG_SHA_256 or
- *              PSA_WANT_ALG_SHA_512
- *
- * \warning If building with MBEDTLS_USE_PSA_CRYPTO, you must call
- * psa_crypto_init() before doing any TLS operations.
+ * Requires: MBEDTLS_SHA1_C or MBEDTLS_SHA256_C or MBEDTLS_SHA512_C
+ *           (Depends on ciphersuites)
  *
  * Comment this macro to disable support for TLS 1.2 / DTLS 1.2
  */
@@ -1520,11 +1512,11 @@
  * Requires: MBEDTLS_SSL_KEEP_PEER_CERTIFICATE
  * Requires: MBEDTLS_PSA_CRYPTO_C
  *
- * Note: even though TLS 1.3 depends on PSA Crypto, and uses it unconditonally
- * for most operations, if you want it to only use PSA for all crypto
- * operations, you need to also enable MBEDTLS_USE_PSA_CRYPTO; otherwise X.509
- * operations, and functions that are common with TLS 1.2 (record protection,
- * running handshake hash) will still use non-PSA crypto.
+ * Note: even though TLS 1.3 depends on PSA Crypto, if you want it to only use
+ * PSA for all crypto operations, you need to also enable
+ * MBEDTLS_USE_PSA_CRYPTO; otherwise X.509 operations, and functions that are
+ * common with TLS 1.2 (record protection, running handshake hash) will still
+ * use non-PSA crypto.
  *
  * Uncomment this macro to enable the support for TLS 1.3.
  */
@@ -1553,26 +1545,6 @@
 //#define MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 
 /**
- * \def MBEDTLS_SSL_TLS1_3_TICKET_AGE_TOLERANCE
- *
- * Maximum time difference in milliseconds tolerated between the age of a
- * ticket from the server and client point of view.
- * From the client point of view, the age of a ticket is the time difference
- * between the time when the client proposes to the server to use the ticket
- * (time of writing of the Pre-Shared Key Extension including the ticket) and
- * the time the client received the ticket from the server.
- * From the server point of view, the age of a ticket is the time difference
- * between the time when the server receives a proposition from the client
- * to use the ticket and the time when the ticket was created by the server.
- * The server age is expected to be always greater than the client one and
- * MBEDTLS_SSL_TLS1_3_TICKET_AGE_TOLERANCE defines the
- * maximum difference tolerated for the server to accept the ticket.
- * This is not used in TLS 1.2.
- *
- */
-#define MBEDTLS_SSL_TLS1_3_TICKET_AGE_TOLERANCE 6000
-
-/**
  * \def MBEDTLS_SSL_TLS1_3_TICKET_NONCE_LENGTH
  *
  * Size in bytes of a ticket nonce. This is not used in TLS 1.2.
@@ -1580,16 +1552,6 @@
  * This must be less than 256.
  */
 #define MBEDTLS_SSL_TLS1_3_TICKET_NONCE_LENGTH 32
-
-/**
- * \def MBEDTLS_SSL_TLS1_3_DEFAULT_NEW_SESSION_TICKETS
- *
- * Default number of NewSessionTicket messages to be sent by a TLS 1.3 server
- * after handshake completion. This is not used in TLS 1.2 and relevant only if
- * the MBEDTLS_SSL_SESSION_TICKETS option is enabled.
- *
- */
-#define MBEDTLS_SSL_TLS1_3_DEFAULT_NEW_SESSION_TICKETS 1
 
 /**
  * \def MBEDTLS_SSL_PROTO_DTLS
@@ -2051,9 +2013,6 @@
  * Enable the multi-precision integer library.
  *
  * Module:  library/bignum.c
- *          library/bignum_core.c
- *          library/bignum_mod.c
- *          library/bignum_mod_raw.c
  * Caller:  library/dhm.c
  *          library/ecp.c
  *          library/ecdsa.c
@@ -2370,10 +2329,7 @@
  * This module is used by the following key exchanges:
  *      ECJPAKE
  *
- * Requires: MBEDTLS_ECP_C and either MBEDTLS_MD_C or MBEDTLS_PSA_CRYPTO_C
- *
- * \warning If building without MBEDTLS_MD_C, you must call psa_crypto_init()
- * before doing any EC J-PAKE operations.
+ * Requires: MBEDTLS_ECP_C, MBEDTLS_MD_C
  */
 #define MBEDTLS_ECJPAKE_C
 
@@ -2460,32 +2416,6 @@
  * Uncomment to enable the HMAC_DRBG random number generator.
  */
 #define MBEDTLS_HMAC_DRBG_C
-
-/**
- * \def MBEDTLS_LMS_C
- *
- * Enable the LMS stateful-hash asymmetric signature algorithm.
- *
- * Module:  library/lms.c
- * Caller:
- *
- * Requires: MBEDTLS_PSA_CRYPTO_C
- *
- * Uncomment to enable the LMS verification algorithm and public key operations.
- */
-#define MBEDTLS_LMS_C
-
-/**
- * \def MBEDTLS_LMS_PRIVATE
- *
- * Enable LMS private-key operations and signing code. Functions enabled by this
- * option are experimental, and should not be used in production.
- *
- * Requires: MBEDTLS_LMS_C
- *
- * Uncomment to enable the LMS signature algorithm and private key operations.
- */
-//#define MBEDTLS_LMS_PRIVATE
 
 /**
  * \def MBEDTLS_NIST_KW_C
@@ -2580,7 +2510,7 @@
  *
  * \note See also our Knowledge Base article about porting to a new
  * environment:
- * https://mbed-tls.readthedocs.io/en/latest/kb/how-to/how-do-i-port-mbed-tls-to-a-new-environment-OS
+ * https://tls.mbed.org/kb/how-to/how-do-i-port-mbed-tls-to-a-new-environment-OS
  *
  * Module:  library/net_sockets.c
  *
@@ -2713,10 +2643,7 @@
  *
  * Module:  library/pkcs5.c
  *
- * Requires: MBEDTLS_CIPHER_C and either MBEDTLS_MD_C or MBEDTLS_PSA_CRYPTO_C.
- *
- * \warning If building without MBEDTLS_MD_C, you must call psa_crypto_init()
- * before doing any PKCS5 operation.
+ * Requires: MBEDTLS_CIPHER_C, MBEDTLS_MD_C
  *
  * This module adds support for the PKCS#5 functions.
  */
@@ -2731,11 +2658,7 @@
  * Module:  library/pkcs12.c
  * Caller:  library/pkparse.c
  *
- * Requires: MBEDTLS_ASN1_PARSE_C, MBEDTLS_CIPHER_C and either
- * MBEDTLS_MD_C or MBEDTLS_PSA_CRYPTO_C.
- *
- * \warning If building without MBEDTLS_MD_C, you must call psa_crypto_init()
- * before doing any PKCS12 operation.
+ * Requires: MBEDTLS_ASN1_PARSE_C, MBEDTLS_CIPHER_C, MBEDTLS_MD_C
  *
  * This module enables PKCS#12 functions.
  */
@@ -2752,7 +2675,7 @@
  * above to be specified at runtime or compile time respectively.
  *
  * \note This abstraction layer must be enabled on Windows (including MSYS2)
- * as other modules rely on it for a fixed snprintf implementation.
+ * as other module rely on it for a fixed snprintf implementation.
  *
  * Module:  library/platform.c
  * Caller:  Most other .c files
@@ -3080,8 +3003,7 @@
  * Module:  library/ssl_ticket.c
  * Caller:
  *
- * Requires: (MBEDTLS_CIPHER_C || MBEDTLS_USE_PSA_CRYPTO) &&
- *           (MBEDTLS_GCM_C || MBEDTLS_CCM_C || MBEDTLS_CHACHAPOLY_C)
+ * Requires: MBEDTLS_CIPHER_C || MBEDTLS_USE_PSA_CRYPTO
  */
 #define MBEDTLS_SSL_TICKET_C
 
@@ -3137,7 +3059,7 @@
  * contexts are not shared between threads. If you do intend to use contexts
  * between threads, you will need to enable this layer to prevent race
  * conditions. See also our Knowledge Base article about threading:
- * https://mbed-tls.readthedocs.io/en/latest/kb/development/thread-safety-and-multi-threading
+ * https://tls.mbed.org/kb/development/thread-safety-and-multi-threading
  *
  * Module:  library/threading.c
  *
@@ -3169,7 +3091,7 @@
  *
  * \note See also our Knowledge Base article about porting to a new
  * environment:
- * https://mbed-tls.readthedocs.io/en/latest/kb/how-to/how-do-i-port-mbed-tls-to-a-new-environment-OS
+ * https://tls.mbed.org/kb/how-to/how-do-i-port-mbed-tls-to-a-new-environment-OS
  *
  * Module:  library/timing.c
  */
@@ -3196,11 +3118,8 @@
  *          library/x509_crt.c
  *          library/x509_csr.c
  *
- * Requires: MBEDTLS_ASN1_PARSE_C, MBEDTLS_BIGNUM_C, MBEDTLS_OID_C, MBEDTLS_PK_PARSE_C,
- *           (MBEDTLS_MD_C or MBEDTLS_USE_PSA_CRYPTO)
- *
- * \warning If building with MBEDTLS_USE_PSA_CRYPTO, you must call
- * psa_crypto_init() before doing any X.509 operation.
+ * Requires: MBEDTLS_ASN1_PARSE_C, MBEDTLS_BIGNUM_C, MBEDTLS_OID_C,
+ *           MBEDTLS_PK_PARSE_C
  *
  * This module is required for the X.509 parsing modules.
  */
@@ -3257,11 +3176,7 @@
  *
  * Module:  library/x509_create.c
  *
- * Requires: MBEDTLS_BIGNUM_C, MBEDTLS_OID_C, MBEDTLS_PK_PARSE_C,
- *           (MBEDTLS_MD_C or MBEDTLS_USE_PSA_CRYPTO)
- *
- * \warning If building with MBEDTLS_USE_PSA_CRYPTO, you must call
- * psa_crypto_init() before doing any X.509 create operation.
+ * Requires: MBEDTLS_BIGNUM_C, MBEDTLS_OID_C, MBEDTLS_PK_WRITE_C
  *
  * This module is the basis for creating X.509 certificates and CSRs.
  */

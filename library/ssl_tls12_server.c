@@ -21,7 +21,13 @@
 
 #if defined(MBEDTLS_SSL_SRV_C) && defined(MBEDTLS_SSL_PROTO_TLS1_2)
 
+#if defined(MBEDTLS_PLATFORM_C)
 #include "mbedtls/platform.h"
+#else
+#include <stdlib.h>
+#define mbedtls_calloc    calloc
+#define mbedtls_free      free
+#endif
 
 #include "mbedtls/ssl.h"
 #include "ssl_misc.h"
@@ -30,7 +36,6 @@
 #include "mbedtls/platform_util.h"
 #include "constant_time_internal.h"
 #include "mbedtls/constant_time.h"
-#include "hash_info.h"
 
 #include <string.h>
 
@@ -3054,8 +3059,11 @@ curve_matching_done:
 
         size_t dig_signed_len = ssl->out_msg + ssl->out_msglen - dig_signed;
         size_t hashlen = 0;
-        unsigned char hash[MBEDTLS_HASH_MAX_SIZE];
-
+#if defined(MBEDTLS_USE_PSA_CRYPTO)
+        unsigned char hash[PSA_HASH_MAX_SIZE];
+#else
+        unsigned char hash[MBEDTLS_MD_MAX_SIZE];
+#endif
         int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
 
         /*
@@ -3397,14 +3405,8 @@ static int ssl_decrypt_encrypted_pms( mbedtls_ssl_context *ssl,
                                       size_t peer_pmssize )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
-
-    mbedtls_x509_crt *own_cert = mbedtls_ssl_own_cert( ssl );
-    if( own_cert == NULL ) {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "got no local certificate" ) );
-        return( MBEDTLS_ERR_SSL_NO_CLIENT_CERTIFICATE );
-    }
-    mbedtls_pk_context *public_key = &own_cert->pk;
     mbedtls_pk_context *private_key = mbedtls_ssl_own_key( ssl );
+    mbedtls_pk_context *public_key = &mbedtls_ssl_own_cert( ssl )->pk;
     size_t len = mbedtls_pk_get_len( public_key );
 
 #if defined(MBEDTLS_SSL_ASYNC_PRIVATE)
