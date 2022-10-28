@@ -84,7 +84,15 @@
 
 #if !defined(MBEDTLS_ECP_ALT)
 
+#if defined(MBEDTLS_PLATFORM_C)
 #include "mbedtls/platform.h"
+#else
+#include <stdlib.h>
+#include <stdio.h>
+#define mbedtls_printf     printf
+#define mbedtls_calloc    calloc
+#define mbedtls_free       free
+#endif
 
 #include "ecp_internal_alt.h"
 
@@ -2279,14 +2287,12 @@ cleanup:
         mbedtls_free( T );
     }
 
-    /* prevent caller from using invalid value */
-    int should_free_R = ( ret != 0 );
-#if defined(MBEDTLS_ECP_RESTARTABLE)
     /* don't free R while in progress in case R == P */
-    if( ret == MBEDTLS_ERR_ECP_IN_PROGRESS )
-        should_free_R = 0;
+#if defined(MBEDTLS_ECP_RESTARTABLE)
+    if( ret != MBEDTLS_ERR_ECP_IN_PROGRESS )
 #endif
-    if( should_free_R )
+    /* prevent caller from using invalid value */
+    if( ret != 0 )
         mbedtls_ecp_point_free( R );
 
     ECP_RS_LEAVE( rsm );
@@ -2461,7 +2467,7 @@ static int ecp_mul_mxz( mbedtls_ecp_group *grp, mbedtls_ecp_point *R,
     MBEDTLS_MPI_CHK( ecp_randomize_mxz( grp, &RP, f_rng, p_rng ) );
 
     /* Loop invariant: R = result so far, RP = R + P */
-    i = grp->nbits + 1; /* one past the (zero-based) required msb for private keys */
+    i = mbedtls_mpi_bitlen( m ); /* one past the (zero-based) most significant bit */
     while( i-- > 0 )
     {
         b = mbedtls_mpi_get_bit( m, i );
@@ -2531,12 +2537,10 @@ static int ecp_mul_restartable_internal( mbedtls_ecp_group *grp, mbedtls_ecp_poi
         MBEDTLS_MPI_CHK( mbedtls_internal_ecp_init( grp ) );
 #endif /* MBEDTLS_ECP_INTERNAL_ALT */
 
-    int restarting = 0;
 #if defined(MBEDTLS_ECP_RESTARTABLE)
-    restarting = ( rs_ctx != NULL && rs_ctx->rsm != NULL );
-#endif
     /* skip argument check when restarting */
-    if( !restarting )
+    if( rs_ctx == NULL || rs_ctx->rsm == NULL )
+#endif
     {
         /* check_privkey is free */
         MBEDTLS_ECP_BUDGET( MBEDTLS_ECP_OPS_CHK );
