@@ -419,73 +419,6 @@ case " $CONFIGS_ENABLED " in
     *) PSK_ONLY="NO";;
 esac
 
-HAS_ALG_SHA_1="NO"
-HAS_ALG_SHA_224="NO"
-HAS_ALG_SHA_256="NO"
-HAS_ALG_SHA_384="NO"
-HAS_ALG_SHA_512="NO"
-
-check_for_hash_alg()
-{
-    CURR_ALG="INVALID";
-    USE_PSA="NO"
-    case $CONFIGS_ENABLED in
-        *" MBEDTLS_USE_PSA_CRYPTO"[\ =]*)
-            USE_PSA="YES";
-        ;;
-        *) :;;
-    esac
-    if [ $USE_PSA = "YES" ]; then
-        CURR_ALG=PSA_WANT_ALG_${1}
-    else
-        CURR_ALG=MBEDTLS_${1}_C
-        # Remove the second underscore to match MBEDTLS_* naming convention
-        CURR_ALG=$(echo "$CURR_ALG" | sed 's/_//2')
-    fi
-
-    case $CONFIGS_ENABLED in
-        *" $CURR_ALG"[\ =]*)
-            return 0
-        ;;
-        *) :;;
-    esac
-    return 1
-}
-
-populate_enabled_hash_algs()
-{
-    for hash_alg in SHA_1 SHA_224 SHA_256 SHA_384 SHA_512; do
-        if check_for_hash_alg "$hash_alg"; then
-            hash_alg_variable=HAS_ALG_${hash_alg}
-            eval ${hash_alg_variable}=YES
-        fi
-    done
-}
-
-# skip next test if the given hash alg is not supported
-requires_hash_alg() {
-    HASH_DEFINE="Invalid"
-    HAS_HASH_ALG="NO"
-    case $1 in
-        SHA_1):;;
-        SHA_224):;;
-        SHA_256):;;
-        SHA_384):;;
-        SHA_512):;;
-      *)
-            echo "Unsupported hash alg - $1"
-            exit 1
-        ;;
-    esac
-
-    HASH_DEFINE=HAS_ALG_${1}
-    eval "HAS_HASH_ALG=\${${HASH_DEFINE}}"
-    if [ "$HAS_HASH_ALG" = "NO" ]
-    then
-        SKIP_NEXT="YES"
-    fi
-}
-
 # skip next test if OpenSSL doesn't support FALLBACK_SCSV
 requires_openssl_with_fallback_scsv() {
     if [ -z "${OPENSSL_HAS_FBSCSV:-}" ]; then
@@ -1545,8 +1478,6 @@ cleanup() {
 
 get_options "$@"
 
-populate_enabled_hash_algs
-
 # Optimize filters: if $FILTER and $EXCLUDE can be expressed as shell
 # patterns rather than regular expressions, use a case statement instead
 # of calling grep. To keep the optimizer simple, it is incomplete and only
@@ -1697,7 +1628,7 @@ trap cleanup INT TERM HUP
 # - the expected parameters are selected
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 requires_ciphersuite_enabled TLS-ECDHE-RSA-WITH-CHACHA20-POLY1305-SHA256
-requires_hash_alg SHA_512 # "signature_algorithm ext: 6"
+requires_config_enabled MBEDTLS_SHA512_C # "signature_algorithm ext: 6"
 requires_config_enabled MBEDTLS_ECP_DP_CURVE25519_ENABLED
 run_test    "Default" \
             "$P_SRV debug_level=3" \
@@ -1745,7 +1676,7 @@ run_test    "key size: TLS-ECDHE-ECDSA-WITH-AES-128-CCM-8" \
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 requires_config_enabled MBEDTLS_X509_CRT_PARSE_C
 requires_config_enabled MBEDTLS_ECDSA_C
-requires_hash_alg SHA_256
+requires_config_enabled MBEDTLS_SHA256_C
 run_test    "TLS: password protected client key" \
             "$P_SRV auth_mode=required" \
             "$P_CLI crt_file=data_files/server5.crt key_file=data_files/server5.key.enc key_pwd=PolarSSLTest" \
@@ -1754,7 +1685,7 @@ run_test    "TLS: password protected client key" \
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 requires_config_enabled MBEDTLS_X509_CRT_PARSE_C
 requires_config_enabled MBEDTLS_ECDSA_C
-requires_hash_alg SHA_256
+requires_config_enabled MBEDTLS_SHA256_C
 run_test    "TLS: password protected server key" \
             "$P_SRV crt_file=data_files/server5.crt key_file=data_files/server5.key.enc key_pwd=PolarSSLTest" \
             "$P_CLI" \
@@ -1764,7 +1695,7 @@ requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 requires_config_enabled MBEDTLS_X509_CRT_PARSE_C
 requires_config_enabled MBEDTLS_ECDSA_C
 requires_config_enabled MBEDTLS_RSA_C
-requires_hash_alg SHA_256
+requires_config_enabled MBEDTLS_SHA256_C
 run_test    "TLS: password protected server key, two certificates" \
             "$P_SRV \
               key_file=data_files/server5.key.enc key_pwd=PolarSSLTest crt_file=data_files/server5.crt \
@@ -1786,7 +1717,7 @@ requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 requires_config_enabled MBEDTLS_X509_TRUSTED_CERTIFICATE_CALLBACK
 requires_config_enabled MBEDTLS_X509_CRT_PARSE_C
 requires_config_enabled MBEDTLS_ECDSA_C
-requires_hash_alg SHA_256
+requires_config_enabled MBEDTLS_SHA256_C
 run_test    "CA callback on server" \
             "$P_SRV auth_mode=required" \
             "$P_CLI ca_callback=1 debug_level=3 crt_file=data_files/server5.crt \
@@ -1802,7 +1733,7 @@ requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
 requires_config_enabled MBEDTLS_X509_CRT_PARSE_C
 requires_config_enabled MBEDTLS_ECDSA_C
-requires_hash_alg SHA_256
+requires_config_enabled MBEDTLS_SHA256_C
 run_test    "Opaque key for client authentication: ECDHE-ECDSA" \
             "$P_SRV auth_mode=required crt_file=data_files/server5.crt \
              key_file=data_files/server5.key" \
@@ -1822,7 +1753,7 @@ requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
 requires_config_enabled MBEDTLS_X509_CRT_PARSE_C
 requires_config_enabled MBEDTLS_ECDSA_C
 requires_config_enabled MBEDTLS_RSA_C
-requires_hash_alg SHA_256
+requires_config_enabled MBEDTLS_SHA256_C
 run_test    "Opaque key for client authentication: ECDHE-RSA" \
             "$P_SRV auth_mode=required crt_file=data_files/server2-sha256.crt \
              key_file=data_files/server2.key" \
@@ -1840,7 +1771,7 @@ requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
 requires_config_enabled MBEDTLS_X509_CRT_PARSE_C
 requires_config_enabled MBEDTLS_RSA_C
-requires_hash_alg SHA_256
+requires_config_enabled MBEDTLS_SHA256_C
 run_test    "Opaque key for client authentication: DHE-RSA" \
             "$P_SRV auth_mode=required crt_file=data_files/server2-sha256.crt \
              key_file=data_files/server2.key" \
@@ -1860,7 +1791,7 @@ requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
 requires_config_enabled MBEDTLS_X509_CRT_PARSE_C
 requires_config_enabled MBEDTLS_ECDSA_C
-requires_hash_alg SHA_256
+requires_config_enabled MBEDTLS_SHA256_C
 run_test    "Opaque key for server authentication: ECDHE-ECDSA" \
             "$P_SRV key_opaque=1 crt_file=data_files/server5.crt \
              key_file=data_files/server5.key  key_opaque_algs=ecdsa-sign,none" \
@@ -1877,7 +1808,7 @@ requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
 requires_config_enabled MBEDTLS_X509_CRT_PARSE_C
 requires_config_enabled MBEDTLS_ECDSA_C
-requires_hash_alg SHA_256
+requires_config_enabled MBEDTLS_SHA256_C
 run_test    "Opaque key for server authentication: ECDH-" \
             "$P_SRV force_version=tls12 auth_mode=required key_opaque=1\
              crt_file=data_files/server5.ku-ka.crt\
@@ -1895,44 +1826,8 @@ requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
 requires_config_enabled MBEDTLS_X509_CRT_PARSE_C
 requires_config_enabled MBEDTLS_ECDSA_C
-requires_config_disabled MBEDTLS_SSL_ASYNC_PRIVATE
-requires_hash_alg SHA_256
-run_test    "Opaque key for server authentication: invalid key: decrypt with ECC key, no async" \
-            "$P_SRV key_opaque=1 crt_file=data_files/server5.crt \
-             key_file=data_files/server5.key key_opaque_algs=rsa-decrypt,none \
-             debug_level=1" \
-            "$P_CLI" \
-            1 \
-            -s "key types: Opaque, none" \
-            -s "error" \
-            -c "error" \
-            -c "Public key type mismatch"
-
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
-requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
-requires_config_enabled MBEDTLS_X509_CRT_PARSE_C
-requires_config_enabled MBEDTLS_ECDSA_C
-requires_config_enabled MBEDTLS_RSA_C
-requires_config_disabled MBEDTLS_SSL_ASYNC_PRIVATE
-requires_hash_alg SHA_256
-run_test    "Opaque key for server authentication: invalid key: ecdh with RSA key, no async" \
-            "$P_SRV key_opaque=1 crt_file=data_files/server2-sha256.crt \
-             key_file=data_files/server2.key key_opaque_algs=ecdh,none \
-             debug_level=1" \
-            "$P_CLI" \
-            1 \
-            -s "key types: Opaque, none" \
-            -s "error" \
-            -c "error" \
-            -c "Public key type mismatch"
-
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
-requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
-requires_config_enabled MBEDTLS_X509_CRT_PARSE_C
-requires_config_enabled MBEDTLS_ECDSA_C
-requires_config_enabled MBEDTLS_SSL_ASYNC_PRIVATE
-requires_hash_alg SHA_256
-run_test    "Opaque key for server authentication: invalid alg: decrypt with ECC key, async" \
+requires_config_enabled MBEDTLS_SHA256_C
+run_test    "Opaque key for server authentication: invalid alg: decrypt with ECC key" \
             "$P_SRV key_opaque=1 crt_file=data_files/server5.crt \
              key_file=data_files/server5.key key_opaque_algs=rsa-decrypt,none \
              debug_level=1" \
@@ -1948,9 +1843,8 @@ requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
 requires_config_enabled MBEDTLS_X509_CRT_PARSE_C
 requires_config_enabled MBEDTLS_ECDSA_C
 requires_config_enabled MBEDTLS_RSA_C
-requires_config_enabled MBEDTLS_SSL_ASYNC_PRIVATE
-requires_hash_alg SHA_256
-run_test    "Opaque key for server authentication: invalid alg: ecdh with RSA key, async" \
+requires_config_enabled MBEDTLS_SHA256_C
+run_test    "Opaque key for server authentication: invalid alg: ecdh with RSA key" \
             "$P_SRV key_opaque=1 crt_file=data_files/server2-sha256.crt \
              key_file=data_files/server2.key key_opaque_algs=ecdh,none \
              debug_level=1" \
@@ -1965,7 +1859,7 @@ requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
 requires_config_enabled MBEDTLS_X509_CRT_PARSE_C
 requires_config_enabled MBEDTLS_ECDSA_C
-requires_hash_alg SHA_256
+requires_config_enabled MBEDTLS_SHA256_C
 requires_config_enabled MBEDTLS_CCM_C
 run_test    "Opaque key for server authentication: invalid alg: ECDHE-ECDSA with ecdh" \
             "$P_SRV key_opaque=1 crt_file=data_files/server5.crt \
@@ -1982,7 +1876,7 @@ requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
 requires_config_enabled MBEDTLS_X509_CRT_PARSE_C
 requires_config_enabled MBEDTLS_ECDSA_C
-requires_hash_alg SHA_256
+requires_config_enabled MBEDTLS_SHA256_C
 requires_config_disabled MBEDTLS_X509_REMOVE_INFO
 run_test    "Opaque keys for server authentication: EC keys with different algs, force ECDHE-ECDSA" \
             "$P_SRV key_opaque=1 crt_file=data_files/server7.crt \
@@ -2003,7 +1897,7 @@ requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
 requires_config_enabled MBEDTLS_X509_CRT_PARSE_C
 requires_config_enabled MBEDTLS_ECDSA_C
-requires_hash_alg SHA_384
+requires_config_enabled MBEDTLS_SHA384_C
 requires_config_disabled MBEDTLS_X509_REMOVE_INFO
 run_test    "Opaque keys for server authentication: EC keys with different algs, force ECDH-ECDSA" \
             "$P_SRV key_opaque=1 crt_file=data_files/server7.crt \
@@ -2024,7 +1918,7 @@ requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
 requires_config_enabled MBEDTLS_X509_CRT_PARSE_C
 requires_config_enabled MBEDTLS_ECDSA_C
-requires_hash_alg SHA_384
+requires_config_enabled MBEDTLS_SHA384_C
 requires_config_enabled MBEDTLS_CCM_C
 requires_config_disabled MBEDTLS_X509_REMOVE_INFO
 run_test    "Opaque keys for server authentication: EC + RSA, force ECDHE-ECDSA" \
@@ -2042,66 +1936,13 @@ run_test    "Opaque keys for server authentication: EC + RSA, force ECDHE-ECDSA"
             -S "error" \
             -C "error"
 
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
-requires_config_enabled MBEDTLS_RSA_C
-run_test    "TLS 1.3 opaque key: no suitable algorithm found" \
-            "$P_SRV debug_level=4 force_version=tls13 auth_mode=required key_opaque=1 key_opaque_algs=rsa-decrypt,none" \
-            "$P_CLI debug_level=4 key_opaque=1 key_opaque_algs=rsa-decrypt,rsa-sign-pss" \
-            1 \
-            -s "The SSL configuration is tls13 only" \
-            -c "key type: Opaque" \
-            -s "key types: Opaque, Opaque" \
-            -c "error" \
-            -s "no suitable signature algorithm"
-
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
-requires_config_enabled MBEDTLS_RSA_C
-run_test    "TLS 1.3 opaque key: suitable algorithm found" \
-            "$P_SRV debug_level=4 force_version=tls13 auth_mode=required key_opaque=1 key_opaque_algs=rsa-decrypt,rsa-sign-pss" \
-            "$P_CLI debug_level=4 key_opaque=1 key_opaque_algs=rsa-decrypt,rsa-sign-pss" \
-            0 \
-            -s "The SSL configuration is tls13 only" \
-            -c "key type: Opaque" \
-            -s "key types: Opaque, Opaque" \
-            -C "error" \
-            -S "error" \
-
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
-requires_config_enabled MBEDTLS_RSA_C
-run_test    "TLS 1.3 opaque key: first client sig alg not suitable" \
-            "$P_SRV debug_level=4 force_version=tls13 auth_mode=required key_opaque=1 key_opaque_algs=rsa-sign-pss-sha512,none" \
-            "$P_CLI debug_level=4 sig_algs=rsa_pss_rsae_sha256,rsa_pss_rsae_sha512" \
-            0 \
-            -s "The SSL configuration is tls13 only" \
-            -s "key types: Opaque, Opaque" \
-            -s "CertificateVerify signature failed with rsa_pss_rsae_sha256" \
-            -s "CertificateVerify signature with rsa_pss_rsae_sha512" \
-            -C "error" \
-            -S "error" \
-
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
-requires_config_enabled MBEDTLS_RSA_C
-run_test    "TLS 1.3 opaque key: 2 keys on server, suitable algorithm found" \
-            "$P_SRV debug_level=4 force_version=tls13 auth_mode=required key_opaque=1 key_opaque_algs2=ecdsa-sign,none key_opaque_algs=rsa-decrypt,rsa-sign-pss" \
-            "$P_CLI debug_level=4 key_opaque=1 key_opaque_algs=rsa-decrypt,rsa-sign-pss" \
-            0 \
-            -s "The SSL configuration is tls13 only" \
-            -c "key type: Opaque" \
-            -s "key types: Opaque, Opaque" \
-            -C "error" \
-            -S "error" \
-
 # Test using a RSA opaque private key for server authentication
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
 requires_config_enabled MBEDTLS_X509_CRT_PARSE_C
 requires_config_enabled MBEDTLS_ECDSA_C
 requires_config_enabled MBEDTLS_RSA_C
-requires_hash_alg SHA_256
+requires_config_enabled MBEDTLS_SHA256_C
 run_test    "Opaque key for server authentication: ECDHE-RSA" \
             "$P_SRV key_opaque=1 crt_file=data_files/server2-sha256.crt \
              key_file=data_files/server2.key key_opaque_algs=rsa-sign-pkcs1,none" \
@@ -2119,7 +1960,7 @@ requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
 requires_config_enabled MBEDTLS_X509_CRT_PARSE_C
 requires_config_enabled MBEDTLS_ECDSA_C
 requires_config_enabled MBEDTLS_RSA_C
-requires_hash_alg SHA_256
+requires_config_enabled MBEDTLS_SHA256_C
 run_test    "Opaque key for server authentication: DHE-RSA" \
             "$P_SRV key_opaque=1 crt_file=data_files/server2-sha256.crt \
              key_file=data_files/server2.key key_opaque_algs=rsa-sign-pkcs1,none" \
@@ -2136,7 +1977,7 @@ requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
 requires_config_enabled MBEDTLS_X509_CRT_PARSE_C
 requires_config_enabled MBEDTLS_RSA_C
-requires_hash_alg SHA_256
+requires_config_enabled MBEDTLS_SHA256_C
 run_test    "Opaque key for server authentication: RSA-PSK" \
             "$P_SRV debug_level=1 key_opaque=1 key_opaque_algs=rsa-decrypt,none \
              psk=abc123 psk_identity=foo" \
@@ -2154,7 +1995,7 @@ requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
 requires_config_enabled MBEDTLS_X509_CRT_PARSE_C
 requires_config_enabled MBEDTLS_RSA_C
-requires_hash_alg SHA_256
+requires_config_enabled MBEDTLS_SHA256_C
 run_test    "Opaque key for server authentication: RSA-" \
             "$P_SRV debug_level=3 key_opaque=1 key_opaque_algs=rsa-decrypt,none " \
             "$P_CLI force_ciphersuite=TLS-RSA-WITH-AES-256-CBC-SHA256" \
@@ -2171,7 +2012,7 @@ requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
 requires_config_enabled MBEDTLS_X509_CRT_PARSE_C
 requires_config_enabled MBEDTLS_ECDSA_C
 requires_config_enabled MBEDTLS_RSA_C
-requires_hash_alg SHA_256
+requires_config_enabled MBEDTLS_SHA256_C
 run_test    "Opaque key for server authentication: DHE-RSA, PSS instead of PKCS1" \
             "$P_SRV auth_mode=required key_opaque=1 crt_file=data_files/server2-sha256.crt \
              key_file=data_files/server2.key key_opaque_algs=rsa-sign-pss,none debug_level=1" \
@@ -2188,7 +2029,7 @@ requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
 requires_config_enabled MBEDTLS_X509_CRT_PARSE_C
 requires_config_enabled MBEDTLS_ECDSA_C
 requires_config_enabled MBEDTLS_RSA_C
-requires_hash_alg SHA_256
+requires_config_enabled MBEDTLS_SHA256_C
 requires_config_disabled MBEDTLS_X509_REMOVE_INFO
 run_test    "Opaque keys for server authentication: RSA keys with different algs" \
             "$P_SRV auth_mode=required key_opaque=1 crt_file=data_files/server2-sha256.crt \
@@ -2210,7 +2051,7 @@ requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
 requires_config_enabled MBEDTLS_X509_CRT_PARSE_C
 requires_config_enabled MBEDTLS_ECDSA_C
 requires_config_enabled MBEDTLS_RSA_C
-requires_hash_alg SHA_384
+requires_config_enabled MBEDTLS_SHA384_C
 requires_config_enabled MBEDTLS_GCM_C
 requires_config_disabled MBEDTLS_X509_REMOVE_INFO
 run_test    "Opaque keys for server authentication: EC + RSA, force DHE-RSA" \
@@ -2233,7 +2074,7 @@ requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
 requires_config_enabled MBEDTLS_X509_CRT_PARSE_C
 requires_config_enabled MBEDTLS_ECDSA_C
-requires_hash_alg SHA_256
+requires_config_enabled MBEDTLS_SHA256_C
 run_test    "Opaque key for client/server authentication: ECDHE-ECDSA" \
             "$P_SRV auth_mode=required key_opaque=1 crt_file=data_files/server5.crt \
              key_file=data_files/server5.key key_opaque_algs=ecdsa-sign,none" \
@@ -2255,7 +2096,7 @@ requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
 requires_config_enabled MBEDTLS_X509_CRT_PARSE_C
 requires_config_enabled MBEDTLS_ECDSA_C
 requires_config_enabled MBEDTLS_RSA_C
-requires_hash_alg SHA_256
+requires_config_enabled MBEDTLS_SHA256_C
 run_test    "Opaque key for client/server authentication: ECDHE-RSA" \
             "$P_SRV auth_mode=required key_opaque=1 crt_file=data_files/server2-sha256.crt \
              key_file=data_files/server2.key  key_opaque_algs=rsa-sign-pkcs1,none" \
@@ -2276,7 +2117,7 @@ requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
 requires_config_enabled MBEDTLS_X509_CRT_PARSE_C
 requires_config_enabled MBEDTLS_ECDSA_C
 requires_config_enabled MBEDTLS_RSA_C
-requires_hash_alg SHA_256
+requires_config_enabled MBEDTLS_SHA256_C
 run_test    "Opaque key for client/server authentication: DHE-RSA" \
             "$P_SRV auth_mode=required key_opaque=1 crt_file=data_files/server2-sha256.crt \
              key_file=data_files/server2.key  key_opaque_algs=rsa-sign-pkcs1,none" \
@@ -2471,6 +2312,40 @@ run_test    "TLS 1.3: key exchange mode parameter passing: All" \
             "$P_SRV tls13_kex_modes=all" \
             "$P_CLI tls13_kex_modes=all" \
             0
+
+requires_openssl_tls1_3
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
+requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
+requires_config_enabled MBEDTLS_KEY_EXCHANGE_PSK_ENABLED
+requires_config_enabled MBEDTLS_SSL_SRV_C
+requires_config_enabled MBEDTLS_DEBUG_C
+run_test    "TLS 1.3: PSK: basic check, O->m" \
+            "$P_SRV force_version=tls13 tls13_kex_modes=psk debug_level=5 psk=6162636465666768696a6b6c6d6e6f70" \
+            "$O_NEXT_CLI -tls1_3 -psk 1234 -psk 6162636465666768696a6b6c6d6e6f70 -allow_no_dhe_kex" \
+            1 \
+            -s "found psk key exchange modes extension" \
+            -s "found pre_shared_key extension" \
+            -s "Found PSK_EPHEMERAL KEX MODE" \
+            -s "Found PSK KEX MODE" \
+            -s "Pre shared key found"
+
+requires_gnutls_tls1_3
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
+requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
+requires_config_enabled MBEDTLS_KEY_EXCHANGE_PSK_ENABLED
+requires_config_enabled MBEDTLS_SSL_SRV_C
+requires_config_enabled MBEDTLS_DEBUG_C
+run_test    "TLS 1.3: PSK: basic check, G->m" \
+            "$P_SRV force_version=tls13 tls13_kex_modes=psk debug_level=5 psk=6162636465666768696a6b6c6d6e6f70" \
+            "$G_NEXT_CLI --priority NORMAL:-VERS-ALL:+KX-ALL:+PSK:+DHE-PSK:+VERS-TLS1.3 \
+                         --pskusername Client_identity --pskkey=6162636465666768696a6b6c6d6e6f70 \
+                         localhost" \
+            1 \
+            -s "found psk key exchange modes extension" \
+            -s "found pre_shared_key extension" \
+            -s "Found PSK_EPHEMERAL KEX MODE" \
+            -s "Found PSK KEX MODE" \
+            -s "Pre shared key found"
 
 # Tests for datagram packing
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
@@ -8721,7 +8596,7 @@ run_test    "SSL async private: renegotiation: server-initiated, decrypt" \
 
 requires_config_enabled MBEDTLS_AES_C
 requires_config_enabled MBEDTLS_CIPHER_MODE_CBC
-requires_hash_alg SHA_256
+requires_config_enabled MBEDTLS_SHA256_C
 requires_config_enabled MBEDTLS_KEY_EXCHANGE_RSA_ENABLED
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 run_test    "Force a non ECC ciphersuite in the client side" \
@@ -8735,7 +8610,7 @@ run_test    "Force a non ECC ciphersuite in the client side" \
 
 requires_config_enabled MBEDTLS_AES_C
 requires_config_enabled MBEDTLS_CIPHER_MODE_CBC
-requires_hash_alg SHA_256
+requires_config_enabled MBEDTLS_SHA256_C
 requires_config_enabled MBEDTLS_KEY_EXCHANGE_RSA_ENABLED
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 run_test    "Force a non ECC ciphersuite in the server side" \
@@ -8747,7 +8622,7 @@ run_test    "Force a non ECC ciphersuite in the server side" \
 
 requires_config_enabled MBEDTLS_AES_C
 requires_config_enabled MBEDTLS_CIPHER_MODE_CBC
-requires_hash_alg SHA_256
+requires_config_enabled MBEDTLS_SHA256_C
 requires_config_enabled MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 run_test    "Force an ECC ciphersuite in the client side" \
@@ -8761,7 +8636,7 @@ run_test    "Force an ECC ciphersuite in the client side" \
 
 requires_config_enabled MBEDTLS_AES_C
 requires_config_enabled MBEDTLS_CIPHER_MODE_CBC
-requires_hash_alg SHA_256
+requires_config_enabled MBEDTLS_SHA256_C
 requires_config_enabled MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 run_test    "Force an ECC ciphersuite in the server side" \
@@ -9299,7 +9174,7 @@ run_test    "DTLS fragmenting: both (MTU=1024)" \
 requires_config_enabled MBEDTLS_SSL_PROTO_DTLS
 requires_config_enabled MBEDTLS_RSA_C
 requires_config_enabled MBEDTLS_ECDSA_C
-requires_hash_alg SHA_256
+requires_config_enabled MBEDTLS_SHA256_C
 requires_config_enabled MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED
 requires_config_enabled MBEDTLS_AES_C
 requires_config_enabled MBEDTLS_GCM_C
@@ -9536,7 +9411,7 @@ not_with_valgrind # spurious autoreduction due to timeout
 requires_config_enabled MBEDTLS_SSL_PROTO_DTLS
 requires_config_enabled MBEDTLS_RSA_C
 requires_config_enabled MBEDTLS_ECDSA_C
-requires_hash_alg SHA_256
+requires_config_enabled MBEDTLS_SHA256_C
 requires_config_enabled MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED
 requires_config_enabled MBEDTLS_SSL_RENEGOTIATION
 requires_config_enabled MBEDTLS_CHACHAPOLY_C
@@ -9569,7 +9444,7 @@ not_with_valgrind # spurious autoreduction due to timeout
 requires_config_enabled MBEDTLS_SSL_PROTO_DTLS
 requires_config_enabled MBEDTLS_RSA_C
 requires_config_enabled MBEDTLS_ECDSA_C
-requires_hash_alg SHA_256
+requires_config_enabled MBEDTLS_SHA256_C
 requires_config_enabled MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED
 requires_config_enabled MBEDTLS_SSL_RENEGOTIATION
 requires_config_enabled MBEDTLS_AES_C
@@ -9603,7 +9478,7 @@ not_with_valgrind # spurious autoreduction due to timeout
 requires_config_enabled MBEDTLS_SSL_PROTO_DTLS
 requires_config_enabled MBEDTLS_RSA_C
 requires_config_enabled MBEDTLS_ECDSA_C
-requires_hash_alg SHA_256
+requires_config_enabled MBEDTLS_SHA256_C
 requires_config_enabled MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED
 requires_config_enabled MBEDTLS_SSL_RENEGOTIATION
 requires_config_enabled MBEDTLS_AES_C
@@ -9637,7 +9512,7 @@ not_with_valgrind # spurious autoreduction due to timeout
 requires_config_enabled MBEDTLS_SSL_PROTO_DTLS
 requires_config_enabled MBEDTLS_RSA_C
 requires_config_enabled MBEDTLS_ECDSA_C
-requires_hash_alg SHA_256
+requires_config_enabled MBEDTLS_SHA256_C
 requires_config_enabled MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED
 requires_config_enabled MBEDTLS_SSL_RENEGOTIATION
 requires_config_enabled MBEDTLS_AES_C
@@ -9672,7 +9547,7 @@ not_with_valgrind # spurious autoreduction due to timeout
 requires_config_enabled MBEDTLS_SSL_PROTO_DTLS
 requires_config_enabled MBEDTLS_RSA_C
 requires_config_enabled MBEDTLS_ECDSA_C
-requires_hash_alg SHA_256
+requires_config_enabled MBEDTLS_SHA256_C
 requires_config_enabled MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED
 requires_config_enabled MBEDTLS_SSL_RENEGOTIATION
 requires_config_enabled MBEDTLS_AES_C
@@ -11573,7 +11448,7 @@ run_test    "TLS 1.3: Client authentication, client alg not in server list - ope
             -c "got a certificate request" \
             -c "client state: MBEDTLS_SSL_CLIENT_CERTIFICATE" \
             -c "client state: MBEDTLS_SSL_CLIENT_CERTIFICATE_VERIFY" \
-            -c "no suitable signature algorithm" \
+            -c "signature algorithm not in received or offered list." \
             -C "unknown pk type"
 
 requires_gnutls_tls1_3
@@ -11591,7 +11466,7 @@ run_test    "TLS 1.3: Client authentication, client alg not in server list - gnu
             -c "got a certificate request" \
             -c "client state: MBEDTLS_SSL_CLIENT_CERTIFICATE" \
             -c "client state: MBEDTLS_SSL_CLIENT_CERTIFICATE_VERIFY" \
-            -c "no suitable signature algorithm" \
+            -c "signature algorithm not in received or offered list." \
             -C "unknown pk type"
 
 # Test using an opaque private key for client authentication
@@ -11845,7 +11720,7 @@ run_test    "TLS 1.3: Client authentication - opaque key, client alg not in serv
             -c "got a certificate request" \
             -c "client state: MBEDTLS_SSL_CLIENT_CERTIFICATE" \
             -c "client state: MBEDTLS_SSL_CLIENT_CERTIFICATE_VERIFY" \
-            -c "no suitable signature algorithm" \
+            -c "signature algorithm not in received or offered list." \
             -C "unkown pk type"
 
 requires_gnutls_tls1_3
@@ -11864,7 +11739,7 @@ run_test    "TLS 1.3: Client authentication - opaque key, client alg not in serv
             -c "got a certificate request" \
             -c "client state: MBEDTLS_SSL_CLIENT_CERTIFICATE" \
             -c "client state: MBEDTLS_SSL_CLIENT_CERTIFICATE_VERIFY" \
-            -c "no suitable signature algorithm" \
+            -c "signature algorithm not in received or offered list." \
             -C "unkown pk type"
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
@@ -12142,6 +12017,52 @@ run_test    "TLS 1.3: Server side check - mbedtls with sni" \
             0 \
             -s "parse ServerName extension" \
             -s "HTTP/1.0 200 OK"
+
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
+requires_config_enabled MBEDTLS_SSL_SRV_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
+run_test    "TLS 1.3, default suite, PSK" \
+            "$P_SRV nbio=2 debug_level=5 force_version=tls13 psk=010203 psk_identity=0a0b0c tls13_kex_modes=psk" \
+            "$P_CLI nbio=2 debug_level=5 force_version=tls13 psk=010203 psk_identity=0a0b0c tls13_kex_modes=psk" \
+            1 \
+            -c "=> write client hello" \
+            -c "client hello, adding pre_shared_key extension, omitting PSK binder list" \
+            -c "client hello, adding psk_key_exchange_modes extension" \
+            -c "client hello, adding PSK binder list" \
+            -c "<= write client hello"
+
+requires_openssl_tls1_3
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
+requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
+requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
+run_test    "TLS 1.3, default suite, PSK - openssl" \
+            "$O_NEXT_SRV -msg -debug -tls1_3 -psk_identity 0a0b0c -psk 010203 -allow_no_dhe_kex -nocert" \
+            "$P_CLI debug_level=4 psk=010203 psk_identity=0a0b0c tls13_kex_modes=psk" \
+            1 \
+            -c "=> write client hello" \
+            -c "client hello, adding pre_shared_key extension, omitting PSK binder list" \
+            -c "client hello, adding psk_key_exchange_modes extension" \
+            -c "client hello, adding PSK binder list" \
+            -c "<= write client hello"
+
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
+requires_gnutls_tls1_3
+requires_gnutls_next_no_ticket
+requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
+requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
+run_test    "TLS 1.3, default suite, PSK - gnutls" \
+            "$G_NEXT_SRV -d 4 --priority=NORMAL:-VERS-ALL:+VERS-TLS1.3:+PSK:+CIPHER-ALL:%NO_TICKETS --pskhint=0a0b0c" \
+            "$P_CLI debug_level=4 psk=010203 psk_identity=0a0b0c tls13_kex_modes=psk" \
+            1 \
+            -c "=> write client hello" \
+            -c "client hello, adding pre_shared_key extension, omitting PSK binder list" \
+            -c "client hello, adding psk_key_exchange_modes extension" \
+            -c "client hello, adding PSK binder list" \
+            -s "Parsing extension 'PSK Key Exchange Modes/45'" \
+            -s "Parsing extension 'Pre Shared Key/41'" \
+            -c "<= write client hello"
 
 for i in opt-testcases/*.sh
 do
@@ -12547,7 +12468,7 @@ run_test    "TLS 1.3: Check signature algorithm order, m->O" \
                     sig_algs=rsa_pkcs1_sha512,rsa_pss_rsae_sha512,rsa_pss_rsae_sha384,ecdsa_secp256r1_sha256" \
             0 \
             -c "Protocol is TLSv1.3" \
-            -c "CertificateVerify signature with rsa_pss_rsae_sha512" \
+            -c "select_sig_alg_for_certificate_verify:selected signature algorithm rsa_pss_rsae_sha512" \
             -c "HTTP/1.0 200 [Oo][Kk]"
 
 requires_gnutls_tls1_3
@@ -12563,7 +12484,7 @@ run_test    "TLS 1.3: Check signature algorithm order, m->G" \
                     sig_algs=rsa_pkcs1_sha512,rsa_pss_rsae_sha512,rsa_pss_rsae_sha384,ecdsa_secp256r1_sha256" \
             0 \
             -c "Protocol is TLSv1.3" \
-            -c "CertificateVerify signature with rsa_pss_rsae_sha512" \
+            -c "select_sig_alg_for_certificate_verify:selected signature algorithm rsa_pss_rsae_sha512" \
             -c "HTTP/1.0 200 [Oo][Kk]"
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
@@ -12580,8 +12501,8 @@ run_test    "TLS 1.3: Check signature algorithm order, m->m" \
                     sig_algs=rsa_pkcs1_sha512,rsa_pss_rsae_sha512,rsa_pss_rsae_sha384,ecdsa_secp256r1_sha256" \
             0 \
             -c "Protocol is TLSv1.3" \
-            -c "CertificateVerify signature with rsa_pss_rsae_sha512" \
-            -s "CertificateVerify signature with rsa_pss_rsae_sha512" \
+            -c "select_sig_alg_for_certificate_verify:selected signature algorithm rsa_pss_rsae_sha512" \
+            -s "select_sig_alg_for_certificate_verify:selected signature algorithm rsa_pss_rsae_sha512" \
             -s "ssl_tls13_pick_key_cert:selected signature algorithm rsa_pss_rsae_sha512" \
             -c "HTTP/1.0 200 [Oo][Kk]"
 
@@ -12600,7 +12521,7 @@ run_test    "TLS 1.3: Check signature algorithm order, O->m" \
                                  -sigalgs rsa_pkcs1_sha512:rsa_pss_rsae_sha512:rsa_pss_rsae_sha384:ecdsa_secp256r1_sha256"  \
             0 \
             -c "TLSv1.3" \
-            -s "CertificateVerify signature with rsa_pss_rsae_sha512" \
+            -s "select_sig_alg_for_certificate_verify:selected signature algorithm rsa_pss_rsae_sha512" \
             -s "ssl_tls13_pick_key_cert:selected signature algorithm rsa_pss_rsae_sha512"
 
 requires_gnutls_tls1_3
@@ -12619,7 +12540,7 @@ run_test    "TLS 1.3: Check signature algorithm order, G->m" \
             0 \
             -c "Negotiated version: 3.4" \
             -c "HTTP/1.0 200 [Oo][Kk]" \
-            -s "CertificateVerify signature with rsa_pss_rsae_sha512" \
+            -s "select_sig_alg_for_certificate_verify:selected signature algorithm rsa_pss_rsae_sha512" \
             -s "ssl_tls13_pick_key_cert:selected signature algorithm rsa_pss_rsae_sha512"
 
 requires_gnutls_tls1_3
@@ -12636,7 +12557,8 @@ run_test    "TLS 1.3: Check server no suitable signature algorithm, G->m" \
                                  --x509certfile data_files/server2-sha256.crt --x509keyfile data_files/server2.key \
                                  --priority=NORMAL:-SIGN-ALL:+SIGN-RSA-SHA512:+SIGN-RSA-PSS-RSAE-SHA512:+SIGN-ECDSA-SECP521R1-SHA512"  \
             1 \
-            -S "ssl_tls13_pick_key_cert:check signature algorithm"
+            -s "ssl_tls13_pick_key_cert:selected signature algorithm rsa_pss_rsae_sha512" \
+            -s "select_sig_alg_for_certificate_verify:no suitable signature algorithm found"
 
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
@@ -12652,7 +12574,8 @@ run_test    "TLS 1.3: Check server no suitable signature algorithm, O->m" \
                                  -cert data_files/server2-sha256.crt -key data_files/server2.key \
                                  -sigalgs rsa_pkcs1_sha512:rsa_pss_rsae_sha512:ecdsa_secp521r1_sha512"  \
             1 \
-            -S "ssl_tls13_pick_key_cert:check signature algorithm"
+            -s "ssl_tls13_pick_key_cert:selected signature algorithm rsa_pss_rsae_sha512" \
+            -s "select_sig_alg_for_certificate_verify:no suitable signature algorithm found"
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
@@ -12667,7 +12590,8 @@ run_test    "TLS 1.3: Check server no suitable signature algorithm, m->m" \
             "$P_CLI allow_sha1=0 debug_level=4 crt_file=data_files/server2-sha256.crt key_file=data_files/server2.key \
                     sig_algs=rsa_pkcs1_sha512,rsa_pss_rsae_sha512,ecdsa_secp521r1_sha512" \
             1 \
-            -S "ssl_tls13_pick_key_cert:check signature algorithm"
+            -s "ssl_tls13_pick_key_cert:selected signature algorithm rsa_pss_rsae_sha512" \
+            -s "select_sig_alg_for_certificate_verify:no suitable signature algorithm found"
 
 requires_gnutls_tls1_3
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
@@ -12723,7 +12647,7 @@ run_test    "TLS 1.3: Check client no signature algorithm, m->O" \
             "$P_CLI debug_level=4 crt_file=data_files/server5.crt key_file=data_files/server5.key \
                     sig_algs=rsa_pkcs1_sha512,rsa_pss_rsae_sha512,rsa_pss_rsae_sha384,ecdsa_secp256r1_sha256" \
             1 \
-            -c "no suitable signature algorithm"
+            -c "select_sig_alg_for_certificate_verify:no suitable signature algorithm found"
 
 requires_gnutls_tls1_3
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
@@ -12737,7 +12661,7 @@ run_test    "TLS 1.3: Check client no signature algorithm, m->G" \
             "$P_CLI debug_level=4 crt_file=data_files/server5.crt key_file=data_files/server5.key \
                     sig_algs=rsa_pkcs1_sha512,rsa_pss_rsae_sha512,rsa_pss_rsae_sha384,ecdsa_secp256r1_sha256" \
             1 \
-            -c "no suitable signature algorithm"
+            -c "select_sig_alg_for_certificate_verify:no suitable signature algorithm found"
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
@@ -12752,7 +12676,7 @@ run_test    "TLS 1.3: Check client no signature algorithm, m->m" \
             "$P_CLI debug_level=4 crt_file=data_files/server5.crt key_file=data_files/server5.key \
                     sig_algs=rsa_pkcs1_sha512,rsa_pss_rsae_sha512,rsa_pss_rsae_sha384,ecdsa_secp256r1_sha256" \
             1 \
-            -c "no suitable signature algorithm"
+            -c "select_sig_alg_for_certificate_verify:no suitable signature algorithm found"
 
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
@@ -12760,13 +12684,13 @@ requires_config_enabled MBEDTLS_DEBUG_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test    "TLS 1.3: NewSessionTicket: Basic check, m->O" \
-            "$O_NEXT_SRV -msg -tls1_3 -no_resume_ephemeral -no_cache --num_tickets 4" \
-            "$P_CLI debug_level=1 reco_mode=1 reconnect=1" \
+            "$O_NEXT_SRV -msg -tls1_3 -no_resume_ephemeral -no_cache " \
+            "$P_CLI debug_level=4 reco_mode=1 reconnect=1" \
             0 \
             -c "Protocol is TLSv1.3" \
+            -c "MBEDTLS_SSL_NEW_SESSION_TICKET" \
             -c "got new session ticket." \
             -c "Saving session for reuse... ok" \
-            -c "Reconnecting with saved session" \
             -c "HTTP/1.0 200 ok"
 
 requires_gnutls_tls1_3
@@ -12775,28 +12699,23 @@ requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_DEBUG_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
 run_test    "TLS 1.3: NewSessionTicket: Basic check, m->G" \
-            "$G_NEXT_SRV -d 10 --priority=NORMAL:-VERS-ALL:+VERS-TLS1.3:+CIPHER-ALL:+PSK --disable-client-cert" \
-            "$P_CLI debug_level=1 reco_mode=1 reconnect=1" \
+            "$G_NEXT_SRV --priority=NORMAL:-VERS-ALL:+VERS-TLS1.3:+CIPHER-ALL:+PSK --disable-client-cert" \
+            "$P_CLI debug_level=4 reco_mode=1 reconnect=1" \
             0 \
             -c "Protocol is TLSv1.3" \
+            -c "MBEDTLS_SSL_NEW_SESSION_TICKET" \
             -c "got new session ticket." \
             -c "Saving session for reuse... ok" \
-            -c "Reconnecting with saved session" \
-            -c "HTTP/1.0 200 OK" \
-            -s "This is a resumed session"
+            -c "HTTP/1.0 200 OK"
 
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_SESSION_TICKETS
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
-requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
-# https://github.com/openssl/openssl/issues/10714
-# Until now, OpenSSL client does not support reconnect.
-skip_next_test
 run_test    "TLS 1.3: NewSessionTicket: Basic check, O->m" \
-            "$P_SRV debug_level=4 crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13 tickets=4" \
-            "$O_NEXT_CLI -msg -debug -tls1_3 -reconnect" \
+            "$P_SRV debug_level=4 crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13 tickets=1" \
+            "$O_NEXT_CLI -msg -debug -tls1_3 -no_middlebox" \
             0 \
             -s "=> write NewSessionTicket msg" \
             -s "server state: MBEDTLS_SSL_NEW_SESSION_TICKET" \
@@ -12807,19 +12726,14 @@ requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_SESSION_TICKETS
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
-requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test    "TLS 1.3: NewSessionTicket: Basic check, G->m" \
-            "$P_SRV debug_level=4 crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13 tickets=4" \
-            "$G_NEXT_CLI localhost -d 4 --priority=NORMAL:-VERS-ALL:+VERS-TLS1.3 -V -r" \
+            "$P_SRV debug_level=4 crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13 tickets=1" \
+            "$G_NEXT_CLI localhost -d 4 --priority=NORMAL:-VERS-ALL:+VERS-TLS1.3:%DISABLE_TLS13_COMPAT_MODE -V" \
             0 \
-            -c "Connecting again- trying to resume previous session" \
-            -c "NEW SESSION TICKET (4) was received" \
             -s "=> write NewSessionTicket msg" \
             -s "server state: MBEDTLS_SSL_NEW_SESSION_TICKET" \
             -s "server state: MBEDTLS_SSL_NEW_SESSION_TICKET_FLUSH" \
-            -s "key exchange mode: ephemeral" \
-            -s "key exchange mode: psk_ephemeral" \
-            -s "found pre_shared_key extension"
+            -c "NEW SESSION TICKET (4) was received"
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_SESSION_TICKETS
@@ -12827,20 +12741,17 @@ requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
 run_test    "TLS 1.3: NewSessionTicket: Basic check, m->m" \
-            "$P_SRV debug_level=4 crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13 tickets=4" \
+            "$P_SRV debug_level=4 crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13 tickets=1" \
             "$P_CLI debug_level=4 reco_mode=1 reconnect=1" \
             0 \
             -c "Protocol is TLSv1.3" \
-            -c "got new session ticket ( 3 )" \
+            -c "MBEDTLS_SSL_NEW_SESSION_TICKET" \
+            -c "got new session ticket." \
             -c "Saving session for reuse... ok" \
-            -c "Reconnecting with saved session" \
             -c "HTTP/1.0 200 OK"    \
             -s "=> write NewSessionTicket msg" \
             -s "server state: MBEDTLS_SSL_NEW_SESSION_TICKET" \
-            -s "server state: MBEDTLS_SSL_NEW_SESSION_TICKET_FLUSH" \
-            -s "key exchange mode: ephemeral" \
-            -s "key exchange mode: psk_ephemeral" \
-            -s "found pre_shared_key extension"
+            -s "server state: MBEDTLS_SSL_NEW_SESSION_TICKET_FLUSH"
 
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
@@ -12872,47 +12783,6 @@ run_test    "TLS 1.2: Check rsa_pss_rsae compatibility issue, m->G" \
             0 \
             -c "Protocol is TLSv1.2" \
             -c "HTTP/1.0 200 [Oo][Kk]"
-
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-requires_config_enabled MBEDTLS_SSL_SESSION_TICKETS
-requires_config_enabled MBEDTLS_SSL_SRV_C
-requires_config_enabled MBEDTLS_SSL_CLI_C
-requires_config_enabled MBEDTLS_DEBUG_C
-run_test    "TLS 1.3: NewSessionTicket: servername check, m->m" \
-            "$P_SRV debug_level=4 crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13 tickets=4 \
-            sni=localhost,data_files/server2.crt,data_files/server2.key,-,-,-,polarssl.example,data_files/server1-nospace.crt,data_files/server1.key,-,-,-" \
-            "$P_CLI debug_level=4 server_name=localhost reco_mode=1 reconnect=1" \
-            0 \
-            -c "Protocol is TLSv1.3" \
-            -c "got new session ticket." \
-            -c "Saving session for reuse... ok" \
-            -c "Reconnecting with saved session" \
-            -c "HTTP/1.0 200 OK"    \
-            -s "=> write NewSessionTicket msg" \
-            -s "server state: MBEDTLS_SSL_NEW_SESSION_TICKET" \
-            -s "server state: MBEDTLS_SSL_NEW_SESSION_TICKET_FLUSH" \
-            -s "key exchange mode: ephemeral" \
-            -s "key exchange mode: psk_ephemeral" \
-            -s "found pre_shared_key extension"
-
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-requires_config_enabled MBEDTLS_SSL_SESSION_TICKETS
-requires_config_enabled MBEDTLS_SSL_SRV_C
-requires_config_enabled MBEDTLS_SSL_CLI_C
-requires_config_enabled MBEDTLS_DEBUG_C
-run_test    "TLS 1.3: NewSessionTicket: servername negative check, m->m" \
-            "$P_SRV debug_level=4 crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13 tickets=4 \
-            sni=localhost,data_files/server2.crt,data_files/server2.key,-,-,-,polarssl.example,data_files/server1-nospace.crt,data_files/server1.key,-,-,-" \
-            "$P_CLI debug_level=4 server_name=localhost reco_server_name=remote reco_mode=1 reconnect=1" \
-            1 \
-            -c "Protocol is TLSv1.3" \
-            -c "got new session ticket." \
-            -c "Saving session for reuse... ok" \
-            -c "Reconnecting with saved session" \
-            -c "Hostname mismatch the session ticket, disable session resumption."    \
-            -s "=> write NewSessionTicket msg" \
-            -s "server state: MBEDTLS_SSL_NEW_SESSION_TICKET" \
-            -s "server state: MBEDTLS_SSL_NEW_SESSION_TICKET_FLUSH"
 
 # Test heap memory usage after handshake
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
