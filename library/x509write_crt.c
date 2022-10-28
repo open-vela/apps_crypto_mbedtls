@@ -43,10 +43,8 @@
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
 #include "psa/crypto.h"
 #include "mbedtls/psa_util.h"
-#endif /* MBEDTLS_USE_PSA_CRYPTO */
-
 #include "hash_info.h"
-#include "mbedtls/legacy_or_psa.h"
+#endif /* MBEDTLS_USE_PSA_CRYPTO */
 
 void mbedtls_x509write_crt_init( mbedtls_x509write_cert *ctx )
 {
@@ -174,7 +172,7 @@ int mbedtls_x509write_crt_set_basic_constraints( mbedtls_x509write_cert *ctx,
                              is_ca, buf + sizeof(buf) - len, len ) );
 }
 
-#if defined(MBEDTLS_HAS_ALG_SHA_1_VIA_MD_OR_PSA_BASED_ON_USE_PSA)
+#if defined(MBEDTLS_SHA1_C)
 static int mbedtls_x509write_crt_set_key_identifier( mbedtls_x509write_cert *ctx,
                                               int is_ca,
                                               unsigned char tag )
@@ -256,7 +254,7 @@ int mbedtls_x509write_crt_set_authority_key_identifier( mbedtls_x509write_cert *
                                                      1,
                                                      (MBEDTLS_ASN1_CONTEXT_SPECIFIC | 0) );
 }
-#endif /* MBEDTLS_HAS_ALG_SHA_1_VIA_MD_OR_PSA_BASED_ON_USE_PSA */
+#endif /* MBEDTLS_SHA1_C */
 
 int mbedtls_x509write_crt_set_key_usage( mbedtls_x509write_cert *ctx,
                                          unsigned int key_usage )
@@ -360,10 +358,12 @@ int mbedtls_x509write_crt_der( mbedtls_x509write_cert *ctx,
     unsigned char *c, *c2;
     unsigned char sig[MBEDTLS_PK_SIGNATURE_MAX_SIZE];
     size_t hash_length = 0;
-    unsigned char hash[MBEDTLS_HASH_MAX_SIZE];
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
     psa_status_t status = PSA_ERROR_CORRUPTION_DETECTED;
     psa_algorithm_t psa_algorithm;
+    unsigned char hash[PSA_HASH_MAX_SIZE];
+#else
+    unsigned char hash[64];
 #endif /* MBEDTLS_USE_PSA_CRYPTO */
 
     size_t sub_len = 0, pub_len = 0, sig_and_oid_len = 0, sig_len;

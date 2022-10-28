@@ -52,7 +52,9 @@
 #include "mbedtls/platform_time.h"
 #endif
 
+#if defined(MBEDTLS_USE_PSA_CRYPTO)
 #include "psa/crypto.h"
+#endif /* MBEDTLS_USE_PSA_CRYPTO */
 
 /*
  * SSL Error codes
@@ -336,11 +338,11 @@
 #define MBEDTLS_SSL_SRV_CIPHERSUITE_ORDER_SERVER  0
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3) && defined(MBEDTLS_SSL_SESSION_TICKETS)
-#if defined(PSA_WANT_ALG_SHA_384)
+#if defined(MBEDTLS_SHA384_C)
 #define MBEDTLS_SSL_TLS1_3_TICKET_RESUMPTION_KEY_LEN        48
-#elif defined(PSA_WANT_ALG_SHA_256)
+#elif defined(MBEDTLS_SHA256_C)
 #define MBEDTLS_SSL_TLS1_3_TICKET_RESUMPTION_KEY_LEN        32
-#endif
+#endif /* MBEDTLS_SHA256_C  */
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3 && MBEDTLS_SSL_SESSION_TICKETS */
 /*
  * Default range for DTLS retransmission timer value, in milliseconds.
@@ -627,8 +629,7 @@ union mbedtls_ssl_premaster_secret
 
 #define MBEDTLS_PREMASTER_SIZE     sizeof( union mbedtls_ssl_premaster_secret )
 
-#define MBEDTLS_TLS1_3_MD_MAX_SIZE         PSA_HASH_MAX_SIZE
-
+#define MBEDTLS_TLS1_3_MD_MAX_SIZE         MBEDTLS_MD_MAX_SIZE
 
 /* Length in number of bytes of the TLS sequence number */
 #define MBEDTLS_SSL_SEQUENCE_NUMBER_LEN 8
@@ -1188,10 +1189,6 @@ struct mbedtls_ssl_session
     uint8_t MBEDTLS_PRIVATE(resumption_key_len);            /*!< resumption_key length */
     unsigned char MBEDTLS_PRIVATE(resumption_key)[MBEDTLS_SSL_TLS1_3_TICKET_RESUMPTION_KEY_LEN];
 
-#if defined(MBEDTLS_SSL_SERVER_NAME_INDICATION) && defined(MBEDTLS_SSL_CLI_C)
-    char *MBEDTLS_PRIVATE(hostname);             /*!< host name binded with tickets */
-#endif /* MBEDTLS_SSL_SERVER_NAME_INDICATION && MBEDTLS_SSL_CLI_C */
-
 #if defined(MBEDTLS_HAVE_TIME) && defined(MBEDTLS_SSL_CLI_C)
     mbedtls_time_t MBEDTLS_PRIVATE(ticket_received);        /*!< time ticket was received */
 #endif /* MBEDTLS_HAVE_TIME && MBEDTLS_SSL_CLI_C */
@@ -1327,17 +1324,9 @@ struct mbedtls_ssl_config
 #if defined(MBEDTLS_SSL_RENEGOTIATION)
     uint8_t MBEDTLS_PRIVATE(disable_renegotiation); /*!< disable renegotiation?     */
 #endif
-#if defined(MBEDTLS_SSL_SESSION_TICKETS) && \
-    defined(MBEDTLS_SSL_CLI_C)
-    uint8_t MBEDTLS_PRIVATE(session_tickets);   /*!< use session tickets? */
+#if defined(MBEDTLS_SSL_SESSION_TICKETS)
+    uint8_t MBEDTLS_PRIVATE(session_tickets);   /*!< use session tickets?           */
 #endif
-
-#if defined(MBEDTLS_SSL_SESSION_TICKETS) && \
-    defined(MBEDTLS_SSL_SRV_C) && \
-    defined(MBEDTLS_SSL_PROTO_TLS1_3)
-    uint16_t MBEDTLS_PRIVATE(new_session_tickets_count);   /*!< number of NewSessionTicket */
-#endif
-
 #if defined(MBEDTLS_SSL_SRV_C)
     uint8_t MBEDTLS_PRIVATE(cert_req_ca_list);  /*!< enable sending CA list in
                                                      Certificate Request messages? */
@@ -1394,11 +1383,9 @@ struct mbedtls_ssl_config
 #endif
 
 #if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
-#if defined(MBEDTLS_SSL_SRV_C)
     /** Callback to retrieve PSK key from identity                          */
     int (*MBEDTLS_PRIVATE(f_psk))(void *, mbedtls_ssl_context *, const unsigned char *, size_t);
     void *MBEDTLS_PRIVATE(p_psk);                    /*!< context for PSK callback           */
-#endif
 #endif
 
 #if defined(MBEDTLS_SSL_DTLS_HELLO_VERIFY) && defined(MBEDTLS_SSL_SRV_C)
@@ -2328,7 +2315,7 @@ int mbedtls_ssl_check_record( mbedtls_ssl_context const *ssl,
  *                 here, except if using an event-driven style.
  *
  * \note           See also the "DTLS tutorial" article in our knowledge base.
- *                 https://mbed-tls.readthedocs.io/en/latest/kb/how-to/dtls-tutorial
+ *                 https://tls.mbed.org/kb/how-to/dtls-tutorial
  */
 void mbedtls_ssl_set_timer_cb( mbedtls_ssl_context *ssl,
                                void *p_timer,
@@ -3421,7 +3408,6 @@ int mbedtls_ssl_set_hs_psk_opaque( mbedtls_ssl_context *ssl,
                                    mbedtls_svc_key_id_t psk );
 #endif /* MBEDTLS_USE_PSA_CRYPTO */
 
-#if defined(MBEDTLS_SSL_SRV_C)
 /**
  * \brief          Set the PSK callback (server-side only).
  *
@@ -3464,7 +3450,6 @@ void mbedtls_ssl_conf_psk_cb( mbedtls_ssl_config *conf,
                      int (*f_psk)(void *, mbedtls_ssl_context *, const unsigned char *,
                                   size_t),
                      void *p_psk );
-#endif /* MBEDTLS_SSL_SRV_C */
 #endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
 
 #if defined(MBEDTLS_DHM_C) && defined(MBEDTLS_SSL_SRV_C)
@@ -4119,8 +4104,7 @@ int mbedtls_ssl_conf_max_frag_len( mbedtls_ssl_config *conf, unsigned char mfl_c
 void mbedtls_ssl_conf_preference_order( mbedtls_ssl_config *conf, int order );
 #endif /* MBEDTLS_SSL_SRV_C */
 
-#if defined(MBEDTLS_SSL_SESSION_TICKETS) && \
-    defined(MBEDTLS_SSL_CLI_C)
+#if defined(MBEDTLS_SSL_SESSION_TICKETS) && defined(MBEDTLS_SSL_CLI_C)
 /**
  * \brief          Enable / Disable session tickets (client only).
  *                 (Default: MBEDTLS_SSL_SESSION_TICKETS_ENABLED.)
@@ -4132,34 +4116,7 @@ void mbedtls_ssl_conf_preference_order( mbedtls_ssl_config *conf, int order );
  *                                         MBEDTLS_SSL_SESSION_TICKETS_DISABLED)
  */
 void mbedtls_ssl_conf_session_tickets( mbedtls_ssl_config *conf, int use_tickets );
-#endif /* MBEDTLS_SSL_SESSION_TICKETS &&
-          MBEDTLS_SSL_CLI_C */
-
-#if defined(MBEDTLS_SSL_SESSION_TICKETS) && \
-    defined(MBEDTLS_SSL_SRV_C) && \
-    defined(MBEDTLS_SSL_PROTO_TLS1_3)
-/**
- * \brief   Number of NewSessionTicket messages for the server to send
- *          after handshake completion.
- *
- * \note    The default value is
- *          \c MBEDTLS_SSL_TLS1_3_DEFAULT_NEW_SESSION_TICKETS.
- *
- * \note    In case of a session resumption, this setting only partially apply.
- *          At most one ticket is sent in that case to just renew the pool of
- *          tickets of the client. The rationale is to avoid the number of
- *          tickets on the server to become rapidly out of control when the
- *          server has the same configuration for all its connection instances.
- *
- * \param conf    SSL configuration
- * \param num_tickets    Number of NewSessionTicket.
- *
- */
-void mbedtls_ssl_conf_new_session_tickets( mbedtls_ssl_config *conf,
-                                           uint16_t num_tickets );
-#endif /* MBEDTLS_SSL_SESSION_TICKETS &&
-          MBEDTLS_SSL_SRV_C &&
-          MBEDTLS_SSL_PROTO_TLS1_3*/
+#endif /* MBEDTLS_SSL_SESSION_TICKETS && MBEDTLS_SSL_CLI_C */
 
 #if defined(MBEDTLS_SSL_RENEGOTIATION)
 /**
@@ -4779,7 +4736,7 @@ int mbedtls_ssl_read( mbedtls_ssl_context *ssl, unsigned char *buf, size_t len )
  *
  * \note           When this function returns #MBEDTLS_ERR_SSL_WANT_WRITE/READ,
  *                 it must be called later with the *same* arguments,
- *                 until it returns a value greater than or equal to 0. When
+ *                 until it returns a value greater that or equal to 0. When
  *                 the function returns #MBEDTLS_ERR_SSL_WANT_WRITE there may be
  *                 some partial data in the output buffer, however this is not
  *                 yet sent.
