@@ -21,7 +21,13 @@
 
 #if defined(MBEDTLS_SSL_CLI_C) && defined(MBEDTLS_SSL_PROTO_TLS1_2)
 
+#if defined(MBEDTLS_PLATFORM_C)
 #include "mbedtls/platform.h"
+#else
+#include <stdlib.h>
+#define mbedtls_calloc    calloc
+#define mbedtls_free      free
+#endif
 
 #include "mbedtls/ssl.h"
 #include "ssl_client.h"
@@ -48,6 +54,27 @@
 #endif
 
 #include "hash_info.h"
+
+#if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
+int mbedtls_ssl_conf_has_static_psk( mbedtls_ssl_config const *conf )
+{
+    if( conf->psk_identity     == NULL ||
+        conf->psk_identity_len == 0     )
+    {
+        return( 0 );
+    }
+
+#if defined(MBEDTLS_USE_PSA_CRYPTO)
+    if( ! mbedtls_svc_key_id_is_null( conf->psk_opaque ) )
+        return( 1 );
+#endif /* MBEDTLS_USE_PSA_CRYPTO */
+
+    if( conf->psk != NULL && conf->psk_len != 0 )
+        return( 1 );
+
+    return( 0 );
+}
+#endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
 
 #if defined(MBEDTLS_SSL_RENEGOTIATION)
 MBEDTLS_CHECK_RETURN_CRITICAL
@@ -1750,10 +1777,10 @@ static int ssl_parse_server_dh_params( mbedtls_ssl_context *ssl,
 #endif /* MBEDTLS_KEY_EXCHANGE_DHE_RSA_ENABLED ||
           MBEDTLS_KEY_EXCHANGE_DHE_PSK_ENABLED */
 
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
-#if defined(MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED)   ||   \
-    defined(MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED)   ||   \
+#if defined(MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED) ||     \
+    defined(MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED) ||     \
     defined(MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED)
+#if defined(MBEDTLS_USE_PSA_CRYPTO)
 MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_parse_server_ecdh_params( mbedtls_ssl_context *ssl,
                                              unsigned char **p,
@@ -1818,15 +1845,7 @@ static int ssl_parse_server_ecdh_params( mbedtls_ssl_context *ssl,
 
     return( 0 );
 }
-#endif /* MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED   ||
-          MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED   ||
-          MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED */
 #else
-#if defined(MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED)   ||   \
-    defined(MBEDTLS_KEY_EXCHANGE_ECDH_RSA_ENABLED)    ||   \
-    defined(MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED)   ||   \
-    defined(MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED) ||   \
-    defined(MBEDTLS_KEY_EXCHANGE_ECDH_ECDSA_ENABLED)
 MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_check_server_ecdh_params( const mbedtls_ssl_context *ssl )
 {
@@ -1856,15 +1875,6 @@ static int ssl_check_server_ecdh_params( const mbedtls_ssl_context *ssl )
     return( 0 );
 }
 
-#endif /* MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED   ||
-          MBEDTLS_KEY_EXCHANGE_ECDH_RSA_ENABLED    ||
-          MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED   ||
-          MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED ||
-          MBEDTLS_KEY_EXCHANGE_ECDH_ECDSA_ENABLED */
-
-#if defined(MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED) ||     \
-    defined(MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED) ||     \
-    defined(MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED)
 MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_parse_server_ecdh_params( mbedtls_ssl_context *ssl,
                                          unsigned char **p,
@@ -1900,10 +1910,11 @@ static int ssl_parse_server_ecdh_params( mbedtls_ssl_context *ssl,
 
     return( ret );
 }
-#endif /* MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED ||     \
-          MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED ||     \
-          MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED */
-#endif /* !MBEDTLS_USE_PSA_CRYPTO */
+#endif /* MBEDTLS_USE_PSA_CRYPTO */
+#endif /* MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED ||
+          MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED ||
+          MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED */
+
 #if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
 MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_parse_server_psk_hint( mbedtls_ssl_context *ssl,
@@ -2319,8 +2330,11 @@ start_processing:
     if( mbedtls_ssl_ciphersuite_uses_server_signature( ciphersuite_info ) )
     {
         size_t sig_len, hashlen;
-        unsigned char hash[MBEDTLS_HASH_MAX_SIZE];
-
+#if defined(MBEDTLS_USE_PSA_CRYPTO)
+        unsigned char hash[PSA_HASH_MAX_SIZE];
+#else
+        unsigned char hash[MBEDTLS_MD_MAX_SIZE];
+#endif
         mbedtls_md_type_t md_alg = MBEDTLS_MD_NONE;
         mbedtls_pk_type_t pk_alg = MBEDTLS_PK_NONE;
         unsigned char *params = ssl->in_msg + mbedtls_ssl_hs_hdr_len( ssl );
@@ -2460,11 +2474,9 @@ start_processing:
 
         if( ret != 0 )
         {
-            int send_alert_msg = 1;
 #if defined(MBEDTLS_SSL_ECP_RESTARTABLE_ENABLED)
-            send_alert_msg = ( ret != MBEDTLS_ERR_ECP_IN_PROGRESS );
+            if( ret != MBEDTLS_ERR_ECP_IN_PROGRESS )
 #endif
-            if( send_alert_msg )
                 mbedtls_ssl_send_alert_message(
                     ssl,
                     MBEDTLS_SSL_ALERT_LEVEL_FATAL,
@@ -2680,6 +2692,7 @@ static int ssl_parse_certificate_request( mbedtls_ssl_context *ssl )
     {
         unsigned char *p = dn + i + 2;
         mbedtls_x509_name name;
+        mbedtls_x509_name *name_cur, *name_prv;
         size_t asn1_len;
         char s[MBEDTLS_X509_MAX_DN_NAME_SIZE];
         memset( &name, 0, sizeof( name ) );
@@ -2699,7 +2712,14 @@ static int ssl_parse_certificate_request( mbedtls_ssl_context *ssl )
         MBEDTLS_SSL_DEBUG_MSG( 3,
             ( "DN hint: %.*s",
               mbedtls_x509_dn_gets( s, sizeof(s), &name ), s ) );
-        mbedtls_asn1_free_named_data_list_shallow( name.next );
+        name_cur = name.next;
+        while( name_cur != NULL )
+        {
+            name_prv = name_cur;
+            name_cur = name_cur->next;
+            mbedtls_platform_zeroize( name_prv, sizeof( mbedtls_x509_name ) );
+            mbedtls_free( name_prv );
+        }
     }
 #endif
 
