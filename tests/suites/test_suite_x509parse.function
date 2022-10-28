@@ -10,6 +10,8 @@
 #include "mbedtls/error.h"
 #include "string.h"
 
+#include "mbedtls/legacy_or_psa.h"
+
 #if MBEDTLS_X509_MAX_INTERMEDIATE_CA > 19
 #error "The value of MBEDTLS_X509_MAX_INTERMEDIATE_C is larger \
 than the current threshold 19. To test larger values, please \
@@ -813,6 +815,41 @@ void mbedtls_x509_dn_gets( char * crt_file, char * entity, char * result_str )
 
 exit:
     mbedtls_x509_crt_free( &crt );
+}
+/* END_CASE */
+
+/* BEGIN_CASE depends_on:MBEDTLS_X509_CRT_PARSE_C */
+void mbedtls_x509_get_name( char * rdn_sequence, int exp_ret )
+{
+    unsigned char *name;
+    unsigned char *p;
+    size_t name_len;
+    mbedtls_x509_name head;
+    mbedtls_x509_name *allocated, *prev;
+    int ret;
+
+    memset( &head, 0, sizeof( head ) );
+
+    name = mbedtls_test_unhexify_alloc( rdn_sequence, &name_len );
+    p = name;
+
+    ret = mbedtls_x509_get_name( &p, ( name + name_len ), &head );
+    if( ret == 0 )
+    {
+        allocated = head.next;
+
+        while( allocated != NULL )
+        {
+            prev = allocated;
+            allocated = allocated->next;
+
+            mbedtls_free( prev );
+        }
+    }
+
+    TEST_EQUAL( ret, exp_ret );
+
+    mbedtls_free( name );
 }
 /* END_CASE */
 
