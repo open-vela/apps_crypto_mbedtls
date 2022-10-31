@@ -32,6 +32,7 @@
 #include "ssl_misc.h"
 #include "ssl_client.h"
 #include "ssl_tls13_keys.h"
+#include "ssl_debug_helpers.h"
 
 /* Write extensions */
 
@@ -88,7 +89,12 @@ static int ssl_tls13_write_supported_versions_ext( mbedtls_ssl_context *ssl,
     }
 
     *out_len = 5 + versions_len;
-
+    mbedtls_ssl_tls13_set_hs_sent_ext_mask(
+        ssl, MBEDTLS_TLS_EXT_SUPPORTED_VERSIONS );
+    MBEDTLS_SSL_DEBUG_MSG(
+        4, ( "sent %s extension",
+             mbedtls_tls13_get_extension_name(
+                 MBEDTLS_TLS_EXT_SUPPORTED_VERSIONS ) ) );
     return( 0 );
 }
 
@@ -359,7 +365,12 @@ static int ssl_tls13_write_key_share_ext( mbedtls_ssl_context *ssl,
 
     MBEDTLS_SSL_DEBUG_BUF( 3, "client hello, key_share extension", buf, *out_len );
 
-    ssl->handshake->extensions_present |= MBEDTLS_SSL_EXT_KEY_SHARE;
+    mbedtls_ssl_tls13_set_hs_sent_ext_mask( ssl, MBEDTLS_TLS_EXT_KEY_SHARE );
+    MBEDTLS_SSL_DEBUG_MSG(
+        4, ( "sent %s extension",
+
+             mbedtls_tls13_get_extension_name(
+                 MBEDTLS_TLS_EXT_KEY_SHARE ) ) );
 
 cleanup:
 
@@ -512,7 +523,6 @@ static int ssl_tls13_parse_key_share_ext( mbedtls_ssl_context *ssl,
     else
         return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
 
-    ssl->handshake->extensions_present |= MBEDTLS_SSL_EXT_KEY_SHARE;
     return( ret );
 }
 
@@ -600,6 +610,12 @@ static int ssl_tls13_write_cookie_ext( mbedtls_ssl_context *ssl,
 
     *out_len = handshake->hrr_cookie_len + 6;
 
+
+    mbedtls_ssl_tls13_set_hs_sent_ext_mask( ssl, MBEDTLS_TLS_EXT_COOKIE );
+    MBEDTLS_SSL_DEBUG_MSG(
+        4, ( "sent %s extension",
+             mbedtls_tls13_get_extension_name(
+                 MBEDTLS_TLS_EXT_COOKIE ) ) );
     return( 0 );
 }
 
@@ -669,7 +685,13 @@ static int ssl_tls13_write_psk_key_exchange_modes_ext( mbedtls_ssl_context *ssl,
     buf[4] = ke_modes_len;
 
     *out_len = p - buf;
-    ssl->handshake->extensions_present |= MBEDTLS_SSL_EXT_PSK_KEY_EXCHANGE_MODES;
+
+    mbedtls_ssl_tls13_set_hs_sent_ext_mask(
+        ssl, MBEDTLS_TLS_EXT_PSK_KEY_EXCHANGE_MODES );
+    MBEDTLS_SSL_DEBUG_MSG(
+        4, ( "sent %s extension",
+             mbedtls_tls13_get_extension_name(
+                 MBEDTLS_TLS_EXT_PSK_KEY_EXCHANGE_MODES ) ) );
     return ( 0 );
 }
 
@@ -981,8 +1003,6 @@ int mbedtls_ssl_tls13_write_identities_of_pre_shared_key_ext(
 
     MBEDTLS_SSL_DEBUG_BUF( 3, "pre_shared_key identities", buf, p - buf );
 
-    ssl->handshake->extensions_present |= MBEDTLS_SSL_EXT_PRE_SHARED_KEY;
-
     return( 0 );
 }
 
@@ -1036,6 +1056,13 @@ int mbedtls_ssl_tls13_write_binders_of_pre_shared_key_ext(
     MBEDTLS_PUT_UINT16_BE( p - buf - 2, buf, 0 );
 
     MBEDTLS_SSL_DEBUG_BUF( 3, "pre_shared_key binders", buf, p - buf );
+
+    mbedtls_ssl_tls13_set_hs_sent_ext_mask(
+        ssl, MBEDTLS_TLS_EXT_PRE_SHARED_KEY );
+    MBEDTLS_SSL_DEBUG_MSG(
+        4, ( "sent %s extension",
+             mbedtls_tls13_get_extension_name(
+                 MBEDTLS_TLS_EXT_PRE_SHARED_KEY ) ) );
 
     return( 0 );
 }
@@ -1108,8 +1135,6 @@ static int ssl_tls13_parse_server_pre_shared_key_ext( mbedtls_ssl_context *ssl,
         MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_set_hs_psk", ret );
         return( ret );
     }
-
-    ssl->handshake->extensions_present |= MBEDTLS_SSL_EXT_PRE_SHARED_KEY;
 
     return( 0 );
 }
@@ -1388,7 +1413,7 @@ static int ssl_tls13_preprocess_server_hello( mbedtls_ssl_context *ssl,
     ssl->session_negotiate->tls_version = ssl->tls_version;
 #endif /* MBEDTLS_SSL_SESSION_TICKETS */
 
-    handshake->extensions_present = MBEDTLS_SSL_EXT_NONE;
+    handshake->received_extensions = MBEDTLS_SSL_EXT_NONE;
 
     ret = ssl_server_hello_is_hrr( ssl, buf, end );
     switch( ret )
@@ -1498,6 +1523,7 @@ static int ssl_tls13_parse_server_hello( mbedtls_ssl_context *ssl,
     uint16_t cipher_suite;
     const mbedtls_ssl_ciphersuite_t *ciphersuite_info;
     int fatal_alert = 0;
+    uint32_t allowed_extensions_mask;
 
     /*
      * Check there is space for minimal fields
@@ -1640,6 +1666,11 @@ static int ssl_tls13_parse_server_hello( mbedtls_ssl_context *ssl,
 
     MBEDTLS_SSL_DEBUG_BUF( 3, "server hello extensions", p, extensions_len );
 
+    handshake->received_extensions = MBEDTLS_SSL_EXT_NONE;
+    allowed_extensions_mask = is_hrr ?
+                                  MBEDTLS_SSL_TLS1_3_ALLOWED_EXTS_OF_HRR :
+                                  MBEDTLS_SSL_TLS1_3_ALLOWED_EXTS_OF_SH;
+
     while( p < extensions_end )
     {
         unsigned int extension_type;
@@ -1654,15 +1685,18 @@ static int ssl_tls13_parse_server_hello( mbedtls_ssl_context *ssl,
         MBEDTLS_SSL_CHK_BUF_READ_PTR( p, extensions_end, extension_data_len );
         extension_data_end = p + extension_data_len;
 
+        ret = mbedtls_ssl_tls13_check_received_extension(
+                  ssl,
+                  is_hrr ?
+                      -MBEDTLS_SSL_HS_SERVER_HELLO : MBEDTLS_SSL_HS_SERVER_HELLO,
+                  extension_type,
+                  allowed_extensions_mask );
+        if( ret != 0 )
+            return( ret );
+
         switch( extension_type )
         {
             case MBEDTLS_TLS_EXT_COOKIE:
-
-                if( !is_hrr )
-                {
-                    fatal_alert = MBEDTLS_SSL_ALERT_MSG_UNSUPPORTED_EXT;
-                    goto cleanup;
-                }
 
                 ret = ssl_tls13_parse_cookie_ext( ssl,
                                                   p, extension_data_end );
@@ -1686,11 +1720,6 @@ static int ssl_tls13_parse_server_hello( mbedtls_ssl_context *ssl,
 #if defined(MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_SOME_PSK_ENABLED)
             case MBEDTLS_TLS_EXT_PRE_SHARED_KEY:
                 MBEDTLS_SSL_DEBUG_MSG( 3, ( "found pre_shared_key extension" ) );
-                if( is_hrr )
-                {
-                    fatal_alert = MBEDTLS_SSL_ALERT_MSG_UNSUPPORTED_EXT;
-                    goto cleanup;
-                }
 
                 if( ( ret = ssl_tls13_parse_server_pre_shared_key_ext(
                                 ssl, p, extension_data_end ) ) != 0 )
@@ -1726,17 +1755,16 @@ static int ssl_tls13_parse_server_hello( mbedtls_ssl_context *ssl,
                 break;
 
             default:
-                MBEDTLS_SSL_DEBUG_MSG(
-                    3,
-                    ( "unknown extension found: %u ( ignoring )",
-                      extension_type ) );
-
-                fatal_alert = MBEDTLS_SSL_ALERT_MSG_UNSUPPORTED_EXT;
+                ret = MBEDTLS_ERR_SSL_INTERNAL_ERROR;
                 goto cleanup;
         }
 
         p += extension_data_len;
     }
+
+    MBEDTLS_SSL_TLS1_3_PRINT_EXTS(
+        3, is_hrr ? -MBEDTLS_SSL_HS_SERVER_HELLO : MBEDTLS_SSL_HS_SERVER_HELLO,
+        handshake->received_extensions );
 
 cleanup:
 
@@ -1786,7 +1814,7 @@ static int ssl_tls13_postprocess_server_hello( mbedtls_ssl_context *ssl )
      * 3) If only the key_share extension was received then the key
      *    exchange mode is EPHEMERAL-only.
      */
-    switch( handshake->extensions_present &
+    switch( handshake->received_extensions &
             ( MBEDTLS_SSL_EXT_PRE_SHARED_KEY | MBEDTLS_SSL_EXT_KEY_SHARE ) )
     {
         /* Only the pre_shared_key extension was received */
@@ -1969,6 +1997,7 @@ static int ssl_tls13_parse_encrypted_extensions( mbedtls_ssl_context *ssl,
     size_t extensions_len;
     const unsigned char *p = buf;
     const unsigned char *extensions_end;
+    mbedtls_ssl_handshake_params *handshake = ssl->handshake;
 
     MBEDTLS_SSL_CHK_BUF_READ_PTR( p, end, 2 );
     extensions_len = MBEDTLS_GET_UINT16_BE( p, 0 );
@@ -1977,6 +2006,8 @@ static int ssl_tls13_parse_encrypted_extensions( mbedtls_ssl_context *ssl,
     MBEDTLS_SSL_DEBUG_BUF( 3, "encrypted extensions", p, extensions_len );
     MBEDTLS_SSL_CHK_BUF_READ_PTR( p, end, extensions_len );
     extensions_end = p + extensions_len;
+
+    handshake->received_extensions = MBEDTLS_SSL_EXT_NONE;
 
     while( p < extensions_end )
     {
@@ -1996,22 +2027,14 @@ static int ssl_tls13_parse_encrypted_extensions( mbedtls_ssl_context *ssl,
 
         MBEDTLS_SSL_CHK_BUF_READ_PTR( p, extensions_end, extension_data_len );
 
-        /* The client MUST check EncryptedExtensions for the
-         * presence of any forbidden extensions and if any are found MUST abort
-         * the handshake with an "unsupported_extension" alert.
-         */
+        ret = mbedtls_ssl_tls13_check_received_extension(
+                  ssl, MBEDTLS_SSL_HS_ENCRYPTED_EXTENSIONS, extension_type,
+                  MBEDTLS_SSL_TLS1_3_ALLOWED_EXTS_OF_EE );
+        if( ret != 0 )
+            return( ret );
+
         switch( extension_type )
         {
-            case MBEDTLS_TLS_EXT_SERVERNAME:
-                MBEDTLS_SSL_DEBUG_MSG( 3, ( "found server_name extension" ) );
-
-                /* The server_name extension should be an empty extension */
-
-                break;
-            case MBEDTLS_TLS_EXT_SUPPORTED_GROUPS:
-                MBEDTLS_SSL_DEBUG_MSG( 3, ( "found extensions supported groups" ) );
-                break;
-
 #if defined(MBEDTLS_SSL_ALPN)
             case MBEDTLS_TLS_EXT_ALPN:
                 MBEDTLS_SSL_DEBUG_MSG( 3, ( "found alpn extension" ) );
@@ -2024,16 +2047,18 @@ static int ssl_tls13_parse_encrypted_extensions( mbedtls_ssl_context *ssl,
                 break;
 #endif /* MBEDTLS_SSL_ALPN */
             default:
-                MBEDTLS_SSL_DEBUG_MSG(
-                    3, ( "unsupported extension found: %u ", extension_type) );
-                MBEDTLS_SSL_PEND_FATAL_ALERT(
-                    MBEDTLS_SSL_ALERT_MSG_UNSUPPORTED_EXT,
-                    MBEDTLS_ERR_SSL_UNSUPPORTED_EXTENSION );
-                return ( MBEDTLS_ERR_SSL_UNSUPPORTED_EXTENSION );
+                MBEDTLS_SSL_DEBUG_MSG( 3,
+                    ( "encrypted extensions: received %s(%u) extension ( ignored )",
+                      mbedtls_tls13_get_extension_name( extension_type ),
+                      extension_type ) );
+                break;
         }
 
         p += extension_data_len;
     }
+
+    MBEDTLS_SSL_TLS1_3_PRINT_EXTS( 3, MBEDTLS_SSL_HS_ENCRYPTED_EXTENSIONS,
+                                   handshake->received_extensions );
 
     /* Check that we consumed all the message. */
     if( p != end )
@@ -2140,7 +2165,7 @@ static int ssl_tls13_parse_certificate_request( mbedtls_ssl_context *ssl,
     size_t certificate_request_context_len = 0;
     size_t extensions_len = 0;
     const unsigned char *extensions_end;
-    unsigned char sig_alg_ext_found = 0;
+    mbedtls_ssl_handshake_params *handshake = ssl->handshake;
 
     /* ...
      * opaque certificate_request_context<0..2^8-1>
@@ -2156,7 +2181,6 @@ static int ssl_tls13_parse_certificate_request( mbedtls_ssl_context *ssl,
         MBEDTLS_SSL_DEBUG_BUF( 3, "Certificate Request Context",
                                p, certificate_request_context_len );
 
-        mbedtls_ssl_handshake_params *handshake = ssl->handshake;
         handshake->certificate_request_context =
                 mbedtls_calloc( 1, certificate_request_context_len );
         if( handshake->certificate_request_context == NULL )
@@ -2180,6 +2204,8 @@ static int ssl_tls13_parse_certificate_request( mbedtls_ssl_context *ssl,
     MBEDTLS_SSL_CHK_BUF_READ_PTR( p, end, extensions_len );
     extensions_end = p + extensions_len;
 
+    handshake->received_extensions = MBEDTLS_SSL_EXT_NONE;
+
     while( p < extensions_end )
     {
         unsigned int extension_type;
@@ -2192,6 +2218,12 @@ static int ssl_tls13_parse_certificate_request( mbedtls_ssl_context *ssl,
 
         MBEDTLS_SSL_CHK_BUF_READ_PTR( p, extensions_end, extension_data_len );
 
+        ret = mbedtls_ssl_tls13_check_received_extension(
+                  ssl, MBEDTLS_SSL_HS_CERTIFICATE_REQUEST, extension_type,
+                  MBEDTLS_SSL_TLS1_3_ALLOWED_EXTS_OF_CR );
+        if( ret != 0 )
+            return( ret );
+
         switch( extension_type )
         {
             case MBEDTLS_TLS_EXT_SIG_ALG:
@@ -2201,25 +2233,24 @@ static int ssl_tls13_parse_certificate_request( mbedtls_ssl_context *ssl,
                                                      p + extension_data_len );
                 if( ret != 0 )
                     return( ret );
-                if( ! sig_alg_ext_found )
-                    sig_alg_ext_found = 1;
-                else
-                {
-                    MBEDTLS_SSL_DEBUG_MSG( 3,
-                        ( "Duplicate signature algorithms extensions found" ) );
-                    goto decode_error;
-                }
+
                 break;
 
             default:
-                MBEDTLS_SSL_DEBUG_MSG(
-                    3,
-                    ( "unknown extension found: %u ( ignoring )",
-                    extension_type ) );
+                MBEDTLS_SSL_DEBUG_MSG( 3,
+                    ( "certificate request: received %s(%u) extension ( ignored )",
+                      mbedtls_tls13_get_extension_name( extension_type ),
+                      extension_type ) );
                 break;
         }
+
         p += extension_data_len;
     }
+
+    MBEDTLS_SSL_TLS1_3_PRINT_EXTS( 3,
+                                   MBEDTLS_SSL_HS_CERTIFICATE_REQUEST,
+                                   handshake->received_extensions );
+
     /* Check that we consumed all the message. */
     if( p != end )
     {
@@ -2227,8 +2258,12 @@ static int ssl_tls13_parse_certificate_request( mbedtls_ssl_context *ssl,
             ( "CertificateRequest misaligned" ) );
         goto decode_error;
     }
-    /* Check that we found signature algorithms extension */
-    if( ! sig_alg_ext_found )
+
+    /* RFC 8446 section 4.3.2
+     *
+     * The "signature_algorithms" extension MUST be specified
+     */
+    if( ( handshake->received_extensions & MBEDTLS_SSL_EXT_SIG_ALG ) == 0 )
     {
         MBEDTLS_SSL_DEBUG_MSG( 3,
             ( "no signature algorithms extension found" ) );
@@ -2468,14 +2503,17 @@ static int ssl_tls13_parse_new_session_ticket_exts( mbedtls_ssl_context *ssl,
                                                     const unsigned char *buf,
                                                     const unsigned char *end )
 {
+    mbedtls_ssl_handshake_params *handshake = ssl->handshake;
     const unsigned char *p = buf;
 
-    ((void) ssl);
+
+    handshake->received_extensions = MBEDTLS_SSL_EXT_NONE;
 
     while( p < end )
     {
         unsigned int extension_type;
         size_t extension_data_len;
+        int ret;
 
         MBEDTLS_SSL_CHK_BUF_READ_PTR( p, end, 4 );
         extension_type = MBEDTLS_GET_UINT16_BE( p, 0 );
@@ -2484,6 +2522,12 @@ static int ssl_tls13_parse_new_session_ticket_exts( mbedtls_ssl_context *ssl,
 
         MBEDTLS_SSL_CHK_BUF_READ_PTR( p, end, extension_data_len );
 
+        ret = mbedtls_ssl_tls13_check_received_extension(
+                  ssl, MBEDTLS_SSL_HS_CLIENT_HELLO, extension_type,
+                  MBEDTLS_SSL_TLS1_3_ALLOWED_EXTS_OF_CH );
+        if( ret != 0 )
+            return( ret );
+
         switch( extension_type )
         {
             case MBEDTLS_TLS_EXT_EARLY_DATA:
@@ -2491,10 +2535,18 @@ static int ssl_tls13_parse_new_session_ticket_exts( mbedtls_ssl_context *ssl,
                 break;
 
             default:
+                MBEDTLS_SSL_DEBUG_MSG( 3,
+                    ( "NewSessionTicket : received %s(%u) extension ( ignored )",
+                      mbedtls_tls13_get_extension_name( extension_type ),
+                      extension_type ) );
                 break;
         }
+
         p +=  extension_data_len;
     }
+
+    MBEDTLS_SSL_TLS1_3_PRINT_EXTS(
+        3, MBEDTLS_SSL_HS_NEW_SESSION_TICKET, handshake->received_extensions );
 
     return( 0 );
 }
