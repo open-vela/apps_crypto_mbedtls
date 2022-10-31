@@ -83,7 +83,6 @@ int main( void )
 #define DFL_RECSPLIT            -1
 #define DFL_DHMLEN              -1
 #define DFL_RECONNECT           0
-#define DFL_RECO_SERVER_NAME    NULL
 #define DFL_RECO_DELAY          0
 #define DFL_RECO_MODE           1
 #define DFL_CID_ENABLED         0
@@ -404,8 +403,8 @@ int main( void )
     USAGE_RENEGO                                            \
     "    exchanges=%%d        default: 1\n"                 \
     "    reconnect=%%d        number of reconnections using session resumption\n" \
-    "                        default: 0 (disabled)\n"       \
-    "    reco_server_name=%%s  default: NULL\n"             \
+    "                        default: 0 (disabled)\n"      \
+    "    reco_server_name=%%s  default: localhost\n"         \
     "    reco_delay=%%d       default: 0 seconds\n"         \
     "    reco_mode=%%d        0: copy session, 1: serialize session\n" \
     "                        default: 1\n"      \
@@ -922,7 +921,7 @@ int main( int argc, char *argv[] )
     opt.recsplit            = DFL_RECSPLIT;
     opt.dhmlen              = DFL_DHMLEN;
     opt.reconnect           = DFL_RECONNECT;
-    opt.reco_server_name    = DFL_RECO_SERVER_NAME;
+    opt.reco_server_name    = DFL_SERVER_NAME;
     opt.reco_delay          = DFL_RECO_DELAY;
     opt.reco_mode           = DFL_RECO_MODE;
     opt.reconnect_hard      = DFL_RECONNECT_HARD;
@@ -1119,7 +1118,7 @@ int main( int argc, char *argv[] )
             if( opt.reconnect < 0 || opt.reconnect > 2 )
                 goto usage;
         }
-        else if( strcmp( p, "reco_server_name" ) == 0 )
+        else if( strcmp( p, "rec_server_name" ) == 0 )
             opt.reco_server_name = q;
         else if( strcmp( p, "reco_delay" ) == 0 )
         {
@@ -2240,10 +2239,7 @@ int main( int argc, char *argv[] )
                     "    or you didn't set ca_file or ca_path "
                         "to an appropriate value.\n"
                     "    Alternatively, you may want to use "
-                        "auth_mode=optional for testing purposes if "
-                        "not using TLS 1.3.\n"
-                    "    For TLS 1.3 server, try `ca_path=/etc/ssl/certs/`"
-                        "or other folder that has root certificates\n" );
+                        "auth_mode=optional for testing purposes.\n" );
             mbedtls_printf( "\n" );
             goto exit;
         }
@@ -3117,8 +3113,7 @@ reconnect:
         }
 
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
-        if( opt.reco_server_name != NULL &&
-            ( ret = mbedtls_ssl_set_hostname( &ssl,
+        if( ( ret = mbedtls_ssl_set_hostname( &ssl,
                                               opt.reco_server_name ) ) != 0 )
         {
             mbedtls_printf( " failed\n  ! mbedtls_ssl_set_hostname returned %d\n\n",
