@@ -398,6 +398,7 @@ int mbedtls_ssl_tls13_parse_certificate( mbedtls_ssl_context *ssl,
     size_t certificate_list_len = 0;
     const unsigned char *p = buf;
     const unsigned char *certificate_list_end;
+    mbedtls_ssl_handshake_params *handshake = ssl->handshake;
 
     MBEDTLS_SSL_CHK_BUF_READ_PTR( p, end, 4 );
     certificate_request_context_len = p[0];
@@ -447,6 +448,7 @@ int mbedtls_ssl_tls13_parse_certificate( mbedtls_ssl_context *ssl,
     while( p < certificate_list_end )
     {
         size_t cert_data_len, extensions_len;
+        const unsigned char *extensions_end;
 
         MBEDTLS_SSL_CHK_BUF_READ_PTR( p, certificate_list_end, 3 );
         cert_data_len = MBEDTLS_GET_UINT24_BE( p, 0 );
@@ -504,7 +506,49 @@ int mbedtls_ssl_tls13_parse_certificate( mbedtls_ssl_context *ssl,
         extensions_len = MBEDTLS_GET_UINT16_BE( p, 0 );
         p += 2;
         MBEDTLS_SSL_CHK_BUF_READ_PTR( p, certificate_list_end, extensions_len );
-        p += extensions_len;
+
+        extensions_end = p + extensions_len;
+        handshake->received_extensions = MBEDTLS_SSL_EXT_NONE;
+
+        while( p < extensions_end )
+        {
+            unsigned int extension_type;
+            size_t extension_data_len;
+
+            /*
+            * struct {
+            *     ExtensionType extension_type; (2 bytes)
+            *     opaque extension_data<0..2^16-1>;
+            * } Extension;
+            */
+            MBEDTLS_SSL_CHK_BUF_READ_PTR( p, extensions_end, 4 );
+            extension_type = MBEDTLS_GET_UINT16_BE( p, 0 );
+            extension_data_len = MBEDTLS_GET_UINT16_BE( p, 2 );
+            p += 4;
+
+            MBEDTLS_SSL_CHK_BUF_READ_PTR( p, extensions_end, extension_data_len );
+
+            ret = mbedtls_ssl_tls13_check_received_extension(
+                      ssl, MBEDTLS_SSL_HS_CERTIFICATE, extension_type,
+                      MBEDTLS_SSL_TLS1_3_ALLOWED_EXTS_OF_CT );
+            if( ret != 0 )
+                return( ret );
+
+            switch( extension_type )
+            {
+                default:
+                    MBEDTLS_SSL_DEBUG_MSG( 3,
+                        ( "Certificate: received %s(%u) extension ( ignored )",
+                        mbedtls_tls13_get_extension_name( extension_type ),
+                        extension_type ) );
+                    break;
+            }
+
+            p += extension_data_len;
+        }
+
+        MBEDTLS_SSL_TLS1_3_PRINT_EXTS(
+            3, MBEDTLS_SSL_HS_CERTIFICATE, handshake->received_extensions );
     }
 
 exit:
@@ -512,7 +556,7 @@ exit:
     if( p != end )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad Certificate message" ) );
-        MBEDTLS_SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR, \
+        MBEDTLS_SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR,
                                       MBEDTLS_ERR_SSL_DECODE_ERROR );
         return( MBEDTLS_ERR_SSL_DECODE_ERROR );
     }
@@ -1485,4 +1529,210 @@ int mbedtls_ssl_tls13_generate_and_write_ecdh_key_exchange(
 }
 #endif /* MBEDTLS_ECDH_C */
 
+#if defined(MBEDTLS_DEBUG_C)
+const char *mbedtls_tls13_get_extension_name( uint16_t extension_type )
+{
+    switch( extension_type )
+    {
+        case MBEDTLS_TLS_EXT_SERVERNAME:
+            return( "server_name" );
+
+        case MBEDTLS_TLS_EXT_MAX_FRAGMENT_LENGTH:
+            return( "max_fragment_length" );
+
+        case MBEDTLS_TLS_EXT_STATUS_REQUEST:
+            return( "status_request" );
+
+        case MBEDTLS_TLS_EXT_SUPPORTED_GROUPS:
+            return( "supported_groups" );
+
+        case MBEDTLS_TLS_EXT_SIG_ALG:
+            return( "signature_algorithms" );
+
+        case MBEDTLS_TLS_EXT_USE_SRTP:
+            return( "use_srtp" );
+
+        case MBEDTLS_TLS_EXT_HEARTBEAT:
+            return( "heartbeat" );
+
+        case MBEDTLS_TLS_EXT_ALPN:
+            return( "application_layer_protocol_negotiation" );
+
+        case MBEDTLS_TLS_EXT_SCT:
+            return( "signed_certificate_timestamp" );
+
+        case MBEDTLS_TLS_EXT_CLI_CERT_TYPE:
+            return( "client_certificate_type" );
+
+        case MBEDTLS_TLS_EXT_SERV_CERT_TYPE:
+            return( "server_certificate_type" );
+
+        case MBEDTLS_TLS_EXT_PADDING:
+            return( "padding" );
+
+        case MBEDTLS_TLS_EXT_PRE_SHARED_KEY:
+            return( "pre_shared_key" );
+
+        case MBEDTLS_TLS_EXT_EARLY_DATA:
+            return( "early_data" );
+
+        case MBEDTLS_TLS_EXT_SUPPORTED_VERSIONS:
+            return( "supported_versions" );
+
+        case MBEDTLS_TLS_EXT_COOKIE:
+            return( "cookie" );
+
+        case MBEDTLS_TLS_EXT_PSK_KEY_EXCHANGE_MODES:
+            return( "psk_key_exchange_modes" );
+
+        case MBEDTLS_TLS_EXT_CERT_AUTH:
+            return( "certificate_authorities" );
+
+        case MBEDTLS_TLS_EXT_OID_FILTERS:
+            return( "oid_filters" );
+
+        case MBEDTLS_TLS_EXT_POST_HANDSHAKE_AUTH:
+            return( "post_handshake_auth" );
+
+        case MBEDTLS_TLS_EXT_SIG_ALG_CERT:
+            return( "signature_algorithms_cert" );
+
+        case MBEDTLS_TLS_EXT_KEY_SHARE:
+            return( "key_share" );
+    };
+
+    return( "unknown" );
+}
+
+static const char *ssl_tls13_get_hs_msg_name( int hs_msg_type )
+{
+    switch( hs_msg_type )
+    {
+        case MBEDTLS_SSL_HS_CLIENT_HELLO:
+            return( "ClientHello" );
+        case MBEDTLS_SSL_HS_SERVER_HELLO:
+            return( "ServerHello" );
+        case -MBEDTLS_SSL_HS_SERVER_HELLO: // HRR does not have IANA value.
+            return( "HelloRetryRequest" );
+        case MBEDTLS_SSL_HS_NEW_SESSION_TICKET:
+            return( "NewSessionTicket" );
+        case MBEDTLS_SSL_HS_ENCRYPTED_EXTENSIONS:
+            return( "EncryptedExtensions" );
+        case MBEDTLS_SSL_HS_CERTIFICATE:
+            return( "Certificate" );
+        case MBEDTLS_SSL_HS_CERTIFICATE_REQUEST:
+            return( "CertificateRequest" );
+    }
+    return( NULL );
+}
+
+void mbedtls_ssl_tls13_print_extensions( const mbedtls_ssl_context *ssl,
+                                         int level, const char *file, int line,
+                                         int hs_msg_type,
+                                         uint32_t extensions_present )
+{
+    static const struct{
+        uint32_t extension_mask;
+        const char *extension_name;
+    } mask_to_str_table[] = {
+            { MBEDTLS_SSL_EXT_SERVERNAME, "server_name" },
+            { MBEDTLS_SSL_EXT_MAX_FRAGMENT_LENGTH, "max_fragment_length" },
+            { MBEDTLS_SSL_EXT_STATUS_REQUEST, "status_request" },
+            { MBEDTLS_SSL_EXT_SUPPORTED_GROUPS, "supported_groups" },
+            { MBEDTLS_SSL_EXT_SIG_ALG, "signature_algorithms" },
+            { MBEDTLS_SSL_EXT_USE_SRTP, "use_srtp" },
+            { MBEDTLS_SSL_EXT_HEARTBEAT, "heartbeat" },
+            { MBEDTLS_SSL_EXT_ALPN, "application_layer_protocol_negotiation" },
+            { MBEDTLS_SSL_EXT_SCT, "signed_certificate_timestamp" },
+            { MBEDTLS_SSL_EXT_CLI_CERT_TYPE, "client_certificate_type" },
+            { MBEDTLS_SSL_EXT_SERV_CERT_TYPE, "server_certificate_type" },
+            { MBEDTLS_SSL_EXT_PADDING, "padding" },
+            { MBEDTLS_SSL_EXT_PRE_SHARED_KEY, "pre_shared_key" },
+            { MBEDTLS_SSL_EXT_EARLY_DATA, "early_data" },
+            { MBEDTLS_SSL_EXT_SUPPORTED_VERSIONS, "supported_versions" },
+            { MBEDTLS_SSL_EXT_COOKIE, "cookie" },
+            { MBEDTLS_SSL_EXT_PSK_KEY_EXCHANGE_MODES, "psk_key_exchange_modes" },
+            { MBEDTLS_SSL_EXT_CERT_AUTH, "certificate_authorities" },
+            { MBEDTLS_SSL_EXT_OID_FILTERS, "oid_filters" },
+            { MBEDTLS_SSL_EXT_POST_HANDSHAKE_AUTH, "post_handshake_auth" },
+            { MBEDTLS_SSL_EXT_SIG_ALG_CERT, "signature_algorithms_cert" },
+            { MBEDTLS_SSL_EXT_KEY_SHARE, "key_share" } };
+
+    mbedtls_debug_print_msg( ssl, level, file, line,
+                             "extension list of %s:",
+                             ssl_tls13_get_hs_msg_name( hs_msg_type ) );
+
+    for( unsigned i = 0;
+         i < sizeof( mask_to_str_table ) / sizeof( mask_to_str_table[0] );
+         i++ )
+    {
+        const char *extension_name = mask_to_str_table[i].extension_name;
+        uint32_t is_present = extensions_present &
+                              mask_to_str_table[i].extension_mask;
+
+        mbedtls_debug_print_msg( ssl, level, file, line,
+                "- %s extension ( %s )", extension_name,
+                is_present ? "true" : "false" );
+    }
+}
+
+#endif /* MBEDTLS_DEBUG_C */
+
+/* RFC 8446 section 4.2
+ *
+ * If an implementation receives an extension which it recognizes and which is
+ * not specified for the message in which it appears, it MUST abort the handshake
+ * with an "illegal_parameter" alert.
+ *
+ */
+int mbedtls_ssl_tls13_check_received_extension(
+        mbedtls_ssl_context *ssl,
+        int hs_msg_type,
+        unsigned int received_extension_type,
+        uint32_t hs_msg_allowed_extensions_mask )
+{
+    uint32_t extension_mask = mbedtls_ssl_get_extension_mask(
+                                  received_extension_type );
+
+    MBEDTLS_SSL_PRINT_EXT_TYPE(
+        3, hs_msg_type, received_extension_type, "received" );
+
+    if( ( extension_mask & hs_msg_allowed_extensions_mask ) == 0 )
+    {
+        MBEDTLS_SSL_PRINT_EXT_TYPE(
+            3, hs_msg_type, received_extension_type, "is illegal" );
+        MBEDTLS_SSL_PEND_FATAL_ALERT(
+            MBEDTLS_SSL_ALERT_MSG_ILLEGAL_PARAMETER,
+            MBEDTLS_ERR_SSL_ILLEGAL_PARAMETER );
+        return( MBEDTLS_ERR_SSL_ILLEGAL_PARAMETER );
+    }
+
+    ssl->handshake->received_extensions |= extension_mask;
+    /*
+     * If it is a message containing extension responses, check that we
+     * previously sent the extension.
+     */
+    switch( hs_msg_type )
+    {
+        case MBEDTLS_SSL_HS_SERVER_HELLO:
+        case MBEDTLS_SSL_TLS1_3_HS_HELLO_RETRY_REQUEST:
+        case MBEDTLS_SSL_HS_ENCRYPTED_EXTENSIONS:
+        case MBEDTLS_SSL_HS_CERTIFICATE:
+            /* Check if the received extension is sent by peer message.*/
+            if( ( ssl->handshake->sent_extensions & extension_mask ) != 0 )
+                return( 0 );
+            break;
+        default:
+            return( 0 );
+    }
+
+    MBEDTLS_SSL_PRINT_EXT_TYPE(
+            3, hs_msg_type, received_extension_type, "is unsupported" );
+    MBEDTLS_SSL_PEND_FATAL_ALERT(
+        MBEDTLS_SSL_ALERT_MSG_UNSUPPORTED_EXT,
+        MBEDTLS_ERR_SSL_UNSUPPORTED_EXTENSION );
+    return( MBEDTLS_ERR_SSL_UNSUPPORTED_EXTENSION );
+}
+
 #endif /* MBEDTLS_SSL_TLS_C && MBEDTLS_SSL_PROTO_TLS1_3 */
+
