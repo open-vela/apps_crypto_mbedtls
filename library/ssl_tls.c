@@ -521,6 +521,101 @@ static void ssl_clear_peer_cert( mbedtls_ssl_session *session )
 }
 #endif /* MBEDTLS_X509_CRT_PARSE_C */
 
+uint32_t mbedtls_ssl_get_extension_id( unsigned int extension_type )
+{
+    switch( extension_type )
+    {
+        case MBEDTLS_TLS_EXT_SERVERNAME:
+            return( MBEDTLS_SSL_EXT_ID_SERVERNAME );
+
+        case MBEDTLS_TLS_EXT_MAX_FRAGMENT_LENGTH:
+            return( MBEDTLS_SSL_EXT_ID_MAX_FRAGMENT_LENGTH );
+
+        case MBEDTLS_TLS_EXT_STATUS_REQUEST:
+            return( MBEDTLS_SSL_EXT_ID_STATUS_REQUEST );
+
+        case MBEDTLS_TLS_EXT_SUPPORTED_GROUPS:
+            return( MBEDTLS_SSL_EXT_ID_SUPPORTED_GROUPS );
+
+        case MBEDTLS_TLS_EXT_SIG_ALG:
+            return( MBEDTLS_SSL_EXT_ID_SIG_ALG );
+
+        case MBEDTLS_TLS_EXT_USE_SRTP:
+            return( MBEDTLS_SSL_EXT_ID_USE_SRTP );
+
+        case MBEDTLS_TLS_EXT_HEARTBEAT:
+            return( MBEDTLS_SSL_EXT_ID_HEARTBEAT );
+
+        case MBEDTLS_TLS_EXT_ALPN:
+            return( MBEDTLS_SSL_EXT_ID_ALPN );
+
+        case MBEDTLS_TLS_EXT_SCT:
+            return( MBEDTLS_SSL_EXT_ID_SCT );
+
+        case MBEDTLS_TLS_EXT_CLI_CERT_TYPE:
+            return( MBEDTLS_SSL_EXT_ID_CLI_CERT_TYPE );
+
+        case MBEDTLS_TLS_EXT_SERV_CERT_TYPE:
+            return( MBEDTLS_SSL_EXT_ID_SERV_CERT_TYPE );
+
+        case MBEDTLS_TLS_EXT_PADDING:
+            return( MBEDTLS_SSL_EXT_ID_PADDING );
+
+        case MBEDTLS_TLS_EXT_PRE_SHARED_KEY:
+            return( MBEDTLS_SSL_EXT_ID_PRE_SHARED_KEY );
+
+        case MBEDTLS_TLS_EXT_EARLY_DATA:
+            return( MBEDTLS_SSL_EXT_ID_EARLY_DATA );
+
+        case MBEDTLS_TLS_EXT_SUPPORTED_VERSIONS:
+            return( MBEDTLS_SSL_EXT_ID_SUPPORTED_VERSIONS );
+
+        case MBEDTLS_TLS_EXT_COOKIE:
+            return( MBEDTLS_SSL_EXT_ID_COOKIE );
+
+        case MBEDTLS_TLS_EXT_PSK_KEY_EXCHANGE_MODES:
+            return( MBEDTLS_SSL_EXT_ID_PSK_KEY_EXCHANGE_MODES );
+
+        case MBEDTLS_TLS_EXT_CERT_AUTH:
+            return( MBEDTLS_SSL_EXT_ID_CERT_AUTH );
+
+        case MBEDTLS_TLS_EXT_OID_FILTERS:
+            return( MBEDTLS_SSL_EXT_ID_OID_FILTERS );
+
+        case MBEDTLS_TLS_EXT_POST_HANDSHAKE_AUTH:
+            return( MBEDTLS_SSL_EXT_ID_POST_HANDSHAKE_AUTH );
+
+        case MBEDTLS_TLS_EXT_SIG_ALG_CERT:
+            return( MBEDTLS_SSL_EXT_ID_SIG_ALG_CERT );
+
+        case MBEDTLS_TLS_EXT_KEY_SHARE:
+            return( MBEDTLS_SSL_EXT_ID_KEY_SHARE );
+
+        case MBEDTLS_TLS_EXT_TRUNCATED_HMAC:
+            return( MBEDTLS_SSL_EXT_ID_TRUNCATED_HMAC );
+
+        case MBEDTLS_TLS_EXT_SUPPORTED_POINT_FORMATS:
+            return( MBEDTLS_SSL_EXT_ID_SUPPORTED_POINT_FORMATS );
+
+        case MBEDTLS_TLS_EXT_ENCRYPT_THEN_MAC:
+            return( MBEDTLS_SSL_EXT_ID_ENCRYPT_THEN_MAC );
+
+        case MBEDTLS_TLS_EXT_EXTENDED_MASTER_SECRET:
+            return( MBEDTLS_SSL_EXT_ID_EXTENDED_MASTER_SECRET );
+
+        case MBEDTLS_TLS_EXT_SESSION_TICKET:
+            return( MBEDTLS_SSL_EXT_ID_SESSION_TICKET );
+
+    }
+
+    return( MBEDTLS_SSL_EXT_ID_UNRECOGNIZED );
+}
+
+uint32_t mbedtls_ssl_get_extension_mask( unsigned int extension_type )
+{
+    return( 1 << mbedtls_ssl_get_extension_id( extension_type ) );
+}
+
 void mbedtls_ssl_optimize_checksum( mbedtls_ssl_context *ssl,
                             const mbedtls_ssl_ciphersuite_t *ciphersuite_info )
 {
@@ -8713,8 +8808,13 @@ int mbedtls_ssl_write_sig_alg_ext( mbedtls_ssl_context *ssl, unsigned char *buf,
     *out_len = p - buf;
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3)
-    ssl->handshake->extensions_present |= MBEDTLS_SSL_EXT_SIG_ALG;
+    mbedtls_ssl_tls13_set_hs_sent_ext_mask( ssl, MBEDTLS_TLS_EXT_SIG_ALG );
+    MBEDTLS_SSL_DEBUG_MSG(
+        4, ( "sent %s extension",
+             mbedtls_tls13_get_extension_name(
+                MBEDTLS_TLS_EXT_SIG_ALG ) ) );
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
+
     return( 0 );
 }
 #endif /* MBEDTLS_SSL_HANDSHAKE_WITH_CERT_ENABLED */
