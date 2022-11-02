@@ -1,10 +1,6 @@
 /**
  *  Modular bignum functions
  *
- * This module implements operations on integers modulo some fixed modulus.
- */
-
-/*
  *  Copyright The Mbed TLS Contributors
  *  SPDX-License-Identifier: Apache-2.0
  *
@@ -143,45 +139,5 @@ int mbedtls_mpi_mod_modulus_setup( mbedtls_mpi_mod_modulus *m,
  * \param[in,out] m     The address of the modulus structure to free.
  */
 void mbedtls_mpi_mod_modulus_free( mbedtls_mpi_mod_modulus *m );
-
-/* BEGIN MERGE SLOT 1 */
-
-/* END MERGE SLOT 1 */
-
-/* BEGIN MERGE SLOT 2 */
-
-/* END MERGE SLOT 2 */
-
-/* BEGIN MERGE SLOT 3 */
-
-/* END MERGE SLOT 3 */
-
-/* BEGIN MERGE SLOT 4 */
-
-/* END MERGE SLOT 4 */
-
-/* BEGIN MERGE SLOT 5 */
-
-/* END MERGE SLOT 5 */
-
-/* BEGIN MERGE SLOT 6 */
-
-/* END MERGE SLOT 6 */
-
-/* BEGIN MERGE SLOT 7 */
-
-/* END MERGE SLOT 7 */
-
-/* BEGIN MERGE SLOT 8 */
-
-/* END MERGE SLOT 8 */
-
-/* BEGIN MERGE SLOT 9 */
-
-/* END MERGE SLOT 9 */
-
-/* BEGIN MERGE SLOT 10 */
-
-/* END MERGE SLOT 10 */
 
 #endif /* MBEDTLS_BIGNUM_MOD_H */
