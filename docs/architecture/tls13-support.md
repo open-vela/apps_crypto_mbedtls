@@ -28,12 +28,9 @@ Support description
 
   - Mbed TLS does not support DHE key establishment.
 
-  - Mbed TLS supports pre-shared keys for key establishment, pre-shared keys
-    provisioned externally as well as provisioned via the ticket mechanism.
-
-  - Mbed TLS supports session resumption via the ticket mechanism.
-
-  - Mbed TLS does not support sending or receiving early data (0-RTT data).
+  - Mbed TLS does not support pre-shared keys, including any form of
+    session resumption. This implies that it does not support sending early
+    data (0-RTT data).
 
 - Supported cipher suites: depends on the library configuration. Potentially
   all of them:
@@ -57,8 +54,8 @@ Support description
   | server_certificate_type      | no      |
   | padding                      | no      |
   | key_share                    | YES     |
-  | pre_shared_key               | YES     |
-  | psk_key_exchange_modes       | YES     |
+  | pre_shared_key               | no      |
+  | psk_key_exchange_modes       | no      |
   | early_data                   | no      |
   | cookie                       | no      |
   | supported_versions           | YES     |
@@ -121,7 +118,7 @@ Support description
   | MBEDTLS_SSL_RENEGOTIATION                | n/a     |
   | MBEDTLS_SSL_MAX_FRAGMENT_LENGTH          | no      |
   |                                          |         |
-  | MBEDTLS_SSL_SESSION_TICKETS              | yes     |
+  | MBEDTLS_SSL_SESSION_TICKETS              | no      |
   | MBEDTLS_SSL_SERVER_NAME_INDICATION       | yes     |
   | MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH       | no      |
   |                                          |         |
@@ -178,7 +175,8 @@ Prototype upstreaming status
 
 The following parts of the TLS 1.3 prototype remain to be upstreamed:
 
-- Sending (client) and receiving (server) early data (0-RTT data).
+- Pre-shared keys, session resumption and 0-RTT data (both client and server
+  side).
 
 - New TLS Message Processing Stack (MPS)
 
