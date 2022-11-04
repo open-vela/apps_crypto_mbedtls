@@ -106,9 +106,6 @@ static int ssl_write_hostname_ext( mbedtls_ssl_context *ssl,
 
     *olen = hostname_len + 9;
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
-    mbedtls_ssl_tls13_set_hs_sent_ext_mask( ssl, MBEDTLS_TLS_EXT_SERVERNAME );
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
     return( 0 );
 }
 #endif /* MBEDTLS_SSL_SERVER_NAME_INDICATION */
@@ -180,9 +177,6 @@ static int ssl_write_alpn_ext( mbedtls_ssl_context *ssl,
     /* Extension length = *out_len - 2 (ext_type) - 2 (ext_len) */
     MBEDTLS_PUT_UINT16_BE( *out_len - 4, buf, 2 );
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
-    mbedtls_ssl_tls13_set_hs_sent_ext_mask( ssl, MBEDTLS_TLS_EXT_ALPN );
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
     return( 0 );
 }
 #endif /* MBEDTLS_SSL_ALPN */
@@ -302,8 +296,7 @@ static int ssl_write_supported_groups_ext( mbedtls_ssl_context *ssl,
     *out_len = p - buf;
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3)
-    mbedtls_ssl_tls13_set_hs_sent_ext_mask(
-        ssl, MBEDTLS_TLS_EXT_SUPPORTED_GROUPS );
+    ssl->handshake->extensions_present |= MBEDTLS_SSL_EXT_SUPPORTED_GROUPS;
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
     return( 0 );
@@ -377,11 +370,9 @@ static int ssl_write_client_hello_cipher_suites(
     /*
      * Add TLS_EMPTY_RENEGOTIATION_INFO_SCSV
      */
-    int renegotiating = 0;
 #if defined(MBEDTLS_SSL_RENEGOTIATION)
-    renegotiating = ( ssl->renego_status != MBEDTLS_SSL_INITIAL_HANDSHAKE );
+    if( ssl->renego_status == MBEDTLS_SSL_INITIAL_HANDSHAKE )
 #endif
-    if( !renegotiating )
     {
         MBEDTLS_SSL_DEBUG_MSG( 3, ( "adding EMPTY_RENEGOTIATION_INFO_SCSV" ) );
         MBEDTLS_SSL_CHK_BUF_PTR( p, end, 2 );
@@ -564,7 +555,7 @@ static int ssl_write_client_hello_body( mbedtls_ssl_context *ssl,
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3)
     /* Keeping track of the included extensions */
-    handshake->sent_extensions = MBEDTLS_SSL_EXT_MASK_NONE;
+    handshake->extensions_present = MBEDTLS_SSL_EXT_NONE;
 #endif
 
     /* First write extensions, then the total length */
@@ -617,7 +608,7 @@ static int ssl_write_client_hello_body( mbedtls_ssl_context *ssl,
     }
 #endif /* MBEDTLS_ECDH_C || MBEDTLS_ECDSA_C || MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED */
 
-#if defined(MBEDTLS_SSL_HANDSHAKE_WITH_CERT_ENABLED)
+#if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
     if(
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3)
         ( propose_tls13 && mbedtls_ssl_conf_tls13_ephemeral_enabled( ssl ) ) ||
@@ -632,7 +623,7 @@ static int ssl_write_client_hello_body( mbedtls_ssl_context *ssl,
             return( ret );
         p += output_len;
     }
-#endif /* MBEDTLS_SSL_HANDSHAKE_WITH_CERT_ENABLED */
+#endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_2)
     if( propose_tls12 )
@@ -646,7 +637,8 @@ static int ssl_write_client_hello_body( mbedtls_ssl_context *ssl,
     }
 #endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
 
-#if defined(MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_SOME_PSK_ENABLED)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3) && \
+    defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
     /* The "pre_shared_key" extension (RFC 8446 Section 4.2.11)
      * MUST be the last extension in the ClientHello.
      */
@@ -658,7 +650,7 @@ static int ssl_write_client_hello_body( mbedtls_ssl_context *ssl,
             return( ret );
         p += output_len;
     }
-#endif /* MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_SOME_PSK_ENABLED */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3 && MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
 
     /* Write the length of the list of extensions. */
     extensions_len = p - p_extensions_len - 2;
@@ -673,10 +665,6 @@ static int ssl_write_client_hello_body( mbedtls_ssl_context *ssl,
         MBEDTLS_SSL_DEBUG_BUF( 3, "client hello extensions",
                                   p_extensions_len, extensions_len );
     }
-
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
-    MBEDTLS_SSL_PRINT_SENT_EXTS( 3, MBEDTLS_SSL_HS_CLIENT_HELLO );
-#endif
 
     *out_len = p - buf;
     return( 0 );
@@ -824,12 +812,9 @@ static int ssl_prepare_client_hello( mbedtls_ssl_context *ssl )
      * RFC 5077 section 3.4: "When presenting a ticket, the client MAY
      * generate and include a Session ID in the TLS ClientHello."
      */
-        int renegotiating = 0;
 #if defined(MBEDTLS_SSL_RENEGOTIATION)
-        if( ssl->renego_status != MBEDTLS_SSL_INITIAL_HANDSHAKE )
-            renegotiating = 1;
+        if( ssl->renego_status == MBEDTLS_SSL_INITIAL_HANDSHAKE )
 #endif
-        if( !renegotiating )
         {
             if( ( session_negotiate->ticket != NULL ) &&
                 ( session_negotiate->ticket_len != 0 ) )
@@ -972,7 +957,8 @@ int mbedtls_ssl_write_client_hello( mbedtls_ssl_context *ssl )
         mbedtls_ssl_add_hs_hdr_to_checksum( ssl, MBEDTLS_SSL_HS_CLIENT_HELLO,
                                             msg_len );
         ssl->handshake->update_checksum( ssl, buf, msg_len - binders_len );
-#if defined(MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_SOME_PSK_ENABLED)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3) && \
+    defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
         if( binders_len > 0 )
         {
             MBEDTLS_SSL_PROC_CHK(
@@ -981,7 +967,7 @@ int mbedtls_ssl_write_client_hello( mbedtls_ssl_context *ssl )
             ssl->handshake->update_checksum( ssl, buf + msg_len - binders_len,
                                              binders_len );
         }
-#endif /* MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_SOME_PSK_ENABLED */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3 && MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
 
         MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_finish_handshake_msg( ssl,
                                                                 buf_len,
