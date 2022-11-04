@@ -25,7 +25,6 @@
 
 #include "mbedtls/error.h"
 #include "mbedtls/platform_util.h"
-#include "constant_time_internal.h"
 
 #include "mbedtls/platform.h"
 
@@ -151,36 +150,6 @@ void mbedtls_mpi_core_bigendian_to_host( mbedtls_mpi_uint *A,
         tmp             = mpi_bigendian_to_host( *cur_limb_left );
         *cur_limb_left  = mpi_bigendian_to_host( *cur_limb_right );
         *cur_limb_right = tmp;
-    }
-}
-
-void mbedtls_mpi_core_cond_assign( mbedtls_mpi_uint *X,
-                                   const mbedtls_mpi_uint *A,
-                                   size_t limbs,
-                                   unsigned char assign )
-{
-    if( X == A )
-        return;
-
-    mbedtls_ct_mpi_uint_cond_assign( limbs, X, A, assign );
-}
-
-void mbedtls_mpi_core_cond_swap( mbedtls_mpi_uint *X,
-                                 mbedtls_mpi_uint *Y,
-                                 size_t limbs,
-                                 unsigned char swap )
-{
-    if( X == Y )
-        return;
-
-    /* all-bits 1 if swap is 1, all-bits 0 if swap is 0 */
-    mbedtls_mpi_uint limb_mask = mbedtls_ct_mpi_uint_mask( swap );
-
-    for( size_t i = 0; i < limbs; i++ )
-    {
-        mbedtls_mpi_uint tmp = X[i];
-        X[i] = ( X[i] & ~limb_mask ) | ( Y[i] & limb_mask );
-        Y[i] = ( Y[i] & ~limb_mask ) | (  tmp & limb_mask );
     }
 }
 
@@ -314,67 +283,6 @@ int mbedtls_mpi_core_write_be( const mbedtls_mpi_uint *X,
         p[bytes_to_copy - i - 1] = GET_BYTE( X, i );
 
     return( 0 );
-}
-
-void mbedtls_mpi_core_shift_r( mbedtls_mpi_uint *X, size_t limbs,
-                               size_t count )
-{
-    size_t i, v0, v1;
-    mbedtls_mpi_uint r0 = 0, r1;
-
-    v0 = count /  biL;
-    v1 = count & (biL - 1);
-
-    if( v0 > limbs || ( v0 == limbs && v1 > 0 ) )
-    {
-        memset( X, 0, limbs * ciL );
-        return;
-    }
-
-    /*
-     * shift by count / limb_size
-     */
-    if( v0 > 0 )
-    {
-        for( i = 0; i < limbs - v0; i++ )
-            X[i] = X[i + v0];
-
-        for( ; i < limbs; i++ )
-            X[i] = 0;
-    }
-
-    /*
-     * shift by count % limb_size
-     */
-    if( v1 > 0 )
-    {
-        for( i = limbs; i > 0; i-- )
-        {
-            r1 = X[i - 1] << (biL - v1);
-            X[i - 1] >>= v1;
-            X[i - 1] |= r0;
-            r0 = r1;
-        }
-    }
-}
-
-mbedtls_mpi_uint mbedtls_mpi_core_add( mbedtls_mpi_uint *X,
-                                       const mbedtls_mpi_uint *A,
-                                       const mbedtls_mpi_uint *B,
-                                       size_t limbs )
-{
-    mbedtls_mpi_uint c = 0;
-
-    for( size_t i = 0; i < limbs; i++ )
-    {
-        mbedtls_mpi_uint t = c + A[i];
-        c = ( t < A[i] );
-        t += B[i];
-        c += ( t < B[i] );
-        X[i] = t;
-    }
-
-    return( c );
 }
 
 mbedtls_mpi_uint mbedtls_mpi_core_add_if( mbedtls_mpi_uint *X,
@@ -524,20 +432,6 @@ void mbedtls_mpi_core_montmul( mbedtls_mpi_uint *X,
      * but is in (the lower AN_limbs limbs of) T if (carry ^ borrow) = 1.
      */
     mbedtls_ct_mpi_uint_cond_assign( AN_limbs, X, T, (unsigned char) ( carry ^ borrow ) );
-}
-
-int mbedtls_mpi_core_get_mont_r2_unsafe( mbedtls_mpi *X,
-                                         const mbedtls_mpi *N )
-{
-    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
-
-    MBEDTLS_MPI_CHK( mbedtls_mpi_lset( X, 1 ) );
-    MBEDTLS_MPI_CHK( mbedtls_mpi_shift_l( X, N->n * 2 * biL ) );
-    MBEDTLS_MPI_CHK( mbedtls_mpi_mod_mpi( X, X, N ) );
-    MBEDTLS_MPI_CHK( mbedtls_mpi_shrink( X, N->n ) );
-
-cleanup:
-    return( ret );
 }
 
 #endif /* MBEDTLS_BIGNUM_C */
