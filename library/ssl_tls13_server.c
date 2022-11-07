@@ -984,6 +984,7 @@ static int ssl_tls13_client_hello_has_exts( mbedtls_ssl_context *ssl,
     return( masked == exts_mask );
 }
 
+#if defined(MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED)
 MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_client_hello_has_exts_for_ephemeral_key_exchange(
         mbedtls_ssl_context *ssl )
@@ -994,8 +995,9 @@ static int ssl_tls13_client_hello_has_exts_for_ephemeral_key_exchange(
                 MBEDTLS_SSL_EXT_KEY_SHARE        |
                 MBEDTLS_SSL_EXT_SIG_ALG ) );
 }
+#endif /* MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED */
 
-#if defined(MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_SOME_PSK_ENABLED)
+#if defined(MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_ENABLED)
 MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_client_hello_has_exts_for_psk_key_exchange(
                mbedtls_ssl_context *ssl )
@@ -1005,7 +1007,9 @@ static int ssl_tls13_client_hello_has_exts_for_psk_key_exchange(
                 MBEDTLS_SSL_EXT_PRE_SHARED_KEY          |
                 MBEDTLS_SSL_EXT_PSK_KEY_EXCHANGE_MODES ) );
 }
+#endif /* MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_ENABLED */
 
+#if defined(MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_EPHEMERAL_ENABLED)
 MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_client_hello_has_exts_for_psk_ephemeral_key_exchange(
                mbedtls_ssl_context *ssl )
@@ -1017,19 +1021,24 @@ static int ssl_tls13_client_hello_has_exts_for_psk_ephemeral_key_exchange(
                 MBEDTLS_SSL_EXT_PRE_SHARED_KEY          |
                 MBEDTLS_SSL_EXT_PSK_KEY_EXCHANGE_MODES ) );
 }
-#endif /* MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_SOME_PSK_ENABLED */
+#endif /* MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_EPHEMERAL_ENABLED */
 
 MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_check_ephemeral_key_exchange( mbedtls_ssl_context *ssl )
 {
+#if defined(MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED)
     return( mbedtls_ssl_conf_tls13_ephemeral_enabled( ssl ) &&
             ssl_tls13_client_hello_has_exts_for_ephemeral_key_exchange( ssl ) );
+#else
+    ((void) ssl);
+    return( 0 );
+#endif
 }
 
 MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_check_psk_key_exchange( mbedtls_ssl_context *ssl )
 {
-#if defined(MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_SOME_PSK_ENABLED)
+#if defined(MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_ENABLED)
     return( mbedtls_ssl_conf_tls13_psk_enabled( ssl ) &&
             mbedtls_ssl_tls13_psk_enabled( ssl ) &&
             ssl_tls13_client_hello_has_exts_for_psk_key_exchange( ssl ) );
@@ -1042,7 +1051,7 @@ static int ssl_tls13_check_psk_key_exchange( mbedtls_ssl_context *ssl )
 MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_check_psk_ephemeral_key_exchange( mbedtls_ssl_context *ssl )
 {
-#if defined(MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_SOME_PSK_ENABLED)
+#if defined(MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_EPHEMERAL_ENABLED)
     return( mbedtls_ssl_conf_tls13_psk_ephemeral_enabled( ssl ) &&
             mbedtls_ssl_tls13_psk_ephemeral_enabled( ssl ) &&
             ssl_tls13_client_hello_has_exts_for_psk_ephemeral_key_exchange( ssl ) );
