@@ -915,8 +915,7 @@ int main( int argc, char *argv[] )
     }
 #endif
 
-#if defined(MBEDTLS_HMAC_DRBG_C) && \
-    ( defined(MBEDTLS_SHA1_C) || defined(MBEDTLS_SHA256_C) )
+#if defined(MBEDTLS_HMAC_DRBG_C)
     if( todo.hmac_drbg )
     {
         mbedtls_hmac_drbg_context hmac_drbg;
@@ -959,7 +958,7 @@ int main( int argc, char *argv[] )
 #endif
         mbedtls_hmac_drbg_free( &hmac_drbg );
     }
-#endif /* MBEDTLS_HMAC_DRBG_C && ( MBEDTLS_SHA1_C || MBEDTLS_SHA256_C ) */
+#endif
 
 #if defined(MBEDTLS_RSA_C) && defined(MBEDTLS_GENPRIME)
     if( todo.rsa )
