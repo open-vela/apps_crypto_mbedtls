@@ -452,4 +452,86 @@ void mbedtls_mpi_core_montmul( mbedtls_mpi_uint *X,
 int mbedtls_mpi_core_get_mont_r2_unsafe( mbedtls_mpi *X,
                                          const mbedtls_mpi *N );
 
+/**
+ * Copy an MPI from a table without leaking the index.
+ *
+ * \param dest              The destination buffer. This must point to a writable
+ *                          buffer of at least \p limbs limbs.
+ * \param table             The address of the table. This must point to a readable
+ *                          array of \p count elements of \p limbs limbs each.
+ * \param limbs             The number of limbs in each table entry.
+ * \param count             The number of entries in \p table.
+ * \param index             The (secret) table index to look up. This must be in the
+ *                          range `0 .. count-1`.
+ */
+void mbedtls_mpi_core_ct_uint_table_lookup( mbedtls_mpi_uint *dest,
+                                            const mbedtls_mpi_uint *table,
+                                            size_t limbs,
+                                            size_t count,
+                                            size_t index );
+
+/**
+ * \brief          Fill an integer with a number of random bytes.
+ *
+ * \param X        The destination MPI.
+ * \param X_limbs  The number of limbs of \p X.
+ * \param bytes    The number of random bytes to generate.
+ * \param f_rng    The RNG function to use. This must not be \c NULL.
+ * \param p_rng    The RNG parameter to be passed to \p f_rng. This may be
+ *                 \c NULL if \p f_rng doesn't need a context argument.
+ *
+ * \return         \c 0 if successful.
+ * \return         #MBEDTLS_ERR_MPI_BAD_INPUT_DATA if \p X does not have
+ *                 enough room for \p bytes bytes.
+ * \return         A negative error code on RNG failure.
+ *
+ * \note           The bytes obtained from the RNG are interpreted
+ *                 as a big-endian representation of an MPI; this can
+ *                 be relevant in applications like deterministic ECDSA.
+ */
+int mbedtls_mpi_core_fill_random( mbedtls_mpi_uint *X, size_t X_limbs,
+                                  size_t bytes,
+                                  int (*f_rng)(void *, unsigned char *, size_t),
+                                  void *p_rng );
+
+/* BEGIN MERGE SLOT 1 */
+
+/* END MERGE SLOT 1 */
+
+/* BEGIN MERGE SLOT 2 */
+
+/* END MERGE SLOT 2 */
+
+/* BEGIN MERGE SLOT 3 */
+
+/* END MERGE SLOT 3 */
+
+/* BEGIN MERGE SLOT 4 */
+
+/* END MERGE SLOT 4 */
+
+/* BEGIN MERGE SLOT 5 */
+
+/* END MERGE SLOT 5 */
+
+/* BEGIN MERGE SLOT 6 */
+
+/* END MERGE SLOT 6 */
+
+/* BEGIN MERGE SLOT 7 */
+
+/* END MERGE SLOT 7 */
+
+/* BEGIN MERGE SLOT 8 */
+
+/* END MERGE SLOT 8 */
+
+/* BEGIN MERGE SLOT 9 */
+
+/* END MERGE SLOT 9 */
+
+/* BEGIN MERGE SLOT 10 */
+
+/* END MERGE SLOT 10 */
+
 #endif /* MBEDTLS_BIGNUM_CORE_H */
