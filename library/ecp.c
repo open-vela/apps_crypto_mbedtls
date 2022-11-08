@@ -2461,7 +2461,7 @@ static int ecp_mul_mxz( mbedtls_ecp_group *grp, mbedtls_ecp_point *R,
     MBEDTLS_MPI_CHK( ecp_randomize_mxz( grp, &RP, f_rng, p_rng ) );
 
     /* Loop invariant: R = result so far, RP = R + P */
-    i = mbedtls_mpi_bitlen( m ); /* one past the (zero-based) most significant bit */
+    i = grp->nbits + 1; /* one past the (zero-based) required msb for private keys */
     while( i-- > 0 )
     {
         b = mbedtls_mpi_get_bit( m, i );
@@ -2662,14 +2662,17 @@ static int mbedtls_ecp_mul_shortcuts( mbedtls_ecp_group *grp,
 
     if( mbedtls_mpi_cmp_int( m, 0 ) == 0 )
     {
+        MBEDTLS_MPI_CHK( mbedtls_ecp_check_pubkey( grp, P ) );
         MBEDTLS_MPI_CHK( mbedtls_ecp_set_zero( R ) );
     }
     else if( mbedtls_mpi_cmp_int( m, 1 ) == 0 )
     {
+        MBEDTLS_MPI_CHK( mbedtls_ecp_check_pubkey( grp, P ) );
         MBEDTLS_MPI_CHK( mbedtls_ecp_copy( R, P ) );
     }
     else if( mbedtls_mpi_cmp_int( m, -1 ) == 0 )
     {
+        MBEDTLS_MPI_CHK( mbedtls_ecp_check_pubkey( grp, P ) );
         MBEDTLS_MPI_CHK( mbedtls_ecp_copy( R, P ) );
         MPI_ECP_NEG( &R->Y );
     }
