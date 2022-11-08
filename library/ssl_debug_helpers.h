@@ -43,43 +43,6 @@ const char *mbedtls_ssl_sig_alg_to_str( uint16_t in );
 
 const char *mbedtls_ssl_named_group_to_str( uint16_t in );
 
-const char *mbedtls_ssl_get_extension_name( unsigned int extension_type );
-
-void mbedtls_ssl_print_extensions( const mbedtls_ssl_context *ssl,
-                                   int level, const char *file, int line,
-                                   int hs_msg_type, uint32_t extensions_mask,
-                                   const char *extra );
-
-void mbedtls_ssl_print_extension_type( const mbedtls_ssl_context *ssl,
-                                       int level, const char *file, int line,
-                                       int hs_msg_type,
-                                       unsigned int extension_type,
-                                       const char *extra_msg0,
-                                       const char *extra_msg1 );
-
-#define MBEDTLS_SSL_PRINT_SENT_EXTS( level, hs_msg_type )                       \
-            mbedtls_ssl_print_extensions( ssl, level, __FILE__, __LINE__,       \
-                                          hs_msg_type,                          \
-                                          ssl->handshake->sent_extensions,      \
-                                          "sent" )
-
-#define MBEDTLS_SSL_PRINT_RECEIVED_EXTS( level, hs_msg_type )                   \
-            mbedtls_ssl_print_extensions( ssl, level, __FILE__, __LINE__,       \
-                                          hs_msg_type,                          \
-                                          ssl->handshake->received_extensions,  \
-                                          "received" )
-
-#define MBEDTLS_SSL_PRINT_EXT_TYPE( level, hs_msg_type, extension_type, extra ) \
-            mbedtls_ssl_print_extension_type( ssl, level, __FILE__, __LINE__,   \
-                                    hs_msg_type, extension_type, extra, NULL )
-#else
-
-#define MBEDTLS_SSL_PRINT_SENT_EXTS( level, hs_msg_type )
-
-#define MBEDTLS_SSL_PRINT_RECEIVED_EXTS( level, hs_msg_type )
-
-#define MBEDTLS_SSL_PRINT_EXT_TYPE( level, hs_msg_type, extension_type, extra )
-
 #endif /* MBEDTLS_DEBUG_C */
 
-#endif /* MBEDTLS_SSL_DEBUG_HELPERS_H */
+#endif /* SSL_DEBUG_HELPERS_H */
