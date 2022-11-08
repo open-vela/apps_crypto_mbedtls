@@ -668,12 +668,7 @@ static void ssl_handshake_params_init( mbedtls_ssl_handshake_params *handshake )
     mbedtls_ecdh_init( &handshake->ecdh_ctx );
 #endif
 #if defined(MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED)
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
-    handshake->psa_pake_ctx = psa_pake_operation_init();
-    handshake->psa_pake_password = MBEDTLS_SVC_KEY_ID_INIT;
-#else
     mbedtls_ecjpake_init( &handshake->ecjpake_ctx );
-#endif /* MBEDTLS_USE_PSA_CRYPTO */
 #if defined(MBEDTLS_SSL_CLI_C)
     handshake->ecjpake_cache = NULL;
     handshake->ecjpake_cache_len = 0;
@@ -1016,6 +1011,30 @@ static int ssl_conf_check(const mbedtls_ssl_context *ssl)
     ret = ssl_conf_version_check( ssl );
     if( ret != 0 )
         return( ret );
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
+    /* RFC 8446 section 4.4.3
+     *
+     * If the verification fails, the receiver MUST terminate the handshake with
+     * a "decrypt_error" alert.
+     *
+     * If the client is configured as TLS 1.3 only with optional verify, return
+     * bad config.
+     *
+     */
+    if( mbedtls_ssl_conf_tls13_ephemeral_enabled(
+            (mbedtls_ssl_context *)ssl )                            &&
+        ssl->conf->endpoint == MBEDTLS_SSL_IS_CLIENT                &&
+        ssl->conf->max_tls_version == MBEDTLS_SSL_VERSION_TLS1_3    &&
+        ssl->conf->min_tls_version == MBEDTLS_SSL_VERSION_TLS1_3    &&
+        ssl->conf->authmode == MBEDTLS_SSL_VERIFY_OPTIONAL )
+    {
+        MBEDTLS_SSL_DEBUG_MSG(
+            1, ( "Optional verify auth mode "
+                 "is not available for TLS 1.3 client" ) );
+        return( MBEDTLS_ERR_SSL_BAD_CONFIG );
+    }
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
     /* Space for further checks */
 
@@ -1432,6 +1451,14 @@ void mbedtls_ssl_conf_tls13_key_exchange_modes( mbedtls_ssl_config *conf,
 {
     conf->tls13_kex_modes = kex_modes & MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_ALL;
 }
+
+#if defined(MBEDTLS_SSL_EARLY_DATA)
+void mbedtls_ssl_tls13_conf_early_data( mbedtls_ssl_config *conf,
+                                        int early_data_enabled )
+{
+    conf->early_data_enabled = early_data_enabled;
+}
+#endif /* MBEDTLS_SSL_EARLY_DATA */
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
@@ -1588,75 +1615,11 @@ int mbedtls_ssl_set_hs_ecjpake_password( mbedtls_ssl_context *ssl,
                                          const unsigned char *pw,
                                          size_t pw_len )
 {
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
-    psa_pake_cipher_suite_t cipher_suite = psa_pake_cipher_suite_init();
-    psa_key_attributes_t attributes = PSA_KEY_ATTRIBUTES_INIT;
-    psa_pake_role_t psa_role;
-    psa_status_t status;
-#else
     mbedtls_ecjpake_role role;
-#endif /* MBEDTLS_USE_PSA_CRYPTO */
 
     if( ssl->handshake == NULL || ssl->conf == NULL )
         return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
 
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
-    if( ssl->conf->endpoint == MBEDTLS_SSL_IS_SERVER )
-        psa_role = PSA_PAKE_ROLE_SERVER;
-    else
-        psa_role = PSA_PAKE_ROLE_CLIENT;
-
-
-    if( pw_len > 0 )
-    {
-        psa_set_key_usage_flags( &attributes, PSA_KEY_USAGE_DERIVE );
-        psa_set_key_algorithm( &attributes, PSA_ALG_JPAKE );
-        psa_set_key_type( &attributes, PSA_KEY_TYPE_PASSWORD );
-
-        status = psa_import_key( &attributes, pw, pw_len,
-                                 &ssl->handshake->psa_pake_password );
-        if( status != PSA_SUCCESS )
-            return( MBEDTLS_ERR_SSL_HW_ACCEL_FAILED );
-    }
-
-    psa_pake_cs_set_algorithm( &cipher_suite, PSA_ALG_JPAKE );
-    psa_pake_cs_set_primitive( &cipher_suite,
-                               PSA_PAKE_PRIMITIVE( PSA_PAKE_PRIMITIVE_TYPE_ECC,
-                                                   PSA_ECC_FAMILY_SECP_R1,
-                                                   256) );
-    psa_pake_cs_set_hash( &cipher_suite, PSA_ALG_SHA_256 );
-
-    status = psa_pake_setup( &ssl->handshake->psa_pake_ctx, &cipher_suite );
-    if( status != PSA_SUCCESS )
-    {
-        psa_destroy_key( ssl->handshake->psa_pake_password );
-        return( MBEDTLS_ERR_SSL_HW_ACCEL_FAILED );
-    }
-
-    status = psa_pake_set_role( &ssl->handshake->psa_pake_ctx, psa_role );
-    if( status != PSA_SUCCESS )
-    {
-        psa_destroy_key( ssl->handshake->psa_pake_password );
-        psa_pake_abort( &ssl->handshake->psa_pake_ctx );
-        return( MBEDTLS_ERR_SSL_HW_ACCEL_FAILED );
-    }
-
-    if( pw_len > 0 )
-    {
-        psa_pake_set_password_key( &ssl->handshake->psa_pake_ctx,
-                                   ssl->handshake->psa_pake_password );
-        if( status != PSA_SUCCESS )
-        {
-            psa_destroy_key( ssl->handshake->psa_pake_password );
-            psa_pake_abort( &ssl->handshake->psa_pake_ctx );
-            return( MBEDTLS_ERR_SSL_HW_ACCEL_FAILED );
-        }
-    }
-
-    ssl->handshake->psa_pake_ctx_is_ok = 1;
-
-    return( 0 );
-#else
     if( ssl->conf->endpoint == MBEDTLS_SSL_IS_SERVER )
         role = MBEDTLS_ECJPAKE_SERVER;
     else
@@ -1667,7 +1630,6 @@ int mbedtls_ssl_set_hs_ecjpake_password( mbedtls_ssl_context *ssl,
                                    MBEDTLS_MD_SHA256,
                                    MBEDTLS_ECP_DP_SECP256R1,
                                    pw, pw_len ) );
-#endif /* MBEDTLS_USE_PSA_CRYPTO */
 }
 #endif /* MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED */
 
@@ -3703,13 +3665,7 @@ void mbedtls_ssl_handshake_free( mbedtls_ssl_context *ssl )
     mbedtls_ecdh_free( &handshake->ecdh_ctx );
 #endif
 #if defined(MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED)
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
-    psa_pake_abort( &handshake->psa_pake_ctx );
-    psa_destroy_key( handshake->psa_pake_password );
-    handshake->psa_pake_password = MBEDTLS_SVC_KEY_ID_INIT;
-#else
     mbedtls_ecjpake_free( &handshake->ecjpake_ctx );
-#endif /* MBEDTLS_USE_PSA_CRYPTO */
 #if defined(MBEDTLS_SSL_CLI_C)
     mbedtls_free( handshake->ecjpake_cache );
     handshake->ecjpake_cache = NULL;
@@ -5703,7 +5659,9 @@ static int tls_prf_generic( mbedtls_md_type_t md_type,
 exit:
     mbedtls_md_free( &md_ctx );
 
-    mbedtls_platform_zeroize( tmp, tmp_len );
+    if ( tmp != NULL )
+        mbedtls_platform_zeroize( tmp, tmp_len );
+
     mbedtls_platform_zeroize( h_i, sizeof( h_i ) );
 
     mbedtls_free( tmp );
@@ -5921,55 +5879,6 @@ static int ssl_compute_master( mbedtls_ssl_handshake_params *handshake,
     else
 #endif
     {
-#if defined(MBEDTLS_USE_PSA_CRYPTO) &&                              \
-    defined(MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED)
-        if( handshake->ciphersuite_info->key_exchange == MBEDTLS_KEY_EXCHANGE_ECJPAKE )
-        {
-            psa_status_t status;
-            psa_algorithm_t alg = PSA_ALG_TLS12_ECJPAKE_TO_PMS;
-            psa_key_derivation_operation_t derivation =
-                PSA_KEY_DERIVATION_OPERATION_INIT;
-
-            MBEDTLS_SSL_DEBUG_MSG( 2, ( "perform PSA-based PMS KDF for ECJPAKE" ) );
-
-            handshake->pmslen = PSA_TLS12_ECJPAKE_TO_PMS_DATA_SIZE;
-
-            status = psa_key_derivation_setup( &derivation, alg );
-            if( status != PSA_SUCCESS )
-                return( MBEDTLS_ERR_SSL_HW_ACCEL_FAILED );
-
-            status = psa_key_derivation_set_capacity( &derivation,
-                                            PSA_TLS12_ECJPAKE_TO_PMS_DATA_SIZE );
-            if( status != PSA_SUCCESS )
-            {
-                psa_key_derivation_abort( &derivation );
-                return( MBEDTLS_ERR_SSL_HW_ACCEL_FAILED );
-            }
-
-            status = psa_pake_get_implicit_key( &handshake->psa_pake_ctx,
-                                                &derivation );
-            if( status != PSA_SUCCESS )
-            {
-                psa_key_derivation_abort( &derivation );
-                return( MBEDTLS_ERR_SSL_HW_ACCEL_FAILED );
-            }
-
-            status = psa_key_derivation_output_bytes( &derivation,
-                                                      handshake->premaster,
-                                                      handshake->pmslen );
-            if( status != PSA_SUCCESS )
-            {
-                psa_key_derivation_abort( &derivation );
-                return( MBEDTLS_ERR_SSL_HW_ACCEL_FAILED );
-            }
-
-            status = psa_key_derivation_abort( &derivation );
-            if( status != PSA_SUCCESS )
-            {
-                return( MBEDTLS_ERR_SSL_HW_ACCEL_FAILED );
-            }
-        }
-#endif
         ret = handshake->tls_prf( handshake->premaster, handshake->pmslen,
                                   lbl, seed, seed_len,
                                   master,
@@ -6007,7 +5916,6 @@ int mbedtls_ssl_derive_keys( mbedtls_ssl_context *ssl )
         MBEDTLS_SSL_DEBUG_RET( 1, "ssl_set_handshake_prfs", ret );
         return( ret );
     }
-
 
     /* Compute master secret if needed */
     ret = ssl_compute_master( ssl->handshake,
@@ -8712,13 +8620,8 @@ int mbedtls_ssl_validate_ciphersuite(
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_2) && defined(MBEDTLS_SSL_CLI_C)
 #if defined(MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED)
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
-    if( suite_info->key_exchange == MBEDTLS_KEY_EXCHANGE_ECJPAKE &&
-        ssl->handshake->psa_pake_ctx_is_ok != 1 )
-#else
     if( suite_info->key_exchange == MBEDTLS_KEY_EXCHANGE_ECJPAKE &&
         mbedtls_ecjpake_check( &ssl->handshake->ecjpake_ctx ) != 0 )
-#endif /* MBEDTLS_USE_PSA_CRYPTO */
     {
         return( -1 );
     }
