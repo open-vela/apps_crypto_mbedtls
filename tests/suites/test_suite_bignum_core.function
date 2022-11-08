@@ -941,3 +941,107 @@ exit:
     mbedtls_mpi_free( &RR_REF );
 }
 /* END_CASE */
+
+/* BEGIN_CASE */
+void mpi_core_ct_uint_table_lookup( int bitlen, int window_size )
+{
+    size_t limbs = BITS_TO_LIMBS( bitlen );
+    size_t count = ( (size_t) 1 ) << window_size;
+
+    mbedtls_mpi_uint *table = NULL;
+    mbedtls_mpi_uint *dest = NULL;
+
+    ASSERT_ALLOC( table, limbs * count );
+    ASSERT_ALLOC( dest, limbs );
+
+    /*
+     * Fill the table with a unique counter so that differences are easily
+     * detected. (And have their relationship to the index relatively non-trivial just
+     * to be sure.)
+     */
+    for( size_t i = 0; i < count * limbs; i++ )
+    {
+        table[i] = ~i - 1;
+    }
+
+    for( size_t i = 0; i < count; i++ )
+    {
+        mbedtls_mpi_uint *current = table + i * limbs;
+        memset( dest, 0x00, limbs * sizeof( *dest ) );
+
+        /*
+         * We shouldn't leak anything through timing.
+         * We need to set these in every loop as we need to make the loop
+         * variable public for the loop head and the buffers for comparison.
+         */
+        TEST_CF_SECRET( &i, sizeof( i ) );
+        TEST_CF_SECRET( dest, limbs * sizeof( *dest ) );
+        TEST_CF_SECRET( table, count * limbs * sizeof( *table ) );
+
+        mbedtls_mpi_core_ct_uint_table_lookup( dest, table, limbs, count, i );
+
+        TEST_CF_PUBLIC( dest, limbs * sizeof( *dest ) );
+        TEST_CF_PUBLIC( table, count * limbs * sizeof( *table ) );
+        ASSERT_COMPARE( dest, limbs * sizeof( *dest ),
+                        current, limbs * sizeof( *current ) );
+        TEST_CF_PUBLIC( &i, sizeof( i ) );
+    }
+
+exit:
+    mbedtls_free(table);
+    mbedtls_free(dest);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void mpi_core_fill_random( int wanted_bytes_arg, int extra_rng_bytes,
+                           int extra_limbs, int before, int expected_ret )
+{
+    size_t wanted_bytes = wanted_bytes_arg;
+    mbedtls_mpi_uint *X = NULL;
+    size_t X_limbs = CHARS_TO_LIMBS( wanted_bytes ) + extra_limbs;
+    size_t rng_bytes = wanted_bytes + extra_rng_bytes;
+    unsigned char *rnd_data = NULL;
+    mbedtls_test_rnd_buf_info rnd_info = {NULL, rng_bytes, NULL, NULL};
+    int ret;
+
+    /* Prepare an RNG with known output, limited to rng_bytes. */
+    ASSERT_ALLOC( rnd_data, rng_bytes );
+    TEST_EQUAL( 0, mbedtls_test_rnd_std_rand( NULL, rnd_data, rng_bytes ) );
+    rnd_info.buf = rnd_data;
+
+    /* Allocate an MPI with room for wanted_bytes plus extra_limbs.
+     * extra_limbs may be negative but the total limb count must be positive.
+     * Fill the MPI with the byte value in before. */
+    TEST_LE_U( 1, X_limbs );
+    ASSERT_ALLOC( X, X_limbs );
+    memset( X, before, X_limbs * sizeof( *X ) );
+
+    ret = mbedtls_mpi_core_fill_random( X, X_limbs, wanted_bytes,
+                                        mbedtls_test_rnd_buffer_rand,
+                                        &rnd_info );
+    TEST_EQUAL( expected_ret, ret );
+
+    if( expected_ret == 0 )
+    {
+        /* mbedtls_mpi_core_fill_random is documented to use bytes from the
+         * RNG as a big-endian representation of the number. We used an RNG
+         * with known output, so check that the output contains the
+         * expected value. Bytes above wanted_bytes must be zero. */
+        for( size_t i = 0; i < wanted_bytes; i++ )
+        {
+            mbedtls_test_set_step( i );
+            TEST_EQUAL( GET_BYTE( X, i ), rnd_data[wanted_bytes - 1 - i] );
+        }
+        for( size_t i = wanted_bytes; i < X_limbs * ciL; i++ )
+        {
+            mbedtls_test_set_step( i );
+            TEST_EQUAL( GET_BYTE( X, i ), 0 );
+        }
+    }
+
+exit:
+    mbedtls_free( rnd_data );
+    mbedtls_free( X );
+}
+/* END_CASE */
