@@ -134,6 +134,7 @@ void mpi_mod_raw_cond_assign( data_t * input_X,
     ASSERT_ALLOC( Y, limbs );
 
     ASSERT_ALLOC( buff_m, limbs );
+    memset( buff_m, 0xFF, copy_bytes );
     TEST_ASSERT( mbedtls_mpi_mod_modulus_setup(
                         &m, buff_m, copy_limbs,
                         MBEDTLS_MPI_MOD_EXT_REP_BE,
@@ -214,6 +215,7 @@ void mpi_mod_raw_cond_swap( data_t * input_X,
     ASSERT_ALLOC( tmp_Y, limbs );
 
     ASSERT_ALLOC( buff_m, copy_limbs );
+    memset( buff_m, 0xFF, copy_bytes );
     TEST_ASSERT( mbedtls_mpi_mod_modulus_setup(
                         &m, buff_m, copy_limbs,
                         MBEDTLS_MPI_MOD_EXT_REP_BE,
@@ -278,3 +280,43 @@ exit:
     mbedtls_free( buff_m );
 }
 /* END_CASE */
+
+/* BEGIN MERGE SLOT 1 */
+
+/* END MERGE SLOT 1 */
+
+/* BEGIN MERGE SLOT 2 */
+
+/* END MERGE SLOT 2 */
+
+/* BEGIN MERGE SLOT 3 */
+
+/* END MERGE SLOT 3 */
+
+/* BEGIN MERGE SLOT 4 */
+
+/* END MERGE SLOT 4 */
+
+/* BEGIN MERGE SLOT 5 */
+
+/* END MERGE SLOT 5 */
+
+/* BEGIN MERGE SLOT 6 */
+
+/* END MERGE SLOT 6 */
+
+/* BEGIN MERGE SLOT 7 */
+
+/* END MERGE SLOT 7 */
+
+/* BEGIN MERGE SLOT 8 */
+
+/* END MERGE SLOT 8 */
+
+/* BEGIN MERGE SLOT 9 */
+
+/* END MERGE SLOT 9 */
+
+/* BEGIN MERGE SLOT 10 */
+
+/* END MERGE SLOT 10 */
