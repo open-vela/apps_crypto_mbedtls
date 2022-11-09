@@ -29,6 +29,11 @@ github.
 
 [ffdh]: https://github.com/Mbed-TLS/mbedtls/issues/3261
 
+PSA Crypto has an experimental API for EC J-PAKE, but it's not implemented in
+Mbed TLS yet. See the [EC J-PAKE follow-up EPIC][ecjp] on github.
+
+[ecjp]: https://github.com/orgs/Mbed-TLS/projects/1#column-17950140
+
 Arbitrary parameters for FFDH
 -----------------------------
 
