@@ -1245,7 +1245,6 @@ component_test_full_no_cipher () {
     scripts/config.py unset MBEDTLS_PSA_CRYPTO_STORAGE_C
     scripts/config.py unset MBEDTLS_SSL_DTLS_ANTI_REPLAY
     scripts/config.py unset MBEDTLS_SSL_DTLS_CONNECTION_ID
-    scripts/config.py unset MBEDTLS_SSL_DTLS_CONNECTION_ID_COMPAT
     scripts/config.py unset MBEDTLS_SSL_PROTO_TLS1_3
     scripts/config.py unset MBEDTLS_SSL_SRV_C
     scripts/config.py unset MBEDTLS_USE_PSA_CRYPTO
@@ -2106,6 +2105,7 @@ component_test_psa_crypto_config_accel_hash_use_psa () {
     scripts/config.py unset MBEDTLS_HKDF_C # has independent PSA implementation
     scripts/config.py unset MBEDTLS_HMAC_DRBG_C
     scripts/config.py unset MBEDTLS_ECDSA_DETERMINISTIC
+    scripts/config.py unset MBEDTLS_SSL_EARLY_DATA
     scripts/config.py -f include/psa/crypto_config.h unset PSA_WANT_ALG_DETERMINISTIC_ECDSA
 
     loc_accel_flags="$loc_accel_flags $( echo "$loc_accel_list" | sed 's/[^ ]* */-DMBEDTLS_PSA_ACCEL_&/g' )"
@@ -2728,25 +2728,6 @@ component_test_variable_ssl_in_out_buffer_len_CID () {
     tests/compat.sh
 }
 
-component_test_variable_ssl_in_out_buffer_len_CID_legacy () {
-    msg "build: MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH and MBEDTLS_SSL_DTLS_CONNECTION_ID (legacy) enabled (ASan build)"
-    scripts/config.py set MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH
-    scripts/config.py set MBEDTLS_SSL_DTLS_CONNECTION_ID
-    scripts/config.py set MBEDTLS_SSL_DTLS_CONNECTION_ID_COMPAT 1
-
-    CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
-    make
-
-    msg "test: MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH and MBEDTLS_SSL_DTLS_CONNECTION_ID"
-    make test
-
-    msg "test: ssl-opt.sh, MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH and MBEDTLS_SSL_DTLS_CONNECTION_ID enabled"
-    tests/ssl-opt.sh
-
-    msg "test: compat.sh, MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH and MBEDTLS_SSL_DTLS_CONNECTION_ID enabled"
-    tests/compat.sh
-}
-
 component_test_ssl_alloc_buffer_and_mfl () {
     msg "build: default config with memory buffer allocator and MFL extension"
     scripts/config.py set MBEDTLS_MEMORY_BUFFER_ALLOC_C
@@ -3241,6 +3222,7 @@ component_build_armcc () {
 
 component_test_tls13_only () {
     msg "build: default config with MBEDTLS_SSL_PROTO_TLS1_3, without MBEDTLS_SSL_PROTO_TLS1_2"
+    scripts/config.py set MBEDTLS_SSL_EARLY_DATA
     make CFLAGS="'-DMBEDTLS_USER_CONFIG_FILE=\"../tests/configs/tls13-only.h\"'"
 
     msg "test: TLS 1.3 only, all key exchange modes enabled"
@@ -3320,6 +3302,7 @@ component_test_tls13_only_psk_all () {
 component_test_tls13_only_ephemeral_all () {
     msg "build: TLS 1.3 only from default, without PSK key exchange mode"
     scripts/config.py unset MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_ENABLED
+    scripts/config.py set MBEDTLS_SSL_EARLY_DATA
     make CFLAGS="'-DMBEDTLS_USER_CONFIG_FILE=\"../tests/configs/tls13-only.h\"'"
 
     msg "test_suite_ssl: TLS 1.3 only, ephemeral and PSK ephemeral key exchange modes"
