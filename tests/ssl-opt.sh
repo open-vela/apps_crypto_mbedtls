@@ -80,12 +80,14 @@ fi
 
 if [ -n "${OPENSSL_NEXT:-}" ]; then
     O_NEXT_SRV="$OPENSSL_NEXT s_server -www -cert data_files/server5.crt -key data_files/server5.key"
+    O_NEXT_SRV_EARLY_DATA="$OPENSSL_NEXT s_server -early_data -cert data_files/server5.crt -key data_files/server5.key"
     O_NEXT_SRV_NO_CERT="$OPENSSL_NEXT s_server -www "
     O_NEXT_CLI="echo 'GET / HTTP/1.0' | $OPENSSL_NEXT s_client -CAfile data_files/test-ca_cat12.crt"
     O_NEXT_CLI_NO_CERT="echo 'GET / HTTP/1.0' | $OPENSSL_NEXT s_client"
 else
     O_NEXT_SRV=false
     O_NEXT_SRV_NO_CERT=false
+    O_NEXT_SRV_EARLY_DATA=false
     O_NEXT_CLI_NO_CERT=false
     O_NEXT_CLI=false
 fi
@@ -523,14 +525,6 @@ requires_openssl_with_fallback_scsv() {
 requires_max_content_len() {
     requires_config_value_at_least "MBEDTLS_SSL_IN_CONTENT_LEN" $1
     requires_config_value_at_least "MBEDTLS_SSL_OUT_CONTENT_LEN" $1
-}
-
-CID_MODE=$( get_config_value_or_default "MBEDTLS_SSL_DTLS_CONNECTION_ID_COMPAT" )
-
-requires_cid_compat() {
-    if [ "$CID_MODE" = "0" ]; then
-        SKIP_NEXT="YES"
-    fi
 }
 
 # skip next test if GnuTLS isn't available
@@ -1698,6 +1692,7 @@ fi
 if [ -n "${OPENSSL_NEXT:-}" ]; then
     O_NEXT_SRV="$O_NEXT_SRV -accept $SRV_PORT"
     O_NEXT_SRV_NO_CERT="$O_NEXT_SRV_NO_CERT -accept $SRV_PORT"
+    O_NEXT_SRV_EARLY_DATA="$O_NEXT_SRV_EARLY_DATA -accept $SRV_PORT"
     O_NEXT_CLI="$O_NEXT_CLI -connect 127.0.0.1:+SRV_PORT"
     O_NEXT_CLI_NO_CERT="$O_NEXT_CLI_NO_CERT -connect 127.0.0.1:+SRV_PORT"
 fi
@@ -2582,17 +2577,6 @@ run_test    "Context serialization, client serializes, with CID" \
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 requires_config_enabled MBEDTLS_SSL_CONTEXT_SERIALIZATION
-requires_config_enabled MBEDTLS_SSL_DTLS_CONNECTION_ID
-requires_cid_compat
-run_test    "Context serialization, client serializes, with CID (legacy)" \
-            "$P_SRV dtls=1 serialize=0 exchanges=2 cid=1 cid_val=dead" \
-            "$P_CLI dtls=1 serialize=1 exchanges=2 cid=1 cid_val=beef" \
-            0 \
-            -c "Deserializing connection..." \
-            -S "Deserializing connection..."
-
-
-requires_config_enabled MBEDTLS_SSL_CONTEXT_SERIALIZATION
 run_test    "Context serialization, server serializes, CCM" \
             "$P_SRV dtls=1 serialize=1 exchanges=2" \
             "$P_CLI dtls=1 serialize=0 exchanges=2 force_ciphersuite=TLS-ECDHE-ECDSA-WITH-AES-128-CCM-8" \
@@ -2622,16 +2606,6 @@ requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 requires_config_enabled MBEDTLS_SSL_CONTEXT_SERIALIZATION
 requires_config_enabled MBEDTLS_SSL_DTLS_CONNECTION_ID
 run_test    "Context serialization, server serializes, with CID" \
-            "$P_SRV dtls=1 serialize=1 exchanges=2 cid=1 cid_val=dead" \
-            "$P_CLI dtls=1 serialize=0 exchanges=2 cid=1 cid_val=beef" \
-            0 \
-            -C "Deserializing connection..." \
-            -s "Deserializing connection..."
-
-requires_config_enabled MBEDTLS_SSL_CONTEXT_SERIALIZATION
-requires_config_enabled MBEDTLS_SSL_DTLS_CONNECTION_ID
-requires_cid_compat
-run_test    "Context serialization, server serializes, with CID (legacy)" \
             "$P_SRV dtls=1 serialize=1 exchanges=2 cid=1 cid_val=dead" \
             "$P_CLI dtls=1 serialize=0 exchanges=2 cid=1 cid_val=beef" \
             0 \
@@ -2677,17 +2651,6 @@ run_test    "Context serialization, both serialize, with CID" \
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 requires_config_enabled MBEDTLS_SSL_CONTEXT_SERIALIZATION
-requires_config_enabled MBEDTLS_SSL_DTLS_CONNECTION_ID
-requires_cid_compat
-run_test    "Context serialization, both serialize, with CID (legacy)" \
-            "$P_SRV dtls=1 serialize=1 exchanges=2 cid=1 cid_val=dead" \
-            "$P_CLI dtls=1 serialize=1 exchanges=2 cid=1 cid_val=beef" \
-            0 \
-            -c "Deserializing connection..." \
-            -s "Deserializing connection..."
-
-
-requires_config_enabled MBEDTLS_SSL_CONTEXT_SERIALIZATION
 run_test    "Context serialization, re-init, client serializes, CCM" \
             "$P_SRV dtls=1 serialize=0 exchanges=2" \
             "$P_CLI dtls=1 serialize=2 exchanges=2 force_ciphersuite=TLS-ECDHE-ECDSA-WITH-AES-128-CCM-8" \
@@ -2724,16 +2687,6 @@ run_test    "Context serialization, re-init, client serializes, with CID" \
             -S "Deserializing connection..."
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
-requires_config_enabled MBEDTLS_SSL_CONTEXT_SERIALIZATION
-requires_config_enabled MBEDTLS_SSL_DTLS_CONNECTION_ID
-requires_cid_compat
-run_test    "Context serialization, re-init, client serializes, with CID (legacy)" \
-            "$P_SRV dtls=1 serialize=0 exchanges=2 cid=1 cid_val=dead" \
-            "$P_CLI dtls=1 serialize=2 exchanges=2 cid=1 cid_val=beef" \
-            0 \
-            -c "Deserializing connection..." \
-            -S "Deserializing connection..."
-
 requires_config_enabled MBEDTLS_SSL_CONTEXT_SERIALIZATION
 run_test    "Context serialization, re-init, server serializes, CCM" \
             "$P_SRV dtls=1 serialize=2 exchanges=2" \
@@ -13088,6 +13041,23 @@ run_test    "TLS 1.3: NewSessionTicket: servername negative check, m->m" \
             -s "=> write NewSessionTicket msg" \
             -s "server state: MBEDTLS_SSL_NEW_SESSION_TICKET" \
             -s "server state: MBEDTLS_SSL_NEW_SESSION_TICKET_FLUSH"
+
+requires_gnutls_tls1_3
+requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
+requires_all_configs_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE \
+                             MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED \
+                             MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_EPHEMERAL_ENABLED \
+                             MBEDTLS_SSL_EARLY_DATA
+run_test    "TLS 1.3 m->G: EarlyData: basic check, good" \
+            "$G_NEXT_SRV -d 10 --priority=NORMAL:-VERS-ALL:+VERS-TLS1.3:+CIPHER-ALL:+ECDHE-PSK:+PSK --earlydata --disable-client-cert" \
+            "$P_CLI debug_level=4 early_data=1 reco_mode=1 reconnect=1 reco_delay=2" \
+            1 \
+            -c "client hello, adding early_data extension" \
+            -c "Reconnecting with saved session" \
+            -c "EncryptedExtensions: early_data(42) extension is unsupported" \
+            -s "Parsing extension 'Early Data/42' (0 bytes)" \
+            -s "Sending extension Early Data/42 (0 bytes)"
 
 # Test heap memory usage after handshake
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
