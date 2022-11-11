@@ -511,12 +511,15 @@ static void ssl_build_record_nonce( unsigned char *dst_iv,
                                     unsigned char const *dynamic_iv,
                                     size_t dynamic_iv_len )
 {
+    size_t i;
+
     /* Start with Fixed IV || 0 */
     memset( dst_iv, 0, dst_iv_len );
     memcpy( dst_iv, fixed_iv, fixed_iv_len );
 
     dst_iv += dst_iv_len - dynamic_iv_len;
-    mbedtls_xor( dst_iv, dst_iv, dynamic_iv, dynamic_iv_len );
+    for( i = 0; i < dynamic_iv_len; i++ )
+        dst_iv[i] ^= dynamic_iv[i];
 }
 #endif /* MBEDTLS_GCM_C || MBEDTLS_CCM_C || MBEDTLS_CHACHAPOLY_C */
 
@@ -1794,8 +1797,7 @@ int mbedtls_ssl_fetch_input( mbedtls_ssl_context *ssl, size_t nb_want )
 
     if( ssl->f_recv == NULL && ssl->f_recv_timeout == NULL )
     {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "Bad usage of mbedtls_ssl_set_bio() "
-                            "or mbedtls_ssl_set_bio()" ) );
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "Bad usage of mbedtls_ssl_set_bio() " ) );
         return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
     }
 
@@ -2010,8 +2012,7 @@ int mbedtls_ssl_flush_output( mbedtls_ssl_context *ssl )
 
     if( ssl->f_send == NULL )
     {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "Bad usage of mbedtls_ssl_set_bio() "
-                            "or mbedtls_ssl_set_bio()" ) );
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "Bad usage of mbedtls_ssl_set_bio() " ) );
         return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
     }
 
