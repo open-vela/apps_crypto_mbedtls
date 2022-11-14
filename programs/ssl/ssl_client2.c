@@ -83,7 +83,6 @@ int main( void )
 #define DFL_RECSPLIT            -1
 #define DFL_DHMLEN              -1
 #define DFL_RECONNECT           0
-#define DFL_RECO_SERVER_NAME    NULL
 #define DFL_RECO_DELAY          0
 #define DFL_RECO_MODE           1
 #define DFL_CID_ENABLED         0
@@ -121,7 +120,7 @@ int main( void )
 #define GET_REQUEST "GET %s HTTP/1.0\r\nExtra-header: "
 #define GET_REQUEST_END "\r\n\r\n"
 
-#if defined(MBEDTLS_SSL_HANDSHAKE_WITH_CERT_ENABLED)
+#if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
 #define USAGE_CONTEXT_CRT_CB \
     "    context_crt_cb=%%d   This determines whether the CRT verification callback is bound\n" \
     "                        to the SSL configuration of the SSL context.\n" \
@@ -130,8 +129,8 @@ int main( void )
     "                        - 1: Use CRT callback bound to SSL context\n"
 #else
 #define USAGE_CONTEXT_CRT_CB ""
-#endif /* MBEDTLS_SSL_HANDSHAKE_WITH_CERT_ENABLED */
-#if defined(MBEDTLS_SSL_HANDSHAKE_WITH_CERT_ENABLED)
+#endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
+#if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
 #if defined(MBEDTLS_FS_IO)
 #define USAGE_IO \
     "    ca_file=%%s          The single file containing the top-level CA(s) you fully trust\n" \
@@ -149,10 +148,10 @@ int main( void )
 #define USAGE_IO \
     "    No file operations available (MBEDTLS_FS_IO not defined)\n"
 #endif /* MBEDTLS_FS_IO */
-#else /* MBEDTLS_SSL_HANDSHAKE_WITH_CERT_ENABLED */
+#else /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
 #define USAGE_IO ""
-#endif /* MBEDTLS_SSL_HANDSHAKE_WITH_CERT_ENABLED */
-#if defined(MBEDTLS_USE_PSA_CRYPTO) && defined(MBEDTLS_SSL_HANDSHAKE_WITH_CERT_ENABLED)
+#endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
+#if defined(MBEDTLS_USE_PSA_CRYPTO) && defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
 #define USAGE_KEY_OPAQUE \
     "    key_opaque=%%d       Handle your private key as if it were opaque\n" \
     "                        default: 0 (disabled)\n"
@@ -174,7 +173,7 @@ int main( void )
 #define USAGE_CID ""
 #endif /* MBEDTLS_SSL_DTLS_CONNECTION_ID */
 
-#if defined(MBEDTLS_SSL_HANDSHAKE_WITH_PSK_ENABLED)
+#if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
 #define USAGE_PSK_RAW                                               \
     "    psk=%%s              default: \"\" (disabled)\n"     \
     "                          The PSK values are in hex, without 0x.\n" \
@@ -196,7 +195,7 @@ int main( void )
 #define USAGE_PSK USAGE_PSK_RAW USAGE_PSK_SLOT
 #else
 #define USAGE_PSK ""
-#endif /* MBEDTLS_SSL_HANDSHAKE_WITH_PSK_ENABLED */
+#endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
 
 #if defined(MBEDTLS_X509_TRUSTED_CERTIFICATE_CALLBACK)
 #define USAGE_CA_CALLBACK                       \
@@ -270,7 +269,8 @@ int main( void )
 #define USAGE_CURVES ""
 #endif
 
-#if defined(MBEDTLS_SSL_HANDSHAKE_WITH_CERT_ENABLED)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3) && \
+    defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
 #define USAGE_SIG_ALGS \
     "    sig_algs=a,b,c,d      default: \"default\" (library default)\n"  \
     "                          example: \"ecdsa_secp256r1_sha256,ecdsa_secp384r1_sha384\"\n"
@@ -376,8 +376,6 @@ int main( void )
     "                        a second non-empty message before attempting\n" \
     "                        to read a response from the server\n"           \
     "    debug_level=%%d      default: 0 (disabled)\n"             \
-    "    build_version=%%d    default: none (disabled)\n"                     \
-    "                        option: 1 (print build version only and stop)\n" \
     "    nbio=%%d             default: 0 (blocking I/O)\n"         \
     "                        options: 1 (non-blocking), 2 (added delays)\n"   \
     "    event=%%d            default: 0 (loop)\n"                            \
@@ -406,8 +404,8 @@ int main( void )
     USAGE_RENEGO                                            \
     "    exchanges=%%d        default: 1\n"                 \
     "    reconnect=%%d        number of reconnections using session resumption\n" \
-    "                        default: 0 (disabled)\n"       \
-    "    reco_server_name=%%s  default: NULL\n"             \
+    "                        default: 0 (disabled)\n"      \
+    "    reco_server_name=%%s  default: localhost\n"         \
     "    reco_delay=%%d       default: 0 seconds\n"         \
     "    reco_mode=%%d        0: copy session, 1: serialize session\n" \
     "                        default: 1\n"      \
@@ -543,7 +541,7 @@ struct options
 
 #include "ssl_test_common_source.c"
 
-#if defined(MBEDTLS_SSL_HANDSHAKE_WITH_CERT_ENABLED)
+#if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
 static unsigned char peer_crt_info[1024];
 
 /*
@@ -581,7 +579,7 @@ static int my_verify( void *data, mbedtls_x509_crt *crt,
 
     return( 0 );
 }
-#endif /* MBEDTLS_SSL_HANDSHAKE_WITH_CERT_ENABLED */
+#endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
 
 #if defined(MBEDTLS_SSL_DTLS_CONNECTION_ID)
 int report_cid_usage( mbedtls_ssl_context *ssl,
@@ -721,13 +719,14 @@ int main( int argc, char *argv[] )
     mbedtls_net_context server_fd;
     io_ctx_t io_ctx;
 
-#if defined(MBEDTLS_SSL_HANDSHAKE_WITH_CERT_ENABLED)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3) && \
+    defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
     uint16_t sig_alg_list[SIG_ALG_LIST_SIZE];
-#endif
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3 && MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
 
     unsigned char buf[MAX_REQUEST_SIZE + 1];
 
-#if defined(MBEDTLS_SSL_HANDSHAKE_WITH_PSK_ENABLED)
+#if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
     unsigned char psk[MBEDTLS_PSK_MAX_LEN];
     size_t psk_len = 0;
 #endif
@@ -759,7 +758,7 @@ int main( int argc, char *argv[] )
     const char *pers = "ssl_client2";
 
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
-#if defined(MBEDTLS_SSL_HANDSHAKE_WITH_PSK_ENABLED)
+#if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
     mbedtls_svc_key_id_t slot = MBEDTLS_SVC_KEY_ID_INIT;
     psa_algorithm_t alg = 0;
     psa_key_attributes_t key_attributes;
@@ -778,7 +777,7 @@ int main( int argc, char *argv[] )
 #if defined(MBEDTLS_TIMING_C)
     mbedtls_timing_delay_context timer;
 #endif
-#if defined(MBEDTLS_SSL_HANDSHAKE_WITH_CERT_ENABLED)
+#if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
     uint32_t flags;
     mbedtls_x509_crt cacert;
     mbedtls_x509_crt clicert;
@@ -787,7 +786,7 @@ int main( int argc, char *argv[] )
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
     mbedtls_svc_key_id_t key_slot = MBEDTLS_SVC_KEY_ID_INIT; /* invalid key slot */
 #endif
-#endif  /* MBEDTLS_SSL_HANDSHAKE_WITH_CERT_ENABLED */
+#endif  /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
     char *p, *q;
     const int *list;
 #if defined(MBEDTLS_SSL_CONTEXT_SERIALIZATION)
@@ -828,7 +827,7 @@ int main( int argc, char *argv[] )
     mbedtls_ssl_config_init( &conf );
     memset( &saved_session, 0, sizeof( mbedtls_ssl_session ) );
     rng_init( &rng );
-#if defined(MBEDTLS_SSL_HANDSHAKE_WITH_CERT_ENABLED)
+#if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
     mbedtls_x509_crt_init( &cacert );
     mbedtls_x509_crt_init( &clicert );
     mbedtls_pk_init( &pkey );
@@ -924,7 +923,7 @@ int main( int argc, char *argv[] )
     opt.recsplit            = DFL_RECSPLIT;
     opt.dhmlen              = DFL_DHMLEN;
     opt.reconnect           = DFL_RECONNECT;
-    opt.reco_server_name    = DFL_RECO_SERVER_NAME;
+    opt.reco_server_name    = DFL_SERVER_NAME;
     opt.reco_delay          = DFL_RECO_DELAY;
     opt.reco_mode           = DFL_RECO_MODE;
     opt.reconnect_hard      = DFL_RECONNECT_HARD;
@@ -983,16 +982,6 @@ int main( int argc, char *argv[] )
             if( opt.debug_level < 0 || opt.debug_level > 65535 )
                 goto usage;
         }
-        else if( strcmp( p, "build_version" ) == 0 )
-        {
-            if( strcmp( q, "1" ) == 0 )
-            {
-                mbedtls_printf( "build version: %s (build %d)\n",
-                                MBEDTLS_VERSION_STRING_FULL,
-                                MBEDTLS_VERSION_NUMBER );
-                goto exit;
-            }
-        }
         else if( strcmp( p, "context_crt_cb" ) == 0 )
         {
             opt.context_crt_cb = atoi( q );
@@ -1038,7 +1027,7 @@ int main( int argc, char *argv[] )
             opt.key_file = q;
         else if( strcmp( p, "key_pwd" ) == 0 )
             opt.key_pwd = q;
-#if defined(MBEDTLS_USE_PSA_CRYPTO) && defined(MBEDTLS_SSL_HANDSHAKE_WITH_CERT_ENABLED)
+#if defined(MBEDTLS_USE_PSA_CRYPTO) && defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
         else if( strcmp( p, "key_opaque" ) == 0 )
             opt.key_opaque = atoi( q );
 #endif
@@ -1131,7 +1120,7 @@ int main( int argc, char *argv[] )
             if( opt.reconnect < 0 || opt.reconnect > 2 )
                 goto usage;
         }
-        else if( strcmp( p, "reco_server_name" ) == 0 )
+        else if( strcmp( p, "rec_server_name" ) == 0 )
             opt.reco_server_name = q;
         else if( strcmp( p, "reco_delay" ) == 0 )
         {
@@ -1176,10 +1165,11 @@ int main( int argc, char *argv[] )
         }
         else if( strcmp( p, "curves" ) == 0 )
             opt.curves = q;
-#if defined(MBEDTLS_SSL_HANDSHAKE_WITH_CERT_ENABLED)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3) && \
+    defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
         else if( strcmp( p, "sig_algs" ) == 0 )
             opt.sig_algs = q;
-#endif
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3 && MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
         else if( strcmp( p, "etm" ) == 0 )
         {
             switch( atoi( q ) )
@@ -1416,7 +1406,7 @@ int main( int argc, char *argv[] )
     mbedtls_debug_set_threshold( opt.debug_level );
 #endif
 
-#if defined(MBEDTLS_SSL_HANDSHAKE_WITH_PSK_ENABLED)
+#if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
     /*
      * Unhexify the pre-shared key if any is given
      */
@@ -1429,7 +1419,7 @@ int main( int argc, char *argv[] )
             goto exit;
         }
     }
-#endif /* MBEDTLS_SSL_HANDSHAKE_WITH_PSK_ENABLED */
+#endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
 
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
     if( opt.psk_opaque != 0 )
@@ -1488,7 +1478,7 @@ int main( int argc, char *argv[] )
         }
 
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
-#if defined (MBEDTLS_SSL_HANDSHAKE_WITH_PSK_ENABLED)
+#if defined (MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
         if( opt.psk_opaque != 0 )
         {
             /* Determine KDF algorithm the opaque PSK will be used in. */
@@ -1499,7 +1489,7 @@ int main( int argc, char *argv[] )
 #endif /* MBEDTLS_HAS_ALG_SHA_384_VIA_MD_OR_PSA_BASED_ON_USE_PSA */
                 alg = PSA_ALG_TLS12_PSK_TO_MS(PSA_ALG_SHA_256);
         }
-#endif /* MBEDTLS_SSL_HANDSHAKE_WITH_PSK_ENABLED */
+#endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
 #endif /* MBEDTLS_USE_PSA_CRYPTO */
     }
 
@@ -1582,7 +1572,8 @@ int main( int argc, char *argv[] )
     }
 #endif /* MBEDTLS_ECP_C */
 
-#if defined(MBEDTLS_SSL_HANDSHAKE_WITH_CERT_ENABLED)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3) && \
+    defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
     if( opt.sig_algs != NULL )
     {
         p = (char *) opt.sig_algs;
@@ -1681,7 +1672,7 @@ int main( int argc, char *argv[] )
 
         sig_alg_list[i] = MBEDTLS_TLS1_3_SIG_NONE;
     }
-#endif /* MBEDTLS_SSL_HANDSHAKE_WITH_CERT_ENABLED */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3 && MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
 
 #if defined(MBEDTLS_SSL_ALPN)
     if( opt.alpn_string != NULL )
@@ -1703,9 +1694,6 @@ int main( int argc, char *argv[] )
     }
 #endif /* MBEDTLS_SSL_ALPN */
 
-    mbedtls_printf( "build version: %s (build %d)\n",
-                    MBEDTLS_VERSION_STRING_FULL, MBEDTLS_VERSION_NUMBER );
-
     /*
      * 0. Initialize the RNG and the session data
      */
@@ -1717,7 +1705,7 @@ int main( int argc, char *argv[] )
         goto exit;
     mbedtls_printf( " ok\n" );
 
-#if defined(MBEDTLS_SSL_HANDSHAKE_WITH_CERT_ENABLED)
+#if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
     /*
      * 1.1. Load the trusted CA
      */
@@ -1747,17 +1735,15 @@ int main( int argc, char *argv[] )
             if( ret != 0 )
                 break;
         }
-#endif /* MBEDTLS_PEM_PARSE_C */
         if( ret == 0 )
+#endif /* MBEDTLS_PEM_PARSE_C */
+        for( i = 0; mbedtls_test_cas_der[i] != NULL; i++ )
         {
-            for( i = 0; mbedtls_test_cas_der[i] != NULL; i++ )
-            {
-                ret = mbedtls_x509_crt_parse_der( &cacert,
-                             (const unsigned char *) mbedtls_test_cas_der[i],
-                             mbedtls_test_cas_der_len[i] );
-                if( ret != 0 )
-                    break;
-            }
+            ret = mbedtls_x509_crt_parse_der( &cacert,
+                         (const unsigned char *) mbedtls_test_cas_der[i],
+                         mbedtls_test_cas_der_len[i] );
+            if( ret != 0 )
+                break;
         }
     }
     if( ret < 0 )
@@ -1841,7 +1827,7 @@ int main( int argc, char *argv[] )
     mbedtls_printf( " ok (key type: %s)\n",
                     strlen( opt.key_file ) || strlen( opt.key_opaque_alg1 ) ?
                             mbedtls_pk_get_name( &pkey ) : "none" );
-#endif /* MBEDTLS_SSL_HANDSHAKE_WITH_CERT_ENABLED */
+#endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
 
     /*
      * 2. Setup stuff
@@ -1859,7 +1845,7 @@ int main( int argc, char *argv[] )
         goto exit;
     }
 
-#if defined(MBEDTLS_SSL_HANDSHAKE_WITH_CERT_ENABLED)
+#if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
     /* The default algorithms profile disables SHA-1, but our tests still
        rely on it heavily. */
     if( opt.allow_sha1 > 0 )
@@ -1872,7 +1858,7 @@ int main( int argc, char *argv[] )
         mbedtls_ssl_conf_verify( &conf, my_verify, NULL );
 
     memset( peer_crt_info, 0, sizeof( peer_crt_info ) );
-#endif /* MBEDTLS_SSL_HANDSHAKE_WITH_CERT_ENABLED */
+#endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
 
 #if defined(MBEDTLS_SSL_DTLS_CONNECTION_ID)
     if( opt.cid_enabled == 1 || opt.cid_enabled_renego == 1 )
@@ -2009,7 +1995,7 @@ int main( int argc, char *argv[] )
     mbedtls_ssl_conf_renegotiation( &conf, opt.renegotiation );
 #endif
 
-#if defined(MBEDTLS_SSL_HANDSHAKE_WITH_CERT_ENABLED)
+#if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
     if( strcmp( opt.ca_path, "none" ) != 0 &&
         strcmp( opt.ca_file, "none" ) != 0 )
     {
@@ -2030,7 +2016,7 @@ int main( int argc, char *argv[] )
             goto exit;
         }
     }
-#endif  /* MBEDTLS_SSL_HANDSHAKE_WITH_CERT_ENABLED */
+#endif  /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
 
 #if defined(MBEDTLS_ECP_C)
     if( opt.curves != NULL &&
@@ -2040,12 +2026,13 @@ int main( int argc, char *argv[] )
     }
 #endif
 
-#if defined(MBEDTLS_SSL_HANDSHAKE_WITH_CERT_ENABLED)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3) && \
+    defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
     if( opt.sig_algs != NULL )
         mbedtls_ssl_conf_sig_algs( &conf, sig_alg_list );
-#endif
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
-#if defined(MBEDTLS_SSL_HANDSHAKE_WITH_PSK_ENABLED)
+#if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
     if( opt.psk_opaque != 0 )
     {
@@ -2083,7 +2070,7 @@ int main( int argc, char *argv[] )
             goto exit;
         }
     }
-#endif /* MBEDTLS_SSL_HANDSHAKE_WITH_PSK_ENABLED */
+#endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
 
     if( opt.min_version != DFL_MIN_VERSION )
         mbedtls_ssl_conf_min_tls_version( &conf, opt.min_version );
@@ -2117,7 +2104,7 @@ int main( int argc, char *argv[] )
     }
 #endif /* MBEDTLS_SSL_DTLS_SRTP */
 
-#if defined(MBEDTLS_SSL_HANDSHAKE_WITH_CERT_ENABLED)
+#if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
     if( ( ret = mbedtls_ssl_set_hostname( &ssl, opt.server_name ) ) != 0 )
     {
         mbedtls_printf( " failed\n  ! mbedtls_ssl_set_hostname returned %d\n\n",
@@ -2140,10 +2127,10 @@ int main( int argc, char *argv[] )
     }
 #endif
 
-#if defined(MBEDTLS_SSL_HANDSHAKE_WITH_CERT_ENABLED)
+#if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
     if( opt.context_crt_cb == 1 )
         mbedtls_ssl_set_verify( &ssl, my_verify, NULL );
-#endif /* MBEDTLS_SSL_HANDSHAKE_WITH_CERT_ENABLED */
+#endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
 
     io_ctx.ssl = &ssl;
     io_ctx.net = &server_fd;
@@ -2255,10 +2242,7 @@ int main( int argc, char *argv[] )
                     "    or you didn't set ca_file or ca_path "
                         "to an appropriate value.\n"
                     "    Alternatively, you may want to use "
-                        "auth_mode=optional for testing purposes if "
-                        "not using TLS 1.3.\n"
-                    "    For TLS 1.3 server, try `ca_path=/etc/ssl/certs/`"
-                        "or other folder that has root certificates\n" );
+                        "auth_mode=optional for testing purposes.\n" );
             mbedtls_printf( "\n" );
             goto exit;
         }
@@ -2467,7 +2451,7 @@ int main( int argc, char *argv[] )
         }
     }
 
-#if defined(MBEDTLS_SSL_HANDSHAKE_WITH_CERT_ENABLED)
+#if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
     /*
      * 5. Verify the server certificate
      */
@@ -2490,7 +2474,7 @@ int main( int argc, char *argv[] )
     mbedtls_printf( "  . Peer certificate information    ...\n" );
     mbedtls_printf( "%s\n", peer_crt_info );
 #endif /* !MBEDTLS_X509_REMOVE_INFO */
-#endif /* MBEDTLS_SSL_HANDSHAKE_WITH_CERT_ENABLED */
+#endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
 
 #if defined(MBEDTLS_SSL_DTLS_CONNECTION_ID)
     ret = report_cid_usage( &ssl, "initial handshake" );
@@ -2865,9 +2849,9 @@ send_request:
         mbedtls_printf( "  . Restarting connection from same port..." );
         fflush( stdout );
 
-#if defined(MBEDTLS_SSL_HANDSHAKE_WITH_CERT_ENABLED)
+#if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
         memset( peer_crt_info, 0, sizeof( peer_crt_info ) );
-#endif /* MBEDTLS_SSL_HANDSHAKE_WITH_CERT_ENABLED */
+#endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
 
         if( ( ret = mbedtls_ssl_session_reset( &ssl ) ) != 0 )
         {
@@ -3101,9 +3085,9 @@ reconnect:
 
         mbedtls_printf( "  . Reconnecting with saved session..." );
 
-#if defined(MBEDTLS_SSL_HANDSHAKE_WITH_CERT_ENABLED)
+#if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
         memset( peer_crt_info, 0, sizeof( peer_crt_info ) );
-#endif /* MBEDTLS_SSL_HANDSHAKE_WITH_CERT_ENABLED */
+#endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
 
         if( ( ret = mbedtls_ssl_session_reset( &ssl ) ) != 0 )
         {
@@ -3132,8 +3116,7 @@ reconnect:
         }
 
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
-        if( opt.reco_server_name != NULL &&
-            ( ret = mbedtls_ssl_set_hostname( &ssl,
+        if( ( ret = mbedtls_ssl_set_hostname( &ssl,
                                               opt.reco_server_name ) ) != 0 )
         {
             mbedtls_printf( " failed\n  ! mbedtls_ssl_set_hostname returned %d\n\n",
@@ -3208,16 +3191,16 @@ exit:
     mbedtls_free( context_buf );
 #endif
 
-#if defined(MBEDTLS_SSL_HANDSHAKE_WITH_CERT_ENABLED)
+#if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
     mbedtls_x509_crt_free( &clicert );
     mbedtls_x509_crt_free( &cacert );
     mbedtls_pk_free( &pkey );
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
     psa_destroy_key( key_slot );
 #endif
-#endif /* MBEDTLS_SSL_HANDSHAKE_WITH_CERT_ENABLED */
+#endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
 
-#if defined(MBEDTLS_SSL_HANDSHAKE_WITH_PSK_ENABLED) && \
+#if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED) && \
     defined(MBEDTLS_USE_PSA_CRYPTO)
     if( opt.psk_opaque != 0 )
     {
@@ -3236,7 +3219,7 @@ exit:
                 ret = MBEDTLS_ERR_SSL_HW_ACCEL_FAILED;
         }
     }
-#endif /* MBEDTLS_SSL_HANDSHAKE_WITH_PSK_ENABLED &&
+#endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED &&
           MBEDTLS_USE_PSA_CRYPTO */
 
 #if defined(MBEDTLS_USE_PSA_CRYPTO) || defined(MBEDTLS_SSL_PROTO_TLS1_3)
