@@ -146,6 +146,8 @@ derived."""
     # Turn off options that are not relevant to the tests and slow them down.
     run_config_py(options, ['full'])
     run_config_py(options, ['unset', 'MBEDTLS_TEST_HOOKS'])
+    if options.unset_use_psa:
+        run_config_py(options, ['unset', 'MBEDTLS_USE_PSA_CRYPTO'])
 
 def collect_config_symbols(options):
     """Read the list of settings from mbedtls_config.h.
@@ -237,7 +239,9 @@ REVERSE_DEPENDENCIES = {
                       'MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED',
                       'MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED',
                       'MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED',
-                      'MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED'],
+                      'MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED',
+                      'MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED',
+                      'MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_EPHEMERAL_ENABLED'],
     'MBEDTLS_ECP_DP_SECP256R1_ENABLED': ['MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED'],
     'MBEDTLS_PKCS1_V21': ['MBEDTLS_X509_RSASSA_PSS_SUPPORT'],
     'MBEDTLS_PKCS1_V15': ['MBEDTLS_KEY_EXCHANGE_DHE_RSA_ENABLED',
@@ -534,6 +538,9 @@ def main():
         parser.add_argument('--make-command', metavar='CMD',
                             help='Command to run instead of make (e.g. gmake)',
                             action='store', default='make')
+        parser.add_argument('--unset-use-psa',
+                            help='Unset MBEDTLS_USE_PSA_CRYPTO before any test',
+                            action='store_true', dest='unset_use_psa')
         parser.add_argument('tasks', metavar='TASKS', nargs='*',
                             help='The domain(s) or job(s) to test (default: all).',
                             default=True)
