@@ -1130,7 +1130,7 @@
  *
  * Enable support for PKCS#1 v1.5 encoding.
  *
- * Requires: MBEDTLS_MD_C, MBEDTLS_RSA_C
+ * Requires: MBEDTLS_RSA_C
  *
  * This enables support for PKCS#1 v1.5 operations.
  */
@@ -1320,9 +1320,7 @@
 /**
  * \def MBEDTLS_SSL_DTLS_CONNECTION_ID
  *
- * Enable support for the DTLS Connection ID extension
- * (version draft-ietf-tls-dtls-connection-id-05,
- * https://tools.ietf.org/html/draft-ietf-tls-dtls-connection-id-05)
+ * Enable support for the DTLS Connection ID extension,
  * which allows to identify DTLS connections across changes
  * in the underlying transport.
  *
@@ -1330,10 +1328,6 @@
  * mbedtls_ssl_get_own_cid()`, `mbedtls_ssl_get_peer_cid()` and
  * `mbedtls_ssl_conf_cid()`. See the corresponding documentation for
  * more information.
- *
- * \warning The Connection ID extension is still in draft state.
- *          We make no stability promises for the availability
- *          or the shape of the API controlled by this option.
  *
  * The maximum lengths of outgoing and incoming CIDs can be configured
  * through the options
@@ -1344,7 +1338,23 @@
  *
  * Uncomment to enable the Connection ID extension.
  */
-//#define MBEDTLS_SSL_DTLS_CONNECTION_ID
+#define MBEDTLS_SSL_DTLS_CONNECTION_ID
+
+
+/**
+ * \def MBEDTLS_SSL_DTLS_CONNECTION_ID_COMPAT
+ *
+ * Defines whether RFC 9146 (default) or the legacy version
+ * (version draft-ietf-tls-dtls-connection-id-05,
+ * https://tools.ietf.org/html/draft-ietf-tls-dtls-connection-id-05)
+ * is used.
+ *
+ * Set the value to 0 for the standard version, and
+ * 1 for the legacy draft version.
+ *
+ * Requires: MBEDTLS_SSL_DTLS_CONNECTION_ID
+ */
+#define MBEDTLS_SSL_DTLS_CONNECTION_ID_COMPAT 0
 
 /**
  * \def MBEDTLS_SSL_ASYNC_PRIVATE
@@ -1553,6 +1563,47 @@
 //#define MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 
 /**
+ * \def MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_ENABLED
+ *
+ * Enable TLS 1.3 PSK key exchange mode.
+ *
+ * Comment to disable support for the PSK key exchange mode in TLS 1.3. If
+ * MBEDTLS_SSL_PROTO_TLS1_3 is not enabled, this option does not have any
+ * effect on the build.
+ *
+ */
+#define MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_ENABLED
+
+/**
+ * \def MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
+ *
+ * Enable TLS 1.3 ephemeral key exchange mode.
+ *
+ * Requires: MBEDTLS_ECDH_C, MBEDTLS_X509_CRT_PARSE_C, MBEDTLS_ECDSA_C or
+ *           MBEDTLS_PKCS1_V21
+ *
+ * Comment to disable support for the ephemeral key exchange mode in TLS 1.3.
+ * If MBEDTLS_SSL_PROTO_TLS1_3 is not enabled, this option does not have any
+ * effect on the build.
+ *
+ */
+#define MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
+
+/**
+ * \def MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_EPHEMERAL_ENABLED
+ *
+ * Enable TLS 1.3 PSK ephemeral key exchange mode.
+ *
+ * Requires: MBEDTLS_ECDH_C
+ *
+ * Comment to disable support for the PSK ephemeral key exchange mode in
+ * TLS 1.3. If MBEDTLS_SSL_PROTO_TLS1_3 is not enabled, this option does not
+ * have any effect on the build.
+ *
+ */
+#define MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_EPHEMERAL_ENABLED
+
+/**
  * \def MBEDTLS_SSL_TLS1_3_TICKET_AGE_TOLERANCE
  *
  * Maximum time difference in milliseconds tolerated between the age of a
@@ -1590,6 +1641,23 @@
  *
  */
 #define MBEDTLS_SSL_TLS1_3_DEFAULT_NEW_SESSION_TICKETS 1
+
+/**
+* \def MBEDTLS_SSL_EARLY_DATA
+*
+* Enable support for RFC 8446 TLS 1.3 early data.
+*
+* Requires: MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_ENABLED or
+*           MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_EPHEMERAL_ENABLED
+*
+* Comment this to disable support for early data. If MBEDTLS_SSL_PROTO_TLS1_3
+* is not enabled, this option does not have any effect on the build.
+*
+* This feature is experimental, not completed and thus not ready for
+* production.
+*
+*/
+//#define MBEDTLS_SSL_EARLY_DATA
 
 /**
  * \def MBEDTLS_SSL_PROTO_DTLS
@@ -3601,17 +3669,6 @@
 
 //#define MBEDTLS_PSK_MAX_LEN               32 /**< Max size of TLS pre-shared keys, in bytes (default 256 bits) */
 //#define MBEDTLS_SSL_COOKIE_TIMEOUT        60 /**< Default expiration delay of DTLS cookies, in seconds if HAVE_TIME, or in number of cookies issued */
-
-/** \def MBEDTLS_TLS_EXT_CID
- *
- * At the time of writing, the CID extension has not been assigned its
- * final value. Set this configuration option to make Mbed TLS use a
- * different value.
- *
- * A future minor revision of Mbed TLS may change the default value of
- * this option to match evolving standards and usage.
- */
-//#define MBEDTLS_TLS_EXT_CID                        254
 
 /**
  * Complete list of ciphersuites to use, in order of preference.
