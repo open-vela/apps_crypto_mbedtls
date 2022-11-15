@@ -32,17 +32,7 @@
 
 #include <string.h>
 
-#if defined(MBEDTLS_SELF_TEST)
-#if defined(MBEDTLS_PLATFORM_C)
 #include "mbedtls/platform.h"
-#else
-#include <stdio.h>
-#include <stdlib.h>
-#define mbedtls_printf printf
-#define mbedtls_calloc    calloc
-#define mbedtls_free       free
-#endif /* MBEDTLS_PLATFORM_C */
-#endif /* MBEDTLS_SELF_TEST */
 
 #if defined(__aarch64__)
 #  if defined(MBEDTLS_SHA256_USE_A64_CRYPTO_IF_PRESENT) || \
@@ -665,9 +655,11 @@ int mbedtls_sha256_finish( mbedtls_sha256_context *ctx,
     MBEDTLS_PUT_UINT32_BE( ctx->state[5], output, 20 );
     MBEDTLS_PUT_UINT32_BE( ctx->state[6], output, 24 );
 
+    int truncated = 0;
 #if defined(MBEDTLS_SHA224_C)
-    if( ctx->is224 == 0 )
+    truncated = ctx->is224;
 #endif
+    if( !truncated )
         MBEDTLS_PUT_UINT32_BE( ctx->state[7], output, 28 );
 
     return( 0 );
