@@ -80,12 +80,14 @@ fi
 
 if [ -n "${OPENSSL_NEXT:-}" ]; then
     O_NEXT_SRV="$OPENSSL_NEXT s_server -www -cert data_files/server5.crt -key data_files/server5.key"
+    O_NEXT_SRV_EARLY_DATA="$OPENSSL_NEXT s_server -early_data -cert data_files/server5.crt -key data_files/server5.key"
     O_NEXT_SRV_NO_CERT="$OPENSSL_NEXT s_server -www "
     O_NEXT_CLI="echo 'GET / HTTP/1.0' | $OPENSSL_NEXT s_client -CAfile data_files/test-ca_cat12.crt"
     O_NEXT_CLI_NO_CERT="echo 'GET / HTTP/1.0' | $OPENSSL_NEXT s_client"
 else
     O_NEXT_SRV=false
     O_NEXT_SRV_NO_CERT=false
+    O_NEXT_SRV_EARLY_DATA=false
     O_NEXT_CLI_NO_CERT=false
     O_NEXT_CLI=false
 fi
@@ -1690,6 +1692,7 @@ fi
 if [ -n "${OPENSSL_NEXT:-}" ]; then
     O_NEXT_SRV="$O_NEXT_SRV -accept $SRV_PORT"
     O_NEXT_SRV_NO_CERT="$O_NEXT_SRV_NO_CERT -accept $SRV_PORT"
+    O_NEXT_SRV_EARLY_DATA="$O_NEXT_SRV_EARLY_DATA -accept $SRV_PORT"
     O_NEXT_CLI="$O_NEXT_CLI -connect 127.0.0.1:+SRV_PORT"
     O_NEXT_CLI_NO_CERT="$O_NEXT_CLI_NO_CERT -connect 127.0.0.1:+SRV_PORT"
 fi
@@ -13038,6 +13041,23 @@ run_test    "TLS 1.3: NewSessionTicket: servername negative check, m->m" \
             -s "=> write NewSessionTicket msg" \
             -s "server state: MBEDTLS_SSL_NEW_SESSION_TICKET" \
             -s "server state: MBEDTLS_SSL_NEW_SESSION_TICKET_FLUSH"
+
+requires_gnutls_tls1_3
+requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
+requires_all_configs_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE \
+                             MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED \
+                             MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_EPHEMERAL_ENABLED \
+                             MBEDTLS_SSL_EARLY_DATA
+run_test    "TLS 1.3 m->G: EarlyData: basic check, good" \
+            "$G_NEXT_SRV -d 10 --priority=NORMAL:-VERS-ALL:+VERS-TLS1.3:+CIPHER-ALL:+ECDHE-PSK:+PSK --earlydata --disable-client-cert" \
+            "$P_CLI debug_level=4 early_data=1 reco_mode=1 reconnect=1 reco_delay=2" \
+            1 \
+            -c "client hello, adding early_data extension" \
+            -c "Reconnecting with saved session" \
+            -c "EncryptedExtensions: early_data(42) extension is unsupported" \
+            -s "Parsing extension 'Early Data/42' (0 bytes)" \
+            -s "Sending extension Early Data/42 (0 bytes)"
 
 # Test heap memory usage after handshake
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
