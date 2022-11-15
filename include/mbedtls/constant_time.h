@@ -1,7 +1,6 @@
 /**
  *  Constant-time functions
- */
-/*
+ *
  *  Copyright The Mbed TLS Contributors
  *  SPDX-License-Identifier: Apache-2.0
  *
