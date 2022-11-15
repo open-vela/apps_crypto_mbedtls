@@ -516,7 +516,7 @@ int mbedtls_x509_crt_parse_der_with_ext_cb( mbedtls_x509_crt *chain,
  *                 mbedtls_x509_crt_init().
  * \param buf      The address of the readable buffer holding the DER encoded
  *                 certificate to use. On success, this buffer must be
- *                 retained and not be changed for the liftetime of the
+ *                 retained and not be changed for the lifetime of the
  *                 CRT chain \p chain, that is, until \p chain is destroyed
  *                 through a call to mbedtls_x509_crt_free().
  * \param buflen   The size in Bytes of \p buf.
@@ -1144,6 +1144,19 @@ int mbedtls_x509write_crt_set_authority_key_identifier( mbedtls_x509write_cert *
  */
 int mbedtls_x509write_crt_set_key_usage( mbedtls_x509write_cert *ctx,
                                          unsigned int key_usage );
+
+/**
+ * \brief           Set the Extended Key Usage Extension
+ *                  (e.g. MBEDTLS_OID_SERVER_AUTH)
+ *
+ * \param ctx       CRT context to use
+ * \param exts      extended key usage extensions to set, a sequence of
+ *                  MBEDTLS_ASN1_OID objects
+ *
+ * \return          0 if successful, or MBEDTLS_ERR_X509_ALLOC_FAILED
+ */
+int mbedtls_x509write_crt_set_ext_key_usage( mbedtls_x509write_cert *ctx,
+                                             const mbedtls_asn1_sequence *exts );
 
 /**
  * \brief           Set the Netscape Cert Type flags
