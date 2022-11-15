@@ -252,17 +252,6 @@ void mbedtls_mpi_swap( mbedtls_mpi *X, mbedtls_mpi *Y )
     memcpy(  Y, &T, sizeof( mbedtls_mpi ) );
 }
 
-static inline mbedtls_mpi_uint mpi_sint_abs( mbedtls_mpi_sint z )
-{
-    if( z >= 0 )
-        return( z );
-    /* Take care to handle the most negative value (-2^(biL-1)) correctly.
-     * A naive -z would have undefined behavior.
-     * Write this in a way that makes popular compilers happy (GCC, Clang,
-     * MSVC). */
-    return( (mbedtls_mpi_uint) 0 - (mbedtls_mpi_uint) z );
-}
-
 /*
  * Set value from integer
  */
@@ -274,7 +263,7 @@ int mbedtls_mpi_lset( mbedtls_mpi *X, mbedtls_mpi_sint z )
     MBEDTLS_MPI_CHK( mbedtls_mpi_grow( X, 1 ) );
     memset( X->p, 0, X->n * ciL );
 
-    X->p[0] = mpi_sint_abs( z );
+    X->p[0] = ( z < 0 ) ? -z : z;
     X->s    = ( z < 0 ) ? -1 : 1;
 
 cleanup:
@@ -782,42 +771,9 @@ cleanup:
  */
 int mbedtls_mpi_shift_r( mbedtls_mpi *X, size_t count )
 {
-    size_t i, v0, v1;
-    mbedtls_mpi_uint r0 = 0, r1;
     MPI_VALIDATE_RET( X != NULL );
-
-    v0 = count /  biL;
-    v1 = count & (biL - 1);
-
-    if( v0 > X->n || ( v0 == X->n && v1 > 0 ) )
-        return mbedtls_mpi_lset( X, 0 );
-
-    /*
-     * shift by count / limb_size
-     */
-    if( v0 > 0 )
-    {
-        for( i = 0; i < X->n - v0; i++ )
-            X->p[i] = X->p[i + v0];
-
-        for( ; i < X->n; i++ )
-            X->p[i] = 0;
-    }
-
-    /*
-     * shift by count % limb_size
-     */
-    if( v1 > 0 )
-    {
-        for( i = X->n; i > 0; i-- )
-        {
-            r1 = X->p[i - 1] << (biL - v1);
-            X->p[i - 1] >>= v1;
-            X->p[i - 1] |= r0;
-            r0 = r1;
-        }
-    }
-
+    if( X->n != 0 )
+        mbedtls_mpi_core_shift_r( X->p, X->n, count );
     return( 0 );
 }
 
@@ -897,7 +853,7 @@ int mbedtls_mpi_cmp_int( const mbedtls_mpi *X, mbedtls_mpi_sint z )
     mbedtls_mpi_uint p[1];
     MPI_VALIDATE_RET( X != NULL );
 
-    *p  = mpi_sint_abs( z );
+    *p  = ( z < 0 ) ? -z : z;
     Y.s = ( z < 0 ) ? -1 : 1;
     Y.n = 1;
     Y.p = p;
@@ -911,8 +867,7 @@ int mbedtls_mpi_cmp_int( const mbedtls_mpi *X, mbedtls_mpi_sint z )
 int mbedtls_mpi_add_abs( mbedtls_mpi *X, const mbedtls_mpi *A, const mbedtls_mpi *B )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
-    size_t i, j;
-    mbedtls_mpi_uint *o, *p, c, tmp;
+    size_t j;
     MPI_VALIDATE_RET( X != NULL );
     MPI_VALIDATE_RET( A != NULL );
     MPI_VALIDATE_RET( B != NULL );
@@ -926,7 +881,7 @@ int mbedtls_mpi_add_abs( mbedtls_mpi *X, const mbedtls_mpi *A, const mbedtls_mpi
         MBEDTLS_MPI_CHK( mbedtls_mpi_copy( X, A ) );
 
     /*
-     * X should always be positive as a result of unsigned additions.
+     * X must always be positive as a result of unsigned additions.
      */
     X->s = 1;
 
@@ -934,34 +889,27 @@ int mbedtls_mpi_add_abs( mbedtls_mpi *X, const mbedtls_mpi *A, const mbedtls_mpi
         if( B->p[j - 1] != 0 )
             break;
 
-    /* Exit early to avoid undefined behavior on NULL+0 when X->n == 0
-     * and B is 0 (of any size). */
-    if( j == 0 )
-        return( 0 );
-
     MBEDTLS_MPI_CHK( mbedtls_mpi_grow( X, j ) );
 
-    o = B->p; p = X->p; c = 0;
+    /* j is the number of non-zero limbs of B. Add those to X. */
 
-    /*
-     * tmp is used because it might happen that p == o
-     */
-    for( i = 0; i < j; i++, o++, p++ )
-    {
-        tmp= *o;
-        *p +=  c; c  = ( *p <  c );
-        *p += tmp; c += ( *p < tmp );
-    }
+    mbedtls_mpi_uint *p = X->p;
+
+    mbedtls_mpi_uint c = mbedtls_mpi_core_add( p, p, B->p, j );
+
+    p += j;
+
+    /* Now propagate any carry */
 
     while( c != 0 )
     {
-        if( i >= X->n )
+        if( j >= X->n )
         {
-            MBEDTLS_MPI_CHK( mbedtls_mpi_grow( X, i + 1 ) );
-            p = X->p + i;
+            MBEDTLS_MPI_CHK( mbedtls_mpi_grow( X, j + 1 ) );
+            p = X->p + j;
         }
 
-        *p += c; c = ( *p < c ); i++; p++;
+        *p += c; c = ( *p < c ); j++; p++;
     }
 
 cleanup:
@@ -1024,12 +972,10 @@ cleanup:
     return( ret );
 }
 
-/* Common function for signed addition and subtraction.
- * Calculate A + B * flip_B where flip_B is 1 or -1.
+/*
+ * Signed addition: X = A + B
  */
-static int add_sub_mpi( mbedtls_mpi *X,
-                        const mbedtls_mpi *A, const mbedtls_mpi *B,
-                        int flip_B )
+int mbedtls_mpi_add_mpi( mbedtls_mpi *X, const mbedtls_mpi *A, const mbedtls_mpi *B )
 {
     int ret, s;
     MPI_VALIDATE_RET( X != NULL );
@@ -1037,21 +983,16 @@ static int add_sub_mpi( mbedtls_mpi *X,
     MPI_VALIDATE_RET( B != NULL );
 
     s = A->s;
-    if( A->s * B->s * flip_B < 0 )
+    if( A->s * B->s < 0 )
     {
-        int cmp = mbedtls_mpi_cmp_abs( A, B );
-        if( cmp >= 0 )
+        if( mbedtls_mpi_cmp_abs( A, B ) >= 0 )
         {
             MBEDTLS_MPI_CHK( mbedtls_mpi_sub_abs( X, A, B ) );
-            /* If |A| = |B|, the result is 0 and we must set the sign bit
-             * to +1 regardless of which of A or B was negative. Otherwise,
-             * since |A| > |B|, the sign is the sign of A. */
-            X->s = cmp == 0 ? 1 : s;
+            X->s =  s;
         }
         else
         {
             MBEDTLS_MPI_CHK( mbedtls_mpi_sub_abs( X, B, A ) );
-            /* Since |A| < |B|, the sign is the opposite of A. */
             X->s = -s;
         }
     }
@@ -1067,19 +1008,38 @@ cleanup:
 }
 
 /*
- * Signed addition: X = A + B
- */
-int mbedtls_mpi_add_mpi( mbedtls_mpi *X, const mbedtls_mpi *A, const mbedtls_mpi *B )
-{
-    return( add_sub_mpi( X, A, B, 1 ) );
-}
-
-/*
  * Signed subtraction: X = A - B
  */
 int mbedtls_mpi_sub_mpi( mbedtls_mpi *X, const mbedtls_mpi *A, const mbedtls_mpi *B )
 {
-    return( add_sub_mpi( X, A, B, -1 ) );
+    int ret, s;
+    MPI_VALIDATE_RET( X != NULL );
+    MPI_VALIDATE_RET( A != NULL );
+    MPI_VALIDATE_RET( B != NULL );
+
+    s = A->s;
+    if( A->s * B->s > 0 )
+    {
+        if( mbedtls_mpi_cmp_abs( A, B ) >= 0 )
+        {
+            MBEDTLS_MPI_CHK( mbedtls_mpi_sub_abs( X, A, B ) );
+            X->s =  s;
+        }
+        else
+        {
+            MBEDTLS_MPI_CHK( mbedtls_mpi_sub_abs( X, B, A ) );
+            X->s = -s;
+        }
+    }
+    else
+    {
+        MBEDTLS_MPI_CHK( mbedtls_mpi_add_abs( X, A, B ) );
+        X->s = s;
+    }
+
+cleanup:
+
+    return( ret );
 }
 
 /*
@@ -1092,7 +1052,7 @@ int mbedtls_mpi_add_int( mbedtls_mpi *X, const mbedtls_mpi *A, mbedtls_mpi_sint 
     MPI_VALIDATE_RET( X != NULL );
     MPI_VALIDATE_RET( A != NULL );
 
-    p[0] = mpi_sint_abs( b );
+    p[0] = ( b < 0 ) ? -b : b;
     B.s = ( b < 0 ) ? -1 : 1;
     B.n = 1;
     B.p = p;
@@ -1110,7 +1070,7 @@ int mbedtls_mpi_sub_int( mbedtls_mpi *X, const mbedtls_mpi *A, mbedtls_mpi_sint 
     MPI_VALIDATE_RET( X != NULL );
     MPI_VALIDATE_RET( A != NULL );
 
-    p[0] = mpi_sint_abs( b );
+    p[0] = ( b < 0 ) ? -b : b;
     B.s = ( b < 0 ) ? -1 : 1;
     B.n = 1;
     B.p = p;
@@ -1448,7 +1408,7 @@ int mbedtls_mpi_div_int( mbedtls_mpi *Q, mbedtls_mpi *R,
     mbedtls_mpi_uint p[1];
     MPI_VALIDATE_RET( A != NULL );
 
-    p[0] = mpi_sint_abs( b );
+    p[0] = ( b < 0 ) ? -b : b;
     B.s = ( b < 0 ) ? -1 : 1;
     B.n = 1;
     B.p = p;
@@ -1971,39 +1931,11 @@ cleanup:
     return( ret );
 }
 
-/* Fill X with n_bytes random bytes.
- * X must already have room for those bytes.
- * The ordering of the bytes returned from the RNG is suitable for
- * deterministic ECDSA (see RFC 6979 §3.3 and mbedtls_mpi_random()).
- * The size and sign of X are unchanged.
- * n_bytes must not be 0.
- */
-static int mpi_fill_random_internal(
-    mbedtls_mpi *X, size_t n_bytes,
-    int (*f_rng)(void *, unsigned char *, size_t), void *p_rng )
-{
-    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
-    const size_t limbs = CHARS_TO_LIMBS( n_bytes );
-    const size_t overhead = ( limbs * ciL ) - n_bytes;
-
-    if( X->n < limbs )
-        return( MBEDTLS_ERR_MPI_BAD_INPUT_DATA );
-
-    memset( X->p, 0, overhead );
-    memset( (unsigned char *) X->p + limbs * ciL, 0, ( X->n - limbs ) * ciL );
-    MBEDTLS_MPI_CHK( f_rng( p_rng, (unsigned char *) X->p + overhead, n_bytes ) );
-    mbedtls_mpi_core_bigendian_to_host( X->p, limbs );
-
-cleanup:
-    return( ret );
-}
-
 /*
  * Fill X with size bytes of random.
- *
- * Use a temporary bytes representation to make sure the result is the same
- * regardless of the platform endianness (useful when f_rng is actually
- * deterministic, eg for tests).
+ * The bytes returned from the RNG are used in a specific order which
+ * is suitable for deterministic ECDSA (see the specification of
+ * mbedtls_mpi_random() and the implementation in mbedtls_mpi_fill_random()).
  */
 int mbedtls_mpi_fill_random( mbedtls_mpi *X, size_t size,
                      int (*f_rng)(void *, unsigned char *, size_t),
@@ -2020,7 +1952,7 @@ int mbedtls_mpi_fill_random( mbedtls_mpi *X, size_t size,
     if( size == 0 )
         return( 0 );
 
-    ret = mpi_fill_random_internal( X, size, f_rng, p_rng );
+    ret = mbedtls_mpi_core_fill_random( X->p, X->n, size, f_rng, p_rng );
 
 cleanup:
     return( ret );
@@ -2082,7 +2014,9 @@ int mbedtls_mpi_random( mbedtls_mpi *X,
      */
     do
     {
-        MBEDTLS_MPI_CHK( mpi_fill_random_internal( X, n_bytes, f_rng, p_rng ) );
+        MBEDTLS_MPI_CHK( mbedtls_mpi_core_fill_random( X->p, X->n,
+                                                       n_bytes,
+                                                       f_rng, p_rng ) );
         MBEDTLS_MPI_CHK( mbedtls_mpi_shift_r( X, 8 * n_bytes - n_bits ) );
 
         if( --count == 0 )
