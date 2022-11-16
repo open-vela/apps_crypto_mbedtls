@@ -38,7 +38,17 @@
 
 #include <string.h>
 
+#if defined(MBEDTLS_SELF_TEST)
+#if defined(MBEDTLS_PLATFORM_C)
 #include "mbedtls/platform.h"
+#else
+#include <stdio.h>
+#include <stdlib.h>
+#define mbedtls_printf printf
+#define mbedtls_calloc    calloc
+#define mbedtls_free       free
+#endif /* MBEDTLS_PLATFORM_C */
+#endif /* MBEDTLS_SELF_TEST */
 
 #if defined(__aarch64__)
 #  if defined(MBEDTLS_SHA512_USE_A64_CRYPTO_IF_PRESENT) || \
@@ -810,11 +820,9 @@ int mbedtls_sha512_finish( mbedtls_sha512_context *ctx,
     sha512_put_uint64_be( ctx->state[4], output, 32 );
     sha512_put_uint64_be( ctx->state[5], output, 40 );
 
-    int truncated = 0;
 #if defined(MBEDTLS_SHA384_C)
-    truncated = ctx->is384;
+    if( ctx->is384 == 0 )
 #endif
-    if( !truncated )
     {
         sha512_put_uint64_be( ctx->state[6], output, 48 );
         sha512_put_uint64_be( ctx->state[7], output, 56 );
