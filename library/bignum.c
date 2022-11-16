@@ -47,7 +47,15 @@
 #include <limits.h>
 #include <string.h>
 
+#if defined(MBEDTLS_PLATFORM_C)
 #include "mbedtls/platform.h"
+#else
+#include <stdio.h>
+#include <stdlib.h>
+#define mbedtls_printf     printf
+#define mbedtls_calloc    calloc
+#define mbedtls_free       free
+#endif
 
 #define MPI_VALIDATE_RET( cond )                                       \
     MBEDTLS_INTERNAL_VALIDATE_RET( cond, MBEDTLS_ERR_MPI_BAD_INPUT_DATA )
@@ -1008,12 +1016,10 @@ cleanup:
     return( ret );
 }
 
-/* Common function for signed addition and subtraction.
- * Calculate A + B * flip_B where flip_B is 1 or -1.
+/*
+ * Signed addition: X = A + B
  */
-static int add_sub_mpi( mbedtls_mpi *X,
-                        const mbedtls_mpi *A, const mbedtls_mpi *B,
-                        int flip_B )
+int mbedtls_mpi_add_mpi( mbedtls_mpi *X, const mbedtls_mpi *A, const mbedtls_mpi *B )
 {
     int ret, s;
     MPI_VALIDATE_RET( X != NULL );
@@ -1021,21 +1027,16 @@ static int add_sub_mpi( mbedtls_mpi *X,
     MPI_VALIDATE_RET( B != NULL );
 
     s = A->s;
-    if( A->s * B->s * flip_B < 0 )
+    if( A->s * B->s < 0 )
     {
-        int cmp = mbedtls_mpi_cmp_abs( A, B );
-        if( cmp >= 0 )
+        if( mbedtls_mpi_cmp_abs( A, B ) >= 0 )
         {
             MBEDTLS_MPI_CHK( mbedtls_mpi_sub_abs( X, A, B ) );
-            /* If |A| = |B|, the result is 0 and we must set the sign bit
-             * to +1 regardless of which of A or B was negative. Otherwise,
-             * since |A| > |B|, the sign is the sign of A. */
-            X->s = cmp == 0 ? 1 : s;
+            X->s =  s;
         }
         else
         {
             MBEDTLS_MPI_CHK( mbedtls_mpi_sub_abs( X, B, A ) );
-            /* Since |A| < |B|, the sign is the opposite of A. */
             X->s = -s;
         }
     }
@@ -1051,19 +1052,38 @@ cleanup:
 }
 
 /*
- * Signed addition: X = A + B
- */
-int mbedtls_mpi_add_mpi( mbedtls_mpi *X, const mbedtls_mpi *A, const mbedtls_mpi *B )
-{
-    return( add_sub_mpi( X, A, B, 1 ) );
-}
-
-/*
  * Signed subtraction: X = A - B
  */
 int mbedtls_mpi_sub_mpi( mbedtls_mpi *X, const mbedtls_mpi *A, const mbedtls_mpi *B )
 {
-    return( add_sub_mpi( X, A, B, -1 ) );
+    int ret, s;
+    MPI_VALIDATE_RET( X != NULL );
+    MPI_VALIDATE_RET( A != NULL );
+    MPI_VALIDATE_RET( B != NULL );
+
+    s = A->s;
+    if( A->s * B->s > 0 )
+    {
+        if( mbedtls_mpi_cmp_abs( A, B ) >= 0 )
+        {
+            MBEDTLS_MPI_CHK( mbedtls_mpi_sub_abs( X, A, B ) );
+            X->s =  s;
+        }
+        else
+        {
+            MBEDTLS_MPI_CHK( mbedtls_mpi_sub_abs( X, B, A ) );
+            X->s = -s;
+        }
+    }
+    else
+    {
+        MBEDTLS_MPI_CHK( mbedtls_mpi_add_abs( X, A, B ) );
+        X->s = s;
+    }
+
+cleanup:
+
+    return( ret );
 }
 
 /*

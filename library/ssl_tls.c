@@ -27,7 +27,15 @@
 
 #include <assert.h>
 
+#if defined(MBEDTLS_PLATFORM_C)
 #include "mbedtls/platform.h"
+#else
+#include <stdlib.h>
+#include <stdio.h>
+#define mbedtls_calloc    calloc
+#define mbedtls_free      free
+#define mbedtls_printf    printf
+#endif /* !MBEDTLS_PLATFORM_C */
 
 #include "mbedtls/ssl.h"
 #include "ssl_client.h"
@@ -235,13 +243,10 @@ int mbedtls_ssl_session_copy( mbedtls_ssl_session *dst,
 {
     mbedtls_ssl_session_free( dst );
     memcpy( dst, src, sizeof( mbedtls_ssl_session ) );
+
 #if defined(MBEDTLS_SSL_SESSION_TICKETS) && defined(MBEDTLS_SSL_CLI_C)
     dst->ticket = NULL;
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3) && \
-    defined(MBEDTLS_SSL_SERVER_NAME_INDICATION)
-    dst->hostname = NULL;
 #endif
-#endif /* MBEDTLS_SSL_SESSION_TICKETS && MBEDTLS_SSL_CLI_C */
 
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
 
@@ -290,18 +295,6 @@ int mbedtls_ssl_session_copy( mbedtls_ssl_session *dst,
 
         memcpy( dst->ticket, src->ticket, src->ticket_len );
     }
-
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3) && \
-    defined(MBEDTLS_SSL_SERVER_NAME_INDICATION)
-    if( src->endpoint == MBEDTLS_SSL_IS_CLIENT )
-    {
-        int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
-        ret = mbedtls_ssl_session_set_hostname( dst, src->hostname );
-        if( ret != 0 )
-            return ( ret );
-    }
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3 &&
-          MBEDTLS_SSL_SERVER_NAME_INDICATION */
 #endif /* MBEDTLS_SSL_SESSION_TICKETS && MBEDTLS_SSL_CLI_C */
 
     return( 0 );
@@ -603,12 +596,6 @@ static void ssl_update_checksum_start( mbedtls_ssl_context *ssl,
 #else
     mbedtls_sha512_update( &ssl->handshake->fin_sha384, buf, len );
 #endif
-#endif
-#if !defined(MBEDTLS_HAS_ALG_SHA_256_VIA_MD_OR_PSA_BASED_ON_USE_PSA) && \
-    !defined(MBEDTLS_HAS_ALG_SHA_384_VIA_MD_OR_PSA_BASED_ON_USE_PSA)
-    (void) ssl;
-    (void) buf;
-    (void) len;
 #endif
 }
 
@@ -1386,23 +1373,6 @@ int mbedtls_ssl_set_session( mbedtls_ssl_context *ssl, const mbedtls_ssl_session
     if( ssl->handshake->resume == 1 )
         return( MBEDTLS_ERR_SSL_FEATURE_UNAVAILABLE );
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
-    if( session->tls_version == MBEDTLS_SSL_VERSION_TLS1_3 )
-    {
-        const mbedtls_ssl_ciphersuite_t *ciphersuite_info =
-                    mbedtls_ssl_ciphersuite_from_id( session->ciphersuite );
-
-        if( mbedtls_ssl_validate_ciphersuite(
-                ssl, ciphersuite_info, MBEDTLS_SSL_VERSION_TLS1_3,
-                MBEDTLS_SSL_VERSION_TLS1_3 ) != 0 )
-        {
-            MBEDTLS_SSL_DEBUG_MSG( 4, ( "%d is not a valid TLS 1.3 ciphersuite.",
-                                        session->ciphersuite ) );
-            return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
-        }
-    }
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
-
     if( ( ret = mbedtls_ssl_session_copy( ssl->session_negotiate,
                                           session ) ) != 0 )
         return( ret );
@@ -1825,7 +1795,6 @@ int mbedtls_ssl_set_hs_psk_opaque( mbedtls_ssl_context *ssl,
 }
 #endif /* MBEDTLS_USE_PSA_CRYPTO */
 
-#if defined(MBEDTLS_SSL_SRV_C)
 void mbedtls_ssl_conf_psk_cb( mbedtls_ssl_config *conf,
                      int (*f_psk)(void *, mbedtls_ssl_context *, const unsigned char *,
                      size_t),
@@ -1834,8 +1803,6 @@ void mbedtls_ssl_conf_psk_cb( mbedtls_ssl_config *conf,
     conf->f_psk = f_psk;
     conf->p_psk = p_psk;
 }
-#endif /* MBEDTLS_SSL_SRV_C */
-
 #endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
 
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
@@ -1947,7 +1914,6 @@ mbedtls_ssl_mode_t mbedtls_ssl_get_mode_from_ciphersuite(
 /* Serialization of TLS 1.3 sessions:
  *
  *     struct {
- *       opaque hostname<0..2^16-1>;
  *       uint64 ticket_received;
  *       uint32 ticket_lifetime;
  *       opaque ticket<1..2^16-1>;
@@ -1974,11 +1940,6 @@ static int ssl_tls13_session_save( const mbedtls_ssl_session *session,
                                    size_t *olen )
 {
     unsigned char *p = buf;
-#if defined(MBEDTLS_SSL_CLI_C) && \
-    defined(MBEDTLS_SSL_SERVER_NAME_INDICATION)
-    size_t hostname_len = ( session->hostname == NULL ) ?
-                            0 : strlen( session->hostname ) + 1;
-#endif
     size_t needed =   1                             /* endpoint */
                     + 2                             /* ciphersuite */
                     + 4                             /* ticket_age_add */
@@ -1997,11 +1958,6 @@ static int ssl_tls13_session_save( const mbedtls_ssl_session *session,
 #if defined(MBEDTLS_SSL_CLI_C)
     if( session->endpoint == MBEDTLS_SSL_IS_CLIENT )
     {
-#if defined(MBEDTLS_SSL_SERVER_NAME_INDICATION)
-        needed +=  2                        /* hostname_len */
-               + hostname_len;              /* hostname */
-#endif
-
         needed +=   4                       /* ticket_lifetime */
                   + 2;                      /* ticket_len */
 
@@ -2039,17 +1995,6 @@ static int ssl_tls13_session_save( const mbedtls_ssl_session *session,
 #if defined(MBEDTLS_SSL_CLI_C)
     if( session->endpoint == MBEDTLS_SSL_IS_CLIENT )
     {
-#if defined(MBEDTLS_SSL_SERVER_NAME_INDICATION)
-        MBEDTLS_PUT_UINT16_BE( hostname_len, p, 0 );
-        p += 2;
-        if( hostname_len > 0 )
-        {
-            /* save host name */
-            memcpy( p, session->hostname, hostname_len );
-            p += hostname_len;
-        }
-#endif /* MBEDTLS_SSL_SERVER_NAME_INDICATION */
-
 #if defined(MBEDTLS_HAVE_TIME)
         MBEDTLS_PUT_UINT64_BE( (uint64_t) session->ticket_received, p, 0 );
         p += 8;
@@ -2110,28 +2055,6 @@ static int ssl_tls13_session_load( mbedtls_ssl_session *session,
 #if defined(MBEDTLS_SSL_CLI_C)
     if( session->endpoint == MBEDTLS_SSL_IS_CLIENT )
     {
-#if defined(MBEDTLS_SSL_SERVER_NAME_INDICATION) && \
-    defined(MBEDTLS_SSL_SESSION_TICKETS)
-        size_t hostname_len;
-        /* load host name */
-        if( end - p < 2 )
-            return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
-        hostname_len = MBEDTLS_GET_UINT16_BE( p, 0 );
-        p += 2;
-
-        if( end - p < ( long int )hostname_len )
-            return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
-        if( hostname_len > 0 )
-        {
-            session->hostname = mbedtls_calloc( 1, hostname_len );
-            if( session->hostname == NULL )
-                return( MBEDTLS_ERR_SSL_ALLOC_FAILED );
-            memcpy( session->hostname, p, hostname_len );
-            p += hostname_len;
-        }
-#endif /* MBEDTLS_SSL_SERVER_NAME_INDICATION &&
-          MBEDTLS_SSL_SESSION_TICKETS */
-
 #if defined(MBEDTLS_HAVE_TIME)
         if( end - p < 8 )
             return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
@@ -3733,10 +3656,6 @@ void mbedtls_ssl_session_free( mbedtls_ssl_session *session )
 #endif
 
 #if defined(MBEDTLS_SSL_SESSION_TICKETS) && defined(MBEDTLS_SSL_CLI_C)
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3) && \
-    defined(MBEDTLS_SSL_SERVER_NAME_INDICATION)
-    mbedtls_free( session->hostname );
-#endif
     mbedtls_free( session->ticket );
 #endif
 
@@ -4052,9 +3971,6 @@ static int ssl_context_load( mbedtls_ssl_context *ssl,
     const unsigned char * const end = buf + len;
     size_t session_len;
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
-#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
-    tls_prf_fn prf_func = NULL;
-#endif
 
     /*
      * The context should have been freshly setup or reset.
@@ -4140,22 +4056,17 @@ static int ssl_context_load( mbedtls_ssl_context *ssl,
     ssl->transform_out = ssl->transform;
     ssl->transform_negotiate = NULL;
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
-    prf_func = ssl_tls12prf_from_cs( ssl->session->ciphersuite );
-    if( prf_func == NULL )
-        return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
-
     /* Read random bytes and populate structure */
     if( (size_t)( end - p ) < sizeof( ssl->transform->randbytes ) )
         return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
-
+#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
     ret = ssl_tls12_populate_transform( ssl->transform,
                   ssl->session->ciphersuite,
                   ssl->session->master,
 #if defined(MBEDTLS_SSL_SOME_SUITES_USE_CBC_ETM)
                   ssl->session->encrypt_then_mac,
 #endif /* MBEDTLS_SSL_SOME_SUITES_USE_CBC_ETM */
-                  prf_func,
+                  ssl_tls12prf_from_cs( ssl->session->ciphersuite ),
                   p, /* currently pointing to randbytes */
                   MBEDTLS_SSL_VERSION_TLS1_2, /* (D)TLS 1.2 is forced */
                   ssl->conf->endpoint,
@@ -5171,10 +5082,6 @@ int mbedtls_ssl_get_handshake_transcript( mbedtls_ssl_context *ssl,
         goto exit;
 
 exit:
-#if !defined(MBEDTLS_HAS_ALG_SHA_384_VIA_MD_OR_PSA_BASED_ON_USE_PSA) && \
-    !defined(MBEDTLS_HAS_ALG_SHA_256_VIA_MD_OR_PSA_BASED_ON_USE_PSA)
-    (void) ssl;
-#endif
     return( psa_ssl_status_to_mbedtls( status ) );
 }
 #else /* MBEDTLS_USE_PSA_CRYPTO */
@@ -5447,8 +5354,6 @@ static psa_status_t setup_psa_key_derivation( psa_key_derivation_operation_t* de
     return( PSA_SUCCESS );
 }
 
-#if defined(MBEDTLS_HAS_ALG_SHA_384_VIA_MD_OR_PSA_BASED_ON_USE_PSA) || \
-    defined(MBEDTLS_HAS_ALG_SHA_256_VIA_MD_OR_PSA_BASED_ON_USE_PSA)
 MBEDTLS_CHECK_RETURN_CRITICAL
 static int tls_prf_generic( mbedtls_md_type_t md_type,
                             const unsigned char *secret, size_t slen,
@@ -5523,7 +5428,7 @@ static int tls_prf_generic( mbedtls_md_type_t md_type,
 
     return( 0 );
 }
-#endif
+
 #else /* MBEDTLS_USE_PSA_CRYPTO */
 
 MBEDTLS_CHECK_RETURN_CRITICAL
@@ -5929,10 +5834,7 @@ int mbedtls_ssl_set_calc_verify_md( mbedtls_ssl_context *ssl, int md )
         default:
             return( -1 );
     }
-#if !defined(MBEDTLS_HAS_ALG_SHA_384_VIA_MD_OR_PSA_BASED_ON_USE_PSA) && \
-    !defined(MBEDTLS_HAS_ALG_SHA_256_VIA_MD_OR_PSA_BASED_ON_USE_PSA)
-    (void) ssl;
-#endif
+
     return( 0 );
 }
 
@@ -7453,25 +7355,16 @@ exit:
  */
 static tls_prf_fn ssl_tls12prf_from_cs( int ciphersuite_id )
 {
-    const mbedtls_ssl_ciphersuite_t * const ciphersuite_info =
-             mbedtls_ssl_ciphersuite_from_id( ciphersuite_id );
 #if defined(MBEDTLS_HAS_ALG_SHA_384_VIA_MD_OR_PSA_BASED_ON_USE_PSA)
+    const mbedtls_ssl_ciphersuite_t * const ciphersuite_info =
+         mbedtls_ssl_ciphersuite_from_id( ciphersuite_id );
+
     if( ciphersuite_info != NULL && ciphersuite_info->mac == MBEDTLS_MD_SHA384 )
         return( tls_prf_sha384 );
-    else
+#else
+    (void) ciphersuite_id;
 #endif
-#if defined(MBEDTLS_HAS_ALG_SHA_256_VIA_MD_OR_PSA_BASED_ON_USE_PSA)
-    {
-        if( ciphersuite_info != NULL && ciphersuite_info->mac == MBEDTLS_MD_SHA256 )
-            return( tls_prf_sha256 );
-    }
-#endif
-#if !defined(MBEDTLS_HAS_ALG_SHA_384_VIA_MD_OR_PSA_BASED_ON_USE_PSA) && \
-    !defined(MBEDTLS_HAS_ALG_SHA_256_VIA_MD_OR_PSA_BASED_ON_USE_PSA)
-    (void) ciphersuite_info;
-#endif
-
-    return( NULL );
+    return( tls_prf_sha256 );
 }
 #endif /* MBEDTLS_SSL_CONTEXT_SERIALIZATION */
 
@@ -8884,55 +8777,5 @@ int mbedtls_ssl_write_alpn_ext( mbedtls_ssl_context *ssl,
     return ( 0 );
 }
 #endif /* MBEDTLS_SSL_ALPN */
-
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3) && \
-    defined(MBEDTLS_SSL_SESSION_TICKETS) && \
-    defined(MBEDTLS_SSL_SERVER_NAME_INDICATION) && \
-    defined(MBEDTLS_SSL_CLI_C)
-int mbedtls_ssl_session_set_hostname( mbedtls_ssl_session *session,
-                                      const char *hostname )
-{
-    /* Initialize to suppress unnecessary compiler warning */
-    size_t hostname_len = 0;
-
-    /* Check if new hostname is valid before
-     * making any change to current one */
-    if( hostname != NULL )
-    {
-        hostname_len = strlen( hostname );
-
-        if( hostname_len > MBEDTLS_SSL_MAX_HOST_NAME_LEN )
-            return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
-    }
-
-    /* Now it's clear that we will overwrite the old hostname,
-     * so we can free it safely */
-    if( session->hostname != NULL )
-    {
-        mbedtls_platform_zeroize( session->hostname,
-                                  strlen( session->hostname ) );
-        mbedtls_free( session->hostname );
-    }
-
-    /* Passing NULL as hostname shall clear the old one */
-    if( hostname == NULL )
-    {
-        session->hostname = NULL;
-    }
-    else
-    {
-        session->hostname = mbedtls_calloc( 1, hostname_len + 1 );
-        if( session->hostname == NULL )
-            return( MBEDTLS_ERR_SSL_ALLOC_FAILED );
-
-        memcpy( session->hostname, hostname, hostname_len );
-    }
-
-    return( 0 );
-}
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3 &&
-          MBEDTLS_SSL_SESSION_TICKETS &&
-          MBEDTLS_SSL_SERVER_NAME_INDICATION &&
-          MBEDTLS_SSL_CLI_C */
 
 #endif /* MBEDTLS_SSL_TLS_C */

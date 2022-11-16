@@ -6,7 +6,7 @@ generate only the specified files.
 
 Class structure:
 
-Child classes of test_data_generation.BaseTarget (file targets) represent an output
+Child classes of test_generation.BaseTarget (file targets) represent an output
 file. These indicate where test cases will be written to, for all subclasses of
 this target. Multiple file targets should not reuse a `target_basename`.
 
@@ -31,12 +31,12 @@ following:
         function.
   - arguments(): a method to generate the list of arguments required for the
         test_function.
-  - generate_function_tests(): a method to generate TestCases for the function.
+  - generate_function_test(): a method to generate TestCases for the function.
         This should create instances of the class with required input data, and
         call `.create_test_case()` to yield the TestCase.
 
 Additional details and other attributes/methods are given in the documentation
-of BaseTarget in test_data_generation.py.
+of BaseTarget in test_generation.py.
 """
 
 # Copyright The Mbed TLS Contributors
@@ -54,40 +54,73 @@ of BaseTarget in test_data_generation.py.
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import itertools
 import sys
+import typing
 
-from abc import ABCMeta
-from typing import Iterator, List
+from abc import ABCMeta, abstractmethod
+from typing import Iterator, List, Tuple, TypeVar
 
 import scripts_path # pylint: disable=unused-import
 from mbedtls_dev import test_case
-from mbedtls_dev import test_data_generation
-from mbedtls_dev import bignum_common
-# Import modules containing additional test classes
-# Test function classes in these modules will be registered by
-# the framework
-from mbedtls_dev import bignum_core # pylint: disable=unused-import
+from mbedtls_dev import test_generation
 
-class BignumTarget(test_data_generation.BaseTarget, metaclass=ABCMeta):
+T = TypeVar('T') #pylint: disable=invalid-name
+
+def hex_to_int(val: str) -> int:
+    return int(val, 16) if val else 0
+
+def quote_str(val) -> str:
+    return "\"{}\"".format(val)
+
+def combination_pairs(values: List[T]) -> List[Tuple[T, T]]:
+    """Return all pair combinations from input values.
+
+    The return value is cast, as older versions of mypy are unable to derive
+    the specific type returned by itertools.combinations_with_replacement.
+    """
+    return typing.cast(
+        List[Tuple[T, T]],
+        list(itertools.combinations_with_replacement(values, 2))
+    )
+
+
+class BignumTarget(test_generation.BaseTarget, metaclass=ABCMeta):
     #pylint: disable=abstract-method
     """Target for bignum (mpi) test case generation."""
     target_basename = 'test_suite_mpi.generated'
 
 
-class BignumOperation(bignum_common.OperationCommon, BignumTarget, metaclass=ABCMeta):
-    #pylint: disable=abstract-method
-    """Common features for bignum operations in legacy tests."""
+class BignumOperation(BignumTarget, metaclass=ABCMeta):
+    """Common features for bignum binary operations.
+
+    This adds functionality common in binary operation tests. This includes
+    generation of case descriptions, using descriptions of values and symbols
+    to represent the operation or result.
+
+    Attributes:
+        symbol: Symbol used for the operation in case description.
+        input_values: List of values to use as test case inputs. These are
+            combined to produce pairs of values.
+        input_cases: List of tuples containing pairs of test case inputs. This
+            can be used to implement specific pairs of inputs.
+    """
+    symbol = ""
     input_values = [
-        "", "0", "-", "-0",
-        "7b", "-7b",
+        "", "0", "7b", "-7b",
         "0000000000000000123", "-0000000000000000123",
         "1230000000000000000", "-1230000000000000000"
-    ]
+    ] # type: List[str]
+    input_cases = [] # type: List[Tuple[str, str]]
 
-    def description_suffix(self) -> str:
-        #pylint: disable=no-self-use # derived classes need self
-        """Text to add at the end of the test case description."""
-        return ""
+    def __init__(self, val_a: str, val_b: str) -> None:
+        self.arg_a = val_a
+        self.arg_b = val_b
+        self.int_a = hex_to_int(val_a)
+        self.int_b = hex_to_int(val_b)
+
+    def arguments(self) -> List[str]:
+        return [quote_str(self.arg_a), quote_str(self.arg_b), self.result()]
 
     def description(self) -> str:
         """Generate a description for the test case.
@@ -102,10 +135,16 @@ class BignumOperation(bignum_common.OperationCommon, BignumTarget, metaclass=ABC
                 self.symbol,
                 self.value_description(self.arg_b)
             )
-            description_suffix = self.description_suffix()
-            if description_suffix:
-                self.case_description += " " + description_suffix
         return super().description()
+
+    @abstractmethod
+    def result(self) -> str:
+        """Get the result of the operation.
+
+        This could be calculated during initialization and stored as `_result`
+        and then returned, or calculated when the method is called.
+        """
+        raise NotImplementedError
 
     @staticmethod
     def value_description(val) -> str:
@@ -116,8 +155,6 @@ class BignumOperation(bignum_common.OperationCommon, BignumTarget, metaclass=ABC
         """
         if val == "":
             return "0 (null)"
-        if val == "-":
-            return "negative 0 (null)"
         if val == "0":
             return "0 (1 limb)"
 
@@ -133,9 +170,20 @@ class BignumOperation(bignum_common.OperationCommon, BignumTarget, metaclass=ABC
         return tmp
 
     @classmethod
+    def get_value_pairs(cls) -> Iterator[Tuple[str, str]]:
+        """Generator to yield pairs of inputs.
+
+        Combinations are first generated from all input values, and then
+        specific cases provided.
+        """
+        yield from combination_pairs(cls.input_values)
+        yield from cls.input_cases
+
+    @classmethod
     def generate_function_tests(cls) -> Iterator[test_case.TestCase]:
         for a_value, b_value in cls.get_value_pairs():
-            yield cls(a_value, b_value).create_test_case()
+            cur_op = cls(a_value, b_value)
+            yield cur_op.create_test_case()
 
 
 class BignumCmp(BignumOperation):
@@ -155,8 +203,8 @@ class BignumCmp(BignumOperation):
         self._result = int(self.int_a > self.int_b) - int(self.int_a < self.int_b)
         self.symbol = ["<", "==", ">"][self._result + 1]
 
-    def result(self) -> List[str]:
-        return [str(self._result)]
+    def result(self) -> str:
+        return str(self._result)
 
 
 class BignumCmpAbs(BignumCmp):
@@ -175,29 +223,16 @@ class BignumAdd(BignumOperation):
     symbol = "+"
     test_function = "mpi_add_mpi"
     test_name = "MPI add"
-    input_cases = bignum_common.combination_pairs(
+    input_cases = combination_pairs(
         [
             "1c67967269c6", "9cde3",
             "-1c67967269c6", "-9cde3",
         ]
     )
 
-    def __init__(self, val_a: str, val_b: str) -> None:
-        super().__init__(val_a, val_b)
-        self._result = self.int_a + self.int_b
-
-    def description_suffix(self) -> str:
-        if (self.int_a >= 0 and self.int_b >= 0):
-            return "" # obviously positive result or 0
-        if (self.int_a <= 0 and self.int_b <= 0):
-            return "" # obviously negative result or 0
-        # The sign of the result is not obvious, so indicate it
-        return ", result{}0".format('>' if self._result > 0 else
-                                    '<' if self._result < 0 else '=')
-
-    def result(self) -> List[str]:
-        return [bignum_common.quote_str("{:x}".format(self._result))]
+    def result(self) -> str:
+        return quote_str("{:x}".format(self.int_a + self.int_b))
 
 if __name__ == '__main__':
     # Use the section of the docstring relevant to the CLI as description
-    test_data_generation.main(sys.argv[1:], "\n".join(__doc__.splitlines()[:4]))
+    test_generation.main(sys.argv[1:], "\n".join(__doc__.splitlines()[:4]))
