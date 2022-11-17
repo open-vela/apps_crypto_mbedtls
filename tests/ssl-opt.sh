@@ -80,12 +80,14 @@ fi
 
 if [ -n "${OPENSSL_NEXT:-}" ]; then
     O_NEXT_SRV="$OPENSSL_NEXT s_server -www -cert data_files/server5.crt -key data_files/server5.key"
+    O_NEXT_SRV_EARLY_DATA="$OPENSSL_NEXT s_server -early_data -cert data_files/server5.crt -key data_files/server5.key"
     O_NEXT_SRV_NO_CERT="$OPENSSL_NEXT s_server -www "
     O_NEXT_CLI="echo 'GET / HTTP/1.0' | $OPENSSL_NEXT s_client -CAfile data_files/test-ca_cat12.crt"
     O_NEXT_CLI_NO_CERT="echo 'GET / HTTP/1.0' | $OPENSSL_NEXT s_client"
 else
     O_NEXT_SRV=false
     O_NEXT_SRV_NO_CERT=false
+    O_NEXT_SRV_EARLY_DATA=false
     O_NEXT_CLI_NO_CERT=false
     O_NEXT_CLI=false
 fi
@@ -1024,6 +1026,16 @@ is_gnutls() {
     esac
 }
 
+# Generate random psk_list argument for ssl_server2
+get_srv_psk_list ()
+{
+    case $(( TESTS % 3 )) in
+        0) echo "psk_list=abc,dead,def,beef,Client_identity,6162636465666768696a6b6c6d6e6f70";;
+        1) echo "psk_list=abc,dead,Client_identity,6162636465666768696a6b6c6d6e6f70,def,beef";;
+        2) echo "psk_list=Client_identity,6162636465666768696a6b6c6d6e6f70,abc,dead,def,beef";;
+    esac
+}
+
 # Determine what calc_verify trace is to be expected, if any.
 #
 # calc_verify is only called for two things: to calculate the
@@ -1350,7 +1362,7 @@ do_run_test_once() {
 
     if [ -n "$PXY_CMD" ]; then
         kill $PXY_PID >/dev/null 2>&1
-        wait $PXY_PID >> $PXY_OUT 2>&1
+        wait $PXY_PID
     fi
 }
 
@@ -1680,6 +1692,7 @@ fi
 if [ -n "${OPENSSL_NEXT:-}" ]; then
     O_NEXT_SRV="$O_NEXT_SRV -accept $SRV_PORT"
     O_NEXT_SRV_NO_CERT="$O_NEXT_SRV_NO_CERT -accept $SRV_PORT"
+    O_NEXT_SRV_EARLY_DATA="$O_NEXT_SRV_EARLY_DATA -accept $SRV_PORT"
     O_NEXT_CLI="$O_NEXT_CLI -connect 127.0.0.1:+SRV_PORT"
     O_NEXT_CLI_NO_CERT="$O_NEXT_CLI_NO_CERT -connect 127.0.0.1:+SRV_PORT"
 fi
@@ -12907,8 +12920,8 @@ run_test    "TLS 1.3: NewSessionTicket: Basic check, O->m" \
             "$O_NEXT_CLI -msg -debug -tls1_3 -reconnect" \
             0 \
             -s "=> write NewSessionTicket msg" \
-            -s "server state: MBEDTLS_SSL_TLS1_3_NEW_SESSION_TICKET" \
-            -s "server state: MBEDTLS_SSL_TLS1_3_NEW_SESSION_TICKET_FLUSH"
+            -s "server state: MBEDTLS_SSL_NEW_SESSION_TICKET" \
+            -s "server state: MBEDTLS_SSL_NEW_SESSION_TICKET_FLUSH"
 
 requires_gnutls_tls1_3
 requires_config_enabled MBEDTLS_SSL_SESSION_TICKETS
@@ -12924,8 +12937,8 @@ run_test    "TLS 1.3: NewSessionTicket: Basic check, G->m" \
             -c "Connecting again- trying to resume previous session" \
             -c "NEW SESSION TICKET (4) was received" \
             -s "=> write NewSessionTicket msg" \
-            -s "server state: MBEDTLS_SSL_TLS1_3_NEW_SESSION_TICKET" \
-            -s "server state: MBEDTLS_SSL_TLS1_3_NEW_SESSION_TICKET_FLUSH" \
+            -s "server state: MBEDTLS_SSL_NEW_SESSION_TICKET" \
+            -s "server state: MBEDTLS_SSL_NEW_SESSION_TICKET_FLUSH" \
             -s "key exchange mode: ephemeral" \
             -s "key exchange mode: psk_ephemeral" \
             -s "found pre_shared_key extension"
@@ -12947,8 +12960,8 @@ run_test    "TLS 1.3: NewSessionTicket: Basic check, m->m" \
             -c "Reconnecting with saved session" \
             -c "HTTP/1.0 200 OK"    \
             -s "=> write NewSessionTicket msg" \
-            -s "server state: MBEDTLS_SSL_TLS1_3_NEW_SESSION_TICKET" \
-            -s "server state: MBEDTLS_SSL_TLS1_3_NEW_SESSION_TICKET_FLUSH" \
+            -s "server state: MBEDTLS_SSL_NEW_SESSION_TICKET" \
+            -s "server state: MBEDTLS_SSL_NEW_SESSION_TICKET_FLUSH" \
             -s "key exchange mode: ephemeral" \
             -s "key exchange mode: psk_ephemeral" \
             -s "found pre_shared_key extension"
@@ -13002,8 +13015,8 @@ run_test    "TLS 1.3: NewSessionTicket: servername check, m->m" \
             -c "Reconnecting with saved session" \
             -c "HTTP/1.0 200 OK"    \
             -s "=> write NewSessionTicket msg" \
-            -s "server state: MBEDTLS_SSL_TLS1_3_NEW_SESSION_TICKET" \
-            -s "server state: MBEDTLS_SSL_TLS1_3_NEW_SESSION_TICKET_FLUSH" \
+            -s "server state: MBEDTLS_SSL_NEW_SESSION_TICKET" \
+            -s "server state: MBEDTLS_SSL_NEW_SESSION_TICKET_FLUSH" \
             -s "key exchange mode: ephemeral" \
             -s "key exchange mode: psk_ephemeral" \
             -s "found pre_shared_key extension"
@@ -13026,8 +13039,8 @@ run_test    "TLS 1.3: NewSessionTicket: servername negative check, m->m" \
             -c "Reconnecting with saved session" \
             -c "Hostname mismatch the session ticket, disable session resumption."    \
             -s "=> write NewSessionTicket msg" \
-            -s "server state: MBEDTLS_SSL_TLS1_3_NEW_SESSION_TICKET" \
-            -s "server state: MBEDTLS_SSL_TLS1_3_NEW_SESSION_TICKET_FLUSH"
+            -s "server state: MBEDTLS_SSL_NEW_SESSION_TICKET" \
+            -s "server state: MBEDTLS_SSL_NEW_SESSION_TICKET_FLUSH"
 
 # Test heap memory usage after handshake
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
