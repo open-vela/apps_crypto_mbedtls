@@ -29,84 +29,6 @@ class BignumCoreTarget(test_data_generation.BaseTarget, metaclass=ABCMeta):
     target_basename = 'test_suite_bignum_core.generated'
 
 
-class BignumCoreShiftR(BignumCoreTarget, metaclass=ABCMeta):
-    """Test cases for mbedtls_bignum_core_shift_r()."""
-    count = 0
-    test_function = "mpi_core_shift_r"
-    test_name = "Core shift right"
-
-    DATA = [
-        ('00', '0', [0, 1, 8]),
-        ('01', '1', [0, 1, 2, 8, 64]),
-        ('dee5ca1a7ef10a75', '64-bit',
-         list(range(11)) + [31, 32, 33, 63, 64, 65, 71, 72]),
-        ('002e7ab0070ad57001', '[leading 0 limb]',
-         [0, 1, 8, 63, 64]),
-        ('a1055eb0bb1efa1150ff', '80-bit',
-         [0, 1, 8, 63, 64, 65, 72, 79, 80, 81, 88, 128, 129, 136]),
-        ('020100000000000000001011121314151617', '138-bit',
-         [0, 1, 8, 9, 16, 72, 73, 136, 137, 138, 144]),
-    ]
-
-    def __init__(self, input_hex: str, descr: str, count: int) -> None:
-        self.input_hex = input_hex
-        self.number_description = descr
-        self.shift_count = count
-        self.result = bignum_common.hex_to_int(input_hex) >> count
-
-    def arguments(self) -> List[str]:
-        return ['"{}"'.format(self.input_hex),
-                str(self.shift_count),
-                '"{:0{}x}"'.format(self.result, len(self.input_hex))]
-
-    def description(self) -> str:
-        return 'Core shift {} >> {}'.format(self.number_description,
-                                            self.shift_count)
-
-    @classmethod
-    def generate_function_tests(cls) -> Iterator[test_case.TestCase]:
-        for input_hex, descr, counts in cls.DATA:
-            for count in counts:
-                yield cls(input_hex, descr, count).create_test_case()
-
-class BignumCoreCTLookup(BignumCoreTarget, metaclass=ABCMeta):
-    """Test cases for mbedtls_mpi_core_ct_uint_table_lookup()."""
-    test_function = "mpi_core_ct_uint_table_lookup"
-    test_name = "Constant time MPI table lookup"
-
-    bitsizes = [
-        (32, "One limb"),
-        (192, "Smallest curve sized"),
-        (512, "Largest curve sized"),
-        (2048, "Small FF/RSA sized"),
-        (4096, "Large FF/RSA sized"),
-        ]
-
-    window_sizes = [0, 1, 2, 3, 4, 5, 6]
-
-    def __init__(self,
-                 bitsize: int, descr: str, window_size: int) -> None:
-        self.bitsize = bitsize
-        self.bitsize_description = descr
-        self.window_size = window_size
-
-    def arguments(self) -> List[str]:
-        return [str(self.bitsize), str(self.window_size)]
-
-    def description(self) -> str:
-        return '{} - {} MPI with {} bit window'.format(
-            BignumCoreCTLookup.test_name,
-            self.bitsize_description,
-            self.window_size
-            )
-
-    @classmethod
-    def generate_function_tests(cls) -> Iterator[test_case.TestCase]:
-        for bitsize, bitsize_description in cls.bitsizes:
-            for window_size in cls.window_sizes:
-                yield (cls(bitsize, bitsize_description, window_size)
-                       .create_test_case())
-
 class BignumCoreOperation(bignum_common.OperationCommon, BignumCoreTarget, metaclass=ABCMeta):
     #pylint: disable=abstract-method
     """Common features for bignum core operations."""
@@ -181,12 +103,12 @@ class BignumCoreOperationArchSplit(BignumCoreOperation):
             yield cls(a_value, b_value, 32).create_test_case()
             yield cls(a_value, b_value, 64).create_test_case()
 
-class BignumCoreAddAndAddIf(BignumCoreOperationArchSplit):
-    """Test cases for bignum core add and add-if."""
+class BignumCoreAddIf(BignumCoreOperationArchSplit):
+    """Test cases for bignum core add if."""
     count = 0
     symbol = "+"
-    test_function = "mpi_core_add_and_add_if"
-    test_name = "mpi_core_add_and_add_if"
+    test_function = "mpi_core_add_if"
+    test_name = "mbedtls_mpi_core_add_if"
 
     def result(self) -> List[str]:
         result = self.int_a + self.int_b
@@ -815,43 +737,3 @@ def mpi_modmul_case_generate() -> None:
             )
             i += 1
     print(generated_inputs)
-
-# BEGIN MERGE SLOT 1
-
-# END MERGE SLOT 1
-
-# BEGIN MERGE SLOT 2
-
-# END MERGE SLOT 2
-
-# BEGIN MERGE SLOT 3
-
-# END MERGE SLOT 3
-
-# BEGIN MERGE SLOT 4
-
-# END MERGE SLOT 4
-
-# BEGIN MERGE SLOT 5
-
-# END MERGE SLOT 5
-
-# BEGIN MERGE SLOT 6
-
-# END MERGE SLOT 6
-
-# BEGIN MERGE SLOT 7
-
-# END MERGE SLOT 7
-
-# BEGIN MERGE SLOT 8
-
-# END MERGE SLOT 8
-
-# BEGIN MERGE SLOT 9
-
-# END MERGE SLOT 9
-
-# BEGIN MERGE SLOT 10
-
-# END MERGE SLOT 10
