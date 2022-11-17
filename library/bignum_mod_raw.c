@@ -102,4 +102,77 @@ int mbedtls_mpi_mod_raw_write( const mbedtls_mpi_uint *A,
     }
 }
 
+/* BEGIN MERGE SLOT 1 */
+
+/* END MERGE SLOT 1 */
+
+/* BEGIN MERGE SLOT 2 */
+
+/* END MERGE SLOT 2 */
+
+/* BEGIN MERGE SLOT 3 */
+
+/* END MERGE SLOT 3 */
+
+/* BEGIN MERGE SLOT 4 */
+
+/* END MERGE SLOT 4 */
+
+/* BEGIN MERGE SLOT 5 */
+
+/* END MERGE SLOT 5 */
+
+/* BEGIN MERGE SLOT 6 */
+
+/* END MERGE SLOT 6 */
+
+/* BEGIN MERGE SLOT 7 */
+int mbedtls_mpi_mod_raw_to_mont_rep( mbedtls_mpi_uint *X,
+                                     const mbedtls_mpi_mod_modulus *m )
+{
+    mbedtls_mpi_uint *T;
+    const size_t t_limbs = m->limbs * 2 + 1;
+
+    if( ( T = (mbedtls_mpi_uint *) mbedtls_calloc( t_limbs, ciL ) ) == NULL )
+        return( MBEDTLS_ERR_MPI_ALLOC_FAILED );
+
+    mbedtls_mpi_core_montmul( X, X, m->rep.mont.rr, m->limbs, m->p, m->limbs,
+                              m->rep.mont.mm, T );
+
+    mbedtls_platform_zeroize( T, t_limbs * ciL );
+    mbedtls_free( T );
+    return( 0 );
+}
+
+int mbedtls_mpi_mod_raw_from_mont_rep( mbedtls_mpi_uint *X,
+                                       const mbedtls_mpi_mod_modulus *m )
+{
+    const mbedtls_mpi_uint one = 1;
+    const size_t t_limbs = m->limbs * 2 + 1;
+    mbedtls_mpi_uint *T;
+
+    if( ( T = (mbedtls_mpi_uint *) mbedtls_calloc( t_limbs, ciL ) ) == NULL )
+        return( MBEDTLS_ERR_MPI_ALLOC_FAILED );
+
+    mbedtls_mpi_core_montmul( X, X, &one, 1, m->p, m->limbs,
+                              m->rep.mont.mm, T );
+
+    mbedtls_platform_zeroize( T, t_limbs * ciL );
+    mbedtls_free( T );
+    return( 0 );
+}
+/* END MERGE SLOT 7 */
+
+/* BEGIN MERGE SLOT 8 */
+
+/* END MERGE SLOT 8 */
+
+/* BEGIN MERGE SLOT 9 */
+
+/* END MERGE SLOT 9 */
+
+/* BEGIN MERGE SLOT 10 */
+
+/* END MERGE SLOT 10 */
+
 #endif /* MBEDTLS_BIGNUM_C */
