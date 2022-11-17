@@ -248,12 +248,16 @@ psa_status_t psa_pake_set_password_key( psa_pake_operation_t *operation,
     psa_key_attributes_t attributes = psa_key_attributes_init();
     psa_key_type_t type;
     psa_key_usage_t usage;
+    psa_key_slot_t *slot = NULL;
 
     if( operation->alg == PSA_ALG_NONE ||
         operation->state != PSA_PAKE_STATE_SETUP )
     {
         return( PSA_ERROR_BAD_STATE );
     }
+
+    if( psa_is_valid_key_id( password, 1 ) == 0 )
+        return( PSA_ERROR_BAD_STATE );
 
     status = psa_get_key_attributes( password, &attributes );
     if( status != PSA_SUCCESS )
@@ -273,7 +277,33 @@ psa_status_t psa_pake_set_password_key( psa_pake_operation_t *operation,
     if( ( usage & PSA_KEY_USAGE_DERIVE ) == 0 )
         return( PSA_ERROR_NOT_PERMITTED );
 
-    operation->password = password;
+    status = psa_get_and_lock_key_slot_with_policy( password, &slot,
+                                                    PSA_KEY_USAGE_DERIVE,
+                                                    PSA_ALG_JPAKE );
+    if( status != PSA_SUCCESS )
+        return( status );
+
+    if( slot->key.data == NULL || slot->key.bytes == 0 )
+        return( PSA_ERROR_INVALID_ARGUMENT );
+
+    if( operation->password != NULL )
+    {
+        mbedtls_free( operation->password );
+        operation->password_len = 0;
+    }
+
+    operation->password = mbedtls_calloc( 1, slot->key.bytes );
+    if( operation->password == NULL )
+    {
+        status = psa_unlock_key_slot( slot );
+        return( PSA_ERROR_INSUFFICIENT_MEMORY );
+    }
+    memcpy( operation->password, slot->key.data, slot->key.bytes );
+    operation->password_len = slot->key.bytes;
+
+    status = psa_unlock_key_slot( slot );
+    if( status != PSA_SUCCESS )
+        return( status );
 
     return( PSA_SUCCESS );
 }
@@ -348,9 +378,7 @@ psa_status_t psa_pake_set_role( psa_pake_operation_t *operation,
 static psa_status_t psa_pake_ecjpake_setup( psa_pake_operation_t *operation )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
-    psa_status_t status = PSA_ERROR_CORRUPTION_DETECTED;
     mbedtls_ecjpake_role role;
-    psa_key_slot_t *slot = NULL;
 
     if( operation->role == PSA_PAKE_ROLE_CLIENT )
         role = MBEDTLS_ECJPAKE_CLIENT;
@@ -359,22 +387,18 @@ static psa_status_t psa_pake_ecjpake_setup( psa_pake_operation_t *operation )
     else
         return( PSA_ERROR_BAD_STATE );
 
-    if( psa_is_valid_key_id( operation->password, 1 ) == 0 )
+    if (operation->password == NULL ||
+        operation->password_len == 0 )
+    {
         return( PSA_ERROR_BAD_STATE );
-
-    status = psa_get_and_lock_key_slot( operation->password, &slot );
-    if( status != PSA_SUCCESS )
-        return( status );
-
+    }
 
     ret = mbedtls_ecjpake_setup( &operation->ctx.ecjpake,
                                  role,
                                  MBEDTLS_MD_SHA256,
                                  MBEDTLS_ECP_DP_SECP256R1,
-                                 slot->key.data, slot->key.bytes );
-
-    psa_unlock_key_slot( slot );
-    slot = NULL;
+                                 operation->password,
+                                 operation->password_len );
 
     if( ret != 0 )
         return( mbedtls_ecjpake_to_psa_error( ret ) );
@@ -840,7 +864,9 @@ psa_status_t psa_pake_abort(psa_pake_operation_t * operation)
     {
         operation->input_step = PSA_PAKE_STEP_INVALID;
         operation->output_step = PSA_PAKE_STEP_INVALID;
-        operation->password = MBEDTLS_SVC_KEY_ID_INIT;
+        mbedtls_free( operation->password );
+        operation->password = NULL;
+        operation->password_len = 0;
         operation->role = PSA_PAKE_ROLE_NONE;
         mbedtls_platform_zeroize( operation->buffer, MBEDTLS_PSA_PAKE_BUFFER_SIZE );
         operation->buffer_length = 0;
