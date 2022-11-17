@@ -14,9 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import itertools
-import typing
-
 from abc import abstractmethod
 from typing import Iterator, List, Tuple, TypeVar
 
@@ -41,7 +38,13 @@ def invmod(a: int, n: int) -> int:
     raise ValueError("Not invertible")
 
 def hex_to_int(val: str) -> int:
-    return int(val, 16) if val else 0
+    """Implement the syntax accepted by mbedtls_test_read_mpi().
+
+    This is a superset of what is accepted by mbedtls_test_read_mpi_core().
+    """
+    if val in ['', '-']:
+        return 0
+    return int(val, 16)
 
 def quote_str(val) -> str:
     return "\"{}\"".format(val)
@@ -60,15 +63,8 @@ def limbs_mpi(val: int, bits_in_limb: int) -> int:
     return (val.bit_length() + bits_in_limb - 1) // bits_in_limb
 
 def combination_pairs(values: List[T]) -> List[Tuple[T, T]]:
-    """Return all pair combinations from input values.
-
-    The return value is cast, as older versions of mypy are unable to derive
-    the specific type returned by itertools.combinations_with_replacement.
-    """
-    return typing.cast(
-        List[Tuple[T, T]],
-        list(itertools.combinations_with_replacement(values, 2))
-    )
+    """Return all pair combinations from input values."""
+    return [(x, y) for x in values for y in values]
 
 class OperationCommon(test_data_generation.BaseTest):
     """Common features for bignum binary operations.
@@ -144,6 +140,58 @@ class OperationCommon(test_data_generation.BaseTest):
     def generate_function_tests(cls) -> Iterator[test_case.TestCase]:
         for a_value, b_value in cls.get_value_pairs():
             yield cls(a_value, b_value).create_test_case()
+
+
+class ModOperationCommon(OperationCommon):
+    #pylint: disable=abstract-method
+    """Target for bignum mod_raw test case generation."""
+
+    def __init__(self, val_n: str, val_a: str, val_b: str = "0", bits_in_limb: int = 64) -> None:
+        super().__init__(val_a=val_a, val_b=val_b)
+        self.val_n = val_n
+        self.bits_in_limb = bits_in_limb
+
+    @property
+    def int_n(self) -> int:
+        return hex_to_int(self.val_n)
+
+    @property
+    def boundary(self) -> int:
+        data_in = [self.int_a, self.int_b, self.int_n]
+        return max([n for n in data_in if n is not None])
+
+    @property
+    def limbs(self) -> int:
+        return limbs_mpi(self.boundary, self.bits_in_limb)
+
+    @property
+    def hex_digits(self) -> int:
+        return 2 * (self.limbs * self.bits_in_limb // 8)
+
+    @property
+    def hex_n(self) -> str:
+        return "{:x}".format(self.int_n).zfill(self.hex_digits)
+
+    @property
+    def hex_a(self) -> str:
+        return "{:x}".format(self.int_a).zfill(self.hex_digits)
+
+    @property
+    def hex_b(self) -> str:
+        return "{:x}".format(self.int_b).zfill(self.hex_digits)
+
+    @property
+    def r(self) -> int: # pylint: disable=invalid-name
+        l = limbs_mpi(self.int_n, self.bits_in_limb)
+        return bound_mpi_limbs(l, self.bits_in_limb)
+
+    @property
+    def r_inv(self) -> int:
+        return invmod(self.r, self.int_n)
+
+    @property
+    def r2(self) -> int: # pylint: disable=invalid-name
+        return pow(self.r, 2)
 
 
 class OperationCommonArchSplit(OperationCommon):
