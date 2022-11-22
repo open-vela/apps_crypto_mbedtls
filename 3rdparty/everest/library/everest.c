@@ -19,11 +19,7 @@
  *  This file is part of Mbed TLS (https://tls.mbed.org).
  */
 
-#if !defined(MBEDTLS_CONFIG_FILE)
-#include "mbedtls/config.h"
-#else
-#include MBEDTLS_CONFIG_FILE
-#endif
+#include "common.h"
 
 #include <string.h>
 
@@ -32,12 +28,7 @@
 #include "everest/x25519.h"
 #include "everest/everest.h"
 
-#if defined(MBEDTLS_PLATFORM_C)
 #include "mbedtls/platform.h"
-#else
-#define mbedtls_calloc calloc
-#define mbedtls_free   free
-#endif
 
 #if defined(MBEDTLS_ECDH_VARIANT_EVEREST_ENABLED)
 
