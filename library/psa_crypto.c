@@ -877,20 +877,7 @@ static psa_status_t psa_restrict_key_policy(
     return( PSA_SUCCESS );
 }
 
-/** Get the description of a key given its identifier and policy constraints
- *  and lock it.
- *
- * The key must have allow all the usage flags set in \p usage. If \p alg is
- * nonzero, the key must allow operations with this algorithm. If \p alg is
- * zero, the algorithm is not checked.
- *
- * In case of a persistent key, the function loads the description of the key
- * into a key slot if not already done.
- *
- * On success, the returned key slot is locked. It is the responsibility of
- * the caller to unlock the key slot when it does not access it anymore.
- */
-static psa_status_t psa_get_and_lock_key_slot_with_policy(
+psa_status_t psa_get_and_lock_key_slot_with_policy(
     mbedtls_svc_key_id_t key,
     psa_key_slot_t **p_slot,
     psa_key_usage_t usage,
@@ -5845,7 +5832,7 @@ static psa_status_t psa_key_agreement_internal( psa_key_derivation_operation_t *
                                                 size_t peer_key_length )
 {
     psa_status_t status;
-    uint8_t shared_secret[PSA_RAW_KEY_AGREEMENT_OUTPUT_MAX_SIZE];
+    uint8_t shared_secret[PSA_KEY_AGREEMENT_MAX_SHARED_SECRET_SIZE];
     size_t shared_secret_length = 0;
     psa_algorithm_t ka_alg = PSA_ALG_KEY_AGREEMENT_GET_BASE( operation->alg );
 
