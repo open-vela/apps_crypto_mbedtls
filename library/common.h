@@ -26,7 +26,6 @@
 #include "mbedtls/build_info.h"
 
 #include <stdint.h>
-#include <stddef.h>
 
 /** Helper to define a function as static except when building invasive tests.
  *
@@ -68,18 +67,6 @@ extern void (*mbedtls_test_hook_test_fail)( const char * test, int line, const c
  * their members are private and should not be accessed by the user.
  */
 #define MBEDTLS_ALLOW_PRIVATE_ACCESS
-
-/** Detect architectures where unaligned memory accesses are safe and performant.
- *
- * This list is incomplete.
- */
-#if defined(__i386__) || defined(__amd64__) || defined( __x86_64__) \
-    || defined(__ARM_FEATURE_UNALIGNED) \
-    || defined(__aarch64__) \
-    || defined(__ARM_ARCH_8__) || defined(__ARM_ARCH_8A__) || defined(__ARM_ARCH_8M__) \
-    || defined(__ARM_ARCH_7A__)
-#define MBEDTLS_ALLOW_UNALIGNED_ACCESS
-#endif
 
 /** Byte Reading Macros
  *
@@ -402,39 +389,6 @@ extern void (*mbedtls_test_hook_test_fail)( const char * test, int line, const c
     ( data )[( offset ) + 7] = MBEDTLS_BYTE_7( n );             \
 }
 #endif
-
-/**
- * Perform a fast block XOR operation, such that
- * r[i] = a[i] ^ b[i] where 0 <= i < n
- *
- * \param   r Pointer to result (buffer of at least \p n bytes). \p r
- *            may be equal to either \p a or \p b, but behaviour when
- *            it overlaps in other ways is undefined.
- * \param   a Pointer to input (buffer of at least \p n bytes)
- * \param   b Pointer to input (buffer of at least \p n bytes)
- * \param   n Number of bytes to process.
- */
-static inline void mbedtls_xor( unsigned char* r, unsigned char const *a, unsigned char const *b, size_t n )
-{
-#if defined(MBEDTLS_ALLOW_UNALIGNED_ACCESS)
-    uint32_t *a32 = (uint32_t*)a;
-    uint32_t *b32 = (uint32_t*)b;
-    uint32_t *r32 = (uint32_t*)r;
-    for ( size_t i = 0; i < (n >> 2); i++ )
-    {
-        r32[i] = a32[i] ^ b32[i];
-    }
-    for ( size_t i = n - (n % 4) ; i < n; i++ )
-    {
-        r[i] = a[i] ^ b[i];
-    }
-#else
-    for ( size_t i = 0; i < n; i++ )
-    {
-        r[i] = a[i] ^ b[i];
-    }
-#endif
-}
 
 /* Fix MSVC C99 compatible issue
  *      MSVC support __func__ from visual studio 2015( 1900 )
