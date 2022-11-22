@@ -2060,6 +2060,31 @@ static int ssl_tls13_parse_encrypted_extensions( mbedtls_ssl_context *ssl,
 
                 break;
 #endif /* MBEDTLS_SSL_ALPN */
+
+#if defined(MBEDTLS_SSL_EARLY_DATA)
+            case MBEDTLS_TLS_EXT_EARLY_DATA:
+                if( ssl->early_data_status != MBEDTLS_SSL_EARLY_DATA_STATUS_INDICATION_SENT )
+                {
+                    /* The server must not send the EarlyDataIndication if the
+                    * client hasn't indicated the use of early data. */
+                    MBEDTLS_SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_ILLEGAL_PARAMETER,
+                                                  MBEDTLS_ERR_SSL_ILLEGAL_PARAMETER );
+                    return( MBEDTLS_ERR_SSL_ILLEGAL_PARAMETER );
+                }
+
+                if( extension_data_len != 0 )
+                {
+                    /* The message must be empty. */
+                    MBEDTLS_SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR,
+                                                  MBEDTLS_ERR_SSL_DECODE_ERROR );
+                    return( MBEDTLS_ERR_SSL_DECODE_ERROR );
+                }
+
+	            ssl->early_data_status = MBEDTLS_SSL_EARLY_DATA_STATUS_ACCEPTED;
+
+                break;
+#endif /* MBEDTLS_SSL_EARLY_DATA */
+
             default:
                 MBEDTLS_SSL_PRINT_EXT(
                     3, MBEDTLS_SSL_HS_ENCRYPTED_EXTENSIONS,
