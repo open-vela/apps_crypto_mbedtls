@@ -1,7 +1,7 @@
 /*
  *  RSASSA-PSS/SHA-256 signature verification program
  *
- *  Copyright (C) 2006-2015, ARM Limited, All Rights Reserved
+ *  Copyright The Mbed TLS Contributors
  *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -15,27 +15,11 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
- *
- *  This file is part of mbed TLS (https://tls.mbed.org)
  */
 
-#if !defined(MBEDTLS_CONFIG_FILE)
-#include "mbedtls/config.h"
-#else
-#include MBEDTLS_CONFIG_FILE
-#endif
+#include "mbedtls/build_info.h"
 
-#if defined(MBEDTLS_PLATFORM_C)
 #include "mbedtls/platform.h"
-#else
-#include <stdio.h>
-#include <stdlib.h>
-#define mbedtls_snprintf        snprintf
-#define mbedtls_printf          printf
-#define mbedtls_exit            exit
-#define MBEDTLS_EXIT_SUCCESS    EXIT_SUCCESS
-#define MBEDTLS_EXIT_FAILURE    EXIT_FAILURE
-#endif /* MBEDTLS_PLATFORM_C */
 
 #if !defined(MBEDTLS_MD_C) || !defined(MBEDTLS_ENTROPY_C) ||  \
     !defined(MBEDTLS_RSA_C) || !defined(MBEDTLS_SHA256_C) ||        \
@@ -100,7 +84,13 @@ int main( int argc, char *argv[] )
         goto exit;
     }
 
-    mbedtls_rsa_set_padding( mbedtls_pk_rsa( pk ), MBEDTLS_RSA_PKCS_V21, MBEDTLS_MD_SHA256 );
+    if( ( ret = mbedtls_rsa_set_padding( mbedtls_pk_rsa( pk ),
+                                         MBEDTLS_RSA_PKCS_V21,
+                                         MBEDTLS_MD_SHA256 ) ) != 0 )
+    {
+        mbedtls_printf( " failed\n  ! Invalid padding\n" );
+        goto exit;
+    }
 
     /*
      * Extract the RSA signature from the file
@@ -145,11 +135,6 @@ int main( int argc, char *argv[] )
 
 exit:
     mbedtls_pk_free( &pk );
-
-#if defined(_WIN32)
-    mbedtls_printf( "  + Press Enter to exit this program.\n" );
-    fflush( stdout ); getchar();
-#endif
 
     mbedtls_exit( exit_code );
 }
