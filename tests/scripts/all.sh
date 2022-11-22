@@ -1952,38 +1952,6 @@ component_test_psa_crypto_config_accel_ecdsa () {
     make test
 }
 
-component_test_psa_crypto_config_accel_ecdh () {
-    msg "test: MBEDTLS_PSA_CRYPTO_CONFIG with accelerated ECDH"
-
-    # Disable ALG_STREAM_CIPHER and ALG_ECB_NO_PADDING to avoid having
-    # partial support for cipher operations in the driver test library.
-    scripts/config.py -f include/psa/crypto_config.h unset PSA_WANT_ALG_STREAM_CIPHER
-    scripts/config.py -f include/psa/crypto_config.h unset PSA_WANT_ALG_ECB_NO_PADDING
-
-    loc_accel_list="ALG_ECDH KEY_TYPE_ECC_KEY_PAIR KEY_TYPE_ECC_PUBLIC_KEY"
-    loc_accel_flags=$( echo "$loc_accel_list" | sed 's/[^ ]* */-DLIBTESTDRIVER1_MBEDTLS_PSA_ACCEL_&/g' )
-    make -C tests libtestdriver1.a CFLAGS=" $ASAN_CFLAGS $loc_accel_flags" LDFLAGS="$ASAN_CFLAGS"
-
-    scripts/config.py set MBEDTLS_PSA_CRYPTO_DRIVERS
-    scripts/config.py set MBEDTLS_PSA_CRYPTO_CONFIG
-    scripts/config.py unset MBEDTLS_USE_PSA_CRYPTO
-    scripts/config.py unset MBEDTLS_SSL_PROTO_TLS1_3
-    scripts/config.py unset MBEDTLS_ECDH_C
-    scripts/config.py unset MBEDTLS_KEY_EXCHANGE_ECDH_RSA_ENABLED
-    scripts/config.py unset MBEDTLS_KEY_EXCHANGE_ECDH_ECDSA_ENABLED
-    scripts/config.py unset MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED
-    scripts/config.py unset MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED
-    scripts/config.py unset MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
-
-    loc_accel_flags="$loc_accel_flags $( echo "$loc_accel_list" | sed 's/[^ ]* */-DMBEDTLS_PSA_ACCEL_&/g' )"
-    make CFLAGS="$ASAN_CFLAGS -O -Werror -I../tests/include -I../tests -I../../tests -DPSA_CRYPTO_DRIVER_TEST -DMBEDTLS_TEST_LIBTESTDRIVER1 $loc_accel_flags" LDFLAGS="-ltestdriver1 $ASAN_CFLAGS"
-
-    not grep mbedtls_ecdh_ library/ecdh.o
-
-    msg "test: MBEDTLS_PSA_CRYPTO_CONFIG with accelerated ECDH"
-    make test
-}
-
 component_test_psa_crypto_config_accel_rsa_signature () {
     msg "test: MBEDTLS_PSA_CRYPTO_CONFIG with accelerated RSA signature"
 
@@ -3253,7 +3221,6 @@ component_build_armcc () {
 
 component_test_tls13_only () {
     msg "build: default config with MBEDTLS_SSL_PROTO_TLS1_3, without MBEDTLS_SSL_PROTO_TLS1_2"
-    scripts/config.py set MBEDTLS_SSL_EARLY_DATA
     make CFLAGS="'-DMBEDTLS_USER_CONFIG_FILE=\"../tests/configs/tls13-only.h\"'"
 
     msg "test: TLS 1.3 only, all key exchange modes enabled"
@@ -3273,7 +3240,6 @@ component_test_tls13_only_psk () {
     scripts/config.py unset MBEDTLS_SSL_SERVER_NAME_INDICATION
     scripts/config.py unset MBEDTLS_ECDSA_C
     scripts/config.py unset MBEDTLS_PKCS1_V21
-    scripts/config.py set   MBEDTLS_SSL_EARLY_DATA
     make CFLAGS="'-DMBEDTLS_USER_CONFIG_FILE=\"../tests/configs/tls13-only.h\"'"
 
     msg "test_suite_ssl: TLS 1.3 only, only PSK key exchange mode enabled"
@@ -3305,7 +3271,6 @@ component_test_tls13_only_psk_ephemeral () {
     scripts/config.py unset MBEDTLS_SSL_SERVER_NAME_INDICATION
     scripts/config.py unset MBEDTLS_ECDSA_C
     scripts/config.py unset MBEDTLS_PKCS1_V21
-    scripts/config.py set   MBEDTLS_SSL_EARLY_DATA
     make CFLAGS="'-DMBEDTLS_USER_CONFIG_FILE=\"../tests/configs/tls13-only.h\"'"
 
     msg "test_suite_ssl: TLS 1.3 only, only PSK ephemeral key exchange mode"
@@ -3323,7 +3288,6 @@ component_test_tls13_only_psk_all () {
     scripts/config.py unset MBEDTLS_SSL_SERVER_NAME_INDICATION
     scripts/config.py unset MBEDTLS_ECDSA_C
     scripts/config.py unset MBEDTLS_PKCS1_V21
-    scripts/config.py set   MBEDTLS_SSL_EARLY_DATA
     make CFLAGS="'-DMBEDTLS_USER_CONFIG_FILE=\"../tests/configs/tls13-only.h\"'"
 
     msg "test_suite_ssl: TLS 1.3 only, PSK and PSK ephemeral key exchange modes"
@@ -3336,7 +3300,6 @@ component_test_tls13_only_psk_all () {
 component_test_tls13_only_ephemeral_all () {
     msg "build: TLS 1.3 only from default, without PSK key exchange mode"
     scripts/config.py unset MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_ENABLED
-    scripts/config.py set   MBEDTLS_SSL_EARLY_DATA
     make CFLAGS="'-DMBEDTLS_USER_CONFIG_FILE=\"../tests/configs/tls13-only.h\"'"
 
     msg "test_suite_ssl: TLS 1.3 only, ephemeral and PSK ephemeral key exchange modes"
@@ -3351,7 +3314,6 @@ component_test_tls13 () {
     scripts/config.py set MBEDTLS_SSL_PROTO_TLS1_3
     scripts/config.py set MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
     scripts/config.py set MBEDTLS_SSL_CID_TLS1_3_PADDING_GRANULARITY 1
-    scripts/config.py set MBEDTLS_SSL_EARLY_DATA
     CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
     make
     msg "test: default config with MBEDTLS_SSL_PROTO_TLS1_3 enabled, without padding"
@@ -3365,7 +3327,6 @@ component_test_tls13_no_compatibility_mode () {
     scripts/config.py set   MBEDTLS_SSL_PROTO_TLS1_3
     scripts/config.py unset MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
     scripts/config.py set   MBEDTLS_SSL_CID_TLS1_3_PADDING_GRANULARITY 1
-    scripts/config.py set   MBEDTLS_SSL_EARLY_DATA
     CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
     make
     msg "test: default config with MBEDTLS_SSL_PROTO_TLS1_3 enabled, without padding"
