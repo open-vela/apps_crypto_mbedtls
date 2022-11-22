@@ -1,7 +1,7 @@
 /*
  *  Translate error code to error string
  *
- *  Copyright The Mbed TLS Contributors
+ *  Copyright (C) 2006-2015, ARM Limited, All Rights Reserved
  *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -15,11 +15,24 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
+ *
+ *  This file is part of mbed TLS (https://tls.mbed.org)
  */
 
-#include "mbedtls/build_info.h"
+#if !defined(MBEDTLS_CONFIG_FILE)
+#include "mbedtls/config.h"
+#else
+#include MBEDTLS_CONFIG_FILE
+#endif
 
+#if defined(MBEDTLS_PLATFORM_C)
 #include "mbedtls/platform.h"
+#else
+#include <stdio.h>
+#include <stdlib.h>
+#define mbedtls_printf     printf
+#define mbedtls_exit       exit
+#endif
 
 #if defined(MBEDTLS_ERROR_C) || defined(MBEDTLS_ERROR_STRERROR_DUMMY)
 #include "mbedtls/error.h"
@@ -70,6 +83,11 @@ int main( int argc, char *argv[] )
         mbedtls_strerror( val, error_buf, 200 );
         mbedtls_printf("Last error was: -0x%04x - %s\n\n", (unsigned int) -val, error_buf );
     }
+
+#if defined(_WIN32)
+    mbedtls_printf( "  + Press Enter to exit this program.\n" );
+    fflush( stdout ); getchar();
+#endif
 
     mbedtls_exit( val );
 }
