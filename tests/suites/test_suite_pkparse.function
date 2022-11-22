@@ -2,7 +2,6 @@
 #include "mbedtls/pk.h"
 #include "mbedtls/pem.h"
 #include "mbedtls/oid.h"
-#include "mbedtls/legacy_or_psa.h"
 /* END_HEADER */
 
 /* BEGIN_DEPENDENCIES
@@ -17,14 +16,12 @@ void pk_parse_keyfile_rsa( char * key_file, char * password, int result )
     int res;
     char *pwd = password;
 
-    PSA_INIT_IF_NO_MD();
     mbedtls_pk_init( &ctx );
 
     if( strcmp( pwd, "NULL" ) == 0 )
         pwd = NULL;
 
-    res = mbedtls_pk_parse_keyfile( &ctx, key_file, pwd,
-            mbedtls_test_rnd_std_rand, NULL );
+    res = mbedtls_pk_parse_keyfile( &ctx, key_file, pwd );
 
     TEST_ASSERT( res == result );
 
@@ -38,7 +35,6 @@ void pk_parse_keyfile_rsa( char * key_file, char * password, int result )
 
 exit:
     mbedtls_pk_free( &ctx );
-    PSA_DONE_IF_NO_MD();
 }
 /* END_CASE */
 
@@ -48,7 +44,6 @@ void pk_parse_public_keyfile_rsa( char * key_file, int result )
     mbedtls_pk_context ctx;
     int res;
 
-    PSA_INIT_IF_NO_MD();
     mbedtls_pk_init( &ctx );
 
     res = mbedtls_pk_parse_public_keyfile( &ctx, key_file );
@@ -65,7 +60,6 @@ void pk_parse_public_keyfile_rsa( char * key_file, int result )
 
 exit:
     mbedtls_pk_free( &ctx );
-    PSA_DONE_IF_NO_MD();
 }
 /* END_CASE */
 
@@ -102,8 +96,7 @@ void pk_parse_keyfile_ec( char * key_file, char * password, int result )
 
     mbedtls_pk_init( &ctx );
 
-    res = mbedtls_pk_parse_keyfile( &ctx, key_file, password,
-            mbedtls_test_rnd_std_rand, NULL );
+    res = mbedtls_pk_parse_keyfile( &ctx, key_file, password );
 
     TEST_ASSERT( res == result );
 
@@ -127,8 +120,7 @@ void pk_parse_key( data_t * buf, int result )
 
     mbedtls_pk_init( &pk );
 
-    TEST_ASSERT( mbedtls_pk_parse_key( &pk, buf->x, buf->len, NULL, 0,
-                        mbedtls_test_rnd_std_rand, NULL ) == result );
+    TEST_ASSERT( mbedtls_pk_parse_key( &pk, buf->x, buf->len, NULL, 0 ) == result );
 
 exit:
     mbedtls_pk_free( &pk );
