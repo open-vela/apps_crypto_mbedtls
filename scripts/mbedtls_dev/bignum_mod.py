@@ -14,10 +14,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from abc import ABCMeta
+
 from . import test_data_generation
 
-class BignumModTarget(test_data_generation.BaseTarget):
-    #pylint: disable=abstract-method, too-few-public-methods
+class BignumModTarget(test_data_generation.BaseTarget, metaclass=ABCMeta):
+    #pylint: disable=abstract-method
     """Target for bignum mod test case generation."""
     target_basename = 'test_suite_bignum_mod.generated'
 
