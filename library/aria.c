@@ -588,6 +588,7 @@ int mbedtls_aria_crypt_cbc( mbedtls_aria_context *ctx,
                             const unsigned char *input,
                             unsigned char *output )
 {
+    int i;
     unsigned char temp[MBEDTLS_ARIA_BLOCKSIZE];
 
     ARIA_VALIDATE_RET( ctx != NULL );
@@ -607,7 +608,8 @@ int mbedtls_aria_crypt_cbc( mbedtls_aria_context *ctx,
             memcpy( temp, input, MBEDTLS_ARIA_BLOCKSIZE );
             mbedtls_aria_crypt_ecb( ctx, input, output );
 
-            mbedtls_xor( output, output, iv, MBEDTLS_ARIA_BLOCKSIZE );
+            for( i = 0; i < MBEDTLS_ARIA_BLOCKSIZE; i++ )
+                output[i] = (unsigned char)( output[i] ^ iv[i] );
 
             memcpy( iv, temp, MBEDTLS_ARIA_BLOCKSIZE );
 
@@ -620,7 +622,8 @@ int mbedtls_aria_crypt_cbc( mbedtls_aria_context *ctx,
     {
         while( length > 0 )
         {
-            mbedtls_xor( output, input, iv, MBEDTLS_ARIA_BLOCKSIZE );
+            for( i = 0; i < MBEDTLS_ARIA_BLOCKSIZE; i++ )
+                output[i] = (unsigned char)( input[i] ^ iv[i] );
 
             mbedtls_aria_crypt_ecb( ctx, output, output );
             memcpy( iv, output, MBEDTLS_ARIA_BLOCKSIZE );
