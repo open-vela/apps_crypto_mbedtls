@@ -25,7 +25,6 @@ import argparse
 import os
 import posixpath
 import re
-import inspect
 
 from abc import ABCMeta, abstractmethod
 from typing import Callable, Dict, Iterable, Iterator, List, Type, TypeVar
@@ -36,8 +35,12 @@ from . import test_case
 T = TypeVar('T') #pylint: disable=invalid-name
 
 
-class BaseTest(metaclass=ABCMeta):
-    """Base class for test case generation.
+class BaseTarget(metaclass=ABCMeta):
+    """Base target for test case generation.
+
+    Child classes of this class represent an output file, and can be referred
+    to as file targets. These indicate where test cases will be written to for
+    all subclasses of the file target, which is set by `target_basename`.
 
     Attributes:
         count: Counter for test cases from this class.
@@ -45,6 +48,8 @@ class BaseTest(metaclass=ABCMeta):
             automatically generated using the class, or manually set.
         dependencies: A list of dependencies required for the test case.
         show_test_count: Toggle for inclusion of `count` in the test description.
+        target_basename: Basename of file to write generated tests to. This
+            should be specified in a child class of BaseTarget.
         test_function: Test function which the class generates cases for.
         test_name: A common name or description of the test function. This can
             be `test_function`, a clearer equivalent, or a short summary of the
@@ -54,6 +59,7 @@ class BaseTest(metaclass=ABCMeta):
     case_description = ""
     dependencies = [] # type: List[str]
     show_test_count = True
+    target_basename = ""
     test_function = ""
     test_name = ""
 
@@ -115,21 +121,6 @@ class BaseTest(metaclass=ABCMeta):
         """
         raise NotImplementedError
 
-
-class BaseTarget:
-    #pylint: disable=too-few-public-methods
-    """Base target for test case generation.
-
-    Child classes of this class represent an output file, and can be referred
-    to as file targets. These indicate where test cases will be written to for
-    all subclasses of the file target, which is set by `target_basename`.
-
-    Attributes:
-        target_basename: Basename of file to write generated tests to. This
-            should be specified in a child class of BaseTarget.
-    """
-    target_basename = ""
-
     @classmethod
     def generate_tests(cls) -> Iterator[test_case.TestCase]:
         """Generate test cases for the class and its subclasses.
@@ -141,8 +132,7 @@ class BaseTarget:
         yield from `generate_tests()` in each. Calling this method on a class X
         will yield test cases from all classes derived from X.
         """
-        if issubclass(cls, BaseTest) and not inspect.isabstract(cls):
-            #pylint: disable=no-member
+        if cls.test_function:
             yield from cls.generate_function_tests()
         for subclass in sorted(cls.__subclasses__(), key=lambda c: c.__name__):
             yield from subclass.generate_tests()
