@@ -3602,7 +3602,7 @@ int mbedtls_ssl_handshake_step( mbedtls_ssl_context *ssl )
     if( ssl            == NULL                       ||
         ssl->conf      == NULL                       ||
         ssl->handshake == NULL                       ||
-        ssl->state == MBEDTLS_SSL_HANDSHAKE_OVER  )
+        mbedtls_ssl_is_handshake_over( ssl ) == 1 )
     {
         return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
     }
@@ -3706,7 +3706,7 @@ int mbedtls_ssl_handshake( mbedtls_ssl_context *ssl )
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> handshake" ) );
 
     /* Main handshake loop */
-    while( ssl->state != MBEDTLS_SSL_HANDSHAKE_OVER )
+    while( mbedtls_ssl_is_handshake_over( ssl ) == 0 )
     {
         ret = mbedtls_ssl_handshake_step( ssl );
 
@@ -7544,7 +7544,7 @@ void mbedtls_ssl_handshake_wrapup( mbedtls_ssl_context *ssl )
 #endif
         mbedtls_ssl_handshake_wrapup_free_hs_transform( ssl );
 
-    ssl->state = MBEDTLS_SSL_HANDSHAKE_OVER;
+    ssl->state++;
 
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "<= handshake wrapup" ) );
 }
