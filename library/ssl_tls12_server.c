@@ -353,9 +353,6 @@ static int ssl_parse_cid_ext( mbedtls_ssl_context *ssl,
     }
 
     /*
-     * Quoting draft-ietf-tls-dtls-connection-id-05
-     * https://tools.ietf.org/html/draft-ietf-tls-dtls-connection-id-05
-     *
      *   struct {
      *      opaque cid<0..2^8-1>;
      *   } ConnectionId;
@@ -1752,9 +1749,6 @@ static void ssl_write_cid_ext( mbedtls_ssl_context *ssl,
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "server hello, adding CID extension" ) );
 
     /*
-     * Quoting draft-ietf-tls-dtls-connection-id-05
-     * https://tools.ietf.org/html/draft-ietf-tls-dtls-connection-id-05
-     *
      *   struct {
      *      opaque cid<0..2^8-1>;
      *   } ConnectionId;
@@ -2531,15 +2525,10 @@ static int ssl_write_certificate_request( mbedtls_ssl_context *ssl )
         if( ! mbedtls_ssl_sig_alg_is_supported( ssl, *sig_alg ) )
             continue;
 
-        /* Write elements at offsets starting from 1 (offset 0 is for the
-         * length). Thus the offset of each element is the length of the
-         * partial list including that element. */
-        sa_len += 2;
         MBEDTLS_PUT_UINT16_BE( *sig_alg, p, sa_len );
-
+        sa_len += 2;
     }
 
-    /* Fill in list length. */
     MBEDTLS_PUT_UINT16_BE( sa_len, p, 0 );
     sa_len += 2;
     p += sa_len;
