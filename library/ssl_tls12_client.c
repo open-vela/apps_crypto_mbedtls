@@ -208,9 +208,6 @@ static int ssl_write_cid_ext( mbedtls_ssl_context *ssl,
     size_t ext_len;
 
     /*
-     * Quoting draft-ietf-tls-dtls-connection-id-05
-     * https://tools.ietf.org/html/draft-ietf-tls-dtls-connection-id-05
-     *
      *   struct {
      *      opaque cid<0..2^8-1>;
      *   } ConnectionId;
@@ -2654,7 +2651,7 @@ static int ssl_parse_certificate_request( mbedtls_ssl_context *ssl )
     for( size_t i = 0; i < sig_alg_len; i += 2 )
     {
         MBEDTLS_SSL_DEBUG_MSG( 3,
-            ( "Supported Signature Algorithm found: %02x %02x",
+            ( "Supported Signature Algorithm found: %d,%d",
               sig_alg[i], sig_alg[i + 1]  ) );
     }
 #endif
