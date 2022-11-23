@@ -526,6 +526,7 @@ int mbedtls_camellia_crypt_cbc( mbedtls_camellia_context *ctx,
                                 const unsigned char *input,
                                 unsigned char *output )
 {
+    int i;
     unsigned char temp[16];
     if( mode != MBEDTLS_CAMELLIA_ENCRYPT && mode != MBEDTLS_CAMELLIA_DECRYPT )
         return MBEDTLS_ERR_CAMELLIA_BAD_INPUT_DATA;
@@ -540,7 +541,8 @@ int mbedtls_camellia_crypt_cbc( mbedtls_camellia_context *ctx,
             memcpy( temp, input, 16 );
             mbedtls_camellia_crypt_ecb( ctx, mode, input, output );
 
-            mbedtls_xor( output, output, iv, 16 );
+            for( i = 0; i < 16; i++ )
+                output[i] = (unsigned char)( output[i] ^ iv[i] );
 
             memcpy( iv, temp, 16 );
 
@@ -553,7 +555,8 @@ int mbedtls_camellia_crypt_cbc( mbedtls_camellia_context *ctx,
     {
         while( length > 0 )
         {
-            mbedtls_xor( output, input, iv, 16 );
+            for( i = 0; i < 16; i++ )
+                output[i] = (unsigned char)( input[i] ^ iv[i] );
 
             mbedtls_camellia_crypt_ecb( ctx, mode, output, output );
             memcpy( iv, output, 16 );
