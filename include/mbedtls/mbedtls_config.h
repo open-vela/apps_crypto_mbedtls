@@ -1146,11 +1146,6 @@
  * \warning If building without MBEDTLS_MD_C, you must call psa_crypto_init()
  * before doing any PKCS#1 v2.1 operation.
  *
- * \warning When building with MBEDTLS_MD_C, all hashes used with this
- * need to be available as built-ins (that is, for SHA-256, MBEDTLS_SHA256_C,
- * etc.) as opposed to just PSA drivers. So far, PSA drivers are only used by
- * this module in builds where MBEDTLS_MD_C is disabled.
- *
  * This enables support for RSAES-OAEP and RSASSA-PSS operations.
  */
 #define MBEDTLS_PKCS1_V21
@@ -1653,7 +1648,7 @@
 * production.
 *
 */
-#define MBEDTLS_SSL_EARLY_DATA
+//#define MBEDTLS_SSL_EARLY_DATA
 
 /**
  * \def MBEDTLS_SSL_PROTO_DTLS
@@ -2438,11 +2433,6 @@
  *
  * \warning If building without MBEDTLS_MD_C, you must call psa_crypto_init()
  * before doing any EC J-PAKE operations.
- *
- * \warning When building with MBEDTLS_MD_C, all hashes used with this
- * need to be available as built-ins (that is, for SHA-256, MBEDTLS_SHA256_C,
- * etc.) as opposed to just PSA drivers. So far, PSA drivers are only used by
- * this module in builds where MBEDTLS_MD_C is disabled.
  */
 #define MBEDTLS_ECJPAKE_C
 
@@ -2787,11 +2777,6 @@
  * \warning If building without MBEDTLS_MD_C, you must call psa_crypto_init()
  * before doing any PKCS5 operation.
  *
- * \warning When building with MBEDTLS_MD_C, all hashes used with this
- * need to be available as built-ins (that is, for SHA-256, MBEDTLS_SHA256_C,
- * etc.) as opposed to just PSA drivers. So far, PSA drivers are only used by
- * this module in builds where MBEDTLS_MD_C is disabled.
- *
  * This module adds support for the PKCS#5 functions.
  */
 #define MBEDTLS_PKCS5_C
@@ -2810,11 +2795,6 @@
  *
  * \warning If building without MBEDTLS_MD_C, you must call psa_crypto_init()
  * before doing any PKCS12 operation.
- *
- * \warning When building with MBEDTLS_MD_C, all hashes used with this
- * need to be available as built-ins (that is, for SHA-256, MBEDTLS_SHA256_C,
- * etc.) as opposed to just PSA drivers. So far, PSA drivers are only used by
- * this module in builds where MBEDTLS_MD_C is disabled.
  *
  * This module enables PKCS#12 functions.
  */
