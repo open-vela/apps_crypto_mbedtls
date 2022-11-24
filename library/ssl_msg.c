@@ -511,12 +511,15 @@ static void ssl_build_record_nonce( unsigned char *dst_iv,
                                     unsigned char const *dynamic_iv,
                                     size_t dynamic_iv_len )
 {
+    size_t i;
+
     /* Start with Fixed IV || 0 */
     memset( dst_iv, 0, dst_iv_len );
     memcpy( dst_iv, fixed_iv, fixed_iv_len );
 
     dst_iv += dst_iv_len - dynamic_iv_len;
-    mbedtls_xor( dst_iv, dst_iv, dynamic_iv, dynamic_iv_len );
+    for( i = 0; i < dynamic_iv_len; i++ )
+        dst_iv[i] ^= dynamic_iv[i];
 }
 #endif /* MBEDTLS_GCM_C || MBEDTLS_CCM_C || MBEDTLS_CHACHAPOLY_C */
 
@@ -1904,7 +1907,7 @@ int mbedtls_ssl_fetch_input( mbedtls_ssl_context *ssl, size_t nb_want )
             MBEDTLS_SSL_DEBUG_MSG( 2, ( "timeout" ) );
             mbedtls_ssl_set_timer( ssl, 0 );
 
-            if( mbedtls_ssl_is_handshake_over( ssl ) == 0 )
+            if( ssl->state != MBEDTLS_SSL_HANDSHAKE_OVER )
             {
                 if( ssl_double_retransmit_timeout( ssl ) != 0 )
                 {
@@ -5296,7 +5299,7 @@ static int ssl_tls13_check_new_session_ticket( mbedtls_ssl_context *ssl )
 
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "NewSessionTicket received" ) );
     mbedtls_ssl_handshake_set_state( ssl,
-                                     MBEDTLS_SSL_NEW_SESSION_TICKET );
+                                     MBEDTLS_SSL_TLS1_3_NEW_SESSION_TICKET );
 
     return( MBEDTLS_ERR_SSL_WANT_READ );
 }
@@ -5499,7 +5502,7 @@ int mbedtls_ssl_read( mbedtls_ssl_context *ssl, unsigned char *buf, size_t len )
     }
 #endif
 
-    if( mbedtls_ssl_is_handshake_over( ssl ) == 0 )
+    if( ssl->state != MBEDTLS_SSL_HANDSHAKE_OVER )
     {
         ret = mbedtls_ssl_handshake( ssl );
         if( ret != MBEDTLS_ERR_SSL_WAITING_SERVER_HELLO_RENEGO &&
@@ -5755,7 +5758,7 @@ int mbedtls_ssl_write( mbedtls_ssl_context *ssl, const unsigned char *buf, size_
     }
 #endif
 
-    if( mbedtls_ssl_is_handshake_over( ssl ) == 0 )
+    if( ssl->state != MBEDTLS_SSL_HANDSHAKE_OVER )
     {
         if( ( ret = mbedtls_ssl_handshake( ssl ) ) != 0 )
         {
