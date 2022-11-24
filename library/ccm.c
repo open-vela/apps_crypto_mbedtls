@@ -112,6 +112,7 @@ static int mbedtls_ccm_crypt( mbedtls_ccm_context *ctx,
                               const unsigned char *input,
                               unsigned char *output )
 {
+    size_t i;
     size_t olen = 0;
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     unsigned char tmp_buf[16] = {0};
@@ -124,7 +125,8 @@ static int mbedtls_ccm_crypt( mbedtls_ccm_context *ctx,
         return ret;
     }
 
-    mbedtls_xor( output, input, tmp_buf + offset, use_len );
+    for( i = 0; i < use_len; i++ )
+        output[i] = input[i] ^ tmp_buf[offset + i];
 
     mbedtls_platform_zeroize(tmp_buf, sizeof(tmp_buf));
     return ret;
@@ -267,6 +269,7 @@ int mbedtls_ccm_update_ad( mbedtls_ccm_context *ctx,
                            size_t add_len )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+    unsigned char i;
     size_t olen, use_len, offset;
 
     if( ctx->state & CCM_STATE__ERROR )
@@ -307,7 +310,8 @@ int mbedtls_ccm_update_ad( mbedtls_ccm_context *ctx,
             if( use_len > add_len )
                 use_len = add_len;
 
-            mbedtls_xor( ctx->y + offset, ctx->y + offset, add, use_len );
+            for( i = 0; i < use_len; i++ )
+                ctx->y[i + offset] ^= add[i];
 
             ctx->processed += use_len;
             add_len -= use_len;
@@ -377,7 +381,8 @@ int mbedtls_ccm_update( mbedtls_ccm_context *ctx,
         if( ctx->mode == MBEDTLS_CCM_ENCRYPT || \
             ctx->mode == MBEDTLS_CCM_STAR_ENCRYPT )
         {
-            mbedtls_xor( ctx->y + offset, ctx->y + offset, input, use_len );
+            for( i = 0; i < use_len; i++ )
+                ctx->y[i + offset] ^= input[i];
 
             if( use_len + offset == 16 || ctx->processed == ctx->plaintext_len )
             {
@@ -406,7 +411,8 @@ int mbedtls_ccm_update( mbedtls_ccm_context *ctx,
             if( ret != 0 )
                 goto exit;
 
-            mbedtls_xor( ctx->y + offset, ctx->y + offset, local_output, use_len );
+            for( i = 0; i < use_len; i++ )
+                ctx->y[i + offset] ^= local_output[i];
 
             memcpy( output, local_output, use_len );
             mbedtls_platform_zeroize( local_output, 16 );
