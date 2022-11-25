@@ -2041,6 +2041,12 @@ int mbedtls_ssl_tls13_generate_and_write_ecdh_key_exchange(
                 size_t *out_len );
 #endif /* MBEDTLS_ECDH_C */
 
+#if defined(MBEDTLS_SSL_EARLY_DATA)
+int mbedtls_ssl_tls13_write_early_data_ext( mbedtls_ssl_context *ssl,
+                                            unsigned char *buf,
+                                            const unsigned char *end,
+                                            size_t *out_len );
+#endif /* MBEDTLS_SSL_EARLY_DATA */
 
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
