@@ -842,10 +842,10 @@
         "but no key exchange methods defined with MBEDTLS_KEY_EXCHANGE_xxxx"
 #endif
 
-/* Early data requires PSK related mode defined */
 #if defined(MBEDTLS_SSL_EARLY_DATA) && \
-        ( !defined(MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_ENABLED) && \
-          !defined(MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_EPHEMERAL_ENABLED))
+    ( !defined(MBEDTLS_SSL_SESSION_TICKETS) || \
+      ( !defined(MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_ENABLED) && \
+        !defined(MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_EPHEMERAL_ENABLED) ) )
 #error "MBEDTLS_SSL_EARLY_DATA  defined, but not all prerequisites"
 #endif
 
@@ -902,19 +902,6 @@
     MBEDTLS_SSL_CID_OUT_LEN_MAX > 255
 #error "MBEDTLS_SSL_CID_OUT_LEN_MAX too large (max 255)"
 #endif
-
-#if defined(MBEDTLS_SSL_DTLS_CONNECTION_ID_COMPAT)     &&                 \
-    !defined(MBEDTLS_SSL_DTLS_CONNECTION_ID)
-#error "MBEDTLS_SSL_DTLS_CONNECTION_ID_COMPAT defined, but not all prerequsites"
-#endif
-
-#if defined(MBEDTLS_SSL_DTLS_CONNECTION_ID_COMPAT) && MBEDTLS_SSL_DTLS_CONNECTION_ID_COMPAT != 0
-#if defined(MBEDTLS_DEPRECATED_REMOVED)
-#error "MBEDTLS_SSL_DTLS_CONNECTION_ID_COMPAT is deprecated and will be removed in a future version of Mbed TLS"
-#elif defined(MBEDTLS_DEPRECATED_WARNING)
-#warning "MBEDTLS_SSL_DTLS_CONNECTION_ID_COMPAT is deprecated and will be removed in a future version of Mbed TLS"
-#endif
-#endif /* MBEDTLS_SSL_DTLS_CONNECTION_ID_COMPAT && MBEDTLS_SSL_DTLS_CONNECTION_ID_COMPAT != 0 */
 
 #if defined(MBEDTLS_SSL_ENCRYPT_THEN_MAC) &&   \
     !defined(MBEDTLS_SSL_PROTO_TLS1_2)
