@@ -144,6 +144,28 @@ int mbedtls_mpi_mod_raw_write( const mbedtls_mpi_uint *A,
 
 /* BEGIN MERGE SLOT 2 */
 
+/** \brief  Subtract two MPIs, returning the residue modulo the specified
+ *          modulus.
+ *
+ * The size of the operation is determined by \p N. \p A and \p B must have
+ * the same number of limbs as \p N.
+ *
+ * \p X may be aliased to \p A or \p B, or even both, but may not overlap
+ * either otherwise.
+ *
+ * \param[out] X        The address of the result MPI.
+ *                      This must be initialized. Must have enough limbs to
+ *                      store the full value of the result.
+ * \param[in]  A        The address of the first MPI. This must be initialized.
+ * \param[in]  B        The address of the second MPI. This must be initialized.
+ * \param[in]  N        The address of the modulus. Used to perform a modulo
+ *                      operation on the result of the subtraction.
+ */
+void mbedtls_mpi_mod_raw_sub( mbedtls_mpi_uint *X,
+                              const mbedtls_mpi_uint *A,
+                              const mbedtls_mpi_uint *B,
+                              const mbedtls_mpi_mod_modulus *N );
+
 /* END MERGE SLOT 2 */
 
 /* BEGIN MERGE SLOT 3 */
@@ -155,28 +177,7 @@ int mbedtls_mpi_mod_raw_write( const mbedtls_mpi_uint *A,
 /* END MERGE SLOT 4 */
 
 /* BEGIN MERGE SLOT 5 */
-/**
- * \brief Perform a known-size modular addition.
- *
- * Calculate `A + B modulo N`.
- *
- * The number of limbs in each operand, and the result, is given by the
- * modulus \p N.
- *
- * \p X may be aliased to \p A or \p B, or even both, but may not overlap
- * either otherwise.
- *
- * \param[out] X    The result of the modular addition.
- * \param[in] A     Little-endian presentation of the left operand. This
- *                  must be smaller than \p N.
- * \param[in] B     Little-endian presentation of the right operand. This
- *                  must be smaller than \p N.
- * \param[in] N     The address of the modulus.
- */
-void mbedtls_mpi_mod_raw_add( mbedtls_mpi_uint *X,
-                              const mbedtls_mpi_uint *A,
-                              const mbedtls_mpi_uint *B,
-                              const mbedtls_mpi_mod_modulus *N );
+
 /* END MERGE SLOT 5 */
 
 /* BEGIN MERGE SLOT 6 */
