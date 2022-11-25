@@ -39,7 +39,7 @@ int mbedtls_mpi_mod_residue_setup( mbedtls_mpi_mod_residue *r,
                                    mbedtls_mpi_uint *p,
                                    size_t p_limbs )
 {
-    if( p_limbs != m->limbs || !mbedtls_mpi_core_lt_ct( p, m->p, m->limbs ) )
+    if( p_limbs < m->limbs || !mbedtls_mpi_core_lt_ct( m->p, p, p_limbs ) )
         return( MBEDTLS_ERR_MPI_BAD_INPUT_DATA );
 
     r->limbs = m->limbs;
@@ -65,6 +65,7 @@ void mbedtls_mpi_mod_modulus_init( mbedtls_mpi_mod_modulus *m )
     m->p = NULL;
     m->limbs = 0;
     m->bits = 0;
+    m->ext_rep = MBEDTLS_MPI_MOD_EXT_REP_INVALID;
     m->int_rep = MBEDTLS_MPI_MOD_REP_INVALID;
 }
 
@@ -95,6 +96,7 @@ void mbedtls_mpi_mod_modulus_free( mbedtls_mpi_mod_modulus *m )
     m->p = NULL;
     m->limbs = 0;
     m->bits = 0;
+    m->ext_rep = MBEDTLS_MPI_MOD_EXT_REP_INVALID;
     m->int_rep = MBEDTLS_MPI_MOD_REP_INVALID;
 }
 
@@ -136,6 +138,7 @@ cleanup:
 int mbedtls_mpi_mod_modulus_setup( mbedtls_mpi_mod_modulus *m,
                                    const mbedtls_mpi_uint *p,
                                    size_t p_limbs,
+                                   mbedtls_mpi_mod_ext_rep ext_rep,
                                    mbedtls_mpi_mod_rep_selector int_rep )
 {
     int ret = 0;
@@ -143,6 +146,17 @@ int mbedtls_mpi_mod_modulus_setup( mbedtls_mpi_mod_modulus *m,
     m->p = p;
     m->limbs = p_limbs;
     m->bits = mbedtls_mpi_core_bitlen( p, p_limbs );
+
+    switch( ext_rep )
+    {
+        case MBEDTLS_MPI_MOD_EXT_REP_LE:
+        case MBEDTLS_MPI_MOD_EXT_REP_BE:
+            m->ext_rep = ext_rep;
+            break;
+        default:
+            ret = MBEDTLS_ERR_MPI_BAD_INPUT_DATA;
+            goto exit;
+    }
 
     switch( int_rep )
     {
@@ -169,96 +183,5 @@ exit:
 
     return( ret );
 }
-
-/* BEGIN MERGE SLOT 1 */
-
-/* END MERGE SLOT 1 */
-
-/* BEGIN MERGE SLOT 2 */
-
-/* END MERGE SLOT 2 */
-
-/* BEGIN MERGE SLOT 3 */
-
-/* END MERGE SLOT 3 */
-
-/* BEGIN MERGE SLOT 4 */
-
-/* END MERGE SLOT 4 */
-
-/* BEGIN MERGE SLOT 5 */
-
-/* END MERGE SLOT 5 */
-
-/* BEGIN MERGE SLOT 6 */
-
-/* END MERGE SLOT 6 */
-
-/* BEGIN MERGE SLOT 7 */
-int mbedtls_mpi_mod_read( mbedtls_mpi_mod_residue *r,
-                          const mbedtls_mpi_mod_modulus *m,
-                          const unsigned char *buf,
-                          size_t buflen,
-                          mbedtls_mpi_mod_ext_rep ext_rep )
-{
-    int ret = MBEDTLS_ERR_MPI_BAD_INPUT_DATA;
-
-    if ( r == NULL || m == NULL )
-        goto cleanup;
-
-    if ( r->p == NULL || m->p == NULL || r->limbs > m->limbs ||
-         r->limbs == 0 || m->limbs == 0 )
-        goto cleanup;
-
-    ret = mbedtls_mpi_mod_raw_read( r->p, m, buf, buflen, ext_rep );
-
-    if( ret != 0 )
-        goto cleanup;
-
-    r->limbs = m->limbs;
-
-    if (m->int_rep == MBEDTLS_MPI_MOD_REP_MONTGOMERY)
-       ret = mbedtls_mpi_mod_raw_to_mont_rep(r->p, m);
-
-cleanup:
-    return ( ret );
-}
-
-int mbedtls_mpi_mod_write( const mbedtls_mpi_mod_residue *r,
-                           const mbedtls_mpi_mod_modulus *m,
-                           unsigned char *buf,
-                           size_t buflen,
-                           mbedtls_mpi_mod_ext_rep ext_rep )
-{
-    int ret = MBEDTLS_ERR_MPI_BAD_INPUT_DATA;
-
-    if ( r == NULL || m == NULL )
-        goto cleanup;
-
-    if ( r->p == NULL || m->p == NULL || r->limbs > m->limbs ||
-         r->limbs == 0 || m->limbs == 0 )
-        goto cleanup;
-
-    if ( m->int_rep == MBEDTLS_MPI_MOD_REP_MONTGOMERY)
-        ret = mbedtls_mpi_mod_raw_from_mont_rep( r->p, m );
-
-    ret = mbedtls_mpi_mod_raw_write( r->p, m, buf, buflen, ext_rep );
-
-cleanup:
-    return ( ret );
-}
-/* END MERGE SLOT 7 */
-
-/* BEGIN MERGE SLOT 8 */
-
-/* END MERGE SLOT 8 */
-
-/* BEGIN MERGE SLOT 9 */
-
-/* END MERGE SLOT 9 */
-
-/* BEGIN MERGE SLOT 10 */
-
-/* END MERGE SLOT 10 */
 
 #endif /* MBEDTLS_BIGNUM_C */
