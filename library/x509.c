@@ -472,6 +472,7 @@ int mbedtls_x509_get_name( unsigned char **p, const unsigned char *end,
     size_t set_len;
     const unsigned char *end_set;
     mbedtls_x509_name *head = cur;
+    mbedtls_x509_name *prev, *allocated;
 
     /* don't use recursion, we'd risk stack overflow if not optimized */
     while( 1 )
@@ -529,8 +530,18 @@ int mbedtls_x509_get_name( unsigned char **p, const unsigned char *end,
 
 error:
     /* Skip the first element as we did not allocate it */
-    mbedtls_asn1_free_named_data_list_shallow( head->next );
-    head->next = NULL;
+    allocated = head->next;
+
+    while( allocated != NULL )
+    {
+        prev = allocated;
+        allocated = allocated->next;
+
+        mbedtls_platform_zeroize( prev, sizeof( *prev ) );
+        mbedtls_free( prev );
+    }
+
+    mbedtls_platform_zeroize( head, sizeof( *head ) );
 
     return( ret );
 }
