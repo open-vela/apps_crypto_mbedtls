@@ -842,10 +842,10 @@
         "but no key exchange methods defined with MBEDTLS_KEY_EXCHANGE_xxxx"
 #endif
 
-/* Early data requires PSK related mode defined */
 #if defined(MBEDTLS_SSL_EARLY_DATA) && \
-        ( !defined(MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_ENABLED) && \
-          !defined(MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_EPHEMERAL_ENABLED))
+    ( !defined(MBEDTLS_SSL_SESSION_TICKETS) || \
+      ( !defined(MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_ENABLED) && \
+        !defined(MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_EPHEMERAL_ENABLED) ) )
 #error "MBEDTLS_SSL_EARLY_DATA  defined, but not all prerequisites"
 #endif
 
@@ -1060,6 +1060,14 @@
 
 #if defined(MBEDTLS_SSL_TRUNCATED_HMAC) //no-check-names
 #error "MBEDTLS_SSL_TRUNCATED_HMAC was removed in Mbed TLS 3.0. See https://github.com/Mbed-TLS/mbedtls/issues/4341"
+#endif
+
+#if defined(MBEDTLS_PKCS7_C) && ( ( !defined(MBEDTLS_ASN1_PARSE_C) ) || \
+    ( !defined(MBEDTLS_OID_C) ) || ( !defined(MBEDTLS_PK_PARSE_C) ) || \
+    ( !defined(MBEDTLS_X509_CRT_PARSE_C) ) ||\
+    ( !defined(MBEDTLS_X509_CRL_PARSE_C) ) || ( !defined(MBEDTLS_BIGNUM_C) ) || \
+    ( !defined(MBEDTLS_MD_C) ) )
+#error  "MBEDTLS_PKCS7_C is defined, but not all prerequisites"
 #endif
 
 /*
