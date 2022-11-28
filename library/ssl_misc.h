@@ -50,12 +50,16 @@
 #include "mbedtls/sha512.h"
 #endif
 
-#if defined(MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED) && \
-    !defined(MBEDTLS_USE_PSA_CRYPTO)
+#if defined(MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED)
 #include "mbedtls/ecjpake.h"
 #endif
 
 #include "common.h"
+
+#if ( defined(__ARMCC_VERSION) || defined(_MSC_VER) ) && \
+    !defined(inline) && !defined(__cplusplus)
+#define inline __inline
+#endif
 
 /* Shorthand for restartable ECC */
 #if defined(MBEDTLS_ECP_RESTARTABLE) && \
@@ -772,13 +776,7 @@ struct mbedtls_ssl_handshake_params
 #endif /* MBEDTLS_ECDH_C || MBEDTLS_ECDSA_C */
 
 #if defined(MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED)
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
-    psa_pake_operation_t psa_pake_ctx;        /*!< EC J-PAKE key exchange */
-    mbedtls_svc_key_id_t psa_pake_password;
-    uint8_t psa_pake_ctx_is_ok;
-#else
     mbedtls_ecjpake_context ecjpake_ctx;        /*!< EC J-PAKE key exchange */
-#endif /* MBEDTLS_USE_PSA_CRYPTO */
 #if defined(MBEDTLS_SSL_CLI_C)
     unsigned char *ecjpake_cache;               /*!< Cache for ClientHello ext */
     size_t ecjpake_cache_len;                   /*!< Length of cached data */
@@ -890,6 +888,13 @@ struct mbedtls_ssl_handshake_params
     uint16_t mtu;                       /*!<  Handshake mtu, used to fragment outgoing messages */
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
 
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
+    /*! TLS 1.3 transforms for 0-RTT and encrypted handshake messages.
+     *  Those pointers own the transforms they reference. */
+    mbedtls_ssl_transform *transform_handshake;
+    mbedtls_ssl_transform *transform_earlydata;
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
+
     /*
      * Checksum contexts
      */
@@ -974,8 +979,6 @@ struct mbedtls_ssl_handshake_params
     unsigned char *certificate_request_context;
 #endif
 
-    /** TLS 1.3 transform for encrypted handshake messages. */
-    mbedtls_ssl_transform *transform_handshake;
     union
     {
         unsigned char early    [MBEDTLS_TLS1_3_MD_MAX_SIZE];
@@ -984,11 +987,6 @@ struct mbedtls_ssl_handshake_params
     } tls13_master_secrets;
 
     mbedtls_ssl_tls13_handshake_secrets tls13_hs_secrets;
-#if defined(MBEDTLS_SSL_EARLY_DATA)
-    mbedtls_ssl_tls13_early_secrets tls13_early_secrets;
-    /** TLS 1.3 transform for early data and handshake messages. */
-    mbedtls_ssl_transform *transform_earlydata;
-#endif
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
 #if defined(MBEDTLS_SSL_ASYNC_PRIVATE)
@@ -2494,52 +2492,6 @@ static inline int psa_ssl_status_to_mbedtls( psa_status_t status )
     }
 }
 #endif /* MBEDTLS_USE_PSA_CRYPTO || MBEDTLS_SSL_PROTO_TLS1_3 */
-
-#if defined(MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED) && \
-    defined(MBEDTLS_USE_PSA_CRYPTO)
-
-typedef enum {
-    MBEDTLS_ECJPAKE_ROUND_ONE,
-    MBEDTLS_ECJPAKE_ROUND_TWO
-} mbedtls_ecjpake_rounds_t;
-
-/**
- * \brief       Parse the provided input buffer for getting the first round
- *              of key exchange. This code is common between server and client
- *
- * \param  pake_ctx [in] the PAKE's operation/context structure
- * \param  buf      [in] input buffer to parse
- * \param  len      [in] length of the input buffer
- * \param  round    [in] either MBEDTLS_ECJPAKE_ROUND_ONE or
- *                       MBEDTLS_ECJPAKE_ROUND_TWO
- *
- * \return               0 on success or a negative error code in case of failure
- */
-int mbedtls_psa_ecjpake_read_round(
-                                    psa_pake_operation_t *pake_ctx,
-                                    const unsigned char *buf,
-                                    size_t len, mbedtls_ecjpake_rounds_t round );
-
-/**
- * \brief       Write the first round of key exchange into the provided output
- *              buffer. This code is common between server and client
- *
- * \param  pake_ctx [in] the PAKE's operation/context structure
- * \param  buf      [out] the output buffer in which data will be written to
- * \param  len      [in] length of the output buffer
- * \param  olen     [out] the length of the data really written on the buffer
- * \param  round    [in] either MBEDTLS_ECJPAKE_ROUND_ONE or
- *                       MBEDTLS_ECJPAKE_ROUND_TWO
- *
- * \return               0 on success or a negative error code in case of failure
- */
-int mbedtls_psa_ecjpake_write_round(
-                                    psa_pake_operation_t *pake_ctx,
-                                    unsigned char *buf,
-                                    size_t len, size_t *olen,
-                                    mbedtls_ecjpake_rounds_t round );
-
-#endif //MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED && MBEDTLS_USE_PSA_CRYPTO
 
 /**
  * \brief       TLS record protection modes
