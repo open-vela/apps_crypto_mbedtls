@@ -30,6 +30,25 @@ class BignumModRawTarget(test_data_generation.BaseTarget):
 
 # BEGIN MERGE SLOT 2
 
+class BignumModRawSub(bignum_common.ModOperationCommon,
+                      BignumModRawTarget):
+    """Test cases for bignum mpi_mod_raw_sub()."""
+    symbol = "-"
+    test_function = "mpi_mod_raw_sub"
+    test_name = "mbedtls_mpi_mod_raw_sub"
+    input_style = "fixed"
+    arity = 2
+
+    def arguments(self) -> List[str]:
+        return [bignum_common.quote_str(n) for n in [self.arg_a,
+                                                     self.arg_b,
+                                                     self.arg_n]
+               ] + self.result()
+
+    def result(self) -> List[str]:
+        result = (self.int_a - self.int_b) % self.int_n
+        return [self.format_result(result)]
+
 # END MERGE SLOT 2
 
 # BEGIN MERGE SLOT 3
@@ -41,6 +60,19 @@ class BignumModRawTarget(test_data_generation.BaseTarget):
 # END MERGE SLOT 4
 
 # BEGIN MERGE SLOT 5
+
+class BignumModRawAdd(bignum_common.ModOperationCommon,
+                      BignumModRawTarget):
+    """Test cases for bignum mpi_mod_raw_add()."""
+    symbol = "+"
+    test_function = "mpi_mod_raw_add"
+    test_name = "mbedtls_mpi_mod_raw_add"
+    input_style = "fixed"
+    arity = 2
+
+    def result(self) -> List[str]:
+        result = (self.int_a + self.int_b) % self.int_n
+        return [self.format_result(result)]
 
 # END MERGE SLOT 5
 
