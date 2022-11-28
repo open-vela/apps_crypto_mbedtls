@@ -1362,7 +1362,7 @@ do_run_test_once() {
 
     if [ -n "$PXY_CMD" ]; then
         kill $PXY_PID >/dev/null 2>&1
-        wait $PXY_PID >> $PXY_OUT 2>&1
+        wait $PXY_PID
     fi
 }
 
@@ -1688,20 +1688,6 @@ if [ -n "${OPENSSL_LEGACY:-}" ]; then
     O_LEGACY_SRV="$O_LEGACY_SRV -accept $SRV_PORT -dhparam data_files/dhparams.pem"
     O_LEGACY_CLI="$O_LEGACY_CLI -connect 127.0.0.1:+SRV_PORT"
 fi
-
-# Newer versions of OpenSSL have a syntax to enable all "ciphers", even
-# low-security ones. This covers not just cipher suites but also protocol
-# versions. It is necessary, for example, to use (D)TLS 1.0/1.1 on
-# OpenSSL 1.1.1f from Ubuntu 20.04. The syntax was only introduced in
-# OpenSSL 1.1.0 (21e0c1d23afff48601eb93135defddae51f7e2e3) and I can't find
-# a way to discover it from -help, so check the openssl version.
-case $($OPENSSL_CMD version) in
-    "OpenSSL 0"*|"OpenSSL 1.0"*) :;;
-    *)
-        O_CLI="$O_CLI -cipher ALL@SECLEVEL=0"
-        O_SRV="$O_SRV -cipher ALL@SECLEVEL=0"
-        ;;
-esac
 
 if [ -n "${OPENSSL_NEXT:-}" ]; then
     O_NEXT_SRV="$O_NEXT_SRV -accept $SRV_PORT"
@@ -12959,8 +12945,8 @@ run_test    "TLS 1.3: NewSessionTicket: Basic check, O->m" \
             "$O_NEXT_CLI -msg -debug -tls1_3 -reconnect" \
             0 \
             -s "=> write NewSessionTicket msg" \
-            -s "server state: MBEDTLS_SSL_TLS1_3_NEW_SESSION_TICKET" \
-            -s "server state: MBEDTLS_SSL_TLS1_3_NEW_SESSION_TICKET_FLUSH"
+            -s "server state: MBEDTLS_SSL_NEW_SESSION_TICKET" \
+            -s "server state: MBEDTLS_SSL_NEW_SESSION_TICKET_FLUSH"
 
 requires_gnutls_tls1_3
 requires_config_enabled MBEDTLS_SSL_SESSION_TICKETS
@@ -12976,8 +12962,8 @@ run_test    "TLS 1.3: NewSessionTicket: Basic check, G->m" \
             -c "Connecting again- trying to resume previous session" \
             -c "NEW SESSION TICKET (4) was received" \
             -s "=> write NewSessionTicket msg" \
-            -s "server state: MBEDTLS_SSL_TLS1_3_NEW_SESSION_TICKET" \
-            -s "server state: MBEDTLS_SSL_TLS1_3_NEW_SESSION_TICKET_FLUSH" \
+            -s "server state: MBEDTLS_SSL_NEW_SESSION_TICKET" \
+            -s "server state: MBEDTLS_SSL_NEW_SESSION_TICKET_FLUSH" \
             -s "key exchange mode: ephemeral" \
             -s "key exchange mode: psk_ephemeral" \
             -s "found pre_shared_key extension"
@@ -12999,8 +12985,8 @@ run_test    "TLS 1.3: NewSessionTicket: Basic check, m->m" \
             -c "Reconnecting with saved session" \
             -c "HTTP/1.0 200 OK"    \
             -s "=> write NewSessionTicket msg" \
-            -s "server state: MBEDTLS_SSL_TLS1_3_NEW_SESSION_TICKET" \
-            -s "server state: MBEDTLS_SSL_TLS1_3_NEW_SESSION_TICKET_FLUSH" \
+            -s "server state: MBEDTLS_SSL_NEW_SESSION_TICKET" \
+            -s "server state: MBEDTLS_SSL_NEW_SESSION_TICKET_FLUSH" \
             -s "key exchange mode: ephemeral" \
             -s "key exchange mode: psk_ephemeral" \
             -s "found pre_shared_key extension"
@@ -13054,8 +13040,8 @@ run_test    "TLS 1.3: NewSessionTicket: servername check, m->m" \
             -c "Reconnecting with saved session" \
             -c "HTTP/1.0 200 OK"    \
             -s "=> write NewSessionTicket msg" \
-            -s "server state: MBEDTLS_SSL_TLS1_3_NEW_SESSION_TICKET" \
-            -s "server state: MBEDTLS_SSL_TLS1_3_NEW_SESSION_TICKET_FLUSH" \
+            -s "server state: MBEDTLS_SSL_NEW_SESSION_TICKET" \
+            -s "server state: MBEDTLS_SSL_NEW_SESSION_TICKET_FLUSH" \
             -s "key exchange mode: ephemeral" \
             -s "key exchange mode: psk_ephemeral" \
             -s "found pre_shared_key extension"
@@ -13078,8 +13064,8 @@ run_test    "TLS 1.3: NewSessionTicket: servername negative check, m->m" \
             -c "Reconnecting with saved session" \
             -c "Hostname mismatch the session ticket, disable session resumption."    \
             -s "=> write NewSessionTicket msg" \
-            -s "server state: MBEDTLS_SSL_TLS1_3_NEW_SESSION_TICKET" \
-            -s "server state: MBEDTLS_SSL_TLS1_3_NEW_SESSION_TICKET_FLUSH"
+            -s "server state: MBEDTLS_SSL_NEW_SESSION_TICKET" \
+            -s "server state: MBEDTLS_SSL_NEW_SESSION_TICKET_FLUSH"
 
 # Test heap memory usage after handshake
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
