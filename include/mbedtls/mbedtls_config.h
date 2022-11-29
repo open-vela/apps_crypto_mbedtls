@@ -1146,6 +1146,11 @@
  * \warning If building without MBEDTLS_MD_C, you must call psa_crypto_init()
  * before doing any PKCS#1 v2.1 operation.
  *
+ * \warning When building with MBEDTLS_MD_C, all hashes used with this
+ * need to be available as built-ins (that is, for SHA-256, MBEDTLS_SHA256_C,
+ * etc.) as opposed to just PSA drivers. So far, PSA drivers are only used by
+ * this module in builds where MBEDTLS_MD_C is disabled.
+ *
  * This enables support for RSAES-OAEP and RSASSA-PSS operations.
  */
 #define MBEDTLS_PKCS1_V21
@@ -1637,7 +1642,8 @@
 *
 * Enable support for RFC 8446 TLS 1.3 early data.
 *
-* Requires: MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_ENABLED or
+* Requires: MBEDTLS_SSL_SESSION_TICKETS and either
+*           MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_ENABLED or
 *           MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_EPHEMERAL_ENABLED
 *
 * Comment this to disable support for early data. If MBEDTLS_SSL_PROTO_TLS1_3
@@ -2432,6 +2438,11 @@
  *
  * \warning If building without MBEDTLS_MD_C, you must call psa_crypto_init()
  * before doing any EC J-PAKE operations.
+ *
+ * \warning When building with MBEDTLS_MD_C, all hashes used with this
+ * need to be available as built-ins (that is, for SHA-256, MBEDTLS_SHA256_C,
+ * etc.) as opposed to just PSA drivers. So far, PSA drivers are only used by
+ * this module in builds where MBEDTLS_MD_C is disabled.
  */
 #define MBEDTLS_ECJPAKE_C
 
@@ -2776,9 +2787,30 @@
  * \warning If building without MBEDTLS_MD_C, you must call psa_crypto_init()
  * before doing any PKCS5 operation.
  *
+ * \warning When building with MBEDTLS_MD_C, all hashes used with this
+ * need to be available as built-ins (that is, for SHA-256, MBEDTLS_SHA256_C,
+ * etc.) as opposed to just PSA drivers. So far, PSA drivers are only used by
+ * this module in builds where MBEDTLS_MD_C is disabled.
+ *
  * This module adds support for the PKCS#5 functions.
  */
 #define MBEDTLS_PKCS5_C
+
+/**
+ * \def MBEDTLS_PKCS7_C
+ *
+ * Enable PKCS7 core for using PKCS7 formatted signatures.
+ * RFC Link - https://tools.ietf.org/html/rfc2315
+ *
+ * Module:  library/pkcs7.c
+ *
+ * Requires: MBEDTLS_ASN1_PARSE_C, MBEDTLS_OID_C, MBEDTLS_PK_PARSE_C,
+ *           MBEDTLS_X509_CRT_PARSE_C MBEDTLS_X509_CRL_PARSE_C,
+ *           MBEDTLS_BIGNUM_C, MBEDTLS_MD_C
+ *
+ * This module is required for the PKCS7 parsing modules.
+ */
+#define MBEDTLS_PKCS7_C
 
 /**
  * \def MBEDTLS_PKCS12_C
@@ -2794,6 +2826,11 @@
  *
  * \warning If building without MBEDTLS_MD_C, you must call psa_crypto_init()
  * before doing any PKCS12 operation.
+ *
+ * \warning When building with MBEDTLS_MD_C, all hashes used with this
+ * need to be available as built-ins (that is, for SHA-256, MBEDTLS_SHA256_C,
+ * etc.) as opposed to just PSA drivers. So far, PSA drivers are only used by
+ * this module in builds where MBEDTLS_MD_C is disabled.
  *
  * This module enables PKCS#12 functions.
  */
