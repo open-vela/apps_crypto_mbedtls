@@ -185,7 +185,7 @@ pre_initialize_variables () {
     export CTEST_OUTPUT_ON_FAILURE=1
 
     # CFLAGS and LDFLAGS for Asan builds that don't use CMake
-    ASAN_CFLAGS='-O2 -Werror -fsanitize=address,undefined -fno-sanitize-recover=all'
+    ASAN_CFLAGS='-Werror -Wall -Wextra -fsanitize=address,undefined -fno-sanitize-recover=all'
 
     # Gather the list of available components. These are the functions
     # defined in this script whose name starts with "component_".
@@ -1217,7 +1217,6 @@ component_test_crypto_full_no_md () {
     # Direct dependencies
     scripts/config.py unset MBEDTLS_HKDF_C
     scripts/config.py unset MBEDTLS_HMAC_DRBG_C
-    scripts/config.py unset MBEDTLS_PKCS7_C
     # Indirect dependencies
     scripts/config.py unset MBEDTLS_ECDSA_DETERMINISTIC
     make
@@ -1246,7 +1245,6 @@ component_test_full_no_cipher () {
     scripts/config.py unset MBEDTLS_PSA_CRYPTO_STORAGE_C
     scripts/config.py unset MBEDTLS_SSL_DTLS_ANTI_REPLAY
     scripts/config.py unset MBEDTLS_SSL_DTLS_CONNECTION_ID
-    scripts/config.py unset MBEDTLS_SSL_DTLS_CONNECTION_ID_COMPAT
     scripts/config.py unset MBEDTLS_SSL_PROTO_TLS1_3
     scripts/config.py unset MBEDTLS_SSL_SRV_C
     scripts/config.py unset MBEDTLS_USE_PSA_CRYPTO
@@ -1439,31 +1437,6 @@ component_test_tls1_2_default_cbc_legacy_cbc_etm_cipher_only_use_psa () {
     tests/ssl-opt.sh -f "TLS 1.2"
 }
 
-# We're not aware of any other (open source) implementation of EC J-PAKE in TLS
-# that we could use for interop testing. However, we now have sort of two
-# implementations ourselves: one using PSA, the other not. At least test that
-# these two interoperate with each other.
-component_test_tls1_2_ecjpake_compatibility() {
-    msg "build: TLS1.2 server+client w/ EC-JPAKE w/o USE_PSA"
-    scripts/config.py set MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED
-    make -C programs ssl/ssl_server2 ssl/ssl_client2
-    cp programs/ssl/ssl_server2 s2_no_use_psa
-    cp programs/ssl/ssl_client2 c2_no_use_psa
-
-    msg "build: TLS1.2 server+client w/ EC-JPAKE w/ USE_PSA"
-    scripts/config.py set MBEDTLS_USE_PSA_CRYPTO
-    make clean
-    make -C programs ssl/ssl_server2 ssl/ssl_client2
-    make -C programs test/udp_proxy test/query_compile_time_config
-
-    msg "test: server w/o USE_PSA - client w/ USE_PSA"
-    P_SRV=../s2_no_use_psa tests/ssl-opt.sh -f ECJPAKE
-    msg "test: client w/o USE_PSA - server w/ USE_PSA"
-    P_CLI=../c2_no_use_psa tests/ssl-opt.sh -f ECJPAKE
-
-    rm s2_no_use_psa c2_no_use_psa
-}
-
 component_test_psa_external_rng_use_psa_crypto () {
     msg "build: full + PSA_CRYPTO_EXTERNAL_RNG + USE_PSA_CRYPTO minus CTR_DRBG"
     scripts/config.py full
@@ -1591,17 +1564,6 @@ component_test_full_cmake_clang () {
     env OPENSSL_CMD="$OPENSSL_NEXT" tests/compat.sh -e '^$' -f 'ARIA\|CHACHA'
 }
 
-skip_suites_without_constant_flow () {
-    # Skip the test suites that don't have any constant-flow annotations.
-    # This will need to be adjusted if we ever start declaring things as
-    # secret from macros or functions inside tests/include or tests/src.
-    SKIP_TEST_SUITES=$(
-        git -C tests/suites grep -L TEST_CF_ 'test_suite_*.function' |
-            sed 's/test_suite_//; s/\.function$//' |
-            tr '\n' ,)
-    export SKIP_TEST_SUITES
-}
-
 component_test_memsan_constant_flow () {
     # This tests both (1) accesses to undefined memory, and (2) branches or
     # memory access depending on secret values. To distinguish between those:
@@ -1653,13 +1615,12 @@ component_test_valgrind_constant_flow () {
     scripts/config.py full
     scripts/config.py set MBEDTLS_TEST_CONSTANT_FLOW_VALGRIND
     scripts/config.py unset MBEDTLS_USE_PSA_CRYPTO
-    skip_suites_without_constant_flow
     cmake -D CMAKE_BUILD_TYPE:String=Release .
     make
 
     # this only shows a summary of the results (how many of each type)
     # details are left in Testing/<date>/DynamicAnalysis.xml
-    msg "test: some suites (full minus MBEDTLS_USE_PSA_CRYPTO, valgrind + constant flow)"
+    msg "test: main suites (full minus MBEDTLS_USE_PSA_CRYPTO, valgrind + constant flow)"
     make memcheck
 }
 
@@ -1676,13 +1637,12 @@ component_test_valgrind_constant_flow_psa () {
     msg "build: cmake release GCC, full config with constant flow testing"
     scripts/config.py full
     scripts/config.py set MBEDTLS_TEST_CONSTANT_FLOW_VALGRIND
-    skip_suites_without_constant_flow
     cmake -D CMAKE_BUILD_TYPE:String=Release .
     make
 
     # this only shows a summary of the results (how many of each type)
     # details are left in Testing/<date>/DynamicAnalysis.xml
-    msg "test: some suites (valgrind + constant flow)"
+    msg "test: main suites (valgrind + constant flow)"
     make memcheck
 }
 
@@ -1992,6 +1952,38 @@ component_test_psa_crypto_config_accel_ecdsa () {
     make test
 }
 
+component_test_psa_crypto_config_accel_ecdh () {
+    msg "test: MBEDTLS_PSA_CRYPTO_CONFIG with accelerated ECDH"
+
+    # Disable ALG_STREAM_CIPHER and ALG_ECB_NO_PADDING to avoid having
+    # partial support for cipher operations in the driver test library.
+    scripts/config.py -f include/psa/crypto_config.h unset PSA_WANT_ALG_STREAM_CIPHER
+    scripts/config.py -f include/psa/crypto_config.h unset PSA_WANT_ALG_ECB_NO_PADDING
+
+    loc_accel_list="ALG_ECDH KEY_TYPE_ECC_KEY_PAIR KEY_TYPE_ECC_PUBLIC_KEY"
+    loc_accel_flags=$( echo "$loc_accel_list" | sed 's/[^ ]* */-DLIBTESTDRIVER1_MBEDTLS_PSA_ACCEL_&/g' )
+    make -C tests libtestdriver1.a CFLAGS=" $ASAN_CFLAGS $loc_accel_flags" LDFLAGS="$ASAN_CFLAGS"
+
+    scripts/config.py set MBEDTLS_PSA_CRYPTO_DRIVERS
+    scripts/config.py set MBEDTLS_PSA_CRYPTO_CONFIG
+    scripts/config.py unset MBEDTLS_USE_PSA_CRYPTO
+    scripts/config.py unset MBEDTLS_SSL_PROTO_TLS1_3
+    scripts/config.py unset MBEDTLS_ECDH_C
+    scripts/config.py unset MBEDTLS_KEY_EXCHANGE_ECDH_RSA_ENABLED
+    scripts/config.py unset MBEDTLS_KEY_EXCHANGE_ECDH_ECDSA_ENABLED
+    scripts/config.py unset MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED
+    scripts/config.py unset MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED
+    scripts/config.py unset MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+
+    loc_accel_flags="$loc_accel_flags $( echo "$loc_accel_list" | sed 's/[^ ]* */-DMBEDTLS_PSA_ACCEL_&/g' )"
+    make CFLAGS="$ASAN_CFLAGS -O -Werror -I../tests/include -I../tests -I../../tests -DPSA_CRYPTO_DRIVER_TEST -DMBEDTLS_TEST_LIBTESTDRIVER1 $loc_accel_flags" LDFLAGS="-ltestdriver1 $ASAN_CFLAGS"
+
+    not grep mbedtls_ecdh_ library/ecdh.o
+
+    msg "test: MBEDTLS_PSA_CRYPTO_CONFIG with accelerated ECDH"
+    make test
+}
+
 component_test_psa_crypto_config_accel_rsa_signature () {
     msg "test: MBEDTLS_PSA_CRYPTO_CONFIG with accelerated RSA signature"
 
@@ -2139,7 +2131,6 @@ config_psa_crypto_hash_use_psa () {
     fi
     scripts/config.py unset MBEDTLS_HKDF_C # has independent PSA implementation
     scripts/config.py unset MBEDTLS_HMAC_DRBG_C
-    scripts/config.py unset MBEDTLS_PKCS7_C
     scripts/config.py unset MBEDTLS_ECDSA_DETERMINISTIC
     scripts/config.py -f include/psa/crypto_config.h unset PSA_WANT_ALG_DETERMINISTIC_ECDSA
 }
@@ -2779,20 +2770,21 @@ component_test_variable_ssl_in_out_buffer_len () {
     tests/compat.sh
 }
 
-component_test_dtls_cid_legacy () {
-    msg "build: MBEDTLS_SSL_DTLS_CONNECTION_ID (legacy) enabled (ASan build)"
-    scripts/config.py set MBEDTLS_SSL_DTLS_CONNECTION_ID_COMPAT 1
+component_test_variable_ssl_in_out_buffer_len_CID () {
+    msg "build: MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH and MBEDTLS_SSL_DTLS_CONNECTION_ID enabled (ASan build)"
+    scripts/config.py set MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH
+    scripts/config.py set MBEDTLS_SSL_DTLS_CONNECTION_ID
 
     CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
     make
 
-    msg "test: MBEDTLS_SSL_DTLS_CONNECTION_ID (legacy)"
+    msg "test: MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH and MBEDTLS_SSL_DTLS_CONNECTION_ID"
     make test
 
-    msg "test: ssl-opt.sh, MBEDTLS_SSL_DTLS_CONNECTION_ID (legacy) enabled"
+    msg "test: ssl-opt.sh, MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH and MBEDTLS_SSL_DTLS_CONNECTION_ID enabled"
     tests/ssl-opt.sh
 
-    msg "test: compat.sh, MBEDTLS_SSL_DTLS_CONNECTION_ID (legacy) enabled"
+    msg "test: compat.sh, MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH and MBEDTLS_SSL_DTLS_CONNECTION_ID enabled"
     tests/compat.sh
 }
 
@@ -3290,7 +3282,6 @@ component_build_armcc () {
 
 component_test_tls13_only () {
     msg "build: default config with MBEDTLS_SSL_PROTO_TLS1_3, without MBEDTLS_SSL_PROTO_TLS1_2"
-    scripts/config.py set MBEDTLS_SSL_EARLY_DATA
     make CFLAGS="'-DMBEDTLS_USER_CONFIG_FILE=\"../tests/configs/tls13-only.h\"'"
 
     msg "test: TLS 1.3 only, all key exchange modes enabled"
@@ -3310,8 +3301,6 @@ component_test_tls13_only_psk () {
     scripts/config.py unset MBEDTLS_SSL_SERVER_NAME_INDICATION
     scripts/config.py unset MBEDTLS_ECDSA_C
     scripts/config.py unset MBEDTLS_PKCS1_V21
-    scripts/config.py unset MBEDTLS_PKCS7_C
-    scripts/config.py set   MBEDTLS_SSL_EARLY_DATA
     make CFLAGS="'-DMBEDTLS_USER_CONFIG_FILE=\"../tests/configs/tls13-only.h\"'"
 
     msg "test_suite_ssl: TLS 1.3 only, only PSK key exchange mode enabled"
@@ -3344,8 +3333,6 @@ component_test_tls13_only_psk_ephemeral () {
     scripts/config.py unset MBEDTLS_SSL_SERVER_NAME_INDICATION
     scripts/config.py unset MBEDTLS_ECDSA_C
     scripts/config.py unset MBEDTLS_PKCS1_V21
-    scripts/config.py unset MBEDTLS_PKCS7_C
-    scripts/config.py set   MBEDTLS_SSL_EARLY_DATA
     make CFLAGS="'-DMBEDTLS_USER_CONFIG_FILE=\"../tests/configs/tls13-only.h\"'"
 
     msg "test_suite_ssl: TLS 1.3 only, only PSK ephemeral key exchange mode"
@@ -3363,8 +3350,6 @@ component_test_tls13_only_psk_all () {
     scripts/config.py unset MBEDTLS_SSL_SERVER_NAME_INDICATION
     scripts/config.py unset MBEDTLS_ECDSA_C
     scripts/config.py unset MBEDTLS_PKCS1_V21
-    scripts/config.py unset MBEDTLS_PKCS7_C
-    scripts/config.py set   MBEDTLS_SSL_EARLY_DATA
     make CFLAGS="'-DMBEDTLS_USER_CONFIG_FILE=\"../tests/configs/tls13-only.h\"'"
 
     msg "test_suite_ssl: TLS 1.3 only, PSK and PSK ephemeral key exchange modes"
@@ -3377,7 +3362,6 @@ component_test_tls13_only_psk_all () {
 component_test_tls13_only_ephemeral_all () {
     msg "build: TLS 1.3 only from default, without PSK key exchange mode"
     scripts/config.py unset MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_ENABLED
-    scripts/config.py set   MBEDTLS_SSL_EARLY_DATA
     make CFLAGS="'-DMBEDTLS_USER_CONFIG_FILE=\"../tests/configs/tls13-only.h\"'"
 
     msg "test_suite_ssl: TLS 1.3 only, ephemeral and PSK ephemeral key exchange modes"
@@ -3392,7 +3376,6 @@ component_test_tls13 () {
     scripts/config.py set MBEDTLS_SSL_PROTO_TLS1_3
     scripts/config.py set MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
     scripts/config.py set MBEDTLS_SSL_CID_TLS1_3_PADDING_GRANULARITY 1
-    scripts/config.py set MBEDTLS_SSL_EARLY_DATA
     CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
     make
     msg "test: default config with MBEDTLS_SSL_PROTO_TLS1_3 enabled, without padding"
@@ -3406,7 +3389,6 @@ component_test_tls13_no_compatibility_mode () {
     scripts/config.py set   MBEDTLS_SSL_PROTO_TLS1_3
     scripts/config.py unset MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
     scripts/config.py set   MBEDTLS_SSL_CID_TLS1_3_PADDING_GRANULARITY 1
-    scripts/config.py set   MBEDTLS_SSL_EARLY_DATA
     CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
     make
     msg "test: default config with MBEDTLS_SSL_PROTO_TLS1_3 enabled, without padding"
@@ -3457,41 +3439,28 @@ component_test_memsan () {
 
 component_test_valgrind () {
     msg "build: Release (clang)"
-    # default config, in particular without MBEDTLS_USE_PSA_CRYPTO
     CC=clang cmake -D CMAKE_BUILD_TYPE:String=Release .
     make
 
-    msg "test: main suites, Valgrind (default config)"
+    msg "test: main suites valgrind (Release)"
     make memcheck
 
     # Optional parts (slow; currently broken on OS X because programs don't
     # seem to receive signals under valgrind on OS X).
-    # These optional parts don't run on the CI.
     if [ "$MEMORY" -gt 0 ]; then
-        msg "test: ssl-opt.sh --memcheck (default config)"
+        msg "test: ssl-opt.sh --memcheck (Release)"
         tests/ssl-opt.sh --memcheck
     fi
 
     if [ "$MEMORY" -gt 1 ]; then
-        msg "test: compat.sh --memcheck (default config)"
+        msg "test: compat.sh --memcheck (Release)"
         tests/compat.sh --memcheck
     fi
 
     if [ "$MEMORY" -gt 0 ]; then
-        msg "test: context-info.sh --memcheck (default config)"
+        msg "test: context-info.sh --memcheck (Release)"
         tests/context-info.sh --memcheck
     fi
-}
-
-component_test_valgrind_psa () {
-    msg "build: Release, full (clang)"
-    # full config, in particular with MBEDTLS_USE_PSA_CRYPTO
-    scripts/config.py full
-    CC=clang cmake -D CMAKE_BUILD_TYPE:String=Release .
-    make
-
-    msg "test: main suites, Valgrind (full config)"
-    make memcheck
 }
 
 support_test_cmake_out_of_source () {
