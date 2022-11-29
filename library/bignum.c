@@ -968,15 +968,17 @@ int mbedtls_mpi_sub_abs( mbedtls_mpi *X, const mbedtls_mpi *A, const mbedtls_mpi
     carry = mbedtls_mpi_core_sub( X->p, A->p, B->p, n );
     if( carry != 0 )
     {
-        /* Propagate the carry through the rest of X. */
-        carry = mbedtls_mpi_core_sub_int( X->p + n, X->p + n, carry, X->n - n );
-
-        /* If we have further carry/borrow, the result is negative. */
-        if( carry != 0 )
+        /* Propagate the carry to the first nonzero limb of X. */
+        for( ; n < X->n && X->p[n] == 0; n++ )
+            --X->p[n];
+        /* If we ran out of space for the carry, it means that the result
+         * is negative. */
+        if( n == X->n )
         {
             ret = MBEDTLS_ERR_MPI_NEGATIVE_VALUE;
             goto cleanup;
         }
+        --X->p[n];
     }
 
     /* X should always be positive as a result of unsigned subtractions. */
