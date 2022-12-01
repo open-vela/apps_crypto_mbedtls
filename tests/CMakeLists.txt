@@ -107,6 +107,10 @@ endif()
 # the risk of a race.
 add_custom_target(test_suite_bignum_generated_data DEPENDS ${bignum_generated_data_files})
 add_custom_target(test_suite_psa_generated_data DEPENDS ${psa_generated_data_files})
+# If SKIP_TEST_SUITES is not defined with -D, get it from the environment.
+if((NOT DEFINED SKIP_TEST_SUITES) AND (DEFINED ENV{SKIP_TEST_SUITES}))
+    set(SKIP_TEST_SUITES $ENV{SKIP_TEST_SUITES})
+endif()
 # Test suites caught by SKIP_TEST_SUITES are built but not executed.
 # "foo" as a skip pattern skips "test_suite_foo" and "test_suite_foo.bar"
 # but not "test_suite_foobar".
@@ -238,6 +242,7 @@ if (NOT ${CMAKE_CURRENT_BINARY_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
     if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/seedfile")
         link_to_source(seedfile)
     endif()
+    link_to_source(Descriptions.txt)
     link_to_source(compat.sh)
     link_to_source(context-info.sh)
     link_to_source(data_files)
