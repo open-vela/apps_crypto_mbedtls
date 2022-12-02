@@ -2614,6 +2614,7 @@ run_test    "Context serialization, client serializes, with CID" \
             -c "Deserializing connection..." \
             -S "Deserializing connection..."
 
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 requires_config_enabled MBEDTLS_SSL_CONTEXT_SERIALIZATION
 run_test    "Context serialization, server serializes, CCM" \
             "$P_SRV dtls=1 serialize=1 exchanges=2" \
@@ -2687,6 +2688,7 @@ run_test    "Context serialization, both serialize, with CID" \
             -c "Deserializing connection..." \
             -s "Deserializing connection..."
 
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 requires_config_enabled MBEDTLS_SSL_CONTEXT_SERIALIZATION
 run_test    "Context serialization, re-init, client serializes, CCM" \
             "$P_SRV dtls=1 serialize=0 exchanges=2" \
@@ -2723,6 +2725,7 @@ run_test    "Context serialization, re-init, client serializes, with CID" \
             -c "Deserializing connection..." \
             -S "Deserializing connection..."
 
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 requires_config_enabled MBEDTLS_SSL_CONTEXT_SERIALIZATION
 run_test    "Context serialization, re-init, server serializes, CCM" \
             "$P_SRV dtls=1 serialize=2 exchanges=2" \
@@ -8004,6 +8007,69 @@ run_test    "ECJPAKE: working, TLS" \
             -S "SSL - The handshake negotiation failed" \
             -S "SSL - Verification of the message MAC failed"
 
+requires_config_enabled MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED
+requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
+run_test    "ECJPAKE_OPAQUE_PW: working, TLS, opaque password client+server" \
+            "$P_SRV debug_level=3 ecjpake_pw=bla ecjpake_pw_opaque=1" \
+            "$P_CLI debug_level=3 ecjpake_pw=bla ecjpake_pw_opaque=1\
+             force_ciphersuite=TLS-ECJPAKE-WITH-AES-128-CCM-8" \
+            0 \
+            -c "add ciphersuite: c0ff" \
+            -c "adding ecjpake_kkpp extension" \
+            -c "using opaque password" \
+            -s "using opaque password" \
+            -C "re-using cached ecjpake parameters" \
+            -s "found ecjpake kkpp extension" \
+            -S "skip ecjpake kkpp extension" \
+            -S "ciphersuite mismatch: ecjpake not configured" \
+            -s "server hello, ecjpake kkpp extension" \
+            -c "found ecjpake_kkpp extension" \
+            -S "SSL - The handshake negotiation failed" \
+            -S "SSL - Verification of the message MAC failed"
+
+requires_config_enabled MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED
+requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
+run_test    "ECJPAKE_OPAQUE_PW: working, TLS, opaque password client only" \
+            "$P_SRV debug_level=3 ecjpake_pw=bla" \
+            "$P_CLI debug_level=3 ecjpake_pw=bla ecjpake_pw_opaque=1\
+             force_ciphersuite=TLS-ECJPAKE-WITH-AES-128-CCM-8" \
+            0 \
+            -c "add ciphersuite: c0ff" \
+            -c "adding ecjpake_kkpp extension" \
+            -c "using opaque password" \
+            -S "using opaque password" \
+            -C "re-using cached ecjpake parameters" \
+            -s "found ecjpake kkpp extension" \
+            -S "skip ecjpake kkpp extension" \
+            -S "ciphersuite mismatch: ecjpake not configured" \
+            -s "server hello, ecjpake kkpp extension" \
+            -c "found ecjpake_kkpp extension" \
+            -S "SSL - The handshake negotiation failed" \
+            -S "SSL - Verification of the message MAC failed"
+
+requires_config_enabled MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED
+requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
+run_test    "ECJPAKE_OPAQUE_PW: working, TLS, opaque password server only" \
+            "$P_SRV debug_level=3 ecjpake_pw=bla ecjpake_pw_opaque=1" \
+            "$P_CLI debug_level=3 ecjpake_pw=bla\
+             force_ciphersuite=TLS-ECJPAKE-WITH-AES-128-CCM-8" \
+            0 \
+            -c "add ciphersuite: c0ff" \
+            -c "adding ecjpake_kkpp extension" \
+            -C "using opaque password" \
+            -s "using opaque password" \
+            -C "re-using cached ecjpake parameters" \
+            -s "found ecjpake kkpp extension" \
+            -S "skip ecjpake kkpp extension" \
+            -S "ciphersuite mismatch: ecjpake not configured" \
+            -s "server hello, ecjpake kkpp extension" \
+            -c "found ecjpake_kkpp extension" \
+            -S "SSL - The handshake negotiation failed" \
+            -S "SSL - Verification of the message MAC failed"
+
 server_needs_more_time 1
 requires_config_enabled MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
@@ -8012,6 +8078,20 @@ run_test    "ECJPAKE: password mismatch, TLS" \
             "$P_CLI debug_level=3 ecjpake_pw=bad \
              force_ciphersuite=TLS-ECJPAKE-WITH-AES-128-CCM-8" \
             1 \
+            -C "re-using cached ecjpake parameters" \
+            -s "SSL - Verification of the message MAC failed"
+
+server_needs_more_time 1
+requires_config_enabled MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED
+requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
+run_test    "ECJPAKE_OPAQUE_PW: opaque password mismatch, TLS" \
+            "$P_SRV debug_level=3 ecjpake_pw=bla ecjpake_pw_opaque=1" \
+            "$P_CLI debug_level=3 ecjpake_pw=bad ecjpake_pw_opaque=1 \
+             force_ciphersuite=TLS-ECJPAKE-WITH-AES-128-CCM-8" \
+            1 \
+            -c "using opaque password" \
+            -s "using opaque password" \
             -C "re-using cached ecjpake parameters" \
             -s "SSL - Verification of the message MAC failed"
 

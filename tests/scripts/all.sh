@@ -1246,7 +1246,6 @@ component_test_full_no_cipher () {
     scripts/config.py unset MBEDTLS_PSA_CRYPTO_STORAGE_C
     scripts/config.py unset MBEDTLS_SSL_DTLS_ANTI_REPLAY
     scripts/config.py unset MBEDTLS_SSL_DTLS_CONNECTION_ID
-    scripts/config.py unset MBEDTLS_SSL_DTLS_CONNECTION_ID_COMPAT
     scripts/config.py unset MBEDTLS_SSL_PROTO_TLS1_3
     scripts/config.py unset MBEDTLS_SSL_SRV_C
     scripts/config.py unset MBEDTLS_USE_PSA_CRYPTO
@@ -1457,9 +1456,9 @@ component_test_tls1_2_ecjpake_compatibility() {
     make -C programs test/udp_proxy test/query_compile_time_config
 
     msg "test: server w/o USE_PSA - client w/ USE_PSA"
-    P_SRV=../s2_no_use_psa tests/ssl-opt.sh -f ECJPAKE
+    P_SRV=../s2_no_use_psa tests/ssl-opt.sh -f ECJPAKE -e ECJPAKE_OPAQUE_PW
     msg "test: client w/o USE_PSA - server w/ USE_PSA"
-    P_CLI=../c2_no_use_psa tests/ssl-opt.sh -f ECJPAKE
+    P_CLI=../c2_no_use_psa tests/ssl-opt.sh -f ECJPAKE -e ECJPAKE_OPAQUE_PW
 
     rm s2_no_use_psa c2_no_use_psa
 }
@@ -2766,20 +2765,21 @@ component_test_variable_ssl_in_out_buffer_len () {
     tests/compat.sh
 }
 
-component_test_dtls_cid_legacy () {
-    msg "build: MBEDTLS_SSL_DTLS_CONNECTION_ID (legacy) enabled (ASan build)"
-    scripts/config.py set MBEDTLS_SSL_DTLS_CONNECTION_ID_COMPAT 1
+component_test_variable_ssl_in_out_buffer_len_CID () {
+    msg "build: MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH and MBEDTLS_SSL_DTLS_CONNECTION_ID enabled (ASan build)"
+    scripts/config.py set MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH
+    scripts/config.py set MBEDTLS_SSL_DTLS_CONNECTION_ID
 
     CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
     make
 
-    msg "test: MBEDTLS_SSL_DTLS_CONNECTION_ID (legacy)"
+    msg "test: MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH and MBEDTLS_SSL_DTLS_CONNECTION_ID"
     make test
 
-    msg "test: ssl-opt.sh, MBEDTLS_SSL_DTLS_CONNECTION_ID (legacy) enabled"
+    msg "test: ssl-opt.sh, MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH and MBEDTLS_SSL_DTLS_CONNECTION_ID enabled"
     tests/ssl-opt.sh
 
-    msg "test: compat.sh, MBEDTLS_SSL_DTLS_CONNECTION_ID (legacy) enabled"
+    msg "test: compat.sh, MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH and MBEDTLS_SSL_DTLS_CONNECTION_ID enabled"
     tests/compat.sh
 }
 
