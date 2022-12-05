@@ -129,7 +129,6 @@ int main( void )
 #define DFL_SNI                 NULL
 #define DFL_ALPN_STRING         NULL
 #define DFL_CURVES              NULL
-#define DFL_MAX_EARLY_DATA_SIZE 0
 #define DFL_SIG_ALGS            NULL
 #define DFL_DHM_FILE            NULL
 #define DFL_TRANSPORT           MBEDTLS_SSL_TRANSPORT_STREAM
@@ -425,16 +424,6 @@ int main( void )
 #define USAGE_ECJPAKE ""
 #endif
 
-#if defined(MBEDTLS_SSL_EARLY_DATA)
-#define USAGE_EARLY_DATA \
-    "    max_early_data_size=%%d default: 0 (disabled)\n"             \
-    "                            options: 0     (disabled), "           \
-    "                                     -1    (enabled, builtin max size), " \
-    "                                     n > 0 (enabled, max amount of early data )\n"
-#else
-#define USAGE_EARLY_DATA ""
-#endif /* MBEDTLS_SSL_EARLY_DATA */
-
 #if defined(MBEDTLS_ECP_C)
 #define USAGE_CURVES \
     "    curves=a,b,c,d      default: \"default\" (library default)\n"  \
@@ -501,8 +490,6 @@ int main( void )
     "    debug_level=%%d      default: 0 (disabled)\n"      \
     "    build_version=%%d    default: none (disabled)\n"                     \
     "                        option: 1 (print build version only and stop)\n" \
-    "    reco_debug_level=%%d default: 0 (disabled)\n"      \
-    "                         level of debugging for re-connection.\n" \
     "    buffer_size=%%d      default: 200 \n" \
     "                         (minimum: 1)\n" \
     "    response_size=%%d    default: about 152 (basic response)\n" \
@@ -605,7 +592,6 @@ struct options
     const char *server_addr;    /* address on which the ssl service runs    */
     const char *server_port;    /* port on which the ssl service runs       */
     int debug_level;            /* level of debugging                       */
-    int reco_debug_level;       /* level of debugging for re-connection.    */
     int nbio;                   /* should I/O be blocking?                  */
     int event;                  /* loop or event-driven IO? level or edge triggered? */
     uint32_t read_timeout;      /* timeout on mbedtls_ssl_read() in milliseconds    */
@@ -691,7 +677,6 @@ struct options
     const char *cid_val_renego; /* the CID to use for incoming messages
                                  * after renegotiation                      */
     int reproducible;           /* make communication reproducible          */
-    uint32_t max_early_data_size; /* max amount of early data               */
     int query_config_mode;      /* whether to read config                   */
     int use_srtp;               /* Support SRTP                             */
     int force_srtp_profile;     /* SRTP protection profile to use or all    */
@@ -1644,7 +1629,6 @@ int main( int argc, char *argv[] )
     opt.server_addr         = DFL_SERVER_ADDR;
     opt.server_port         = DFL_SERVER_PORT;
     opt.debug_level         = DFL_DEBUG_LEVEL;
-    opt.reco_debug_level    = DFL_DEBUG_LEVEL;
     opt.event               = DFL_EVENT;
     opt.response_size       = DFL_RESPONSE_SIZE;
     opt.nbio                = DFL_NBIO;
@@ -1707,7 +1691,6 @@ int main( int argc, char *argv[] )
     opt.sni                 = DFL_SNI;
     opt.alpn_string         = DFL_ALPN_STRING;
     opt.curves              = DFL_CURVES;
-    opt.max_early_data_size = DFL_MAX_EARLY_DATA_SIZE;
     opt.sig_algs            = DFL_SIG_ALGS;
     opt.dhm_file            = DFL_DHM_FILE;
     opt.transport           = DFL_TRANSPORT;
@@ -1771,12 +1754,6 @@ int main( int argc, char *argv[] )
                                 MBEDTLS_VERSION_NUMBER );
                 goto exit;
             }
-        }
-        else if( strcmp( p, "reco_debug_level" ) == 0 )
-        {
-            opt.reco_debug_level = atoi( q );
-            if( opt.reco_debug_level < 0 || opt.reco_debug_level > 65535 )
-                goto usage;
         }
         else if( strcmp( p, "nbio" ) == 0 )
         {
@@ -1904,12 +1881,6 @@ int main( int argc, char *argv[] )
         else if( strcmp( p, "sig_algs" ) == 0 )
             opt.sig_algs = q;
 #endif
-#if defined(MBEDTLS_SSL_EARLY_DATA)
-        else if( strcmp( p, "max_early_data_size" ) == 0 )
-        {
-            opt.max_early_data_size = atoi( q );
-        }
-#endif /* MBEDTLS_SSL_EARLY_DATA */
         else if( strcmp( p, "renegotiation" ) == 0 )
         {
             opt.renegotiation = (atoi( q )) ?
@@ -2904,10 +2875,6 @@ int main( int argc, char *argv[] )
 
     if( opt.cert_req_ca_list != DFL_CERT_REQ_CA_LIST )
         mbedtls_ssl_conf_cert_req_ca_list( &conf, opt.cert_req_ca_list );
-
-#if defined(MBEDTLS_SSL_EARLY_DATA)
-    mbedtls_ssl_tls13_conf_max_early_data_size( &conf, opt.max_early_data_size );
-#endif /* MBEDTLS_SSL_EARLY_DATA */
 
 #if defined(MBEDTLS_KEY_EXCHANGE_CERT_REQ_ALLOWED_ENABLED)
     /* exercise setting DN hints for server certificate request
@@ -4316,11 +4283,6 @@ close_notify:
     ret = 0;
 
     mbedtls_printf( " done\n" );
-
-#if defined(MBEDTLS_DEBUG_C)
-    if( opt.reco_debug_level )
-        mbedtls_debug_set_threshold( opt.reco_debug_level );
-#endif
 
     goto reset;
 
