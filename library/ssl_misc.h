@@ -143,7 +143,7 @@ uint32_t mbedtls_ssl_get_extension_mask( unsigned int extension_type );
               MBEDTLS_SSL_EXT_MASK( TRUNCATED_HMAC )                         | \
               MBEDTLS_SSL_EXT_MASK( UNRECOGNIZED ) )
 
-/* RFC 8446 section 4.2. Allowed extensions for ClientHello */
+/* RFC 8446 section 4.2. Allowed extensions for ClienHello */
 #define MBEDTLS_SSL_TLS1_3_ALLOWED_EXTS_OF_CH                                  \
             ( MBEDTLS_SSL_EXT_MASK( SERVERNAME )                             | \
               MBEDTLS_SSL_EXT_MASK( MAX_FRAGMENT_LENGTH )                    | \
@@ -1135,7 +1135,7 @@ struct mbedtls_ssl_transform
 #if defined(MBEDTLS_SSL_DTLS_CONNECTION_ID)
     uint8_t in_cid_len;
     uint8_t out_cid_len;
-    unsigned char in_cid [ MBEDTLS_SSL_CID_OUT_LEN_MAX ];
+    unsigned char in_cid [ MBEDTLS_SSL_CID_IN_LEN_MAX ];
     unsigned char out_cid[ MBEDTLS_SSL_CID_OUT_LEN_MAX ];
 #endif /* MBEDTLS_SSL_DTLS_CONNECTION_ID */
 
