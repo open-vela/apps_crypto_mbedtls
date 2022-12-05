@@ -1543,7 +1543,7 @@
  * Requires: MBEDTLS_SSL_KEEP_PEER_CERTIFICATE
  * Requires: MBEDTLS_PSA_CRYPTO_C
  *
- * Note: even though TLS 1.3 depends on PSA Crypto, and uses it unconditionally
+ * Note: even though TLS 1.3 depends on PSA Crypto, and uses it unconditonally
  * for most operations, if you want it to only use PSA for all crypto
  * operations, you need to also enable MBEDTLS_USE_PSA_CRYPTO; otherwise X.509
  * operations, and functions that are common with TLS 1.2 (record protection,
@@ -1664,6 +1664,8 @@
 *           MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_ENABLED or
 *           MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_EPHEMERAL_ENABLED
 *
+* Requires: MBEDTLS_SSL_MAX_EARLY_DATA_SIZE >= 0
+*
 * Comment this to disable support for early data. If MBEDTLS_SSL_PROTO_TLS1_3
 * is not enabled, this option does not have any effect on the build.
 *
@@ -1672,6 +1674,19 @@
 *
 */
 //#define MBEDTLS_SSL_EARLY_DATA
+
+/**
+ * \def MBEDTLS_SSL_MAX_EARLY_DATA_SIZE
+ *
+ * The maximium amount of 0-RTT data(RFC8446 section 4.6.1).
+ * It only works when MBEDTLS_SSL_EARLY_DATA is enabled and MUST be in range
+ * 1...UINT32_MAX
+ *
+ * This feature is experimental, not completed and thus not ready for
+ * production.
+ *
+ */
+#define MBEDTLS_SSL_MAX_EARLY_DATA_SIZE        1024
 
 /**
  * \def MBEDTLS_SSL_PROTO_DTLS
