@@ -1447,9 +1447,11 @@ void mbedtls_ssl_session_reset_msg_layer( mbedtls_ssl_context *ssl,
 
     if( ssl->handshake != NULL )
     {
+#if defined(MBEDTLS_SSL_EARLY_DATA)
         mbedtls_ssl_transform_free( ssl->handshake->transform_earlydata );
         mbedtls_free( ssl->handshake->transform_earlydata );
         ssl->handshake->transform_earlydata = NULL;
+#endif
 
         mbedtls_ssl_transform_free( ssl->handshake->transform_handshake );
         mbedtls_free( ssl->handshake->transform_handshake );
@@ -1921,54 +1923,6 @@ int mbedtls_ssl_set_hs_ecjpake_password( mbedtls_ssl_context *ssl,
 
     return( 0 );
 }
-
-int mbedtls_ssl_set_hs_ecjpake_password_opaque( mbedtls_ssl_context *ssl,
-                                                mbedtls_svc_key_id_t pwd )
-{
-    psa_pake_cipher_suite_t cipher_suite = psa_pake_cipher_suite_init();
-    psa_pake_role_t psa_role;
-    psa_status_t status;
-
-    if( ssl->handshake == NULL || ssl->conf == NULL )
-        return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
-
-    if( ssl->conf->endpoint == MBEDTLS_SSL_IS_SERVER )
-        psa_role = PSA_PAKE_ROLE_SERVER;
-    else
-        psa_role = PSA_PAKE_ROLE_CLIENT;
-
-    if( mbedtls_svc_key_id_is_null( pwd ) )
-        return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
-    ssl->handshake->psa_pake_password = pwd;
-
-    psa_pake_cs_set_algorithm( &cipher_suite, PSA_ALG_JPAKE );
-    psa_pake_cs_set_primitive( &cipher_suite,
-                               PSA_PAKE_PRIMITIVE( PSA_PAKE_PRIMITIVE_TYPE_ECC,
-                                                   PSA_ECC_FAMILY_SECP_R1,
-                                                   256) );
-    psa_pake_cs_set_hash( &cipher_suite, PSA_ALG_SHA_256 );
-
-    status = psa_pake_setup( &ssl->handshake->psa_pake_ctx, &cipher_suite );
-    if( status != PSA_SUCCESS )
-        goto error;
-
-    status = psa_pake_set_role( &ssl->handshake->psa_pake_ctx, psa_role );
-    if( status != PSA_SUCCESS )
-        goto error;
-
-    psa_pake_set_password_key( &ssl->handshake->psa_pake_ctx,
-                                ssl->handshake->psa_pake_password );
-    if( status != PSA_SUCCESS )
-        goto error;
-
-    ssl->handshake->psa_pake_ctx_is_ok = 1;
-
-    return( 0 );
-
-error:
-    psa_pake_abort( &ssl->handshake->psa_pake_ctx );
-    return( MBEDTLS_ERR_SSL_HW_ACCEL_FAILED );
-}
 #else /* MBEDTLS_USE_PSA_CRYPTO */
 int mbedtls_ssl_set_hs_ecjpake_password( mbedtls_ssl_context *ssl,
                                          const unsigned char *pw,
@@ -1983,10 +1937,6 @@ int mbedtls_ssl_set_hs_ecjpake_password( mbedtls_ssl_context *ssl,
         role = MBEDTLS_ECJPAKE_SERVER;
     else
         role = MBEDTLS_ECJPAKE_CLIENT;
-
-    /* Empty password is not valid  */
-    if( ( pw == NULL) || ( pw_len == 0 ) )
-        return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
 
     return( mbedtls_ecjpake_setup( &ssl->handshake->ecjpake_ctx,
                                    role,
@@ -4119,9 +4069,11 @@ void mbedtls_ssl_handshake_free( mbedtls_ssl_context *ssl )
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3)
     mbedtls_ssl_transform_free( handshake->transform_handshake );
+    mbedtls_free( handshake->transform_handshake );
+#if defined(MBEDTLS_SSL_EARLY_DATA)
     mbedtls_ssl_transform_free( handshake->transform_earlydata );
     mbedtls_free( handshake->transform_earlydata );
-    mbedtls_free( handshake->transform_handshake );
+#endif
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
 
