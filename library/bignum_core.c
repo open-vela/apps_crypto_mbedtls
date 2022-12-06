@@ -596,19 +596,6 @@ static size_t exp_mod_get_window_size( size_t Ebits )
     return( wsize );
 }
 
-size_t mbedtls_mpi_core_exp_mod_working_limbs( size_t AN_limbs, size_t E_limbs )
-{
-    const size_t wsize = exp_mod_get_window_size( E_limbs * biL );
-    const size_t welem = ( (size_t) 1 ) << wsize;
-
-    /* How big does each part of the working memory pool need to be? */
-    const size_t table_limbs   = welem * AN_limbs;
-    const size_t select_limbs  = AN_limbs;
-    const size_t temp_limbs    = 2 * AN_limbs + 1;
-
-    return( table_limbs + select_limbs + temp_limbs );
-}
-
 static void exp_mod_precompute_window( const mbedtls_mpi_uint *A,
                                        const mbedtls_mpi_uint *N,
                                        size_t AN_limbs,
@@ -623,9 +610,9 @@ static void exp_mod_precompute_window( const mbedtls_mpi_uint *A,
     Wtable[0] = 1;
     mbedtls_mpi_core_montmul( Wtable, Wtable, RR, AN_limbs, N, AN_limbs, mm, temp );
 
-    /* W[1] = A (already in Montgomery presentation) */
+    /* W[1] = A * R^2 * R^-1 mod N = A * R mod N */
     mbedtls_mpi_uint *W1 = Wtable + AN_limbs;
-    memcpy( W1, A, AN_limbs * ciL );
+    mbedtls_mpi_core_montmul( W1, A, RR, AN_limbs, N, AN_limbs, mm, temp );
 
     /* W[i+1] = W[i] * W[1], i >= 2 */
     mbedtls_mpi_uint *Wprev = W1;
@@ -639,8 +626,6 @@ static void exp_mod_precompute_window( const mbedtls_mpi_uint *A,
 
 /* Exponentiation: X := A^E mod N.
  *
- * A must already be in Montgomery form.
- *
  * As in other bignum functions, assume that AN_limbs and E_limbs are nonzero.
  *
  * RR must contain 2^{2*biL} mod N.
@@ -649,27 +634,35 @@ static void exp_mod_precompute_window( const mbedtls_mpi_uint *A,
  * (The difference is that the body in our loop processes a single bit instead
  * of a full window.)
  */
-void mbedtls_mpi_core_exp_mod( mbedtls_mpi_uint *X,
-                               const mbedtls_mpi_uint *A,
-                               const mbedtls_mpi_uint *N,
-                               size_t AN_limbs,
-                               const mbedtls_mpi_uint *E,
-                               size_t E_limbs,
-                               const mbedtls_mpi_uint *RR,
-                               mbedtls_mpi_uint *T )
+int mbedtls_mpi_core_exp_mod( mbedtls_mpi_uint *X,
+                              const mbedtls_mpi_uint *A,
+                              const mbedtls_mpi_uint *N,
+                              size_t AN_limbs,
+                              const mbedtls_mpi_uint *E,
+                              size_t E_limbs,
+                              const mbedtls_mpi_uint *RR )
 {
     const size_t wsize = exp_mod_get_window_size( E_limbs * biL );
     const size_t welem = ( (size_t) 1 ) << wsize;
 
-    /* This is how we will use the temporary storage T, which must have space
-     * for table_limbs, select_limbs and (2 * AN_limbs + 1) for montmul. */
-    const size_t table_limbs  = welem * AN_limbs;
-    const size_t select_limbs = AN_limbs;
+    /* Allocate memory pool and set pointers to parts of it */
+    const size_t table_limbs   = welem * AN_limbs;
+    const size_t temp_limbs    = 2 * AN_limbs + 1;
+    const size_t select_limbs  = AN_limbs;
+    const size_t total_limbs   = table_limbs + temp_limbs + select_limbs;
 
-    /* Pointers to specific parts of the temporary working memory pool */
-    mbedtls_mpi_uint *const Wtable  = T;
-    mbedtls_mpi_uint *const Wselect = Wtable  +  table_limbs;
-    mbedtls_mpi_uint *const temp    = Wselect + select_limbs;
+    /* heap allocated memory pool */
+    mbedtls_mpi_uint *mempool =
+        mbedtls_calloc( total_limbs, sizeof(mbedtls_mpi_uint) );
+    if( mempool == NULL )
+    {
+        return( MBEDTLS_ERR_MPI_ALLOC_FAILED );
+    }
+
+    /* pointers to temporaries within memory pool */
+    mbedtls_mpi_uint *const Wtable  = mempool;
+    mbedtls_mpi_uint *const Wselect = Wtable    + table_limbs;
+    mbedtls_mpi_uint *const temp    = Wselect  + select_limbs;
 
     /*
      * Window precomputation
@@ -736,6 +729,14 @@ void mbedtls_mpi_core_exp_mod( mbedtls_mpi_uint *X,
         }
     }
     while( ! ( E_bit_index == 0 && E_limb_index == 0 ) );
+
+    /* Convert X back to normal presentation */
+    const mbedtls_mpi_uint one = 1;
+    mbedtls_mpi_core_montmul( X, X, &one, 1, N, AN_limbs, mm, temp );
+
+    mbedtls_platform_zeroize( mempool, total_limbs * sizeof(mbedtls_mpi_uint) );
+    mbedtls_free( mempool );
+    return( 0 );
 }
 
 /* END MERGE SLOT 1 */
