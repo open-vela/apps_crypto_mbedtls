@@ -690,11 +690,38 @@
  * This is useful in non-threaded environments if you want to avoid blocking
  * for too long on ECC (and, hence, X.509 or SSL/TLS) operations.
  *
- * Uncomment this macro to enable restartable ECC computations.
+ * This option:
+ * - Adds xxx_restartable() variants of existing operations in the
+ *   following modules, with corresponding restart context types:
+ *   - ECP: scalar multiplication (mult), linear combination (muladd);
+ *   - ECDSA: signature generation & verification;
+ *   - PK: signature generation & verification;
+ *   - X509: certificate chain verification.
+ * - Adds mbedtls_ecdh_enable_restart() in the ECDH module.
+ * - Changes the behaviour of TLS 1.2 clients (not servers) when using the
+ *   ECDHE-ECDSA key exchange (not other key exchanges) to make all ECC
+ *   computations restartable:
+ *   - ECDH operations from the key exchange - unless MBEDTLS_USE_PSA_CRYPTO
+ *     is also enabled.
+ *   - verification of the server's key exchange signature;
+ *   - verification of the server's certificate chain;
+ *   - generation of our signature if client authentication is used, with an
+ *     ECC key/certificate.
+ *
+ * \note  In the cases above, the usual SSL/TLS functions, such as
+ *        mbedtls_ssl_handshake(), can now return
+ *        MBEDTLS_ERR_SSL_CRYPTO_IN_PROGRESS.
+ *
+ * \note  When this option and MBEDTLS_USE_PSA_CRYPTO are both enabled,
+ *        restartable operations in PK, X.509 and TLS (see above) are not
+ *        using PSA. On the other hand, ECDH computations in TLS are using
+ *        PSA, and are not restartable.
  *
  * \note  This option only works with the default software implementation of
  *        elliptic curve functionality. It is incompatible with
  *        MBEDTLS_ECP_ALT, MBEDTLS_ECDH_XXX_ALT, MBEDTLS_ECDSA_XXX_ALT.
+ *
+ * Uncomment this macro to enable restartable ECC computations.
  */
 //#define MBEDTLS_ECP_RESTARTABLE
 
@@ -1906,7 +1933,6 @@
  * before calling any function from the SSL/TLS, X.509 or PK modules.
  *
  * Requires: MBEDTLS_PSA_CRYPTO_C.
- * Conflicts with: MBEDTLS_ECP_RESTARTABLE
  *
  * Uncomment this to enable internal use of PSA Crypto and new associated APIs.
  */
@@ -2817,6 +2843,10 @@
 /**
  * \def MBEDTLS_PKCS7_C
  *
+ * This feature is a work in progress and not ready for production. Testing and
+ * validation is incomplete, and handling of malformed inputs may not be robust.
+ * The API may change.
+ *
  * Enable PKCS7 core for using PKCS7 formatted signatures.
  * RFC Link - https://tools.ietf.org/html/rfc2315
  *
@@ -2828,7 +2858,7 @@
  *
  * This module is required for the PKCS7 parsing modules.
  */
-#define MBEDTLS_PKCS7_C
+//#define MBEDTLS_PKCS7_C
 
 /**
  * \def MBEDTLS_PKCS12_C
