@@ -179,18 +179,7 @@ exit:
 /* END MERGE SLOT 2 */
 
 /* BEGIN MERGE SLOT 3 */
-int mbedtls_mpi_mod_sub( mbedtls_mpi_mod_residue *X,
-                         const mbedtls_mpi_mod_residue *A,
-                         const mbedtls_mpi_mod_residue *B,
-                         const mbedtls_mpi_mod_modulus *N )
-{
-    if( X->limbs != N->limbs || A->limbs != N->limbs || B->limbs != N->limbs )
-        return( MBEDTLS_ERR_MPI_BAD_INPUT_DATA );
 
-    mbedtls_mpi_mod_raw_sub( X->p, A->p, B->p, N );
-
-    return( 0 );
-}
 /* END MERGE SLOT 3 */
 
 /* BEGIN MERGE SLOT 4 */
@@ -198,18 +187,7 @@ int mbedtls_mpi_mod_sub( mbedtls_mpi_mod_residue *X,
 /* END MERGE SLOT 4 */
 
 /* BEGIN MERGE SLOT 5 */
-int mbedtls_mpi_mod_add( mbedtls_mpi_mod_residue *X,
-                         const mbedtls_mpi_mod_residue *A,
-                         const mbedtls_mpi_mod_residue *B,
-                         const mbedtls_mpi_mod_modulus *N )
-{
-    if( X->limbs != N->limbs || A->limbs != N->limbs || B->limbs != N->limbs )
-        return( MBEDTLS_ERR_MPI_BAD_INPUT_DATA );
 
-    mbedtls_mpi_mod_raw_add(X->p, A->p, B->p, N);
-
-    return( 0 );
-}
 /* END MERGE SLOT 5 */
 
 /* BEGIN MERGE SLOT 6 */
