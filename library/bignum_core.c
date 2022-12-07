@@ -154,6 +154,27 @@ void mbedtls_mpi_core_bigendian_to_host( mbedtls_mpi_uint *A,
     }
 }
 
+/* Whether min <= A, in constant time.
+ * A_limbs must be at least 1. */
+unsigned mbedtls_mpi_core_uint_le_mpi( mbedtls_mpi_uint min,
+                                       const mbedtls_mpi_uint *A,
+                                       size_t A_limbs )
+{
+    /* min <= least significant limb? */
+    unsigned min_le_lsl = 1 ^ mbedtls_ct_mpi_uint_lt( A[0], min );
+
+    /* most significant limbs (excluding 1) are all zero? */
+    mbedtls_mpi_uint msll_mask = 0;
+    for( size_t i = 1; i < A_limbs; i++ )
+        msll_mask |= A[i];
+    /* The most significant limbs of A are not all zero iff msll_mask != 0. */
+    unsigned msll_nonzero = mbedtls_ct_mpi_uint_mask( msll_mask ) & 1;
+
+    /* min <= A iff the lowest limb of A is >= min or the other limbs
+     * are not all zero. */
+    return( min_le_lsl | msll_nonzero );
+}
+
 void mbedtls_mpi_core_cond_assign( mbedtls_mpi_uint *X,
                                    const mbedtls_mpi_uint *A,
                                    size_t limbs,
@@ -540,6 +561,7 @@ cleanup:
     return( ret );
 }
 
+MBEDTLS_STATIC_TESTABLE
 void mbedtls_mpi_core_ct_uint_table_lookup( mbedtls_mpi_uint *dest,
                                             const mbedtls_mpi_uint *table,
                                             size_t limbs,
@@ -580,7 +602,224 @@ cleanup:
     return( ret );
 }
 
+int mbedtls_mpi_core_random( mbedtls_mpi_uint *X,
+                             mbedtls_mpi_uint min,
+                             const mbedtls_mpi_uint *N,
+                             size_t limbs,
+                             int (*f_rng)(void *, unsigned char *, size_t),
+                             void *p_rng )
+{
+    unsigned ge_lower = 1, lt_upper = 0;
+    size_t n_bits = mbedtls_mpi_core_bitlen( N, limbs );
+    size_t n_bytes = ( n_bits + 7 ) / 8;
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+
+    /*
+     * When min == 0, each try has at worst a probability 1/2 of failing
+     * (the msb has a probability 1/2 of being 0, and then the result will
+     * be < N), so after 30 tries failure probability is a most 2**(-30).
+     *
+     * When N is just below a power of 2, as is the case when generating
+     * a random scalar on most elliptic curves, 1 try is enough with
+     * overwhelming probability. When N is just above a power of 2,
+     * as when generating a random scalar on secp224k1, each try has
+     * a probability of failing that is almost 1/2.
+     *
+     * The probabilities are almost the same if min is nonzero but negligible
+     * compared to N. This is always the case when N is crypto-sized, but
+     * it's convenient to support small N for testing purposes. When N
+     * is small, use a higher repeat count, otherwise the probability of
+     * failure is macroscopic.
+     */
+    int count = ( n_bytes > 4 ? 30 : 250 );
+
+    /*
+     * Match the procedure given in RFC 6979 §3.3 (deterministic ECDSA)
+     * when f_rng is a suitably parametrized instance of HMAC_DRBG:
+     * - use the same byte ordering;
+     * - keep the leftmost n_bits bits of the generated octet string;
+     * - try until result is in the desired range.
+     * This also avoids any bias, which is especially important for ECDSA.
+     */
+    do
+    {
+        MBEDTLS_MPI_CHK( mbedtls_mpi_core_fill_random( X, limbs,
+                                                       n_bytes,
+                                                       f_rng, p_rng ) );
+        mbedtls_mpi_core_shift_r( X, limbs, 8 * n_bytes - n_bits );
+
+        if( --count == 0 )
+        {
+            ret = MBEDTLS_ERR_MPI_NOT_ACCEPTABLE;
+            goto cleanup;
+        }
+
+        ge_lower = mbedtls_mpi_core_uint_le_mpi( min, X, limbs );
+        lt_upper = mbedtls_mpi_core_lt_ct( X, N, limbs );
+    }
+    while( ge_lower == 0 || lt_upper == 0 );
+
+cleanup:
+    return( ret );
+}
+
 /* BEGIN MERGE SLOT 1 */
+
+static size_t exp_mod_get_window_size( size_t Ebits )
+{
+    size_t wsize = ( Ebits > 671 ) ? 6 : ( Ebits > 239 ) ? 5 :
+                   ( Ebits >  79 ) ? 4 : 1;
+
+#if( MBEDTLS_MPI_WINDOW_SIZE < 6 )
+    if( wsize > MBEDTLS_MPI_WINDOW_SIZE )
+        wsize = MBEDTLS_MPI_WINDOW_SIZE;
+#endif
+
+    return( wsize );
+}
+
+static void exp_mod_precompute_window( const mbedtls_mpi_uint *A,
+                                       const mbedtls_mpi_uint *N,
+                                       size_t AN_limbs,
+                                       mbedtls_mpi_uint mm,
+                                       const mbedtls_mpi_uint *RR,
+                                       size_t welem,
+                                       mbedtls_mpi_uint *Wtable,
+                                       mbedtls_mpi_uint *temp )
+{
+    /* W[0] = 1 (in Montgomery presentation) */
+    memset( Wtable, 0, AN_limbs * ciL );
+    Wtable[0] = 1;
+    mbedtls_mpi_core_montmul( Wtable, Wtable, RR, AN_limbs, N, AN_limbs, mm, temp );
+
+    /* W[1] = A * R^2 * R^-1 mod N = A * R mod N */
+    mbedtls_mpi_uint *W1 = Wtable + AN_limbs;
+    mbedtls_mpi_core_montmul( W1, A, RR, AN_limbs, N, AN_limbs, mm, temp );
+
+    /* W[i+1] = W[i] * W[1], i >= 2 */
+    mbedtls_mpi_uint *Wprev = W1;
+    for( size_t i = 2; i < welem; i++ )
+    {
+        mbedtls_mpi_uint *Wcur = Wprev + AN_limbs;
+        mbedtls_mpi_core_montmul( Wcur, Wprev, W1, AN_limbs, N, AN_limbs, mm, temp );
+        Wprev = Wcur;
+    }
+}
+
+/* Exponentiation: X := A^E mod N.
+ *
+ * As in other bignum functions, assume that AN_limbs and E_limbs are nonzero.
+ *
+ * RR must contain 2^{2*biL} mod N.
+ *
+ * The algorithm is a variant of Left-to-right k-ary exponentiation: HAC 14.82
+ * (The difference is that the body in our loop processes a single bit instead
+ * of a full window.)
+ */
+int mbedtls_mpi_core_exp_mod( mbedtls_mpi_uint *X,
+                              const mbedtls_mpi_uint *A,
+                              const mbedtls_mpi_uint *N,
+                              size_t AN_limbs,
+                              const mbedtls_mpi_uint *E,
+                              size_t E_limbs,
+                              const mbedtls_mpi_uint *RR )
+{
+    const size_t wsize = exp_mod_get_window_size( E_limbs * biL );
+    const size_t welem = ( (size_t) 1 ) << wsize;
+
+    /* Allocate memory pool and set pointers to parts of it */
+    const size_t table_limbs   = welem * AN_limbs;
+    const size_t temp_limbs    = 2 * AN_limbs + 1;
+    const size_t select_limbs  = AN_limbs;
+    const size_t total_limbs   = table_limbs + temp_limbs + select_limbs;
+
+    /* heap allocated memory pool */
+    mbedtls_mpi_uint *mempool =
+        mbedtls_calloc( total_limbs, sizeof(mbedtls_mpi_uint) );
+    if( mempool == NULL )
+    {
+        return( MBEDTLS_ERR_MPI_ALLOC_FAILED );
+    }
+
+    /* pointers to temporaries within memory pool */
+    mbedtls_mpi_uint *const Wtable  = mempool;
+    mbedtls_mpi_uint *const Wselect = Wtable    + table_limbs;
+    mbedtls_mpi_uint *const temp    = Wselect  + select_limbs;
+
+    /*
+     * Window precomputation
+     */
+
+    const mbedtls_mpi_uint mm = mbedtls_mpi_core_montmul_init( N );
+
+    /* Set Wtable[i] = A^(2^i) (in Montgomery representation) */
+    exp_mod_precompute_window( A, N, AN_limbs,
+                               mm, RR,
+                               welem, Wtable, temp );
+
+    /*
+     * Fixed window exponentiation
+     */
+
+    /* X = 1 (in Montgomery presentation) initially */
+    memcpy( X, Wtable, AN_limbs * ciL );
+
+    /* We'll process the bits of E from most significant
+     * (limb_index=E_limbs-1, E_bit_index=biL-1) to least significant
+     * (limb_index=0, E_bit_index=0). */
+    size_t E_limb_index = E_limbs;
+    size_t E_bit_index = 0;
+    /* At any given time, window contains window_bits bits from E.
+     * window_bits can go up to wsize. */
+    size_t window_bits = 0;
+    mbedtls_mpi_uint window = 0;
+
+    do
+    {
+        /* Square */
+        mbedtls_mpi_core_montmul( X, X, X, AN_limbs, N, AN_limbs, mm, temp );
+
+        /* Move to the next bit of the exponent */
+        if( E_bit_index == 0 )
+        {
+            --E_limb_index;
+            E_bit_index = biL - 1;
+        }
+        else
+        {
+            --E_bit_index;
+        }
+        /* Insert next exponent bit into window */
+        ++window_bits;
+        window <<= 1;
+        window |= ( E[E_limb_index] >> E_bit_index ) & 1;
+
+        /* Clear window if it's full. Also clear the window at the end,
+         * when we've finished processing the exponent. */
+        if( window_bits == wsize ||
+            ( E_bit_index == 0 && E_limb_index == 0 ) )
+        {
+            /* Select Wtable[window] without leaking window through
+             * memory access patterns. */
+            mbedtls_mpi_core_ct_uint_table_lookup( Wselect, Wtable,
+                                                   AN_limbs, welem, window );
+            /* Multiply X by the selected element. */
+            mbedtls_mpi_core_montmul( X, X, Wselect, AN_limbs, N, AN_limbs, mm,
+                                      temp );
+            window = 0;
+            window_bits = 0;
+        }
+    }
+    while( ! ( E_bit_index == 0 && E_limb_index == 0 ) );
+
+    /* Convert X back to normal presentation */
+    const mbedtls_mpi_uint one = 1;
+    mbedtls_mpi_core_montmul( X, X, &one, 1, N, AN_limbs, mm, temp );
+
+    mbedtls_platform_zeroize( mempool, total_limbs * sizeof(mbedtls_mpi_uint) );
+    mbedtls_free( mempool );
+    return( 0 );
+}
 
 /* END MERGE SLOT 1 */
 
