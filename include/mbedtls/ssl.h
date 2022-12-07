@@ -409,14 +409,6 @@
 /** \} name SECTION: Module settings */
 
 /*
- * Default to standard CID mode
- */
-#if defined(MBEDTLS_SSL_DTLS_CONNECTION_ID) && \
-    !defined(MBEDTLS_SSL_DTLS_CONNECTION_ID_COMPAT)
-#define MBEDTLS_SSL_DTLS_CONNECTION_ID_COMPAT 0
-#endif
-
-/*
  * Length of the verify data for secure renegotiation
  */
 #define MBEDTLS_SSL_VERIFY_DATA_MAX_LEN 12
@@ -584,10 +576,15 @@
 #define MBEDTLS_TLS_EXT_SIG_ALG_CERT                50 /* RFC 8446 TLS 1.3 */
 #define MBEDTLS_TLS_EXT_KEY_SHARE                   51 /* RFC 8446 TLS 1.3 */
 
-#if MBEDTLS_SSL_DTLS_CONNECTION_ID_COMPAT == 0
-#define MBEDTLS_TLS_EXT_CID                         54 /* RFC 9146 DTLS 1.2 CID */
-#else
-#define MBEDTLS_TLS_EXT_CID                        254 /* Pre-RFC 9146 DTLS 1.2 CID */
+/* The value of the CID extension is still TBD as of
+ * draft-ietf-tls-dtls-connection-id-05
+ * (https://tools.ietf.org/html/draft-ietf-tls-dtls-connection-id-05).
+ *
+ * A future minor revision of Mbed TLS may change the default value of
+ * this option to match evolving standards and usage.
+ */
+#if !defined(MBEDTLS_TLS_EXT_CID)
+#define MBEDTLS_TLS_EXT_CID                        254 /* TBD */
 #endif
 
 #define MBEDTLS_TLS_EXT_ECJPAKE_KKPP               256 /* experimental */
@@ -1527,12 +1524,6 @@ struct mbedtls_ssl_config
     int MBEDTLS_PRIVATE(early_data_enabled);     /*!< Early data enablement:
                                                   *   - MBEDTLS_SSL_EARLY_DATA_DISABLED,
                                                   *   - MBEDTLS_SSL_EARLY_DATA_ENABLED */
-
-#if defined(MBEDTLS_SSL_SRV_C)
-    /* The maximum amount of 0-RTT data. RFC 8446 section 4.6.1 */
-    uint32_t MBEDTLS_PRIVATE(max_early_data_size);
-#endif /* MBEDTLS_SSL_SRV_C */
-
 #endif /* MBEDTLS_SSL_EARLY_DATA */
 
 #if defined(MBEDTLS_SSL_ALPN)
@@ -1970,35 +1961,6 @@ void mbedtls_ssl_conf_authmode( mbedtls_ssl_config *conf, int authmode );
 */
 void mbedtls_ssl_tls13_conf_early_data( mbedtls_ssl_config *conf,
                                         int early_data_enabled );
-
-#if defined(MBEDTLS_SSL_SRV_C)
-/**
- * \brief Set the maximum amount of 0-RTT data in bytes
- *        Default:  #MBEDTLS_SSL_MAX_EARLY_DATA_SIZE
- *
- *        This function sets the value of the max_early_data_size
- *        field of the early data indication extension included in
- *        the NewSessionTicket messages that the server may send.
- *
- *        The value defines the maximum amount of 0-RTT data
- *        in bytes that a client will be allowed to send when using
- *        one of the tickets defined by the NewSessionTicket messages.
- *
- * \note When resuming a session using a ticket, if the server receives more
- *       early data than allowed for the ticket, it terminates the connection.
- *       The maximum amount of 0-RTT data should thus be large enough
- *       to allow a minimum of early data to be exchanged.
- *
- * \param[in] conf                  The SSL configuration to use.
- * \param[in] max_early_data_size   The maximum amount of 0-RTT data.
- *
- * \warning This interface is experimental and may change without notice.
- *
- */
-void mbedtls_ssl_tls13_conf_max_early_data_size(
-         mbedtls_ssl_config *conf, uint32_t max_early_data_size );
-#endif /* MBEDTLS_SSL_SRV_C */
-
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3 && MBEDTLS_SSL_EARLY_DATA */
 
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
@@ -2112,9 +2074,8 @@ void mbedtls_ssl_set_bio( mbedtls_ssl_context *ssl,
  * \brief             Configure the use of the Connection ID (CID)
  *                    extension in the next handshake.
  *
- *                    Reference: RFC 9146 (or draft-ietf-tls-dtls-connection-id-05
+ *                    Reference: draft-ietf-tls-dtls-connection-id-05
  *                    https://tools.ietf.org/html/draft-ietf-tls-dtls-connection-id-05
- *                    for legacy version)
  *
  *                    The DTLS CID extension allows the reliable association of
  *                    DTLS records to DTLS connections across changes in the
@@ -3899,6 +3860,23 @@ void mbedtls_ssl_conf_sni( mbedtls_ssl_config *conf,
 int mbedtls_ssl_set_hs_ecjpake_password( mbedtls_ssl_context *ssl,
                                          const unsigned char *pw,
                                          size_t pw_len );
+
+/**
+ * \brief          Set the EC J-PAKE opaque password for current handshake.
+ *
+ * \note           The key must remain valid until the handshake is over.
+ *
+ * \note           The SSL context needs to be already set up. The right place
+ *                 to call this function is between \c mbedtls_ssl_setup() or
+ *                 \c mbedtls_ssl_reset() and \c mbedtls_ssl_handshake().
+ *
+ * \param ssl      SSL context
+ * \param pwd      EC J-PAKE opaque password
+ *
+ * \return         0 on success, or a negative error code.
+ */
+int mbedtls_ssl_set_hs_ecjpake_password_opaque( mbedtls_ssl_context *ssl,
+                                                mbedtls_svc_key_id_t pwd );
 #endif /*MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED */
 
 #if defined(MBEDTLS_SSL_ALPN)
