@@ -32,6 +32,8 @@
 #error "mbed TLS requires a platform with 8-bit chars"
 #endif
 
+#include <stdint.h>
+
 #if defined(_WIN32)
 #if !defined(MBEDTLS_PLATFORM_C)
 #error "MBEDTLS_PLATFORM_C is required on Windows"
@@ -849,6 +851,13 @@
 #error "MBEDTLS_SSL_EARLY_DATA  defined, but not all prerequisites"
 #endif
 
+#if defined(MBEDTLS_SSL_EARLY_DATA) && defined(MBEDTLS_SSL_SRV_C) && \
+    ( !defined(MBEDTLS_SSL_MAX_EARLY_DATA_SIZE)     || \
+      ( MBEDTLS_SSL_MAX_EARLY_DATA_SIZE < 0 )       || \
+      ( MBEDTLS_SSL_MAX_EARLY_DATA_SIZE > UINT32_MAX ) )
+#error "MBEDTLS_SSL_MAX_EARLY_DATA_SIZE MUST be defined and in range(0..UINT32_MAX)"
+#endif
+
 #if defined(MBEDTLS_SSL_PROTO_DTLS)     && \
     !defined(MBEDTLS_SSL_PROTO_TLS1_2)
 #error "MBEDTLS_SSL_PROTO_DTLS defined, but not all prerequisites"
@@ -905,7 +914,7 @@
 
 #if defined(MBEDTLS_SSL_DTLS_CONNECTION_ID_COMPAT)     &&                 \
     !defined(MBEDTLS_SSL_DTLS_CONNECTION_ID)
-#error "MBEDTLS_SSL_DTLS_CONNECTION_ID_COMPAT defined, but not all prerequsites"
+#error "MBEDTLS_SSL_DTLS_CONNECTION_ID_COMPAT defined, but not all prerequisites"
 #endif
 
 #if defined(MBEDTLS_SSL_DTLS_CONNECTION_ID_COMPAT) && MBEDTLS_SSL_DTLS_CONNECTION_ID_COMPAT != 0
