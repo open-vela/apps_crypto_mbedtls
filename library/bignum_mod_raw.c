@@ -52,12 +52,11 @@ void mbedtls_mpi_mod_raw_cond_swap( mbedtls_mpi_uint *X,
 int mbedtls_mpi_mod_raw_read( mbedtls_mpi_uint *X,
                               const mbedtls_mpi_mod_modulus *m,
                               const unsigned char *input,
-                              size_t input_length,
-                              mbedtls_mpi_mod_ext_rep ext_rep )
+                              size_t input_length )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
 
-    switch( ext_rep )
+    switch( m->ext_rep )
     {
         case MBEDTLS_MPI_MOD_EXT_REP_LE:
             ret = mbedtls_mpi_core_read_le( X, m->limbs,
@@ -88,10 +87,9 @@ cleanup:
 int mbedtls_mpi_mod_raw_write( const mbedtls_mpi_uint *A,
                                const mbedtls_mpi_mod_modulus *m,
                                unsigned char *output,
-                               size_t output_length,
-                               mbedtls_mpi_mod_ext_rep ext_rep )
+                               size_t output_length )
 {
-    switch( ext_rep )
+    switch( m->ext_rep )
     {
         case MBEDTLS_MPI_MOD_EXT_REP_LE:
             return( mbedtls_mpi_core_write_le( A, m->limbs,
@@ -110,47 +108,9 @@ int mbedtls_mpi_mod_raw_write( const mbedtls_mpi_uint *A,
 
 /* BEGIN MERGE SLOT 2 */
 
-void mbedtls_mpi_mod_raw_sub( mbedtls_mpi_uint *X,
-                              const mbedtls_mpi_uint *A,
-                              const mbedtls_mpi_uint *B,
-                              const mbedtls_mpi_mod_modulus *N )
-{
-    mbedtls_mpi_uint c = mbedtls_mpi_core_sub( X, A, B, N->limbs );
-
-    (void) mbedtls_mpi_core_add_if( X, N->p, N->limbs, (unsigned) c );
-}
-
 /* END MERGE SLOT 2 */
 
 /* BEGIN MERGE SLOT 3 */
-
-size_t mbedtls_mpi_mod_raw_inv_prime_working_limbs( size_t AN_limbs )
-{
-    /* mbedtls_mpi_mod_raw_inv_prime() needs a temporary for the exponent,
-     * which will be the same size as the modulus and input (AN_limbs),
-     * and additional space to pass to mbedtls_mpi_core_exp_mod(). */
-    return( AN_limbs +
-            mbedtls_mpi_core_exp_mod_working_limbs( AN_limbs, AN_limbs ) );
-}
-
-void mbedtls_mpi_mod_raw_inv_prime( mbedtls_mpi_uint *X,
-                                    const mbedtls_mpi_uint *A,
-                                    const mbedtls_mpi_uint *N,
-                                    size_t AN_limbs,
-                                    const mbedtls_mpi_uint *RR,
-                                    mbedtls_mpi_uint *T )
-{
-    /* Inversion by power: g^|G| = 1 => g^(-1) = g^(|G|-1), and
-     *                       |G| = N - 1, so we want
-     *                 g^(|G|-1) = g^(N - 2)
-     */
-    mbedtls_mpi_uint *Nminus2 = T;
-    (void) mbedtls_mpi_core_sub_int( Nminus2, N, 2, AN_limbs );
-
-    mbedtls_mpi_core_exp_mod( X,
-                              A, N, AN_limbs, Nminus2, AN_limbs,
-                              RR, T + AN_limbs );
-}
 
 /* END MERGE SLOT 3 */
 
@@ -159,16 +119,7 @@ void mbedtls_mpi_mod_raw_inv_prime( mbedtls_mpi_uint *X,
 /* END MERGE SLOT 4 */
 
 /* BEGIN MERGE SLOT 5 */
-void mbedtls_mpi_mod_raw_add( mbedtls_mpi_uint *X,
-                              const mbedtls_mpi_uint *A,
-                              const mbedtls_mpi_uint *B,
-                              const mbedtls_mpi_mod_modulus *N )
-{
-    mbedtls_mpi_uint carry, borrow;
-    carry  = mbedtls_mpi_core_add( X, A, B, N->limbs );
-    borrow = mbedtls_mpi_core_sub( X, X, N->p, N->limbs );
-    (void) mbedtls_mpi_core_add_if( X, N->p, N->limbs, (unsigned) ( carry ^ borrow ) );
-}
+
 /* END MERGE SLOT 5 */
 
 /* BEGIN MERGE SLOT 6 */
