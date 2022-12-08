@@ -46,6 +46,11 @@
 #define MBEDTLS_CIPHER_MODE_STREAM
 #endif
 
+#if ( defined(__ARMCC_VERSION) || defined(_MSC_VER) ) && \
+    !defined(inline) && !defined(__cplusplus)
+#define inline __inline
+#endif
+
 /** The selected feature is not available. */
 #define MBEDTLS_ERR_CIPHER_FEATURE_UNAVAILABLE  -0x6080
 /** Bad input parameters. */
