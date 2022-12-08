@@ -27,6 +27,11 @@
 
 #include <stddef.h>
 
+#if ( defined(__ARMCC_VERSION) || defined(_MSC_VER) ) && \
+    !defined(inline) && !defined(__cplusplus)
+#define inline __inline
+#endif
+
 /**
  * \name PEM Error codes
  * These error codes are returned in case of errors reading the
