@@ -690,42 +690,11 @@
  * This is useful in non-threaded environments if you want to avoid blocking
  * for too long on ECC (and, hence, X.509 or SSL/TLS) operations.
  *
- * This option:
- * - Adds xxx_restartable() variants of existing operations in the
- *   following modules, with corresponding restart context types:
- *   - ECP (for Short Weierstrass curves only): scalar multiplication (mul),
- *     linear combination (muladd);
- *   - ECDSA: signature generation & verification;
- *   - PK: signature generation & verification;
- *   - X509: certificate chain verification.
- * - Adds mbedtls_ecdh_enable_restart() in the ECDH module.
- * - Changes the behaviour of TLS 1.2 clients (not servers) when using the
- *   ECDHE-ECDSA key exchange (not other key exchanges) to make all ECC
- *   computations restartable:
- *   - ECDH operations from the key exchange, only for Short Weierstass
- *     curves, only when MBEDTLS_USE_PSA_CRYPTO is not enabled.
- *   - verification of the server's key exchange signature;
- *   - verification of the server's certificate chain;
- *   - generation of the client's signature if client authentication is used,
- *     with an ECC key/certificate.
- *
- * \note  In the cases above, the usual SSL/TLS functions, such as
- *        mbedtls_ssl_handshake(), can now return
- *        MBEDTLS_ERR_SSL_CRYPTO_IN_PROGRESS.
- *
- * \note  When this option and MBEDTLS_USE_PSA_CRYPTO are both enabled,
- *        restartable operations in PK, X.509 and TLS (see above) are not
- *        using PSA. On the other hand, ECDH computations in TLS are using
- *        PSA, and are not restartable. These are temporary limitations that
- *        should be lifted in the future.
+ * Uncomment this macro to enable restartable ECC computations.
  *
  * \note  This option only works with the default software implementation of
  *        elliptic curve functionality. It is incompatible with
  *        MBEDTLS_ECP_ALT, MBEDTLS_ECDH_XXX_ALT, MBEDTLS_ECDSA_XXX_ALT.
- *
- * Requires: MBEDTLS_ECP_C
- *
- * Uncomment this macro to enable restartable ECC computations.
  */
 //#define MBEDTLS_ECP_RESTARTABLE
 
@@ -1356,15 +1325,20 @@
 /**
  * \def MBEDTLS_SSL_DTLS_CONNECTION_ID
  *
- * Enable support for the DTLS Connection ID (CID) extension,
+ * Enable support for the DTLS Connection ID extension
+ * (version draft-ietf-tls-dtls-connection-id-05,
+ * https://tools.ietf.org/html/draft-ietf-tls-dtls-connection-id-05)
  * which allows to identify DTLS connections across changes
- * in the underlying transport. The CID functionality is described
- * in RFC 9146.
+ * in the underlying transport.
  *
  * Setting this option enables the SSL APIs `mbedtls_ssl_set_cid()`,
  * mbedtls_ssl_get_own_cid()`, `mbedtls_ssl_get_peer_cid()` and
  * `mbedtls_ssl_conf_cid()`. See the corresponding documentation for
  * more information.
+ *
+ * \warning The Connection ID extension is still in draft state.
+ *          We make no stability promises for the availability
+ *          or the shape of the API controlled by this option.
  *
  * The maximum lengths of outgoing and incoming CIDs can be configured
  * through the options
@@ -1375,30 +1349,7 @@
  *
  * Uncomment to enable the Connection ID extension.
  */
-#define MBEDTLS_SSL_DTLS_CONNECTION_ID
-
-
-/**
- * \def MBEDTLS_SSL_DTLS_CONNECTION_ID_COMPAT
- *
- * Defines whether RFC 9146 (default) or the legacy version
- * (version draft-ietf-tls-dtls-connection-id-05,
- * https://tools.ietf.org/html/draft-ietf-tls-dtls-connection-id-05)
- * is used.
- *
- * Set the value to 0 for the standard version, and
- * 1 for the legacy draft version.
- *
- * \deprecated Support for the legacy version of the DTLS
- *             Connection ID feature is deprecated. Please
- *             switch to the standardized version defined
- *             in RFC 9146 enabled by utilizing
- *             MBEDTLS_SSL_DTLS_CONNECTION_ID without use
- *             of MBEDTLS_SSL_DTLS_CONNECTION_ID_COMPAT.
- *
- * Requires: MBEDTLS_SSL_DTLS_CONNECTION_ID
- */
-#define MBEDTLS_SSL_DTLS_CONNECTION_ID_COMPAT 0
+//#define MBEDTLS_SSL_DTLS_CONNECTION_ID
 
 /**
  * \def MBEDTLS_SSL_ASYNC_PRIVATE
@@ -1937,6 +1888,7 @@
  * before calling any function from the SSL/TLS, X.509 or PK modules.
  *
  * Requires: MBEDTLS_PSA_CRYPTO_C.
+ * Conflicts with: MBEDTLS_ECP_RESTARTABLE
  *
  * Uncomment this to enable internal use of PSA Crypto and new associated APIs.
  */
@@ -2847,10 +2799,6 @@
 /**
  * \def MBEDTLS_PKCS7_C
  *
- * This feature is a work in progress and not ready for production. Testing and
- * validation is incomplete, and handling of malformed inputs may not be robust.
- * The API may change.
- *
  * Enable PKCS7 core for using PKCS7 formatted signatures.
  * RFC Link - https://tools.ietf.org/html/rfc2315
  *
@@ -2862,7 +2810,7 @@
  *
  * This module is required for the PKCS7 parsing modules.
  */
-//#define MBEDTLS_PKCS7_C
+#define MBEDTLS_PKCS7_C
 
 /**
  * \def MBEDTLS_PKCS12_C
@@ -3748,6 +3696,17 @@
 
 //#define MBEDTLS_PSK_MAX_LEN               32 /**< Max size of TLS pre-shared keys, in bytes (default 256 bits) */
 //#define MBEDTLS_SSL_COOKIE_TIMEOUT        60 /**< Default expiration delay of DTLS cookies, in seconds if HAVE_TIME, or in number of cookies issued */
+
+/** \def MBEDTLS_TLS_EXT_CID
+ *
+ * At the time of writing, the CID extension has not been assigned its
+ * final value. Set this configuration option to make Mbed TLS use a
+ * different value.
+ *
+ * A future minor revision of Mbed TLS may change the default value of
+ * this option to match evolving standards and usage.
+ */
+//#define MBEDTLS_TLS_EXT_CID                        254
 
 /**
  * Complete list of ciphersuites to use, in order of preference.

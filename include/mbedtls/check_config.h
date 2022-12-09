@@ -114,19 +114,15 @@
 #endif
 
 #if defined(MBEDTLS_ECP_RESTARTABLE)           && \
-    ( defined(MBEDTLS_ECDH_COMPUTE_SHARED_ALT) || \
+    ( defined(MBEDTLS_USE_PSA_CRYPTO)          || \
+      defined(MBEDTLS_ECDH_COMPUTE_SHARED_ALT) || \
       defined(MBEDTLS_ECDH_GEN_PUBLIC_ALT)     || \
       defined(MBEDTLS_ECDSA_SIGN_ALT)          || \
       defined(MBEDTLS_ECDSA_VERIFY_ALT)        || \
       defined(MBEDTLS_ECDSA_GENKEY_ALT)        || \
       defined(MBEDTLS_ECP_INTERNAL_ALT)        || \
       defined(MBEDTLS_ECP_ALT) )
-#error "MBEDTLS_ECP_RESTARTABLE defined, but it cannot coexist with an alternative ECP implementation"
-#endif
-
-#if defined(MBEDTLS_ECP_RESTARTABLE)           && \
-    !defined(MBEDTLS_ECP_C)
-#error "MBEDTLS_ECP_RESTARTABLE defined, but not all prerequisites"
+#error "MBEDTLS_ECP_RESTARTABLE defined, but it cannot coexist with an alternative or PSA-based ECP implementation"
 #endif
 
 #if defined(MBEDTLS_ECDSA_DETERMINISTIC) && !defined(MBEDTLS_HMAC_DRBG_C)
@@ -906,19 +902,6 @@
     MBEDTLS_SSL_CID_OUT_LEN_MAX > 255
 #error "MBEDTLS_SSL_CID_OUT_LEN_MAX too large (max 255)"
 #endif
-
-#if defined(MBEDTLS_SSL_DTLS_CONNECTION_ID_COMPAT)     &&                 \
-    !defined(MBEDTLS_SSL_DTLS_CONNECTION_ID)
-#error "MBEDTLS_SSL_DTLS_CONNECTION_ID_COMPAT defined, but not all prerequsites"
-#endif
-
-#if defined(MBEDTLS_SSL_DTLS_CONNECTION_ID_COMPAT) && MBEDTLS_SSL_DTLS_CONNECTION_ID_COMPAT != 0
-#if defined(MBEDTLS_DEPRECATED_REMOVED)
-#error "MBEDTLS_SSL_DTLS_CONNECTION_ID_COMPAT is deprecated and will be removed in a future version of Mbed TLS"
-#elif defined(MBEDTLS_DEPRECATED_WARNING)
-#warning "MBEDTLS_SSL_DTLS_CONNECTION_ID_COMPAT is deprecated and will be removed in a future version of Mbed TLS"
-#endif
-#endif /* MBEDTLS_SSL_DTLS_CONNECTION_ID_COMPAT && MBEDTLS_SSL_DTLS_CONNECTION_ID_COMPAT != 0 */
 
 #if defined(MBEDTLS_SSL_ENCRYPT_THEN_MAC) &&   \
     !defined(MBEDTLS_SSL_PROTO_TLS1_2)
