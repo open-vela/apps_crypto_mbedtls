@@ -1543,7 +1543,7 @@
  * Requires: MBEDTLS_SSL_KEEP_PEER_CERTIFICATE
  * Requires: MBEDTLS_PSA_CRYPTO_C
  *
- * Note: even though TLS 1.3 depends on PSA Crypto, and uses it unconditonally
+ * Note: even though TLS 1.3 depends on PSA Crypto, and uses it unconditionally
  * for most operations, if you want it to only use PSA for all crypto
  * operations, you need to also enable MBEDTLS_USE_PSA_CRYPTO; otherwise X.509
  * operations, and functions that are common with TLS 1.2 (record protection,
@@ -1672,6 +1672,23 @@
 *
 */
 //#define MBEDTLS_SSL_EARLY_DATA
+
+/**
+ * \def MBEDTLS_SSL_MAX_EARLY_DATA_SIZE
+ *
+ * The default maximum amount of 0-RTT data. See the documentation of
+ * \c mbedtls_ssl_tls13_conf_max_early_data_size() for more information.
+ *
+ * It must be positive and smaller than UINT32_MAX.
+ *
+ * If MBEDTLS_SSL_EARLY_DATA is not defined, this default value does not
+ * have any impact on the build.
+ *
+ * This feature is experimental, not completed and thus not ready for
+ * production.
+ *
+ */
+#define MBEDTLS_SSL_MAX_EARLY_DATA_SIZE        1024
 
 /**
  * \def MBEDTLS_SSL_PROTO_DTLS
@@ -2817,6 +2834,10 @@
 /**
  * \def MBEDTLS_PKCS7_C
  *
+ * This feature is a work in progress and not ready for production. Testing and
+ * validation is incomplete, and handling of malformed inputs may not be robust.
+ * The API may change.
+ *
  * Enable PKCS7 core for using PKCS7 formatted signatures.
  * RFC Link - https://tools.ietf.org/html/rfc2315
  *
@@ -2828,7 +2849,7 @@
  *
  * This module is required for the PKCS7 parsing modules.
  */
-#define MBEDTLS_PKCS7_C
+//#define MBEDTLS_PKCS7_C
 
 /**
  * \def MBEDTLS_PKCS12_C
