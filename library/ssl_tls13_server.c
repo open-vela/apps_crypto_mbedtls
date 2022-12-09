@@ -30,6 +30,16 @@
 #include "ssl_tls13_keys.h"
 #include "ssl_debug_helpers.h"
 
+#if defined(MBEDTLS_ECP_C)
+#include "mbedtls/ecp.h"
+#endif /* MBEDTLS_ECP_C */
+
+#include "mbedtls/platform.h"
+
+#include "ssl_misc.h"
+#include "ssl_tls13_keys.h"
+#include "ssl_debug_helpers.h"
+
 
 static const mbedtls_ssl_ciphersuite_t *ssl_tls13_validate_peer_ciphersuite(
                                       mbedtls_ssl_context *ssl,
@@ -624,7 +634,7 @@ static int ssl_tls13_parse_pre_shared_key_ext( mbedtls_ssl_context *ssl,
 
     if( p_identity_len != identities_end || p_binder_len != binders_end )
     {
-        MBEDTLS_SSL_DEBUG_MSG( 3, ( "pre_shared_key extesion decode error" ) );
+        MBEDTLS_SSL_DEBUG_MSG( 3, ( "pre_shared_key extension decode error" ) );
         MBEDTLS_SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR,
                                       MBEDTLS_ERR_SSL_DECODE_ERROR );
         return( MBEDTLS_ERR_SSL_DECODE_ERROR );

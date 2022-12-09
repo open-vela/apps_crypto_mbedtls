@@ -691,7 +691,7 @@ int mbedtls_ssl_encrypt_buf( mbedtls_ssl_context *ssl,
     int auth_done = 0;
     unsigned char * data;
     /* For an explanation of the additional data length see
-    * the descrpition of ssl_extract_add_data_from_record().
+    * the description of ssl_extract_add_data_from_record().
     */
 #if defined(MBEDTLS_SSL_DTLS_CONNECTION_ID)
     unsigned char add_data[23 + MBEDTLS_SSL_CID_OUT_LEN_MAX];
@@ -1289,7 +1289,7 @@ int mbedtls_ssl_decrypt_buf( mbedtls_ssl_context const *ssl,
 #endif
     unsigned char* data;
     /* For an explanation of the additional data length see
-    * the descrpition of ssl_extract_add_data_from_record().
+    * the description of ssl_extract_add_data_from_record().
     */
 #if defined(MBEDTLS_SSL_DTLS_CONNECTION_ID)
     unsigned char add_data[23 + MBEDTLS_SSL_CID_IN_LEN_MAX];
@@ -4098,7 +4098,7 @@ static int ssl_load_buffered_message( mbedtls_ssl_context *ssl )
     if( hs == NULL )
         return( -1 );
 
-    MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> ssl_load_buffered_messsage" ) );
+    MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> ssl_load_buffered_message" ) );
 
     if( ssl->state == MBEDTLS_SSL_CLIENT_CHANGE_CIPHER_SPEC ||
         ssl->state == MBEDTLS_SSL_SERVER_CHANGE_CIPHER_SPEC )
@@ -5097,9 +5097,7 @@ int mbedtls_ssl_parse_change_cipher_spec( mbedtls_ssl_context *ssl )
      * data.
      */
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "switching to new transform spec for inbound data" ) );
-#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
     ssl->transform_in = ssl->transform_negotiate;
-#endif
     ssl->session_in = ssl->session_negotiate;
 
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
