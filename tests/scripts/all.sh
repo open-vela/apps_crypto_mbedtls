@@ -1246,6 +1246,7 @@ component_test_full_no_cipher () {
     scripts/config.py unset MBEDTLS_PSA_CRYPTO_STORAGE_C
     scripts/config.py unset MBEDTLS_SSL_DTLS_ANTI_REPLAY
     scripts/config.py unset MBEDTLS_SSL_DTLS_CONNECTION_ID
+    scripts/config.py unset MBEDTLS_SSL_DTLS_CONNECTION_ID_COMPAT
     scripts/config.py unset MBEDTLS_SSL_PROTO_TLS1_3
     scripts/config.py unset MBEDTLS_SSL_SRV_C
     scripts/config.py unset MBEDTLS_USE_PSA_CRYPTO
@@ -1590,6 +1591,17 @@ component_test_full_cmake_clang () {
     env OPENSSL_CMD="$OPENSSL_NEXT" tests/compat.sh -e '^$' -f 'ARIA\|CHACHA'
 }
 
+skip_suites_without_constant_flow () {
+    # Skip the test suites that don't have any constant-flow annotations.
+    # This will need to be adjusted if we ever start declaring things as
+    # secret from macros or functions inside tests/include or tests/src.
+    SKIP_TEST_SUITES=$(
+        git -C tests/suites grep -L TEST_CF_ 'test_suite_*.function' |
+            sed 's/test_suite_//; s/\.function$//' |
+            tr '\n' ,)
+    export SKIP_TEST_SUITES
+}
+
 component_test_memsan_constant_flow () {
     # This tests both (1) accesses to undefined memory, and (2) branches or
     # memory access depending on secret values. To distinguish between those:
@@ -1641,12 +1653,13 @@ component_test_valgrind_constant_flow () {
     scripts/config.py full
     scripts/config.py set MBEDTLS_TEST_CONSTANT_FLOW_VALGRIND
     scripts/config.py unset MBEDTLS_USE_PSA_CRYPTO
+    skip_suites_without_constant_flow
     cmake -D CMAKE_BUILD_TYPE:String=Release .
     make
 
     # this only shows a summary of the results (how many of each type)
     # details are left in Testing/<date>/DynamicAnalysis.xml
-    msg "test: main suites (full minus MBEDTLS_USE_PSA_CRYPTO, valgrind + constant flow)"
+    msg "test: some suites (full minus MBEDTLS_USE_PSA_CRYPTO, valgrind + constant flow)"
     make memcheck
 }
 
@@ -1663,12 +1676,13 @@ component_test_valgrind_constant_flow_psa () {
     msg "build: cmake release GCC, full config with constant flow testing"
     scripts/config.py full
     scripts/config.py set MBEDTLS_TEST_CONSTANT_FLOW_VALGRIND
+    skip_suites_without_constant_flow
     cmake -D CMAKE_BUILD_TYPE:String=Release .
     make
 
     # this only shows a summary of the results (how many of each type)
     # details are left in Testing/<date>/DynamicAnalysis.xml
-    msg "test: main suites (valgrind + constant flow)"
+    msg "test: some suites (valgrind + constant flow)"
     make memcheck
 }
 
@@ -1975,6 +1989,38 @@ component_test_psa_crypto_config_accel_ecdsa () {
     not grep mbedtls_ecdsa_ library/ecdsa.o
 
     msg "test: MBEDTLS_PSA_CRYPTO_CONFIG with accelerated ECDSA"
+    make test
+}
+
+component_test_psa_crypto_config_accel_ecdh () {
+    msg "test: MBEDTLS_PSA_CRYPTO_CONFIG with accelerated ECDH"
+
+    # Disable ALG_STREAM_CIPHER and ALG_ECB_NO_PADDING to avoid having
+    # partial support for cipher operations in the driver test library.
+    scripts/config.py -f include/psa/crypto_config.h unset PSA_WANT_ALG_STREAM_CIPHER
+    scripts/config.py -f include/psa/crypto_config.h unset PSA_WANT_ALG_ECB_NO_PADDING
+
+    loc_accel_list="ALG_ECDH KEY_TYPE_ECC_KEY_PAIR KEY_TYPE_ECC_PUBLIC_KEY"
+    loc_accel_flags=$( echo "$loc_accel_list" | sed 's/[^ ]* */-DLIBTESTDRIVER1_MBEDTLS_PSA_ACCEL_&/g' )
+    make -C tests libtestdriver1.a CFLAGS=" $ASAN_CFLAGS $loc_accel_flags" LDFLAGS="$ASAN_CFLAGS"
+
+    scripts/config.py set MBEDTLS_PSA_CRYPTO_DRIVERS
+    scripts/config.py set MBEDTLS_PSA_CRYPTO_CONFIG
+    scripts/config.py unset MBEDTLS_USE_PSA_CRYPTO
+    scripts/config.py unset MBEDTLS_SSL_PROTO_TLS1_3
+    scripts/config.py unset MBEDTLS_ECDH_C
+    scripts/config.py unset MBEDTLS_KEY_EXCHANGE_ECDH_RSA_ENABLED
+    scripts/config.py unset MBEDTLS_KEY_EXCHANGE_ECDH_ECDSA_ENABLED
+    scripts/config.py unset MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED
+    scripts/config.py unset MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED
+    scripts/config.py unset MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+
+    loc_accel_flags="$loc_accel_flags $( echo "$loc_accel_list" | sed 's/[^ ]* */-DMBEDTLS_PSA_ACCEL_&/g' )"
+    make CFLAGS="$ASAN_CFLAGS -O -Werror -I../tests/include -I../tests -I../../tests -DPSA_CRYPTO_DRIVER_TEST -DMBEDTLS_TEST_LIBTESTDRIVER1 $loc_accel_flags" LDFLAGS="-ltestdriver1 $ASAN_CFLAGS"
+
+    not grep mbedtls_ecdh_ library/ecdh.o
+
+    msg "test: MBEDTLS_PSA_CRYPTO_CONFIG with accelerated ECDH"
     make test
 }
 
@@ -2765,21 +2811,20 @@ component_test_variable_ssl_in_out_buffer_len () {
     tests/compat.sh
 }
 
-component_test_variable_ssl_in_out_buffer_len_CID () {
-    msg "build: MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH and MBEDTLS_SSL_DTLS_CONNECTION_ID enabled (ASan build)"
-    scripts/config.py set MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH
-    scripts/config.py set MBEDTLS_SSL_DTLS_CONNECTION_ID
+component_test_dtls_cid_legacy () {
+    msg "build: MBEDTLS_SSL_DTLS_CONNECTION_ID (legacy) enabled (ASan build)"
+    scripts/config.py set MBEDTLS_SSL_DTLS_CONNECTION_ID_COMPAT 1
 
     CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
     make
 
-    msg "test: MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH and MBEDTLS_SSL_DTLS_CONNECTION_ID"
+    msg "test: MBEDTLS_SSL_DTLS_CONNECTION_ID (legacy)"
     make test
 
-    msg "test: ssl-opt.sh, MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH and MBEDTLS_SSL_DTLS_CONNECTION_ID enabled"
+    msg "test: ssl-opt.sh, MBEDTLS_SSL_DTLS_CONNECTION_ID (legacy) enabled"
     tests/ssl-opt.sh
 
-    msg "test: compat.sh, MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH and MBEDTLS_SSL_DTLS_CONNECTION_ID enabled"
+    msg "test: compat.sh, MBEDTLS_SSL_DTLS_CONNECTION_ID (legacy) enabled"
     tests/compat.sh
 }
 
@@ -3444,28 +3489,41 @@ component_test_memsan () {
 
 component_test_valgrind () {
     msg "build: Release (clang)"
+    # default config, in particular without MBEDTLS_USE_PSA_CRYPTO
     CC=clang cmake -D CMAKE_BUILD_TYPE:String=Release .
     make
 
-    msg "test: main suites valgrind (Release)"
+    msg "test: main suites, Valgrind (default config)"
     make memcheck
 
     # Optional parts (slow; currently broken on OS X because programs don't
     # seem to receive signals under valgrind on OS X).
+    # These optional parts don't run on the CI.
     if [ "$MEMORY" -gt 0 ]; then
-        msg "test: ssl-opt.sh --memcheck (Release)"
+        msg "test: ssl-opt.sh --memcheck (default config)"
         tests/ssl-opt.sh --memcheck
     fi
 
     if [ "$MEMORY" -gt 1 ]; then
-        msg "test: compat.sh --memcheck (Release)"
+        msg "test: compat.sh --memcheck (default config)"
         tests/compat.sh --memcheck
     fi
 
     if [ "$MEMORY" -gt 0 ]; then
-        msg "test: context-info.sh --memcheck (Release)"
+        msg "test: context-info.sh --memcheck (default config)"
         tests/context-info.sh --memcheck
     fi
+}
+
+component_test_valgrind_psa () {
+    msg "build: Release, full (clang)"
+    # full config, in particular with MBEDTLS_USE_PSA_CRYPTO
+    scripts/config.py full
+    CC=clang cmake -D CMAKE_BUILD_TYPE:String=Release .
+    make
+
+    msg "test: main suites, Valgrind (full config)"
+    make memcheck
 }
 
 support_test_cmake_out_of_source () {
@@ -3602,6 +3660,26 @@ support_test_psa_compliance () {
     ver_minor="${ver%%.*}"
 
     [ "$ver_major" -eq 3 ] && [ "$ver_minor" -ge 10 ]
+}
+
+component_test_corrected_code_style () {
+    ./scripts/code_style.py --fix
+
+    msg "build: make, default config (out-of-box), corrected code style"
+    make
+
+    msg "test: main suites make, default config (out-of-box), corrected code style"
+    make test
+
+    # Clean up code-style corrections
+    git checkout -- .
+}
+
+support_test_corrected_code_style() {
+    case $(uncrustify --version) in
+        *0.75.1*) true;;
+        *) false;;
+    esac
 }
 
 component_check_python_files () {

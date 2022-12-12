@@ -235,6 +235,7 @@ int mbedtls_gcm_starts( mbedtls_gcm_context *ctx,
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     unsigned char work_buf[16];
+    size_t i;
     const unsigned char *p;
     size_t use_len, olen = 0;
     uint64_t iv_bits;
@@ -267,7 +268,8 @@ int mbedtls_gcm_starts( mbedtls_gcm_context *ctx,
         {
             use_len = ( iv_len < 16 ) ? iv_len : 16;
 
-            mbedtls_xor( ctx->y, ctx->y, p, use_len );
+            for( i = 0; i < use_len; i++ )
+                ctx->y[i] ^= p[i];
 
             gcm_mult( ctx, ctx->y, ctx->y );
 
@@ -275,7 +277,8 @@ int mbedtls_gcm_starts( mbedtls_gcm_context *ctx,
             p += use_len;
         }
 
-        mbedtls_xor( ctx->y, ctx->y, work_buf, 16);
+        for( i = 0; i < 16; i++ )
+            ctx->y[i] ^= work_buf[i];
 
         gcm_mult( ctx, ctx->y, ctx->y );
     }
@@ -310,7 +313,7 @@ int mbedtls_gcm_update_ad( mbedtls_gcm_context *ctx,
                            const unsigned char *add, size_t add_len )
 {
     const unsigned char *p;
-    size_t use_len, offset;
+    size_t use_len, i, offset;
 
     /* IV is limited to 2^64 bits, so 2^61 bytes */
     if( (uint64_t) add_len >> 61 != 0 )
@@ -325,7 +328,8 @@ int mbedtls_gcm_update_ad( mbedtls_gcm_context *ctx,
         if( use_len > add_len )
             use_len = add_len;
 
-        mbedtls_xor( ctx->buf + offset, ctx->buf + offset, p, use_len );
+        for( i = 0; i < use_len; i++ )
+            ctx->buf[i+offset] ^= p[i];
 
         if( offset + use_len == 16 )
             gcm_mult( ctx, ctx->buf, ctx->buf );
@@ -339,7 +343,8 @@ int mbedtls_gcm_update_ad( mbedtls_gcm_context *ctx,
 
     while( add_len >= 16 )
     {
-        mbedtls_xor( ctx->buf, ctx->buf, p, 16 );
+        for( i = 0; i < 16; i++ )
+            ctx->buf[i] ^= p[i];
 
         gcm_mult( ctx, ctx->buf, ctx->buf );
 
@@ -349,7 +354,8 @@ int mbedtls_gcm_update_ad( mbedtls_gcm_context *ctx,
 
     if( add_len > 0 )
     {
-        mbedtls_xor( ctx->buf, ctx->buf, p, add_len );
+        for( i = 0; i < add_len; i++ )
+            ctx->buf[i] ^= p[i];
     }
 
     return( 0 );
@@ -372,6 +378,7 @@ static int gcm_mask( mbedtls_gcm_context *ctx,
                      const unsigned char *input,
                      unsigned char *output )
 {
+    size_t i;
     size_t olen = 0;
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
 
@@ -382,12 +389,14 @@ static int gcm_mask( mbedtls_gcm_context *ctx,
         return( ret );
     }
 
-    if( ctx->mode == MBEDTLS_GCM_DECRYPT )
-        mbedtls_xor( ctx->buf + offset, ctx->buf + offset, input, use_len );
-    mbedtls_xor( output, ectr + offset, input, use_len );
-    if( ctx->mode == MBEDTLS_GCM_ENCRYPT )
-        mbedtls_xor( ctx->buf + offset, ctx->buf + offset, output, use_len );
-
+    for( i = 0; i < use_len; i++ )
+    {
+        if( ctx->mode == MBEDTLS_GCM_DECRYPT )
+            ctx->buf[offset + i] ^= input[i];
+        output[i] = ectr[offset + i] ^ input[i];
+        if( ctx->mode == MBEDTLS_GCM_ENCRYPT )
+            ctx->buf[offset + i] ^= output[i];
+    }
     return( 0 );
 }
 
@@ -480,6 +489,7 @@ int mbedtls_gcm_finish( mbedtls_gcm_context *ctx,
                         unsigned char *tag, size_t tag_len )
 {
     unsigned char work_buf[16];
+    size_t i;
     uint64_t orig_len;
     uint64_t orig_add_len;
 
@@ -514,11 +524,13 @@ int mbedtls_gcm_finish( mbedtls_gcm_context *ctx,
         MBEDTLS_PUT_UINT32_BE( ( orig_len     >> 32 ), work_buf, 8  );
         MBEDTLS_PUT_UINT32_BE( ( orig_len           ), work_buf, 12 );
 
-        mbedtls_xor( ctx->buf, ctx->buf, work_buf, 16 );
+        for( i = 0; i < 16; i++ )
+            ctx->buf[i] ^= work_buf[i];
 
         gcm_mult( ctx, ctx->buf, ctx->buf );
 
-        mbedtls_xor( tag, tag, ctx->buf, tag_len );
+        for( i = 0; i < tag_len; i++ )
+            tag[i] ^= ctx->buf[i];
     }
 
     return( 0 );
