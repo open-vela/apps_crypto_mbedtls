@@ -23,7 +23,6 @@
 #ifndef MBEDTLS_CHECK_CONFIG_H
 #define MBEDTLS_CHECK_CONFIG_H
 
-/* *INDENT-OFF* */
 /*
  * We assume CHAR_BIT is 8 in many places. In practice, this is true on our
  * target platforms, so not an issue, but let's just be extra sure.
@@ -1100,5 +1099,4 @@
  */
 typedef int mbedtls_iso_c_forbids_empty_translation_units;
 
-/* *INDENT-ON* */
 #endif /* MBEDTLS_CHECK_CONFIG_H */
