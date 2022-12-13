@@ -278,7 +278,7 @@ class CodeParser():
             "library/*.c",
             "3rdparty/everest/library/everest.c",
             "3rdparty/everest/library/x25519.c"
-        ], ["library/psa_crypto_driver_wrappers.c"])
+        ])
         symbols = self.parse_symbols()
 
         # Remove identifier macros like mbedtls_printf or mbedtls_calloc
@@ -629,7 +629,7 @@ class CodeParser():
         self.log.info("Compiling...")
         symbols = []
 
-        # Back up the config and atomically compile with the full configuration.
+        # Back up the config and atomically compile with the full configratuion.
         shutil.copy(
             "include/mbedtls/mbedtls_config.h",
             "include/mbedtls/mbedtls_config.h.bak"
@@ -892,7 +892,7 @@ def main():
     parser.add_argument(
         "-q", "--quiet",
         action="store_true",
-        help="hide unnecessary text, explanations, and highlights"
+        help="hide unnecessary text, explanations, and highlighs"
     )
 
     args = parser.parse_args()
