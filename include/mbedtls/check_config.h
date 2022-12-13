@@ -32,8 +32,6 @@
 #error "mbed TLS requires a platform with 8-bit chars"
 #endif
 
-#include <stdint.h>
-
 #if defined(_WIN32)
 #if !defined(MBEDTLS_PLATFORM_C)
 #error "MBEDTLS_PLATFORM_C is required on Windows"
@@ -329,7 +327,7 @@
 
 /* Use of EC J-PAKE in TLS requires SHA-256.
  * This will be taken from MD if it is present, or from PSA if MD is absent.
- * Note: MBEDTLS_ECJPAKE_C depends on MBEDTLS_MD_C || MBEDTLS_PSA_CRYPTO_C. */
+ * Note: ECJPAKE_C depends on MD_C || PSA_CRYPTO_C. */
 #if defined(MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED) &&                    \
     !( defined(MBEDTLS_MD_C) && defined(MBEDTLS_SHA256_C) ) &&          \
     !( !defined(MBEDTLS_MD_C) && defined(PSA_WANT_ALG_SHA_256) )
@@ -851,13 +849,6 @@
 #error "MBEDTLS_SSL_EARLY_DATA  defined, but not all prerequisites"
 #endif
 
-#if defined(MBEDTLS_SSL_EARLY_DATA) && defined(MBEDTLS_SSL_SRV_C) && \
-    ( !defined(MBEDTLS_SSL_MAX_EARLY_DATA_SIZE)     || \
-      ( MBEDTLS_SSL_MAX_EARLY_DATA_SIZE < 0 )       || \
-      ( MBEDTLS_SSL_MAX_EARLY_DATA_SIZE > UINT32_MAX ) )
-#error "MBEDTLS_SSL_MAX_EARLY_DATA_SIZE MUST be defined and in range(0..UINT32_MAX)"
-#endif
-
 #if defined(MBEDTLS_SSL_PROTO_DTLS)     && \
     !defined(MBEDTLS_SSL_PROTO_TLS1_2)
 #error "MBEDTLS_SSL_PROTO_DTLS defined, but not all prerequisites"
@@ -911,19 +902,6 @@
     MBEDTLS_SSL_CID_OUT_LEN_MAX > 255
 #error "MBEDTLS_SSL_CID_OUT_LEN_MAX too large (max 255)"
 #endif
-
-#if defined(MBEDTLS_SSL_DTLS_CONNECTION_ID_COMPAT)     &&                 \
-    !defined(MBEDTLS_SSL_DTLS_CONNECTION_ID)
-#error "MBEDTLS_SSL_DTLS_CONNECTION_ID_COMPAT defined, but not all prerequisites"
-#endif
-
-#if defined(MBEDTLS_SSL_DTLS_CONNECTION_ID_COMPAT) && MBEDTLS_SSL_DTLS_CONNECTION_ID_COMPAT != 0
-#if defined(MBEDTLS_DEPRECATED_REMOVED)
-#error "MBEDTLS_SSL_DTLS_CONNECTION_ID_COMPAT is deprecated and will be removed in a future version of Mbed TLS"
-#elif defined(MBEDTLS_DEPRECATED_WARNING)
-#warning "MBEDTLS_SSL_DTLS_CONNECTION_ID_COMPAT is deprecated and will be removed in a future version of Mbed TLS"
-#endif
-#endif /* MBEDTLS_SSL_DTLS_CONNECTION_ID_COMPAT && MBEDTLS_SSL_DTLS_CONNECTION_ID_COMPAT != 0 */
 
 #if defined(MBEDTLS_SSL_ENCRYPT_THEN_MAC) &&   \
     !defined(MBEDTLS_SSL_PROTO_TLS1_2)

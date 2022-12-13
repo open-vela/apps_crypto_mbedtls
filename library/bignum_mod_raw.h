@@ -106,7 +106,6 @@ void mbedtls_mpi_mod_raw_cond_swap( mbedtls_mpi_uint *X,
  * \param[in] m         The address of the modulus related to \p X.
  * \param[in] input     The input buffer to import from.
  * \param input_length  The length in bytes of \p input.
- * \param ext_rep       The endianness of the number in the input buffer.
  *
  * \return       \c 0 if successful.
  * \return       #MBEDTLS_ERR_MPI_BUFFER_TOO_SMALL if \p X isn't
@@ -117,8 +116,7 @@ void mbedtls_mpi_mod_raw_cond_swap( mbedtls_mpi_uint *X,
 int mbedtls_mpi_mod_raw_read( mbedtls_mpi_uint *X,
                               const mbedtls_mpi_mod_modulus *m,
                               const unsigned char *input,
-                              size_t input_length,
-                              mbedtls_mpi_mod_ext_rep ext_rep );
+                              size_t input_length );
 
 /** Export A into unsigned binary data.
  *
@@ -128,7 +126,6 @@ int mbedtls_mpi_mod_raw_read( mbedtls_mpi_uint *X,
  * \param[in] m         The address of the modulus related to \p A.
  * \param[out] output   The output buffer to export to.
  * \param output_length The length in bytes of \p output.
- * \param ext_rep       The endianness in which the number should be written into the output buffer.
  *
  * \return       \c 0 if successful.
  * \return       #MBEDTLS_ERR_MPI_BUFFER_TOO_SMALL if \p output isn't
@@ -139,8 +136,7 @@ int mbedtls_mpi_mod_raw_read( mbedtls_mpi_uint *X,
 int mbedtls_mpi_mod_raw_write( const mbedtls_mpi_uint *A,
                                const mbedtls_mpi_mod_modulus *m,
                                unsigned char *output,
-                               size_t output_length,
-                               mbedtls_mpi_mod_ext_rep ext_rep );
+                               size_t output_length );
 
 /* BEGIN MERGE SLOT 1 */
 
@@ -233,23 +229,6 @@ int mbedtls_mpi_mod_raw_to_mont_rep( mbedtls_mpi_uint *X,
  */
 int mbedtls_mpi_mod_raw_from_mont_rep( mbedtls_mpi_uint *X,
                                        const mbedtls_mpi_mod_modulus *m );
-
-/** \brief  Perform fixed width modular negation.
- *
- * The size of the operation is determined by \p m. \p A must have
- * the same number of limbs as \p m.
- *
- * \p X may be aliased to \p A.
- *
- * \param[out] X        The result of the modular negation.
- *                      This must be initialized.
- * \param[in] A         Little-endian presentation of the input operand. This
- *                      must be less than or equal to \p m.
- * \param[in] m         The modulus to use.
- */
-void mbedtls_mpi_mod_raw_neg( mbedtls_mpi_uint *X,
-                              const mbedtls_mpi_uint *A,
-                              const mbedtls_mpi_mod_modulus *m);
 /* END MERGE SLOT 7 */
 
 /* BEGIN MERGE SLOT 8 */

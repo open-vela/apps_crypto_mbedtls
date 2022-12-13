@@ -52,12 +52,11 @@ void mbedtls_mpi_mod_raw_cond_swap( mbedtls_mpi_uint *X,
 int mbedtls_mpi_mod_raw_read( mbedtls_mpi_uint *X,
                               const mbedtls_mpi_mod_modulus *m,
                               const unsigned char *input,
-                              size_t input_length,
-                              mbedtls_mpi_mod_ext_rep ext_rep )
+                              size_t input_length )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
 
-    switch( ext_rep )
+    switch( m->ext_rep )
     {
         case MBEDTLS_MPI_MOD_EXT_REP_LE:
             ret = mbedtls_mpi_core_read_le( X, m->limbs,
@@ -88,10 +87,9 @@ cleanup:
 int mbedtls_mpi_mod_raw_write( const mbedtls_mpi_uint *A,
                                const mbedtls_mpi_mod_modulus *m,
                                unsigned char *output,
-                               size_t output_length,
-                               mbedtls_mpi_mod_ext_rep ext_rep )
+                               size_t output_length )
 {
-    switch( ext_rep )
+    switch( m->ext_rep )
     {
         case MBEDTLS_MPI_MOD_EXT_REP_LE:
             return( mbedtls_mpi_core_write_le( A, m->limbs,
@@ -181,18 +179,6 @@ int mbedtls_mpi_mod_raw_from_mont_rep( mbedtls_mpi_uint *X,
     mbedtls_platform_zeroize( T, t_limbs * ciL );
     mbedtls_free( T );
     return( 0 );
-}
-
-void mbedtls_mpi_mod_raw_neg( mbedtls_mpi_uint *X,
-                              const mbedtls_mpi_uint *A,
-                              const mbedtls_mpi_mod_modulus *m )
-{
-    mbedtls_mpi_core_sub( X, m->p, A, m->limbs );
-
-    /* If A=0 initially, then X=N now. Detect this by
-     * subtracting N and catching the carry. */
-    mbedtls_mpi_uint borrow = mbedtls_mpi_core_sub( X, X, m->p, m->limbs );
-    (void) mbedtls_mpi_core_add_if( X, m->p, m->limbs, (unsigned) borrow  );
 }
 /* END MERGE SLOT 7 */
 
