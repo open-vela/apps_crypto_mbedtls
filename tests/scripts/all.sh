@@ -185,8 +185,7 @@ pre_initialize_variables () {
     export CTEST_OUTPUT_ON_FAILURE=1
 
     # CFLAGS and LDFLAGS for Asan builds that don't use CMake
-    # default to -O2, use -Ox _after_ this if you want another level
-    ASAN_CFLAGS='-O2 -Werror -fsanitize=address,undefined -fno-sanitize-recover=all'
+    ASAN_CFLAGS='-Werror -Wall -Wextra -fsanitize=address,undefined -fno-sanitize-recover=all'
 
     # Gather the list of available components. These are the functions
     # defined in this script whose name starts with "component_".
@@ -1592,17 +1591,6 @@ component_test_full_cmake_clang () {
     env OPENSSL_CMD="$OPENSSL_NEXT" tests/compat.sh -e '^$' -f 'ARIA\|CHACHA'
 }
 
-skip_suites_without_constant_flow () {
-    # Skip the test suites that don't have any constant-flow annotations.
-    # This will need to be adjusted if we ever start declaring things as
-    # secret from macros or functions inside tests/include or tests/src.
-    SKIP_TEST_SUITES=$(
-        git -C tests/suites grep -L TEST_CF_ 'test_suite_*.function' |
-            sed 's/test_suite_//; s/\.function$//' |
-            tr '\n' ,)
-    export SKIP_TEST_SUITES
-}
-
 component_test_memsan_constant_flow () {
     # This tests both (1) accesses to undefined memory, and (2) branches or
     # memory access depending on secret values. To distinguish between those:
@@ -1654,13 +1642,12 @@ component_test_valgrind_constant_flow () {
     scripts/config.py full
     scripts/config.py set MBEDTLS_TEST_CONSTANT_FLOW_VALGRIND
     scripts/config.py unset MBEDTLS_USE_PSA_CRYPTO
-    skip_suites_without_constant_flow
     cmake -D CMAKE_BUILD_TYPE:String=Release .
     make
 
     # this only shows a summary of the results (how many of each type)
     # details are left in Testing/<date>/DynamicAnalysis.xml
-    msg "test: some suites (full minus MBEDTLS_USE_PSA_CRYPTO, valgrind + constant flow)"
+    msg "test: main suites (full minus MBEDTLS_USE_PSA_CRYPTO, valgrind + constant flow)"
     make memcheck
 }
 
@@ -1677,13 +1664,12 @@ component_test_valgrind_constant_flow_psa () {
     msg "build: cmake release GCC, full config with constant flow testing"
     scripts/config.py full
     scripts/config.py set MBEDTLS_TEST_CONSTANT_FLOW_VALGRIND
-    skip_suites_without_constant_flow
     cmake -D CMAKE_BUILD_TYPE:String=Release .
     make
 
     # this only shows a summary of the results (how many of each type)
     # details are left in Testing/<date>/DynamicAnalysis.xml
-    msg "test: some suites (valgrind + constant flow)"
+    msg "test: main suites (valgrind + constant flow)"
     make memcheck
 }
 
@@ -2209,16 +2195,11 @@ component_test_psa_crypto_config_accel_hash_use_psa () {
     msg "test: MBEDTLS_PSA_CRYPTO_CONFIG with accelerated hash and USE_PSA"
     make test
 
-    # This is mostly useful so that we can later compare outcome files with
-    # the reference config in analyze_outcomes.py, to check that the
-    # dependency declarations in ssl-opt.sh and in TLS code are correct.
     msg "test: ssl-opt.sh, MBEDTLS_PSA_CRYPTO_CONFIG with accelerated hash and USE_PSA"
     tests/ssl-opt.sh
 
-    # This is to make sure all ciphersuites are exercised, but we don't need
-    # interop testing (besides, we already got some from ssl-opt.sh).
-    msg "test: compat.sh, MBEDTLS_PSA_CRYPTO_CONFIG with accelerated hash and USE_PSA"
-    tests/compat.sh -p mbedTLS -V YES
+    msg "test: compat.sh, MBEDTLS_PSA_CRYPTO_CONFIG without accelerated hash and USE_PSA"
+    tests/compat.sh
 }
 
 # This component provides reference configuration for test_psa_crypto_config_accel_hash_use_psa
@@ -3495,41 +3476,28 @@ component_test_memsan () {
 
 component_test_valgrind () {
     msg "build: Release (clang)"
-    # default config, in particular without MBEDTLS_USE_PSA_CRYPTO
     CC=clang cmake -D CMAKE_BUILD_TYPE:String=Release .
     make
 
-    msg "test: main suites, Valgrind (default config)"
+    msg "test: main suites valgrind (Release)"
     make memcheck
 
     # Optional parts (slow; currently broken on OS X because programs don't
     # seem to receive signals under valgrind on OS X).
-    # These optional parts don't run on the CI.
     if [ "$MEMORY" -gt 0 ]; then
-        msg "test: ssl-opt.sh --memcheck (default config)"
+        msg "test: ssl-opt.sh --memcheck (Release)"
         tests/ssl-opt.sh --memcheck
     fi
 
     if [ "$MEMORY" -gt 1 ]; then
-        msg "test: compat.sh --memcheck (default config)"
+        msg "test: compat.sh --memcheck (Release)"
         tests/compat.sh --memcheck
     fi
 
     if [ "$MEMORY" -gt 0 ]; then
-        msg "test: context-info.sh --memcheck (default config)"
+        msg "test: context-info.sh --memcheck (Release)"
         tests/context-info.sh --memcheck
     fi
-}
-
-component_test_valgrind_psa () {
-    msg "build: Release, full (clang)"
-    # full config, in particular with MBEDTLS_USE_PSA_CRYPTO
-    scripts/config.py full
-    CC=clang cmake -D CMAKE_BUILD_TYPE:String=Release .
-    make
-
-    msg "test: main suites, Valgrind (full config)"
-    make memcheck
 }
 
 support_test_cmake_out_of_source () {
@@ -3666,26 +3634,6 @@ support_test_psa_compliance () {
     ver_minor="${ver%%.*}"
 
     [ "$ver_major" -eq 3 ] && [ "$ver_minor" -ge 10 ]
-}
-
-component_test_corrected_code_style () {
-    ./scripts/code_style.py --fix
-
-    msg "build: make, default config (out-of-box), corrected code style"
-    make
-
-    msg "test: main suites make, default config (out-of-box), corrected code style"
-    make test
-
-    # Clean up code-style corrections
-    git checkout -- .
-}
-
-support_test_corrected_code_style() {
-    case $(uncrustify --version) in
-        *0.75.1*) true;;
-        *) false;;
-    esac
 }
 
 component_check_python_files () {
