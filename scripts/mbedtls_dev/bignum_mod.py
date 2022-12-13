@@ -14,7 +14,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import Dict, List # pylint: disable=unused-import
+
 from . import test_data_generation
+from . import bignum_common # pylint: disable=unused-import
 
 class BignumModTarget(test_data_generation.BaseTarget):
     #pylint: disable=abstract-method, too-few-public-methods
@@ -30,6 +33,20 @@ class BignumModTarget(test_data_generation.BaseTarget):
 # END MERGE SLOT 2
 
 # BEGIN MERGE SLOT 3
+
+class BignumModSub(bignum_common.ModOperationCommon, BignumModTarget):
+    """Test cases for bignum mpi_mod_sub()."""
+    symbol = "-"
+    test_function = "mpi_mod_sub"
+    test_name = "mbedtls_mpi_mod_sub"
+    input_style = "fixed"
+    arity = 2
+
+    def result(self) -> List[str]:
+        result = (self.int_a - self.int_b) % self.int_n
+        # To make negative tests easier, append 0 for success to the
+        # generated cases
+        return [self.format_result(result), "0"]
 
 # END MERGE SLOT 3
 
