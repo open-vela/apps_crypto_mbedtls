@@ -185,8 +185,7 @@ pre_initialize_variables () {
     export CTEST_OUTPUT_ON_FAILURE=1
 
     # CFLAGS and LDFLAGS for Asan builds that don't use CMake
-    # default to -O2, use -Ox _after_ this if you want another level
-    ASAN_CFLAGS='-O2 -Werror -fsanitize=address,undefined -fno-sanitize-recover=all'
+    ASAN_CFLAGS='-Werror -Wall -Wextra -fsanitize=address,undefined -fno-sanitize-recover=all'
 
     # Gather the list of available components. These are the functions
     # defined in this script whose name starts with "component_".
@@ -1457,14 +1456,10 @@ component_test_tls1_2_ecjpake_compatibility() {
     make -C programs ssl/ssl_server2 ssl/ssl_client2
     make -C programs test/udp_proxy test/query_compile_time_config
 
-    msg "test: server w/o USE_PSA - client w/ USE_PSA, text password"
-    P_SRV=../s2_no_use_psa tests/ssl-opt.sh -f "ECJPAKE: working, TLS"
-    msg "test: server w/o USE_PSA - client w/ USE_PSA, opaque password"
-    P_SRV=../s2_no_use_psa tests/ssl-opt.sh -f "ECJPAKE: opaque password client only, working, TLS"
-    msg "test: client w/o USE_PSA - server w/ USE_PSA, text password"
-    P_CLI=../c2_no_use_psa tests/ssl-opt.sh -f "ECJPAKE: working, TLS"
-    msg "test: client w/o USE_PSA - server w/ USE_PSA, opaque password"
-    P_CLI=../c2_no_use_psa tests/ssl-opt.sh -f "ECJPAKE: opaque password server only, working, TLS"
+    msg "test: server w/o USE_PSA - client w/ USE_PSA"
+    P_SRV=../s2_no_use_psa tests/ssl-opt.sh -f ECJPAKE
+    msg "test: client w/o USE_PSA - server w/ USE_PSA"
+    P_CLI=../c2_no_use_psa tests/ssl-opt.sh -f ECJPAKE
 
     rm s2_no_use_psa c2_no_use_psa
 }
@@ -2213,16 +2208,11 @@ component_test_psa_crypto_config_accel_hash_use_psa () {
     msg "test: MBEDTLS_PSA_CRYPTO_CONFIG with accelerated hash and USE_PSA"
     make test
 
-    # This is mostly useful so that we can later compare outcome files with
-    # the reference config in analyze_outcomes.py, to check that the
-    # dependency declarations in ssl-opt.sh and in TLS code are correct.
     msg "test: ssl-opt.sh, MBEDTLS_PSA_CRYPTO_CONFIG with accelerated hash and USE_PSA"
     tests/ssl-opt.sh
 
-    # This is to make sure all ciphersuites are exercised, but we don't need
-    # interop testing (besides, we already got some from ssl-opt.sh).
-    msg "test: compat.sh, MBEDTLS_PSA_CRYPTO_CONFIG with accelerated hash and USE_PSA"
-    tests/compat.sh -p mbedTLS -V YES
+    msg "test: compat.sh, MBEDTLS_PSA_CRYPTO_CONFIG without accelerated hash and USE_PSA"
+    tests/compat.sh
 }
 
 # This component provides reference configuration for test_psa_crypto_config_accel_hash_use_psa
@@ -3670,26 +3660,6 @@ support_test_psa_compliance () {
     ver_minor="${ver%%.*}"
 
     [ "$ver_major" -eq 3 ] && [ "$ver_minor" -ge 10 ]
-}
-
-component_test_corrected_code_style () {
-    ./scripts/code_style.py --fix
-
-    msg "build: make, default config (out-of-box), corrected code style"
-    make
-
-    msg "test: main suites make, default config (out-of-box), corrected code style"
-    make test
-
-    # Clean up code-style corrections
-    git checkout -- .
-}
-
-support_test_corrected_code_style() {
-    case $(uncrustify --version) in
-        *0.75.1*) true;;
-        *) false;;
-    esac
 }
 
 component_check_python_files () {

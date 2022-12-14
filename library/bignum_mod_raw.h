@@ -174,51 +174,6 @@ void mbedtls_mpi_mod_raw_sub( mbedtls_mpi_uint *X,
 
 /* BEGIN MERGE SLOT 3 */
 
-/**
- * \brief          Returns the number of limbs of working memory required for
- *                 a call to `mbedtls_mpi_mod_raw_inv_prime()`.
- *
- * \param AN_limbs The number of limbs in the input `A` and the modulus `N`
- *                 (they must be the same size) that will be given to
- *                 `mbedtls_mpi_mod_raw_inv_prime()`.
- *
- * \return         The number of limbs of working memory required by
- *                 `mbedtls_mpi_mod_raw_inv_prime()`.
- */
-size_t mbedtls_mpi_mod_raw_inv_prime_working_limbs( size_t AN_limbs );
-
-/**
- * \brief Perform fixed-width modular inversion of a Montgomery-form MPI with
- *        respect to a modulus \p N that must be prime.
- *
- * \p X may be aliased to \p A, but not to \p N or \p RR.
- *
- * \param[out] X     The modular inverse of \p A with respect to \p N.
- *                   Will be in Montgomery form.
- * \param[in] A      The number to calculate the modular inverse of.
- *                   Must be in Montgomery form. Must not be 0.
- * \param[in] N      The modulus, as a little-endian array of length \p AN_limbs.
- *                   Must be prime.
- * \param AN_limbs   The number of limbs in \p A, \p N and \p RR.
- * \param[in] RR     The precomputed residue of 2^{2*biL} modulo N, as a little-
- *                   endian array of length \p AN_limbs.
- * \param[in,out] T  Temporary storage of at least the number of limbs returned
- *                   by `mbedtls_mpi_mod_raw_inv_prime_working_limbs()`.
- *                   Its initial content is unused and its final content is
- *                   indeterminate.
- *                   It must not alias or otherwise overlap any of the other
- *                   parameters.
- *                   It is up to the caller to zeroize \p T when it is no
- *                   longer needed, and before freeing it if it was dynamically
- *                   allocated.
- */
-void mbedtls_mpi_mod_raw_inv_prime( mbedtls_mpi_uint *X,
-                                    const mbedtls_mpi_uint *A,
-                                    const mbedtls_mpi_uint *N,
-                                    size_t AN_limbs,
-                                    const mbedtls_mpi_uint *RR,
-                                    mbedtls_mpi_uint *T );
-
 /* END MERGE SLOT 3 */
 
 /* BEGIN MERGE SLOT 4 */
@@ -278,23 +233,6 @@ int mbedtls_mpi_mod_raw_to_mont_rep( mbedtls_mpi_uint *X,
  */
 int mbedtls_mpi_mod_raw_from_mont_rep( mbedtls_mpi_uint *X,
                                        const mbedtls_mpi_mod_modulus *m );
-
-/** \brief  Perform fixed width modular negation.
- *
- * The size of the operation is determined by \p m. \p A must have
- * the same number of limbs as \p m.
- *
- * \p X may be aliased to \p A.
- *
- * \param[out] X        The result of the modular negation.
- *                      This must be initialized.
- * \param[in] A         Little-endian presentation of the input operand. This
- *                      must be less than or equal to \p m.
- * \param[in] m         The modulus to use.
- */
-void mbedtls_mpi_mod_raw_neg( mbedtls_mpi_uint *X,
-                              const mbedtls_mpi_uint *A,
-                              const mbedtls_mpi_mod_modulus *m);
 /* END MERGE SLOT 7 */
 
 /* BEGIN MERGE SLOT 8 */
