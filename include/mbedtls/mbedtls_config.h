@@ -3016,6 +3016,9 @@
  *
  * Enable the SHA-224 cryptographic hash algorithm.
  *
+ * Requires: MBEDTLS_SHA256_C. The library does not currently support enabling
+ *           SHA-224 without SHA-256.
+ *
  * Module:  library/sha256.c
  * Caller:  library/md.c
  *          library/ssl_cookie.c
@@ -3028,6 +3031,9 @@
  * \def MBEDTLS_SHA256_C
  *
  * Enable the SHA-256 cryptographic hash algorithm.
+ *
+ * Requires: MBEDTLS_SHA224_C. The library does not currently support enabling
+ *           SHA-256 without SHA-224.
  *
  * Module:  library/sha256.c
  * Caller:  library/entropy.c
