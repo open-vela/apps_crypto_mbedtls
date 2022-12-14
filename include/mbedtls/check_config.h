@@ -23,7 +23,6 @@
 #ifndef MBEDTLS_CHECK_CONFIG_H
 #define MBEDTLS_CHECK_CONFIG_H
 
-/* *INDENT-OFF* */
 /*
  * We assume CHAR_BIT is 8 in many places. In practice, this is true on our
  * target platforms, so not an issue, but let's just be extra sure.
@@ -330,7 +329,7 @@
 
 /* Use of EC J-PAKE in TLS requires SHA-256.
  * This will be taken from MD if it is present, or from PSA if MD is absent.
- * Note: MBEDTLS_ECJPAKE_C depends on MBEDTLS_MD_C || MBEDTLS_PSA_CRYPTO_C. */
+ * Note: ECJPAKE_C depends on MD_C || PSA_CRYPTO_C. */
 #if defined(MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED) &&                    \
     !( defined(MBEDTLS_MD_C) && defined(MBEDTLS_SHA256_C) ) &&          \
     !( !defined(MBEDTLS_MD_C) && defined(PSA_WANT_ALG_SHA_256) )
@@ -691,6 +690,10 @@
 #error "MBEDTLS_X509_RSASSA_PSS_SUPPORT defined, but not all prerequisites"
 #endif
 
+#if defined(MBEDTLS_SHA384_C) && !defined(MBEDTLS_SHA512_C)
+#error "MBEDTLS_SHA384_C defined without MBEDTLS_SHA512_C"
+#endif
+
 #if defined(MBEDTLS_SHA512_USE_A64_CRYPTO_IF_PRESENT) && \
     defined(MBEDTLS_SHA512_USE_A64_CRYPTO_ONLY)
 #error "Must only define one of MBEDTLS_SHA512_USE_A64_CRYPTO_*"
@@ -744,6 +747,14 @@
 
 #if defined(MBEDTLS_SHA512_USE_A64_CRYPTO_ONLY) && !defined(__aarch64__)
 #error "MBEDTLS_SHA512_USE_A64_CRYPTO_ONLY defined on non-Aarch64 system"
+#endif
+
+#if defined(MBEDTLS_SHA224_C) && !defined(MBEDTLS_SHA256_C)
+#error "MBEDTLS_SHA224_C defined without MBEDTLS_SHA256_C"
+#endif
+
+#if defined(MBEDTLS_SHA256_C) && !defined(MBEDTLS_SHA224_C)
+#error "MBEDTLS_SHA256_C defined without MBEDTLS_SHA224_C"
 #endif
 
 #if defined(MBEDTLS_SHA256_USE_A64_CRYPTO_IF_PRESENT) && \
@@ -1088,5 +1099,4 @@
  */
 typedef int mbedtls_iso_c_forbids_empty_translation_units;
 
-/* *INDENT-ON* */
 #endif /* MBEDTLS_CHECK_CONFIG_H */
