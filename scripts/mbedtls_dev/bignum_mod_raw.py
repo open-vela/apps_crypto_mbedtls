@@ -61,7 +61,7 @@ class BignumModRawInvPrime(bignum_common.ModOperationCommon,
     symbol = "^ -1"
     test_function = "mpi_mod_raw_inv_prime"
     test_name = "mbedtls_mpi_mod_raw_inv_prime (Montgomery form only)"
-    input_style = "arch_split"
+    input_style = "fixed"
     arity = 1
     suffix = True
 
@@ -137,18 +137,7 @@ class BignumModRawConvertFromMont(bignum_common.ModOperationCommon,
         result = self.from_montgomery(self.int_a)
         return [self.format_result(result)]
 
-class BignumModRawModNegate(bignum_common.ModOperationCommon,
-                            BignumModRawTarget):
-    """ Test cases for mpi_mod_raw_neg(). """
-    test_function = "mpi_mod_raw_neg"
-    test_name = "Modular negation: "
-    symbol = "-"
-    input_style = "arch_split"
-    arity = 1
 
-    def result(self) -> List[str]:
-        result = (self.int_n - self.int_a) % self.int_n
-        return [self.format_result(result)]
 # END MERGE SLOT 7
 
 # BEGIN MERGE SLOT 8
