@@ -669,15 +669,12 @@ static void ssl_build_record_nonce( unsigned char *dst_iv,
                                     unsigned char const *dynamic_iv,
                                     size_t dynamic_iv_len )
 {
-    size_t i;
-
     /* Start with Fixed IV || 0 */
     memset( dst_iv, 0, dst_iv_len );
     memcpy( dst_iv, fixed_iv, fixed_iv_len );
 
     dst_iv += dst_iv_len - dynamic_iv_len;
-    for( i = 0; i < dynamic_iv_len; i++ )
-        dst_iv[i] ^= dynamic_iv[i];
+    mbedtls_xor( dst_iv, dst_iv, dynamic_iv, dynamic_iv_len );
 }
 #endif /* MBEDTLS_GCM_C || MBEDTLS_CCM_C || MBEDTLS_CHACHAPOLY_C */
 
@@ -691,7 +688,7 @@ int mbedtls_ssl_encrypt_buf( mbedtls_ssl_context *ssl,
     int auth_done = 0;
     unsigned char * data;
     /* For an explanation of the additional data length see
-    * the descrpition of ssl_extract_add_data_from_record().
+    * the description of ssl_extract_add_data_from_record().
     */
 #if defined(MBEDTLS_SSL_DTLS_CONNECTION_ID)
     unsigned char add_data[23 + MBEDTLS_SSL_CID_OUT_LEN_MAX];
@@ -1289,7 +1286,7 @@ int mbedtls_ssl_decrypt_buf( mbedtls_ssl_context const *ssl,
 #endif
     unsigned char* data;
     /* For an explanation of the additional data length see
-    * the descrpition of ssl_extract_add_data_from_record().
+    * the description of ssl_extract_add_data_from_record().
     */
 #if defined(MBEDTLS_SSL_DTLS_CONNECTION_ID)
     unsigned char add_data[23 + MBEDTLS_SSL_CID_IN_LEN_MAX];
@@ -4098,7 +4095,7 @@ static int ssl_load_buffered_message( mbedtls_ssl_context *ssl )
     if( hs == NULL )
         return( -1 );
 
-    MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> ssl_load_buffered_messsage" ) );
+    MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> ssl_load_buffered_message" ) );
 
     if( ssl->state == MBEDTLS_SSL_CLIENT_CHANGE_CIPHER_SPEC ||
         ssl->state == MBEDTLS_SSL_SERVER_CHANGE_CIPHER_SPEC )
