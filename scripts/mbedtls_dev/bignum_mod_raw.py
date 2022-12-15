@@ -18,7 +18,6 @@ from typing import Dict, List
 
 from . import test_data_generation
 from . import bignum_common
-from .bignum_data import ONLY_PRIME_MODULI
 
 class BignumModRawTarget(test_data_generation.BaseTarget):
     #pylint: disable=abstract-method, too-few-public-methods
@@ -50,56 +49,9 @@ class BignumModRawSub(bignum_common.ModOperationCommon,
         result = (self.int_a - self.int_b) % self.int_n
         return [self.format_result(result)]
 
-class BignumModRawMul(bignum_common.ModOperationCommon,
-                      BignumModRawTarget):
-    """Test cases for bignum mpi_mod_raw_mul()."""
-    symbol = "*"
-    test_function = "mpi_mod_raw_mul"
-    test_name = "mbedtls_mpi_mod_raw_mul"
-    input_style = "arch_split"
-    arity = 2
-
-    def arguments(self) -> List[str]:
-        return [bignum_common.quote_str(n) for n in [self.arg_a,
-                                                     self.arg_b,
-                                                     self.arg_n]
-               ] + self.result()
-
-    def result(self) -> List[str]:
-        result = (self.int_a * self.int_b) % self.int_n
-        return [self.format_result(result)]
-
 # END MERGE SLOT 2
 
 # BEGIN MERGE SLOT 3
-
-class BignumModRawInvPrime(bignum_common.ModOperationCommon,
-                           BignumModRawTarget):
-    """Test cases for bignum mpi_mod_raw_inv_prime()."""
-    moduli = ONLY_PRIME_MODULI
-    symbol = "^ -1"
-    test_function = "mpi_mod_raw_inv_prime"
-    test_name = "mbedtls_mpi_mod_raw_inv_prime (Montgomery form only)"
-    input_style = "fixed"
-    arity = 1
-    suffix = True
-
-    @property
-    def is_valid(self) -> bool:
-        return self.int_a > 0 and self.int_a < self.int_n
-
-    @property
-    def arg_a(self) -> str:
-        # Input has to be given in Montgomery form
-        mont_a = self.to_montgomery(self.int_a)
-        return self.format_arg('{:x}'.format(mont_a))
-
-    def result(self) -> List[str]:
-        result = bignum_common.invmod(self.int_a, self.int_n)
-        if result < 0:
-            result += self.int_n
-        mont_result = self.to_montgomery(result)
-        return [self.format_result(mont_result)]
 
 # END MERGE SLOT 3
 
@@ -140,8 +92,9 @@ class BignumModRawConvertToMont(bignum_common.ModOperationCommon,
     arity = 1
 
     def result(self) -> List[str]:
-        result = self.to_montgomery(self.int_a)
+        result = (self.int_a * self.r) % self.int_n
         return [self.format_result(result)]
+
 
 class BignumModRawConvertFromMont(bignum_common.ModOperationCommon,
                                   BignumModRawTarget):
@@ -153,7 +106,7 @@ class BignumModRawConvertFromMont(bignum_common.ModOperationCommon,
     arity = 1
 
     def result(self) -> List[str]:
-        result = self.from_montgomery(self.int_a)
+        result = (self.int_a * self.r_inv) % self.int_n
         return [self.format_result(result)]
 
 
