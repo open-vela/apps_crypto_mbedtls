@@ -11,51 +11,6 @@
  * the wrong size. The functions in bignum_mod.h provide a higher-level
  * interface that includes protections against accidental misuse, at the
  * expense of code size and sometimes more cumbersome memory management.
- *
- * The functions in this module obey the following conventions unless
- * explicitly indicated otherwise:
- * - **Modulus parameters**: the modulus is passed as a pointer to a structure
- *   of type #mbedtls_mpi_mod_modulus. The structure must be set up with an
- *   array of limbs storing the bignum value of the modulus. The modulus must
- *   be odd and is assumed to have no leading zeroes. The modulus is usually
- *   named \c N and is usually input-only.
- * - **Bignum parameters**: Bignums are passed as pointers to an array of
- *   limbs. A limb has the type #mbedtls_mpi_uint. Unless otherwise specified:
- *     - Bignum parameters called \c A, \c B, ... are inputs, and are not
- *       modified by the function.
- *     - Bignum parameters called \c X, \c Y are outputs or input-output.
- *       The initial content of output-only parameters is ignored.
- *     - \c T is a temporary storage area. The initial content of such a
- *       parameter is ignored and the final content is unspecified.
- * - **Bignum sizes**: bignum sizes are usually expressed by the \c limbs
- *   member of the modulus argument. All bignum parameters must have the same
- *   number of limbs as the modulus. All bignum sizes must be at least 1 and
- *   must be significantly less than #SIZE_MAX. The behavior if a size is 0 is
- *   undefined.
- * - **Bignum representation**: the representation of inputs and outputs is
- *   specified by the \c int_rep field of the modulus for arithmetic
- *   functions. Utility functions may allow for different representation.
- * - **Parameter ordering**: for bignum parameters, outputs come before inputs.
- *   The modulus is passed after other bignum input parameters. Temporaries
- *   come last.
- * - **Aliasing**: in general, output bignums may be aliased to one or more
- *   inputs. Modulus values may not be aliased to any other parameter. Outputs
- *   may not be aliased to one another. Temporaries may not be aliased to any
- *   other parameter.
- * - **Overlap**: apart from aliasing of limb array pointers (where two
- *   arguments are equal pointers), overlap is not supported and may result
- *   in undefined behavior.
- * - **Error handling**: This is a low-level module. Functions generally do not
- *   try to protect against invalid arguments such as nonsensical sizes or
- *   null pointers. Note that passing bignums with a different size than the
- *   modulus may lead to buffer overflows. Some functions which allocate
- *   memory or handle reading/writing of bignums will return an error if
- *   memory allocation fails or if buffer sizes are invalid.
- * - **Modular representatives**: all functions expect inputs to be in the
- *   range [0, \c N - 1] and guarantee outputs in the range [0, \c N - 1]. If
- *   an input is out of range, outputs are fully unspecified, though bignum
- *   values out of range should not cause buffer overflows (beware that this is
- *   not extensively tested).
  */
 
 /*
@@ -215,89 +170,9 @@ void mbedtls_mpi_mod_raw_sub( mbedtls_mpi_uint *X,
                               const mbedtls_mpi_uint *B,
                               const mbedtls_mpi_mod_modulus *N );
 
-/** \brief  Multiply two MPIs, returning the residue modulo the specified
- *          modulus.
- *
- * \note Currently handles the case when `m->int_rep` is
- * MBEDTLS_MPI_MOD_REP_MONTGOMERY.
- *
- * The size of the operation is determined by \p N. \p A, \p B and \p X must
- * all be associated with the modulus \p N and must all have the same number
- * of limbs as \p N.
- *
- * \p X may be aliased to \p A or \p B, or even both, but may not overlap
- * either otherwise. They may not alias \p N (since they must be in canonical
- * form, they cannot == \p N).
- *
- * \param[out] X        The address of the result MPI. Must have the same
- *                      number of limbs as \p N.
- *                      On successful completion, \p X contains the result of
- *                      the multiplication `A * B * R^-1` mod N where
- *                      `R = 2^(biL * N->limbs)`.
- * \param[in]  A        The address of the first MPI.
- * \param[in]  B        The address of the second MPI.
- * \param[in]  N        The address of the modulus. Used to perform a modulo
- *                      operation on the result of the multiplication.
- * \param[in,out] T     Temporary storage of size at least 2 * AN_limbs + 1
- *                      limbs. Its initial content is unused and
- *                      its final content is indeterminate.
- *                      It must not alias or otherwise overlap any of the
- *                      other parameters.
- */
-void mbedtls_mpi_mod_raw_mul( mbedtls_mpi_uint *X,
-                              const mbedtls_mpi_uint *A,
-                              const mbedtls_mpi_uint *B,
-                              const mbedtls_mpi_mod_modulus *N,
-                              mbedtls_mpi_uint *T );
-
 /* END MERGE SLOT 2 */
 
 /* BEGIN MERGE SLOT 3 */
-
-/**
- * \brief          Returns the number of limbs of working memory required for
- *                 a call to `mbedtls_mpi_mod_raw_inv_prime()`.
- *
- * \param AN_limbs The number of limbs in the input `A` and the modulus `N`
- *                 (they must be the same size) that will be given to
- *                 `mbedtls_mpi_mod_raw_inv_prime()`.
- *
- * \return         The number of limbs of working memory required by
- *                 `mbedtls_mpi_mod_raw_inv_prime()`.
- */
-size_t mbedtls_mpi_mod_raw_inv_prime_working_limbs( size_t AN_limbs );
-
-/**
- * \brief Perform fixed-width modular inversion of a Montgomery-form MPI with
- *        respect to a modulus \p N that must be prime.
- *
- * \p X may be aliased to \p A, but not to \p N or \p RR.
- *
- * \param[out] X     The modular inverse of \p A with respect to \p N.
- *                   Will be in Montgomery form.
- * \param[in] A      The number to calculate the modular inverse of.
- *                   Must be in Montgomery form. Must not be 0.
- * \param[in] N      The modulus, as a little-endian array of length \p AN_limbs.
- *                   Must be prime.
- * \param AN_limbs   The number of limbs in \p A, \p N and \p RR.
- * \param[in] RR     The precomputed residue of 2^{2*biL} modulo N, as a little-
- *                   endian array of length \p AN_limbs.
- * \param[in,out] T  Temporary storage of at least the number of limbs returned
- *                   by `mbedtls_mpi_mod_raw_inv_prime_working_limbs()`.
- *                   Its initial content is unused and its final content is
- *                   indeterminate.
- *                   It must not alias or otherwise overlap any of the other
- *                   parameters.
- *                   It is up to the caller to zeroize \p T when it is no
- *                   longer needed, and before freeing it if it was dynamically
- *                   allocated.
- */
-void mbedtls_mpi_mod_raw_inv_prime( mbedtls_mpi_uint *X,
-                                    const mbedtls_mpi_uint *A,
-                                    const mbedtls_mpi_uint *N,
-                                    size_t AN_limbs,
-                                    const mbedtls_mpi_uint *RR,
-                                    mbedtls_mpi_uint *T );
 
 /* END MERGE SLOT 3 */
 
