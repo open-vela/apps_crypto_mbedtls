@@ -1704,6 +1704,15 @@ void mbedtls_ssl_tls13_conf_early_data( mbedtls_ssl_config *conf,
 {
     conf->early_data_enabled = early_data_enabled;
 }
+
+#if defined(MBEDTLS_SSL_SRV_C)
+void mbedtls_ssl_tls13_conf_max_early_data_size(
+         mbedtls_ssl_config *conf, uint32_t max_early_data_size )
+{
+    conf->max_early_data_size = max_early_data_size;
+}
+#endif /* MBEDTLS_SSL_SRV_C */
+
 #endif /* MBEDTLS_SSL_EARLY_DATA */
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
@@ -4241,7 +4250,7 @@ int mbedtls_ssl_context_save( mbedtls_ssl_context *ssl,
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "There is pending outgoing data" ) );
         return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
     }
-    /* Protocol must be DLTS, not TLS */
+    /* Protocol must be DTLS, not TLS */
     if( ssl->conf->transport != MBEDTLS_SSL_TRANSPORT_DATAGRAM )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "Only DTLS is supported" ) );
@@ -5117,6 +5126,15 @@ int mbedtls_ssl_config_defaults( mbedtls_ssl_config *conf,
 #endif
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3)
+
+#if defined(MBEDTLS_SSL_EARLY_DATA)
+    mbedtls_ssl_tls13_conf_early_data( conf, MBEDTLS_SSL_EARLY_DATA_DISABLED );
+#if defined(MBEDTLS_SSL_SRV_C)
+    mbedtls_ssl_tls13_conf_max_early_data_size(
+        conf, MBEDTLS_SSL_MAX_EARLY_DATA_SIZE );
+#endif
+#endif /* MBEDTLS_SSL_EARLY_DATA */
+
 #if defined(MBEDTLS_SSL_SRV_C) && defined(MBEDTLS_SSL_SESSION_TICKETS)
     mbedtls_ssl_conf_new_session_tickets(
         conf, MBEDTLS_SSL_TLS1_3_DEFAULT_NEW_SESSION_TICKETS );
