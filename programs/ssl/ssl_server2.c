@@ -129,7 +129,6 @@ int main( void )
 #define DFL_SNI                 NULL
 #define DFL_ALPN_STRING         NULL
 #define DFL_CURVES              NULL
-#define DFL_MAX_EARLY_DATA_SIZE 0
 #define DFL_SIG_ALGS            NULL
 #define DFL_DHM_FILE            NULL
 #define DFL_TRANSPORT           MBEDTLS_SSL_TRANSPORT_STREAM
@@ -425,15 +424,6 @@ int main( void )
 #define USAGE_ECJPAKE ""
 #endif
 
-#if defined(MBEDTLS_SSL_EARLY_DATA)
-#define USAGE_EARLY_DATA \
-    "    max_early_data_size=%%d default: -1 (disabled)\n"             \
-    "                            options: -1 (disabled), "           \
-    "                                     >= 0 (enabled, max amount of early data )\n"
-#else
-#define USAGE_EARLY_DATA ""
-#endif /* MBEDTLS_SSL_EARLY_DATA */
-
 #if defined(MBEDTLS_ECP_C)
 #define USAGE_CURVES \
     "    curves=a,b,c,d      default: \"default\" (library default)\n"  \
@@ -687,7 +677,6 @@ struct options
     const char *cid_val_renego; /* the CID to use for incoming messages
                                  * after renegotiation                      */
     int reproducible;           /* make communication reproducible          */
-    uint32_t max_early_data_size; /* max amount of early data               */
     int query_config_mode;      /* whether to read config                   */
     int use_srtp;               /* Support SRTP                             */
     int force_srtp_profile;     /* SRTP protection profile to use or all    */
@@ -1546,9 +1535,6 @@ int main( int argc, char *argv[] )
      };
 #endif /* MBEDTLS_SSL_DTLS_SRTP */
 
-#if defined(MBEDTLS_SSL_EARLY_DATA)
-    int tls13_early_data_enabled = MBEDTLS_SSL_EARLY_DATA_DISABLED;
-#endif
 #if defined(MBEDTLS_MEMORY_BUFFER_ALLOC_C)
     mbedtls_memory_buffer_alloc_init( alloc_buf, sizeof(alloc_buf) );
 #if defined(MBEDTLS_MEMORY_DEBUG)
@@ -1705,7 +1691,6 @@ int main( int argc, char *argv[] )
     opt.sni                 = DFL_SNI;
     opt.alpn_string         = DFL_ALPN_STRING;
     opt.curves              = DFL_CURVES;
-    opt.max_early_data_size = DFL_MAX_EARLY_DATA_SIZE;
     opt.sig_algs            = DFL_SIG_ALGS;
     opt.dhm_file            = DFL_DHM_FILE;
     opt.transport           = DFL_TRANSPORT;
@@ -1896,19 +1881,6 @@ int main( int argc, char *argv[] )
         else if( strcmp( p, "sig_algs" ) == 0 )
             opt.sig_algs = q;
 #endif
-#if defined(MBEDTLS_SSL_EARLY_DATA)
-        else if( strcmp( p, "max_early_data_size" ) == 0 )
-        {
-            long long value = atoll( q );
-            tls13_early_data_enabled =
-                value >= 0 ? MBEDTLS_SSL_EARLY_DATA_ENABLED :
-                             MBEDTLS_SSL_EARLY_DATA_DISABLED;
-            if( tls13_early_data_enabled )
-            {
-                opt.max_early_data_size = atoi( q );
-            }
-        }
-#endif /* MBEDTLS_SSL_EARLY_DATA */
         else if( strcmp( p, "renegotiation" ) == 0 )
         {
             opt.renegotiation = (atoi( q )) ?
@@ -1977,7 +1949,7 @@ int main( int argc, char *argv[] )
              * is not recommended in practice.
              * `psk_or_ephemeral` exists in theory, we need this mode to test if
              * this setting work correctly. With this key exchange setting, server
-             * should always perform `ephemeral` handshake. `psk` or `psk_ephemeral`
+             * should always perform `ephemeral` handshake. `psk` or `psk_ephermal`
              * is not expected.
              */
             else if( strcmp( q, "psk_or_ephemeral" ) == 0 )
@@ -2903,15 +2875,6 @@ int main( int argc, char *argv[] )
 
     if( opt.cert_req_ca_list != DFL_CERT_REQ_CA_LIST )
         mbedtls_ssl_conf_cert_req_ca_list( &conf, opt.cert_req_ca_list );
-
-#if defined(MBEDTLS_SSL_EARLY_DATA)
-    mbedtls_ssl_tls13_conf_early_data( &conf, tls13_early_data_enabled );
-    if( tls13_early_data_enabled == MBEDTLS_SSL_EARLY_DATA_ENABLED )
-    {
-        mbedtls_ssl_tls13_conf_max_early_data_size(
-            &conf, opt.max_early_data_size );
-    }
-#endif /* MBEDTLS_SSL_EARLY_DATA */
 
 #if defined(MBEDTLS_KEY_EXCHANGE_CERT_REQ_ALLOWED_ENABLED)
     /* exercise setting DN hints for server certificate request
