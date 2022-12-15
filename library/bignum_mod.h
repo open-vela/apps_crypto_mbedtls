@@ -2,6 +2,61 @@
  *  Modular bignum functions
  *
  * This module implements operations on integers modulo some fixed modulus.
+ *
+ * The functions in this module obey the following conventions unless
+ * explicitly indicated otherwise:
+ *
+ * - **Modulus parameters**: the modulus is passed as a pointer to a structure
+ *   of type #mbedtls_mpi_mod_modulus. The structure must be set up with an
+ *   array of limbs storing the bignum value of the modulus. The modulus must
+ *   be odd and is assumed to have no leading zeroes. The modulus is usually
+ *   named \c N and is usually input-only.
+ * - **Bignum parameters**: Bignums are passed as pointers to an array of
+ *   limbs or to a #mbedtls_mpi_mod_residue structure. A limb has the type
+ *   #mbedtls_mpi_uint. Residues must be initialized before use, and must be
+ *   associated with the modulus \c N. Unless otherwise specified:
+ *     - Bignum parameters called \c A, \c B, ... are inputs and are not
+ *       modified by the function.
+ *     - Bignum parameters called \c X, \c Y, ... are outputs or input-output.
+ *       The initial bignum value of output-only parameters is ignored, but
+ *       they must be set up and associated with the modulus \c N. Some
+ *       functions (typically constant-flow) require that the limbs in an
+ *       output residue are initialized.
+ *     - Bignum parameters called \c P are inputs used to set up a modulus or
+ *       residue. These must be pointers to an array of limbs.
+ *     - \c T is a temporary storage area. The initial content of such a
+ *       parameter is ignored and the final content is unspecified.
+ *     - Some functions use different names, such as \c R for the residue.
+ * - **Bignum sizes**: bignum sizes are always expressed in limbs. Both
+ *   #mbedtls_mpi_mod_modulus and #mbedtls_mpi_mod_residue have a \c limbs
+ *   member storing its size. All bignum parameters must have the same
+ *   number of limbs as the modulus. All bignum sizes must be at least 1 and
+ *   must be significantly less than #SIZE_MAX. The behavior if a size is 0 is
+ *   undefined.
+ * - **Bignum representation**: the representation of inputs and outputs is
+ *   specified by the \c int_rep field of the modulus.
+ * - **Parameter ordering**: for bignum parameters, outputs come before inputs.
+ *   The modulus is passed after residues. Temporaries come last.
+ * - **Aliasing**: in general, output bignums may be aliased to one or more
+ *   inputs. Modulus values may not be aliased to any other parameter. Outputs
+ *   may not be aliased to one another. Temporaries may not be aliased to any
+ *   other parameter.
+ * - **Overlap**: apart from aliasing of residue pointers (where two residue
+ *   arguments are equal pointers), overlap is not supported and may result
+ *   in undefined behavior.
+ * - **Error handling**: functions generally check compatibility of input
+ *   sizes. Most functions will not check that input values are in canonical
+ *   form (i.e. that \c A < \c N), this is only checked during setup of a
+ *   residue structure.
+ * - **Modular representatives**: all functions expect inputs to be in the
+ *   range [0, \c N - 1] and guarantee outputs in the range [0, \c N - 1].
+ *   Residues are set up with an associated modulus, and operations are only
+ *   guaranteed to work if the modulus is associated with all residue
+ *   parameters. If a residue is passed with a modulus other than the one it
+ *   is associated with, then it may be out of range. If an input is out of
+ *   range, outputs are fully unspecified, though bignum values out of range
+ *   should not cause buffer overflows (beware that this is not extensively
+ *   tested).
  */
 
 /*
@@ -163,7 +218,35 @@ void mbedtls_mpi_mod_modulus_free( mbedtls_mpi_mod_modulus *m );
 /* END MERGE SLOT 2 */
 
 /* BEGIN MERGE SLOT 3 */
-
+/**
+ * \brief Perform a fixed-size modular subtraction.
+ *
+ * Calculate `A - B modulo N`.
+ *
+ * \p A, \p B and \p X must all have the same number of limbs as \p N.
+ *
+ * \p X may be aliased to \p A or \p B, or even both, but may not overlap
+ * either otherwise.
+ *
+ * \note This function does not check that \p A or \p B are in canonical
+ *       form (that is, are < \p N) - that will have been done by
+ *       mbedtls_mpi_mod_residue_setup().
+ *
+ * \param[out] X    The address of the result MPI. Must be initialized.
+ *                  Must have the same number of limbs as the modulus \p N.
+ * \param[in]  A    The address of the first MPI.
+ * \param[in]  B    The address of the second MPI.
+ * \param[in]  N    The address of the modulus. Used to perform a modulo
+ *                  operation on the result of the subtraction.
+ *
+ * \return          \c 0 if successful.
+ * \return          #MBEDTLS_ERR_MPI_BAD_INPUT_DATA if the given MPIs do not
+ *                  have the correct number of limbs.
+ */
+int mbedtls_mpi_mod_sub( mbedtls_mpi_mod_residue *X,
+                         const mbedtls_mpi_mod_residue *A,
+                         const mbedtls_mpi_mod_residue *B,
+                         const mbedtls_mpi_mod_modulus *N );
 /* END MERGE SLOT 3 */
 
 /* BEGIN MERGE SLOT 4 */
