@@ -11,6 +11,51 @@
  * the wrong size. The functions in bignum_mod.h provide a higher-level
  * interface that includes protections against accidental misuse, at the
  * expense of code size and sometimes more cumbersome memory management.
+ *
+ * The functions in this module obey the following conventions unless
+ * explicitly indicated otherwise:
+ * - **Modulus parameters**: the modulus is passed as a pointer to a structure
+ *   of type #mbedtls_mpi_mod_modulus. The structure must be set up with an
+ *   array of limbs storing the bignum value of the modulus. The modulus must
+ *   be odd and is assumed to have no leading zeroes. The modulus is usually
+ *   named \c N and is usually input-only.
+ * - **Bignum parameters**: Bignums are passed as pointers to an array of
+ *   limbs. A limb has the type #mbedtls_mpi_uint. Unless otherwise specified:
+ *     - Bignum parameters called \c A, \c B, ... are inputs, and are not
+ *       modified by the function.
+ *     - Bignum parameters called \c X, \c Y are outputs or input-output.
+ *       The initial content of output-only parameters is ignored.
+ *     - \c T is a temporary storage area. The initial content of such a
+ *       parameter is ignored and the final content is unspecified.
+ * - **Bignum sizes**: bignum sizes are usually expressed by the \c limbs
+ *   member of the modulus argument. All bignum parameters must have the same
+ *   number of limbs as the modulus. All bignum sizes must be at least 1 and
+ *   must be significantly less than #SIZE_MAX. The behavior if a size is 0 is
+ *   undefined.
+ * - **Bignum representation**: the representation of inputs and outputs is
+ *   specified by the \c int_rep field of the modulus for arithmetic
+ *   functions. Utility functions may allow for different representation.
+ * - **Parameter ordering**: for bignum parameters, outputs come before inputs.
+ *   The modulus is passed after other bignum input parameters. Temporaries
+ *   come last.
+ * - **Aliasing**: in general, output bignums may be aliased to one or more
+ *   inputs. Modulus values may not be aliased to any other parameter. Outputs
+ *   may not be aliased to one another. Temporaries may not be aliased to any
+ *   other parameter.
+ * - **Overlap**: apart from aliasing of limb array pointers (where two
+ *   arguments are equal pointers), overlap is not supported and may result
+ *   in undefined behavior.
+ * - **Error handling**: This is a low-level module. Functions generally do not
+ *   try to protect against invalid arguments such as nonsensical sizes or
+ *   null pointers. Note that passing bignums with a different size than the
+ *   modulus may lead to buffer overflows. Some functions which allocate
+ *   memory or handle reading/writing of bignums will return an error if
+ *   memory allocation fails or if buffer sizes are invalid.
+ * - **Modular representatives**: all functions expect inputs to be in the
+ *   range [0, \c N - 1] and guarantee outputs in the range [0, \c N - 1]. If
+ *   an input is out of range, outputs are fully unspecified, though bignum
+ *   values out of range should not cause buffer overflows (beware that this is
+ *   not extensively tested).
  */
 
 /*
@@ -178,10 +223,6 @@ void mbedtls_mpi_mod_raw_sub( mbedtls_mpi_uint *X,
  * \brief          Returns the number of limbs of working memory required for
  *                 a call to `mbedtls_mpi_mod_raw_inv_prime()`.
  *
- * \note           This will always be at least
- *                 `mbedtls_mpi_core_montmul_working_limbs(AN_limbs)`,
- *                 i.e. sufficient for a call to `mbedtls_mpi_core_montmul()`.
- *
  * \param AN_limbs The number of limbs in the input `A` and the modulus `N`
  *                 (they must be the same size) that will be given to
  *                 `mbedtls_mpi_mod_raw_inv_prime()`.
@@ -282,23 +323,6 @@ int mbedtls_mpi_mod_raw_to_mont_rep( mbedtls_mpi_uint *X,
  */
 int mbedtls_mpi_mod_raw_from_mont_rep( mbedtls_mpi_uint *X,
                                        const mbedtls_mpi_mod_modulus *m );
-
-/** \brief  Perform fixed width modular negation.
- *
- * The size of the operation is determined by \p m. \p A must have
- * the same number of limbs as \p m.
- *
- * \p X may be aliased to \p A.
- *
- * \param[out] X        The result of the modular negation.
- *                      This must be initialized.
- * \param[in] A         Little-endian presentation of the input operand. This
- *                      must be less than or equal to \p m.
- * \param[in] m         The modulus to use.
- */
-void mbedtls_mpi_mod_raw_neg( mbedtls_mpi_uint *X,
-                              const mbedtls_mpi_uint *A,
-                              const mbedtls_mpi_mod_modulus *m);
 /* END MERGE SLOT 7 */
 
 /* BEGIN MERGE SLOT 8 */

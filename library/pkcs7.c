@@ -253,24 +253,6 @@ static int pkcs7_get_signature( unsigned char **p, unsigned char *end,
     return( 0 );
 }
 
-static void pkcs7_free_signer_info( mbedtls_pkcs7_signer_info *signer )
-{
-    mbedtls_x509_name *name_cur;
-    mbedtls_x509_name *name_prv;
-
-    if( signer == NULL )
-        return;
-
-    name_cur = signer->issuer.next;
-    while( name_cur != NULL )
-    {
-        name_prv = name_cur;
-        name_cur = name_cur->next;
-        mbedtls_free( name_prv );
-    }
-    signer->issuer.next = NULL;
-}
-
 /**
  * SignerInfo ::= SEQUENCE {
  *      version Version;
@@ -347,14 +329,31 @@ static int pkcs7_get_signer_info( unsigned char **p, unsigned char *end,
         ret = MBEDTLS_ERR_PKCS7_INVALID_SIGNER_INFO;
 
 out:
-    if( asn1_ret != 0 || ret != 0 )
-    {
-        pkcs7_free_signer_info( signer );
+    if( asn1_ret != 0 )
         ret = MBEDTLS_ERROR_ADD( MBEDTLS_ERR_PKCS7_INVALID_SIGNER_INFO,
                                     asn1_ret );
-    }
+    else if( ret != 0 )
+        ret = MBEDTLS_ERR_PKCS7_INVALID_SIGNER_INFO;
 
     return( ret );
+}
+
+static void pkcs7_free_signer_info( mbedtls_pkcs7_signer_info *signer )
+{
+    mbedtls_x509_name *name_cur;
+    mbedtls_x509_name *name_prv;
+
+    if( signer == NULL )
+        return;
+
+    name_cur = signer->issuer.next;
+    while( name_cur != NULL )
+    {
+        name_prv = name_cur;
+        name_cur = name_cur->next;
+        mbedtls_free( name_prv );
+    }
+    signer->issuer.next = NULL;
 }
 
 /**
@@ -388,7 +387,7 @@ static int pkcs7_get_signers_info_set( unsigned char **p, unsigned char *end,
 
     ret = pkcs7_get_signer_info( p, end_set, signers_set );
     if( ret != 0 )
-        return( ret );
+        goto cleanup;
     count++;
 
     mbedtls_pkcs7_signer_info *prev = signers_set;
