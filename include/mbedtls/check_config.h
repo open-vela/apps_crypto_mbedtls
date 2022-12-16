@@ -117,19 +117,15 @@
 #endif
 
 #if defined(MBEDTLS_ECP_RESTARTABLE)           && \
-    ( defined(MBEDTLS_ECDH_COMPUTE_SHARED_ALT) || \
+    ( defined(MBEDTLS_USE_PSA_CRYPTO)          || \
+      defined(MBEDTLS_ECDH_COMPUTE_SHARED_ALT) || \
       defined(MBEDTLS_ECDH_GEN_PUBLIC_ALT)     || \
       defined(MBEDTLS_ECDSA_SIGN_ALT)          || \
       defined(MBEDTLS_ECDSA_VERIFY_ALT)        || \
       defined(MBEDTLS_ECDSA_GENKEY_ALT)        || \
       defined(MBEDTLS_ECP_INTERNAL_ALT)        || \
       defined(MBEDTLS_ECP_ALT) )
-#error "MBEDTLS_ECP_RESTARTABLE defined, but it cannot coexist with an alternative ECP implementation"
-#endif
-
-#if defined(MBEDTLS_ECP_RESTARTABLE)           && \
-    !defined(MBEDTLS_ECP_C)
-#error "MBEDTLS_ECP_RESTARTABLE defined, but not all prerequisites"
+#error "MBEDTLS_ECP_RESTARTABLE defined, but it cannot coexist with an alternative or PSA-based ECP implementation"
 #endif
 
 #if defined(MBEDTLS_ECDSA_DETERMINISTIC) && !defined(MBEDTLS_HMAC_DRBG_C)
@@ -334,7 +330,7 @@
 
 /* Use of EC J-PAKE in TLS requires SHA-256.
  * This will be taken from MD if it is present, or from PSA if MD is absent.
- * Note: ECJPAKE_C depends on MD_C || PSA_CRYPTO_C. */
+ * Note: MBEDTLS_ECJPAKE_C depends on MBEDTLS_MD_C || MBEDTLS_PSA_CRYPTO_C. */
 #if defined(MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED) &&                    \
     !( defined(MBEDTLS_MD_C) && defined(MBEDTLS_SHA256_C) ) &&          \
     !( !defined(MBEDTLS_MD_C) && defined(PSA_WANT_ALG_SHA_256) )

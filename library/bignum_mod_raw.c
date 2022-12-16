@@ -183,13 +183,13 @@ int mbedtls_mpi_mod_raw_to_mont_rep( mbedtls_mpi_uint *X,
                                      const mbedtls_mpi_mod_modulus *m )
 {
     mbedtls_mpi_uint *T;
-    const size_t t_limbs = m->limbs * 2 + 1;
+    const size_t t_limbs = mbedtls_mpi_core_montmul_working_limbs( m->limbs );
 
     if( ( T = (mbedtls_mpi_uint *) mbedtls_calloc( t_limbs, ciL ) ) == NULL )
         return( MBEDTLS_ERR_MPI_ALLOC_FAILED );
 
-    mbedtls_mpi_core_montmul( X, X, m->rep.mont.rr, m->limbs, m->p, m->limbs,
-                              m->rep.mont.mm, T );
+    mbedtls_mpi_core_to_mont_rep( X, X, m->p, m->limbs,
+                                  m->rep.mont.mm, m->rep.mont.rr, T );
 
     mbedtls_platform_zeroize( T, t_limbs * ciL );
     mbedtls_free( T );
@@ -199,19 +199,29 @@ int mbedtls_mpi_mod_raw_to_mont_rep( mbedtls_mpi_uint *X,
 int mbedtls_mpi_mod_raw_from_mont_rep( mbedtls_mpi_uint *X,
                                        const mbedtls_mpi_mod_modulus *m )
 {
-    const mbedtls_mpi_uint one = 1;
-    const size_t t_limbs = m->limbs * 2 + 1;
+    const size_t t_limbs = mbedtls_mpi_core_montmul_working_limbs( m->limbs );
     mbedtls_mpi_uint *T;
 
     if( ( T = (mbedtls_mpi_uint *) mbedtls_calloc( t_limbs, ciL ) ) == NULL )
         return( MBEDTLS_ERR_MPI_ALLOC_FAILED );
 
-    mbedtls_mpi_core_montmul( X, X, &one, 1, m->p, m->limbs,
-                              m->rep.mont.mm, T );
+    mbedtls_mpi_core_from_mont_rep( X, X, m->p, m->limbs, m->rep.mont.mm, T );
 
     mbedtls_platform_zeroize( T, t_limbs * ciL );
     mbedtls_free( T );
     return( 0 );
+}
+
+void mbedtls_mpi_mod_raw_neg( mbedtls_mpi_uint *X,
+                              const mbedtls_mpi_uint *A,
+                              const mbedtls_mpi_mod_modulus *m )
+{
+    mbedtls_mpi_core_sub( X, m->p, A, m->limbs );
+
+    /* If A=0 initially, then X=N now. Detect this by
+     * subtracting N and catching the carry. */
+    mbedtls_mpi_uint borrow = mbedtls_mpi_core_sub( X, X, m->p, m->limbs );
+    (void) mbedtls_mpi_core_add_if( X, m->p, m->limbs, (unsigned) borrow  );
 }
 /* END MERGE SLOT 7 */
 
