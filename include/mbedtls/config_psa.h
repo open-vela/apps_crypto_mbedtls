@@ -7,7 +7,7 @@
  *  those definitions to define symbols used in the library code.
  *
  *  Users and integrators should not edit this file, please edit
- *  include/mbedtls/mbedtls_config.h for MBETLS_XXX settings or
+ *  include/mbedtls/mbedtls_config.h for MBEDTLS_XXX settings or
  *  include/psa/crypto_config.h for PSA_WANT_XXX settings.
  */
 /*
@@ -236,6 +236,12 @@ extern "C" {
 #define MBEDTLS_PSA_BUILTIN_ALG_TLS12_PSK_TO_MS 1
 #endif /* !MBEDTLS_PSA_ACCEL_ALG_TLS12_PSK_TO_MS */
 #endif /* PSA_WANT_ALG_TLS12_PSK_TO_MS */
+
+#if defined(PSA_WANT_ALG_TLS12_ECJPAKE_TO_PMS)
+#if !defined(MBEDTLS_PSA_ACCEL_ALG_TLS12_ECJPAKE_TO_PMS)
+#define MBEDTLS_PSA_BUILTIN_ALG_TLS12_ECJPAKE_TO_PMS 1
+#endif /* !MBEDTLS_PSA_ACCEL_ALG_TLS12_ECJPAKE_TO_PMS */
+#endif /* PSA_WANT_ALG_TLS12_ECJPAKE_TO_PMS */
 
 #if defined(PSA_WANT_KEY_TYPE_ECC_KEY_PAIR)
 #if !defined(MBEDTLS_PSA_ACCEL_KEY_TYPE_ECC_KEY_PAIR)
@@ -719,6 +725,11 @@ extern "C" {
 #if defined(MBEDTLS_DES_C)
 #define PSA_WANT_KEY_TYPE_DES 1
 #define MBEDTLS_PSA_BUILTIN_KEY_TYPE_DES 1
+#endif
+
+#if defined(MBEDTLS_PSA_BUILTIN_ALG_SHA_256)
+#define MBEDTLS_PSA_BUILTIN_ALG_TLS12_ECJPAKE_TO_PMS 1
+#define PSA_WANT_ALG_TLS12_ECJPAKE_TO_PMS 1
 #endif
 
 #if defined(MBEDTLS_CHACHA20_C)
