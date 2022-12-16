@@ -84,22 +84,9 @@
 
 #if !defined(MBEDTLS_ECP_ALT)
 
-#if defined(MBEDTLS_PLATFORM_C)
 #include "mbedtls/platform.h"
-#else
-#include <stdlib.h>
-#include <stdio.h>
-#define mbedtls_printf     printf
-#define mbedtls_calloc    calloc
-#define mbedtls_free       free
-#endif
 
 #include "ecp_internal_alt.h"
-
-#if ( defined(__ARMCC_VERSION) || defined(_MSC_VER) ) && \
-    !defined(inline) && !defined(__cplusplus)
-#define inline __inline
-#endif
 
 #if defined(MBEDTLS_SELF_TEST)
 /*
@@ -767,68 +754,6 @@ cleanup:
     return( ret );
 }
 
-#if defined(MBEDTLS_ECP_SHORT_WEIERSTRASS_ENABLED)
-static int mbedtls_ecp_sw_derive_y( const mbedtls_ecp_group *grp,
-                                    const mbedtls_mpi *X,
-                                    mbedtls_mpi *Y,
-                                    int parity_bit )
-{
-    /* w = y^2 = x^3 + ax + b
-     * y = sqrt(w) = w^((p+1)/4) mod p   (for prime p where p = 3 mod 4)
-     *
-     * Note: this method for extracting square root does not validate that w
-     * was indeed a square so this function will return garbage in Y if X
-     * does not correspond to a point on the curve.
-     */
-
-    /* Check prerequisite p = 3 mod 4 */
-    if( mbedtls_mpi_get_bit( &grp->P, 0 ) != 1 ||
-        mbedtls_mpi_get_bit( &grp->P, 1 ) != 1 )
-        return( MBEDTLS_ERR_ECP_FEATURE_UNAVAILABLE );
-
-    int ret;
-    mbedtls_mpi exp;
-    mbedtls_mpi_init( &exp );
-
-    /* use Y to store intermediate results */
-    /* y^2 = x^3 + ax + b = (x^2 + a)x + b */
-    /* x^2 */
-    MBEDTLS_MPI_CHK( mbedtls_mpi_mul_mpi( Y, X, X ) );
-    MBEDTLS_MPI_CHK( mbedtls_mpi_mod_mpi( Y, Y, &grp->P ) );
-    /* x^2 + a */
-    if( !grp->A.p ) /* special case for A = -3; temporarily set exp = -3 */
-        MBEDTLS_MPI_CHK( mbedtls_mpi_lset( &exp, -3 ) );
-    MBEDTLS_MPI_CHK( mbedtls_mpi_add_mpi( Y, Y, grp->A.p ? &grp->A : &exp ) );
-    MBEDTLS_MPI_CHK( mbedtls_mpi_mod_mpi( Y, Y, &grp->P ) );
-    /* (x^2 + a)x */
-    MBEDTLS_MPI_CHK( mbedtls_mpi_mul_mpi( Y, Y, X ) );
-    MBEDTLS_MPI_CHK( mbedtls_mpi_mod_mpi( Y, Y, &grp->P ) );
-    /* (x^2 + a)x + b */
-    MBEDTLS_MPI_CHK( mbedtls_mpi_add_mpi( Y, Y, &grp->B ) );
-    MBEDTLS_MPI_CHK( mbedtls_mpi_mod_mpi( Y, Y, &grp->P ) );
-
-    /* w = y^2 */ /* Y contains y^2 intermediate result */
-    /* exp = ((p+1)/4) */
-    MBEDTLS_MPI_CHK( mbedtls_mpi_add_int( &exp, &grp->P, 1 ) );
-    MBEDTLS_MPI_CHK( mbedtls_mpi_shift_r( &exp, 2 ) );
-    /* sqrt(w) = w^((p+1)/4) mod p   (for prime p where p = 3 mod 4) */
-    MBEDTLS_MPI_CHK( mbedtls_mpi_exp_mod( Y, Y /*y^2*/, &exp, &grp->P, NULL ) );
-
-    /* check parity bit match or else invert Y */
-    /* This quick inversion implementation is valid because Y != 0 for all
-     * Short Weierstrass curves supported by mbedtls, as each supported curve
-     * has an order that is a large prime, so each supported curve does not
-     * have any point of order 2, and a point with Y == 0 would be of order 2 */
-    if( mbedtls_mpi_get_bit( Y, 0 ) != parity_bit )
-        MBEDTLS_MPI_CHK( mbedtls_mpi_sub_mpi( Y, &grp->P, Y ) );
-
-cleanup:
-
-    mbedtls_mpi_free( &exp );
-    return( ret );
-}
-#endif /* MBEDTLS_ECP_SHORT_WEIERSTRASS_ENABLED */
-
 /*
  * Import a point from unsigned binary data (SEC1 2.3.4 and RFC7748)
  */
@@ -870,29 +795,16 @@ int mbedtls_ecp_point_read_binary( const mbedtls_ecp_group *grp,
                 return( MBEDTLS_ERR_ECP_BAD_INPUT_DATA );
         }
 
-        if( ilen < 1 + plen )
+        if( buf[0] != 0x04 )
+            return( MBEDTLS_ERR_ECP_FEATURE_UNAVAILABLE );
+
+        if( ilen != 2 * plen + 1 )
             return( MBEDTLS_ERR_ECP_BAD_INPUT_DATA );
 
         MBEDTLS_MPI_CHK( mbedtls_mpi_read_binary( &pt->X, buf + 1, plen ) );
+        MBEDTLS_MPI_CHK( mbedtls_mpi_read_binary( &pt->Y,
+                                                  buf + 1 + plen, plen ) );
         MBEDTLS_MPI_CHK( mbedtls_mpi_lset( &pt->Z, 1 ) );
-
-        if( buf[0] == 0x04 )
-        {
-            /* format == MBEDTLS_ECP_PF_UNCOMPRESSED */
-            if( ilen != 1 + plen * 2 )
-                return( MBEDTLS_ERR_ECP_BAD_INPUT_DATA );
-            return( mbedtls_mpi_read_binary( &pt->Y, buf + 1 + plen, plen ) );
-        }
-        else if( buf[0] == 0x02 || buf[0] == 0x03 )
-        {
-            /* format == MBEDTLS_ECP_PF_COMPRESSED */
-            if( ilen != 1 + plen )
-                return( MBEDTLS_ERR_ECP_BAD_INPUT_DATA );
-            return( mbedtls_ecp_sw_derive_y( grp, &pt->X, &pt->Y,
-                                             ( buf[0] & 1 ) ) );
-        }
-        else
-            return( MBEDTLS_ERR_ECP_BAD_INPUT_DATA );
     }
 #endif
 
@@ -2362,12 +2274,14 @@ cleanup:
         mbedtls_free( T );
     }
 
-    /* don't free R while in progress in case R == P */
-#if defined(MBEDTLS_ECP_RESTARTABLE)
-    if( ret != MBEDTLS_ERR_ECP_IN_PROGRESS )
-#endif
     /* prevent caller from using invalid value */
-    if( ret != 0 )
+    int should_free_R = ( ret != 0 );
+#if defined(MBEDTLS_ECP_RESTARTABLE)
+    /* don't free R while in progress in case R == P */
+    if( ret == MBEDTLS_ERR_ECP_IN_PROGRESS )
+        should_free_R = 0;
+#endif
+    if( should_free_R )
         mbedtls_ecp_point_free( R );
 
     ECP_RS_LEAVE( rsm );
@@ -2542,7 +2456,7 @@ static int ecp_mul_mxz( mbedtls_ecp_group *grp, mbedtls_ecp_point *R,
     MBEDTLS_MPI_CHK( ecp_randomize_mxz( grp, &RP, f_rng, p_rng ) );
 
     /* Loop invariant: R = result so far, RP = R + P */
-    i = mbedtls_mpi_bitlen( m ); /* one past the (zero-based) most significant bit */
+    i = grp->nbits + 1; /* one past the (zero-based) required msb for private keys */
     while( i-- > 0 )
     {
         b = mbedtls_mpi_get_bit( m, i );
@@ -2612,10 +2526,12 @@ static int ecp_mul_restartable_internal( mbedtls_ecp_group *grp, mbedtls_ecp_poi
         MBEDTLS_MPI_CHK( mbedtls_internal_ecp_init( grp ) );
 #endif /* MBEDTLS_ECP_INTERNAL_ALT */
 
+    int restarting = 0;
 #if defined(MBEDTLS_ECP_RESTARTABLE)
-    /* skip argument check when restarting */
-    if( rs_ctx == NULL || rs_ctx->rsm == NULL )
+    restarting = ( rs_ctx != NULL && rs_ctx->rsm != NULL );
 #endif
+    /* skip argument check when restarting */
+    if( !restarting )
     {
         /* check_privkey is free */
         MBEDTLS_ECP_BUDGET( MBEDTLS_ECP_OPS_CHK );
@@ -2741,14 +2657,17 @@ static int mbedtls_ecp_mul_shortcuts( mbedtls_ecp_group *grp,
 
     if( mbedtls_mpi_cmp_int( m, 0 ) == 0 )
     {
+        MBEDTLS_MPI_CHK( mbedtls_ecp_check_pubkey( grp, P ) );
         MBEDTLS_MPI_CHK( mbedtls_ecp_set_zero( R ) );
     }
     else if( mbedtls_mpi_cmp_int( m, 1 ) == 0 )
     {
+        MBEDTLS_MPI_CHK( mbedtls_ecp_check_pubkey( grp, P ) );
         MBEDTLS_MPI_CHK( mbedtls_ecp_copy( R, P ) );
     }
     else if( mbedtls_mpi_cmp_int( m, -1 ) == 0 )
     {
+        MBEDTLS_MPI_CHK( mbedtls_ecp_check_pubkey( grp, P ) );
         MBEDTLS_MPI_CHK( mbedtls_ecp_copy( R, P ) );
         MPI_ECP_NEG( &R->Y );
     }

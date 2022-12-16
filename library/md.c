@@ -36,13 +36,7 @@
 #include "mbedtls/sha256.h"
 #include "mbedtls/sha512.h"
 
-#if defined(MBEDTLS_PLATFORM_C)
 #include "mbedtls/platform.h"
-#else
-#include <stdlib.h>
-#define mbedtls_calloc    calloc
-#define mbedtls_free       free
-#endif
 
 #include <string.h>
 
@@ -639,7 +633,6 @@ int mbedtls_md_hmac_starts( mbedtls_md_context_t *ctx, const unsigned char *key,
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     unsigned char sum[MBEDTLS_MD_MAX_SIZE];
     unsigned char *ipad, *opad;
-    size_t i;
 
     if( ctx == NULL || ctx->md_info == NULL || ctx->hmac_ctx == NULL )
         return( MBEDTLS_ERR_MD_BAD_INPUT_DATA );
@@ -663,11 +656,8 @@ int mbedtls_md_hmac_starts( mbedtls_md_context_t *ctx, const unsigned char *key,
     memset( ipad, 0x36, ctx->md_info->block_size );
     memset( opad, 0x5C, ctx->md_info->block_size );
 
-    for( i = 0; i < keylen; i++ )
-    {
-        ipad[i] = (unsigned char)( ipad[i] ^ key[i] );
-        opad[i] = (unsigned char)( opad[i] ^ key[i] );
-    }
+    mbedtls_xor( ipad, ipad, key, keylen );
+    mbedtls_xor( opad, opad, key, keylen );
 
     if( ( ret = mbedtls_md_starts( ctx ) ) != 0 )
         goto cleanup;
