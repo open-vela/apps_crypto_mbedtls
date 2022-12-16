@@ -32,18 +32,9 @@
 #include <stdio.h>
 #endif
 
-#if defined(MBEDTLS_ENTROPY_NV_SEED)
 #include "mbedtls/platform.h"
-#endif
 
-#if defined(MBEDTLS_SELF_TEST)
-#if defined(MBEDTLS_PLATFORM_C)
 #include "mbedtls/platform.h"
-#else
-#include <stdio.h>
-#define mbedtls_printf     printf
-#endif /* MBEDTLS_PLATFORM_C */
-#endif /* MBEDTLS_SELF_TEST */
 
 
 #define ENTROPY_MAX_LOOP    256     /**< Maximum amount to loop before error */
@@ -573,7 +564,7 @@ static int mbedtls_entropy_source_self_test_check_bits( const unsigned char *buf
 }
 
 /*
- * A test to ensure hat the entropy sources are functioning correctly
+ * A test to ensure that the entropy sources are functioning correctly
  * and there is no obvious failure. The test performs the following checks:
  *  - The entropy source is not providing only 0s (all bits unset) or 1s (all
  *    bits set).
