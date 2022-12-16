@@ -13,7 +13,6 @@
 # - the set of tests skipped in the driver-only build is the same as in an
 #   equivalent software-based configuration, or the difference is small enough,
 #   justified, and a github issue is created to track it.
-#   This part is verified by tests/scripts/analyze_outcomes.py
 #
 # WARNING: this script checks out a commit other than the head of the current
 # branch; it checks out the current branch again when running successfully,
@@ -27,12 +26,18 @@
 # re-running this script (for example "get numbers before this PR").
 
 # ----- BEGIN edit this -----
-# Space-separated list of test suites to ignore:
-# if SSS is in that list, test_suite_SSS and test_suite_SSS.* are ignored.
-IGNORE="md mdx shax" # accelerated
-IGNORE="$IGNORE entropy hmac_drbg random" # disabled (ext. RNG)
-IGNORE="$IGNORE psa_crypto_init" # needs internal RNG
-IGNORE="$IGNORE hkdf" # disabled in the all.sh component tested
+# The component in all.sh that builds and tests with drivers.
+DRIVER_COMPONENT=test_psa_crypto_config_accel_hash_use_psa
+# A similar configuration to that of the component, except without drivers,
+# for comparison.
+reference_config () {
+    scripts/config.py set MBEDTLS_USE_PSA_CRYPTO
+    scripts/config.py unset MBEDTLS_PKCS1_V21
+    scripts/config.py unset MBEDTLS_X509_RSASSA_PSS_SUPPORT
+    scripts/config.py unset MBEDTLS_ECDSA_DETERMINISTIC
+}
+# Space-separated list of test suites of interest.
+SUITES="rsa pkcs1_v15 pk pkparse pkwrite"
 # ----- END edit this -----
 
 set -eu
@@ -69,24 +74,16 @@ cleanup
 scripts/config.py full
 record "after-full"
 
+# get the numbers now for driver-only and reference
+cleanup
+reference_config
+record "reference"
+
+cleanup
+export MBEDTLS_TEST_OUTCOME_FILE="$PWD/outcome-drivers.csv"
+tests/scripts/all.sh -k test_psa_crypto_config_accel_hash_use_psa
 
 # analysis
-
-populate_suites () {
-    SUITES=''
-    make generated_files >/dev/null
-    data_files=$(cd tests/suites && echo *.data)
-    for data in $data_files; do
-        suite=${data#test_suite_}
-        suite=${suite%.data}
-        suite_base=${suite%%.*}
-        case " $IGNORE " in
-            *" $suite_base "*) :;;
-            *) SUITES="$SUITES $suite";;
-        esac
-    done
-    make neat
-}
 
 compare_suite () {
     ref="outcome-$1.csv"
@@ -101,32 +98,19 @@ compare_suite () {
     nb_ref=$(wc -l <skipped-ref)
     nb_new=$(wc -l <skipped-new)
 
-    printf "%36s: total %4d; skipped %4d -> %4d\n" \
+    printf "%12s: total %3d; skipped %3d -> %3d\n" \
             $suite      $total       $nb_ref $nb_new
-    if diff skipped-ref skipped-new | grep '^> '; then
-        ret=1
-    else
-        ret=0
-    fi
+    diff skipped-ref skipped-new | grep '^> ' || true
     rm skipped-ref skipped-new
-    return $ret
 }
 
 compare_builds () {
     printf "\n*** Comparing $1 -> $2 ***\n"
-    failed=''
     for suite in $SUITES; do
-        if compare_suite "$1" "$2" "$suite"; then :; else
-            failed="$failed $suite"
-        fi
+        compare_suite "$1" "$2" "$suite"
     done
-    if [ -z "$failed" ]; then
-        printf "No coverage gap found.\n"
-    else
-        printf "Suites with less coverage:%s\n" "$failed"
-    fi
 }
 
-populate_suites
 compare_builds before-default after-default
 compare_builds before-full after-full
+compare_builds reference drivers
