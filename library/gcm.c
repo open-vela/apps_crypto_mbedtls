@@ -32,7 +32,6 @@
 #if defined(MBEDTLS_GCM_C)
 
 #include "mbedtls/gcm.h"
-#include "mbedtls/platform.h"
 #include "mbedtls/platform_util.h"
 #include "mbedtls/error.h"
 
@@ -42,13 +41,29 @@
 #include "aesni.h"
 #endif
 
+#if defined(MBEDTLS_SELF_TEST) && defined(MBEDTLS_AES_C)
+#include "mbedtls/aes.h"
+#include "mbedtls/platform.h"
+#if !defined(MBEDTLS_PLATFORM_C)
+#include <stdio.h>
+#define mbedtls_printf printf
+#endif /* MBEDTLS_PLATFORM_C */
+#endif /* MBEDTLS_SELF_TEST && MBEDTLS_AES_C */
+
 #if !defined(MBEDTLS_GCM_ALT)
+
+/* Parameter validation macros */
+#define GCM_VALIDATE_RET( cond ) \
+    MBEDTLS_INTERNAL_VALIDATE_RET( cond, MBEDTLS_ERR_GCM_BAD_INPUT )
+#define GCM_VALIDATE( cond ) \
+    MBEDTLS_INTERNAL_VALIDATE( cond )
 
 /*
  * Initialize a context
  */
 void mbedtls_gcm_init( mbedtls_gcm_context *ctx )
 {
+    GCM_VALIDATE( ctx != NULL );
     memset( ctx, 0, sizeof( mbedtls_gcm_context ) );
 }
 
@@ -128,8 +143,9 @@ int mbedtls_gcm_setkey( mbedtls_gcm_context *ctx,
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     const mbedtls_cipher_info_t *cipher_info;
 
-    if( keybits != 128 && keybits != 192 && keybits != 256 )
-        return MBEDTLS_ERR_GCM_BAD_INPUT;
+    GCM_VALIDATE_RET( ctx != NULL );
+    GCM_VALIDATE_RET( key != NULL );
+    GCM_VALIDATE_RET( keybits == 128 || keybits == 192 || keybits == 256 );
 
     cipher_info = mbedtls_cipher_info_from_values( cipher, keybits,
                                                    MBEDTLS_MODE_ECB );
@@ -235,9 +251,13 @@ int mbedtls_gcm_starts( mbedtls_gcm_context *ctx,
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     unsigned char work_buf[16];
+    size_t i;
     const unsigned char *p;
     size_t use_len, olen = 0;
     uint64_t iv_bits;
+
+    GCM_VALIDATE_RET( ctx != NULL );
+    GCM_VALIDATE_RET( iv != NULL );
 
     /* IV is limited to 2^64 bits, so 2^61 bytes */
     /* IV is not allowed to be zero length */
@@ -267,7 +287,8 @@ int mbedtls_gcm_starts( mbedtls_gcm_context *ctx,
         {
             use_len = ( iv_len < 16 ) ? iv_len : 16;
 
-            mbedtls_xor( ctx->y, ctx->y, p, use_len );
+            for( i = 0; i < use_len; i++ )
+                ctx->y[i] ^= p[i];
 
             gcm_mult( ctx, ctx->y, ctx->y );
 
@@ -275,7 +296,8 @@ int mbedtls_gcm_starts( mbedtls_gcm_context *ctx,
             p += use_len;
         }
 
-        mbedtls_xor( ctx->y, ctx->y, work_buf, 16);
+        for( i = 0; i < 16; i++ )
+            ctx->y[i] ^= work_buf[i];
 
         gcm_mult( ctx, ctx->y, ctx->y );
     }
@@ -310,7 +332,9 @@ int mbedtls_gcm_update_ad( mbedtls_gcm_context *ctx,
                            const unsigned char *add, size_t add_len )
 {
     const unsigned char *p;
-    size_t use_len, offset;
+    size_t use_len, i, offset;
+
+    GCM_VALIDATE_RET( add_len == 0 || add != NULL );
 
     /* IV is limited to 2^64 bits, so 2^61 bytes */
     if( (uint64_t) add_len >> 61 != 0 )
@@ -325,7 +349,8 @@ int mbedtls_gcm_update_ad( mbedtls_gcm_context *ctx,
         if( use_len > add_len )
             use_len = add_len;
 
-        mbedtls_xor( ctx->buf + offset, ctx->buf + offset, p, use_len );
+        for( i = 0; i < use_len; i++ )
+            ctx->buf[i+offset] ^= p[i];
 
         if( offset + use_len == 16 )
             gcm_mult( ctx, ctx->buf, ctx->buf );
@@ -339,7 +364,8 @@ int mbedtls_gcm_update_ad( mbedtls_gcm_context *ctx,
 
     while( add_len >= 16 )
     {
-        mbedtls_xor( ctx->buf, ctx->buf, p, 16 );
+        for( i = 0; i < 16; i++ )
+            ctx->buf[i] ^= p[i];
 
         gcm_mult( ctx, ctx->buf, ctx->buf );
 
@@ -349,7 +375,8 @@ int mbedtls_gcm_update_ad( mbedtls_gcm_context *ctx,
 
     if( add_len > 0 )
     {
-        mbedtls_xor( ctx->buf, ctx->buf, p, add_len );
+        for( i = 0; i < add_len; i++ )
+            ctx->buf[i] ^= p[i];
     }
 
     return( 0 );
@@ -372,6 +399,7 @@ static int gcm_mask( mbedtls_gcm_context *ctx,
                      const unsigned char *input,
                      unsigned char *output )
 {
+    size_t i;
     size_t olen = 0;
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
 
@@ -382,12 +410,14 @@ static int gcm_mask( mbedtls_gcm_context *ctx,
         return( ret );
     }
 
-    if( ctx->mode == MBEDTLS_GCM_DECRYPT )
-        mbedtls_xor( ctx->buf + offset, ctx->buf + offset, input, use_len );
-    mbedtls_xor( output, ectr + offset, input, use_len );
-    if( ctx->mode == MBEDTLS_GCM_ENCRYPT )
-        mbedtls_xor( ctx->buf + offset, ctx->buf + offset, output, use_len );
-
+    for( i = 0; i < use_len; i++ )
+    {
+        if( ctx->mode == MBEDTLS_GCM_DECRYPT )
+            ctx->buf[offset + i] ^= input[i];
+        output[i] = ectr[offset + i] ^ input[i];
+        if( ctx->mode == MBEDTLS_GCM_ENCRYPT )
+            ctx->buf[offset + i] ^= output[i];
+    }
     return( 0 );
 }
 
@@ -404,6 +434,7 @@ int mbedtls_gcm_update( mbedtls_gcm_context *ctx,
 
     if( output_size < input_length )
         return( MBEDTLS_ERR_GCM_BUFFER_TOO_SMALL );
+    GCM_VALIDATE_RET( output_length != NULL );
     *output_length = input_length;
 
     /* Exit early if input_length==0 so that we don't do any pointer arithmetic
@@ -412,6 +443,10 @@ int mbedtls_gcm_update( mbedtls_gcm_context *ctx,
      * untouched for mbedtls_gcm_finish */
     if( input_length == 0 )
         return( 0 );
+
+    GCM_VALIDATE_RET( ctx != NULL );
+    GCM_VALIDATE_RET( input != NULL );
+    GCM_VALIDATE_RET( output != NULL );
 
     if( output > input && (size_t) ( output - input ) < input_length )
         return( MBEDTLS_ERR_GCM_BAD_INPUT );
@@ -480,8 +515,12 @@ int mbedtls_gcm_finish( mbedtls_gcm_context *ctx,
                         unsigned char *tag, size_t tag_len )
 {
     unsigned char work_buf[16];
+    size_t i;
     uint64_t orig_len;
     uint64_t orig_add_len;
+
+    GCM_VALIDATE_RET( ctx != NULL );
+    GCM_VALIDATE_RET( tag != NULL );
 
     /* We never pass any output in finish(). The output parameter exists only
      * for the sake of alternative implementations. */
@@ -514,11 +553,13 @@ int mbedtls_gcm_finish( mbedtls_gcm_context *ctx,
         MBEDTLS_PUT_UINT32_BE( ( orig_len     >> 32 ), work_buf, 8  );
         MBEDTLS_PUT_UINT32_BE( ( orig_len           ), work_buf, 12 );
 
-        mbedtls_xor( ctx->buf, ctx->buf, work_buf, 16 );
+        for( i = 0; i < 16; i++ )
+            ctx->buf[i] ^= work_buf[i];
 
         gcm_mult( ctx, ctx->buf, ctx->buf );
 
-        mbedtls_xor( tag, tag, ctx->buf, tag_len );
+        for( i = 0; i < tag_len; i++ )
+            tag[i] ^= ctx->buf[i];
     }
 
     return( 0 );
@@ -538,6 +579,13 @@ int mbedtls_gcm_crypt_and_tag( mbedtls_gcm_context *ctx,
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     size_t olen;
+
+    GCM_VALIDATE_RET( ctx != NULL );
+    GCM_VALIDATE_RET( iv != NULL );
+    GCM_VALIDATE_RET( add_len == 0 || add != NULL );
+    GCM_VALIDATE_RET( length == 0 || input != NULL );
+    GCM_VALIDATE_RET( length == 0 || output != NULL );
+    GCM_VALIDATE_RET( tag != NULL );
 
     if( ( ret = mbedtls_gcm_starts( ctx, mode, iv, iv_len ) ) != 0 )
         return( ret );
@@ -570,6 +618,13 @@ int mbedtls_gcm_auth_decrypt( mbedtls_gcm_context *ctx,
     unsigned char check_tag[16];
     size_t i;
     int diff;
+
+    GCM_VALIDATE_RET( ctx != NULL );
+    GCM_VALIDATE_RET( iv != NULL );
+    GCM_VALIDATE_RET( add_len == 0 || add != NULL );
+    GCM_VALIDATE_RET( tag != NULL );
+    GCM_VALIDATE_RET( length == 0 || input != NULL );
+    GCM_VALIDATE_RET( length == 0 || output != NULL );
 
     if( ( ret = mbedtls_gcm_crypt_and_tag( ctx, MBEDTLS_GCM_DECRYPT, length,
                                    iv, iv_len, add, add_len,
