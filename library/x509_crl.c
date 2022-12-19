@@ -1,5 +1,5 @@
 /*
- *  X.509 Certificate Revocation List (CRL) parsing
+ *  X.509 Certidicate Revocation List (CRL) parsing
  *
  *  Copyright The Mbed TLS Contributors
  *  SPDX-License-Identifier: Apache-2.0
@@ -42,7 +42,15 @@
 #include "mbedtls/pem.h"
 #endif
 
+#if defined(MBEDTLS_PLATFORM_C)
 #include "mbedtls/platform.h"
+#else
+#include <stdlib.h>
+#include <stdio.h>
+#define mbedtls_free       free
+#define mbedtls_calloc    calloc
+#define mbedtls_snprintf   snprintf
+#endif
 
 #if defined(MBEDTLS_HAVE_TIME)
 #if defined(_WIN32) && !defined(EFIX64) && !defined(EFI32)
@@ -705,16 +713,28 @@ void mbedtls_x509_crl_free( mbedtls_x509_crl *crl )
 {
     mbedtls_x509_crl *crl_cur = crl;
     mbedtls_x509_crl *crl_prv;
+    mbedtls_x509_name *name_cur;
+    mbedtls_x509_name *name_prv;
     mbedtls_x509_crl_entry *entry_cur;
     mbedtls_x509_crl_entry *entry_prv;
 
-    while( crl_cur != NULL )
+    if( crl == NULL )
+        return;
+
+    do
     {
 #if defined(MBEDTLS_X509_RSASSA_PSS_SUPPORT)
         mbedtls_free( crl_cur->sig_opts );
 #endif
 
-        mbedtls_asn1_free_named_data_list_shallow( crl_cur->issuer.next );
+        name_cur = crl_cur->issuer.next;
+        while( name_cur != NULL )
+        {
+            name_prv = name_cur;
+            name_cur = name_cur->next;
+            mbedtls_platform_zeroize( name_prv, sizeof( mbedtls_x509_name ) );
+            mbedtls_free( name_prv );
+        }
 
         entry_cur = crl_cur->entry.next;
         while( entry_cur != NULL )
@@ -732,6 +752,13 @@ void mbedtls_x509_crl_free( mbedtls_x509_crl *crl )
             mbedtls_free( crl_cur->raw.p );
         }
 
+        crl_cur = crl_cur->next;
+    }
+    while( crl_cur != NULL );
+
+    crl_cur = crl;
+    do
+    {
         crl_prv = crl_cur;
         crl_cur = crl_cur->next;
 
@@ -739,6 +766,7 @@ void mbedtls_x509_crl_free( mbedtls_x509_crl *crl )
         if( crl_prv != crl )
             mbedtls_free( crl_prv );
     }
+    while( crl_cur != NULL );
 }
 
 #endif /* MBEDTLS_X509_CRL_PARSE_C */
