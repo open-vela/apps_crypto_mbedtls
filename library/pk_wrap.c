@@ -55,13 +55,7 @@
 #include "hash_info.h"
 #endif
 
-#if defined(MBEDTLS_PLATFORM_C)
 #include "mbedtls/platform.h"
-#else
-#include <stdlib.h>
-#define mbedtls_calloc    calloc
-#define mbedtls_free       free
-#endif
 
 #include <limits.h>
 #include <stdint.h>
@@ -1168,8 +1162,12 @@ static int ecdsa_sign_wrap( void *ctx_arg, mbedtls_md_type_t md_alg,
     size_t key_len;
     unsigned char buf[MBEDTLS_PK_ECP_PRV_DER_MAX_BYTES];
     unsigned char *p;
-    psa_algorithm_t psa_sig_md =
-        PSA_ALG_ECDSA( mbedtls_hash_info_psa_from_md( md_alg ) );
+    psa_algorithm_t psa_hash = mbedtls_hash_info_psa_from_md( md_alg );
+#if defined(MBEDTLS_ECDSA_DETERMINISTIC)
+    psa_algorithm_t psa_sig_md = PSA_ALG_DETERMINISTIC_ECDSA( psa_hash );
+#else
+    psa_algorithm_t psa_sig_md = PSA_ALG_ECDSA( psa_hash );
+#endif
     size_t curve_bits;
     psa_ecc_family_t curve =
         mbedtls_ecc_group_to_psa( ctx->grp.id, &curve_bits );
