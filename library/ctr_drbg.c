@@ -36,7 +36,14 @@
 #include <stdio.h>
 #endif
 
+#if defined(MBEDTLS_SELF_TEST)
+#if defined(MBEDTLS_PLATFORM_C)
 #include "mbedtls/platform.h"
+#else
+#include <stdio.h>
+#define mbedtls_printf printf
+#endif /* MBEDTLS_PLATFORM_C */
+#endif /* MBEDTLS_SELF_TEST */
 
 /*
  * CTR_DRBG context initialization
@@ -174,7 +181,8 @@ static int block_cipher_df( unsigned char *output,
 
         while( use_len > 0 )
         {
-            mbedtls_xor( chain, chain, p, MBEDTLS_CTR_DRBG_BLOCKSIZE );
+            for( i = 0; i < MBEDTLS_CTR_DRBG_BLOCKSIZE; i++ )
+                chain[i] ^= p[i];
             p += MBEDTLS_CTR_DRBG_BLOCKSIZE;
             use_len -= ( use_len >= MBEDTLS_CTR_DRBG_BLOCKSIZE ) ?
                        MBEDTLS_CTR_DRBG_BLOCKSIZE : use_len;
