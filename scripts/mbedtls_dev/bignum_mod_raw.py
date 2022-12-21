@@ -14,8 +14,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, List
+from typing import Iterator, List, Optional, Union
 
+from . import test_case
 from . import test_data_generation
 from . import bignum_common
 from .bignum_data import ONLY_PRIME_MODULI
@@ -50,25 +51,6 @@ class BignumModRawSub(bignum_common.ModOperationCommon,
         result = (self.int_a - self.int_b) % self.int_n
         return [self.format_result(result)]
 
-class BignumModRawMul(bignum_common.ModOperationCommon,
-                      BignumModRawTarget):
-    """Test cases for bignum mpi_mod_raw_mul()."""
-    symbol = "*"
-    test_function = "mpi_mod_raw_mul"
-    test_name = "mbedtls_mpi_mod_raw_mul"
-    input_style = "arch_split"
-    arity = 2
-
-    def arguments(self) -> List[str]:
-        return [self.format_result(self.to_montgomery(self.int_a)),
-                self.format_result(self.to_montgomery(self.int_b)),
-                bignum_common.quote_str(self.arg_n)
-               ] + self.result()
-
-    def result(self) -> List[str]:
-        result = (self.int_a * self.int_b) % self.int_n
-        return [self.format_result(self.to_montgomery(result))]
-
 # END MERGE SLOT 2
 
 # BEGIN MERGE SLOT 3
@@ -80,14 +62,24 @@ class BignumModRawInvPrime(bignum_common.ModOperationCommon,
     symbol = "^ -1"
     test_function = "mpi_mod_raw_inv_prime"
     test_name = "mbedtls_mpi_mod_raw_inv_prime (Montgomery form only)"
-    input_style = "arch_split"
+    input_style = "fixed"
     arity = 1
     suffix = True
-    montgomery_form_a = True
-    disallow_zero_a = True
+
+    @property
+    def is_valid(self) -> bool:
+        return self.int_a > 0 and self.int_a < self.int_n
+
+    @property
+    def arg_a(self) -> str:
+        # Input has to be given in Montgomery form
+        mont_a = self.to_montgomery(self.int_a)
+        return self.format_arg('{:x}'.format(mont_a))
 
     def result(self) -> List[str]:
-        result = bignum_common.invmod_positive(self.int_a, self.int_n)
+        result = bignum_common.invmod(self.int_a, self.int_n)
+        if result < 0:
+            result += self.int_n
         mont_result = self.to_montgomery(result)
         return [self.format_result(mont_result)]
 
@@ -115,6 +107,70 @@ class BignumModRawAdd(bignum_common.ModOperationCommon,
 # END MERGE SLOT 5
 
 # BEGIN MERGE SLOT 6
+
+class BignumModRawConvertRep(bignum_common.ModOperationCommon,
+                             BignumModRawTarget):
+    # This is an abstract class, it's ok to have unimplemented methods.
+    #pylint: disable=abstract-method
+    """Test cases for representation conversion."""
+    arity = 1
+
+    def __init__(self, val_n: str, val_a: str, bits_in_limb: Optional[int],
+                 rep: bignum_common.ModulusRepresentation) -> None:
+        if bits_in_limb is None:
+            super().__init__(val_n=val_n, val_a=val_a)
+        else:
+            self.input_style = "arch_split"
+            super().__init__(val_n=val_n, val_a=val_a, bits_in_limb=bits_in_limb)
+        self.rep = rep
+
+    def arguments(self) -> List[str]:
+        return ([bignum_common.quote_str(self.arg_n), self.rep.symbol(),
+                 bignum_common.quote_str(self.arg_a)] +
+                self.result())
+
+    def description(self) -> str:
+        base = super().description()
+        mod_with_rep = 'mod({})'.format(self.rep.name)
+        return base.replace('mod', mod_with_rep, 1)
+
+    @classmethod
+    def generate_function_tests(cls) -> Iterator[test_case.TestCase]:
+        representations = \
+            bignum_common.ModulusRepresentation.supported_representations()
+        for rep in representations:
+            if rep is bignum_common.ModulusRepresentation.MONTGOMERY:
+                limb_sizes = cls.limb_sizes #type: Union[List[int], List[None]]
+            else:
+                limb_sizes = [None] # no dependency on limb size
+            for n in cls.moduli:
+                for a in cls.input_values:
+                    for bil in limb_sizes:
+                        test_object = cls(n, a, bil, rep)
+                        if test_object.is_valid:
+                            yield test_object.create_test_case()
+
+class BignumModRawCanonicalToModulusRep(BignumModRawConvertRep):
+    """Test cases for mpi_mod_raw_canonical_to_modulus_rep."""
+    test_function = "mpi_mod_raw_canonical_to_modulus_rep"
+    test_name = "Rep canon->mod"
+
+    def result(self) -> List[str]:
+        result = self.convert_from_canonical(self.int_a, self.rep)
+        return [self.format_result(result)]
+
+class BignumModRawModulusToCanonicalRep(BignumModRawConvertRep):
+    """Test cases for mpi_mod_raw_modulus_to_canonical_rep."""
+    test_function = "mpi_mod_raw_modulus_to_canonical_rep"
+    test_name = "Rep mod->canon"
+
+    @property
+    def arg_a(self) -> str:
+        converted_a = self.convert_from_canonical(self.int_a, self.rep)
+        return self.format_arg(hex(converted_a)[2:])
+
+    def result(self) -> List[str]:
+        return [self.format_result(self.int_a)]
 
 # END MERGE SLOT 6
 
