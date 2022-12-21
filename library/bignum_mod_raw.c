@@ -120,6 +120,16 @@ void mbedtls_mpi_mod_raw_sub( mbedtls_mpi_uint *X,
     (void) mbedtls_mpi_core_add_if( X, N->p, N->limbs, (unsigned) c );
 }
 
+void mbedtls_mpi_mod_raw_mul( mbedtls_mpi_uint *X,
+                              const mbedtls_mpi_uint *A,
+                              const mbedtls_mpi_uint *B,
+                              const mbedtls_mpi_mod_modulus *N,
+                              mbedtls_mpi_uint *T )
+{
+    mbedtls_mpi_core_montmul( X, A, B, N->limbs, N->p, N->limbs,
+                              N->rep.mont.mm, T );
+}
+
 /* END MERGE SLOT 2 */
 
 /* BEGIN MERGE SLOT 3 */
@@ -176,48 +186,6 @@ void mbedtls_mpi_mod_raw_add( mbedtls_mpi_uint *X,
 
 /* BEGIN MERGE SLOT 6 */
 
-int mbedtls_mpi_mod_raw_canonical_to_modulus_rep(
-    mbedtls_mpi_uint *X,
-    const mbedtls_mpi_mod_modulus *N )
-{
-    switch( N->int_rep )
-    {
-        case MBEDTLS_MPI_MOD_REP_MONTGOMERY:
-            return( mbedtls_mpi_mod_raw_to_mont_rep( X, N ) );
-        case MBEDTLS_MPI_MOD_REP_OPT_RED:
-            return( 0 );
-        default:
-            return( MBEDTLS_ERR_MPI_BAD_INPUT_DATA );
-    }
-}
-
-int mbedtls_mpi_mod_raw_modulus_to_canonical_rep(
-    mbedtls_mpi_uint *X,
-    const mbedtls_mpi_mod_modulus *N )
-{
-    switch( N->int_rep )
-    {
-        case MBEDTLS_MPI_MOD_REP_MONTGOMERY:
-            return( mbedtls_mpi_mod_raw_from_mont_rep( X, N ) );
-        case MBEDTLS_MPI_MOD_REP_OPT_RED:
-            return( 0 );
-        default:
-            return( MBEDTLS_ERR_MPI_BAD_INPUT_DATA );
-    }
-}
-
-int mbedtls_mpi_mod_raw_random( mbedtls_mpi_uint *X,
-                                mbedtls_mpi_uint min,
-                                const mbedtls_mpi_mod_modulus *N,
-                                int (*f_rng)(void *, unsigned char *, size_t),
-                                void *p_rng )
-{
-    int ret = mbedtls_mpi_core_random( X, min, N->p, N->limbs, f_rng, p_rng );
-    if( ret != 0 )
-        return( ret );
-    return( mbedtls_mpi_mod_raw_canonical_to_modulus_rep( X, N ) );
-}
-
 /* END MERGE SLOT 6 */
 
 /* BEGIN MERGE SLOT 7 */
@@ -225,13 +193,13 @@ int mbedtls_mpi_mod_raw_to_mont_rep( mbedtls_mpi_uint *X,
                                      const mbedtls_mpi_mod_modulus *m )
 {
     mbedtls_mpi_uint *T;
-    const size_t t_limbs = m->limbs * 2 + 1;
+    const size_t t_limbs = mbedtls_mpi_core_montmul_working_limbs( m->limbs );
 
     if( ( T = (mbedtls_mpi_uint *) mbedtls_calloc( t_limbs, ciL ) ) == NULL )
         return( MBEDTLS_ERR_MPI_ALLOC_FAILED );
 
-    mbedtls_mpi_core_montmul( X, X, m->rep.mont.rr, m->limbs, m->p, m->limbs,
-                              m->rep.mont.mm, T );
+    mbedtls_mpi_core_to_mont_rep( X, X, m->p, m->limbs,
+                                  m->rep.mont.mm, m->rep.mont.rr, T );
 
     mbedtls_platform_zeroize( T, t_limbs * ciL );
     mbedtls_free( T );
@@ -241,15 +209,13 @@ int mbedtls_mpi_mod_raw_to_mont_rep( mbedtls_mpi_uint *X,
 int mbedtls_mpi_mod_raw_from_mont_rep( mbedtls_mpi_uint *X,
                                        const mbedtls_mpi_mod_modulus *m )
 {
-    const mbedtls_mpi_uint one = 1;
-    const size_t t_limbs = m->limbs * 2 + 1;
+    const size_t t_limbs = mbedtls_mpi_core_montmul_working_limbs( m->limbs );
     mbedtls_mpi_uint *T;
 
     if( ( T = (mbedtls_mpi_uint *) mbedtls_calloc( t_limbs, ciL ) ) == NULL )
         return( MBEDTLS_ERR_MPI_ALLOC_FAILED );
 
-    mbedtls_mpi_core_montmul( X, X, &one, 1, m->p, m->limbs,
-                              m->rep.mont.mm, T );
+    mbedtls_mpi_core_from_mont_rep( X, X, m->p, m->limbs, m->rep.mont.mm, T );
 
     mbedtls_platform_zeroize( T, t_limbs * ciL );
     mbedtls_free( T );
