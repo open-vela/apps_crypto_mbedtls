@@ -87,23 +87,12 @@
 #include "mbedtls/bignum.h"
 #endif
 
-/** How residues associated with a modulus are represented.
- *
- * This also determines which fields of the modulus structure are valid and
- * what their contents are (see #mbedtls_mpi_mod_modulus).
- */
+/* Skip 1 as it is slightly easier to accidentally pass to functions. */
 typedef enum
 {
-    /** Representation not chosen (makes the modulus structure invalid). */
     MBEDTLS_MPI_MOD_REP_INVALID    = 0,
-    /* Skip 1 as it is slightly easier to accidentally pass to functions. */
-    /** Montgomery representation. */
     MBEDTLS_MPI_MOD_REP_MONTGOMERY = 2,
-    /** TODO: document this.
-     *
-     * Residues are in canonical representation.
-     */
-    MBEDTLS_MPI_MOD_REP_OPT_RED,
+    MBEDTLS_MPI_MOD_REP_OPT_RED
 } mbedtls_mpi_mod_rep_selector;
 
 /* Make mbedtls_mpi_mod_rep_selector and mbedtls_mpi_mod_ext_rep disjoint to
@@ -135,9 +124,7 @@ typedef struct {
     mbedtls_mpi_mod_rep_selector int_rep;    // selector to signal the active member of the union
     union rep
     {
-        /* if int_rep == #MBEDTLS_MPI_MOD_REP_MONTGOMERY */
         mbedtls_mpi_mont_struct mont;
-        /* if int_rep == #MBEDTLS_MPI_MOD_REP_OPT_RED */
         mbedtls_mpi_opt_red_struct ored;
     } rep;
 } mbedtls_mpi_mod_modulus;
@@ -262,6 +249,35 @@ int mbedtls_mpi_mod_sub( mbedtls_mpi_mod_residue *X,
                          const mbedtls_mpi_mod_residue *A,
                          const mbedtls_mpi_mod_residue *B,
                          const mbedtls_mpi_mod_modulus *N );
+
+/**
+ * \brief Perform modular inversion of an MPI with respect to a modulus \p N.
+ *
+ * \p A and \p X must be associated with the modulus \p N and will therefore
+ * have the same number of limbs as \p N.
+ *
+ * \p X may be aliased to \p A.
+ *
+ * \warning  Currently only supports prime moduli, but does not check for them.
+ *
+ * \param[out] X   The modular inverse of \p A with respect to \p N.
+ * \param[in] A    The number to calculate the modular inverse of.
+ *                 Must not be 0.
+ * \param[in] N    The modulus to use.
+ *
+ * \return         \c 0 if successful.
+ * \return         #MBEDTLS_ERR_MPI_BAD_INPUT_DATA if \p A and \p N do not
+ *                 have the same number of limbs.
+ * \return         #MBEDTLS_ERR_MPI_BAD_INPUT_DATA if \p A is zero.
+ * \return         #MBEDTLS_ERR_MPI_ALLOC_FAILED if couldn't allocate enough
+ *                 memory (needed for conversion to and from Mongtomery form
+ *                 when not in Montgomery form already, and for temporary use
+ *                 by the inversion calculation itself).
+ */
+
+int mbedtls_mpi_mod_inv( mbedtls_mpi_mod_residue *X,
+                         const mbedtls_mpi_mod_residue *A,
+                         const mbedtls_mpi_mod_modulus *N );
 /* END MERGE SLOT 3 */
 
 /* BEGIN MERGE SLOT 4 */
@@ -302,39 +318,6 @@ int mbedtls_mpi_mod_add( mbedtls_mpi_mod_residue *X,
 /* END MERGE SLOT 5 */
 
 /* BEGIN MERGE SLOT 6 */
-
-/** Generate a random number uniformly in a range.
- *
- * This function generates a random number between \p min inclusive and
- * \p N exclusive.
- *
- * The procedure complies with RFC 6979 §3.3 (deterministic ECDSA)
- * when the RNG is a suitably parametrized instance of HMAC_DRBG
- * and \p min is \c 1.
- *
- * \note           There are `N - min` possible outputs. The lower bound
- *                 \p min can be reached, but the upper bound \p N cannot.
- *
- * \param X        The destination residue.
- * \param min      The minimum value to return. It must be strictly smaller
- *                 than \b N.
- * \param N        The modulus.
- *                 This is the upper bound of the output range, exclusive.
- * \param f_rng    The RNG function to use. This must not be \c NULL.
- * \param p_rng    The RNG parameter to be passed to \p f_rng.
- *
- * \return         \c 0 if successful.
- * \return         #MBEDTLS_ERR_MPI_NOT_ACCEPTABLE if the implementation was
- *                 unable to find a suitable value within a limited number
- *                 of attempts. This has a negligible probability if \p N
- *                 is significantly larger than \p min, which is the case
- *                 for all usual cryptographic applications.
- */
-int mbedtls_mpi_mod_random( mbedtls_mpi_mod_residue *X,
-                            mbedtls_mpi_uint min,
-                            const mbedtls_mpi_mod_modulus *N,
-                            int (*f_rng)(void *, unsigned char *, size_t),
-                            void *p_rng );
 
 /* END MERGE SLOT 6 */
 
