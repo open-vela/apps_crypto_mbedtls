@@ -198,32 +198,10 @@ int mbedtls_mpi_mod_sub( mbedtls_mpi_mod_residue *X,
 /* END MERGE SLOT 4 */
 
 /* BEGIN MERGE SLOT 5 */
-int mbedtls_mpi_mod_add( mbedtls_mpi_mod_residue *X,
-                         const mbedtls_mpi_mod_residue *A,
-                         const mbedtls_mpi_mod_residue *B,
-                         const mbedtls_mpi_mod_modulus *N )
-{
-    if( X->limbs != N->limbs || A->limbs != N->limbs || B->limbs != N->limbs )
-        return( MBEDTLS_ERR_MPI_BAD_INPUT_DATA );
 
-    mbedtls_mpi_mod_raw_add(X->p, A->p, B->p, N);
-
-    return( 0 );
-}
 /* END MERGE SLOT 5 */
 
 /* BEGIN MERGE SLOT 6 */
-
-int mbedtls_mpi_mod_random( mbedtls_mpi_mod_residue *X,
-                            mbedtls_mpi_uint min,
-                            const mbedtls_mpi_mod_modulus *N,
-                            int (*f_rng)(void *, unsigned char *, size_t),
-                            void *p_rng )
-{
-    if( X->limbs != N->limbs )
-        return( MBEDTLS_ERR_MPI_BAD_INPUT_DATA );
-    return( mbedtls_mpi_mod_raw_random( X->p, min, N, f_rng, p_rng ) );
-}
 
 /* END MERGE SLOT 6 */
 
@@ -248,7 +226,8 @@ int mbedtls_mpi_mod_read( mbedtls_mpi_mod_residue *r,
 
     r->limbs = m->limbs;
 
-    ret = mbedtls_mpi_mod_raw_canonical_to_modulus_rep( r->p, m );
+    if( m->int_rep == MBEDTLS_MPI_MOD_REP_MONTGOMERY )
+       ret = mbedtls_mpi_mod_raw_to_mont_rep( r->p, m );
 
 cleanup:
     return ( ret );
