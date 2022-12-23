@@ -2,6 +2,63 @@
  *  Modular bignum functions
  *
  * This module implements operations on integers modulo some fixed modulus.
+ *
+ * The functions in this module obey the following conventions unless
+ * explicitly indicated otherwise:
+ *
+ * - **Modulus parameters**: the modulus is passed as a pointer to a structure
+ *   of type #mbedtls_mpi_mod_modulus. The structure must be set up with an
+ *   array of limbs storing the bignum value of the modulus. The modulus must
+ *   be odd and is assumed to have no leading zeroes. The modulus is usually
+ *   named \c N and is usually input-only. Functions which take a parameter
+ *   of type \c const #mbedtls_mpi_mod_modulus* must not modify its value.
+ * - **Bignum parameters**: Bignums are passed as pointers to an array of
+ *   limbs or to a #mbedtls_mpi_mod_residue structure. A limb has the type
+ *   #mbedtls_mpi_uint. Residues must be initialized before use, and must be
+ *   associated with the modulus \c N. Unless otherwise specified:
+ *     - Bignum parameters called \c A, \c B, ... are inputs and are not
+ *       modified by the function. Functions which take a parameter of
+ *       type \c const #mbedtls_mpi_mod_residue* must not modify its value.
+ *     - Bignum parameters called \c X, \c Y, ... are outputs or input-output.
+ *       The initial bignum value of output-only parameters is ignored, but
+ *       they must be set up and associated with the modulus \c N. Some
+ *       functions (typically constant-flow) require that the limbs in an
+ *       output residue are initialized.
+ *     - Bignum parameters called \c p are inputs used to set up a modulus or
+ *       residue. These must be pointers to an array of limbs.
+ *     - \c T is a temporary storage area. The initial content of such a
+ *       parameter is ignored and the final content is unspecified.
+ *     - Some functions use different names, such as \c r for the residue.
+ * - **Bignum sizes**: bignum sizes are always expressed in limbs. Both
+ *   #mbedtls_mpi_mod_modulus and #mbedtls_mpi_mod_residue have a \c limbs
+ *   member storing its size. All bignum parameters must have the same
+ *   number of limbs as the modulus. All bignum sizes must be at least 1 and
+ *   must be significantly less than #SIZE_MAX. The behavior if a size is 0 is
+ *   undefined.
+ * - **Bignum representation**: the representation of inputs and outputs is
+ *   specified by the \c int_rep field of the modulus.
+ * - **Parameter ordering**: for bignum parameters, outputs come before inputs.
+ *   The modulus is passed after residues. Temporaries come last.
+ * - **Aliasing**: in general, output bignums may be aliased to one or more
+ *   inputs. Modulus values may not be aliased to any other parameter. Outputs
+ *   may not be aliased to one another. Temporaries may not be aliased to any
+ *   other parameter.
+ * - **Overlap**: apart from aliasing of residue pointers (where two residue
+ *   arguments are equal pointers), overlap is not supported and may result
+ *   in undefined behavior.
+ * - **Error handling**: functions generally check compatibility of input
+ *   sizes. Most functions will not check that input values are in canonical
+ *   form (i.e. that \c A < \c N), this is only checked during setup of a
+ *   residue structure.
+ * - **Modular representatives**: all functions expect inputs to be in the
+ *   range [0, \c N - 1] and guarantee outputs in the range [0, \c N - 1].
+ *   Residues are set up with an associated modulus, and operations are only
+ *   guaranteed to work if the modulus is associated with all residue
+ *   parameters. If a residue is passed with a modulus other than the one it
+ *   is associated with, then it may be out of range. If an input is out of
+ *   range, outputs are fully unspecified, though bignum values out of range
+ *   should not cause buffer overflows (beware that this is not extensively
+ *   tested).
  */
 
 /*
@@ -30,12 +87,23 @@
 #include "mbedtls/bignum.h"
 #endif
 
-/* Skip 1 as it is slightly easier to accidentally pass to functions. */
+/** How residues associated with a modulus are represented.
+ *
+ * This also determines which fields of the modulus structure are valid and
+ * what their contents are (see #mbedtls_mpi_mod_modulus).
+ */
 typedef enum
 {
+    /** Representation not chosen (makes the modulus structure invalid). */
     MBEDTLS_MPI_MOD_REP_INVALID    = 0,
+    /* Skip 1 as it is slightly easier to accidentally pass to functions. */
+    /** Montgomery representation. */
     MBEDTLS_MPI_MOD_REP_MONTGOMERY = 2,
-    MBEDTLS_MPI_MOD_REP_OPT_RED
+    /** TODO: document this.
+     *
+     * Residues are in canonical representation.
+     */
+    MBEDTLS_MPI_MOD_REP_OPT_RED,
 } mbedtls_mpi_mod_rep_selector;
 
 /* Make mbedtls_mpi_mod_rep_selector and mbedtls_mpi_mod_ext_rep disjoint to
@@ -67,7 +135,9 @@ typedef struct {
     mbedtls_mpi_mod_rep_selector int_rep;    // selector to signal the active member of the union
     union rep
     {
+        /* if int_rep == #MBEDTLS_MPI_MOD_REP_MONTGOMERY */
         mbedtls_mpi_mont_struct mont;
+        /* if int_rep == #MBEDTLS_MPI_MOD_REP_OPT_RED */
         mbedtls_mpi_opt_red_struct ored;
     } rep;
 } mbedtls_mpi_mod_modulus;
@@ -192,6 +262,35 @@ int mbedtls_mpi_mod_sub( mbedtls_mpi_mod_residue *X,
                          const mbedtls_mpi_mod_residue *A,
                          const mbedtls_mpi_mod_residue *B,
                          const mbedtls_mpi_mod_modulus *N );
+
+/**
+ * \brief Perform modular inversion of an MPI with respect to a modulus \p N.
+ *
+ * \p A and \p X must be associated with the modulus \p N and will therefore
+ * have the same number of limbs as \p N.
+ *
+ * \p X may be aliased to \p A.
+ *
+ * \warning  Currently only supports prime moduli, but does not check for them.
+ *
+ * \param[out] X   The modular inverse of \p A with respect to \p N.
+ * \param[in] A    The number to calculate the modular inverse of.
+ *                 Must not be 0.
+ * \param[in] N    The modulus to use.
+ *
+ * \return         \c 0 if successful.
+ * \return         #MBEDTLS_ERR_MPI_BAD_INPUT_DATA if \p A and \p N do not
+ *                 have the same number of limbs.
+ * \return         #MBEDTLS_ERR_MPI_BAD_INPUT_DATA if \p A is zero.
+ * \return         #MBEDTLS_ERR_MPI_ALLOC_FAILED if couldn't allocate enough
+ *                 memory (needed for conversion to and from Mongtomery form
+ *                 when not in Montgomery form already, and for temporary use
+ *                 by the inversion calculation itself).
+ */
+
+int mbedtls_mpi_mod_inv( mbedtls_mpi_mod_residue *X,
+                         const mbedtls_mpi_mod_residue *A,
+                         const mbedtls_mpi_mod_modulus *N );
 /* END MERGE SLOT 3 */
 
 /* BEGIN MERGE SLOT 4 */
@@ -199,10 +298,72 @@ int mbedtls_mpi_mod_sub( mbedtls_mpi_mod_residue *X,
 /* END MERGE SLOT 4 */
 
 /* BEGIN MERGE SLOT 5 */
-
+/**
+ * \brief Perform a fixed-size modular addition.
+ *
+ * Calculate `A + B modulo N`.
+ *
+ * \p A, \p B and \p X must all be associated with the modulus \p N and must
+ * all have the same number of limbs as \p N.
+ *
+ * \p X may be aliased to \p A or \p B, or even both, but may not overlap
+ * either otherwise.
+ *
+ * \note This function does not check that \p A or \p B are in canonical
+ *       form (that is, are < \p N) - that will have been done by
+ *       mbedtls_mpi_mod_residue_setup().
+ *
+ * \param[out] X    The address of the result residue. Must be initialized.
+ *                  Must have the same number of limbs as the modulus \p N.
+ * \param[in]  A    The address of the first input residue.
+ * \param[in]  B    The address of the second input residue.
+ * \param[in]  N    The address of the modulus. Used to perform a modulo
+ *                  operation on the result of the addition.
+ *
+ * \return          \c 0 if successful.
+ * \return          #MBEDTLS_ERR_MPI_BAD_INPUT_DATA if the given MPIs do not
+ *                  have the correct number of limbs.
+ */
+int mbedtls_mpi_mod_add( mbedtls_mpi_mod_residue *X,
+                         const mbedtls_mpi_mod_residue *A,
+                         const mbedtls_mpi_mod_residue *B,
+                         const mbedtls_mpi_mod_modulus *N );
 /* END MERGE SLOT 5 */
 
 /* BEGIN MERGE SLOT 6 */
+
+/** Generate a random number uniformly in a range.
+ *
+ * This function generates a random number between \p min inclusive and
+ * \p N exclusive.
+ *
+ * The procedure complies with RFC 6979 §3.3 (deterministic ECDSA)
+ * when the RNG is a suitably parametrized instance of HMAC_DRBG
+ * and \p min is \c 1.
+ *
+ * \note           There are `N - min` possible outputs. The lower bound
+ *                 \p min can be reached, but the upper bound \p N cannot.
+ *
+ * \param X        The destination residue.
+ * \param min      The minimum value to return. It must be strictly smaller
+ *                 than \b N.
+ * \param N        The modulus.
+ *                 This is the upper bound of the output range, exclusive.
+ * \param f_rng    The RNG function to use. This must not be \c NULL.
+ * \param p_rng    The RNG parameter to be passed to \p f_rng.
+ *
+ * \return         \c 0 if successful.
+ * \return         #MBEDTLS_ERR_MPI_NOT_ACCEPTABLE if the implementation was
+ *                 unable to find a suitable value within a limited number
+ *                 of attempts. This has a negligible probability if \p N
+ *                 is significantly larger than \p min, which is the case
+ *                 for all usual cryptographic applications.
+ */
+int mbedtls_mpi_mod_random( mbedtls_mpi_mod_residue *X,
+                            mbedtls_mpi_uint min,
+                            const mbedtls_mpi_mod_modulus *N,
+                            int (*f_rng)(void *, unsigned char *, size_t),
+                            void *p_rng );
 
 /* END MERGE SLOT 6 */
 
