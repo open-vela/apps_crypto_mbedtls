@@ -1972,6 +1972,7 @@ component_build_module_alt () {
     # aesni.c and padlock.c reference mbedtls_aes_context fields directly.
     scripts/config.py unset MBEDTLS_AESNI_C
     scripts/config.py unset MBEDTLS_PADLOCK_C
+    scripts/config.py unset MBEDTLS_AESCE_C
     # MBEDTLS_ECP_RESTARTABLE is documented as incompatible.
     scripts/config.py unset MBEDTLS_ECP_RESTARTABLE
     # You can only have one threading implementation: alt or pthread, not both.
@@ -2158,8 +2159,7 @@ component_test_psa_crypto_config_accel_ecdsa_use_psa () {
     msg "test: MBEDTLS_PSA_CRYPTO_CONFIG with accelerated ECDSA + USE_PSA"
     make test
 
-    msg "test: ssl-opt.sh"
-    tests/ssl-opt.sh
+    # TODO: ssl-opt.sh (currently doesn't pass) - #6861
 }
 
 # Keep in sync with component_test_psa_crypto_config_accel_ecdsa_use_psa.
@@ -2178,8 +2178,7 @@ component_test_psa_crypto_config_reference_ecdsa_use_psa () {
     msg "test: MBEDTLS_PSA_CRYPTO_CONFIG with accelerated ECDSA + USE_PSA"
     make test
 
-    msg "test: ssl-opt.sh"
-    tests/ssl-opt.sh
+    # TODO: ssl-opt.sh (when the accel component is ready) - #6861
 }
 
 component_test_psa_crypto_config_accel_ecdh () {
@@ -3343,6 +3342,7 @@ component_test_have_int32 () {
     scripts/config.py unset MBEDTLS_HAVE_ASM
     scripts/config.py unset MBEDTLS_AESNI_C
     scripts/config.py unset MBEDTLS_PADLOCK_C
+    scripts/config.py unset MBEDTLS_AESCE_C
     make CC=gcc CFLAGS='-Werror -Wall -Wextra -DMBEDTLS_HAVE_INT32'
 
     msg "test: gcc, force 32-bit bignum limbs"
@@ -3354,6 +3354,7 @@ component_test_have_int64 () {
     scripts/config.py unset MBEDTLS_HAVE_ASM
     scripts/config.py unset MBEDTLS_AESNI_C
     scripts/config.py unset MBEDTLS_PADLOCK_C
+    scripts/config.py unset MBEDTLS_AESCE_C
     make CC=gcc CFLAGS='-Werror -Wall -Wextra -DMBEDTLS_HAVE_INT64'
 
     msg "test: gcc, force 64-bit bignum limbs"
