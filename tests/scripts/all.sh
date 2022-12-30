@@ -870,14 +870,8 @@ component_check_test_cases () {
     else
         opt=''
     fi
-    tests/scripts/check_test_cases.py $opt
+    tests/scripts/check_test_cases.py -q $opt
     unset opt
-
-    # Check that no tests are explicitely disabled when USE_PSA_CRYPTO is set
-    # as a matter of policy to ensure there is no missed testing
-    msg "Check: explicitely disabled test with USE_PSA_CRYPTO"  # < 1s
-    not grep -n 'depends_on:.*!MBEDTLS_USE_PSA_CRYPTO' tests/suites/*.function tests/suites/*.data
-    not grep -n '^ *requires_config_disabled.*MBEDTLS_USE_PSA_CRYPTO' tests/ssl-opt.sh tests/opt-testcases/*.sh
 }
 
 component_check_doxygen_warnings () {
@@ -1457,10 +1451,14 @@ component_test_tls1_2_ecjpake_compatibility() {
     make -C programs ssl/ssl_server2 ssl/ssl_client2
     make -C programs test/udp_proxy test/query_compile_time_config
 
-    msg "test: server w/o USE_PSA - client w/ USE_PSA"
-    P_SRV=../s2_no_use_psa tests/ssl-opt.sh -f ECJPAKE
-    msg "test: client w/o USE_PSA - server w/ USE_PSA"
-    P_CLI=../c2_no_use_psa tests/ssl-opt.sh -f ECJPAKE
+    msg "test: server w/o USE_PSA - client w/ USE_PSA, text password"
+    P_SRV=../s2_no_use_psa tests/ssl-opt.sh -f "ECJPAKE: working, TLS"
+    msg "test: server w/o USE_PSA - client w/ USE_PSA, opaque password"
+    P_SRV=../s2_no_use_psa tests/ssl-opt.sh -f "ECJPAKE: opaque password client only, working, TLS"
+    msg "test: client w/o USE_PSA - server w/ USE_PSA, text password"
+    P_CLI=../c2_no_use_psa tests/ssl-opt.sh -f "ECJPAKE: working, TLS"
+    msg "test: client w/o USE_PSA - server w/ USE_PSA, opaque password"
+    P_CLI=../c2_no_use_psa tests/ssl-opt.sh -f "ECJPAKE: opaque password server only, working, TLS"
 
     rm s2_no_use_psa c2_no_use_psa
 }
@@ -1889,10 +1887,13 @@ component_test_depends_py_pkalgs_psa () {
 component_build_module_alt () {
     msg "build: MBEDTLS_XXX_ALT" # ~30s
     scripts/config.py full
-    # Disable options that are incompatible with some ALT implementations.
+
+    # Disable options that are incompatible with some ALT implementations:
     # aesni.c and padlock.c reference mbedtls_aes_context fields directly.
     scripts/config.py unset MBEDTLS_AESNI_C
     scripts/config.py unset MBEDTLS_PADLOCK_C
+    # MBEDTLS_ECP_RESTARTABLE is documented as incompatible.
+    scripts/config.py unset MBEDTLS_ECP_RESTARTABLE
     # You can only have one threading implementation: alt or pthread, not both.
     scripts/config.py unset MBEDTLS_THREADING_PTHREAD
     # The SpecifiedECDomain parsing code accesses mbedtls_ecp_group fields
@@ -1904,10 +1905,12 @@ component_build_module_alt () {
     # MBEDTLS_SHA512_*ALT can't be used with MBEDTLS_SHA512_USE_A64_CRYPTO_*
     scripts/config.py unset MBEDTLS_SHA512_USE_A64_CRYPTO_IF_PRESENT
     scripts/config.py unset MBEDTLS_SHA512_USE_A64_CRYPTO_ONLY
+
     # Enable all MBEDTLS_XXX_ALT for whole modules. Do not enable
     # MBEDTLS_XXX_YYY_ALT which are for single functions.
     scripts/config.py set-all 'MBEDTLS_([A-Z0-9]*|NIST_KW)_ALT'
     scripts/config.py unset MBEDTLS_DHM_ALT #incompatible with MBEDTLS_DEBUG_C
+
     # We can only compile, not link, since we don't have any implementations
     # suitable for testing with the dummy alt headers.
     make CC=gcc CFLAGS='-Werror -Wall -Wextra -I../tests/include/alt-dummy' lib
@@ -1928,7 +1931,6 @@ component_test_no_use_psa_crypto_full_cmake_asan() {
     # full minus MBEDTLS_USE_PSA_CRYPTO: run the same set of tests as basic-build-test.sh
     msg "build: cmake, full config minus MBEDTLS_USE_PSA_CRYPTO, ASan"
     scripts/config.py full
-    scripts/config.py set MBEDTLS_ECP_RESTARTABLE  # not using PSA, so enable restartable ECC
     scripts/config.py unset MBEDTLS_PSA_CRYPTO_C
     scripts/config.py unset MBEDTLS_USE_PSA_CRYPTO
     scripts/config.py unset MBEDTLS_SSL_PROTO_TLS1_3
@@ -1943,6 +1945,9 @@ component_test_no_use_psa_crypto_full_cmake_asan() {
     msg "test: main suites (full minus MBEDTLS_USE_PSA_CRYPTO)"
     make test
 
+    # Note: ssl-opt.sh has some test cases that depend on
+    # MBEDTLS_ECP_RESTARTABLE && !MBEDTLS_USE_PSA_CRYPTO
+    # This is the only component where those tests are not skipped.
     msg "test: ssl-opt.sh (full minus MBEDTLS_USE_PSA_CRYPTO)"
     tests/ssl-opt.sh
 
@@ -1964,8 +1969,7 @@ component_test_psa_crypto_config_accel_ecdsa () {
     scripts/config.py -f include/psa/crypto_config.h unset PSA_WANT_ALG_STREAM_CIPHER
     scripts/config.py -f include/psa/crypto_config.h unset PSA_WANT_ALG_ECB_NO_PADDING
 
-    # These hashes are needed for some ECDSA signature tests.
-    scripts/config.py -f tests/include/test/drivers/config_test_driver.h set MBEDTLS_SHA224_C
+    # SHA384 needed for some ECDSA signature tests.
     scripts/config.py -f tests/include/test/drivers/config_test_driver.h set MBEDTLS_SHA384_C
     scripts/config.py -f tests/include/test/drivers/config_test_driver.h set MBEDTLS_SHA512_C
 
@@ -1974,7 +1978,6 @@ component_test_psa_crypto_config_accel_ecdsa () {
     make -C tests libtestdriver1.a CFLAGS="$ASAN_CFLAGS $loc_accel_flags" LDFLAGS="$ASAN_CFLAGS"
 
     # Restore test driver base configuration
-    scripts/config.py -f tests/include/test/drivers/config_test_driver.h unset MBEDTLS_SHA224_C
     scripts/config.py -f tests/include/test/drivers/config_test_driver.h unset MBEDTLS_SHA384_C
     scripts/config.py -f tests/include/test/drivers/config_test_driver.h unset MBEDTLS_SHA512_C
 
@@ -2059,7 +2062,6 @@ component_test_psa_crypto_config_accel_rsa_signature () {
     scripts/config.py -f include/psa/crypto_config.h unset PSA_WANT_ALG_RIPEMD160_C
 
     scripts/config.py -f tests/include/test/drivers/config_test_driver.h set MBEDTLS_SHA1_C
-    scripts/config.py -f tests/include/test/drivers/config_test_driver.h set MBEDTLS_SHA224_C
     scripts/config.py -f tests/include/test/drivers/config_test_driver.h set MBEDTLS_SHA512_C
     # We need to define either MD_C or all of the PSA_WANT_ALG_SHAxxx.
     scripts/config.py -f tests/include/test/drivers/config_test_driver.h set MBEDTLS_MD_C
@@ -2074,7 +2076,6 @@ component_test_psa_crypto_config_accel_rsa_signature () {
 
     # Restore test driver base configuration
     scripts/config.py -f tests/include/test/drivers/config_test_driver.h unset MBEDTLS_SHA1_C
-    scripts/config.py -f tests/include/test/drivers/config_test_driver.h unset MBEDTLS_SHA224_C
     scripts/config.py -f tests/include/test/drivers/config_test_driver.h unset MBEDTLS_SHA512_C
     scripts/config.py -f tests/include/test/drivers/config_test_driver.h unset MBEDTLS_MD_C
     scripts/config.py -f tests/include/test/drivers/config_test_driver.h unset MBEDTLS_PEM_PARSE_C
