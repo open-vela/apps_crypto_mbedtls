@@ -45,19 +45,13 @@ typedef uint64_t psa_storage_uid_t;
 /**
  * \brief A container for metadata associated with a specific uid
  */
-struct psa_storage_info_t
-{
+struct psa_storage_info_t {
     uint32_t size;                  /**< The size of the data associated with a uid **/
     psa_storage_create_flags_t flags;    /**< The flags set when the uid was created **/
 };
 
 /** Flag indicating that \ref psa_storage_create and \ref psa_storage_set_extended are supported */
 #define PSA_STORAGE_SUPPORT_SET_EXTENDED (1 << 0)
-
-/** \brief PSA storage specific error codes
- */
-#define PSA_ERROR_INVALID_SIGNATURE     ((psa_status_t)-149)
-#define PSA_ERROR_DATA_CORRUPT          ((psa_status_t)-152)
 
 #define PSA_ITS_API_VERSION_MAJOR  1  /**< The major version number of the PSA ITS API. It will be incremented on significant updates that may include breaking changes */
 #define PSA_ITS_API_VERSION_MINOR  1  /**< The minor version number of the PSA ITS API. It will be incremented in small updates that are unlikely to include breaking changes */
@@ -109,7 +103,7 @@ psa_status_t psa_its_get(psa_storage_uid_t uid,
                          uint32_t data_offset,
                          uint32_t data_length,
                          void *p_data,
-                         size_t *p_data_length );
+                         size_t *p_data_length);
 
 /**
  * \brief Retrieve the metadata about the provided uid
