@@ -80,7 +80,6 @@
 
 #endif /* bits in mbedtls_mpi_uint */
 
-/* *INDENT-OFF* */
 #if defined(MBEDTLS_HAVE_ASM)
 
 #ifndef asm
@@ -1005,7 +1004,6 @@
 #endif /* MSVC */
 
 #endif /* MBEDTLS_HAVE_ASM */
-/* *INDENT-ON* */
 
 #if !defined(MULADDC_X1_CORE)
 #if defined(MBEDTLS_HAVE_UDBL)
