@@ -80,6 +80,7 @@
 
 #endif /* bits in mbedtls_mpi_uint */
 
+/* *INDENT-OFF* */
 #if defined(MBEDTLS_HAVE_ASM)
 
 #ifndef asm
