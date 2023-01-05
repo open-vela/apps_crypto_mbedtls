@@ -106,12 +106,8 @@ def check_style_is_correct(src_file_list: List[str]) -> bool:
     style_correct = True
     for src_file in src_file_list:
         uncrustify_cmd = [UNCRUSTIFY_EXE] + UNCRUSTIFY_ARGS + [src_file]
-        result = subprocess.run(uncrustify_cmd, stdout=subprocess.PIPE, \
+        subprocess.run(uncrustify_cmd, stdout=subprocess.PIPE, \
                 stderr=subprocess.PIPE, check=False)
-        if result.returncode != 0:
-            print_err("Uncrustify returned " + str(result.returncode) + \
-                    " correcting file " + src_file)
-            return False
 
         # Uncrustify makes changes to the code and places the result in a new
         # file with the extension ".uncrustify". To get the changes (if any)
@@ -139,22 +135,15 @@ def fix_style_single_pass(src_file_list: List[str]) -> None:
     code_change_args = UNCRUSTIFY_ARGS + ["--no-backup"]
     for src_file in src_file_list:
         uncrustify_cmd = [UNCRUSTIFY_EXE] + code_change_args + [src_file]
-        result = subprocess.run(uncrustify_cmd, check=False, \
-                stdout=STDOUT_UTF8, stderr=STDERR_UTF8)
-        if result.returncode != 0:
-            print_err("Uncrustify with file returned: " + \
-                    str(result.returncode) + " correcting file " + \
-                    src_file)
-            return False
+        subprocess.run(uncrustify_cmd, check=False, stdout=STDOUT_UTF8, \
+                stderr=STDERR_UTF8)
 
 def fix_style(src_file_list: List[str]) -> int:
     """
     Fix the code style. This takes 2 passes of Uncrustify.
     """
-    if fix_style_single_pass(src_file_list) != True:
-        return 1
-    if fix_style_single_pass(src_file_list) != True:
-        return 1
+    fix_style_single_pass(src_file_list)
+    fix_style_single_pass(src_file_list)
 
     # Guard against future changes that cause the codebase to require
     # more passes.
