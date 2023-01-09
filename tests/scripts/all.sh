@@ -939,6 +939,19 @@ component_test_full_cmake_gcc_asan () {
 
     msg "test: context-info.sh (full config, ASan build)" # ~ 15 sec
     tests/context-info.sh
+
+    msg "test: check direct ECP dependencies in TLS and X.509"
+    docs/architecture/psa-migration/syms.sh full
+
+    # TODO: replace "mbedtls_ecp_curve" with "mbedtls_ecp" also for
+    # "full-tls-external" once Issue6839 is completed
+    not grep mbedtls_ecp_curve full-tls-external
+    not grep mbedtls_ecp full-x509-external
+
+    rm  full-tls-external \
+        full-tls-modules \
+        full-x509-external \
+        full-x509-modules
 }
 
 component_test_psa_crypto_key_id_encodes_owner () {
@@ -1969,8 +1982,7 @@ component_test_psa_crypto_config_accel_ecdsa () {
     scripts/config.py -f include/psa/crypto_config.h unset PSA_WANT_ALG_STREAM_CIPHER
     scripts/config.py -f include/psa/crypto_config.h unset PSA_WANT_ALG_ECB_NO_PADDING
 
-    # These hashes are needed for some ECDSA signature tests.
-    scripts/config.py -f tests/include/test/drivers/config_test_driver.h set MBEDTLS_SHA224_C
+    # SHA384 needed for some ECDSA signature tests.
     scripts/config.py -f tests/include/test/drivers/config_test_driver.h set MBEDTLS_SHA384_C
     scripts/config.py -f tests/include/test/drivers/config_test_driver.h set MBEDTLS_SHA512_C
 
@@ -1979,7 +1991,6 @@ component_test_psa_crypto_config_accel_ecdsa () {
     make -C tests libtestdriver1.a CFLAGS="$ASAN_CFLAGS $loc_accel_flags" LDFLAGS="$ASAN_CFLAGS"
 
     # Restore test driver base configuration
-    scripts/config.py -f tests/include/test/drivers/config_test_driver.h unset MBEDTLS_SHA224_C
     scripts/config.py -f tests/include/test/drivers/config_test_driver.h unset MBEDTLS_SHA384_C
     scripts/config.py -f tests/include/test/drivers/config_test_driver.h unset MBEDTLS_SHA512_C
 
@@ -2064,7 +2075,6 @@ component_test_psa_crypto_config_accel_rsa_signature () {
     scripts/config.py -f include/psa/crypto_config.h unset PSA_WANT_ALG_RIPEMD160_C
 
     scripts/config.py -f tests/include/test/drivers/config_test_driver.h set MBEDTLS_SHA1_C
-    scripts/config.py -f tests/include/test/drivers/config_test_driver.h set MBEDTLS_SHA224_C
     scripts/config.py -f tests/include/test/drivers/config_test_driver.h set MBEDTLS_SHA512_C
     # We need to define either MD_C or all of the PSA_WANT_ALG_SHAxxx.
     scripts/config.py -f tests/include/test/drivers/config_test_driver.h set MBEDTLS_MD_C
@@ -2079,7 +2089,6 @@ component_test_psa_crypto_config_accel_rsa_signature () {
 
     # Restore test driver base configuration
     scripts/config.py -f tests/include/test/drivers/config_test_driver.h unset MBEDTLS_SHA1_C
-    scripts/config.py -f tests/include/test/drivers/config_test_driver.h unset MBEDTLS_SHA224_C
     scripts/config.py -f tests/include/test/drivers/config_test_driver.h unset MBEDTLS_SHA512_C
     scripts/config.py -f tests/include/test/drivers/config_test_driver.h unset MBEDTLS_MD_C
     scripts/config.py -f tests/include/test/drivers/config_test_driver.h unset MBEDTLS_PEM_PARSE_C
