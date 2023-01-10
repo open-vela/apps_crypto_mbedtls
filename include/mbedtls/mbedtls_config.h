@@ -1408,7 +1408,6 @@
  * module to perform private key operations instead of performing the
  * operation inside the library.
  *
- * Requires: MBEDTLS_X509_CRT_PARSE_C
  */
 //#define MBEDTLS_SSL_ASYNC_PRIVATE
 
@@ -2012,8 +2011,6 @@
  *
  * See the documentation of `mbedtls_x509_crt_verify_with_ca_cb()` and
  * `mbedtls_ssl_conf_ca_cb()` for more information.
- *
- * Requires: MBEDTLS_X509_CRT_PARSE_C
  *
  * Uncomment to enable trusted certificate callbacks.
  */
@@ -3049,6 +3046,9 @@
  *
  * Enable the SHA-224 cryptographic hash algorithm.
  *
+ * Requires: MBEDTLS_SHA256_C. The library does not currently support enabling
+ *           SHA-224 without SHA-256.
+ *
  * Module:  library/sha256.c
  * Caller:  library/md.c
  *          library/ssl_cookie.c
@@ -3061,6 +3061,9 @@
  * \def MBEDTLS_SHA256_C
  *
  * Enable the SHA-256 cryptographic hash algorithm.
+ *
+ * Requires: MBEDTLS_SHA224_C. The library does not currently support enabling
+ *           SHA-256 without SHA-224.
  *
  * Module:  library/sha256.c
  * Caller:  library/entropy.c
@@ -3128,6 +3131,8 @@
  * \def MBEDTLS_SHA384_C
  *
  * Enable the SHA-384 cryptographic hash algorithm.
+ *
+ * Requires: MBEDTLS_SHA512_C
  *
  * Module:  library/sha512.c
  * Caller:  library/md.c
