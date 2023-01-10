@@ -965,16 +965,13 @@ MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_handshake_init( mbedtls_ssl_context *ssl )
 {
     /* Clear old handshake information if present */
-#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
     if( ssl->transform_negotiate )
         mbedtls_ssl_transform_free( ssl->transform_negotiate );
-#endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
     if( ssl->session_negotiate )
         mbedtls_ssl_session_free( ssl->session_negotiate );
     if( ssl->handshake )
         mbedtls_ssl_handshake_free( ssl );
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
     /*
      * Either the pointers are now NULL or cleared properly and can be freed.
      * Now allocate missing structures.
@@ -983,7 +980,6 @@ static int ssl_handshake_init( mbedtls_ssl_context *ssl )
     {
         ssl->transform_negotiate = mbedtls_calloc( 1, sizeof(mbedtls_ssl_transform) );
     }
-#endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
 
     if( ssl->session_negotiate == NULL )
     {
@@ -1002,23 +998,18 @@ static int ssl_handshake_init( mbedtls_ssl_context *ssl )
 #endif
 
     /* All pointers should exist and can be directly freed without issue */
-    if( ssl->handshake           == NULL ||
-#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
+    if( ssl->handshake == NULL ||
         ssl->transform_negotiate == NULL ||
-#endif
-        ssl->session_negotiate   == NULL )
+        ssl->session_negotiate == NULL )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "alloc() of ssl sub-contexts failed" ) );
 
         mbedtls_free( ssl->handshake );
-        ssl->handshake = NULL;
-
-#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
         mbedtls_free( ssl->transform_negotiate );
-        ssl->transform_negotiate = NULL;
-#endif
-
         mbedtls_free( ssl->session_negotiate );
+
+        ssl->handshake = NULL;
+        ssl->transform_negotiate = NULL;
         ssl->session_negotiate = NULL;
 
         return( MBEDTLS_ERR_SSL_ALLOC_FAILED );
@@ -1026,11 +1017,8 @@ static int ssl_handshake_init( mbedtls_ssl_context *ssl )
 
     /* Initialize structures */
     mbedtls_ssl_session_init( ssl->session_negotiate );
-    ssl_handshake_params_init( ssl->handshake );
-
-#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
     mbedtls_ssl_transform_init( ssl->transform_negotiate );
-#endif
+    ssl_handshake_params_init( ssl->handshake );
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3) && \
     defined(MBEDTLS_SSL_SRV_C) && \
@@ -1076,14 +1064,14 @@ static int ssl_handshake_init( mbedtls_ssl_context *ssl )
 
         for( size_t i = 0; i < length; i++ )
         {
-            uint16_t tls_id = mbedtls_ssl_get_tls_id_from_ecp_group_id(
-                                curve_list[i] );
-            if ( tls_id == 0 )
+            const mbedtls_ecp_curve_info *info =
+                        mbedtls_ecp_curve_info_from_grp_id( curve_list[i] );
+            if ( info == NULL )
             {
                 mbedtls_free( group_list );
                 return( MBEDTLS_ERR_SSL_BAD_CONFIG );
             }
-            group_list[i] = tls_id;
+            group_list[i] = info->tls_id;
         }
 
         group_list[length] = 0;
@@ -3227,14 +3215,12 @@ size_t mbedtls_ssl_get_input_max_frag_len( const mbedtls_ssl_context *ssl )
     size_t max_len = MBEDTLS_SSL_IN_CONTENT_LEN;
     size_t read_mfl;
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
     /* Use the configured MFL for the client if we're past SERVER_HELLO_DONE */
     if( ssl->conf->endpoint == MBEDTLS_SSL_IS_CLIENT &&
         ssl->state >= MBEDTLS_SSL_SERVER_HELLO_DONE )
     {
         return ssl_mfl_code_to_length( ssl->conf->mfl_code );
     }
-#endif
 
     /* Check if a smaller max length was negotiated */
     if( ssl->session_out != NULL )
@@ -3246,7 +3232,7 @@ size_t mbedtls_ssl_get_input_max_frag_len( const mbedtls_ssl_context *ssl )
         }
     }
 
-    /* During a handshake, use the value being negotiated */
+    // During a handshake, use the value being negotiated
     if( ssl->session_negotiate != NULL )
     {
         read_mfl = ssl_mfl_code_to_length( ssl->session_negotiate->mfl_code );
@@ -3511,15 +3497,12 @@ static unsigned char ssl_serialized_session_header[] = {
  *                                 // the structure of mbedtls_ssl_session.
  *
  *    uint8_t minor_ver;           // Protocol minor version. Possible values:
- *                                 // - TLS 1.2 (0x0303)
- *                                 // - TLS 1.3 (0x0304)
+ *                                 // - TLS 1.2 (3)
  *
  *    select (serialized_session.tls_version) {
  *
  *      case MBEDTLS_SSL_VERSION_TLS1_2:
  *        serialized_session_tls12 data;
- *      case MBEDTLS_SSL_VERSION_TLS1_3:
- *        serialized_session_tls13 data;
  *
  *   };
  *
@@ -4021,7 +4004,7 @@ void mbedtls_ssl_handshake_free( mbedtls_ssl_context *ssl )
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
     psa_hash_abort( &handshake->fin_sha256_psa );
 #else
-    mbedtls_sha256_free( &handshake->fin_sha256 );
+    mbedtls_sha256_free(   &handshake->fin_sha256    );
 #endif
 #endif
 #if defined(MBEDTLS_HAS_ALG_SHA_384_VIA_MD_OR_PSA_BASED_ON_USE_PSA)
@@ -4065,7 +4048,7 @@ void mbedtls_ssl_handshake_free( mbedtls_ssl_context *ssl )
 #if defined(MBEDTLS_ECDH_C) || defined(MBEDTLS_ECDSA_C) || \
     defined(MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED)
     /* explicit void pointer cast for buggy MS compiler */
-    mbedtls_free( (void *) handshake->curves_tls_id );
+    mbedtls_free( (void *) handshake->curves );
 #endif
 
 #if defined(MBEDTLS_SSL_HANDSHAKE_WITH_PSK_ENABLED)
@@ -4566,12 +4549,10 @@ static int ssl_context_load( mbedtls_ssl_context *ssl,
 
     /* This has been allocated by ssl_handshake_init(), called by
      * by either mbedtls_ssl_session_reset_int() or mbedtls_ssl_setup(). */
-#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
     ssl->transform = ssl->transform_negotiate;
     ssl->transform_in = ssl->transform;
     ssl->transform_out = ssl->transform;
     ssl->transform_negotiate = NULL;
-#endif
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_2)
     prf_func = ssl_tls12prf_from_cs( ssl->session->ciphersuite );
@@ -4807,14 +4788,11 @@ void mbedtls_ssl_free( mbedtls_ssl_context *ssl )
     if( ssl->handshake )
     {
         mbedtls_ssl_handshake_free( ssl );
-        mbedtls_free( ssl->handshake );
-
-#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
         mbedtls_ssl_transform_free( ssl->transform_negotiate );
-        mbedtls_free( ssl->transform_negotiate );
-#endif
-
         mbedtls_ssl_session_free( ssl->session_negotiate );
+
+        mbedtls_free( ssl->handshake );
+        mbedtls_free( ssl->transform_negotiate );
         mbedtls_free( ssl->session_negotiate );
     }
 
@@ -5490,125 +5468,17 @@ int mbedtls_ssl_check_curve_tls_id( const mbedtls_ssl_context *ssl, uint16_t tls
  */
 int mbedtls_ssl_check_curve( const mbedtls_ssl_context *ssl, mbedtls_ecp_group_id grp_id )
 {
-    uint16_t tls_id = mbedtls_ssl_get_tls_id_from_ecp_group_id( grp_id );
+    const mbedtls_ecp_curve_info *grp_info =
+        mbedtls_ecp_curve_info_from_grp_id( grp_id );
 
-    if ( tls_id == 0 )
+    if ( grp_info == NULL )
         return -1;
+
+    uint16_t tls_id = grp_info->tls_id;
 
     return mbedtls_ssl_check_curve_tls_id( ssl, tls_id );
 }
 #endif /* MBEDTLS_ECP_C */
-
-#if defined( MBEDTLS_DEBUG_C )
-#define EC_NAME(_name_)     _name_
-#else
-#define EC_NAME(_name_)     NULL
-#endif
-
-static const struct {
-    uint16_t tls_id;
-    mbedtls_ecp_group_id ecp_group_id;
-    psa_ecc_family_t psa_family;
-    uint16_t bits;
-    const char* name;
-} tls_id_match_table[] =
-{
-#if defined(MBEDTLS_ECP_DP_SECP521R1_ENABLED) || defined(PSA_WANT_ECC_SECP_R1_521)
-    { 25, MBEDTLS_ECP_DP_SECP521R1, PSA_ECC_FAMILY_SECP_R1, 521, EC_NAME( "secp521r1" ) },
-#endif
-#if defined(MBEDTLS_ECP_DP_BP512R1_ENABLED) || defined(PSA_WANT_ECC_BRAINPOOL_P_R1_512)
-    { 28, MBEDTLS_ECP_DP_BP512R1, PSA_ECC_FAMILY_BRAINPOOL_P_R1, 512, EC_NAME( "brainpoolP512r1" ) },
-#endif
-#if defined(MBEDTLS_ECP_DP_SECP384R1_ENABLED) || defined(PSA_WANT_ECC_SECP_R1_384)
-    { 24, MBEDTLS_ECP_DP_SECP384R1, PSA_ECC_FAMILY_SECP_R1, 384, EC_NAME( "secp384r1" ) },
-#endif
-#if defined(MBEDTLS_ECP_DP_BP384R1_ENABLED) || defined(PSA_WANT_ECC_BRAINPOOL_P_R1_384)
-    { 27, MBEDTLS_ECP_DP_BP384R1, PSA_ECC_FAMILY_BRAINPOOL_P_R1, 384, EC_NAME( "brainpoolP384r1" ) },
-#endif
-#if defined(MBEDTLS_ECP_DP_SECP256R1_ENABLED) || defined(PSA_WANT_ECC_SECP_R1_256)
-    { 23, MBEDTLS_ECP_DP_SECP256R1, PSA_ECC_FAMILY_SECP_R1, 256, EC_NAME( "secp256r1" ) },
-#endif
-#if defined(MBEDTLS_ECP_DP_SECP256K1_ENABLED) || defined(PSA_WANT_ECC_SECP_K1_256)
-    { 22, MBEDTLS_ECP_DP_SECP256K1, PSA_ECC_FAMILY_SECP_K1, 256, EC_NAME( "secp256k1" ) },
-#endif
-#if defined(MBEDTLS_ECP_DP_BP256R1_ENABLED) || defined(PSA_WANT_ECC_BRAINPOOL_P_R1_256)
-    { 26, MBEDTLS_ECP_DP_BP256R1, PSA_ECC_FAMILY_BRAINPOOL_P_R1, 256, EC_NAME( "brainpoolP256r1" ) },
-#endif
-#if defined(MBEDTLS_ECP_DP_SECP224R1_ENABLED) || defined(PSA_WANT_ECC_SECP_R1_224)
-    { 21, MBEDTLS_ECP_DP_SECP224R1, PSA_ECC_FAMILY_SECP_R1, 224, EC_NAME( "secp224r1" ) },
-#endif
-#if defined(MBEDTLS_ECP_DP_SECP224K1_ENABLED) || defined(PSA_WANT_ECC_SECP_K1_224)
-    { 20, MBEDTLS_ECP_DP_SECP224K1, PSA_ECC_FAMILY_SECP_K1, 224, EC_NAME( "secp224k1" ) },
-#endif
-#if defined(MBEDTLS_ECP_DP_SECP192R1_ENABLED) || defined(PSA_WANT_ECC_SECP_R1_192)
-    { 19, MBEDTLS_ECP_DP_SECP192R1, PSA_ECC_FAMILY_SECP_R1, 192, EC_NAME( "secp192r1" ) },
-#endif
-#if defined(MBEDTLS_ECP_DP_SECP192K1_ENABLED) || defined(PSA_WANT_ECC_SECP_K1_192)
-    { 18, MBEDTLS_ECP_DP_SECP192K1, PSA_ECC_FAMILY_SECP_K1, 192, EC_NAME( "secp192k1" ) },
-#endif
-#if defined(MBEDTLS_ECP_DP_CURVE25519_ENABLED) || defined(PSA_WANT_ECC_MONTGOMERY_255)
-    { 29, MBEDTLS_ECP_DP_CURVE25519, PSA_ECC_FAMILY_MONTGOMERY, 255, EC_NAME( "x25519" ) },
-#endif
-#if defined(MBEDTLS_ECP_DP_CURVE448_ENABLED) || defined(PSA_WANT_ECC_MONTGOMERY_448)
-    { 30, MBEDTLS_ECP_DP_CURVE448, PSA_ECC_FAMILY_MONTGOMERY, 448, EC_NAME( "x448" ) },
-#endif
-    { 0, MBEDTLS_ECP_DP_NONE, 0, 0, NULL },
-};
-
-int mbedtls_ssl_get_psa_curve_info_from_tls_id( uint16_t tls_id,
-                                                psa_ecc_family_t *family,
-                                                size_t* bits )
-{
-    for( int i = 0; tls_id_match_table[i].tls_id != 0; i++ )
-    {
-        if( tls_id_match_table[i].tls_id == tls_id )
-        {
-            if( family != NULL )
-                *family = tls_id_match_table[i].psa_family;
-            if( bits != NULL )
-                *bits = tls_id_match_table[i].bits;
-            return PSA_SUCCESS;
-        }
-    }
-
-    return PSA_ERROR_NOT_SUPPORTED;
-}
-
-mbedtls_ecp_group_id mbedtls_ssl_get_ecp_group_id_from_tls_id( uint16_t tls_id )
-{
-    for( int i = 0; tls_id_match_table[i].tls_id != 0; i++ )
-    {
-        if( tls_id_match_table[i].tls_id == tls_id )
-            return tls_id_match_table[i].ecp_group_id;
-    }
-
-    return MBEDTLS_ECP_DP_NONE;
-}
-
-uint16_t mbedtls_ssl_get_tls_id_from_ecp_group_id( mbedtls_ecp_group_id grp_id )
-{
-    for( int i = 0; tls_id_match_table[i].ecp_group_id != MBEDTLS_ECP_DP_NONE;
-            i++ )
-    {
-        if( tls_id_match_table[i].ecp_group_id == grp_id )
-            return tls_id_match_table[i].tls_id;
-    }
-
-    return 0;
-}
-
-#if defined(MBEDTLS_DEBUG_C)
-const char* mbedtls_ssl_get_curve_name_from_tls_id( uint16_t tls_id )
-{
-    for( int i = 0; tls_id_match_table[i].tls_id != 0; i++ )
-    {
-        if( tls_id_match_table[i].tls_id == tls_id )
-            return tls_id_match_table[i].name;
-    }
-
-    return NULL;
-}
-#endif
 
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
 int mbedtls_ssl_check_cert_usage( const mbedtls_x509_crt *cert,

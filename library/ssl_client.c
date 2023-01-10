@@ -24,11 +24,15 @@
 #if defined(MBEDTLS_SSL_CLI_C)
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3) || defined(MBEDTLS_SSL_PROTO_TLS1_2)
 
+#include "mbedtls/platform.h"
+
 #include <string.h>
 
 #include "mbedtls/debug.h"
 #include "mbedtls/error.h"
-#include "mbedtls/platform.h"
+#if defined(MBEDTLS_HAVE_TIME)
+#include "mbedtls/platform_time.h"
+#endif
 
 #include "ssl_client.h"
 #include "ssl_misc.h"
@@ -262,17 +266,15 @@ static int ssl_write_supported_groups_ext( mbedtls_ssl_context *ssl,
             ( mbedtls_ssl_conf_is_tls12_enabled( ssl->conf ) &&
               mbedtls_ssl_tls12_named_group_is_ecdhe( *group_list ) ) )
         {
-            if( mbedtls_ssl_get_ecp_group_id_from_tls_id( *group_list ) ==
-                MBEDTLS_ECP_DP_NONE )
-            {
+            const mbedtls_ecp_curve_info *curve_info;
+            curve_info = mbedtls_ecp_curve_info_from_tls_id( *group_list );
+            if( curve_info == NULL )
                 continue;
-            }
             MBEDTLS_SSL_CHK_BUF_PTR( p, end, 2 );
             MBEDTLS_PUT_UINT16_BE( *group_list, p, 0 );
             p += 2;
             MBEDTLS_SSL_DEBUG_MSG( 3, ( "NamedGroup: %s ( %x )",
-                        mbedtls_ssl_get_curve_name_from_tls_id( *group_list ),
-                        *group_list ) );
+                                curve_info->name, *group_list ) );
         }
 #endif /* MBEDTLS_ECP_C */
         /* Add DHE groups here */

@@ -80,7 +80,6 @@
 
 #endif /* bits in mbedtls_mpi_uint */
 
-/* *INDENT-OFF* */
 #if defined(MBEDTLS_HAVE_ASM)
 
 #ifndef asm
@@ -1072,5 +1071,4 @@
 #define MULADDC_X8_CORE MULADDC_X4_CORE MULADDC_X4_CORE
 #endif /* MULADDC_X8_CORE */
 
-/* *INDENT-ON* */
 #endif /* bn_mul.h */

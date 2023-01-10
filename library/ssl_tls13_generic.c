@@ -28,13 +28,15 @@
 #include "mbedtls/oid.h"
 #include "mbedtls/platform.h"
 #include "mbedtls/constant_time.h"
-#include "psa/crypto.h"
-#include "mbedtls/psa_util.h"
+#include <string.h>
 
 #include "ssl_misc.h"
 #include "ssl_tls13_invasive.h"
 #include "ssl_tls13_keys.h"
 #include "ssl_debug_helpers.h"
+
+#include "psa/crypto.h"
+#include "mbedtls/psa_util.h"
 
 const uint8_t mbedtls_ssl_tls13_hello_retry_request_magic[
                 MBEDTLS_SERVER_HELLO_RANDOM_LEN ] =
@@ -1516,19 +1518,16 @@ int mbedtls_ssl_tls13_generate_and_write_ecdh_key_exchange(
     psa_key_attributes_t key_attributes;
     size_t own_pubkey_len;
     mbedtls_ssl_handshake_params *handshake = ssl->handshake;
-    psa_ecc_family_t ec_psa_family = 0;
-    size_t ec_bits = 0;
+    size_t ecdh_bits = 0;
 
     MBEDTLS_SSL_DEBUG_MSG( 1, ( "Perform PSA-based ECDH computation." ) );
 
-    /* Convert EC's TLS ID to PSA key type. */
-    if( mbedtls_ssl_get_psa_curve_info_from_tls_id( named_group,
-                &ec_psa_family, &ec_bits ) == PSA_ERROR_NOT_SUPPORTED )
-    {
-        return( MBEDTLS_ERR_SSL_HANDSHAKE_FAILURE );
-    }
-    handshake->ecdh_psa_type = PSA_KEY_TYPE_ECC_KEY_PAIR( ec_psa_family );
-    ssl->handshake->ecdh_bits = ec_bits;
+    /* Convert EC group to PSA key type. */
+    if( ( handshake->ecdh_psa_type =
+        mbedtls_psa_parse_tls_ecc_group( named_group, &ecdh_bits ) ) == 0 )
+            return( MBEDTLS_ERR_SSL_HANDSHAKE_FAILURE );
+
+    ssl->handshake->ecdh_bits = ecdh_bits;
 
     key_attributes = psa_key_attributes_init();
     psa_set_key_usage_flags( &key_attributes, PSA_KEY_USAGE_DERIVE );

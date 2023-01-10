@@ -230,8 +230,9 @@ static int ssl_tls13_get_default_group_id( mbedtls_ssl_context *ssl,
 
     for ( ; *group_list != 0; group_list++ )
     {
-        if( ( mbedtls_ssl_get_psa_curve_info_from_tls_id( *group_list,
-                            NULL, NULL ) == PSA_SUCCESS ) &&
+        const mbedtls_ecp_curve_info *curve_info;
+        curve_info = mbedtls_ecp_curve_info_from_tls_id( *group_list );
+        if( curve_info != NULL &&
             mbedtls_ssl_tls13_named_group_is_ecdhe( *group_list ) )
         {
             *group_id = *group_list;
@@ -384,6 +385,7 @@ static int ssl_tls13_parse_hrr_key_share_ext( mbedtls_ssl_context *ssl,
                                               const unsigned char *end )
 {
 #if defined(MBEDTLS_ECDH_C)
+    const mbedtls_ecp_curve_info *curve_info = NULL;
     const unsigned char *p = buf;
     int selected_group;
     int found = 0;
@@ -410,9 +412,8 @@ static int ssl_tls13_parse_hrr_key_share_ext( mbedtls_ssl_context *ssl,
      */
     for( ; *group_list != 0; group_list++ )
     {
-        if( ( mbedtls_ssl_get_psa_curve_info_from_tls_id( *group_list,
-                NULL, NULL ) == PSA_ERROR_NOT_SUPPORTED ) ||
-                *group_list != selected_group )
+        curve_info = mbedtls_ecp_curve_info_from_tls_id( *group_list );
+        if( curve_info == NULL || curve_info->tls_id != selected_group )
             continue;
 
         /* We found a match */
@@ -492,15 +493,15 @@ static int ssl_tls13_parse_key_share_ext( mbedtls_ssl_context *ssl,
 #if defined(MBEDTLS_ECDH_C)
     if( mbedtls_ssl_tls13_named_group_is_ecdhe( group ) )
     {
-        if( mbedtls_ssl_get_psa_curve_info_from_tls_id( group, NULL, NULL )
-                    == PSA_ERROR_NOT_SUPPORTED )
+        const mbedtls_ecp_curve_info *curve_info =
+            mbedtls_ecp_curve_info_from_tls_id( group );
+        if( curve_info == NULL )
         {
             MBEDTLS_SSL_DEBUG_MSG( 1, ( "Invalid TLS curve group id" ) );
             return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
         }
 
-        MBEDTLS_SSL_DEBUG_MSG( 2, ( "ECDH curve: %s",
-                    mbedtls_ssl_get_curve_name_from_tls_id( group ) ) );
+        MBEDTLS_SSL_DEBUG_MSG( 2, ( "ECDH curve: %s", curve_info->name ) );
 
         ret = mbedtls_ssl_tls13_read_public_ecdhe_share( ssl, p, end - p );
         if( ret != 0 )
@@ -945,21 +946,6 @@ int mbedtls_ssl_tls13_write_identities_of_pre_shared_key_ext(
         mbedtls_ssl_session *session = ssl->session_negotiate;
         uint32_t obfuscated_ticket_age =
                                 (uint32_t)( now - session->ticket_received );
-
-        /*
-         * The ticket timestamp is in seconds but the ticket age is in
-         * milliseconds. If the ticket was received at the end of a second and
-         * re-used here just at the beginning of the next second, the computed
-         * age `now - session->ticket_received` is equal to 1s thus 1000 ms
-         * while the actual age could be just a few milliseconds or tens of
-         * milliseconds. If the server has more accurate ticket timestamps
-         * (typically timestamps in milliseconds), as part of the processing of
-         * the ClientHello, it may compute a ticket lifetime smaller than the
-         * one computed here and potentially reject the ticket. To avoid that,
-         * remove one second to the ticket age if possible.
-         */
-        if( obfuscated_ticket_age > 0 )
-            obfuscated_ticket_age -= 1;
 
         obfuscated_ticket_age *= 1000;
         obfuscated_ticket_age += session->ticket_age_add;
@@ -2819,10 +2805,11 @@ int mbedtls_ssl_tls13_handshake_client_step( mbedtls_ssl_context *ssl )
 
     switch( ssl->state )
     {
+        /*
+         * ssl->state is initialized as HELLO_REQUEST. It is the same
+         * as CLIENT_HELLO state.
+         */
         case MBEDTLS_SSL_HELLO_REQUEST:
-            mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CLIENT_HELLO );
-            break;
-
         case MBEDTLS_SSL_CLIENT_HELLO:
             ret = mbedtls_ssl_write_client_hello( ssl );
             break;
