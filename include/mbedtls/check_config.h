@@ -695,6 +695,10 @@
 #error "MBEDTLS_X509_RSASSA_PSS_SUPPORT defined, but not all prerequisites"
 #endif
 
+#if defined(MBEDTLS_SHA384_C) && !defined(MBEDTLS_SHA512_C)
+#error "MBEDTLS_SHA384_C defined without MBEDTLS_SHA512_C"
+#endif
+
 #if defined(MBEDTLS_SHA512_USE_A64_CRYPTO_IF_PRESENT) && \
     defined(MBEDTLS_SHA512_USE_A64_CRYPTO_ONLY)
 #error "Must only define one of MBEDTLS_SHA512_USE_A64_CRYPTO_*"
@@ -748,6 +752,14 @@
 
 #if defined(MBEDTLS_SHA512_USE_A64_CRYPTO_ONLY) && !defined(__aarch64__)
 #error "MBEDTLS_SHA512_USE_A64_CRYPTO_ONLY defined on non-Aarch64 system"
+#endif
+
+#if defined(MBEDTLS_SHA224_C) && !defined(MBEDTLS_SHA256_C)
+#error "MBEDTLS_SHA224_C defined without MBEDTLS_SHA256_C"
+#endif
+
+#if defined(MBEDTLS_SHA256_C) && !defined(MBEDTLS_SHA224_C)
+#error "MBEDTLS_SHA256_C defined without MBEDTLS_SHA224_C"
 #endif
 
 #if defined(MBEDTLS_SHA256_USE_A64_CRYPTO_IF_PRESENT) && \
@@ -858,10 +870,6 @@
 
 #if defined(MBEDTLS_SSL_CLI_C) && !defined(MBEDTLS_SSL_TLS_C)
 #error "MBEDTLS_SSL_CLI_C defined, but not all prerequisites"
-#endif
-
-#if defined(MBEDTLS_SSL_ASYNC_PRIVATE) && !defined(MBEDTLS_X509_CRT_PARSE_C)
-#error "MBEDTLS_SSL_ASYNC_PRIVATE defined, but not all prerequisites"
 #endif
 
 #if defined(MBEDTLS_SSL_TLS_C) && ( !defined(MBEDTLS_CIPHER_C) ||     \
@@ -1011,11 +1019,6 @@
 
 #if defined(MBEDTLS_X509_CSR_WRITE_C) && ( !defined(MBEDTLS_X509_CREATE_C) )
 #error "MBEDTLS_X509_CSR_WRITE_C defined, but not all prerequisites"
-#endif
-
-#if defined(MBEDTLS_X509_TRUSTED_CERTIFICATE_CALLBACK) && \
-            ( !defined(MBEDTLS_X509_CRT_PARSE_C) )
-#error "MBEDTLS_X509_TRUSTED_CERTIFICATE_CALLBACK defined, but not all prerequisites"
 #endif
 
 #if defined(MBEDTLS_HAVE_INT32) && defined(MBEDTLS_HAVE_INT64)
