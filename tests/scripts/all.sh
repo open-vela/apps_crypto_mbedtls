@@ -870,7 +870,7 @@ component_check_test_cases () {
     else
         opt=''
     fi
-    tests/scripts/check_test_cases.py $opt
+    tests/scripts/check_test_cases.py -q $opt
     unset opt
 }
 
@@ -1287,6 +1287,57 @@ component_test_crypto_full_no_cipher () {
     make
 
     msg "test: crypto_full minus CIPHER"
+    make test
+}
+
+component_test_full_no_bignum () {
+    msg "build: full minus bignum"
+    scripts/config.py full
+    scripts/config.py unset MBEDTLS_BIGNUM_C
+    # Direct dependencies of bignum
+    scripts/config.py unset MBEDTLS_ECP_C
+    scripts/config.py unset MBEDTLS_RSA_C
+    scripts/config.py unset MBEDTLS_DHM_C
+    # Direct dependencies of ECP
+    scripts/config.py unset MBEDTLS_ECDH_C
+    scripts/config.py unset MBEDTLS_ECDSA_C
+    scripts/config.py unset MBEDTLS_ECJPAKE_C
+    scripts/config.py unset MBEDTLS_ECP_RESTARTABLE
+    # Indirect dependencies of ECP
+    scripts/config.py unset MBEDTLS_KEY_EXCHANGE_ECDH_ECDSA_ENABLED
+    scripts/config.py unset MBEDTLS_KEY_EXCHANGE_ECDH_RSA_ENABLED
+    scripts/config.py unset MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+    scripts/config.py unset MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED
+    scripts/config.py unset MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED
+    scripts/config.py unset MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED
+    scripts/config.py unset MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
+    scripts/config.py unset MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_EPHEMERAL_ENABLED
+    # Direct dependencies of DHM
+    scripts/config.py unset MBEDTLS_KEY_EXCHANGE_DHE_PSK_ENABLED
+    # Direct dependencies of RSA
+    scripts/config.py unset MBEDTLS_KEY_EXCHANGE_DHE_RSA_ENABLED
+    scripts/config.py unset MBEDTLS_KEY_EXCHANGE_RSA_PSK_ENABLED
+    scripts/config.py unset MBEDTLS_KEY_EXCHANGE_RSA_ENABLED
+    scripts/config.py unset MBEDTLS_X509_RSASSA_PSS_SUPPORT
+    # PK and its dependencies
+    scripts/config.py unset MBEDTLS_PK_C
+    scripts/config.py unset MBEDTLS_PK_PARSE_C
+    scripts/config.py unset MBEDTLS_PK_WRITE_C
+    scripts/config.py unset MBEDTLS_X509_USE_C
+    scripts/config.py unset MBEDTLS_X509_CRT_PARSE_C
+    scripts/config.py unset MBEDTLS_X509_CRL_PARSE_C
+    scripts/config.py unset MBEDTLS_X509_CSR_PARSE_C
+    scripts/config.py unset MBEDTLS_X509_CREATE_C
+    scripts/config.py unset MBEDTLS_X509_CRT_WRITE_C
+    scripts/config.py unset MBEDTLS_X509_CSR_WRITE_C
+    scripts/config.py unset MBEDTLS_PKCS7_C
+    scripts/config.py unset MBEDTLS_SSL_SERVER_NAME_INDICATION
+    scripts/config.py unset MBEDTLS_SSL_ASYNC_PRIVATE
+    scripts/config.py unset MBEDTLS_X509_TRUSTED_CERTIFICATE_CALLBACK
+
+    make
+
+    msg "test: full minus bignum"
     make test
 }
 
@@ -1982,7 +2033,8 @@ component_test_psa_crypto_config_accel_ecdsa () {
     scripts/config.py -f include/psa/crypto_config.h unset PSA_WANT_ALG_STREAM_CIPHER
     scripts/config.py -f include/psa/crypto_config.h unset PSA_WANT_ALG_ECB_NO_PADDING
 
-    # SHA384 needed for some ECDSA signature tests.
+    # These hashes are needed for some ECDSA signature tests.
+    scripts/config.py -f tests/include/test/drivers/config_test_driver.h set MBEDTLS_SHA224_C
     scripts/config.py -f tests/include/test/drivers/config_test_driver.h set MBEDTLS_SHA384_C
     scripts/config.py -f tests/include/test/drivers/config_test_driver.h set MBEDTLS_SHA512_C
 
@@ -1991,6 +2043,7 @@ component_test_psa_crypto_config_accel_ecdsa () {
     make -C tests libtestdriver1.a CFLAGS="$ASAN_CFLAGS $loc_accel_flags" LDFLAGS="$ASAN_CFLAGS"
 
     # Restore test driver base configuration
+    scripts/config.py -f tests/include/test/drivers/config_test_driver.h unset MBEDTLS_SHA224_C
     scripts/config.py -f tests/include/test/drivers/config_test_driver.h unset MBEDTLS_SHA384_C
     scripts/config.py -f tests/include/test/drivers/config_test_driver.h unset MBEDTLS_SHA512_C
 
@@ -2075,6 +2128,7 @@ component_test_psa_crypto_config_accel_rsa_signature () {
     scripts/config.py -f include/psa/crypto_config.h unset PSA_WANT_ALG_RIPEMD160_C
 
     scripts/config.py -f tests/include/test/drivers/config_test_driver.h set MBEDTLS_SHA1_C
+    scripts/config.py -f tests/include/test/drivers/config_test_driver.h set MBEDTLS_SHA224_C
     scripts/config.py -f tests/include/test/drivers/config_test_driver.h set MBEDTLS_SHA512_C
     # We need to define either MD_C or all of the PSA_WANT_ALG_SHAxxx.
     scripts/config.py -f tests/include/test/drivers/config_test_driver.h set MBEDTLS_MD_C
@@ -2089,6 +2143,7 @@ component_test_psa_crypto_config_accel_rsa_signature () {
 
     # Restore test driver base configuration
     scripts/config.py -f tests/include/test/drivers/config_test_driver.h unset MBEDTLS_SHA1_C
+    scripts/config.py -f tests/include/test/drivers/config_test_driver.h unset MBEDTLS_SHA224_C
     scripts/config.py -f tests/include/test/drivers/config_test_driver.h unset MBEDTLS_SHA512_C
     scripts/config.py -f tests/include/test/drivers/config_test_driver.h unset MBEDTLS_MD_C
     scripts/config.py -f tests/include/test/drivers/config_test_driver.h unset MBEDTLS_PEM_PARSE_C

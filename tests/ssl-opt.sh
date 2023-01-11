@@ -2101,6 +2101,8 @@ run_test    "Opaque keys for server authentication: EC + RSA, force ECDHE-ECDSA"
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
 requires_config_enabled MBEDTLS_RSA_C
+requires_config_enabled MBEDTLS_SSL_SRV_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
 run_test    "TLS 1.3 opaque key: no suitable algorithm found" \
             "$P_SRV debug_level=4 force_version=tls13 auth_mode=required key_opaque=1 key_opaque_algs=rsa-decrypt,none" \
             "$P_CLI debug_level=4 key_opaque=1 key_opaque_algs=rsa-decrypt,rsa-sign-pss" \
@@ -2114,6 +2116,8 @@ run_test    "TLS 1.3 opaque key: no suitable algorithm found" \
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
 requires_config_enabled MBEDTLS_RSA_C
+requires_config_enabled MBEDTLS_SSL_SRV_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
 run_test    "TLS 1.3 opaque key: suitable algorithm found" \
             "$P_SRV debug_level=4 force_version=tls13 auth_mode=required key_opaque=1 key_opaque_algs=rsa-decrypt,rsa-sign-pss" \
             "$P_CLI debug_level=4 key_opaque=1 key_opaque_algs=rsa-decrypt,rsa-sign-pss" \
@@ -2122,11 +2126,13 @@ run_test    "TLS 1.3 opaque key: suitable algorithm found" \
             -c "key type: Opaque" \
             -s "key types: Opaque, Opaque" \
             -C "error" \
-            -S "error" \
+            -S "error"
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
 requires_config_enabled MBEDTLS_RSA_C
+requires_config_enabled MBEDTLS_SSL_SRV_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
 run_test    "TLS 1.3 opaque key: first client sig alg not suitable" \
             "$P_SRV debug_level=4 force_version=tls13 auth_mode=required key_opaque=1 key_opaque_algs=rsa-sign-pss-sha512,none" \
             "$P_CLI debug_level=4 sig_algs=rsa_pss_rsae_sha256,rsa_pss_rsae_sha512" \
@@ -2141,6 +2147,8 @@ run_test    "TLS 1.3 opaque key: first client sig alg not suitable" \
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
 requires_config_enabled MBEDTLS_RSA_C
+requires_config_enabled MBEDTLS_SSL_SRV_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
 run_test    "TLS 1.3 opaque key: 2 keys on server, suitable algorithm found" \
             "$P_SRV debug_level=4 force_version=tls13 auth_mode=required key_opaque=1 key_opaque_algs2=ecdsa-sign,none key_opaque_algs=rsa-decrypt,rsa-sign-pss" \
             "$P_CLI debug_level=4 key_opaque=1 key_opaque_algs=rsa-decrypt,rsa-sign-pss" \
