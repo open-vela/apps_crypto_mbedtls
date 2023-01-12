@@ -87,33 +87,25 @@
 #include "mbedtls/bignum.h"
 #endif
 
-/** How residues associated with a modulus are represented.
- *
- * This also determines which fields of the modulus structure are valid and
- * what their contents are (see #mbedtls_mpi_mod_modulus).
- */
-typedef enum {
-    /** Representation not chosen (makes the modulus structure invalid). */
+/* Skip 1 as it is slightly easier to accidentally pass to functions. */
+typedef enum
+{
     MBEDTLS_MPI_MOD_REP_INVALID    = 0,
-    /* Skip 1 as it is slightly easier to accidentally pass to functions. */
-    /** Montgomery representation. */
     MBEDTLS_MPI_MOD_REP_MONTGOMERY = 2,
-    /** TODO: document this.
-     *
-     * Residues are in canonical representation.
-     */
-    MBEDTLS_MPI_MOD_REP_OPT_RED,
+    MBEDTLS_MPI_MOD_REP_OPT_RED
 } mbedtls_mpi_mod_rep_selector;
 
 /* Make mbedtls_mpi_mod_rep_selector and mbedtls_mpi_mod_ext_rep disjoint to
  * make it easier to catch when they are accidentally swapped. */
-typedef enum {
+typedef enum
+{
     MBEDTLS_MPI_MOD_EXT_REP_INVALID = 0,
     MBEDTLS_MPI_MOD_EXT_REP_LE      = 8,
     MBEDTLS_MPI_MOD_EXT_REP_BE
 } mbedtls_mpi_mod_ext_rep;
 
-typedef struct {
+typedef struct
+{
     mbedtls_mpi_uint *p;
     size_t limbs;
 } mbedtls_mpi_mod_residue;
@@ -130,10 +122,9 @@ typedef struct {
     size_t limbs;                            // number of limbs
     size_t bits;                             // bitlen of p
     mbedtls_mpi_mod_rep_selector int_rep;    // selector to signal the active member of the union
-    union rep {
-        /* if int_rep == #MBEDTLS_MPI_MOD_REP_MONTGOMERY */
+    union rep
+    {
         mbedtls_mpi_mont_struct mont;
-        /* if int_rep == #MBEDTLS_MPI_MOD_REP_OPT_RED */
         mbedtls_mpi_opt_red_struct ored;
     } rep;
 } mbedtls_mpi_mod_modulus;
@@ -166,10 +157,10 @@ typedef struct {
  * \return      #MBEDTLS_ERR_MPI_BAD_INPUT_DATA if \p p_limbs is less than the
  *              limbs in \p m or if \p p is not less than \p m.
  */
-int mbedtls_mpi_mod_residue_setup(mbedtls_mpi_mod_residue *r,
-                                  const mbedtls_mpi_mod_modulus *m,
-                                  mbedtls_mpi_uint *p,
-                                  size_t p_limbs);
+int mbedtls_mpi_mod_residue_setup( mbedtls_mpi_mod_residue *r,
+                                   const mbedtls_mpi_mod_modulus *m,
+                                   mbedtls_mpi_uint *p,
+                                   size_t p_limbs );
 
 /** Unbind elements of a residue structure.
  *
@@ -181,13 +172,13 @@ int mbedtls_mpi_mod_residue_setup(mbedtls_mpi_mod_residue *r,
  *
  * \param[out] r     The address of residue to release.
  */
-void mbedtls_mpi_mod_residue_release(mbedtls_mpi_mod_residue *r);
+void mbedtls_mpi_mod_residue_release( mbedtls_mpi_mod_residue *r );
 
 /** Initialize a modulus structure.
  *
  * \param[out] m     The address of the modulus structure to initialize.
  */
-void mbedtls_mpi_mod_modulus_init(mbedtls_mpi_mod_modulus *m);
+void mbedtls_mpi_mod_modulus_init( mbedtls_mpi_mod_modulus *m );
 
 /** Setup a modulus structure.
  *
@@ -203,10 +194,10 @@ void mbedtls_mpi_mod_modulus_init(mbedtls_mpi_mod_modulus *m);
  * \return      \c 0 if successful.
  * \return      #MBEDTLS_ERR_MPI_BAD_INPUT_DATA if \p int_rep is invalid.
  */
-int mbedtls_mpi_mod_modulus_setup(mbedtls_mpi_mod_modulus *m,
-                                  const mbedtls_mpi_uint *p,
-                                  size_t p_limbs,
-                                  mbedtls_mpi_mod_rep_selector int_rep);
+int mbedtls_mpi_mod_modulus_setup( mbedtls_mpi_mod_modulus *m,
+                                   const mbedtls_mpi_uint *p,
+                                   size_t p_limbs,
+                                   mbedtls_mpi_mod_rep_selector int_rep );
 
 /** Free elements of a modulus structure.
  *
@@ -218,47 +209,13 @@ int mbedtls_mpi_mod_modulus_setup(mbedtls_mpi_mod_modulus *m,
  *
  * \param[in,out] m     The address of the modulus structure to free.
  */
-void mbedtls_mpi_mod_modulus_free(mbedtls_mpi_mod_modulus *m);
+void mbedtls_mpi_mod_modulus_free( mbedtls_mpi_mod_modulus *m );
 
 /* BEGIN MERGE SLOT 1 */
 
 /* END MERGE SLOT 1 */
 
 /* BEGIN MERGE SLOT 2 */
-
-/** \brief  Multiply two residues, returning the residue modulo the specified
- *          modulus.
- *
- * \note Currently handles the case when `N->int_rep` is
- * MBEDTLS_MPI_MOD_REP_MONTGOMERY.
- *
- * The size of the operation is determined by \p N. \p A, \p B and \p X must
- * all be associated with the modulus \p N and must all have the same number
- * of limbs as \p N.
- *
- * \p X may be aliased to \p A or \p B, or even both, but may not overlap
- * either otherwise. They may not alias \p N (since they must be in canonical
- * form, they cannot == \p N).
- *
- * \param[out] X        The address of the result MPI. Must have the same
- *                      number of limbs as \p N.
- *                      On successful completion, \p X contains the result of
- *                      the multiplication `A * B * R^-1` mod N where
- *                      `R = 2^(biL * N->limbs)`.
- * \param[in]  A        The address of the first MPI.
- * \param[in]  B        The address of the second MPI.
- * \param[in]  N        The address of the modulus. Used to perform a modulo
- *                      operation on the result of the multiplication.
- *
- * \return      \c 0 if successful.
- * \return      #MBEDTLS_ERR_MPI_BAD_INPUT_DATA if all the parameters do not
- *              have the same number of limbs or \p N is invalid.
- * \return      #MBEDTLS_ERR_MPI_ALLOC_FAILED on memory-allocation failure.
- */
-int mbedtls_mpi_mod_mul(mbedtls_mpi_mod_residue *X,
-                        const mbedtls_mpi_mod_residue *A,
-                        const mbedtls_mpi_mod_residue *B,
-                        const mbedtls_mpi_mod_modulus *N);
 
 /* END MERGE SLOT 2 */
 
@@ -288,10 +245,10 @@ int mbedtls_mpi_mod_mul(mbedtls_mpi_mod_residue *X,
  * \return          #MBEDTLS_ERR_MPI_BAD_INPUT_DATA if the given MPIs do not
  *                  have the correct number of limbs.
  */
-int mbedtls_mpi_mod_sub(mbedtls_mpi_mod_residue *X,
-                        const mbedtls_mpi_mod_residue *A,
-                        const mbedtls_mpi_mod_residue *B,
-                        const mbedtls_mpi_mod_modulus *N);
+int mbedtls_mpi_mod_sub( mbedtls_mpi_mod_residue *X,
+                         const mbedtls_mpi_mod_residue *A,
+                         const mbedtls_mpi_mod_residue *B,
+                         const mbedtls_mpi_mod_modulus *N );
 
 /**
  * \brief Perform modular inversion of an MPI with respect to a modulus \p N.
@@ -318,9 +275,9 @@ int mbedtls_mpi_mod_sub(mbedtls_mpi_mod_residue *X,
  *                 by the inversion calculation itself).
  */
 
-int mbedtls_mpi_mod_inv(mbedtls_mpi_mod_residue *X,
-                        const mbedtls_mpi_mod_residue *A,
-                        const mbedtls_mpi_mod_modulus *N);
+int mbedtls_mpi_mod_inv( mbedtls_mpi_mod_residue *X,
+                         const mbedtls_mpi_mod_residue *A,
+                         const mbedtls_mpi_mod_modulus *N );
 /* END MERGE SLOT 3 */
 
 /* BEGIN MERGE SLOT 4 */
@@ -354,46 +311,13 @@ int mbedtls_mpi_mod_inv(mbedtls_mpi_mod_residue *X,
  * \return          #MBEDTLS_ERR_MPI_BAD_INPUT_DATA if the given MPIs do not
  *                  have the correct number of limbs.
  */
-int mbedtls_mpi_mod_add(mbedtls_mpi_mod_residue *X,
-                        const mbedtls_mpi_mod_residue *A,
-                        const mbedtls_mpi_mod_residue *B,
-                        const mbedtls_mpi_mod_modulus *N);
+int mbedtls_mpi_mod_add( mbedtls_mpi_mod_residue *X,
+                         const mbedtls_mpi_mod_residue *A,
+                         const mbedtls_mpi_mod_residue *B,
+                         const mbedtls_mpi_mod_modulus *N );
 /* END MERGE SLOT 5 */
 
 /* BEGIN MERGE SLOT 6 */
-
-/** Generate a random number uniformly in a range.
- *
- * This function generates a random number between \p min inclusive and
- * \p N exclusive.
- *
- * The procedure complies with RFC 6979 §3.3 (deterministic ECDSA)
- * when the RNG is a suitably parametrized instance of HMAC_DRBG
- * and \p min is \c 1.
- *
- * \note           There are `N - min` possible outputs. The lower bound
- *                 \p min can be reached, but the upper bound \p N cannot.
- *
- * \param X        The destination residue.
- * \param min      The minimum value to return. It must be strictly smaller
- *                 than \b N.
- * \param N        The modulus.
- *                 This is the upper bound of the output range, exclusive.
- * \param f_rng    The RNG function to use. This must not be \c NULL.
- * \param p_rng    The RNG parameter to be passed to \p f_rng.
- *
- * \return         \c 0 if successful.
- * \return         #MBEDTLS_ERR_MPI_NOT_ACCEPTABLE if the implementation was
- *                 unable to find a suitable value within a limited number
- *                 of attempts. This has a negligible probability if \p N
- *                 is significantly larger than \p min, which is the case
- *                 for all usual cryptographic applications.
- */
-int mbedtls_mpi_mod_random(mbedtls_mpi_mod_residue *X,
-                           mbedtls_mpi_uint min,
-                           const mbedtls_mpi_mod_modulus *N,
-                           int (*f_rng)(void *, unsigned char *, size_t),
-                           void *p_rng);
 
 /* END MERGE SLOT 6 */
 
@@ -421,11 +345,11 @@ int mbedtls_mpi_mod_random(mbedtls_mpi_mod_residue *X,
  * \return       #MBEDTLS_ERR_MPI_BAD_INPUT_DATA if \p ext_rep
  *               is invalid or the value in the buffer is not less than \p m.
  */
-int mbedtls_mpi_mod_read(mbedtls_mpi_mod_residue *r,
-                         const mbedtls_mpi_mod_modulus *m,
-                         const unsigned char *buf,
-                         size_t buflen,
-                         mbedtls_mpi_mod_ext_rep ext_rep);
+int mbedtls_mpi_mod_read( mbedtls_mpi_mod_residue *r,
+                          const mbedtls_mpi_mod_modulus *m,
+                          const unsigned char *buf,
+                          size_t buflen,
+                          mbedtls_mpi_mod_ext_rep ext_rep );
 
 /** Write a residue into a byte buffer.
  *
@@ -459,11 +383,11 @@ int mbedtls_mpi_mod_read(mbedtls_mpi_mod_residue *r,
  *               memory for conversion. Can occur only for moduli with
  *               MBEDTLS_MPI_MOD_REP_MONTGOMERY.
  */
-int mbedtls_mpi_mod_write(const mbedtls_mpi_mod_residue *r,
-                          const mbedtls_mpi_mod_modulus *m,
-                          unsigned char *buf,
-                          size_t buflen,
-                          mbedtls_mpi_mod_ext_rep ext_rep);
+int mbedtls_mpi_mod_write( const mbedtls_mpi_mod_residue *r,
+                           const mbedtls_mpi_mod_modulus *m,
+                           unsigned char *buf,
+                           size_t buflen,
+                           mbedtls_mpi_mod_ext_rep ext_rep );
 /* END MERGE SLOT 7 */
 
 /* BEGIN MERGE SLOT 8 */
