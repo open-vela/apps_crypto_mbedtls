@@ -421,7 +421,9 @@ class DomainData:
                                           '|MBEDTLS_SHA384_'),
             # Key exchange types. Only build the library and the sample
             # programs.
-            'kex': ExclusiveDomain(key_exchange_symbols, build_and_test),
+            'kex': ExclusiveDomain(key_exchange_symbols,
+                                   [build_command + ['lib'],
+                                    build_command + ['-C', 'programs']]),
             'pkalgs': ComplementaryDomain(['MBEDTLS_ECDSA_C',
                                            'MBEDTLS_ECP_C',
                                            'MBEDTLS_PKCS1_V21',
