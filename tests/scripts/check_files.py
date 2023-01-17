@@ -268,7 +268,7 @@ class UnicodeIssueTracker(LineIssueTracker):
 
     heading = "Invalid UTF-8 or forbidden character:"
 
-    # Only allow valid UTF-8, and only other explicitly allowed characters.
+    # Only allow valid UTF-8, and only white-listed characters.
     # We deliberately exclude all characters that aren't a simple non-blank,
     # non-zero-width glyph, apart from a very small set (tab, ordinary space,
     # line breaks, "basic" no-break space and soft hyphen). In particular,
@@ -285,7 +285,6 @@ class UnicodeIssueTracker(LineIssueTracker):
         '\u2070\u2071\u2074-\u208E\u2090-\u209C', # Superscripts and Subscripts
         '\u2190-\u21FF', # Arrows
         '\u2200-\u22FF', # Mathematical Symbols
-        '\u2500 \u2514 \u251C' # Box Drawings characters used in markdown trees
     ])
     # Allow any of the characters and ranges above, and anything classified
     # as a word constituent.

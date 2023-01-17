@@ -972,15 +972,6 @@ test_ca_server1_config_file = test-ca.server1.opensslconf
 
 server1.crt: server1.key server1.req.sha256 $(test_ca_crt) $(test_ca_key_file_rsa)
 	$(MBEDTLS_CERT_WRITE) request_file=server1.req.sha256 issuer_crt=$(test_ca_crt) issuer_key=$(test_ca_key_file_rsa) issuer_pwd=$(test_ca_pwd_rsa) version=1 not_before=20190210144406 not_after=20290210144406 md=SHA1 version=3 output_file=$@
-server1.long_serial.crt: server1.key server1.req.sha256 $(test_ca_crt) $(test_ca_key_file_rsa)
-	echo "112233445566778899aabbccddeeff0011223344" > test-ca.server1.tmp.serial
-	$(OPENSSL) ca -in server1.req.sha256 -key PolarSSLTest -config test-ca.server1.test_serial.opensslconf -notext -batch -out $@
-server1.80serial.crt: server1.key server1.req.sha256 $(test_ca_crt) $(test_ca_key_file_rsa)
-	echo "8011223344" > test-ca.server1.tmp.serial
-	$(OPENSSL) ca -in server1.req.sha256 -key PolarSSLTest -config test-ca.server1.test_serial.opensslconf -notext -batch -out $@
-server1.long_serial_FF.crt: server1.key server1.req.sha256 $(test_ca_crt) $(test_ca_key_file_rsa)
-	echo "ffffffffffffffffffffffffffffffff" > test-ca.server1.tmp.serial
-	$(OPENSSL) ca -in server1.req.sha256 -key PolarSSLTest -config test-ca.server1.test_serial.opensslconf -notext -batch -out $@
 server1.noauthid.crt: server1.key server1.req.sha256 $(test_ca_crt) $(test_ca_key_file_rsa)
 	$(MBEDTLS_CERT_WRITE) request_file=server1.req.sha256 issuer_crt=$(test_ca_crt) issuer_key=$(test_ca_key_file_rsa) issuer_pwd=$(test_ca_pwd_rsa) not_before=20190210144406 not_after=20290210144406 md=SHA1 authority_identifier=0 version=3 output_file=$@
 server1.crt.der: server1.crt
@@ -1151,7 +1142,6 @@ tls13_certs: ecdsa_secp521r1.crt ecdsa_secp521r1.key
 # PKCS7 test data
 pkcs7_test_cert_1 = pkcs7-rsa-sha256-1.crt
 pkcs7_test_cert_2 = pkcs7-rsa-sha256-2.crt
-pkcs7_test_cert_3 = pkcs7-rsa-sha256-3.crt
 pkcs7_test_file = pkcs7_data.bin
 
 $(pkcs7_test_file):
@@ -1172,15 +1162,6 @@ pkcs7-rsa-sha256-2.crt:
 	$(OPENSSL) req -x509 -subj="/C=NL/O=PKCS7/CN=PKCS7 Cert 2" -sha256 -nodes -days 365  -newkey rsa:2048 -keyout pkcs7-rsa-sha256-2.key -out pkcs7-rsa-sha256-2.crt
 	cat pkcs7-rsa-sha256-2.crt pkcs7-rsa-sha256-2.key > pkcs7-rsa-sha256-2.pem
 all_final += pkcs7-rsa-sha256-2.crt
-
-pkcs7-rsa-sha256-3.crt:
-	$(OPENSSL) req -x509 -subj="/C=NL/O=PKCS7/CN=PKCS7 Cert 3" -sha256 -nodes -days 365  -newkey rsa:2048 -keyout pkcs7-rsa-sha256-3.key -out pkcs7-rsa-sha256-3.crt
-	cat pkcs7-rsa-sha256-3.crt pkcs7-rsa-sha256-3.key > pkcs7-rsa-sha256-3.pem
-all_final += pkcs7-rsa-sha256-3.crt
-
-pkcs7-rsa-expired.crt:
-	$(FAKETIME) -f -3650d $(OPENSSL) req -x509 -subj="/C=NL/O=PKCS7/CN=PKCS7 Cert Expired" -sha256 -nodes -days 365  -newkey rsa:2048 -keyout pkcs7-rsa-expired.key -out pkcs7-rsa-expired.crt
-all_final += pkcs7-rsa-expired.crt
 
 # Convert signing certs to DER for testing PEM-free builds
 pkcs7-rsa-sha256-1.der: $(pkcs7_test_cert_1)
@@ -1211,15 +1192,10 @@ pkcs7_data_without_cert_signed.der: $(pkcs7_test_file) $(pkcs7_test_cert_1)
 	$(OPENSSL) smime -sign -binary -in pkcs7_data.bin -out $@ -md sha256 -signer pkcs7-rsa-sha256-1.pem -nocerts -noattr -outform DER -out $@
 all_final += pkcs7_data_without_cert_signed.der
 
-# pkcs7 signature file with two signers
+# pkcs7 signature file with multiple signers
 pkcs7_data_multiple_signed.der: $(pkcs7_test_file) $(pkcs7_test_cert_1) $(pkcs7_test_cert_2)
 	$(OPENSSL) smime -sign -binary -in pkcs7_data.bin -out $@ -md sha256 -signer pkcs7-rsa-sha256-1.pem -signer pkcs7-rsa-sha256-2.pem -nocerts -noattr -outform DER -out $@
 all_final += pkcs7_data_multiple_signed.der
-
-# pkcs7 signature file with three signers
-pkcs7_data_3_signed.der: $(pkcs7_test_file) $(pkcs7_test_cert_1) $(pkcs7_test_cert_2) $(pkcs7_test_cert_3)
-	$(OPENSSL) smime -sign -binary -in pkcs7_data.bin -out $@ -md sha256 -signer pkcs7-rsa-sha256-1.pem -signer pkcs7-rsa-sha256-2.pem -signer pkcs7-rsa-sha256-3.pem -nocerts -noattr -outform DER -out $@
-all_final += pkcs7_data_3_signed.der
 
 # pkcs7 signature file with multiple certificates
 pkcs7_data_multiple_certs_signed.der: $(pkcs7_test_file) $(pkcs7_test_cert_1) $(pkcs7_test_cert_2)

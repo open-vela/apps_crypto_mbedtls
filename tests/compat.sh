@@ -753,17 +753,15 @@ start_server() {
     echo "$SERVER_CMD" > $SRV_OUT
     # for servers without -www or equivalent
     while :; do echo bla; sleep 1; done | $SERVER_CMD >> $SRV_OUT 2>&1 &
-    SRV_PID=$!
+    PROCESS_ID=$!
 
-    wait_server_start "$PORT" "$SRV_PID"
+    wait_server_start "$PORT" "$PROCESS_ID"
 }
 
 # terminate the running server
 stop_server() {
-    # For Ubuntu 22.04, `Terminated` message is outputed by wait command.
-    # To remove it from stdout, redirect stdout/stderr to SRV_OUT
-    kill $SRV_PID >/dev/null 2>&1
-    wait $SRV_PID >> $SRV_OUT 2>&1
+    kill $PROCESS_ID 2>/dev/null
+    wait $PROCESS_ID 2>/dev/null
 
     if [ "$MEMCHECK" -gt 0 ]; then
         if is_mbedtls "$SERVER_CMD" && has_mem_err $SRV_OUT; then
@@ -779,7 +777,7 @@ stop_server() {
 # kill the running server (used when killed by signal)
 cleanup() {
     rm -f $SRV_OUT $CLI_OUT
-    kill $SRV_PID >/dev/null 2>&1
+    kill $PROCESS_ID >/dev/null 2>&1
     kill $WATCHDOG_PID >/dev/null 2>&1
     exit 1
 }
@@ -792,13 +790,11 @@ wait_client_done() {
     ( sleep "$DOG_DELAY"; echo "TIMEOUT" >> $CLI_OUT; kill $CLI_PID ) &
     WATCHDOG_PID=$!
 
-    # For Ubuntu 22.04, `Terminated` message is outputed by wait command.
-    # To remove it from stdout, redirect stdout/stderr to CLI_OUT
-    wait $CLI_PID >> $CLI_OUT 2>&1
+    wait $CLI_PID
     EXIT=$?
 
-    kill $WATCHDOG_PID >/dev/null 2>&1
-    wait $WATCHDOG_PID >> $CLI_OUT 2>&1
+    kill $WATCHDOG_PID
+    wait $WATCHDOG_PID
 
     echo "EXIT: $EXIT" >> $CLI_OUT
 }
