@@ -214,7 +214,9 @@ class KeyType:
         This function does not currently handle key derivation or PAKE.
         """
         #pylint: disable=too-many-branches,too-many-return-statements
-        if not alg.is_valid_for_operation():
+        if alg.is_wildcard:
+            return False
+        if alg.is_invalid_truncation():
             return False
         if self.head == 'HMAC' and alg.head == 'HMAC':
             return True
@@ -245,8 +247,6 @@ class KeyType:
             # operations: it imports the public key as a formatted byte string.
             # So a public key object with a key agreement algorithm is not
             # a valid combination.
-            return False
-        if alg.is_invalid_key_agreement_with_derivation():
             return False
         if self.head == 'ECC':
             assert self.params is not None
@@ -414,38 +414,17 @@ class Algorithm:
         self.category = self.determine_category(self.base_expression, self.head)
         self.is_wildcard = self.determine_wildcard(self.expression)
 
-    def get_key_agreement_derivation(self) -> Optional[str]:
-        """For a combined key agreement and key derivation algorithm, get the derivation part.
-
-        For anything else, return None.
-        """
+    def is_key_agreement_with_derivation(self) -> bool:
+        """Whether this is a combined key agreement and key derivation algorithm."""
         if self.category != AlgorithmCategory.KEY_AGREEMENT:
-            return None
+            return False
         m = re.match(r'PSA_ALG_KEY_AGREEMENT\(\w+,\s*(.*)\)\Z', self.expression)
         if not m:
-            return None
+            return False
         kdf_alg = m.group(1)
         # Assume kdf_alg is either a valid KDF or 0.
-        if re.match(r'(?:0[Xx])?0+\s*\Z', kdf_alg):
-            return None
-        return kdf_alg
+        return not re.match(r'(?:0[Xx])?0+\s*\Z', kdf_alg)
 
-    KEY_DERIVATIONS_INCOMPATIBLE_WITH_AGREEMENT = frozenset([
-        'PSA_ALG_TLS12_ECJPAKE_TO_PMS', # secret input in specific format
-    ])
-    def is_valid_key_agreement_with_derivation(self) -> bool:
-        """Whether this is a valid combined key agreement and key derivation algorithm."""
-        kdf_alg = self.get_key_agreement_derivation()
-        if kdf_alg is None:
-            return False
-        return kdf_alg not in self.KEY_DERIVATIONS_INCOMPATIBLE_WITH_AGREEMENT
-
-    def is_invalid_key_agreement_with_derivation(self) -> bool:
-        """Whether this is an invalid combined key agreement and key derivation algorithm."""
-        kdf_alg = self.get_key_agreement_derivation()
-        if kdf_alg is None:
-            return False
-        return kdf_alg in self.KEY_DERIVATIONS_INCOMPATIBLE_WITH_AGREEMENT
 
     def short_expression(self, level: int = 0) -> str:
         """Abbreviate the expression, keeping it human-readable.
@@ -519,26 +498,13 @@ class Algorithm:
                 return True
         return False
 
-    def is_valid_for_operation(self) -> bool:
-        """Whether this algorithm construction is valid for an operation.
-
-        This function assumes that the algorithm is constructed in a
-        "grammatically" correct way, and only rejects semantically invalid
-        combinations.
-        """
-        if self.is_wildcard:
-            return False
-        if self.is_invalid_truncation():
-            return False
-        return True
-
     def can_do(self, category: AlgorithmCategory) -> bool:
         """Whether this algorithm can perform operations in the given category.
         """
         if category == self.category:
             return True
         if category == AlgorithmCategory.KEY_DERIVATION and \
-           self.is_valid_key_agreement_with_derivation():
+           self.is_key_agreement_with_derivation():
             return True
         return False
 
