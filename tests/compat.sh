@@ -804,8 +804,11 @@ run_client() {
     LEN=$(( 72 - `echo "$TITLE" | wc -c` ))
     for i in `seq 1 $LEN`; do printf '.'; done; printf ' '
 
+    # Calculate the argument $c to pass to translate_ciphers.py
+    client=$(echo $1 | head -c1)
+    c=$(echo $client | tr '[:upper:]' '[:lower:]')
     # Translate ciphersuite names based on client's naming convention
-    t_cipher=$(./scripts/translate_ciphers.py $3 $2)
+    t_cipher=$(./scripts/translate_ciphers.py $c $2)
     check_translation $? "$t_cipher"
 
     # should we skip?
@@ -1031,7 +1034,7 @@ for VERIFY in $VERIFIES; do
                         start_server "OpenSSL"
                         for i in $M_CIPHERS; do
                             check_openssl_server_bug $i
-                            run_client mbedTLS $i m
+                            run_client mbedTLS $i
                         done
                         stop_server
                     fi
@@ -1039,7 +1042,7 @@ for VERIFY in $VERIFIES; do
                     if [ "X" != "X$O_CIPHERS" ]; then
                         start_server "mbedTLS"
                         for i in $O_CIPHERS; do
-                            run_client OpenSSL $i o
+                            run_client OpenSSL $i
                         done
                         stop_server
                     fi
@@ -1056,7 +1059,7 @@ for VERIFY in $VERIFIES; do
                     if [ "X" != "X$M_CIPHERS" ]; then
                         start_server "GnuTLS"
                         for i in $M_CIPHERS; do
-                            run_client mbedTLS $i m
+                            run_client mbedTLS $i
                         done
                         stop_server
                     fi
@@ -1064,7 +1067,7 @@ for VERIFY in $VERIFIES; do
                     if [ "X" != "X$G_CIPHERS" ]; then
                         start_server "mbedTLS"
                         for i in $G_CIPHERS; do
-                            run_client GnuTLS $i g
+                            run_client GnuTLS $i
                         done
                         stop_server
                     fi
@@ -1083,7 +1086,7 @@ for VERIFY in $VERIFIES; do
                     if [ "X" != "X$M_CIPHERS" ]; then
                         start_server "mbedTLS"
                         for i in $M_CIPHERS; do
-                            run_client mbedTLS $i m
+                            run_client mbedTLS $i
                         done
                         stop_server
                     fi
