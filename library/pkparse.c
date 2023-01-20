@@ -429,11 +429,7 @@ static int pk_group_id_from_specified(const mbedtls_asn1_buf *params,
     ret = pk_group_id_from_group(&grp, grp_id);
 
 cleanup:
-    mbedtls_mpi_free(&grp.N);
-    mbedtls_mpi_free(&grp.P);
-    mbedtls_mpi_free(&grp.A);
-    mbedtls_mpi_free(&grp.B);
-    mbedtls_ecp_point_free(&grp.G);
+    mbedtls_ecp_group_free(&grp);
 
     return ret;
 }
