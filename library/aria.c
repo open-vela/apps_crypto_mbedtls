@@ -37,6 +37,11 @@
 
 #include "mbedtls/platform_util.h"
 
+#if ( defined(__ARMCC_VERSION) || defined(_MSC_VER) ) && \
+    !defined(inline) && !defined(__cplusplus)
+#define inline __inline
+#endif
+
 /* Parameter validation macros */
 #define ARIA_VALIDATE_RET( cond )                                       \
     MBEDTLS_INTERNAL_VALIDATE_RET( cond, MBEDTLS_ERR_ARIA_BAD_INPUT_DATA )
@@ -98,8 +103,47 @@ static inline uint32_t aria_p1( uint32_t x )
  * modify byte order: ( A B C D ) -> ( D C B A ), i.e. change endianness
  *
  * This is submatrix P3 in [1] Appendix B.1
+ *
+ * Some compilers fail to translate this to a single instruction,
+ * so let's provide asm versions for common platforms with C fallback.
  */
-#define ARIA_P3(x) MBEDTLS_BSWAP32(x)
+#if defined(MBEDTLS_HAVE_ASM)
+#if defined(__arm__) /* rev available from v6 up */
+/* armcc5 --gnu defines __GNUC__ but doesn't support GNU's extended asm */
+#if defined(__GNUC__) && \
+    ( !defined(__ARMCC_VERSION) || __ARMCC_VERSION >= 6000000 ) && \
+    __ARM_ARCH >= 6
+static inline uint32_t aria_p3( uint32_t x )
+{
+    uint32_t r;
+    __asm( "rev %0, %1" : "=l" (r) : "l" (x) );
+    return( r );
+}
+#define ARIA_P3 aria_p3
+#elif defined(__ARMCC_VERSION) && __ARMCC_VERSION < 6000000 && \
+    ( __TARGET_ARCH_ARM >= 6 || __TARGET_ARCH_THUMB >= 3 )
+static inline uint32_t aria_p3( uint32_t x )
+{
+    uint32_t r;
+    __asm( "rev r, x" );
+    return( r );
+}
+#define ARIA_P3 aria_p3
+#endif
+#endif /* arm */
+#if defined(__GNUC__) && \
+    defined(__i386__) || defined(__amd64__) || defined( __x86_64__)
+static inline uint32_t aria_p3( uint32_t x )
+{
+    __asm( "bswap %0" : "=r" (x) : "0" (x) );
+    return( x );
+}
+#define ARIA_P3 aria_p3
+#endif /* x86 gnuc */
+#endif /* MBEDTLS_HAVE_ASM && GNUC */
+#if !defined(ARIA_P3)
+#define ARIA_P3(x) ARIA_P2( ARIA_P1 ( x ) )
+#endif
 
 /*
  * ARIA Affine Transform
@@ -544,6 +588,7 @@ int mbedtls_aria_crypt_cbc( mbedtls_aria_context *ctx,
                             const unsigned char *input,
                             unsigned char *output )
 {
+    int i;
     unsigned char temp[MBEDTLS_ARIA_BLOCKSIZE];
 
     ARIA_VALIDATE_RET( ctx != NULL );
@@ -563,7 +608,8 @@ int mbedtls_aria_crypt_cbc( mbedtls_aria_context *ctx,
             memcpy( temp, input, MBEDTLS_ARIA_BLOCKSIZE );
             mbedtls_aria_crypt_ecb( ctx, input, output );
 
-            mbedtls_xor( output, output, iv, MBEDTLS_ARIA_BLOCKSIZE );
+            for( i = 0; i < MBEDTLS_ARIA_BLOCKSIZE; i++ )
+                output[i] = (unsigned char)( output[i] ^ iv[i] );
 
             memcpy( iv, temp, MBEDTLS_ARIA_BLOCKSIZE );
 
@@ -576,7 +622,8 @@ int mbedtls_aria_crypt_cbc( mbedtls_aria_context *ctx,
     {
         while( length > 0 )
         {
-            mbedtls_xor( output, input, iv, MBEDTLS_ARIA_BLOCKSIZE );
+            for( i = 0; i < MBEDTLS_ARIA_BLOCKSIZE; i++ )
+                output[i] = (unsigned char)( input[i] ^ iv[i] );
 
             mbedtls_aria_crypt_ecb( ctx, output, output );
             memcpy( iv, output, MBEDTLS_ARIA_BLOCKSIZE );
