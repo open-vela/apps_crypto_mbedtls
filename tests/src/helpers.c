@@ -48,7 +48,7 @@ void mbedtls_test_platform_teardown( void )
 #endif /* MBEDTLS_PLATFORM_C */
 }
 
-int mbedtls_test_ascii2uc(const char c, unsigned char *uc)
+static int ascii2uc(const char c, unsigned char *uc)
 {
     if( ( c >= '0' ) && ( c <= '9' ) )
         *uc = c - '0';
@@ -89,10 +89,6 @@ void mbedtls_test_set_step( unsigned long step )
     mbedtls_test_info.step = step;
 }
 
-#if defined(MBEDTLS_BIGNUM_C)
-unsigned mbedtls_test_case_uses_negative_0 = 0;
-#endif
-
 void mbedtls_test_info_reset( void )
 {
     mbedtls_test_info.result = MBEDTLS_TEST_RESULT_SUCCESS;
@@ -102,9 +98,6 @@ void mbedtls_test_info_reset( void )
     mbedtls_test_info.filename = 0;
     memset( mbedtls_test_info.line1, 0, sizeof( mbedtls_test_info.line1 ) );
     memset( mbedtls_test_info.line2, 0, sizeof( mbedtls_test_info.line2 ) );
-#if defined(MBEDTLS_BIGNUM_C)
-    mbedtls_test_case_uses_negative_0 = 0;
-#endif
 }
 
 int mbedtls_test_equal( const char *test, int line_no, const char* filename,
@@ -207,10 +200,10 @@ int mbedtls_test_unhexify( unsigned char *obuf,
 
     while( *ibuf != 0 )
     {
-        if ( mbedtls_test_ascii2uc( *(ibuf++), &uc ) != 0 )
+        if ( ascii2uc( *(ibuf++), &uc ) != 0 )
             return( -1 );
 
-        if ( mbedtls_test_ascii2uc( *(ibuf++), &uc2 ) != 0 )
+        if ( ascii2uc( *(ibuf++), &uc2 ) != 0 )
             return( -1 );
 
         *(obuf++) = ( uc << 4 ) | uc2;
@@ -350,3 +343,63 @@ void mbedtls_test_err_add_check( int high, int low,
     }
 }
 #endif /* MBEDTLS_TEST_HOOKS */
+
+#if defined(MBEDTLS_BIGNUM_C)
+#include "bignum_core.h"
+
+int mbedtls_test_read_mpi_core( mbedtls_mpi_uint **pX, size_t *plimbs,
+                                const char *input )
+{
+    /* Sanity check */
+    if( *pX != NULL )
+        return( MBEDTLS_ERR_MPI_BAD_INPUT_DATA );
+
+    size_t hex_len = strlen( input );
+    size_t byte_len = ( hex_len + 1 ) / 2;
+    *plimbs = CHARS_TO_LIMBS( byte_len );
+    if( *plimbs == 0 )
+        return( 0 );
+
+    *pX = mbedtls_calloc( *plimbs, sizeof( **pX ) );
+    if( *pX == NULL )
+        return( MBEDTLS_ERR_MPI_ALLOC_FAILED );
+
+    unsigned char *byte_start = ( unsigned char * ) *pX;
+    if( byte_len % sizeof( mbedtls_mpi_uint ) != 0 )
+    {
+        byte_start += sizeof( mbedtls_mpi_uint ) - byte_len % sizeof( mbedtls_mpi_uint );
+    }
+    if( ( hex_len & 1 ) != 0 )
+    {
+        /* mbedtls_test_unhexify wants an even number of hex digits */
+        TEST_ASSERT( ascii2uc( *input, byte_start ) == 0 );
+        ++byte_start;
+        ++input;
+        --byte_len;
+    }
+    TEST_ASSERT( mbedtls_test_unhexify( byte_start,
+                                        byte_len,
+                                        input,
+                                        &byte_len ) == 0 );
+
+    mbedtls_mpi_core_bigendian_to_host( *pX, *plimbs );
+    return( 0 );
+
+exit:
+    mbedtls_free( *pX );
+    return( MBEDTLS_ERR_MPI_BAD_INPUT_DATA );
+}
+
+int mbedtls_test_read_mpi( mbedtls_mpi *X, const char *s )
+{
+    /* mbedtls_mpi_read_string() currently retains leading zeros.
+     * It always allocates at least one limb for the value 0. */
+    if( s[0] == 0 )
+    {
+        mbedtls_mpi_free( X );
+        return( 0 );
+    }
+    else
+        return( mbedtls_mpi_read_string( X, 16, s ) );
+}
+#endif
