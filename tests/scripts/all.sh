@@ -1948,18 +1948,6 @@ component_test_depends_py_pkalgs_psa () {
     tests/scripts/depends.py pkalgs
 }
 
-component_build_no_pk_rsa_alt_support () {
-    msg "build: !MBEDTLS_PK_RSA_ALT_SUPPORT" # ~30s
-
-    scripts/config.py full
-    scripts/config.py unset MBEDTLS_PK_RSA_ALT_SUPPORT
-    scripts/config.py set MBEDTLS_RSA_C
-    scripts/config.py set MBEDTLS_X509_CRT_WRITE_C
-
-    # Only compile - this is primarily to test for compile issues
-    make CC=gcc CFLAGS='-Werror -Wall -Wextra -I../tests/include/alt-dummy'
-}
-
 component_build_module_alt () {
     msg "build: MBEDTLS_XXX_ALT" # ~30s
     scripts/config.py full
@@ -3753,12 +3741,20 @@ support_test_psa_compliance () {
     [ "$ver_major" -eq 3 ] && [ "$ver_minor" -ge 10 ]
 }
 
-component_check_code_style () {
-    msg "Check C code style"
-    ./scripts/code_style.py
+component_test_corrected_code_style () {
+    ./scripts/code_style.py --fix
+
+    msg "build: make, default config (out-of-box), corrected code style"
+    make
+
+    msg "test: main suites make, default config (out-of-box), corrected code style"
+    make test
+
+    # Clean up code-style corrections
+    git checkout -- .
 }
 
-support_check_code_style() {
+support_test_corrected_code_style() {
     case $(uncrustify --version) in
         *0.75.1*) true;;
         *) false;;
