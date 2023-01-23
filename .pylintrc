@@ -1,6 +1,5 @@
 [MASTER]
 init-hook='import sys; sys.path.append("scripts")'
-min-similarity-lines=10
 
 [BASIC]
 # We're ok with short funtion argument names.
