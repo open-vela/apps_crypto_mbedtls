@@ -64,11 +64,9 @@ int main( void )
 #define DFL_KEY_OPAQUE          0
 #define DFL_KEY_PWD             ""
 #define DFL_PSK                 ""
-#define DFL_EARLY_DATA          MBEDTLS_SSL_EARLY_DATA_DISABLED
 #define DFL_PSK_OPAQUE          0
 #define DFL_PSK_IDENTITY        "Client_identity"
 #define DFL_ECJPAKE_PW          NULL
-#define DFL_ECJPAKE_PW_OPAQUE   0
 #define DFL_EC_MAX_OPS          -1
 #define DFL_FORCE_CIPHER        0
 #define DFL_TLS1_3_KEX_MODES    MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_ALL
@@ -85,7 +83,6 @@ int main( void )
 #define DFL_RECSPLIT            -1
 #define DFL_DHMLEN              -1
 #define DFL_RECONNECT           0
-#define DFL_RECO_SERVER_NAME    NULL
 #define DFL_RECO_DELAY          0
 #define DFL_RECO_MODE           1
 #define DFL_CID_ENABLED         0
@@ -319,17 +316,11 @@ int main( void )
 #endif
 
 #if defined(MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED)
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
 #define USAGE_ECJPAKE \
-    "    ecjpake_pw=%%s           default: none (disabled)\n"   \
-    "    ecjpake_pw_opaque=%%d    default: 0 (disabled)\n"
-#else /* MBEDTLS_USE_PSA_CRYPTO */
-#define USAGE_ECJPAKE \
-    "    ecjpake_pw=%%s           default: none (disabled)\n"
-#endif /* MBEDTLS_USE_PSA_CRYPTO */
-#else /* MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED */
+    "    ecjpake_pw=%%s       default: none (disabled)\n"
+#else
 #define USAGE_ECJPAKE ""
-#endif /* MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED */
+#endif
 
 #if defined(MBEDTLS_ECP_RESTARTABLE)
 #define USAGE_ECRESTART \
@@ -351,14 +342,6 @@ int main( void )
 #else
 #define USAGE_SERIALIZATION ""
 #endif
-
-#if defined(MBEDTLS_SSL_EARLY_DATA)
-#define USAGE_EARLY_DATA \
-    "    early_data=%%d        default: 0 (disabled)\n"      \
-    "                        options: 0 (disabled), 1 (enabled)\n"
-#else
-#define USAGE_EARLY_DATA ""
-#endif /* MBEDTLS_SSL_EARLY_DATA && MBEDTLS_SSL_PROTO_TLS1_3 */
 
 #define USAGE_KEY_OPAQUE_ALGS \
     "    key_opaque_algs=%%s  Allowed opaque key algorithms.\n"                      \
@@ -392,8 +375,6 @@ int main( void )
     "                        a second non-empty message before attempting\n" \
     "                        to read a response from the server\n"           \
     "    debug_level=%%d      default: 0 (disabled)\n"             \
-    "    build_version=%%d    default: none (disabled)\n"                     \
-    "                        option: 1 (print build version only and stop)\n" \
     "    nbio=%%d             default: 0 (blocking I/O)\n"         \
     "                        options: 1 (non-blocking), 2 (added delays)\n"   \
     "    event=%%d            default: 0 (loop)\n"                            \
@@ -422,8 +403,8 @@ int main( void )
     USAGE_RENEGO                                            \
     "    exchanges=%%d        default: 1\n"                 \
     "    reconnect=%%d        number of reconnections using session resumption\n" \
-    "                        default: 0 (disabled)\n"       \
-    "    reco_server_name=%%s  default: NULL\n"             \
+    "                        default: 0 (disabled)\n"      \
+    "    reco_server_name=%%s  default: localhost\n"         \
     "    reco_delay=%%d       default: 0 seconds\n"         \
     "    reco_mode=%%d        0: copy session, 1: serialize session\n" \
     "                        default: 1\n"      \
@@ -438,7 +419,6 @@ int main( void )
     USAGE_REPRODUCIBLE                                      \
     USAGE_CURVES                                            \
     USAGE_SIG_ALGS                                          \
-    USAGE_EARLY_DATA                                        \
     USAGE_DHMLEN                                            \
     USAGE_KEY_OPAQUE_ALGS                                   \
     "\n"
@@ -499,9 +479,6 @@ struct options
     const char *psk;            /* the pre-shared key                       */
     const char *psk_identity;   /* the pre-shared key identity              */
     const char *ecjpake_pw;     /* the EC J-PAKE password                   */
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
-    int ecjpake_pw_opaque;      /* set to 1 to use the opaque method for setting the password */
-#endif
     int ec_max_ops;             /* EC consecutive operations limit          */
     int force_ciphersuite[2];   /* protocol/ciphersuite to use, or all      */
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3)
@@ -553,9 +530,6 @@ struct options
                                  * after renegotiation                      */
     int reproducible;           /* make communication reproducible          */
     int skip_close_notify;      /* skip sending the close_notify alert      */
-#if defined(MBEDTLS_SSL_EARLY_DATA)
-    int early_data;             /* support for early data                   */
-#endif
     int query_config_mode;      /* whether to read config                   */
     int use_srtp;               /* Support SRTP                             */
     int force_srtp_profile;     /* SRTP protection profile to use or all    */
@@ -834,10 +808,6 @@ int main( int argc, char *argv[] )
         MBEDTLS_TLS_SRTP_UNSET
     };
 #endif /* MBEDTLS_SSL_DTLS_SRTP */
-#if defined(MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED) && \
-    defined(MBEDTLS_USE_PSA_CRYPTO)
-    mbedtls_svc_key_id_t ecjpake_pw_slot = MBEDTLS_SVC_KEY_ID_INIT; /* ecjpake password key slot */
-#endif /* MBEDTLS_USE_PSA_CRYPTO && MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED */
 
 #if defined(MBEDTLS_MEMORY_BUFFER_ALLOC_C)
     mbedtls_memory_buffer_alloc_init( alloc_buf, sizeof(alloc_buf) );
@@ -933,9 +903,6 @@ int main( int argc, char *argv[] )
 #endif
     opt.psk_identity        = DFL_PSK_IDENTITY;
     opt.ecjpake_pw          = DFL_ECJPAKE_PW;
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
-    opt.ecjpake_pw_opaque   = DFL_ECJPAKE_PW_OPAQUE;
-#endif
     opt.ec_max_ops          = DFL_EC_MAX_OPS;
     opt.force_ciphersuite[0]= DFL_FORCE_CIPHER;
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3)
@@ -954,7 +921,7 @@ int main( int argc, char *argv[] )
     opt.recsplit            = DFL_RECSPLIT;
     opt.dhmlen              = DFL_DHMLEN;
     opt.reconnect           = DFL_RECONNECT;
-    opt.reco_server_name    = DFL_RECO_SERVER_NAME;
+    opt.reco_server_name    = DFL_SERVER_NAME;
     opt.reco_delay          = DFL_RECO_DELAY;
     opt.reco_mode           = DFL_RECO_MODE;
     opt.reconnect_hard      = DFL_RECONNECT_HARD;
@@ -962,9 +929,6 @@ int main( int argc, char *argv[] )
     opt.alpn_string         = DFL_ALPN_STRING;
     opt.curves              = DFL_CURVES;
     opt.sig_algs            = DFL_SIG_ALGS;
-#if defined(MBEDTLS_SSL_EARLY_DATA)
-    opt.early_data          = DFL_EARLY_DATA;
-#endif
     opt.transport           = DFL_TRANSPORT;
     opt.hs_to_min           = DFL_HS_TO_MIN;
     opt.hs_to_max           = DFL_HS_TO_MAX;
@@ -1015,16 +979,6 @@ int main( int argc, char *argv[] )
             opt.debug_level = atoi( q );
             if( opt.debug_level < 0 || opt.debug_level > 65535 )
                 goto usage;
-        }
-        else if( strcmp( p, "build_version" ) == 0 )
-        {
-            if( strcmp( q, "1" ) == 0 )
-            {
-                mbedtls_printf( "build version: %s (build %d)\n",
-                                MBEDTLS_VERSION_STRING_FULL,
-                                MBEDTLS_VERSION_NUMBER );
-                goto exit;
-            }
         }
         else if( strcmp( p, "context_crt_cb" ) == 0 )
         {
@@ -1111,10 +1065,6 @@ int main( int argc, char *argv[] )
             opt.psk_identity = q;
         else if( strcmp( p, "ecjpake_pw" ) == 0 )
             opt.ecjpake_pw = q;
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
-        else if( strcmp( p, "ecjpake_pw_opaque" ) == 0 )
-            opt.ecjpake_pw_opaque = atoi( q );
-#endif
         else if( strcmp( p, "ec_max_ops" ) == 0 )
             opt.ec_max_ops = atoi( q );
         else if( strcmp( p, "force_ciphersuite" ) == 0 )
@@ -1168,7 +1118,7 @@ int main( int argc, char *argv[] )
             if( opt.reconnect < 0 || opt.reconnect > 2 )
                 goto usage;
         }
-        else if( strcmp( p, "reco_server_name" ) == 0 )
+        else if( strcmp( p, "rec_server_name" ) == 0 )
             opt.reco_server_name = q;
         else if( strcmp( p, "reco_delay" ) == 0 )
         {
@@ -1226,24 +1176,7 @@ int main( int argc, char *argv[] )
                 default: goto usage;
             }
         }
-
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3)
-#if defined(MBEDTLS_SSL_EARLY_DATA)
-        else if( strcmp( p, "early_data" ) == 0 )
-        {
-            switch( atoi( q ) )
-            {
-                case 0:
-                    opt.early_data = MBEDTLS_SSL_EARLY_DATA_DISABLED;
-                    break;
-                case 1:
-                    opt.early_data = MBEDTLS_SSL_EARLY_DATA_ENABLED;
-                    break;
-                default: goto usage;
-            }
-        }
-#endif /* MBEDTLS_SSL_EARLY_DATA */
-
         else if( strcmp( p, "tls13_kex_modes" ) == 0 )
         {
             if( strcmp( q, "psk" ) == 0 )
@@ -1757,9 +1690,6 @@ int main( int argc, char *argv[] )
     }
 #endif /* MBEDTLS_SSL_ALPN */
 
-    mbedtls_printf( "build version: %s (build %d)\n",
-                    MBEDTLS_VERSION_STRING_FULL, MBEDTLS_VERSION_NUMBER );
-
     /*
      * 0. Initialize the RNG and the session data
      */
@@ -2145,10 +2075,6 @@ int main( int argc, char *argv[] )
     if( opt.max_version != DFL_MAX_VERSION )
         mbedtls_ssl_conf_max_tls_version( &conf, opt.max_version );
 
-#if defined(MBEDTLS_SSL_EARLY_DATA)
-    mbedtls_ssl_tls13_conf_early_data( &conf, opt.early_data );
-#endif /* MBEDTLS_SSL_EARLY_DATA */
-
     if( ( ret = mbedtls_ssl_setup( &ssl, &conf ) ) != 0 )
     {
         mbedtls_printf( " failed\n  ! mbedtls_ssl_setup returned -0x%x\n\n",
@@ -2187,46 +2113,16 @@ int main( int argc, char *argv[] )
 #if defined(MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED)
     if( opt.ecjpake_pw != DFL_ECJPAKE_PW )
     {
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
-        if ( opt.ecjpake_pw_opaque != DFL_ECJPAKE_PW_OPAQUE )
-        {
-            psa_key_attributes_t attributes = PSA_KEY_ATTRIBUTES_INIT;
-
-            psa_set_key_usage_flags( &attributes, PSA_KEY_USAGE_DERIVE );
-            psa_set_key_algorithm( &attributes, PSA_ALG_JPAKE );
-            psa_set_key_type( &attributes, PSA_KEY_TYPE_PASSWORD );
-
-            status = psa_import_key( &attributes,
-                                (const unsigned char *) opt.ecjpake_pw,
-                                strlen( opt.ecjpake_pw ),
-                                &ecjpake_pw_slot );
-            if( status != PSA_SUCCESS )
-            {
-                mbedtls_printf( " failed\n  ! psa_import_key returned %d\n\n",
-                            status );
-                goto exit;
-            }
-            if( ( ret = mbedtls_ssl_set_hs_ecjpake_password_opaque( &ssl,
-                                        ecjpake_pw_slot ) ) != 0 )
-            {
-                mbedtls_printf( " failed\n  ! mbedtls_ssl_set_hs_ecjpake_password_opaque returned %d\n\n", ret );
-                goto exit;
-            }
-            mbedtls_printf( "using opaque password\n");
-        }
-        else
-#endif  /* MBEDTLS_USE_PSA_CRYPTO */
-        {
-            if( ( ret = mbedtls_ssl_set_hs_ecjpake_password( &ssl,
-                                        (const unsigned char *) opt.ecjpake_pw,
+        if( ( ret = mbedtls_ssl_set_hs_ecjpake_password( &ssl,
+                        (const unsigned char *) opt.ecjpake_pw,
                                         strlen( opt.ecjpake_pw ) ) ) != 0 )
-            {
-                mbedtls_printf( " failed\n  ! mbedtls_ssl_set_hs_ecjpake_password returned %d\n\n", ret );
-                goto exit;
-            }
+        {
+            mbedtls_printf( " failed\n  ! mbedtls_ssl_set_hs_ecjpake_password returned %d\n\n",
+                            ret );
+            goto exit;
         }
     }
-#endif /* MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED */
+#endif
 
 #if defined(MBEDTLS_SSL_HANDSHAKE_WITH_CERT_ENABLED)
     if( opt.context_crt_cb == 1 )
@@ -2343,10 +2239,7 @@ int main( int argc, char *argv[] )
                     "    or you didn't set ca_file or ca_path "
                         "to an appropriate value.\n"
                     "    Alternatively, you may want to use "
-                        "auth_mode=optional for testing purposes if "
-                        "not using TLS 1.3.\n"
-                    "    For TLS 1.3 server, try `ca_path=/etc/ssl/certs/`"
-                        "or other folder that has root certificates\n" );
+                        "auth_mode=optional for testing purposes.\n" );
             mbedtls_printf( "\n" );
             goto exit;
         }
@@ -3220,8 +3113,7 @@ reconnect:
         }
 
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
-        if( opt.reco_server_name != NULL &&
-            ( ret = mbedtls_ssl_set_hostname( &ssl,
+        if( ( ret = mbedtls_ssl_set_hostname( &ssl,
                                               opt.reco_server_name ) ) != 0 )
         {
             mbedtls_printf( " failed\n  ! mbedtls_ssl_set_hostname returned %d\n\n",
@@ -3326,31 +3218,6 @@ exit:
     }
 #endif /* MBEDTLS_SSL_HANDSHAKE_WITH_PSK_ENABLED &&
           MBEDTLS_USE_PSA_CRYPTO */
-
-#if defined(MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED) && \
-    defined(MBEDTLS_USE_PSA_CRYPTO)
-    /*
-     * In case opaque keys it's the user responsibility to keep the key valid
-     * for the duration of the handshake and destroy it at the end
-     */
-    if( ( opt.ecjpake_pw_opaque != DFL_ECJPAKE_PW_OPAQUE ) )
-    {
-        psa_key_attributes_t check_attributes = PSA_KEY_ATTRIBUTES_INIT;
-
-        /* Verify that the key is still valid before destroying it */
-        if( psa_get_key_attributes( ecjpake_pw_slot, &check_attributes ) !=
-                PSA_SUCCESS )
-        {
-            if( ret == 0 )
-                ret = 1;
-            mbedtls_printf( "The EC J-PAKE password key has unexpectedly been already destroyed\n" );
-        }
-        else
-        {
-            psa_destroy_key( ecjpake_pw_slot );
-        }
-    }
-#endif  /* MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED && MBEDTLS_USE_PSA_CRYPTO */
 
 #if defined(MBEDTLS_USE_PSA_CRYPTO) || defined(MBEDTLS_SSL_PROTO_TLS1_3)
     const char* message = mbedtls_test_helper_is_psa_leaking();

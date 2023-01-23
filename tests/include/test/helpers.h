@@ -216,17 +216,6 @@ void mbedtls_test_hexify( unsigned char *obuf,
                           int len );
 
 /**
- * \brief Convert hexadecimal digit to an integer.
- *
- * \param c        The digit to convert (`'0'` to `'9'`, `'A'` to `'F'` or
- *                 `'a'` to `'f'`).
- * \param[out] uc  On success, the value of the digit (0 to 15).
- *
- * \return         0 on success, -1 if \p c is not a hexadecimal digit.
- */
-int mbedtls_test_ascii2uc(const char c, unsigned char *uc);
-
-/**
  * Allocate and zeroize a buffer.
  *
  * If the size if zero, a pointer to a zeroized 1-byte buffer is returned.
@@ -279,5 +268,47 @@ void mbedtls_test_mutex_usage_check( void );
 void mbedtls_test_err_add_check( int high, int low,
                                  const char *file, int line);
 #endif
+
+#if defined(MBEDTLS_BIGNUM_C)
+/** Allocate and populate a core MPI from a test case argument.
+ *
+ * This function allocates exactly as many limbs as necessary to fit
+ * the length of the input. In other words, it preserves leading zeros.
+ *
+ * The limb array is allocated with mbedtls_calloc() and must later be
+ * freed with mbedtls_free().
+ *
+ * \param[in,out] pX    The address where a pointer to the allocated limb
+ *                      array will be stored.
+ *                      \c *pX must be null on entry.
+ *                      On exit, \c *pX is null on error or if the number
+ *                      of limbs is 0.
+ * \param[out] plimbs   The address where the number of limbs will be stored.
+ * \param[in] input     The test argument to read.
+ *                      It is interpreted as a hexadecimal representation
+ *                      of a non-negative integer.
+ *
+ * \return \c 0 on success, an \c MBEDTLS_ERR_MPI_xxx error code otherwise.
+ */
+int mbedtls_test_read_mpi_core( mbedtls_mpi_uint **pX, size_t *plimbs,
+                                const char *input );
+
+/** Read an MPI from a hexadecimal string.
+ *
+ * Like mbedtls_mpi_read_string(), but size the resulting bignum based
+ * on the number of digits in the string. In particular, construct a
+ * bignum with 0 limbs for an empty string, and a bignum with leading 0
+ * limbs if the string has sufficiently many leading 0 digits.
+ *
+ * This is important so that the "0 (null)" and "0 (1 limb)" and
+ * "leading zeros" test cases do what they claim.
+ *
+ * \param[out] X        The MPI object to populate. It must be initialized.
+ * \param[in] s         The null-terminated hexadecimal string to read from.
+ *
+ * \return \c 0 on success, an \c MBEDTLS_ERR_MPI_xxx error code otherwise.
+ */
+int mbedtls_test_read_mpi( mbedtls_mpi *X, const char *s );
+#endif /* MBEDTLS_BIGNUM_C */
 
 #endif /* TEST_HELPERS_H */

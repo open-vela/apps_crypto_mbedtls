@@ -106,9 +106,6 @@ static int ssl_write_hostname_ext( mbedtls_ssl_context *ssl,
 
     *olen = hostname_len + 9;
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
-    mbedtls_ssl_tls13_set_hs_sent_ext_mask( ssl, MBEDTLS_TLS_EXT_SERVERNAME );
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
     return( 0 );
 }
 #endif /* MBEDTLS_SSL_SERVER_NAME_INDICATION */
@@ -180,9 +177,6 @@ static int ssl_write_alpn_ext( mbedtls_ssl_context *ssl,
     /* Extension length = *out_len - 2 (ext_type) - 2 (ext_len) */
     MBEDTLS_PUT_UINT16_BE( *out_len - 4, buf, 2 );
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
-    mbedtls_ssl_tls13_set_hs_sent_ext_mask( ssl, MBEDTLS_TLS_EXT_ALPN );
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
     return( 0 );
 }
 #endif /* MBEDTLS_SSL_ALPN */
@@ -302,8 +296,7 @@ static int ssl_write_supported_groups_ext( mbedtls_ssl_context *ssl,
     *out_len = p - buf;
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3)
-    mbedtls_ssl_tls13_set_hs_sent_ext_mask(
-        ssl, MBEDTLS_TLS_EXT_SUPPORTED_GROUPS );
+    ssl->handshake->extensions_present |= MBEDTLS_SSL_EXT_SUPPORTED_GROUPS;
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
     return( 0 );
@@ -518,22 +511,18 @@ static int ssl_write_client_hello_body( mbedtls_ssl_context *ssl,
 #if defined(MBEDTLS_SSL_PROTO_TLS1_2) && defined(MBEDTLS_SSL_PROTO_DTLS)
     if( ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM )
     {
-#if !defined(MBEDTLS_SSL_PROTO_TLS1_3)
-        uint8_t cookie_len = 0;
-#else
-        uint16_t cookie_len = 0;
-#endif /* !MBEDTLS_SSL_PROTO_TLS1_3 */
+        unsigned char cookie_len = 0;
 
         if( handshake->cookie != NULL )
         {
             MBEDTLS_SSL_DEBUG_BUF( 3, "client hello, cookie",
                                    handshake->cookie,
-                                   handshake->cookie_len );
-            cookie_len = handshake->cookie_len;
+                                   handshake->verify_cookie_len );
+            cookie_len = handshake->verify_cookie_len;
         }
 
         MBEDTLS_SSL_CHK_BUF_PTR( p, end, cookie_len + 1 );
-        *p++ = ( unsigned char )cookie_len;
+        *p++ = cookie_len;
         if( cookie_len > 0 )
         {
             memcpy( p, handshake->cookie, cookie_len );
@@ -568,7 +557,7 @@ static int ssl_write_client_hello_body( mbedtls_ssl_context *ssl,
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3)
     /* Keeping track of the included extensions */
-    handshake->sent_extensions = MBEDTLS_SSL_EXT_MASK_NONE;
+    handshake->extensions_present = MBEDTLS_SSL_EXT_NONE;
 #endif
 
     /* First write extensions, then the total length */
@@ -678,11 +667,6 @@ static int ssl_write_client_hello_body( mbedtls_ssl_context *ssl,
                                   p_extensions_len, extensions_len );
     }
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
-    MBEDTLS_SSL_PRINT_EXTS(
-        3, MBEDTLS_SSL_HS_CLIENT_HELLO, handshake->sent_extensions );
-#endif
-
     *out_len = p - buf;
     return( 0 );
 }
@@ -788,7 +772,7 @@ static int ssl_prepare_client_hello( mbedtls_ssl_context *ssl )
 
     /*
      * Generate the random bytes, except when responding to a verify request
-     * where we MUST reuse the previously generated random bytes
+     * where we MUST reuse the previoulsy generated random bytes
      * (RFC 6347 4.2.1).
      */
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
