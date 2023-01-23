@@ -864,66 +864,6 @@ ec_prv.pk8param.pem: ec_prv.pk8param.der
 	$(OPENSSL) pkey -in $< -inform DER -out $@
 all_final += ec_prv.pk8param.pem
 
-ec_prv.sec1.comp.pem: ec_prv.sec1.pem
-	$(OPENSSL) ec -in $< -out $@ -conv_form compressed
-all_final += ec_prv.sec1.comp.pem
-
-ec_224_prv.comp.pem: ec_224_prv.pem
-	$(OPENSSL) ec -in $< -out $@ -conv_form compressed
-all_final += ec_224_prv.comp.pem
-
-ec_256_prv.comp.pem: ec_256_prv.pem
-	$(OPENSSL) ec -in $< -out $@ -conv_form compressed
-all_final += ec_256_prv.comp.pem
-
-ec_384_prv.comp.pem: ec_384_prv.pem
-	$(OPENSSL) ec -in $< -out $@ -conv_form compressed
-all_final += ec_384_prv.comp.pem
-
-ec_521_prv.comp.pem: ec_521_prv.pem
-	$(OPENSSL) ec -in $< -out $@ -conv_form compressed
-all_final += ec_521_prv.comp.pem
-
-ec_bp256_prv.comp.pem: ec_bp256_prv.pem
-	$(OPENSSL) ec -in $< -out $@ -conv_form compressed
-all_final += ec_bp256_prv.comp.pem
-
-ec_bp384_prv.comp.pem: ec_bp384_prv.pem
-	$(OPENSSL) ec -in $< -out $@ -conv_form compressed
-all_final += ec_bp384_prv.comp.pem
-
-ec_bp512_prv.comp.pem: ec_bp512_prv.pem
-	$(OPENSSL) ec -in $< -out $@ -conv_form compressed
-all_final += ec_bp512_prv.comp.pem
-
-ec_pub.comp.pem: ec_pub.pem
-	$(OPENSSL) ec -pubin -in $< -out $@ -conv_form compressed
-all_final += ec_pub.comp.pem
-
-ec_256_pub.comp.pem: ec_256_pub.pem
-	$(OPENSSL) ec -pubin -in $< -out $@ -conv_form compressed
-all_final += ec_256_pub.comp.pem
-
-ec_384_pub.comp.pem: ec_384_pub.pem
-	$(OPENSSL) ec -pubin -in $< -out $@ -conv_form compressed
-all_final += ec_384_pub.comp.pem
-
-ec_521_pub.comp.pem: ec_521_pub.pem
-	$(OPENSSL) ec -pubin -in $< -out $@ -conv_form compressed
-all_final += ec_521_pub.comp.pem
-
-ec_bp256_pub.comp.pem: ec_bp256_pub.pem
-	$(OPENSSL) ec -pubin -in $< -out $@ -conv_form compressed
-all_final += ec_bp256_pub.comp.pem
-
-ec_bp384_pub.comp.pem: ec_bp384_pub.pem
-	$(OPENSSL) ec -pubin -in $< -out $@ -conv_form compressed
-all_final += ec_bp384_pub.comp.pem
-
-ec_bp512_pub.comp.pem: ec_bp512_pub.pem
-	$(OPENSSL) ec -pubin -in $< -out $@ -conv_form compressed
-all_final += ec_bp512_pub.comp.pem
-
 ################################################################
 ### Generate CSRs for X.509 write test suite
 ################################################################
@@ -1032,12 +972,6 @@ test_ca_server1_config_file = test-ca.server1.opensslconf
 
 server1.crt: server1.key server1.req.sha256 $(test_ca_crt) $(test_ca_key_file_rsa)
 	$(MBEDTLS_CERT_WRITE) request_file=server1.req.sha256 issuer_crt=$(test_ca_crt) issuer_key=$(test_ca_key_file_rsa) issuer_pwd=$(test_ca_pwd_rsa) version=1 not_before=20190210144406 not_after=20290210144406 md=SHA1 version=3 output_file=$@
-server1.long_serial.crt: server1.long_serial.crt: server1.key server1.req.sha256 $(test_ca_crt) $(test_ca_key_file_rsa)
-	echo "112233445566778899aabbccddeeff0011223344" > test-ca.server1.tmp.serial
-	$(OPENSSL) ca -in server1.req.sha256 -key PolarSSLTest -config test-ca.server1.test_serial.opensslconf -notext -batch -out $@
-server1.80serial.crt: server1.long_serial.crt: server1.key server1.req.sha256 $(test_ca_crt) $(test_ca_key_file_rsa)
-	echo "8011223344" > test-ca.server1.tmp.serial
-	$(OPENSSL) ca -in server1.req.sha256 -key PolarSSLTest -config test-ca.server1.test_serial.opensslconf -notext -batch -out $@
 server1.noauthid.crt: server1.key server1.req.sha256 $(test_ca_crt) $(test_ca_key_file_rsa)
 	$(MBEDTLS_CERT_WRITE) request_file=server1.req.sha256 issuer_crt=$(test_ca_crt) issuer_key=$(test_ca_key_file_rsa) issuer_pwd=$(test_ca_pwd_rsa) not_before=20190210144406 not_after=20290210144406 md=SHA1 authority_identifier=0 version=3 output_file=$@
 server1.crt.der: server1.crt

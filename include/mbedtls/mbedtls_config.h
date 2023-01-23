@@ -48,11 +48,8 @@
  * Requires support for asm() in compiler.
  *
  * Used in:
- *      library/aesni.h
  *      library/aria.c
  *      library/bn_mul.h
- *      library/constant_time.c
- *      library/padlock.h
  *
  * Required by:
  *      MBEDTLS_AESNI_C
@@ -1411,7 +1408,6 @@
  * module to perform private key operations instead of performing the
  * operation inside the library.
  *
- * Requires: MBEDTLS_X509_CRT_PARSE_C
  */
 //#define MBEDTLS_SSL_ASYNC_PRIVATE
 
@@ -1691,21 +1687,21 @@
 #define MBEDTLS_SSL_TLS1_3_DEFAULT_NEW_SESSION_TICKETS 1
 
 /**
- * \def MBEDTLS_SSL_EARLY_DATA
- *
- * Enable support for RFC 8446 TLS 1.3 early data.
- *
- * Requires: MBEDTLS_SSL_SESSION_TICKETS and either
- *           MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_ENABLED or
- *           MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_EPHEMERAL_ENABLED
- *
- * Comment this to disable support for early data. If MBEDTLS_SSL_PROTO_TLS1_3
- * is not enabled, this option does not have any effect on the build.
- *
- * This feature is experimental, not completed and thus not ready for
- * production.
- *
- */
+* \def MBEDTLS_SSL_EARLY_DATA
+*
+* Enable support for RFC 8446 TLS 1.3 early data.
+*
+* Requires: MBEDTLS_SSL_SESSION_TICKETS and either
+*           MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_ENABLED or
+*           MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_EPHEMERAL_ENABLED
+*
+* Comment this to disable support for early data. If MBEDTLS_SSL_PROTO_TLS1_3
+* is not enabled, this option does not have any effect on the build.
+*
+* This feature is experimental, not completed and thus not ready for
+* production.
+*
+*/
 //#define MBEDTLS_SSL_EARLY_DATA
 
 /**
@@ -2015,8 +2011,6 @@
  *
  * See the documentation of `mbedtls_x509_crt_verify_with_ca_cb()` and
  * `mbedtls_ssl_conf_ca_cb()` for more information.
- *
- * Requires: MBEDTLS_X509_CRT_PARSE_C
  *
  * Uncomment to enable trusted certificate callbacks.
  */
