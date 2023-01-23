@@ -860,10 +860,6 @@
 #error "MBEDTLS_SSL_CLI_C defined, but not all prerequisites"
 #endif
 
-#if defined(MBEDTLS_SSL_ASYNC_PRIVATE) && !defined(MBEDTLS_X509_CRT_PARSE_C)
-#error "MBEDTLS_SSL_ASYNC_PRIVATE defined, but not all prerequisites"
-#endif
-
 #if defined(MBEDTLS_SSL_TLS_C) && ( !defined(MBEDTLS_CIPHER_C) ||     \
     ( !defined(MBEDTLS_MD_C) && !defined(MBEDTLS_USE_PSA_CRYPTO) ) )
 #error "MBEDTLS_SSL_TLS_C defined, but not all prerequisites"
@@ -1011,11 +1007,6 @@
 
 #if defined(MBEDTLS_X509_CSR_WRITE_C) && ( !defined(MBEDTLS_X509_CREATE_C) )
 #error "MBEDTLS_X509_CSR_WRITE_C defined, but not all prerequisites"
-#endif
-
-#if defined(MBEDTLS_X509_TRUSTED_CERTIFICATE_CALLBACK) && \
-            ( !defined(MBEDTLS_X509_CRT_PARSE_C) )
-#error "MBEDTLS_X509_TRUSTED_CERTIFICATE_CALLBACK defined, but not all prerequisites"
 #endif
 
 #if defined(MBEDTLS_HAVE_INT32) && defined(MBEDTLS_HAVE_INT64)
