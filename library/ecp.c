@@ -79,6 +79,7 @@
 
 #include "bn_mul.h"
 #include "ecp_invasive.h"
+#include "bignum_core.h"
 
 #include <string.h>
 
