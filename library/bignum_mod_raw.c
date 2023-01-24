@@ -128,15 +128,6 @@ void mbedtls_mpi_mod_raw_mul(mbedtls_mpi_uint *X,
                              N->rep.mont.mm, T);
 }
 
-MBEDTLS_STATIC_TESTABLE
-void mbedtls_mpi_mod_raw_fix_quasi_reduction(mbedtls_mpi_uint *X,
-                                             const mbedtls_mpi_mod_modulus *N)
-{
-    mbedtls_mpi_uint c = mbedtls_mpi_core_sub(X, X, N->p, N->limbs);
-
-    (void) mbedtls_mpi_core_add_if(X, N->p, N->limbs, (unsigned) c);
-}
-
 /* END MERGE SLOT 2 */
 
 /* BEGIN MERGE SLOT 3 */
