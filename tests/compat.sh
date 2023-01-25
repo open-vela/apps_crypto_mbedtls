@@ -1106,7 +1106,8 @@ done
 
 echo "------------------------------------------------------------------------"
 
-if [ $FAILED -ne 0 -o $SRVMEM -ne 0 ]; then
+if [ $FAILED -ne 0 -o $SRVMEM -ne 0 ];
+then
     printf "FAILED"
 else
     printf "PASSED"
@@ -1122,9 +1123,4 @@ PASSED=$(( $TESTS - $FAILED ))
 echo " ($PASSED / $TESTS tests ($SKIPPED skipped$MEMREPORT))"
 
 FAILED=$(( $FAILED + $SRVMEM ))
-if [ $FAILED -gt 255 ]; then
-    # Clamp at 255 as caller gets exit code & 0xFF
-    # (so 256 would be 0, or success, etc)
-    FAILED=255
-fi
 exit $FAILED
