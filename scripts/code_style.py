@@ -90,9 +90,8 @@ def get_uncrustify_version() -> str:
     """
     Get the version string from Uncrustify
     """
-    result = subprocess.run([UNCRUSTIFY_EXE, "--version"],
-                            stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                            check=False)
+    result = subprocess.run([UNCRUSTIFY_EXE, "--version"], \
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
     if result.returncode != 0:
         print_err("Could not get Uncrustify version:", str(result.stderr, "utf-8"))
         return ""
@@ -107,11 +106,11 @@ def check_style_is_correct(src_file_list: List[str]) -> bool:
     style_correct = True
     for src_file in src_file_list:
         uncrustify_cmd = [UNCRUSTIFY_EXE] + UNCRUSTIFY_ARGS + [src_file]
-        result = subprocess.run(uncrustify_cmd, stdout=subprocess.PIPE,
-                                stderr=subprocess.PIPE, check=False)
+        result = subprocess.run(uncrustify_cmd, stdout=subprocess.PIPE, \
+                stderr=subprocess.PIPE, check=False)
         if result.returncode != 0:
-            print_err("Uncrustify returned " + str(result.returncode) +
-                      " correcting file " + src_file)
+            print_err("Uncrustify returned " + str(result.returncode) + \
+                    " correcting file " + src_file)
             return False
 
         # Uncrustify makes changes to the code and places the result in a new
@@ -143,9 +142,9 @@ def fix_style_single_pass(src_file_list: List[str]) -> bool:
         result = subprocess.run(uncrustify_cmd, check=False, \
                 stdout=STDOUT_UTF8, stderr=STDERR_UTF8)
         if result.returncode != 0:
-            print_err("Uncrustify with file returned: " +
-                      str(result.returncode) + " correcting file " +
-                      src_file)
+            print_err("Uncrustify with file returned: " + \
+                    str(result.returncode) + " correcting file " + \
+                    src_file)
             return False
     return True
 
@@ -172,31 +171,17 @@ def main() -> int:
     """
     uncrustify_version = get_uncrustify_version().strip()
     if UNCRUSTIFY_SUPPORTED_VERSION not in uncrustify_version:
-        print("Warning: Using unsupported Uncrustify version '" +
-              uncrustify_version + "'", file=STDOUT_UTF8)
-        print("Note: The only supported version is " +
-              UNCRUSTIFY_SUPPORTED_VERSION, file=STDOUT_UTF8)
+        print("Warning: Using unsupported Uncrustify version '" \
+                + uncrustify_version + "' (Note: The only supported version" \
+                "is " + UNCRUSTIFY_SUPPORTED_VERSION + ")", file=STDOUT_UTF8)
+
+    src_files = get_src_files()
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('-f', '--fix', action='store_true',
-                        help=('modify source files to fix the code style '
-                              '(default: print diff, do not modify files)'))
-    # --files is almost useless: it only matters if there are no files
-    # ('code_style.py' without arguments checks all files known to Git,
-    # 'code_style.py --files' does nothing). In particular,
-    # 'code_style.py --fix --files ...' is intended as a stable ("porcelain")
-    # way to restyle a possibly empty set of files.
-    parser.add_argument('--files', action='store_true',
-                        help='only check the specified files (default with non-option arguments)')
-    parser.add_argument('operands', nargs='*', metavar='FILE',
-                        help='files to check (if none: check files that are known to git)')
+    parser.add_argument('-f', '--fix', action='store_true', \
+            help='modify source files to fix the code style')
 
     args = parser.parse_args()
-
-    if args.files or args.operands:
-        src_files = args.operands
-    else:
-        src_files = get_src_files()
 
     if args.fix:
         # Fix mode
