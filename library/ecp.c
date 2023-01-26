@@ -79,6 +79,7 @@
 
 #include "bn_mul.h"
 #include "ecp_invasive.h"
+#include "bignum_core.h"
 
 #include <string.h>
 
@@ -582,9 +583,11 @@ void mbedtls_ecp_group_free(mbedtls_ecp_group *grp)
     }
 
     if (grp->h != 1) {
+        mbedtls_mpi_free(&grp->P);
         mbedtls_mpi_free(&grp->A);
         mbedtls_mpi_free(&grp->B);
         mbedtls_ecp_point_free(&grp->G);
+        mbedtls_mpi_free(&grp->N);
     }
 
     if (!ecp_group_is_static_comb_table(grp) && grp->T != NULL) {
