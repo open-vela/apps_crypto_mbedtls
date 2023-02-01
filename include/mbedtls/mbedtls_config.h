@@ -48,11 +48,8 @@
  * Requires support for asm() in compiler.
  *
  * Used in:
- *      library/aesni.h
  *      library/aria.c
  *      library/bn_mul.h
- *      library/constant_time.c
- *      library/padlock.h
  *
  * Required by:
  *      MBEDTLS_AESNI_C
@@ -2428,7 +2425,7 @@
  *
  * PEM_PARSE uses DES/3DES for decrypting encrypted keys.
  *
- * \warning   DES/3DES are considered weak ciphers and their use constitutes a
+ * \warning   DES is considered a weak cipher and its use constitutes a
  *            security risk. We recommend considering stronger ciphers instead.
  */
 #define MBEDTLS_DES_C

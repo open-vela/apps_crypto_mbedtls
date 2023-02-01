@@ -61,31 +61,23 @@ def analyze_coverage(results, outcomes):
             # fixed this branch to have full coverage of test cases.
             results.warning('Test case not executed: {}', key)
 
-def analyze_driver_vs_reference(outcomes, component_ref, component_driver,
-                                ignored_suites, ignored_test=None):
+def analyze_driver_vs_reference(outcomes, component_ref, component_driver, ignored_tests):
     """Check that all tests executed in the reference component are also
     executed in the corresponding driver component.
-    Skip:
-    - full test suites provided in ignored_suites list
-    - only some specific test inside a test suite, for which the corresponding
-      output string is provided
+    Skip test suites provided in ignored_tests list.
     """
     available = check_test_cases.collect_available_test_cases()
     result = True
 
     for key in available:
+        # Skip ignored test suites
+        test_suite = key.split(';')[0] # retrieve test suit name
+        test_suite = test_suite.split('.')[0] # retrieve main part of test suit name
+        if test_suite in ignored_tests:
+            continue
         # Continue if test was not executed by any component
         hits = outcomes[key].hits() if key in outcomes else 0
         if hits == 0:
-            continue
-        # Skip ignored test suites
-        full_test_suite = key.split(';')[0] # retrieve full test suite name
-        test_string = key.split(';')[1] # retrieve the text string of this test
-        test_suite = full_test_suite.split('.')[0] # retrieve main part of test suite name
-        if test_suite in ignored_suites:
-            continue
-        if ((full_test_suite in ignored_test) and
-                (test_string in ignored_test[full_test_suite])):
             continue
         # Search for tests that run in reference component and not in driver component
         driver_test_passed = False
@@ -95,8 +87,8 @@ def analyze_driver_vs_reference(outcomes, component_ref, component_driver,
                 driver_test_passed = True
             if component_ref in entry:
                 reference_test_passed = True
-        if(reference_test_passed and not driver_test_passed):
-            print(key)
+        if(driver_test_passed is False and reference_test_passed is True):
+            print('{}: driver: skipped/failed; reference: passed'.format(key))
             result = False
     return result
 
@@ -131,65 +123,30 @@ def do_analyze_coverage(outcome_file, args):
     """Perform coverage analysis."""
     del args # unused
     outcomes = read_outcome_file(outcome_file)
-    print("\n*** Analyze coverage ***\n")
     results = analyze_outcomes(outcomes)
     return results.error_count == 0
 
 def do_analyze_driver_vs_reference(outcome_file, args):
     """Perform driver vs reference analyze."""
-    ignored_suites = ['test_suite_' + x for x in args['ignored_suites']]
+    ignored_tests = ['test_suite_' + x for x in args['ignored_suites']]
 
     outcomes = read_outcome_file(outcome_file)
-    print("\n*** Analyze driver {} vs reference {} ***\n".format(
-        args['component_driver'], args['component_ref']))
     return analyze_driver_vs_reference(outcomes, args['component_ref'],
-                                       args['component_driver'], ignored_suites,
-                                       args['ignored_tests'])
+                                       args['component_driver'], ignored_tests)
 
 # List of tasks with a function that can handle this task and additional arguments if required
 TASKS = {
     'analyze_coverage':                 {
         'test_function': do_analyze_coverage,
-        'args': {}
-        },
-    # How to use analyze_driver_vs_reference_xxx locally:
-    # 1. tests/scripts/all.sh --outcome-file "$PWD/out.csv" <component_ref> <component_driver>
-    # 2. tests/scripts/analyze_outcomes.py out.csv analyze_driver_vs_reference_xxx
+        'args': {}},
     'analyze_driver_vs_reference_hash': {
         'test_function': do_analyze_driver_vs_reference,
         'args': {
             'component_ref': 'test_psa_crypto_config_reference_hash_use_psa',
             'component_driver': 'test_psa_crypto_config_accel_hash_use_psa',
-            'ignored_suites': [
-                'shax', 'mdx', # the software implementations that are being excluded
-                'md',  # the legacy abstraction layer that's being excluded
-            ],
-            'ignored_tests': {
-            }
-        }
-    },
-    'analyze_driver_vs_reference_ecdsa': {
-        'test_function': do_analyze_driver_vs_reference,
-        'args': {
-            'component_ref': 'test_psa_crypto_config_reference_ecdsa_use_psa',
-            'component_driver': 'test_psa_crypto_config_accel_ecdsa_use_psa',
-            'ignored_suites': [
-                'ecdsa', # the software implementation that's excluded
-                # the following lines should not be needed,
-                # they will be removed by upcoming work
-                'pk', # #6857
-                'x509parse', # #6858
-                'x509write', # #6858
-                'debug', # #6860
-                'ssl', # #6860
-            ],
-            'ignored_tests': {
-                'test_suite_random': [
-                    'PSA classic wrapper: ECDSA signature (SECP256R1)',
-                ],
-            }
-        }
-    },
+            'ignored_suites': ['shax', 'mdx', # the software implementations that are being excluded
+                               'md',  # the legacy abstraction layer that's being excluded
+                              ]}}
 }
 
 def main():
