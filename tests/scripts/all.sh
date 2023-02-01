@@ -3163,7 +3163,7 @@ component_test_m32_o0 () {
 }
 support_test_m32_o0 () {
     case $(uname -m) in
-        amd64|x86_64) true;;
+        *64*) true;;
         *) false;;
     esac
 }
