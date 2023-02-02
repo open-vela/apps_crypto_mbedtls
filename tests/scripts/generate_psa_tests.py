@@ -151,16 +151,14 @@ def test_case_for_key_type_not_supported(
     tc.set_arguments([key_type] + list(args))
     return tc
 
-class KeyTypeNotSupported:
-    """Generate test cases for when a key type is not supported."""
+class NotSupported:
+    """Generate test cases for when something is not supported."""
 
     def __init__(self, info: Information) -> None:
         self.constructors = info.constructors
 
     ALWAYS_SUPPORTED = frozenset([
         'PSA_KEY_TYPE_DERIVE',
-        'PSA_KEY_TYPE_PASSWORD',
-        'PSA_KEY_TYPE_PASSWORD_HASH',
         'PSA_KEY_TYPE_RAW_DATA',
         'PSA_KEY_TYPE_HMAC'
     ])
@@ -357,7 +355,7 @@ class OpFail:
                 dependencies[i] = '!' + dep
         tc.set_dependencies(dependencies)
         tc.set_function(category.name.lower() + '_fail')
-        arguments = [] # type: List[str]
+        arguments = []
         if kt:
             key_material = kt.key_material(kt.sizes_to_test()[0])
             arguments += [key_type, test_case.hex_string(key_material)]
@@ -524,7 +522,7 @@ class StorageFormat:
             key_type: psa_storage.Expr, bits: int,
             alg: psa_storage.Expr
     ) -> bool:
-        """Whether to exercise the given key with the given algorithm.
+        """Whether to the given key with the given algorithm.
 
         Normally only the type and algorithm matter for compatibility, and
         this is handled in crypto_knowledge.KeyType.can_do(). This function
@@ -902,7 +900,7 @@ class PSATestGenerator(test_data_generation.TestGenerator):
         'test_suite_psa_crypto_generate_key.generated':
         lambda info: KeyGenerate(info).test_cases_for_key_generation(),
         'test_suite_psa_crypto_not_supported.generated':
-        lambda info: KeyTypeNotSupported(info).test_cases_for_not_supported(),
+        lambda info: NotSupported(info).test_cases_for_not_supported(),
         'test_suite_psa_crypto_op_fail.generated':
         lambda info: OpFail(info).all_test_cases(),
         'test_suite_psa_crypto_storage_format.current':

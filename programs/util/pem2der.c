@@ -189,7 +189,7 @@ int main(int argc, char *argv[])
     memset(buf, 0, sizeof(buf));
     memset(der_buffer, 0, sizeof(der_buffer));
 
-    if (argc < 2) {
+    if (argc == 0) {
 usage:
         mbedtls_printf(USAGE);
         goto exit;
