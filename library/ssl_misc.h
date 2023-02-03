@@ -986,6 +986,7 @@ struct mbedtls_ssl_handshake_params {
 
     mbedtls_ssl_tls13_handshake_secrets tls13_hs_secrets;
 #if defined(MBEDTLS_SSL_EARLY_DATA)
+    mbedtls_ssl_tls13_early_secrets tls13_early_secrets;
     /** TLS 1.3 transform for early data and handshake messages. */
     mbedtls_ssl_transform *transform_earlydata;
 #endif
@@ -2717,5 +2718,26 @@ MBEDTLS_CHECK_RETURN_CRITICAL
 int mbedtls_ssl_session_set_hostname(mbedtls_ssl_session *session,
                                      const char *hostname);
 #endif
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3) && defined(MBEDTLS_SSL_SESSION_TICKETS)
+static inline unsigned int mbedtls_ssl_session_get_ticket_flags(
+    mbedtls_ssl_session *session, unsigned int flags)
+{
+    return session->ticket_flags &
+           (flags & MBEDTLS_SSL_TLS1_3_TICKET_FLAGS_MASK);
+}
+
+static inline void mbedtls_ssl_session_set_ticket_flags(
+    mbedtls_ssl_session *session, unsigned int flags)
+{
+    session->ticket_flags |= (flags & MBEDTLS_SSL_TLS1_3_TICKET_FLAGS_MASK);
+}
+
+static inline void mbedtls_ssl_session_clear_ticket_flags(
+    mbedtls_ssl_session *session, unsigned int flags)
+{
+    session->ticket_flags &= ~(flags & MBEDTLS_SSL_TLS1_3_TICKET_FLAGS_MASK);
+}
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3 && MBEDTLS_SSL_SESSION_TICKETS */
 
 #endif /* ssl_misc.h */
