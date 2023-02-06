@@ -27,6 +27,7 @@
 #
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_openssl_tls1_3
@@ -38,11 +39,12 @@ run_test "TLS 1.3 O->m: AES_128_GCM_SHA256,secp256r1,ecdsa_secp256r1_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-GCM-SHA256 ( id=4865 )" \
          -s "received signature algorithm: 0x403" \
          -s "got named group: secp256r1(0017)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_openssl_tls1_3
@@ -54,11 +56,12 @@ run_test "TLS 1.3 O->m: AES_128_GCM_SHA256,secp256r1,ecdsa_secp384r1_sha384" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-GCM-SHA256 ( id=4865 )" \
          -s "received signature algorithm: 0x503" \
          -s "got named group: secp256r1(0017)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_openssl_tls1_3
@@ -70,11 +73,12 @@ run_test "TLS 1.3 O->m: AES_128_GCM_SHA256,secp256r1,ecdsa_secp521r1_sha512" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-GCM-SHA256 ( id=4865 )" \
          -s "received signature algorithm: 0x603" \
          -s "got named group: secp256r1(0017)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -87,11 +91,12 @@ run_test "TLS 1.3 O->m: AES_128_GCM_SHA256,secp256r1,rsa_pss_rsae_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-GCM-SHA256 ( id=4865 )" \
          -s "received signature algorithm: 0x804" \
          -s "got named group: secp256r1(0017)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_openssl_tls1_3
@@ -103,11 +108,12 @@ run_test "TLS 1.3 O->m: AES_128_GCM_SHA256,secp384r1,ecdsa_secp256r1_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-GCM-SHA256 ( id=4865 )" \
          -s "received signature algorithm: 0x403" \
          -s "got named group: secp384r1(0018)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_openssl_tls1_3
@@ -119,11 +125,12 @@ run_test "TLS 1.3 O->m: AES_128_GCM_SHA256,secp384r1,ecdsa_secp384r1_sha384" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-GCM-SHA256 ( id=4865 )" \
          -s "received signature algorithm: 0x503" \
          -s "got named group: secp384r1(0018)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_openssl_tls1_3
@@ -135,11 +142,12 @@ run_test "TLS 1.3 O->m: AES_128_GCM_SHA256,secp384r1,ecdsa_secp521r1_sha512" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-GCM-SHA256 ( id=4865 )" \
          -s "received signature algorithm: 0x603" \
          -s "got named group: secp384r1(0018)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -152,11 +160,12 @@ run_test "TLS 1.3 O->m: AES_128_GCM_SHA256,secp384r1,rsa_pss_rsae_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-GCM-SHA256 ( id=4865 )" \
          -s "received signature algorithm: 0x804" \
          -s "got named group: secp384r1(0018)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_openssl_tls1_3
@@ -168,11 +177,12 @@ run_test "TLS 1.3 O->m: AES_128_GCM_SHA256,secp521r1,ecdsa_secp256r1_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-GCM-SHA256 ( id=4865 )" \
          -s "received signature algorithm: 0x403" \
          -s "got named group: secp521r1(0019)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_openssl_tls1_3
@@ -184,11 +194,12 @@ run_test "TLS 1.3 O->m: AES_128_GCM_SHA256,secp521r1,ecdsa_secp384r1_sha384" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-GCM-SHA256 ( id=4865 )" \
          -s "received signature algorithm: 0x503" \
          -s "got named group: secp521r1(0019)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_openssl_tls1_3
@@ -200,11 +211,12 @@ run_test "TLS 1.3 O->m: AES_128_GCM_SHA256,secp521r1,ecdsa_secp521r1_sha512" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-GCM-SHA256 ( id=4865 )" \
          -s "received signature algorithm: 0x603" \
          -s "got named group: secp521r1(0019)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -217,11 +229,12 @@ run_test "TLS 1.3 O->m: AES_128_GCM_SHA256,secp521r1,rsa_pss_rsae_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-GCM-SHA256 ( id=4865 )" \
          -s "received signature algorithm: 0x804" \
          -s "got named group: secp521r1(0019)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_openssl_tls1_3
@@ -233,11 +246,12 @@ run_test "TLS 1.3 O->m: AES_128_GCM_SHA256,x25519,ecdsa_secp256r1_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-GCM-SHA256 ( id=4865 )" \
          -s "received signature algorithm: 0x403" \
          -s "got named group: x25519(001d)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_openssl_tls1_3
@@ -249,11 +263,12 @@ run_test "TLS 1.3 O->m: AES_128_GCM_SHA256,x25519,ecdsa_secp384r1_sha384" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-GCM-SHA256 ( id=4865 )" \
          -s "received signature algorithm: 0x503" \
          -s "got named group: x25519(001d)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_openssl_tls1_3
@@ -265,11 +280,12 @@ run_test "TLS 1.3 O->m: AES_128_GCM_SHA256,x25519,ecdsa_secp521r1_sha512" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-GCM-SHA256 ( id=4865 )" \
          -s "received signature algorithm: 0x603" \
          -s "got named group: x25519(001d)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -282,11 +298,12 @@ run_test "TLS 1.3 O->m: AES_128_GCM_SHA256,x25519,rsa_pss_rsae_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-GCM-SHA256 ( id=4865 )" \
          -s "received signature algorithm: 0x804" \
          -s "got named group: x25519(001d)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_openssl_tls1_3
@@ -298,11 +315,12 @@ run_test "TLS 1.3 O->m: AES_128_GCM_SHA256,x448,ecdsa_secp256r1_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-GCM-SHA256 ( id=4865 )" \
          -s "received signature algorithm: 0x403" \
          -s "got named group: x448(001e)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_openssl_tls1_3
@@ -314,11 +332,12 @@ run_test "TLS 1.3 O->m: AES_128_GCM_SHA256,x448,ecdsa_secp384r1_sha384" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-GCM-SHA256 ( id=4865 )" \
          -s "received signature algorithm: 0x503" \
          -s "got named group: x448(001e)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_openssl_tls1_3
@@ -330,11 +349,12 @@ run_test "TLS 1.3 O->m: AES_128_GCM_SHA256,x448,ecdsa_secp521r1_sha512" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-GCM-SHA256 ( id=4865 )" \
          -s "received signature algorithm: 0x603" \
          -s "got named group: x448(001e)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -347,11 +367,12 @@ run_test "TLS 1.3 O->m: AES_128_GCM_SHA256,x448,rsa_pss_rsae_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-GCM-SHA256 ( id=4865 )" \
          -s "received signature algorithm: 0x804" \
          -s "got named group: x448(001e)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_openssl_tls1_3
@@ -363,11 +384,12 @@ run_test "TLS 1.3 O->m: AES_256_GCM_SHA384,secp256r1,ecdsa_secp256r1_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-256-GCM-SHA384 ( id=4866 )" \
          -s "received signature algorithm: 0x403" \
          -s "got named group: secp256r1(0017)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_openssl_tls1_3
@@ -379,11 +401,12 @@ run_test "TLS 1.3 O->m: AES_256_GCM_SHA384,secp256r1,ecdsa_secp384r1_sha384" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-256-GCM-SHA384 ( id=4866 )" \
          -s "received signature algorithm: 0x503" \
          -s "got named group: secp256r1(0017)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_openssl_tls1_3
@@ -395,11 +418,12 @@ run_test "TLS 1.3 O->m: AES_256_GCM_SHA384,secp256r1,ecdsa_secp521r1_sha512" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-256-GCM-SHA384 ( id=4866 )" \
          -s "received signature algorithm: 0x603" \
          -s "got named group: secp256r1(0017)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -412,11 +436,12 @@ run_test "TLS 1.3 O->m: AES_256_GCM_SHA384,secp256r1,rsa_pss_rsae_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-256-GCM-SHA384 ( id=4866 )" \
          -s "received signature algorithm: 0x804" \
          -s "got named group: secp256r1(0017)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_openssl_tls1_3
@@ -428,11 +453,12 @@ run_test "TLS 1.3 O->m: AES_256_GCM_SHA384,secp384r1,ecdsa_secp256r1_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-256-GCM-SHA384 ( id=4866 )" \
          -s "received signature algorithm: 0x403" \
          -s "got named group: secp384r1(0018)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_openssl_tls1_3
@@ -444,11 +470,12 @@ run_test "TLS 1.3 O->m: AES_256_GCM_SHA384,secp384r1,ecdsa_secp384r1_sha384" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-256-GCM-SHA384 ( id=4866 )" \
          -s "received signature algorithm: 0x503" \
          -s "got named group: secp384r1(0018)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_openssl_tls1_3
@@ -460,11 +487,12 @@ run_test "TLS 1.3 O->m: AES_256_GCM_SHA384,secp384r1,ecdsa_secp521r1_sha512" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-256-GCM-SHA384 ( id=4866 )" \
          -s "received signature algorithm: 0x603" \
          -s "got named group: secp384r1(0018)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -477,11 +505,12 @@ run_test "TLS 1.3 O->m: AES_256_GCM_SHA384,secp384r1,rsa_pss_rsae_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-256-GCM-SHA384 ( id=4866 )" \
          -s "received signature algorithm: 0x804" \
          -s "got named group: secp384r1(0018)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_openssl_tls1_3
@@ -493,11 +522,12 @@ run_test "TLS 1.3 O->m: AES_256_GCM_SHA384,secp521r1,ecdsa_secp256r1_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-256-GCM-SHA384 ( id=4866 )" \
          -s "received signature algorithm: 0x403" \
          -s "got named group: secp521r1(0019)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_openssl_tls1_3
@@ -509,11 +539,12 @@ run_test "TLS 1.3 O->m: AES_256_GCM_SHA384,secp521r1,ecdsa_secp384r1_sha384" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-256-GCM-SHA384 ( id=4866 )" \
          -s "received signature algorithm: 0x503" \
          -s "got named group: secp521r1(0019)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_openssl_tls1_3
@@ -525,11 +556,12 @@ run_test "TLS 1.3 O->m: AES_256_GCM_SHA384,secp521r1,ecdsa_secp521r1_sha512" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-256-GCM-SHA384 ( id=4866 )" \
          -s "received signature algorithm: 0x603" \
          -s "got named group: secp521r1(0019)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -542,11 +574,12 @@ run_test "TLS 1.3 O->m: AES_256_GCM_SHA384,secp521r1,rsa_pss_rsae_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-256-GCM-SHA384 ( id=4866 )" \
          -s "received signature algorithm: 0x804" \
          -s "got named group: secp521r1(0019)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_openssl_tls1_3
@@ -558,11 +591,12 @@ run_test "TLS 1.3 O->m: AES_256_GCM_SHA384,x25519,ecdsa_secp256r1_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-256-GCM-SHA384 ( id=4866 )" \
          -s "received signature algorithm: 0x403" \
          -s "got named group: x25519(001d)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_openssl_tls1_3
@@ -574,11 +608,12 @@ run_test "TLS 1.3 O->m: AES_256_GCM_SHA384,x25519,ecdsa_secp384r1_sha384" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-256-GCM-SHA384 ( id=4866 )" \
          -s "received signature algorithm: 0x503" \
          -s "got named group: x25519(001d)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_openssl_tls1_3
@@ -590,11 +625,12 @@ run_test "TLS 1.3 O->m: AES_256_GCM_SHA384,x25519,ecdsa_secp521r1_sha512" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-256-GCM-SHA384 ( id=4866 )" \
          -s "received signature algorithm: 0x603" \
          -s "got named group: x25519(001d)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -607,11 +643,12 @@ run_test "TLS 1.3 O->m: AES_256_GCM_SHA384,x25519,rsa_pss_rsae_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-256-GCM-SHA384 ( id=4866 )" \
          -s "received signature algorithm: 0x804" \
          -s "got named group: x25519(001d)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_openssl_tls1_3
@@ -623,11 +660,12 @@ run_test "TLS 1.3 O->m: AES_256_GCM_SHA384,x448,ecdsa_secp256r1_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-256-GCM-SHA384 ( id=4866 )" \
          -s "received signature algorithm: 0x403" \
          -s "got named group: x448(001e)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_openssl_tls1_3
@@ -639,11 +677,12 @@ run_test "TLS 1.3 O->m: AES_256_GCM_SHA384,x448,ecdsa_secp384r1_sha384" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-256-GCM-SHA384 ( id=4866 )" \
          -s "received signature algorithm: 0x503" \
          -s "got named group: x448(001e)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_openssl_tls1_3
@@ -655,11 +694,12 @@ run_test "TLS 1.3 O->m: AES_256_GCM_SHA384,x448,ecdsa_secp521r1_sha512" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-256-GCM-SHA384 ( id=4866 )" \
          -s "received signature algorithm: 0x603" \
          -s "got named group: x448(001e)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -672,11 +712,12 @@ run_test "TLS 1.3 O->m: AES_256_GCM_SHA384,x448,rsa_pss_rsae_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-256-GCM-SHA384 ( id=4866 )" \
          -s "received signature algorithm: 0x804" \
          -s "got named group: x448(001e)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_openssl_tls1_3
@@ -688,11 +729,12 @@ run_test "TLS 1.3 O->m: CHACHA20_POLY1305_SHA256,secp256r1,ecdsa_secp256r1_sha25
          -s "server hello, chosen ciphersuite: TLS1-3-CHACHA20-POLY1305-SHA256 ( id=4867 )" \
          -s "received signature algorithm: 0x403" \
          -s "got named group: secp256r1(0017)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_openssl_tls1_3
@@ -704,11 +746,12 @@ run_test "TLS 1.3 O->m: CHACHA20_POLY1305_SHA256,secp256r1,ecdsa_secp384r1_sha38
          -s "server hello, chosen ciphersuite: TLS1-3-CHACHA20-POLY1305-SHA256 ( id=4867 )" \
          -s "received signature algorithm: 0x503" \
          -s "got named group: secp256r1(0017)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_openssl_tls1_3
@@ -720,11 +763,12 @@ run_test "TLS 1.3 O->m: CHACHA20_POLY1305_SHA256,secp256r1,ecdsa_secp521r1_sha51
          -s "server hello, chosen ciphersuite: TLS1-3-CHACHA20-POLY1305-SHA256 ( id=4867 )" \
          -s "received signature algorithm: 0x603" \
          -s "got named group: secp256r1(0017)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -737,11 +781,12 @@ run_test "TLS 1.3 O->m: CHACHA20_POLY1305_SHA256,secp256r1,rsa_pss_rsae_sha256" 
          -s "server hello, chosen ciphersuite: TLS1-3-CHACHA20-POLY1305-SHA256 ( id=4867 )" \
          -s "received signature algorithm: 0x804" \
          -s "got named group: secp256r1(0017)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_openssl_tls1_3
@@ -753,11 +798,12 @@ run_test "TLS 1.3 O->m: CHACHA20_POLY1305_SHA256,secp384r1,ecdsa_secp256r1_sha25
          -s "server hello, chosen ciphersuite: TLS1-3-CHACHA20-POLY1305-SHA256 ( id=4867 )" \
          -s "received signature algorithm: 0x403" \
          -s "got named group: secp384r1(0018)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_openssl_tls1_3
@@ -769,11 +815,12 @@ run_test "TLS 1.3 O->m: CHACHA20_POLY1305_SHA256,secp384r1,ecdsa_secp384r1_sha38
          -s "server hello, chosen ciphersuite: TLS1-3-CHACHA20-POLY1305-SHA256 ( id=4867 )" \
          -s "received signature algorithm: 0x503" \
          -s "got named group: secp384r1(0018)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_openssl_tls1_3
@@ -785,11 +832,12 @@ run_test "TLS 1.3 O->m: CHACHA20_POLY1305_SHA256,secp384r1,ecdsa_secp521r1_sha51
          -s "server hello, chosen ciphersuite: TLS1-3-CHACHA20-POLY1305-SHA256 ( id=4867 )" \
          -s "received signature algorithm: 0x603" \
          -s "got named group: secp384r1(0018)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -802,11 +850,12 @@ run_test "TLS 1.3 O->m: CHACHA20_POLY1305_SHA256,secp384r1,rsa_pss_rsae_sha256" 
          -s "server hello, chosen ciphersuite: TLS1-3-CHACHA20-POLY1305-SHA256 ( id=4867 )" \
          -s "received signature algorithm: 0x804" \
          -s "got named group: secp384r1(0018)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_openssl_tls1_3
@@ -818,11 +867,12 @@ run_test "TLS 1.3 O->m: CHACHA20_POLY1305_SHA256,secp521r1,ecdsa_secp256r1_sha25
          -s "server hello, chosen ciphersuite: TLS1-3-CHACHA20-POLY1305-SHA256 ( id=4867 )" \
          -s "received signature algorithm: 0x403" \
          -s "got named group: secp521r1(0019)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_openssl_tls1_3
@@ -834,11 +884,12 @@ run_test "TLS 1.3 O->m: CHACHA20_POLY1305_SHA256,secp521r1,ecdsa_secp384r1_sha38
          -s "server hello, chosen ciphersuite: TLS1-3-CHACHA20-POLY1305-SHA256 ( id=4867 )" \
          -s "received signature algorithm: 0x503" \
          -s "got named group: secp521r1(0019)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_openssl_tls1_3
@@ -850,11 +901,12 @@ run_test "TLS 1.3 O->m: CHACHA20_POLY1305_SHA256,secp521r1,ecdsa_secp521r1_sha51
          -s "server hello, chosen ciphersuite: TLS1-3-CHACHA20-POLY1305-SHA256 ( id=4867 )" \
          -s "received signature algorithm: 0x603" \
          -s "got named group: secp521r1(0019)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -867,11 +919,12 @@ run_test "TLS 1.3 O->m: CHACHA20_POLY1305_SHA256,secp521r1,rsa_pss_rsae_sha256" 
          -s "server hello, chosen ciphersuite: TLS1-3-CHACHA20-POLY1305-SHA256 ( id=4867 )" \
          -s "received signature algorithm: 0x804" \
          -s "got named group: secp521r1(0019)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_openssl_tls1_3
@@ -883,11 +936,12 @@ run_test "TLS 1.3 O->m: CHACHA20_POLY1305_SHA256,x25519,ecdsa_secp256r1_sha256" 
          -s "server hello, chosen ciphersuite: TLS1-3-CHACHA20-POLY1305-SHA256 ( id=4867 )" \
          -s "received signature algorithm: 0x403" \
          -s "got named group: x25519(001d)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_openssl_tls1_3
@@ -899,11 +953,12 @@ run_test "TLS 1.3 O->m: CHACHA20_POLY1305_SHA256,x25519,ecdsa_secp384r1_sha384" 
          -s "server hello, chosen ciphersuite: TLS1-3-CHACHA20-POLY1305-SHA256 ( id=4867 )" \
          -s "received signature algorithm: 0x503" \
          -s "got named group: x25519(001d)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_openssl_tls1_3
@@ -915,11 +970,12 @@ run_test "TLS 1.3 O->m: CHACHA20_POLY1305_SHA256,x25519,ecdsa_secp521r1_sha512" 
          -s "server hello, chosen ciphersuite: TLS1-3-CHACHA20-POLY1305-SHA256 ( id=4867 )" \
          -s "received signature algorithm: 0x603" \
          -s "got named group: x25519(001d)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -932,11 +988,12 @@ run_test "TLS 1.3 O->m: CHACHA20_POLY1305_SHA256,x25519,rsa_pss_rsae_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-CHACHA20-POLY1305-SHA256 ( id=4867 )" \
          -s "received signature algorithm: 0x804" \
          -s "got named group: x25519(001d)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_openssl_tls1_3
@@ -948,11 +1005,12 @@ run_test "TLS 1.3 O->m: CHACHA20_POLY1305_SHA256,x448,ecdsa_secp256r1_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-CHACHA20-POLY1305-SHA256 ( id=4867 )" \
          -s "received signature algorithm: 0x403" \
          -s "got named group: x448(001e)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_openssl_tls1_3
@@ -964,11 +1022,12 @@ run_test "TLS 1.3 O->m: CHACHA20_POLY1305_SHA256,x448,ecdsa_secp384r1_sha384" \
          -s "server hello, chosen ciphersuite: TLS1-3-CHACHA20-POLY1305-SHA256 ( id=4867 )" \
          -s "received signature algorithm: 0x503" \
          -s "got named group: x448(001e)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_openssl_tls1_3
@@ -980,11 +1039,12 @@ run_test "TLS 1.3 O->m: CHACHA20_POLY1305_SHA256,x448,ecdsa_secp521r1_sha512" \
          -s "server hello, chosen ciphersuite: TLS1-3-CHACHA20-POLY1305-SHA256 ( id=4867 )" \
          -s "received signature algorithm: 0x603" \
          -s "got named group: x448(001e)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -997,11 +1057,12 @@ run_test "TLS 1.3 O->m: CHACHA20_POLY1305_SHA256,x448,rsa_pss_rsae_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-CHACHA20-POLY1305-SHA256 ( id=4867 )" \
          -s "received signature algorithm: 0x804" \
          -s "got named group: x448(001e)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_openssl_tls1_3
@@ -1013,11 +1074,12 @@ run_test "TLS 1.3 O->m: AES_128_CCM_SHA256,secp256r1,ecdsa_secp256r1_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-SHA256 ( id=4868 )" \
          -s "received signature algorithm: 0x403" \
          -s "got named group: secp256r1(0017)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_openssl_tls1_3
@@ -1029,11 +1091,12 @@ run_test "TLS 1.3 O->m: AES_128_CCM_SHA256,secp256r1,ecdsa_secp384r1_sha384" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-SHA256 ( id=4868 )" \
          -s "received signature algorithm: 0x503" \
          -s "got named group: secp256r1(0017)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_openssl_tls1_3
@@ -1045,11 +1108,12 @@ run_test "TLS 1.3 O->m: AES_128_CCM_SHA256,secp256r1,ecdsa_secp521r1_sha512" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-SHA256 ( id=4868 )" \
          -s "received signature algorithm: 0x603" \
          -s "got named group: secp256r1(0017)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -1062,11 +1126,12 @@ run_test "TLS 1.3 O->m: AES_128_CCM_SHA256,secp256r1,rsa_pss_rsae_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-SHA256 ( id=4868 )" \
          -s "received signature algorithm: 0x804" \
          -s "got named group: secp256r1(0017)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_openssl_tls1_3
@@ -1078,11 +1143,12 @@ run_test "TLS 1.3 O->m: AES_128_CCM_SHA256,secp384r1,ecdsa_secp256r1_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-SHA256 ( id=4868 )" \
          -s "received signature algorithm: 0x403" \
          -s "got named group: secp384r1(0018)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_openssl_tls1_3
@@ -1094,11 +1160,12 @@ run_test "TLS 1.3 O->m: AES_128_CCM_SHA256,secp384r1,ecdsa_secp384r1_sha384" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-SHA256 ( id=4868 )" \
          -s "received signature algorithm: 0x503" \
          -s "got named group: secp384r1(0018)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_openssl_tls1_3
@@ -1110,11 +1177,12 @@ run_test "TLS 1.3 O->m: AES_128_CCM_SHA256,secp384r1,ecdsa_secp521r1_sha512" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-SHA256 ( id=4868 )" \
          -s "received signature algorithm: 0x603" \
          -s "got named group: secp384r1(0018)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -1127,11 +1195,12 @@ run_test "TLS 1.3 O->m: AES_128_CCM_SHA256,secp384r1,rsa_pss_rsae_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-SHA256 ( id=4868 )" \
          -s "received signature algorithm: 0x804" \
          -s "got named group: secp384r1(0018)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_openssl_tls1_3
@@ -1143,11 +1212,12 @@ run_test "TLS 1.3 O->m: AES_128_CCM_SHA256,secp521r1,ecdsa_secp256r1_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-SHA256 ( id=4868 )" \
          -s "received signature algorithm: 0x403" \
          -s "got named group: secp521r1(0019)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_openssl_tls1_3
@@ -1159,11 +1229,12 @@ run_test "TLS 1.3 O->m: AES_128_CCM_SHA256,secp521r1,ecdsa_secp384r1_sha384" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-SHA256 ( id=4868 )" \
          -s "received signature algorithm: 0x503" \
          -s "got named group: secp521r1(0019)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_openssl_tls1_3
@@ -1175,11 +1246,12 @@ run_test "TLS 1.3 O->m: AES_128_CCM_SHA256,secp521r1,ecdsa_secp521r1_sha512" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-SHA256 ( id=4868 )" \
          -s "received signature algorithm: 0x603" \
          -s "got named group: secp521r1(0019)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -1192,11 +1264,12 @@ run_test "TLS 1.3 O->m: AES_128_CCM_SHA256,secp521r1,rsa_pss_rsae_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-SHA256 ( id=4868 )" \
          -s "received signature algorithm: 0x804" \
          -s "got named group: secp521r1(0019)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_openssl_tls1_3
@@ -1208,11 +1281,12 @@ run_test "TLS 1.3 O->m: AES_128_CCM_SHA256,x25519,ecdsa_secp256r1_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-SHA256 ( id=4868 )" \
          -s "received signature algorithm: 0x403" \
          -s "got named group: x25519(001d)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_openssl_tls1_3
@@ -1224,11 +1298,12 @@ run_test "TLS 1.3 O->m: AES_128_CCM_SHA256,x25519,ecdsa_secp384r1_sha384" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-SHA256 ( id=4868 )" \
          -s "received signature algorithm: 0x503" \
          -s "got named group: x25519(001d)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_openssl_tls1_3
@@ -1240,11 +1315,12 @@ run_test "TLS 1.3 O->m: AES_128_CCM_SHA256,x25519,ecdsa_secp521r1_sha512" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-SHA256 ( id=4868 )" \
          -s "received signature algorithm: 0x603" \
          -s "got named group: x25519(001d)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -1257,11 +1333,12 @@ run_test "TLS 1.3 O->m: AES_128_CCM_SHA256,x25519,rsa_pss_rsae_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-SHA256 ( id=4868 )" \
          -s "received signature algorithm: 0x804" \
          -s "got named group: x25519(001d)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_openssl_tls1_3
@@ -1273,11 +1350,12 @@ run_test "TLS 1.3 O->m: AES_128_CCM_SHA256,x448,ecdsa_secp256r1_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-SHA256 ( id=4868 )" \
          -s "received signature algorithm: 0x403" \
          -s "got named group: x448(001e)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_openssl_tls1_3
@@ -1289,11 +1367,12 @@ run_test "TLS 1.3 O->m: AES_128_CCM_SHA256,x448,ecdsa_secp384r1_sha384" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-SHA256 ( id=4868 )" \
          -s "received signature algorithm: 0x503" \
          -s "got named group: x448(001e)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_openssl_tls1_3
@@ -1305,11 +1384,12 @@ run_test "TLS 1.3 O->m: AES_128_CCM_SHA256,x448,ecdsa_secp521r1_sha512" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-SHA256 ( id=4868 )" \
          -s "received signature algorithm: 0x603" \
          -s "got named group: x448(001e)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -1322,11 +1402,12 @@ run_test "TLS 1.3 O->m: AES_128_CCM_SHA256,x448,rsa_pss_rsae_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-SHA256 ( id=4868 )" \
          -s "received signature algorithm: 0x804" \
          -s "got named group: x448(001e)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_openssl_tls1_3
@@ -1338,11 +1419,12 @@ run_test "TLS 1.3 O->m: AES_128_CCM_8_SHA256,secp256r1,ecdsa_secp256r1_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-8-SHA256 ( id=4869 )" \
          -s "received signature algorithm: 0x403" \
          -s "got named group: secp256r1(0017)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_openssl_tls1_3
@@ -1354,11 +1436,12 @@ run_test "TLS 1.3 O->m: AES_128_CCM_8_SHA256,secp256r1,ecdsa_secp384r1_sha384" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-8-SHA256 ( id=4869 )" \
          -s "received signature algorithm: 0x503" \
          -s "got named group: secp256r1(0017)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_openssl_tls1_3
@@ -1370,11 +1453,12 @@ run_test "TLS 1.3 O->m: AES_128_CCM_8_SHA256,secp256r1,ecdsa_secp521r1_sha512" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-8-SHA256 ( id=4869 )" \
          -s "received signature algorithm: 0x603" \
          -s "got named group: secp256r1(0017)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -1387,11 +1471,12 @@ run_test "TLS 1.3 O->m: AES_128_CCM_8_SHA256,secp256r1,rsa_pss_rsae_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-8-SHA256 ( id=4869 )" \
          -s "received signature algorithm: 0x804" \
          -s "got named group: secp256r1(0017)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_openssl_tls1_3
@@ -1403,11 +1488,12 @@ run_test "TLS 1.3 O->m: AES_128_CCM_8_SHA256,secp384r1,ecdsa_secp256r1_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-8-SHA256 ( id=4869 )" \
          -s "received signature algorithm: 0x403" \
          -s "got named group: secp384r1(0018)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_openssl_tls1_3
@@ -1419,11 +1505,12 @@ run_test "TLS 1.3 O->m: AES_128_CCM_8_SHA256,secp384r1,ecdsa_secp384r1_sha384" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-8-SHA256 ( id=4869 )" \
          -s "received signature algorithm: 0x503" \
          -s "got named group: secp384r1(0018)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_openssl_tls1_3
@@ -1435,11 +1522,12 @@ run_test "TLS 1.3 O->m: AES_128_CCM_8_SHA256,secp384r1,ecdsa_secp521r1_sha512" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-8-SHA256 ( id=4869 )" \
          -s "received signature algorithm: 0x603" \
          -s "got named group: secp384r1(0018)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -1452,11 +1540,12 @@ run_test "TLS 1.3 O->m: AES_128_CCM_8_SHA256,secp384r1,rsa_pss_rsae_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-8-SHA256 ( id=4869 )" \
          -s "received signature algorithm: 0x804" \
          -s "got named group: secp384r1(0018)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_openssl_tls1_3
@@ -1468,11 +1557,12 @@ run_test "TLS 1.3 O->m: AES_128_CCM_8_SHA256,secp521r1,ecdsa_secp256r1_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-8-SHA256 ( id=4869 )" \
          -s "received signature algorithm: 0x403" \
          -s "got named group: secp521r1(0019)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_openssl_tls1_3
@@ -1484,11 +1574,12 @@ run_test "TLS 1.3 O->m: AES_128_CCM_8_SHA256,secp521r1,ecdsa_secp384r1_sha384" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-8-SHA256 ( id=4869 )" \
          -s "received signature algorithm: 0x503" \
          -s "got named group: secp521r1(0019)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_openssl_tls1_3
@@ -1500,11 +1591,12 @@ run_test "TLS 1.3 O->m: AES_128_CCM_8_SHA256,secp521r1,ecdsa_secp521r1_sha512" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-8-SHA256 ( id=4869 )" \
          -s "received signature algorithm: 0x603" \
          -s "got named group: secp521r1(0019)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -1517,11 +1609,12 @@ run_test "TLS 1.3 O->m: AES_128_CCM_8_SHA256,secp521r1,rsa_pss_rsae_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-8-SHA256 ( id=4869 )" \
          -s "received signature algorithm: 0x804" \
          -s "got named group: secp521r1(0019)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_openssl_tls1_3
@@ -1533,11 +1626,12 @@ run_test "TLS 1.3 O->m: AES_128_CCM_8_SHA256,x25519,ecdsa_secp256r1_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-8-SHA256 ( id=4869 )" \
          -s "received signature algorithm: 0x403" \
          -s "got named group: x25519(001d)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_openssl_tls1_3
@@ -1549,11 +1643,12 @@ run_test "TLS 1.3 O->m: AES_128_CCM_8_SHA256,x25519,ecdsa_secp384r1_sha384" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-8-SHA256 ( id=4869 )" \
          -s "received signature algorithm: 0x503" \
          -s "got named group: x25519(001d)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_openssl_tls1_3
@@ -1565,11 +1660,12 @@ run_test "TLS 1.3 O->m: AES_128_CCM_8_SHA256,x25519,ecdsa_secp521r1_sha512" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-8-SHA256 ( id=4869 )" \
          -s "received signature algorithm: 0x603" \
          -s "got named group: x25519(001d)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -1582,11 +1678,12 @@ run_test "TLS 1.3 O->m: AES_128_CCM_8_SHA256,x25519,rsa_pss_rsae_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-8-SHA256 ( id=4869 )" \
          -s "received signature algorithm: 0x804" \
          -s "got named group: x25519(001d)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_openssl_tls1_3
@@ -1598,11 +1695,12 @@ run_test "TLS 1.3 O->m: AES_128_CCM_8_SHA256,x448,ecdsa_secp256r1_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-8-SHA256 ( id=4869 )" \
          -s "received signature algorithm: 0x403" \
          -s "got named group: x448(001e)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_openssl_tls1_3
@@ -1614,11 +1712,12 @@ run_test "TLS 1.3 O->m: AES_128_CCM_8_SHA256,x448,ecdsa_secp384r1_sha384" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-8-SHA256 ( id=4869 )" \
          -s "received signature algorithm: 0x503" \
          -s "got named group: x448(001e)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_openssl_tls1_3
@@ -1630,11 +1729,12 @@ run_test "TLS 1.3 O->m: AES_128_CCM_8_SHA256,x448,ecdsa_secp521r1_sha512" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-8-SHA256 ( id=4869 )" \
          -s "received signature algorithm: 0x603" \
          -s "got named group: x448(001e)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -1647,11 +1747,12 @@ run_test "TLS 1.3 O->m: AES_128_CCM_8_SHA256,x448,rsa_pss_rsae_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-8-SHA256 ( id=4869 )" \
          -s "received signature algorithm: 0x804" \
          -s "got named group: x448(001e)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_gnutls_tls1_3
@@ -1665,11 +1766,12 @@ run_test "TLS 1.3 G->m: AES_128_GCM_SHA256,secp256r1,ecdsa_secp256r1_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-GCM-SHA256 ( id=4865 )" \
          -s "received signature algorithm: 0x403" \
          -s "got named group: secp256r1(0017)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_gnutls_tls1_3
@@ -1683,11 +1785,12 @@ run_test "TLS 1.3 G->m: AES_128_GCM_SHA256,secp256r1,ecdsa_secp384r1_sha384" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-GCM-SHA256 ( id=4865 )" \
          -s "received signature algorithm: 0x503" \
          -s "got named group: secp256r1(0017)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_gnutls_tls1_3
@@ -1701,11 +1804,12 @@ run_test "TLS 1.3 G->m: AES_128_GCM_SHA256,secp256r1,ecdsa_secp521r1_sha512" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-GCM-SHA256 ( id=4865 )" \
          -s "received signature algorithm: 0x603" \
          -s "got named group: secp256r1(0017)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -1720,11 +1824,12 @@ run_test "TLS 1.3 G->m: AES_128_GCM_SHA256,secp256r1,rsa_pss_rsae_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-GCM-SHA256 ( id=4865 )" \
          -s "received signature algorithm: 0x804" \
          -s "got named group: secp256r1(0017)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_gnutls_tls1_3
@@ -1738,11 +1843,12 @@ run_test "TLS 1.3 G->m: AES_128_GCM_SHA256,secp384r1,ecdsa_secp256r1_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-GCM-SHA256 ( id=4865 )" \
          -s "received signature algorithm: 0x403" \
          -s "got named group: secp384r1(0018)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_gnutls_tls1_3
@@ -1756,11 +1862,12 @@ run_test "TLS 1.3 G->m: AES_128_GCM_SHA256,secp384r1,ecdsa_secp384r1_sha384" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-GCM-SHA256 ( id=4865 )" \
          -s "received signature algorithm: 0x503" \
          -s "got named group: secp384r1(0018)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_gnutls_tls1_3
@@ -1774,11 +1881,12 @@ run_test "TLS 1.3 G->m: AES_128_GCM_SHA256,secp384r1,ecdsa_secp521r1_sha512" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-GCM-SHA256 ( id=4865 )" \
          -s "received signature algorithm: 0x603" \
          -s "got named group: secp384r1(0018)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -1793,11 +1901,12 @@ run_test "TLS 1.3 G->m: AES_128_GCM_SHA256,secp384r1,rsa_pss_rsae_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-GCM-SHA256 ( id=4865 )" \
          -s "received signature algorithm: 0x804" \
          -s "got named group: secp384r1(0018)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_gnutls_tls1_3
@@ -1811,11 +1920,12 @@ run_test "TLS 1.3 G->m: AES_128_GCM_SHA256,secp521r1,ecdsa_secp256r1_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-GCM-SHA256 ( id=4865 )" \
          -s "received signature algorithm: 0x403" \
          -s "got named group: secp521r1(0019)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_gnutls_tls1_3
@@ -1829,11 +1939,12 @@ run_test "TLS 1.3 G->m: AES_128_GCM_SHA256,secp521r1,ecdsa_secp384r1_sha384" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-GCM-SHA256 ( id=4865 )" \
          -s "received signature algorithm: 0x503" \
          -s "got named group: secp521r1(0019)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_gnutls_tls1_3
@@ -1847,11 +1958,12 @@ run_test "TLS 1.3 G->m: AES_128_GCM_SHA256,secp521r1,ecdsa_secp521r1_sha512" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-GCM-SHA256 ( id=4865 )" \
          -s "received signature algorithm: 0x603" \
          -s "got named group: secp521r1(0019)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -1866,11 +1978,12 @@ run_test "TLS 1.3 G->m: AES_128_GCM_SHA256,secp521r1,rsa_pss_rsae_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-GCM-SHA256 ( id=4865 )" \
          -s "received signature algorithm: 0x804" \
          -s "got named group: secp521r1(0019)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_gnutls_tls1_3
@@ -1884,11 +1997,12 @@ run_test "TLS 1.3 G->m: AES_128_GCM_SHA256,x25519,ecdsa_secp256r1_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-GCM-SHA256 ( id=4865 )" \
          -s "received signature algorithm: 0x403" \
          -s "got named group: x25519(001d)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_gnutls_tls1_3
@@ -1902,11 +2016,12 @@ run_test "TLS 1.3 G->m: AES_128_GCM_SHA256,x25519,ecdsa_secp384r1_sha384" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-GCM-SHA256 ( id=4865 )" \
          -s "received signature algorithm: 0x503" \
          -s "got named group: x25519(001d)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_gnutls_tls1_3
@@ -1920,11 +2035,12 @@ run_test "TLS 1.3 G->m: AES_128_GCM_SHA256,x25519,ecdsa_secp521r1_sha512" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-GCM-SHA256 ( id=4865 )" \
          -s "received signature algorithm: 0x603" \
          -s "got named group: x25519(001d)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -1939,11 +2055,12 @@ run_test "TLS 1.3 G->m: AES_128_GCM_SHA256,x25519,rsa_pss_rsae_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-GCM-SHA256 ( id=4865 )" \
          -s "received signature algorithm: 0x804" \
          -s "got named group: x25519(001d)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_gnutls_tls1_3
@@ -1957,11 +2074,12 @@ run_test "TLS 1.3 G->m: AES_128_GCM_SHA256,x448,ecdsa_secp256r1_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-GCM-SHA256 ( id=4865 )" \
          -s "received signature algorithm: 0x403" \
          -s "got named group: x448(001e)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_gnutls_tls1_3
@@ -1975,11 +2093,12 @@ run_test "TLS 1.3 G->m: AES_128_GCM_SHA256,x448,ecdsa_secp384r1_sha384" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-GCM-SHA256 ( id=4865 )" \
          -s "received signature algorithm: 0x503" \
          -s "got named group: x448(001e)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_gnutls_tls1_3
@@ -1993,11 +2112,12 @@ run_test "TLS 1.3 G->m: AES_128_GCM_SHA256,x448,ecdsa_secp521r1_sha512" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-GCM-SHA256 ( id=4865 )" \
          -s "received signature algorithm: 0x603" \
          -s "got named group: x448(001e)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -2012,11 +2132,12 @@ run_test "TLS 1.3 G->m: AES_128_GCM_SHA256,x448,rsa_pss_rsae_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-GCM-SHA256 ( id=4865 )" \
          -s "received signature algorithm: 0x804" \
          -s "got named group: x448(001e)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_gnutls_tls1_3
@@ -2030,11 +2151,12 @@ run_test "TLS 1.3 G->m: AES_256_GCM_SHA384,secp256r1,ecdsa_secp256r1_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-256-GCM-SHA384 ( id=4866 )" \
          -s "received signature algorithm: 0x403" \
          -s "got named group: secp256r1(0017)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_gnutls_tls1_3
@@ -2048,11 +2170,12 @@ run_test "TLS 1.3 G->m: AES_256_GCM_SHA384,secp256r1,ecdsa_secp384r1_sha384" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-256-GCM-SHA384 ( id=4866 )" \
          -s "received signature algorithm: 0x503" \
          -s "got named group: secp256r1(0017)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_gnutls_tls1_3
@@ -2066,11 +2189,12 @@ run_test "TLS 1.3 G->m: AES_256_GCM_SHA384,secp256r1,ecdsa_secp521r1_sha512" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-256-GCM-SHA384 ( id=4866 )" \
          -s "received signature algorithm: 0x603" \
          -s "got named group: secp256r1(0017)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -2085,11 +2209,12 @@ run_test "TLS 1.3 G->m: AES_256_GCM_SHA384,secp256r1,rsa_pss_rsae_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-256-GCM-SHA384 ( id=4866 )" \
          -s "received signature algorithm: 0x804" \
          -s "got named group: secp256r1(0017)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_gnutls_tls1_3
@@ -2103,11 +2228,12 @@ run_test "TLS 1.3 G->m: AES_256_GCM_SHA384,secp384r1,ecdsa_secp256r1_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-256-GCM-SHA384 ( id=4866 )" \
          -s "received signature algorithm: 0x403" \
          -s "got named group: secp384r1(0018)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_gnutls_tls1_3
@@ -2121,11 +2247,12 @@ run_test "TLS 1.3 G->m: AES_256_GCM_SHA384,secp384r1,ecdsa_secp384r1_sha384" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-256-GCM-SHA384 ( id=4866 )" \
          -s "received signature algorithm: 0x503" \
          -s "got named group: secp384r1(0018)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_gnutls_tls1_3
@@ -2139,11 +2266,12 @@ run_test "TLS 1.3 G->m: AES_256_GCM_SHA384,secp384r1,ecdsa_secp521r1_sha512" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-256-GCM-SHA384 ( id=4866 )" \
          -s "received signature algorithm: 0x603" \
          -s "got named group: secp384r1(0018)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -2158,11 +2286,12 @@ run_test "TLS 1.3 G->m: AES_256_GCM_SHA384,secp384r1,rsa_pss_rsae_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-256-GCM-SHA384 ( id=4866 )" \
          -s "received signature algorithm: 0x804" \
          -s "got named group: secp384r1(0018)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_gnutls_tls1_3
@@ -2176,11 +2305,12 @@ run_test "TLS 1.3 G->m: AES_256_GCM_SHA384,secp521r1,ecdsa_secp256r1_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-256-GCM-SHA384 ( id=4866 )" \
          -s "received signature algorithm: 0x403" \
          -s "got named group: secp521r1(0019)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_gnutls_tls1_3
@@ -2194,11 +2324,12 @@ run_test "TLS 1.3 G->m: AES_256_GCM_SHA384,secp521r1,ecdsa_secp384r1_sha384" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-256-GCM-SHA384 ( id=4866 )" \
          -s "received signature algorithm: 0x503" \
          -s "got named group: secp521r1(0019)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_gnutls_tls1_3
@@ -2212,11 +2343,12 @@ run_test "TLS 1.3 G->m: AES_256_GCM_SHA384,secp521r1,ecdsa_secp521r1_sha512" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-256-GCM-SHA384 ( id=4866 )" \
          -s "received signature algorithm: 0x603" \
          -s "got named group: secp521r1(0019)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -2231,11 +2363,12 @@ run_test "TLS 1.3 G->m: AES_256_GCM_SHA384,secp521r1,rsa_pss_rsae_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-256-GCM-SHA384 ( id=4866 )" \
          -s "received signature algorithm: 0x804" \
          -s "got named group: secp521r1(0019)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_gnutls_tls1_3
@@ -2249,11 +2382,12 @@ run_test "TLS 1.3 G->m: AES_256_GCM_SHA384,x25519,ecdsa_secp256r1_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-256-GCM-SHA384 ( id=4866 )" \
          -s "received signature algorithm: 0x403" \
          -s "got named group: x25519(001d)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_gnutls_tls1_3
@@ -2267,11 +2401,12 @@ run_test "TLS 1.3 G->m: AES_256_GCM_SHA384,x25519,ecdsa_secp384r1_sha384" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-256-GCM-SHA384 ( id=4866 )" \
          -s "received signature algorithm: 0x503" \
          -s "got named group: x25519(001d)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_gnutls_tls1_3
@@ -2285,11 +2420,12 @@ run_test "TLS 1.3 G->m: AES_256_GCM_SHA384,x25519,ecdsa_secp521r1_sha512" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-256-GCM-SHA384 ( id=4866 )" \
          -s "received signature algorithm: 0x603" \
          -s "got named group: x25519(001d)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -2304,11 +2440,12 @@ run_test "TLS 1.3 G->m: AES_256_GCM_SHA384,x25519,rsa_pss_rsae_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-256-GCM-SHA384 ( id=4866 )" \
          -s "received signature algorithm: 0x804" \
          -s "got named group: x25519(001d)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_gnutls_tls1_3
@@ -2322,11 +2459,12 @@ run_test "TLS 1.3 G->m: AES_256_GCM_SHA384,x448,ecdsa_secp256r1_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-256-GCM-SHA384 ( id=4866 )" \
          -s "received signature algorithm: 0x403" \
          -s "got named group: x448(001e)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_gnutls_tls1_3
@@ -2340,11 +2478,12 @@ run_test "TLS 1.3 G->m: AES_256_GCM_SHA384,x448,ecdsa_secp384r1_sha384" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-256-GCM-SHA384 ( id=4866 )" \
          -s "received signature algorithm: 0x503" \
          -s "got named group: x448(001e)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_gnutls_tls1_3
@@ -2358,11 +2497,12 @@ run_test "TLS 1.3 G->m: AES_256_GCM_SHA384,x448,ecdsa_secp521r1_sha512" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-256-GCM-SHA384 ( id=4866 )" \
          -s "received signature algorithm: 0x603" \
          -s "got named group: x448(001e)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -2377,11 +2517,12 @@ run_test "TLS 1.3 G->m: AES_256_GCM_SHA384,x448,rsa_pss_rsae_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-256-GCM-SHA384 ( id=4866 )" \
          -s "received signature algorithm: 0x804" \
          -s "got named group: x448(001e)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_gnutls_tls1_3
@@ -2395,11 +2536,12 @@ run_test "TLS 1.3 G->m: CHACHA20_POLY1305_SHA256,secp256r1,ecdsa_secp256r1_sha25
          -s "server hello, chosen ciphersuite: TLS1-3-CHACHA20-POLY1305-SHA256 ( id=4867 )" \
          -s "received signature algorithm: 0x403" \
          -s "got named group: secp256r1(0017)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_gnutls_tls1_3
@@ -2413,11 +2555,12 @@ run_test "TLS 1.3 G->m: CHACHA20_POLY1305_SHA256,secp256r1,ecdsa_secp384r1_sha38
          -s "server hello, chosen ciphersuite: TLS1-3-CHACHA20-POLY1305-SHA256 ( id=4867 )" \
          -s "received signature algorithm: 0x503" \
          -s "got named group: secp256r1(0017)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_gnutls_tls1_3
@@ -2431,11 +2574,12 @@ run_test "TLS 1.3 G->m: CHACHA20_POLY1305_SHA256,secp256r1,ecdsa_secp521r1_sha51
          -s "server hello, chosen ciphersuite: TLS1-3-CHACHA20-POLY1305-SHA256 ( id=4867 )" \
          -s "received signature algorithm: 0x603" \
          -s "got named group: secp256r1(0017)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -2450,11 +2594,12 @@ run_test "TLS 1.3 G->m: CHACHA20_POLY1305_SHA256,secp256r1,rsa_pss_rsae_sha256" 
          -s "server hello, chosen ciphersuite: TLS1-3-CHACHA20-POLY1305-SHA256 ( id=4867 )" \
          -s "received signature algorithm: 0x804" \
          -s "got named group: secp256r1(0017)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_gnutls_tls1_3
@@ -2468,11 +2613,12 @@ run_test "TLS 1.3 G->m: CHACHA20_POLY1305_SHA256,secp384r1,ecdsa_secp256r1_sha25
          -s "server hello, chosen ciphersuite: TLS1-3-CHACHA20-POLY1305-SHA256 ( id=4867 )" \
          -s "received signature algorithm: 0x403" \
          -s "got named group: secp384r1(0018)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_gnutls_tls1_3
@@ -2486,11 +2632,12 @@ run_test "TLS 1.3 G->m: CHACHA20_POLY1305_SHA256,secp384r1,ecdsa_secp384r1_sha38
          -s "server hello, chosen ciphersuite: TLS1-3-CHACHA20-POLY1305-SHA256 ( id=4867 )" \
          -s "received signature algorithm: 0x503" \
          -s "got named group: secp384r1(0018)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_gnutls_tls1_3
@@ -2504,11 +2651,12 @@ run_test "TLS 1.3 G->m: CHACHA20_POLY1305_SHA256,secp384r1,ecdsa_secp521r1_sha51
          -s "server hello, chosen ciphersuite: TLS1-3-CHACHA20-POLY1305-SHA256 ( id=4867 )" \
          -s "received signature algorithm: 0x603" \
          -s "got named group: secp384r1(0018)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -2523,11 +2671,12 @@ run_test "TLS 1.3 G->m: CHACHA20_POLY1305_SHA256,secp384r1,rsa_pss_rsae_sha256" 
          -s "server hello, chosen ciphersuite: TLS1-3-CHACHA20-POLY1305-SHA256 ( id=4867 )" \
          -s "received signature algorithm: 0x804" \
          -s "got named group: secp384r1(0018)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_gnutls_tls1_3
@@ -2541,11 +2690,12 @@ run_test "TLS 1.3 G->m: CHACHA20_POLY1305_SHA256,secp521r1,ecdsa_secp256r1_sha25
          -s "server hello, chosen ciphersuite: TLS1-3-CHACHA20-POLY1305-SHA256 ( id=4867 )" \
          -s "received signature algorithm: 0x403" \
          -s "got named group: secp521r1(0019)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_gnutls_tls1_3
@@ -2559,11 +2709,12 @@ run_test "TLS 1.3 G->m: CHACHA20_POLY1305_SHA256,secp521r1,ecdsa_secp384r1_sha38
          -s "server hello, chosen ciphersuite: TLS1-3-CHACHA20-POLY1305-SHA256 ( id=4867 )" \
          -s "received signature algorithm: 0x503" \
          -s "got named group: secp521r1(0019)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_gnutls_tls1_3
@@ -2577,11 +2728,12 @@ run_test "TLS 1.3 G->m: CHACHA20_POLY1305_SHA256,secp521r1,ecdsa_secp521r1_sha51
          -s "server hello, chosen ciphersuite: TLS1-3-CHACHA20-POLY1305-SHA256 ( id=4867 )" \
          -s "received signature algorithm: 0x603" \
          -s "got named group: secp521r1(0019)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -2596,11 +2748,12 @@ run_test "TLS 1.3 G->m: CHACHA20_POLY1305_SHA256,secp521r1,rsa_pss_rsae_sha256" 
          -s "server hello, chosen ciphersuite: TLS1-3-CHACHA20-POLY1305-SHA256 ( id=4867 )" \
          -s "received signature algorithm: 0x804" \
          -s "got named group: secp521r1(0019)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_gnutls_tls1_3
@@ -2614,11 +2767,12 @@ run_test "TLS 1.3 G->m: CHACHA20_POLY1305_SHA256,x25519,ecdsa_secp256r1_sha256" 
          -s "server hello, chosen ciphersuite: TLS1-3-CHACHA20-POLY1305-SHA256 ( id=4867 )" \
          -s "received signature algorithm: 0x403" \
          -s "got named group: x25519(001d)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_gnutls_tls1_3
@@ -2632,11 +2786,12 @@ run_test "TLS 1.3 G->m: CHACHA20_POLY1305_SHA256,x25519,ecdsa_secp384r1_sha384" 
          -s "server hello, chosen ciphersuite: TLS1-3-CHACHA20-POLY1305-SHA256 ( id=4867 )" \
          -s "received signature algorithm: 0x503" \
          -s "got named group: x25519(001d)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_gnutls_tls1_3
@@ -2650,11 +2805,12 @@ run_test "TLS 1.3 G->m: CHACHA20_POLY1305_SHA256,x25519,ecdsa_secp521r1_sha512" 
          -s "server hello, chosen ciphersuite: TLS1-3-CHACHA20-POLY1305-SHA256 ( id=4867 )" \
          -s "received signature algorithm: 0x603" \
          -s "got named group: x25519(001d)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -2669,11 +2825,12 @@ run_test "TLS 1.3 G->m: CHACHA20_POLY1305_SHA256,x25519,rsa_pss_rsae_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-CHACHA20-POLY1305-SHA256 ( id=4867 )" \
          -s "received signature algorithm: 0x804" \
          -s "got named group: x25519(001d)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_gnutls_tls1_3
@@ -2687,11 +2844,12 @@ run_test "TLS 1.3 G->m: CHACHA20_POLY1305_SHA256,x448,ecdsa_secp256r1_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-CHACHA20-POLY1305-SHA256 ( id=4867 )" \
          -s "received signature algorithm: 0x403" \
          -s "got named group: x448(001e)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_gnutls_tls1_3
@@ -2705,11 +2863,12 @@ run_test "TLS 1.3 G->m: CHACHA20_POLY1305_SHA256,x448,ecdsa_secp384r1_sha384" \
          -s "server hello, chosen ciphersuite: TLS1-3-CHACHA20-POLY1305-SHA256 ( id=4867 )" \
          -s "received signature algorithm: 0x503" \
          -s "got named group: x448(001e)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_gnutls_tls1_3
@@ -2723,11 +2882,12 @@ run_test "TLS 1.3 G->m: CHACHA20_POLY1305_SHA256,x448,ecdsa_secp521r1_sha512" \
          -s "server hello, chosen ciphersuite: TLS1-3-CHACHA20-POLY1305-SHA256 ( id=4867 )" \
          -s "received signature algorithm: 0x603" \
          -s "got named group: x448(001e)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -2742,11 +2902,12 @@ run_test "TLS 1.3 G->m: CHACHA20_POLY1305_SHA256,x448,rsa_pss_rsae_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-CHACHA20-POLY1305-SHA256 ( id=4867 )" \
          -s "received signature algorithm: 0x804" \
          -s "got named group: x448(001e)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_gnutls_tls1_3
@@ -2760,11 +2921,12 @@ run_test "TLS 1.3 G->m: AES_128_CCM_SHA256,secp256r1,ecdsa_secp256r1_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-SHA256 ( id=4868 )" \
          -s "received signature algorithm: 0x403" \
          -s "got named group: secp256r1(0017)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_gnutls_tls1_3
@@ -2778,11 +2940,12 @@ run_test "TLS 1.3 G->m: AES_128_CCM_SHA256,secp256r1,ecdsa_secp384r1_sha384" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-SHA256 ( id=4868 )" \
          -s "received signature algorithm: 0x503" \
          -s "got named group: secp256r1(0017)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_gnutls_tls1_3
@@ -2796,11 +2959,12 @@ run_test "TLS 1.3 G->m: AES_128_CCM_SHA256,secp256r1,ecdsa_secp521r1_sha512" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-SHA256 ( id=4868 )" \
          -s "received signature algorithm: 0x603" \
          -s "got named group: secp256r1(0017)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -2815,11 +2979,12 @@ run_test "TLS 1.3 G->m: AES_128_CCM_SHA256,secp256r1,rsa_pss_rsae_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-SHA256 ( id=4868 )" \
          -s "received signature algorithm: 0x804" \
          -s "got named group: secp256r1(0017)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_gnutls_tls1_3
@@ -2833,11 +2998,12 @@ run_test "TLS 1.3 G->m: AES_128_CCM_SHA256,secp384r1,ecdsa_secp256r1_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-SHA256 ( id=4868 )" \
          -s "received signature algorithm: 0x403" \
          -s "got named group: secp384r1(0018)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_gnutls_tls1_3
@@ -2851,11 +3017,12 @@ run_test "TLS 1.3 G->m: AES_128_CCM_SHA256,secp384r1,ecdsa_secp384r1_sha384" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-SHA256 ( id=4868 )" \
          -s "received signature algorithm: 0x503" \
          -s "got named group: secp384r1(0018)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_gnutls_tls1_3
@@ -2869,11 +3036,12 @@ run_test "TLS 1.3 G->m: AES_128_CCM_SHA256,secp384r1,ecdsa_secp521r1_sha512" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-SHA256 ( id=4868 )" \
          -s "received signature algorithm: 0x603" \
          -s "got named group: secp384r1(0018)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -2888,11 +3056,12 @@ run_test "TLS 1.3 G->m: AES_128_CCM_SHA256,secp384r1,rsa_pss_rsae_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-SHA256 ( id=4868 )" \
          -s "received signature algorithm: 0x804" \
          -s "got named group: secp384r1(0018)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_gnutls_tls1_3
@@ -2906,11 +3075,12 @@ run_test "TLS 1.3 G->m: AES_128_CCM_SHA256,secp521r1,ecdsa_secp256r1_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-SHA256 ( id=4868 )" \
          -s "received signature algorithm: 0x403" \
          -s "got named group: secp521r1(0019)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_gnutls_tls1_3
@@ -2924,11 +3094,12 @@ run_test "TLS 1.3 G->m: AES_128_CCM_SHA256,secp521r1,ecdsa_secp384r1_sha384" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-SHA256 ( id=4868 )" \
          -s "received signature algorithm: 0x503" \
          -s "got named group: secp521r1(0019)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_gnutls_tls1_3
@@ -2942,11 +3113,12 @@ run_test "TLS 1.3 G->m: AES_128_CCM_SHA256,secp521r1,ecdsa_secp521r1_sha512" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-SHA256 ( id=4868 )" \
          -s "received signature algorithm: 0x603" \
          -s "got named group: secp521r1(0019)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -2961,11 +3133,12 @@ run_test "TLS 1.3 G->m: AES_128_CCM_SHA256,secp521r1,rsa_pss_rsae_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-SHA256 ( id=4868 )" \
          -s "received signature algorithm: 0x804" \
          -s "got named group: secp521r1(0019)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_gnutls_tls1_3
@@ -2979,11 +3152,12 @@ run_test "TLS 1.3 G->m: AES_128_CCM_SHA256,x25519,ecdsa_secp256r1_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-SHA256 ( id=4868 )" \
          -s "received signature algorithm: 0x403" \
          -s "got named group: x25519(001d)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_gnutls_tls1_3
@@ -2997,11 +3171,12 @@ run_test "TLS 1.3 G->m: AES_128_CCM_SHA256,x25519,ecdsa_secp384r1_sha384" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-SHA256 ( id=4868 )" \
          -s "received signature algorithm: 0x503" \
          -s "got named group: x25519(001d)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_gnutls_tls1_3
@@ -3015,11 +3190,12 @@ run_test "TLS 1.3 G->m: AES_128_CCM_SHA256,x25519,ecdsa_secp521r1_sha512" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-SHA256 ( id=4868 )" \
          -s "received signature algorithm: 0x603" \
          -s "got named group: x25519(001d)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -3034,11 +3210,12 @@ run_test "TLS 1.3 G->m: AES_128_CCM_SHA256,x25519,rsa_pss_rsae_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-SHA256 ( id=4868 )" \
          -s "received signature algorithm: 0x804" \
          -s "got named group: x25519(001d)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_gnutls_tls1_3
@@ -3052,11 +3229,12 @@ run_test "TLS 1.3 G->m: AES_128_CCM_SHA256,x448,ecdsa_secp256r1_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-SHA256 ( id=4868 )" \
          -s "received signature algorithm: 0x403" \
          -s "got named group: x448(001e)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_gnutls_tls1_3
@@ -3070,11 +3248,12 @@ run_test "TLS 1.3 G->m: AES_128_CCM_SHA256,x448,ecdsa_secp384r1_sha384" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-SHA256 ( id=4868 )" \
          -s "received signature algorithm: 0x503" \
          -s "got named group: x448(001e)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_gnutls_tls1_3
@@ -3088,11 +3267,12 @@ run_test "TLS 1.3 G->m: AES_128_CCM_SHA256,x448,ecdsa_secp521r1_sha512" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-SHA256 ( id=4868 )" \
          -s "received signature algorithm: 0x603" \
          -s "got named group: x448(001e)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -3107,11 +3287,12 @@ run_test "TLS 1.3 G->m: AES_128_CCM_SHA256,x448,rsa_pss_rsae_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-SHA256 ( id=4868 )" \
          -s "received signature algorithm: 0x804" \
          -s "got named group: x448(001e)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_gnutls_tls1_3
@@ -3125,11 +3306,12 @@ run_test "TLS 1.3 G->m: AES_128_CCM_8_SHA256,secp256r1,ecdsa_secp256r1_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-8-SHA256 ( id=4869 )" \
          -s "received signature algorithm: 0x403" \
          -s "got named group: secp256r1(0017)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_gnutls_tls1_3
@@ -3143,11 +3325,12 @@ run_test "TLS 1.3 G->m: AES_128_CCM_8_SHA256,secp256r1,ecdsa_secp384r1_sha384" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-8-SHA256 ( id=4869 )" \
          -s "received signature algorithm: 0x503" \
          -s "got named group: secp256r1(0017)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_gnutls_tls1_3
@@ -3161,11 +3344,12 @@ run_test "TLS 1.3 G->m: AES_128_CCM_8_SHA256,secp256r1,ecdsa_secp521r1_sha512" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-8-SHA256 ( id=4869 )" \
          -s "received signature algorithm: 0x603" \
          -s "got named group: secp256r1(0017)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -3180,11 +3364,12 @@ run_test "TLS 1.3 G->m: AES_128_CCM_8_SHA256,secp256r1,rsa_pss_rsae_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-8-SHA256 ( id=4869 )" \
          -s "received signature algorithm: 0x804" \
          -s "got named group: secp256r1(0017)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_gnutls_tls1_3
@@ -3198,11 +3383,12 @@ run_test "TLS 1.3 G->m: AES_128_CCM_8_SHA256,secp384r1,ecdsa_secp256r1_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-8-SHA256 ( id=4869 )" \
          -s "received signature algorithm: 0x403" \
          -s "got named group: secp384r1(0018)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_gnutls_tls1_3
@@ -3216,11 +3402,12 @@ run_test "TLS 1.3 G->m: AES_128_CCM_8_SHA256,secp384r1,ecdsa_secp384r1_sha384" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-8-SHA256 ( id=4869 )" \
          -s "received signature algorithm: 0x503" \
          -s "got named group: secp384r1(0018)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_gnutls_tls1_3
@@ -3234,11 +3421,12 @@ run_test "TLS 1.3 G->m: AES_128_CCM_8_SHA256,secp384r1,ecdsa_secp521r1_sha512" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-8-SHA256 ( id=4869 )" \
          -s "received signature algorithm: 0x603" \
          -s "got named group: secp384r1(0018)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -3253,11 +3441,12 @@ run_test "TLS 1.3 G->m: AES_128_CCM_8_SHA256,secp384r1,rsa_pss_rsae_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-8-SHA256 ( id=4869 )" \
          -s "received signature algorithm: 0x804" \
          -s "got named group: secp384r1(0018)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_gnutls_tls1_3
@@ -3271,11 +3460,12 @@ run_test "TLS 1.3 G->m: AES_128_CCM_8_SHA256,secp521r1,ecdsa_secp256r1_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-8-SHA256 ( id=4869 )" \
          -s "received signature algorithm: 0x403" \
          -s "got named group: secp521r1(0019)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_gnutls_tls1_3
@@ -3289,11 +3479,12 @@ run_test "TLS 1.3 G->m: AES_128_CCM_8_SHA256,secp521r1,ecdsa_secp384r1_sha384" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-8-SHA256 ( id=4869 )" \
          -s "received signature algorithm: 0x503" \
          -s "got named group: secp521r1(0019)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_gnutls_tls1_3
@@ -3307,11 +3498,12 @@ run_test "TLS 1.3 G->m: AES_128_CCM_8_SHA256,secp521r1,ecdsa_secp521r1_sha512" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-8-SHA256 ( id=4869 )" \
          -s "received signature algorithm: 0x603" \
          -s "got named group: secp521r1(0019)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -3326,11 +3518,12 @@ run_test "TLS 1.3 G->m: AES_128_CCM_8_SHA256,secp521r1,rsa_pss_rsae_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-8-SHA256 ( id=4869 )" \
          -s "received signature algorithm: 0x804" \
          -s "got named group: secp521r1(0019)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_gnutls_tls1_3
@@ -3344,11 +3537,12 @@ run_test "TLS 1.3 G->m: AES_128_CCM_8_SHA256,x25519,ecdsa_secp256r1_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-8-SHA256 ( id=4869 )" \
          -s "received signature algorithm: 0x403" \
          -s "got named group: x25519(001d)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_gnutls_tls1_3
@@ -3362,11 +3556,12 @@ run_test "TLS 1.3 G->m: AES_128_CCM_8_SHA256,x25519,ecdsa_secp384r1_sha384" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-8-SHA256 ( id=4869 )" \
          -s "received signature algorithm: 0x503" \
          -s "got named group: x25519(001d)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_gnutls_tls1_3
@@ -3380,11 +3575,12 @@ run_test "TLS 1.3 G->m: AES_128_CCM_8_SHA256,x25519,ecdsa_secp521r1_sha512" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-8-SHA256 ( id=4869 )" \
          -s "received signature algorithm: 0x603" \
          -s "got named group: x25519(001d)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -3399,11 +3595,12 @@ run_test "TLS 1.3 G->m: AES_128_CCM_8_SHA256,x25519,rsa_pss_rsae_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-8-SHA256 ( id=4869 )" \
          -s "received signature algorithm: 0x804" \
          -s "got named group: x25519(001d)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_gnutls_tls1_3
@@ -3417,11 +3614,12 @@ run_test "TLS 1.3 G->m: AES_128_CCM_8_SHA256,x448,ecdsa_secp256r1_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-8-SHA256 ( id=4869 )" \
          -s "received signature algorithm: 0x403" \
          -s "got named group: x448(001e)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_gnutls_tls1_3
@@ -3435,11 +3633,12 @@ run_test "TLS 1.3 G->m: AES_128_CCM_8_SHA256,x448,ecdsa_secp384r1_sha384" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-8-SHA256 ( id=4869 )" \
          -s "received signature algorithm: 0x503" \
          -s "got named group: x448(001e)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_gnutls_tls1_3
@@ -3453,11 +3652,12 @@ run_test "TLS 1.3 G->m: AES_128_CCM_8_SHA256,x448,ecdsa_secp521r1_sha512" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-8-SHA256 ( id=4869 )" \
          -s "received signature algorithm: 0x603" \
          -s "got named group: x448(001e)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -3472,12 +3672,13 @@ run_test "TLS 1.3 G->m: AES_128_CCM_8_SHA256,x448,rsa_pss_rsae_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-8-SHA256 ( id=4869 )" \
          -s "received signature algorithm: 0x804" \
          -s "got named group: x448(001e)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -C "received HelloRetryRequest message"
 
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->O: AES_128_GCM_SHA256,secp256r1,ecdsa_secp256r1_sha256" \
@@ -3495,6 +3696,7 @@ run_test "TLS 1.3 m->O: AES_128_GCM_SHA256,secp256r1,ecdsa_secp256r1_sha256" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->O: AES_128_GCM_SHA256,secp256r1,ecdsa_secp384r1_sha384" \
@@ -3512,6 +3714,7 @@ run_test "TLS 1.3 m->O: AES_128_GCM_SHA256,secp256r1,ecdsa_secp384r1_sha384" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->O: AES_128_GCM_SHA256,secp256r1,ecdsa_secp521r1_sha512" \
@@ -3529,6 +3732,7 @@ run_test "TLS 1.3 m->O: AES_128_GCM_SHA256,secp256r1,ecdsa_secp521r1_sha512" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -3547,6 +3751,7 @@ run_test "TLS 1.3 m->O: AES_128_GCM_SHA256,secp256r1,rsa_pss_rsae_sha256" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->O: AES_128_GCM_SHA256,secp384r1,ecdsa_secp256r1_sha256" \
@@ -3564,6 +3769,7 @@ run_test "TLS 1.3 m->O: AES_128_GCM_SHA256,secp384r1,ecdsa_secp256r1_sha256" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->O: AES_128_GCM_SHA256,secp384r1,ecdsa_secp384r1_sha384" \
@@ -3581,6 +3787,7 @@ run_test "TLS 1.3 m->O: AES_128_GCM_SHA256,secp384r1,ecdsa_secp384r1_sha384" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->O: AES_128_GCM_SHA256,secp384r1,ecdsa_secp521r1_sha512" \
@@ -3598,6 +3805,7 @@ run_test "TLS 1.3 m->O: AES_128_GCM_SHA256,secp384r1,ecdsa_secp521r1_sha512" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -3616,6 +3824,7 @@ run_test "TLS 1.3 m->O: AES_128_GCM_SHA256,secp384r1,rsa_pss_rsae_sha256" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->O: AES_128_GCM_SHA256,secp521r1,ecdsa_secp256r1_sha256" \
@@ -3633,6 +3842,7 @@ run_test "TLS 1.3 m->O: AES_128_GCM_SHA256,secp521r1,ecdsa_secp256r1_sha256" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->O: AES_128_GCM_SHA256,secp521r1,ecdsa_secp384r1_sha384" \
@@ -3650,6 +3860,7 @@ run_test "TLS 1.3 m->O: AES_128_GCM_SHA256,secp521r1,ecdsa_secp384r1_sha384" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->O: AES_128_GCM_SHA256,secp521r1,ecdsa_secp521r1_sha512" \
@@ -3667,6 +3878,7 @@ run_test "TLS 1.3 m->O: AES_128_GCM_SHA256,secp521r1,ecdsa_secp521r1_sha512" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -3685,6 +3897,7 @@ run_test "TLS 1.3 m->O: AES_128_GCM_SHA256,secp521r1,rsa_pss_rsae_sha256" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->O: AES_128_GCM_SHA256,x25519,ecdsa_secp256r1_sha256" \
@@ -3702,6 +3915,7 @@ run_test "TLS 1.3 m->O: AES_128_GCM_SHA256,x25519,ecdsa_secp256r1_sha256" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->O: AES_128_GCM_SHA256,x25519,ecdsa_secp384r1_sha384" \
@@ -3719,6 +3933,7 @@ run_test "TLS 1.3 m->O: AES_128_GCM_SHA256,x25519,ecdsa_secp384r1_sha384" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->O: AES_128_GCM_SHA256,x25519,ecdsa_secp521r1_sha512" \
@@ -3736,6 +3951,7 @@ run_test "TLS 1.3 m->O: AES_128_GCM_SHA256,x25519,ecdsa_secp521r1_sha512" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -3754,6 +3970,7 @@ run_test "TLS 1.3 m->O: AES_128_GCM_SHA256,x25519,rsa_pss_rsae_sha256" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->O: AES_128_GCM_SHA256,x448,ecdsa_secp256r1_sha256" \
@@ -3771,6 +3988,7 @@ run_test "TLS 1.3 m->O: AES_128_GCM_SHA256,x448,ecdsa_secp256r1_sha256" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->O: AES_128_GCM_SHA256,x448,ecdsa_secp384r1_sha384" \
@@ -3788,6 +4006,7 @@ run_test "TLS 1.3 m->O: AES_128_GCM_SHA256,x448,ecdsa_secp384r1_sha384" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->O: AES_128_GCM_SHA256,x448,ecdsa_secp521r1_sha512" \
@@ -3805,6 +4024,7 @@ run_test "TLS 1.3 m->O: AES_128_GCM_SHA256,x448,ecdsa_secp521r1_sha512" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -3823,6 +4043,7 @@ run_test "TLS 1.3 m->O: AES_128_GCM_SHA256,x448,rsa_pss_rsae_sha256" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->O: AES_256_GCM_SHA384,secp256r1,ecdsa_secp256r1_sha256" \
@@ -3840,6 +4061,7 @@ run_test "TLS 1.3 m->O: AES_256_GCM_SHA384,secp256r1,ecdsa_secp256r1_sha256" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->O: AES_256_GCM_SHA384,secp256r1,ecdsa_secp384r1_sha384" \
@@ -3857,6 +4079,7 @@ run_test "TLS 1.3 m->O: AES_256_GCM_SHA384,secp256r1,ecdsa_secp384r1_sha384" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->O: AES_256_GCM_SHA384,secp256r1,ecdsa_secp521r1_sha512" \
@@ -3874,6 +4097,7 @@ run_test "TLS 1.3 m->O: AES_256_GCM_SHA384,secp256r1,ecdsa_secp521r1_sha512" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -3892,6 +4116,7 @@ run_test "TLS 1.3 m->O: AES_256_GCM_SHA384,secp256r1,rsa_pss_rsae_sha256" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->O: AES_256_GCM_SHA384,secp384r1,ecdsa_secp256r1_sha256" \
@@ -3909,6 +4134,7 @@ run_test "TLS 1.3 m->O: AES_256_GCM_SHA384,secp384r1,ecdsa_secp256r1_sha256" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->O: AES_256_GCM_SHA384,secp384r1,ecdsa_secp384r1_sha384" \
@@ -3926,6 +4152,7 @@ run_test "TLS 1.3 m->O: AES_256_GCM_SHA384,secp384r1,ecdsa_secp384r1_sha384" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->O: AES_256_GCM_SHA384,secp384r1,ecdsa_secp521r1_sha512" \
@@ -3943,6 +4170,7 @@ run_test "TLS 1.3 m->O: AES_256_GCM_SHA384,secp384r1,ecdsa_secp521r1_sha512" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -3961,6 +4189,7 @@ run_test "TLS 1.3 m->O: AES_256_GCM_SHA384,secp384r1,rsa_pss_rsae_sha256" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->O: AES_256_GCM_SHA384,secp521r1,ecdsa_secp256r1_sha256" \
@@ -3978,6 +4207,7 @@ run_test "TLS 1.3 m->O: AES_256_GCM_SHA384,secp521r1,ecdsa_secp256r1_sha256" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->O: AES_256_GCM_SHA384,secp521r1,ecdsa_secp384r1_sha384" \
@@ -3995,6 +4225,7 @@ run_test "TLS 1.3 m->O: AES_256_GCM_SHA384,secp521r1,ecdsa_secp384r1_sha384" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->O: AES_256_GCM_SHA384,secp521r1,ecdsa_secp521r1_sha512" \
@@ -4012,6 +4243,7 @@ run_test "TLS 1.3 m->O: AES_256_GCM_SHA384,secp521r1,ecdsa_secp521r1_sha512" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -4030,6 +4262,7 @@ run_test "TLS 1.3 m->O: AES_256_GCM_SHA384,secp521r1,rsa_pss_rsae_sha256" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->O: AES_256_GCM_SHA384,x25519,ecdsa_secp256r1_sha256" \
@@ -4047,6 +4280,7 @@ run_test "TLS 1.3 m->O: AES_256_GCM_SHA384,x25519,ecdsa_secp256r1_sha256" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->O: AES_256_GCM_SHA384,x25519,ecdsa_secp384r1_sha384" \
@@ -4064,6 +4298,7 @@ run_test "TLS 1.3 m->O: AES_256_GCM_SHA384,x25519,ecdsa_secp384r1_sha384" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->O: AES_256_GCM_SHA384,x25519,ecdsa_secp521r1_sha512" \
@@ -4081,6 +4316,7 @@ run_test "TLS 1.3 m->O: AES_256_GCM_SHA384,x25519,ecdsa_secp521r1_sha512" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -4099,6 +4335,7 @@ run_test "TLS 1.3 m->O: AES_256_GCM_SHA384,x25519,rsa_pss_rsae_sha256" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->O: AES_256_GCM_SHA384,x448,ecdsa_secp256r1_sha256" \
@@ -4116,6 +4353,7 @@ run_test "TLS 1.3 m->O: AES_256_GCM_SHA384,x448,ecdsa_secp256r1_sha256" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->O: AES_256_GCM_SHA384,x448,ecdsa_secp384r1_sha384" \
@@ -4133,6 +4371,7 @@ run_test "TLS 1.3 m->O: AES_256_GCM_SHA384,x448,ecdsa_secp384r1_sha384" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->O: AES_256_GCM_SHA384,x448,ecdsa_secp521r1_sha512" \
@@ -4150,6 +4389,7 @@ run_test "TLS 1.3 m->O: AES_256_GCM_SHA384,x448,ecdsa_secp521r1_sha512" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -4168,6 +4408,7 @@ run_test "TLS 1.3 m->O: AES_256_GCM_SHA384,x448,rsa_pss_rsae_sha256" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->O: CHACHA20_POLY1305_SHA256,secp256r1,ecdsa_secp256r1_sha256" \
@@ -4185,6 +4426,7 @@ run_test "TLS 1.3 m->O: CHACHA20_POLY1305_SHA256,secp256r1,ecdsa_secp256r1_sha25
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->O: CHACHA20_POLY1305_SHA256,secp256r1,ecdsa_secp384r1_sha384" \
@@ -4202,6 +4444,7 @@ run_test "TLS 1.3 m->O: CHACHA20_POLY1305_SHA256,secp256r1,ecdsa_secp384r1_sha38
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->O: CHACHA20_POLY1305_SHA256,secp256r1,ecdsa_secp521r1_sha512" \
@@ -4219,6 +4462,7 @@ run_test "TLS 1.3 m->O: CHACHA20_POLY1305_SHA256,secp256r1,ecdsa_secp521r1_sha51
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -4237,6 +4481,7 @@ run_test "TLS 1.3 m->O: CHACHA20_POLY1305_SHA256,secp256r1,rsa_pss_rsae_sha256" 
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->O: CHACHA20_POLY1305_SHA256,secp384r1,ecdsa_secp256r1_sha256" \
@@ -4254,6 +4499,7 @@ run_test "TLS 1.3 m->O: CHACHA20_POLY1305_SHA256,secp384r1,ecdsa_secp256r1_sha25
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->O: CHACHA20_POLY1305_SHA256,secp384r1,ecdsa_secp384r1_sha384" \
@@ -4271,6 +4517,7 @@ run_test "TLS 1.3 m->O: CHACHA20_POLY1305_SHA256,secp384r1,ecdsa_secp384r1_sha38
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->O: CHACHA20_POLY1305_SHA256,secp384r1,ecdsa_secp521r1_sha512" \
@@ -4288,6 +4535,7 @@ run_test "TLS 1.3 m->O: CHACHA20_POLY1305_SHA256,secp384r1,ecdsa_secp521r1_sha51
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -4306,6 +4554,7 @@ run_test "TLS 1.3 m->O: CHACHA20_POLY1305_SHA256,secp384r1,rsa_pss_rsae_sha256" 
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->O: CHACHA20_POLY1305_SHA256,secp521r1,ecdsa_secp256r1_sha256" \
@@ -4323,6 +4572,7 @@ run_test "TLS 1.3 m->O: CHACHA20_POLY1305_SHA256,secp521r1,ecdsa_secp256r1_sha25
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->O: CHACHA20_POLY1305_SHA256,secp521r1,ecdsa_secp384r1_sha384" \
@@ -4340,6 +4590,7 @@ run_test "TLS 1.3 m->O: CHACHA20_POLY1305_SHA256,secp521r1,ecdsa_secp384r1_sha38
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->O: CHACHA20_POLY1305_SHA256,secp521r1,ecdsa_secp521r1_sha512" \
@@ -4357,6 +4608,7 @@ run_test "TLS 1.3 m->O: CHACHA20_POLY1305_SHA256,secp521r1,ecdsa_secp521r1_sha51
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -4375,6 +4627,7 @@ run_test "TLS 1.3 m->O: CHACHA20_POLY1305_SHA256,secp521r1,rsa_pss_rsae_sha256" 
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->O: CHACHA20_POLY1305_SHA256,x25519,ecdsa_secp256r1_sha256" \
@@ -4392,6 +4645,7 @@ run_test "TLS 1.3 m->O: CHACHA20_POLY1305_SHA256,x25519,ecdsa_secp256r1_sha256" 
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->O: CHACHA20_POLY1305_SHA256,x25519,ecdsa_secp384r1_sha384" \
@@ -4409,6 +4663,7 @@ run_test "TLS 1.3 m->O: CHACHA20_POLY1305_SHA256,x25519,ecdsa_secp384r1_sha384" 
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->O: CHACHA20_POLY1305_SHA256,x25519,ecdsa_secp521r1_sha512" \
@@ -4426,6 +4681,7 @@ run_test "TLS 1.3 m->O: CHACHA20_POLY1305_SHA256,x25519,ecdsa_secp521r1_sha512" 
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -4444,6 +4700,7 @@ run_test "TLS 1.3 m->O: CHACHA20_POLY1305_SHA256,x25519,rsa_pss_rsae_sha256" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->O: CHACHA20_POLY1305_SHA256,x448,ecdsa_secp256r1_sha256" \
@@ -4461,6 +4718,7 @@ run_test "TLS 1.3 m->O: CHACHA20_POLY1305_SHA256,x448,ecdsa_secp256r1_sha256" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->O: CHACHA20_POLY1305_SHA256,x448,ecdsa_secp384r1_sha384" \
@@ -4478,6 +4736,7 @@ run_test "TLS 1.3 m->O: CHACHA20_POLY1305_SHA256,x448,ecdsa_secp384r1_sha384" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->O: CHACHA20_POLY1305_SHA256,x448,ecdsa_secp521r1_sha512" \
@@ -4495,6 +4754,7 @@ run_test "TLS 1.3 m->O: CHACHA20_POLY1305_SHA256,x448,ecdsa_secp521r1_sha512" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -4513,6 +4773,7 @@ run_test "TLS 1.3 m->O: CHACHA20_POLY1305_SHA256,x448,rsa_pss_rsae_sha256" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->O: AES_128_CCM_SHA256,secp256r1,ecdsa_secp256r1_sha256" \
@@ -4530,6 +4791,7 @@ run_test "TLS 1.3 m->O: AES_128_CCM_SHA256,secp256r1,ecdsa_secp256r1_sha256" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->O: AES_128_CCM_SHA256,secp256r1,ecdsa_secp384r1_sha384" \
@@ -4547,6 +4809,7 @@ run_test "TLS 1.3 m->O: AES_128_CCM_SHA256,secp256r1,ecdsa_secp384r1_sha384" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->O: AES_128_CCM_SHA256,secp256r1,ecdsa_secp521r1_sha512" \
@@ -4564,6 +4827,7 @@ run_test "TLS 1.3 m->O: AES_128_CCM_SHA256,secp256r1,ecdsa_secp521r1_sha512" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -4582,6 +4846,7 @@ run_test "TLS 1.3 m->O: AES_128_CCM_SHA256,secp256r1,rsa_pss_rsae_sha256" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->O: AES_128_CCM_SHA256,secp384r1,ecdsa_secp256r1_sha256" \
@@ -4599,6 +4864,7 @@ run_test "TLS 1.3 m->O: AES_128_CCM_SHA256,secp384r1,ecdsa_secp256r1_sha256" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->O: AES_128_CCM_SHA256,secp384r1,ecdsa_secp384r1_sha384" \
@@ -4616,6 +4882,7 @@ run_test "TLS 1.3 m->O: AES_128_CCM_SHA256,secp384r1,ecdsa_secp384r1_sha384" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->O: AES_128_CCM_SHA256,secp384r1,ecdsa_secp521r1_sha512" \
@@ -4633,6 +4900,7 @@ run_test "TLS 1.3 m->O: AES_128_CCM_SHA256,secp384r1,ecdsa_secp521r1_sha512" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -4651,6 +4919,7 @@ run_test "TLS 1.3 m->O: AES_128_CCM_SHA256,secp384r1,rsa_pss_rsae_sha256" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->O: AES_128_CCM_SHA256,secp521r1,ecdsa_secp256r1_sha256" \
@@ -4668,6 +4937,7 @@ run_test "TLS 1.3 m->O: AES_128_CCM_SHA256,secp521r1,ecdsa_secp256r1_sha256" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->O: AES_128_CCM_SHA256,secp521r1,ecdsa_secp384r1_sha384" \
@@ -4685,6 +4955,7 @@ run_test "TLS 1.3 m->O: AES_128_CCM_SHA256,secp521r1,ecdsa_secp384r1_sha384" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->O: AES_128_CCM_SHA256,secp521r1,ecdsa_secp521r1_sha512" \
@@ -4702,6 +4973,7 @@ run_test "TLS 1.3 m->O: AES_128_CCM_SHA256,secp521r1,ecdsa_secp521r1_sha512" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -4720,6 +4992,7 @@ run_test "TLS 1.3 m->O: AES_128_CCM_SHA256,secp521r1,rsa_pss_rsae_sha256" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->O: AES_128_CCM_SHA256,x25519,ecdsa_secp256r1_sha256" \
@@ -4737,6 +5010,7 @@ run_test "TLS 1.3 m->O: AES_128_CCM_SHA256,x25519,ecdsa_secp256r1_sha256" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->O: AES_128_CCM_SHA256,x25519,ecdsa_secp384r1_sha384" \
@@ -4754,6 +5028,7 @@ run_test "TLS 1.3 m->O: AES_128_CCM_SHA256,x25519,ecdsa_secp384r1_sha384" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->O: AES_128_CCM_SHA256,x25519,ecdsa_secp521r1_sha512" \
@@ -4771,6 +5046,7 @@ run_test "TLS 1.3 m->O: AES_128_CCM_SHA256,x25519,ecdsa_secp521r1_sha512" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -4789,6 +5065,7 @@ run_test "TLS 1.3 m->O: AES_128_CCM_SHA256,x25519,rsa_pss_rsae_sha256" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->O: AES_128_CCM_SHA256,x448,ecdsa_secp256r1_sha256" \
@@ -4806,6 +5083,7 @@ run_test "TLS 1.3 m->O: AES_128_CCM_SHA256,x448,ecdsa_secp256r1_sha256" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->O: AES_128_CCM_SHA256,x448,ecdsa_secp384r1_sha384" \
@@ -4823,6 +5101,7 @@ run_test "TLS 1.3 m->O: AES_128_CCM_SHA256,x448,ecdsa_secp384r1_sha384" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->O: AES_128_CCM_SHA256,x448,ecdsa_secp521r1_sha512" \
@@ -4840,6 +5119,7 @@ run_test "TLS 1.3 m->O: AES_128_CCM_SHA256,x448,ecdsa_secp521r1_sha512" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -4858,6 +5138,7 @@ run_test "TLS 1.3 m->O: AES_128_CCM_SHA256,x448,rsa_pss_rsae_sha256" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->O: AES_128_CCM_8_SHA256,secp256r1,ecdsa_secp256r1_sha256" \
@@ -4875,6 +5156,7 @@ run_test "TLS 1.3 m->O: AES_128_CCM_8_SHA256,secp256r1,ecdsa_secp256r1_sha256" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->O: AES_128_CCM_8_SHA256,secp256r1,ecdsa_secp384r1_sha384" \
@@ -4892,6 +5174,7 @@ run_test "TLS 1.3 m->O: AES_128_CCM_8_SHA256,secp256r1,ecdsa_secp384r1_sha384" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->O: AES_128_CCM_8_SHA256,secp256r1,ecdsa_secp521r1_sha512" \
@@ -4909,6 +5192,7 @@ run_test "TLS 1.3 m->O: AES_128_CCM_8_SHA256,secp256r1,ecdsa_secp521r1_sha512" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -4927,6 +5211,7 @@ run_test "TLS 1.3 m->O: AES_128_CCM_8_SHA256,secp256r1,rsa_pss_rsae_sha256" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->O: AES_128_CCM_8_SHA256,secp384r1,ecdsa_secp256r1_sha256" \
@@ -4944,6 +5229,7 @@ run_test "TLS 1.3 m->O: AES_128_CCM_8_SHA256,secp384r1,ecdsa_secp256r1_sha256" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->O: AES_128_CCM_8_SHA256,secp384r1,ecdsa_secp384r1_sha384" \
@@ -4961,6 +5247,7 @@ run_test "TLS 1.3 m->O: AES_128_CCM_8_SHA256,secp384r1,ecdsa_secp384r1_sha384" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->O: AES_128_CCM_8_SHA256,secp384r1,ecdsa_secp521r1_sha512" \
@@ -4978,6 +5265,7 @@ run_test "TLS 1.3 m->O: AES_128_CCM_8_SHA256,secp384r1,ecdsa_secp521r1_sha512" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -4996,6 +5284,7 @@ run_test "TLS 1.3 m->O: AES_128_CCM_8_SHA256,secp384r1,rsa_pss_rsae_sha256" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->O: AES_128_CCM_8_SHA256,secp521r1,ecdsa_secp256r1_sha256" \
@@ -5013,6 +5302,7 @@ run_test "TLS 1.3 m->O: AES_128_CCM_8_SHA256,secp521r1,ecdsa_secp256r1_sha256" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->O: AES_128_CCM_8_SHA256,secp521r1,ecdsa_secp384r1_sha384" \
@@ -5030,6 +5320,7 @@ run_test "TLS 1.3 m->O: AES_128_CCM_8_SHA256,secp521r1,ecdsa_secp384r1_sha384" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->O: AES_128_CCM_8_SHA256,secp521r1,ecdsa_secp521r1_sha512" \
@@ -5047,6 +5338,7 @@ run_test "TLS 1.3 m->O: AES_128_CCM_8_SHA256,secp521r1,ecdsa_secp521r1_sha512" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -5065,6 +5357,7 @@ run_test "TLS 1.3 m->O: AES_128_CCM_8_SHA256,secp521r1,rsa_pss_rsae_sha256" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->O: AES_128_CCM_8_SHA256,x25519,ecdsa_secp256r1_sha256" \
@@ -5082,6 +5375,7 @@ run_test "TLS 1.3 m->O: AES_128_CCM_8_SHA256,x25519,ecdsa_secp256r1_sha256" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->O: AES_128_CCM_8_SHA256,x25519,ecdsa_secp384r1_sha384" \
@@ -5099,6 +5393,7 @@ run_test "TLS 1.3 m->O: AES_128_CCM_8_SHA256,x25519,ecdsa_secp384r1_sha384" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->O: AES_128_CCM_8_SHA256,x25519,ecdsa_secp521r1_sha512" \
@@ -5116,6 +5411,7 @@ run_test "TLS 1.3 m->O: AES_128_CCM_8_SHA256,x25519,ecdsa_secp521r1_sha512" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -5134,6 +5430,7 @@ run_test "TLS 1.3 m->O: AES_128_CCM_8_SHA256,x25519,rsa_pss_rsae_sha256" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->O: AES_128_CCM_8_SHA256,x448,ecdsa_secp256r1_sha256" \
@@ -5151,6 +5448,7 @@ run_test "TLS 1.3 m->O: AES_128_CCM_8_SHA256,x448,ecdsa_secp256r1_sha256" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->O: AES_128_CCM_8_SHA256,x448,ecdsa_secp384r1_sha384" \
@@ -5168,6 +5466,7 @@ run_test "TLS 1.3 m->O: AES_128_CCM_8_SHA256,x448,ecdsa_secp384r1_sha384" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->O: AES_128_CCM_8_SHA256,x448,ecdsa_secp521r1_sha512" \
@@ -5185,6 +5484,7 @@ run_test "TLS 1.3 m->O: AES_128_CCM_8_SHA256,x448,ecdsa_secp521r1_sha512" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -5205,6 +5505,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->G: AES_128_GCM_SHA256,secp256r1,ecdsa_secp256r1_sha256" \
@@ -5224,6 +5525,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->G: AES_128_GCM_SHA256,secp256r1,ecdsa_secp384r1_sha384" \
@@ -5243,6 +5545,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->G: AES_128_GCM_SHA256,secp256r1,ecdsa_secp521r1_sha512" \
@@ -5262,6 +5565,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -5282,6 +5586,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->G: AES_128_GCM_SHA256,secp384r1,ecdsa_secp256r1_sha256" \
@@ -5301,6 +5606,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->G: AES_128_GCM_SHA256,secp384r1,ecdsa_secp384r1_sha384" \
@@ -5320,6 +5626,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->G: AES_128_GCM_SHA256,secp384r1,ecdsa_secp521r1_sha512" \
@@ -5339,6 +5646,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -5359,6 +5667,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->G: AES_128_GCM_SHA256,secp521r1,ecdsa_secp256r1_sha256" \
@@ -5378,6 +5687,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->G: AES_128_GCM_SHA256,secp521r1,ecdsa_secp384r1_sha384" \
@@ -5397,6 +5707,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->G: AES_128_GCM_SHA256,secp521r1,ecdsa_secp521r1_sha512" \
@@ -5416,6 +5727,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -5436,6 +5748,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->G: AES_128_GCM_SHA256,x25519,ecdsa_secp256r1_sha256" \
@@ -5455,6 +5768,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->G: AES_128_GCM_SHA256,x25519,ecdsa_secp384r1_sha384" \
@@ -5474,6 +5788,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->G: AES_128_GCM_SHA256,x25519,ecdsa_secp521r1_sha512" \
@@ -5493,6 +5808,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -5513,6 +5829,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->G: AES_128_GCM_SHA256,x448,ecdsa_secp256r1_sha256" \
@@ -5532,6 +5849,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->G: AES_128_GCM_SHA256,x448,ecdsa_secp384r1_sha384" \
@@ -5551,6 +5869,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->G: AES_128_GCM_SHA256,x448,ecdsa_secp521r1_sha512" \
@@ -5570,6 +5889,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -5590,6 +5910,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->G: AES_256_GCM_SHA384,secp256r1,ecdsa_secp256r1_sha256" \
@@ -5609,6 +5930,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->G: AES_256_GCM_SHA384,secp256r1,ecdsa_secp384r1_sha384" \
@@ -5628,6 +5950,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->G: AES_256_GCM_SHA384,secp256r1,ecdsa_secp521r1_sha512" \
@@ -5647,6 +5970,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -5667,6 +5991,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->G: AES_256_GCM_SHA384,secp384r1,ecdsa_secp256r1_sha256" \
@@ -5686,6 +6011,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->G: AES_256_GCM_SHA384,secp384r1,ecdsa_secp384r1_sha384" \
@@ -5705,6 +6031,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->G: AES_256_GCM_SHA384,secp384r1,ecdsa_secp521r1_sha512" \
@@ -5724,6 +6051,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -5744,6 +6072,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->G: AES_256_GCM_SHA384,secp521r1,ecdsa_secp256r1_sha256" \
@@ -5763,6 +6092,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->G: AES_256_GCM_SHA384,secp521r1,ecdsa_secp384r1_sha384" \
@@ -5782,6 +6112,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->G: AES_256_GCM_SHA384,secp521r1,ecdsa_secp521r1_sha512" \
@@ -5801,6 +6132,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -5821,6 +6153,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->G: AES_256_GCM_SHA384,x25519,ecdsa_secp256r1_sha256" \
@@ -5840,6 +6173,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->G: AES_256_GCM_SHA384,x25519,ecdsa_secp384r1_sha384" \
@@ -5859,6 +6193,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->G: AES_256_GCM_SHA384,x25519,ecdsa_secp521r1_sha512" \
@@ -5878,6 +6213,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -5898,6 +6234,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->G: AES_256_GCM_SHA384,x448,ecdsa_secp256r1_sha256" \
@@ -5917,6 +6254,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->G: AES_256_GCM_SHA384,x448,ecdsa_secp384r1_sha384" \
@@ -5936,6 +6274,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->G: AES_256_GCM_SHA384,x448,ecdsa_secp521r1_sha512" \
@@ -5955,6 +6294,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -5975,6 +6315,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->G: CHACHA20_POLY1305_SHA256,secp256r1,ecdsa_secp256r1_sha256" \
@@ -5994,6 +6335,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->G: CHACHA20_POLY1305_SHA256,secp256r1,ecdsa_secp384r1_sha384" \
@@ -6013,6 +6355,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->G: CHACHA20_POLY1305_SHA256,secp256r1,ecdsa_secp521r1_sha512" \
@@ -6032,6 +6375,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -6052,6 +6396,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->G: CHACHA20_POLY1305_SHA256,secp384r1,ecdsa_secp256r1_sha256" \
@@ -6071,6 +6416,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->G: CHACHA20_POLY1305_SHA256,secp384r1,ecdsa_secp384r1_sha384" \
@@ -6090,6 +6436,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->G: CHACHA20_POLY1305_SHA256,secp384r1,ecdsa_secp521r1_sha512" \
@@ -6109,6 +6456,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -6129,6 +6477,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->G: CHACHA20_POLY1305_SHA256,secp521r1,ecdsa_secp256r1_sha256" \
@@ -6148,6 +6497,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->G: CHACHA20_POLY1305_SHA256,secp521r1,ecdsa_secp384r1_sha384" \
@@ -6167,6 +6517,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->G: CHACHA20_POLY1305_SHA256,secp521r1,ecdsa_secp521r1_sha512" \
@@ -6186,6 +6537,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -6206,6 +6558,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->G: CHACHA20_POLY1305_SHA256,x25519,ecdsa_secp256r1_sha256" \
@@ -6225,6 +6578,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->G: CHACHA20_POLY1305_SHA256,x25519,ecdsa_secp384r1_sha384" \
@@ -6244,6 +6598,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->G: CHACHA20_POLY1305_SHA256,x25519,ecdsa_secp521r1_sha512" \
@@ -6263,6 +6618,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -6283,6 +6639,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->G: CHACHA20_POLY1305_SHA256,x448,ecdsa_secp256r1_sha256" \
@@ -6302,6 +6659,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->G: CHACHA20_POLY1305_SHA256,x448,ecdsa_secp384r1_sha384" \
@@ -6321,6 +6679,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->G: CHACHA20_POLY1305_SHA256,x448,ecdsa_secp521r1_sha512" \
@@ -6340,6 +6699,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -6360,6 +6720,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->G: AES_128_CCM_SHA256,secp256r1,ecdsa_secp256r1_sha256" \
@@ -6379,6 +6740,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->G: AES_128_CCM_SHA256,secp256r1,ecdsa_secp384r1_sha384" \
@@ -6398,6 +6760,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->G: AES_128_CCM_SHA256,secp256r1,ecdsa_secp521r1_sha512" \
@@ -6417,6 +6780,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -6437,6 +6801,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->G: AES_128_CCM_SHA256,secp384r1,ecdsa_secp256r1_sha256" \
@@ -6456,6 +6821,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->G: AES_128_CCM_SHA256,secp384r1,ecdsa_secp384r1_sha384" \
@@ -6475,6 +6841,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->G: AES_128_CCM_SHA256,secp384r1,ecdsa_secp521r1_sha512" \
@@ -6494,6 +6861,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -6514,6 +6882,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->G: AES_128_CCM_SHA256,secp521r1,ecdsa_secp256r1_sha256" \
@@ -6533,6 +6902,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->G: AES_128_CCM_SHA256,secp521r1,ecdsa_secp384r1_sha384" \
@@ -6552,6 +6922,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->G: AES_128_CCM_SHA256,secp521r1,ecdsa_secp521r1_sha512" \
@@ -6571,6 +6942,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -6591,6 +6963,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->G: AES_128_CCM_SHA256,x25519,ecdsa_secp256r1_sha256" \
@@ -6610,6 +6983,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->G: AES_128_CCM_SHA256,x25519,ecdsa_secp384r1_sha384" \
@@ -6629,6 +7003,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->G: AES_128_CCM_SHA256,x25519,ecdsa_secp521r1_sha512" \
@@ -6648,6 +7023,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -6668,6 +7044,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->G: AES_128_CCM_SHA256,x448,ecdsa_secp256r1_sha256" \
@@ -6687,6 +7064,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->G: AES_128_CCM_SHA256,x448,ecdsa_secp384r1_sha384" \
@@ -6706,6 +7084,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->G: AES_128_CCM_SHA256,x448,ecdsa_secp521r1_sha512" \
@@ -6725,6 +7104,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -6745,6 +7125,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->G: AES_128_CCM_8_SHA256,secp256r1,ecdsa_secp256r1_sha256" \
@@ -6764,6 +7145,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->G: AES_128_CCM_8_SHA256,secp256r1,ecdsa_secp384r1_sha384" \
@@ -6783,6 +7165,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->G: AES_128_CCM_8_SHA256,secp256r1,ecdsa_secp521r1_sha512" \
@@ -6802,6 +7185,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -6822,6 +7206,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->G: AES_128_CCM_8_SHA256,secp384r1,ecdsa_secp256r1_sha256" \
@@ -6841,6 +7226,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->G: AES_128_CCM_8_SHA256,secp384r1,ecdsa_secp384r1_sha384" \
@@ -6860,6 +7246,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->G: AES_128_CCM_8_SHA256,secp384r1,ecdsa_secp521r1_sha512" \
@@ -6879,6 +7266,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -6899,6 +7287,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->G: AES_128_CCM_8_SHA256,secp521r1,ecdsa_secp256r1_sha256" \
@@ -6918,6 +7307,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->G: AES_128_CCM_8_SHA256,secp521r1,ecdsa_secp384r1_sha384" \
@@ -6937,6 +7327,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->G: AES_128_CCM_8_SHA256,secp521r1,ecdsa_secp521r1_sha512" \
@@ -6956,6 +7347,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -6976,6 +7368,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->G: AES_128_CCM_8_SHA256,x25519,ecdsa_secp256r1_sha256" \
@@ -6995,6 +7388,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->G: AES_128_CCM_8_SHA256,x25519,ecdsa_secp384r1_sha384" \
@@ -7014,6 +7408,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->G: AES_128_CCM_8_SHA256,x25519,ecdsa_secp521r1_sha512" \
@@ -7033,6 +7428,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -7053,6 +7449,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->G: AES_128_CCM_8_SHA256,x448,ecdsa_secp256r1_sha256" \
@@ -7072,6 +7469,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->G: AES_128_CCM_8_SHA256,x448,ecdsa_secp384r1_sha384" \
@@ -7091,6 +7489,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->G: AES_128_CCM_8_SHA256,x448,ecdsa_secp521r1_sha512" \
@@ -7110,6 +7509,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -7127,10 +7527,12 @@ run_test "TLS 1.3 m->G: AES_128_CCM_8_SHA256,x448,rsa_pss_rsae_sha256" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->m: AES_128_GCM_SHA256,secp256r1,ecdsa_secp256r1_sha256" \
@@ -7141,7 +7543,7 @@ run_test "TLS 1.3 m->m: AES_128_GCM_SHA256,secp256r1,ecdsa_secp256r1_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-GCM-SHA256 ( id=4865 )" \
          -s "received signature algorithm: 0x403" \
          -s "got named group: secp256r1(0017)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1301 ) - TLS1-3-AES-128-GCM-SHA256" \
          -c "Certificate Verify: Signature algorithm ( 0403 )" \
@@ -7151,10 +7553,12 @@ run_test "TLS 1.3 m->m: AES_128_GCM_SHA256,secp256r1,ecdsa_secp256r1_sha256" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->m: AES_128_GCM_SHA256,secp256r1,ecdsa_secp384r1_sha384" \
@@ -7165,7 +7569,7 @@ run_test "TLS 1.3 m->m: AES_128_GCM_SHA256,secp256r1,ecdsa_secp384r1_sha384" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-GCM-SHA256 ( id=4865 )" \
          -s "received signature algorithm: 0x503" \
          -s "got named group: secp256r1(0017)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1301 ) - TLS1-3-AES-128-GCM-SHA256" \
          -c "Certificate Verify: Signature algorithm ( 0503 )" \
@@ -7175,10 +7579,12 @@ run_test "TLS 1.3 m->m: AES_128_GCM_SHA256,secp256r1,ecdsa_secp384r1_sha384" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->m: AES_128_GCM_SHA256,secp256r1,ecdsa_secp521r1_sha512" \
@@ -7189,7 +7595,7 @@ run_test "TLS 1.3 m->m: AES_128_GCM_SHA256,secp256r1,ecdsa_secp521r1_sha512" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-GCM-SHA256 ( id=4865 )" \
          -s "received signature algorithm: 0x603" \
          -s "got named group: secp256r1(0017)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1301 ) - TLS1-3-AES-128-GCM-SHA256" \
          -c "Certificate Verify: Signature algorithm ( 0603 )" \
@@ -7199,11 +7605,13 @@ run_test "TLS 1.3 m->m: AES_128_GCM_SHA256,secp256r1,ecdsa_secp521r1_sha512" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -7215,7 +7623,7 @@ run_test "TLS 1.3 m->m: AES_128_GCM_SHA256,secp256r1,rsa_pss_rsae_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-GCM-SHA256 ( id=4865 )" \
          -s "received signature algorithm: 0x804" \
          -s "got named group: secp256r1(0017)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1301 ) - TLS1-3-AES-128-GCM-SHA256" \
          -c "Certificate Verify: Signature algorithm ( 0804 )" \
@@ -7225,10 +7633,12 @@ run_test "TLS 1.3 m->m: AES_128_GCM_SHA256,secp256r1,rsa_pss_rsae_sha256" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->m: AES_128_GCM_SHA256,secp384r1,ecdsa_secp256r1_sha256" \
@@ -7239,7 +7649,7 @@ run_test "TLS 1.3 m->m: AES_128_GCM_SHA256,secp384r1,ecdsa_secp256r1_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-GCM-SHA256 ( id=4865 )" \
          -s "received signature algorithm: 0x403" \
          -s "got named group: secp384r1(0018)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1301 ) - TLS1-3-AES-128-GCM-SHA256" \
          -c "Certificate Verify: Signature algorithm ( 0403 )" \
@@ -7249,10 +7659,12 @@ run_test "TLS 1.3 m->m: AES_128_GCM_SHA256,secp384r1,ecdsa_secp256r1_sha256" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->m: AES_128_GCM_SHA256,secp384r1,ecdsa_secp384r1_sha384" \
@@ -7263,7 +7675,7 @@ run_test "TLS 1.3 m->m: AES_128_GCM_SHA256,secp384r1,ecdsa_secp384r1_sha384" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-GCM-SHA256 ( id=4865 )" \
          -s "received signature algorithm: 0x503" \
          -s "got named group: secp384r1(0018)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1301 ) - TLS1-3-AES-128-GCM-SHA256" \
          -c "Certificate Verify: Signature algorithm ( 0503 )" \
@@ -7273,10 +7685,12 @@ run_test "TLS 1.3 m->m: AES_128_GCM_SHA256,secp384r1,ecdsa_secp384r1_sha384" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->m: AES_128_GCM_SHA256,secp384r1,ecdsa_secp521r1_sha512" \
@@ -7287,7 +7701,7 @@ run_test "TLS 1.3 m->m: AES_128_GCM_SHA256,secp384r1,ecdsa_secp521r1_sha512" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-GCM-SHA256 ( id=4865 )" \
          -s "received signature algorithm: 0x603" \
          -s "got named group: secp384r1(0018)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1301 ) - TLS1-3-AES-128-GCM-SHA256" \
          -c "Certificate Verify: Signature algorithm ( 0603 )" \
@@ -7297,11 +7711,13 @@ run_test "TLS 1.3 m->m: AES_128_GCM_SHA256,secp384r1,ecdsa_secp521r1_sha512" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -7313,7 +7729,7 @@ run_test "TLS 1.3 m->m: AES_128_GCM_SHA256,secp384r1,rsa_pss_rsae_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-GCM-SHA256 ( id=4865 )" \
          -s "received signature algorithm: 0x804" \
          -s "got named group: secp384r1(0018)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1301 ) - TLS1-3-AES-128-GCM-SHA256" \
          -c "Certificate Verify: Signature algorithm ( 0804 )" \
@@ -7323,10 +7739,12 @@ run_test "TLS 1.3 m->m: AES_128_GCM_SHA256,secp384r1,rsa_pss_rsae_sha256" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->m: AES_128_GCM_SHA256,secp521r1,ecdsa_secp256r1_sha256" \
@@ -7337,7 +7755,7 @@ run_test "TLS 1.3 m->m: AES_128_GCM_SHA256,secp521r1,ecdsa_secp256r1_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-GCM-SHA256 ( id=4865 )" \
          -s "received signature algorithm: 0x403" \
          -s "got named group: secp521r1(0019)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1301 ) - TLS1-3-AES-128-GCM-SHA256" \
          -c "Certificate Verify: Signature algorithm ( 0403 )" \
@@ -7347,10 +7765,12 @@ run_test "TLS 1.3 m->m: AES_128_GCM_SHA256,secp521r1,ecdsa_secp256r1_sha256" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->m: AES_128_GCM_SHA256,secp521r1,ecdsa_secp384r1_sha384" \
@@ -7361,7 +7781,7 @@ run_test "TLS 1.3 m->m: AES_128_GCM_SHA256,secp521r1,ecdsa_secp384r1_sha384" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-GCM-SHA256 ( id=4865 )" \
          -s "received signature algorithm: 0x503" \
          -s "got named group: secp521r1(0019)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1301 ) - TLS1-3-AES-128-GCM-SHA256" \
          -c "Certificate Verify: Signature algorithm ( 0503 )" \
@@ -7371,10 +7791,12 @@ run_test "TLS 1.3 m->m: AES_128_GCM_SHA256,secp521r1,ecdsa_secp384r1_sha384" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->m: AES_128_GCM_SHA256,secp521r1,ecdsa_secp521r1_sha512" \
@@ -7385,7 +7807,7 @@ run_test "TLS 1.3 m->m: AES_128_GCM_SHA256,secp521r1,ecdsa_secp521r1_sha512" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-GCM-SHA256 ( id=4865 )" \
          -s "received signature algorithm: 0x603" \
          -s "got named group: secp521r1(0019)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1301 ) - TLS1-3-AES-128-GCM-SHA256" \
          -c "Certificate Verify: Signature algorithm ( 0603 )" \
@@ -7395,11 +7817,13 @@ run_test "TLS 1.3 m->m: AES_128_GCM_SHA256,secp521r1,ecdsa_secp521r1_sha512" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -7411,7 +7835,7 @@ run_test "TLS 1.3 m->m: AES_128_GCM_SHA256,secp521r1,rsa_pss_rsae_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-GCM-SHA256 ( id=4865 )" \
          -s "received signature algorithm: 0x804" \
          -s "got named group: secp521r1(0019)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1301 ) - TLS1-3-AES-128-GCM-SHA256" \
          -c "Certificate Verify: Signature algorithm ( 0804 )" \
@@ -7421,10 +7845,12 @@ run_test "TLS 1.3 m->m: AES_128_GCM_SHA256,secp521r1,rsa_pss_rsae_sha256" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->m: AES_128_GCM_SHA256,x25519,ecdsa_secp256r1_sha256" \
@@ -7435,7 +7861,7 @@ run_test "TLS 1.3 m->m: AES_128_GCM_SHA256,x25519,ecdsa_secp256r1_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-GCM-SHA256 ( id=4865 )" \
          -s "received signature algorithm: 0x403" \
          -s "got named group: x25519(001d)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1301 ) - TLS1-3-AES-128-GCM-SHA256" \
          -c "Certificate Verify: Signature algorithm ( 0403 )" \
@@ -7445,10 +7871,12 @@ run_test "TLS 1.3 m->m: AES_128_GCM_SHA256,x25519,ecdsa_secp256r1_sha256" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->m: AES_128_GCM_SHA256,x25519,ecdsa_secp384r1_sha384" \
@@ -7459,7 +7887,7 @@ run_test "TLS 1.3 m->m: AES_128_GCM_SHA256,x25519,ecdsa_secp384r1_sha384" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-GCM-SHA256 ( id=4865 )" \
          -s "received signature algorithm: 0x503" \
          -s "got named group: x25519(001d)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1301 ) - TLS1-3-AES-128-GCM-SHA256" \
          -c "Certificate Verify: Signature algorithm ( 0503 )" \
@@ -7469,10 +7897,12 @@ run_test "TLS 1.3 m->m: AES_128_GCM_SHA256,x25519,ecdsa_secp384r1_sha384" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->m: AES_128_GCM_SHA256,x25519,ecdsa_secp521r1_sha512" \
@@ -7483,7 +7913,7 @@ run_test "TLS 1.3 m->m: AES_128_GCM_SHA256,x25519,ecdsa_secp521r1_sha512" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-GCM-SHA256 ( id=4865 )" \
          -s "received signature algorithm: 0x603" \
          -s "got named group: x25519(001d)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1301 ) - TLS1-3-AES-128-GCM-SHA256" \
          -c "Certificate Verify: Signature algorithm ( 0603 )" \
@@ -7493,11 +7923,13 @@ run_test "TLS 1.3 m->m: AES_128_GCM_SHA256,x25519,ecdsa_secp521r1_sha512" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -7509,7 +7941,7 @@ run_test "TLS 1.3 m->m: AES_128_GCM_SHA256,x25519,rsa_pss_rsae_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-GCM-SHA256 ( id=4865 )" \
          -s "received signature algorithm: 0x804" \
          -s "got named group: x25519(001d)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1301 ) - TLS1-3-AES-128-GCM-SHA256" \
          -c "Certificate Verify: Signature algorithm ( 0804 )" \
@@ -7519,10 +7951,12 @@ run_test "TLS 1.3 m->m: AES_128_GCM_SHA256,x25519,rsa_pss_rsae_sha256" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->m: AES_128_GCM_SHA256,x448,ecdsa_secp256r1_sha256" \
@@ -7533,7 +7967,7 @@ run_test "TLS 1.3 m->m: AES_128_GCM_SHA256,x448,ecdsa_secp256r1_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-GCM-SHA256 ( id=4865 )" \
          -s "received signature algorithm: 0x403" \
          -s "got named group: x448(001e)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1301 ) - TLS1-3-AES-128-GCM-SHA256" \
          -c "Certificate Verify: Signature algorithm ( 0403 )" \
@@ -7543,10 +7977,12 @@ run_test "TLS 1.3 m->m: AES_128_GCM_SHA256,x448,ecdsa_secp256r1_sha256" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->m: AES_128_GCM_SHA256,x448,ecdsa_secp384r1_sha384" \
@@ -7557,7 +7993,7 @@ run_test "TLS 1.3 m->m: AES_128_GCM_SHA256,x448,ecdsa_secp384r1_sha384" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-GCM-SHA256 ( id=4865 )" \
          -s "received signature algorithm: 0x503" \
          -s "got named group: x448(001e)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1301 ) - TLS1-3-AES-128-GCM-SHA256" \
          -c "Certificate Verify: Signature algorithm ( 0503 )" \
@@ -7567,10 +8003,12 @@ run_test "TLS 1.3 m->m: AES_128_GCM_SHA256,x448,ecdsa_secp384r1_sha384" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->m: AES_128_GCM_SHA256,x448,ecdsa_secp521r1_sha512" \
@@ -7581,7 +8019,7 @@ run_test "TLS 1.3 m->m: AES_128_GCM_SHA256,x448,ecdsa_secp521r1_sha512" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-GCM-SHA256 ( id=4865 )" \
          -s "received signature algorithm: 0x603" \
          -s "got named group: x448(001e)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1301 ) - TLS1-3-AES-128-GCM-SHA256" \
          -c "Certificate Verify: Signature algorithm ( 0603 )" \
@@ -7591,11 +8029,13 @@ run_test "TLS 1.3 m->m: AES_128_GCM_SHA256,x448,ecdsa_secp521r1_sha512" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -7607,7 +8047,7 @@ run_test "TLS 1.3 m->m: AES_128_GCM_SHA256,x448,rsa_pss_rsae_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-GCM-SHA256 ( id=4865 )" \
          -s "received signature algorithm: 0x804" \
          -s "got named group: x448(001e)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1301 ) - TLS1-3-AES-128-GCM-SHA256" \
          -c "Certificate Verify: Signature algorithm ( 0804 )" \
@@ -7617,10 +8057,12 @@ run_test "TLS 1.3 m->m: AES_128_GCM_SHA256,x448,rsa_pss_rsae_sha256" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->m: AES_256_GCM_SHA384,secp256r1,ecdsa_secp256r1_sha256" \
@@ -7631,7 +8073,7 @@ run_test "TLS 1.3 m->m: AES_256_GCM_SHA384,secp256r1,ecdsa_secp256r1_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-256-GCM-SHA384 ( id=4866 )" \
          -s "received signature algorithm: 0x403" \
          -s "got named group: secp256r1(0017)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1302 ) - TLS1-3-AES-256-GCM-SHA384" \
          -c "Certificate Verify: Signature algorithm ( 0403 )" \
@@ -7641,10 +8083,12 @@ run_test "TLS 1.3 m->m: AES_256_GCM_SHA384,secp256r1,ecdsa_secp256r1_sha256" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->m: AES_256_GCM_SHA384,secp256r1,ecdsa_secp384r1_sha384" \
@@ -7655,7 +8099,7 @@ run_test "TLS 1.3 m->m: AES_256_GCM_SHA384,secp256r1,ecdsa_secp384r1_sha384" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-256-GCM-SHA384 ( id=4866 )" \
          -s "received signature algorithm: 0x503" \
          -s "got named group: secp256r1(0017)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1302 ) - TLS1-3-AES-256-GCM-SHA384" \
          -c "Certificate Verify: Signature algorithm ( 0503 )" \
@@ -7665,10 +8109,12 @@ run_test "TLS 1.3 m->m: AES_256_GCM_SHA384,secp256r1,ecdsa_secp384r1_sha384" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->m: AES_256_GCM_SHA384,secp256r1,ecdsa_secp521r1_sha512" \
@@ -7679,7 +8125,7 @@ run_test "TLS 1.3 m->m: AES_256_GCM_SHA384,secp256r1,ecdsa_secp521r1_sha512" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-256-GCM-SHA384 ( id=4866 )" \
          -s "received signature algorithm: 0x603" \
          -s "got named group: secp256r1(0017)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1302 ) - TLS1-3-AES-256-GCM-SHA384" \
          -c "Certificate Verify: Signature algorithm ( 0603 )" \
@@ -7689,11 +8135,13 @@ run_test "TLS 1.3 m->m: AES_256_GCM_SHA384,secp256r1,ecdsa_secp521r1_sha512" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -7705,7 +8153,7 @@ run_test "TLS 1.3 m->m: AES_256_GCM_SHA384,secp256r1,rsa_pss_rsae_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-256-GCM-SHA384 ( id=4866 )" \
          -s "received signature algorithm: 0x804" \
          -s "got named group: secp256r1(0017)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1302 ) - TLS1-3-AES-256-GCM-SHA384" \
          -c "Certificate Verify: Signature algorithm ( 0804 )" \
@@ -7715,10 +8163,12 @@ run_test "TLS 1.3 m->m: AES_256_GCM_SHA384,secp256r1,rsa_pss_rsae_sha256" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->m: AES_256_GCM_SHA384,secp384r1,ecdsa_secp256r1_sha256" \
@@ -7729,7 +8179,7 @@ run_test "TLS 1.3 m->m: AES_256_GCM_SHA384,secp384r1,ecdsa_secp256r1_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-256-GCM-SHA384 ( id=4866 )" \
          -s "received signature algorithm: 0x403" \
          -s "got named group: secp384r1(0018)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1302 ) - TLS1-3-AES-256-GCM-SHA384" \
          -c "Certificate Verify: Signature algorithm ( 0403 )" \
@@ -7739,10 +8189,12 @@ run_test "TLS 1.3 m->m: AES_256_GCM_SHA384,secp384r1,ecdsa_secp256r1_sha256" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->m: AES_256_GCM_SHA384,secp384r1,ecdsa_secp384r1_sha384" \
@@ -7753,7 +8205,7 @@ run_test "TLS 1.3 m->m: AES_256_GCM_SHA384,secp384r1,ecdsa_secp384r1_sha384" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-256-GCM-SHA384 ( id=4866 )" \
          -s "received signature algorithm: 0x503" \
          -s "got named group: secp384r1(0018)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1302 ) - TLS1-3-AES-256-GCM-SHA384" \
          -c "Certificate Verify: Signature algorithm ( 0503 )" \
@@ -7763,10 +8215,12 @@ run_test "TLS 1.3 m->m: AES_256_GCM_SHA384,secp384r1,ecdsa_secp384r1_sha384" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->m: AES_256_GCM_SHA384,secp384r1,ecdsa_secp521r1_sha512" \
@@ -7777,7 +8231,7 @@ run_test "TLS 1.3 m->m: AES_256_GCM_SHA384,secp384r1,ecdsa_secp521r1_sha512" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-256-GCM-SHA384 ( id=4866 )" \
          -s "received signature algorithm: 0x603" \
          -s "got named group: secp384r1(0018)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1302 ) - TLS1-3-AES-256-GCM-SHA384" \
          -c "Certificate Verify: Signature algorithm ( 0603 )" \
@@ -7787,11 +8241,13 @@ run_test "TLS 1.3 m->m: AES_256_GCM_SHA384,secp384r1,ecdsa_secp521r1_sha512" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -7803,7 +8259,7 @@ run_test "TLS 1.3 m->m: AES_256_GCM_SHA384,secp384r1,rsa_pss_rsae_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-256-GCM-SHA384 ( id=4866 )" \
          -s "received signature algorithm: 0x804" \
          -s "got named group: secp384r1(0018)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1302 ) - TLS1-3-AES-256-GCM-SHA384" \
          -c "Certificate Verify: Signature algorithm ( 0804 )" \
@@ -7813,10 +8269,12 @@ run_test "TLS 1.3 m->m: AES_256_GCM_SHA384,secp384r1,rsa_pss_rsae_sha256" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->m: AES_256_GCM_SHA384,secp521r1,ecdsa_secp256r1_sha256" \
@@ -7827,7 +8285,7 @@ run_test "TLS 1.3 m->m: AES_256_GCM_SHA384,secp521r1,ecdsa_secp256r1_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-256-GCM-SHA384 ( id=4866 )" \
          -s "received signature algorithm: 0x403" \
          -s "got named group: secp521r1(0019)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1302 ) - TLS1-3-AES-256-GCM-SHA384" \
          -c "Certificate Verify: Signature algorithm ( 0403 )" \
@@ -7837,10 +8295,12 @@ run_test "TLS 1.3 m->m: AES_256_GCM_SHA384,secp521r1,ecdsa_secp256r1_sha256" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->m: AES_256_GCM_SHA384,secp521r1,ecdsa_secp384r1_sha384" \
@@ -7851,7 +8311,7 @@ run_test "TLS 1.3 m->m: AES_256_GCM_SHA384,secp521r1,ecdsa_secp384r1_sha384" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-256-GCM-SHA384 ( id=4866 )" \
          -s "received signature algorithm: 0x503" \
          -s "got named group: secp521r1(0019)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1302 ) - TLS1-3-AES-256-GCM-SHA384" \
          -c "Certificate Verify: Signature algorithm ( 0503 )" \
@@ -7861,10 +8321,12 @@ run_test "TLS 1.3 m->m: AES_256_GCM_SHA384,secp521r1,ecdsa_secp384r1_sha384" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->m: AES_256_GCM_SHA384,secp521r1,ecdsa_secp521r1_sha512" \
@@ -7875,7 +8337,7 @@ run_test "TLS 1.3 m->m: AES_256_GCM_SHA384,secp521r1,ecdsa_secp521r1_sha512" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-256-GCM-SHA384 ( id=4866 )" \
          -s "received signature algorithm: 0x603" \
          -s "got named group: secp521r1(0019)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1302 ) - TLS1-3-AES-256-GCM-SHA384" \
          -c "Certificate Verify: Signature algorithm ( 0603 )" \
@@ -7885,11 +8347,13 @@ run_test "TLS 1.3 m->m: AES_256_GCM_SHA384,secp521r1,ecdsa_secp521r1_sha512" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -7901,7 +8365,7 @@ run_test "TLS 1.3 m->m: AES_256_GCM_SHA384,secp521r1,rsa_pss_rsae_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-256-GCM-SHA384 ( id=4866 )" \
          -s "received signature algorithm: 0x804" \
          -s "got named group: secp521r1(0019)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1302 ) - TLS1-3-AES-256-GCM-SHA384" \
          -c "Certificate Verify: Signature algorithm ( 0804 )" \
@@ -7911,10 +8375,12 @@ run_test "TLS 1.3 m->m: AES_256_GCM_SHA384,secp521r1,rsa_pss_rsae_sha256" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->m: AES_256_GCM_SHA384,x25519,ecdsa_secp256r1_sha256" \
@@ -7925,7 +8391,7 @@ run_test "TLS 1.3 m->m: AES_256_GCM_SHA384,x25519,ecdsa_secp256r1_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-256-GCM-SHA384 ( id=4866 )" \
          -s "received signature algorithm: 0x403" \
          -s "got named group: x25519(001d)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1302 ) - TLS1-3-AES-256-GCM-SHA384" \
          -c "Certificate Verify: Signature algorithm ( 0403 )" \
@@ -7935,10 +8401,12 @@ run_test "TLS 1.3 m->m: AES_256_GCM_SHA384,x25519,ecdsa_secp256r1_sha256" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->m: AES_256_GCM_SHA384,x25519,ecdsa_secp384r1_sha384" \
@@ -7949,7 +8417,7 @@ run_test "TLS 1.3 m->m: AES_256_GCM_SHA384,x25519,ecdsa_secp384r1_sha384" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-256-GCM-SHA384 ( id=4866 )" \
          -s "received signature algorithm: 0x503" \
          -s "got named group: x25519(001d)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1302 ) - TLS1-3-AES-256-GCM-SHA384" \
          -c "Certificate Verify: Signature algorithm ( 0503 )" \
@@ -7959,10 +8427,12 @@ run_test "TLS 1.3 m->m: AES_256_GCM_SHA384,x25519,ecdsa_secp384r1_sha384" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->m: AES_256_GCM_SHA384,x25519,ecdsa_secp521r1_sha512" \
@@ -7973,7 +8443,7 @@ run_test "TLS 1.3 m->m: AES_256_GCM_SHA384,x25519,ecdsa_secp521r1_sha512" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-256-GCM-SHA384 ( id=4866 )" \
          -s "received signature algorithm: 0x603" \
          -s "got named group: x25519(001d)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1302 ) - TLS1-3-AES-256-GCM-SHA384" \
          -c "Certificate Verify: Signature algorithm ( 0603 )" \
@@ -7983,11 +8453,13 @@ run_test "TLS 1.3 m->m: AES_256_GCM_SHA384,x25519,ecdsa_secp521r1_sha512" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -7999,7 +8471,7 @@ run_test "TLS 1.3 m->m: AES_256_GCM_SHA384,x25519,rsa_pss_rsae_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-256-GCM-SHA384 ( id=4866 )" \
          -s "received signature algorithm: 0x804" \
          -s "got named group: x25519(001d)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1302 ) - TLS1-3-AES-256-GCM-SHA384" \
          -c "Certificate Verify: Signature algorithm ( 0804 )" \
@@ -8009,10 +8481,12 @@ run_test "TLS 1.3 m->m: AES_256_GCM_SHA384,x25519,rsa_pss_rsae_sha256" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->m: AES_256_GCM_SHA384,x448,ecdsa_secp256r1_sha256" \
@@ -8023,7 +8497,7 @@ run_test "TLS 1.3 m->m: AES_256_GCM_SHA384,x448,ecdsa_secp256r1_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-256-GCM-SHA384 ( id=4866 )" \
          -s "received signature algorithm: 0x403" \
          -s "got named group: x448(001e)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1302 ) - TLS1-3-AES-256-GCM-SHA384" \
          -c "Certificate Verify: Signature algorithm ( 0403 )" \
@@ -8033,10 +8507,12 @@ run_test "TLS 1.3 m->m: AES_256_GCM_SHA384,x448,ecdsa_secp256r1_sha256" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->m: AES_256_GCM_SHA384,x448,ecdsa_secp384r1_sha384" \
@@ -8047,7 +8523,7 @@ run_test "TLS 1.3 m->m: AES_256_GCM_SHA384,x448,ecdsa_secp384r1_sha384" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-256-GCM-SHA384 ( id=4866 )" \
          -s "received signature algorithm: 0x503" \
          -s "got named group: x448(001e)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1302 ) - TLS1-3-AES-256-GCM-SHA384" \
          -c "Certificate Verify: Signature algorithm ( 0503 )" \
@@ -8057,10 +8533,12 @@ run_test "TLS 1.3 m->m: AES_256_GCM_SHA384,x448,ecdsa_secp384r1_sha384" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->m: AES_256_GCM_SHA384,x448,ecdsa_secp521r1_sha512" \
@@ -8071,7 +8549,7 @@ run_test "TLS 1.3 m->m: AES_256_GCM_SHA384,x448,ecdsa_secp521r1_sha512" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-256-GCM-SHA384 ( id=4866 )" \
          -s "received signature algorithm: 0x603" \
          -s "got named group: x448(001e)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1302 ) - TLS1-3-AES-256-GCM-SHA384" \
          -c "Certificate Verify: Signature algorithm ( 0603 )" \
@@ -8081,11 +8559,13 @@ run_test "TLS 1.3 m->m: AES_256_GCM_SHA384,x448,ecdsa_secp521r1_sha512" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -8097,7 +8577,7 @@ run_test "TLS 1.3 m->m: AES_256_GCM_SHA384,x448,rsa_pss_rsae_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-256-GCM-SHA384 ( id=4866 )" \
          -s "received signature algorithm: 0x804" \
          -s "got named group: x448(001e)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1302 ) - TLS1-3-AES-256-GCM-SHA384" \
          -c "Certificate Verify: Signature algorithm ( 0804 )" \
@@ -8107,10 +8587,12 @@ run_test "TLS 1.3 m->m: AES_256_GCM_SHA384,x448,rsa_pss_rsae_sha256" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->m: CHACHA20_POLY1305_SHA256,secp256r1,ecdsa_secp256r1_sha256" \
@@ -8121,7 +8603,7 @@ run_test "TLS 1.3 m->m: CHACHA20_POLY1305_SHA256,secp256r1,ecdsa_secp256r1_sha25
          -s "server hello, chosen ciphersuite: TLS1-3-CHACHA20-POLY1305-SHA256 ( id=4867 )" \
          -s "received signature algorithm: 0x403" \
          -s "got named group: secp256r1(0017)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1303 ) - TLS1-3-CHACHA20-POLY1305-SHA256" \
          -c "Certificate Verify: Signature algorithm ( 0403 )" \
@@ -8131,10 +8613,12 @@ run_test "TLS 1.3 m->m: CHACHA20_POLY1305_SHA256,secp256r1,ecdsa_secp256r1_sha25
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->m: CHACHA20_POLY1305_SHA256,secp256r1,ecdsa_secp384r1_sha384" \
@@ -8145,7 +8629,7 @@ run_test "TLS 1.3 m->m: CHACHA20_POLY1305_SHA256,secp256r1,ecdsa_secp384r1_sha38
          -s "server hello, chosen ciphersuite: TLS1-3-CHACHA20-POLY1305-SHA256 ( id=4867 )" \
          -s "received signature algorithm: 0x503" \
          -s "got named group: secp256r1(0017)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1303 ) - TLS1-3-CHACHA20-POLY1305-SHA256" \
          -c "Certificate Verify: Signature algorithm ( 0503 )" \
@@ -8155,10 +8639,12 @@ run_test "TLS 1.3 m->m: CHACHA20_POLY1305_SHA256,secp256r1,ecdsa_secp384r1_sha38
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->m: CHACHA20_POLY1305_SHA256,secp256r1,ecdsa_secp521r1_sha512" \
@@ -8169,7 +8655,7 @@ run_test "TLS 1.3 m->m: CHACHA20_POLY1305_SHA256,secp256r1,ecdsa_secp521r1_sha51
          -s "server hello, chosen ciphersuite: TLS1-3-CHACHA20-POLY1305-SHA256 ( id=4867 )" \
          -s "received signature algorithm: 0x603" \
          -s "got named group: secp256r1(0017)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1303 ) - TLS1-3-CHACHA20-POLY1305-SHA256" \
          -c "Certificate Verify: Signature algorithm ( 0603 )" \
@@ -8179,11 +8665,13 @@ run_test "TLS 1.3 m->m: CHACHA20_POLY1305_SHA256,secp256r1,ecdsa_secp521r1_sha51
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -8195,7 +8683,7 @@ run_test "TLS 1.3 m->m: CHACHA20_POLY1305_SHA256,secp256r1,rsa_pss_rsae_sha256" 
          -s "server hello, chosen ciphersuite: TLS1-3-CHACHA20-POLY1305-SHA256 ( id=4867 )" \
          -s "received signature algorithm: 0x804" \
          -s "got named group: secp256r1(0017)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1303 ) - TLS1-3-CHACHA20-POLY1305-SHA256" \
          -c "Certificate Verify: Signature algorithm ( 0804 )" \
@@ -8205,10 +8693,12 @@ run_test "TLS 1.3 m->m: CHACHA20_POLY1305_SHA256,secp256r1,rsa_pss_rsae_sha256" 
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->m: CHACHA20_POLY1305_SHA256,secp384r1,ecdsa_secp256r1_sha256" \
@@ -8219,7 +8709,7 @@ run_test "TLS 1.3 m->m: CHACHA20_POLY1305_SHA256,secp384r1,ecdsa_secp256r1_sha25
          -s "server hello, chosen ciphersuite: TLS1-3-CHACHA20-POLY1305-SHA256 ( id=4867 )" \
          -s "received signature algorithm: 0x403" \
          -s "got named group: secp384r1(0018)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1303 ) - TLS1-3-CHACHA20-POLY1305-SHA256" \
          -c "Certificate Verify: Signature algorithm ( 0403 )" \
@@ -8229,10 +8719,12 @@ run_test "TLS 1.3 m->m: CHACHA20_POLY1305_SHA256,secp384r1,ecdsa_secp256r1_sha25
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->m: CHACHA20_POLY1305_SHA256,secp384r1,ecdsa_secp384r1_sha384" \
@@ -8243,7 +8735,7 @@ run_test "TLS 1.3 m->m: CHACHA20_POLY1305_SHA256,secp384r1,ecdsa_secp384r1_sha38
          -s "server hello, chosen ciphersuite: TLS1-3-CHACHA20-POLY1305-SHA256 ( id=4867 )" \
          -s "received signature algorithm: 0x503" \
          -s "got named group: secp384r1(0018)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1303 ) - TLS1-3-CHACHA20-POLY1305-SHA256" \
          -c "Certificate Verify: Signature algorithm ( 0503 )" \
@@ -8253,10 +8745,12 @@ run_test "TLS 1.3 m->m: CHACHA20_POLY1305_SHA256,secp384r1,ecdsa_secp384r1_sha38
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->m: CHACHA20_POLY1305_SHA256,secp384r1,ecdsa_secp521r1_sha512" \
@@ -8267,7 +8761,7 @@ run_test "TLS 1.3 m->m: CHACHA20_POLY1305_SHA256,secp384r1,ecdsa_secp521r1_sha51
          -s "server hello, chosen ciphersuite: TLS1-3-CHACHA20-POLY1305-SHA256 ( id=4867 )" \
          -s "received signature algorithm: 0x603" \
          -s "got named group: secp384r1(0018)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1303 ) - TLS1-3-CHACHA20-POLY1305-SHA256" \
          -c "Certificate Verify: Signature algorithm ( 0603 )" \
@@ -8277,11 +8771,13 @@ run_test "TLS 1.3 m->m: CHACHA20_POLY1305_SHA256,secp384r1,ecdsa_secp521r1_sha51
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -8293,7 +8789,7 @@ run_test "TLS 1.3 m->m: CHACHA20_POLY1305_SHA256,secp384r1,rsa_pss_rsae_sha256" 
          -s "server hello, chosen ciphersuite: TLS1-3-CHACHA20-POLY1305-SHA256 ( id=4867 )" \
          -s "received signature algorithm: 0x804" \
          -s "got named group: secp384r1(0018)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1303 ) - TLS1-3-CHACHA20-POLY1305-SHA256" \
          -c "Certificate Verify: Signature algorithm ( 0804 )" \
@@ -8303,10 +8799,12 @@ run_test "TLS 1.3 m->m: CHACHA20_POLY1305_SHA256,secp384r1,rsa_pss_rsae_sha256" 
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->m: CHACHA20_POLY1305_SHA256,secp521r1,ecdsa_secp256r1_sha256" \
@@ -8317,7 +8815,7 @@ run_test "TLS 1.3 m->m: CHACHA20_POLY1305_SHA256,secp521r1,ecdsa_secp256r1_sha25
          -s "server hello, chosen ciphersuite: TLS1-3-CHACHA20-POLY1305-SHA256 ( id=4867 )" \
          -s "received signature algorithm: 0x403" \
          -s "got named group: secp521r1(0019)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1303 ) - TLS1-3-CHACHA20-POLY1305-SHA256" \
          -c "Certificate Verify: Signature algorithm ( 0403 )" \
@@ -8327,10 +8825,12 @@ run_test "TLS 1.3 m->m: CHACHA20_POLY1305_SHA256,secp521r1,ecdsa_secp256r1_sha25
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->m: CHACHA20_POLY1305_SHA256,secp521r1,ecdsa_secp384r1_sha384" \
@@ -8341,7 +8841,7 @@ run_test "TLS 1.3 m->m: CHACHA20_POLY1305_SHA256,secp521r1,ecdsa_secp384r1_sha38
          -s "server hello, chosen ciphersuite: TLS1-3-CHACHA20-POLY1305-SHA256 ( id=4867 )" \
          -s "received signature algorithm: 0x503" \
          -s "got named group: secp521r1(0019)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1303 ) - TLS1-3-CHACHA20-POLY1305-SHA256" \
          -c "Certificate Verify: Signature algorithm ( 0503 )" \
@@ -8351,10 +8851,12 @@ run_test "TLS 1.3 m->m: CHACHA20_POLY1305_SHA256,secp521r1,ecdsa_secp384r1_sha38
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->m: CHACHA20_POLY1305_SHA256,secp521r1,ecdsa_secp521r1_sha512" \
@@ -8365,7 +8867,7 @@ run_test "TLS 1.3 m->m: CHACHA20_POLY1305_SHA256,secp521r1,ecdsa_secp521r1_sha51
          -s "server hello, chosen ciphersuite: TLS1-3-CHACHA20-POLY1305-SHA256 ( id=4867 )" \
          -s "received signature algorithm: 0x603" \
          -s "got named group: secp521r1(0019)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1303 ) - TLS1-3-CHACHA20-POLY1305-SHA256" \
          -c "Certificate Verify: Signature algorithm ( 0603 )" \
@@ -8375,11 +8877,13 @@ run_test "TLS 1.3 m->m: CHACHA20_POLY1305_SHA256,secp521r1,ecdsa_secp521r1_sha51
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -8391,7 +8895,7 @@ run_test "TLS 1.3 m->m: CHACHA20_POLY1305_SHA256,secp521r1,rsa_pss_rsae_sha256" 
          -s "server hello, chosen ciphersuite: TLS1-3-CHACHA20-POLY1305-SHA256 ( id=4867 )" \
          -s "received signature algorithm: 0x804" \
          -s "got named group: secp521r1(0019)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1303 ) - TLS1-3-CHACHA20-POLY1305-SHA256" \
          -c "Certificate Verify: Signature algorithm ( 0804 )" \
@@ -8401,10 +8905,12 @@ run_test "TLS 1.3 m->m: CHACHA20_POLY1305_SHA256,secp521r1,rsa_pss_rsae_sha256" 
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->m: CHACHA20_POLY1305_SHA256,x25519,ecdsa_secp256r1_sha256" \
@@ -8415,7 +8921,7 @@ run_test "TLS 1.3 m->m: CHACHA20_POLY1305_SHA256,x25519,ecdsa_secp256r1_sha256" 
          -s "server hello, chosen ciphersuite: TLS1-3-CHACHA20-POLY1305-SHA256 ( id=4867 )" \
          -s "received signature algorithm: 0x403" \
          -s "got named group: x25519(001d)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1303 ) - TLS1-3-CHACHA20-POLY1305-SHA256" \
          -c "Certificate Verify: Signature algorithm ( 0403 )" \
@@ -8425,10 +8931,12 @@ run_test "TLS 1.3 m->m: CHACHA20_POLY1305_SHA256,x25519,ecdsa_secp256r1_sha256" 
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->m: CHACHA20_POLY1305_SHA256,x25519,ecdsa_secp384r1_sha384" \
@@ -8439,7 +8947,7 @@ run_test "TLS 1.3 m->m: CHACHA20_POLY1305_SHA256,x25519,ecdsa_secp384r1_sha384" 
          -s "server hello, chosen ciphersuite: TLS1-3-CHACHA20-POLY1305-SHA256 ( id=4867 )" \
          -s "received signature algorithm: 0x503" \
          -s "got named group: x25519(001d)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1303 ) - TLS1-3-CHACHA20-POLY1305-SHA256" \
          -c "Certificate Verify: Signature algorithm ( 0503 )" \
@@ -8449,10 +8957,12 @@ run_test "TLS 1.3 m->m: CHACHA20_POLY1305_SHA256,x25519,ecdsa_secp384r1_sha384" 
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->m: CHACHA20_POLY1305_SHA256,x25519,ecdsa_secp521r1_sha512" \
@@ -8463,7 +8973,7 @@ run_test "TLS 1.3 m->m: CHACHA20_POLY1305_SHA256,x25519,ecdsa_secp521r1_sha512" 
          -s "server hello, chosen ciphersuite: TLS1-3-CHACHA20-POLY1305-SHA256 ( id=4867 )" \
          -s "received signature algorithm: 0x603" \
          -s "got named group: x25519(001d)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1303 ) - TLS1-3-CHACHA20-POLY1305-SHA256" \
          -c "Certificate Verify: Signature algorithm ( 0603 )" \
@@ -8473,11 +8983,13 @@ run_test "TLS 1.3 m->m: CHACHA20_POLY1305_SHA256,x25519,ecdsa_secp521r1_sha512" 
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -8489,7 +9001,7 @@ run_test "TLS 1.3 m->m: CHACHA20_POLY1305_SHA256,x25519,rsa_pss_rsae_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-CHACHA20-POLY1305-SHA256 ( id=4867 )" \
          -s "received signature algorithm: 0x804" \
          -s "got named group: x25519(001d)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1303 ) - TLS1-3-CHACHA20-POLY1305-SHA256" \
          -c "Certificate Verify: Signature algorithm ( 0804 )" \
@@ -8499,10 +9011,12 @@ run_test "TLS 1.3 m->m: CHACHA20_POLY1305_SHA256,x25519,rsa_pss_rsae_sha256" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->m: CHACHA20_POLY1305_SHA256,x448,ecdsa_secp256r1_sha256" \
@@ -8513,7 +9027,7 @@ run_test "TLS 1.3 m->m: CHACHA20_POLY1305_SHA256,x448,ecdsa_secp256r1_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-CHACHA20-POLY1305-SHA256 ( id=4867 )" \
          -s "received signature algorithm: 0x403" \
          -s "got named group: x448(001e)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1303 ) - TLS1-3-CHACHA20-POLY1305-SHA256" \
          -c "Certificate Verify: Signature algorithm ( 0403 )" \
@@ -8523,10 +9037,12 @@ run_test "TLS 1.3 m->m: CHACHA20_POLY1305_SHA256,x448,ecdsa_secp256r1_sha256" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->m: CHACHA20_POLY1305_SHA256,x448,ecdsa_secp384r1_sha384" \
@@ -8537,7 +9053,7 @@ run_test "TLS 1.3 m->m: CHACHA20_POLY1305_SHA256,x448,ecdsa_secp384r1_sha384" \
          -s "server hello, chosen ciphersuite: TLS1-3-CHACHA20-POLY1305-SHA256 ( id=4867 )" \
          -s "received signature algorithm: 0x503" \
          -s "got named group: x448(001e)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1303 ) - TLS1-3-CHACHA20-POLY1305-SHA256" \
          -c "Certificate Verify: Signature algorithm ( 0503 )" \
@@ -8547,10 +9063,12 @@ run_test "TLS 1.3 m->m: CHACHA20_POLY1305_SHA256,x448,ecdsa_secp384r1_sha384" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->m: CHACHA20_POLY1305_SHA256,x448,ecdsa_secp521r1_sha512" \
@@ -8561,7 +9079,7 @@ run_test "TLS 1.3 m->m: CHACHA20_POLY1305_SHA256,x448,ecdsa_secp521r1_sha512" \
          -s "server hello, chosen ciphersuite: TLS1-3-CHACHA20-POLY1305-SHA256 ( id=4867 )" \
          -s "received signature algorithm: 0x603" \
          -s "got named group: x448(001e)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1303 ) - TLS1-3-CHACHA20-POLY1305-SHA256" \
          -c "Certificate Verify: Signature algorithm ( 0603 )" \
@@ -8571,11 +9089,13 @@ run_test "TLS 1.3 m->m: CHACHA20_POLY1305_SHA256,x448,ecdsa_secp521r1_sha512" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -8587,7 +9107,7 @@ run_test "TLS 1.3 m->m: CHACHA20_POLY1305_SHA256,x448,rsa_pss_rsae_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-CHACHA20-POLY1305-SHA256 ( id=4867 )" \
          -s "received signature algorithm: 0x804" \
          -s "got named group: x448(001e)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1303 ) - TLS1-3-CHACHA20-POLY1305-SHA256" \
          -c "Certificate Verify: Signature algorithm ( 0804 )" \
@@ -8597,10 +9117,12 @@ run_test "TLS 1.3 m->m: CHACHA20_POLY1305_SHA256,x448,rsa_pss_rsae_sha256" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->m: AES_128_CCM_SHA256,secp256r1,ecdsa_secp256r1_sha256" \
@@ -8611,7 +9133,7 @@ run_test "TLS 1.3 m->m: AES_128_CCM_SHA256,secp256r1,ecdsa_secp256r1_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-SHA256 ( id=4868 )" \
          -s "received signature algorithm: 0x403" \
          -s "got named group: secp256r1(0017)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1304 ) - TLS1-3-AES-128-CCM-SHA256" \
          -c "Certificate Verify: Signature algorithm ( 0403 )" \
@@ -8621,10 +9143,12 @@ run_test "TLS 1.3 m->m: AES_128_CCM_SHA256,secp256r1,ecdsa_secp256r1_sha256" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->m: AES_128_CCM_SHA256,secp256r1,ecdsa_secp384r1_sha384" \
@@ -8635,7 +9159,7 @@ run_test "TLS 1.3 m->m: AES_128_CCM_SHA256,secp256r1,ecdsa_secp384r1_sha384" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-SHA256 ( id=4868 )" \
          -s "received signature algorithm: 0x503" \
          -s "got named group: secp256r1(0017)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1304 ) - TLS1-3-AES-128-CCM-SHA256" \
          -c "Certificate Verify: Signature algorithm ( 0503 )" \
@@ -8645,10 +9169,12 @@ run_test "TLS 1.3 m->m: AES_128_CCM_SHA256,secp256r1,ecdsa_secp384r1_sha384" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->m: AES_128_CCM_SHA256,secp256r1,ecdsa_secp521r1_sha512" \
@@ -8659,7 +9185,7 @@ run_test "TLS 1.3 m->m: AES_128_CCM_SHA256,secp256r1,ecdsa_secp521r1_sha512" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-SHA256 ( id=4868 )" \
          -s "received signature algorithm: 0x603" \
          -s "got named group: secp256r1(0017)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1304 ) - TLS1-3-AES-128-CCM-SHA256" \
          -c "Certificate Verify: Signature algorithm ( 0603 )" \
@@ -8669,11 +9195,13 @@ run_test "TLS 1.3 m->m: AES_128_CCM_SHA256,secp256r1,ecdsa_secp521r1_sha512" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -8685,7 +9213,7 @@ run_test "TLS 1.3 m->m: AES_128_CCM_SHA256,secp256r1,rsa_pss_rsae_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-SHA256 ( id=4868 )" \
          -s "received signature algorithm: 0x804" \
          -s "got named group: secp256r1(0017)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1304 ) - TLS1-3-AES-128-CCM-SHA256" \
          -c "Certificate Verify: Signature algorithm ( 0804 )" \
@@ -8695,10 +9223,12 @@ run_test "TLS 1.3 m->m: AES_128_CCM_SHA256,secp256r1,rsa_pss_rsae_sha256" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->m: AES_128_CCM_SHA256,secp384r1,ecdsa_secp256r1_sha256" \
@@ -8709,7 +9239,7 @@ run_test "TLS 1.3 m->m: AES_128_CCM_SHA256,secp384r1,ecdsa_secp256r1_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-SHA256 ( id=4868 )" \
          -s "received signature algorithm: 0x403" \
          -s "got named group: secp384r1(0018)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1304 ) - TLS1-3-AES-128-CCM-SHA256" \
          -c "Certificate Verify: Signature algorithm ( 0403 )" \
@@ -8719,10 +9249,12 @@ run_test "TLS 1.3 m->m: AES_128_CCM_SHA256,secp384r1,ecdsa_secp256r1_sha256" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->m: AES_128_CCM_SHA256,secp384r1,ecdsa_secp384r1_sha384" \
@@ -8733,7 +9265,7 @@ run_test "TLS 1.3 m->m: AES_128_CCM_SHA256,secp384r1,ecdsa_secp384r1_sha384" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-SHA256 ( id=4868 )" \
          -s "received signature algorithm: 0x503" \
          -s "got named group: secp384r1(0018)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1304 ) - TLS1-3-AES-128-CCM-SHA256" \
          -c "Certificate Verify: Signature algorithm ( 0503 )" \
@@ -8743,10 +9275,12 @@ run_test "TLS 1.3 m->m: AES_128_CCM_SHA256,secp384r1,ecdsa_secp384r1_sha384" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->m: AES_128_CCM_SHA256,secp384r1,ecdsa_secp521r1_sha512" \
@@ -8757,7 +9291,7 @@ run_test "TLS 1.3 m->m: AES_128_CCM_SHA256,secp384r1,ecdsa_secp521r1_sha512" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-SHA256 ( id=4868 )" \
          -s "received signature algorithm: 0x603" \
          -s "got named group: secp384r1(0018)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1304 ) - TLS1-3-AES-128-CCM-SHA256" \
          -c "Certificate Verify: Signature algorithm ( 0603 )" \
@@ -8767,11 +9301,13 @@ run_test "TLS 1.3 m->m: AES_128_CCM_SHA256,secp384r1,ecdsa_secp521r1_sha512" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -8783,7 +9319,7 @@ run_test "TLS 1.3 m->m: AES_128_CCM_SHA256,secp384r1,rsa_pss_rsae_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-SHA256 ( id=4868 )" \
          -s "received signature algorithm: 0x804" \
          -s "got named group: secp384r1(0018)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1304 ) - TLS1-3-AES-128-CCM-SHA256" \
          -c "Certificate Verify: Signature algorithm ( 0804 )" \
@@ -8793,10 +9329,12 @@ run_test "TLS 1.3 m->m: AES_128_CCM_SHA256,secp384r1,rsa_pss_rsae_sha256" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->m: AES_128_CCM_SHA256,secp521r1,ecdsa_secp256r1_sha256" \
@@ -8807,7 +9345,7 @@ run_test "TLS 1.3 m->m: AES_128_CCM_SHA256,secp521r1,ecdsa_secp256r1_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-SHA256 ( id=4868 )" \
          -s "received signature algorithm: 0x403" \
          -s "got named group: secp521r1(0019)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1304 ) - TLS1-3-AES-128-CCM-SHA256" \
          -c "Certificate Verify: Signature algorithm ( 0403 )" \
@@ -8817,10 +9355,12 @@ run_test "TLS 1.3 m->m: AES_128_CCM_SHA256,secp521r1,ecdsa_secp256r1_sha256" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->m: AES_128_CCM_SHA256,secp521r1,ecdsa_secp384r1_sha384" \
@@ -8831,7 +9371,7 @@ run_test "TLS 1.3 m->m: AES_128_CCM_SHA256,secp521r1,ecdsa_secp384r1_sha384" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-SHA256 ( id=4868 )" \
          -s "received signature algorithm: 0x503" \
          -s "got named group: secp521r1(0019)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1304 ) - TLS1-3-AES-128-CCM-SHA256" \
          -c "Certificate Verify: Signature algorithm ( 0503 )" \
@@ -8841,10 +9381,12 @@ run_test "TLS 1.3 m->m: AES_128_CCM_SHA256,secp521r1,ecdsa_secp384r1_sha384" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->m: AES_128_CCM_SHA256,secp521r1,ecdsa_secp521r1_sha512" \
@@ -8855,7 +9397,7 @@ run_test "TLS 1.3 m->m: AES_128_CCM_SHA256,secp521r1,ecdsa_secp521r1_sha512" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-SHA256 ( id=4868 )" \
          -s "received signature algorithm: 0x603" \
          -s "got named group: secp521r1(0019)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1304 ) - TLS1-3-AES-128-CCM-SHA256" \
          -c "Certificate Verify: Signature algorithm ( 0603 )" \
@@ -8865,11 +9407,13 @@ run_test "TLS 1.3 m->m: AES_128_CCM_SHA256,secp521r1,ecdsa_secp521r1_sha512" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -8881,7 +9425,7 @@ run_test "TLS 1.3 m->m: AES_128_CCM_SHA256,secp521r1,rsa_pss_rsae_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-SHA256 ( id=4868 )" \
          -s "received signature algorithm: 0x804" \
          -s "got named group: secp521r1(0019)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1304 ) - TLS1-3-AES-128-CCM-SHA256" \
          -c "Certificate Verify: Signature algorithm ( 0804 )" \
@@ -8891,10 +9435,12 @@ run_test "TLS 1.3 m->m: AES_128_CCM_SHA256,secp521r1,rsa_pss_rsae_sha256" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->m: AES_128_CCM_SHA256,x25519,ecdsa_secp256r1_sha256" \
@@ -8905,7 +9451,7 @@ run_test "TLS 1.3 m->m: AES_128_CCM_SHA256,x25519,ecdsa_secp256r1_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-SHA256 ( id=4868 )" \
          -s "received signature algorithm: 0x403" \
          -s "got named group: x25519(001d)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1304 ) - TLS1-3-AES-128-CCM-SHA256" \
          -c "Certificate Verify: Signature algorithm ( 0403 )" \
@@ -8915,10 +9461,12 @@ run_test "TLS 1.3 m->m: AES_128_CCM_SHA256,x25519,ecdsa_secp256r1_sha256" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->m: AES_128_CCM_SHA256,x25519,ecdsa_secp384r1_sha384" \
@@ -8929,7 +9477,7 @@ run_test "TLS 1.3 m->m: AES_128_CCM_SHA256,x25519,ecdsa_secp384r1_sha384" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-SHA256 ( id=4868 )" \
          -s "received signature algorithm: 0x503" \
          -s "got named group: x25519(001d)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1304 ) - TLS1-3-AES-128-CCM-SHA256" \
          -c "Certificate Verify: Signature algorithm ( 0503 )" \
@@ -8939,10 +9487,12 @@ run_test "TLS 1.3 m->m: AES_128_CCM_SHA256,x25519,ecdsa_secp384r1_sha384" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->m: AES_128_CCM_SHA256,x25519,ecdsa_secp521r1_sha512" \
@@ -8953,7 +9503,7 @@ run_test "TLS 1.3 m->m: AES_128_CCM_SHA256,x25519,ecdsa_secp521r1_sha512" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-SHA256 ( id=4868 )" \
          -s "received signature algorithm: 0x603" \
          -s "got named group: x25519(001d)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1304 ) - TLS1-3-AES-128-CCM-SHA256" \
          -c "Certificate Verify: Signature algorithm ( 0603 )" \
@@ -8963,11 +9513,13 @@ run_test "TLS 1.3 m->m: AES_128_CCM_SHA256,x25519,ecdsa_secp521r1_sha512" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -8979,7 +9531,7 @@ run_test "TLS 1.3 m->m: AES_128_CCM_SHA256,x25519,rsa_pss_rsae_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-SHA256 ( id=4868 )" \
          -s "received signature algorithm: 0x804" \
          -s "got named group: x25519(001d)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1304 ) - TLS1-3-AES-128-CCM-SHA256" \
          -c "Certificate Verify: Signature algorithm ( 0804 )" \
@@ -8989,10 +9541,12 @@ run_test "TLS 1.3 m->m: AES_128_CCM_SHA256,x25519,rsa_pss_rsae_sha256" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->m: AES_128_CCM_SHA256,x448,ecdsa_secp256r1_sha256" \
@@ -9003,7 +9557,7 @@ run_test "TLS 1.3 m->m: AES_128_CCM_SHA256,x448,ecdsa_secp256r1_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-SHA256 ( id=4868 )" \
          -s "received signature algorithm: 0x403" \
          -s "got named group: x448(001e)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1304 ) - TLS1-3-AES-128-CCM-SHA256" \
          -c "Certificate Verify: Signature algorithm ( 0403 )" \
@@ -9013,10 +9567,12 @@ run_test "TLS 1.3 m->m: AES_128_CCM_SHA256,x448,ecdsa_secp256r1_sha256" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->m: AES_128_CCM_SHA256,x448,ecdsa_secp384r1_sha384" \
@@ -9027,7 +9583,7 @@ run_test "TLS 1.3 m->m: AES_128_CCM_SHA256,x448,ecdsa_secp384r1_sha384" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-SHA256 ( id=4868 )" \
          -s "received signature algorithm: 0x503" \
          -s "got named group: x448(001e)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1304 ) - TLS1-3-AES-128-CCM-SHA256" \
          -c "Certificate Verify: Signature algorithm ( 0503 )" \
@@ -9037,10 +9593,12 @@ run_test "TLS 1.3 m->m: AES_128_CCM_SHA256,x448,ecdsa_secp384r1_sha384" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->m: AES_128_CCM_SHA256,x448,ecdsa_secp521r1_sha512" \
@@ -9051,7 +9609,7 @@ run_test "TLS 1.3 m->m: AES_128_CCM_SHA256,x448,ecdsa_secp521r1_sha512" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-SHA256 ( id=4868 )" \
          -s "received signature algorithm: 0x603" \
          -s "got named group: x448(001e)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1304 ) - TLS1-3-AES-128-CCM-SHA256" \
          -c "Certificate Verify: Signature algorithm ( 0603 )" \
@@ -9061,11 +9619,13 @@ run_test "TLS 1.3 m->m: AES_128_CCM_SHA256,x448,ecdsa_secp521r1_sha512" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -9077,7 +9637,7 @@ run_test "TLS 1.3 m->m: AES_128_CCM_SHA256,x448,rsa_pss_rsae_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-SHA256 ( id=4868 )" \
          -s "received signature algorithm: 0x804" \
          -s "got named group: x448(001e)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1304 ) - TLS1-3-AES-128-CCM-SHA256" \
          -c "Certificate Verify: Signature algorithm ( 0804 )" \
@@ -9087,10 +9647,12 @@ run_test "TLS 1.3 m->m: AES_128_CCM_SHA256,x448,rsa_pss_rsae_sha256" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->m: AES_128_CCM_8_SHA256,secp256r1,ecdsa_secp256r1_sha256" \
@@ -9101,7 +9663,7 @@ run_test "TLS 1.3 m->m: AES_128_CCM_8_SHA256,secp256r1,ecdsa_secp256r1_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-8-SHA256 ( id=4869 )" \
          -s "received signature algorithm: 0x403" \
          -s "got named group: secp256r1(0017)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1305 ) - TLS1-3-AES-128-CCM-8-SHA256" \
          -c "Certificate Verify: Signature algorithm ( 0403 )" \
@@ -9111,10 +9673,12 @@ run_test "TLS 1.3 m->m: AES_128_CCM_8_SHA256,secp256r1,ecdsa_secp256r1_sha256" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->m: AES_128_CCM_8_SHA256,secp256r1,ecdsa_secp384r1_sha384" \
@@ -9125,7 +9689,7 @@ run_test "TLS 1.3 m->m: AES_128_CCM_8_SHA256,secp256r1,ecdsa_secp384r1_sha384" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-8-SHA256 ( id=4869 )" \
          -s "received signature algorithm: 0x503" \
          -s "got named group: secp256r1(0017)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1305 ) - TLS1-3-AES-128-CCM-8-SHA256" \
          -c "Certificate Verify: Signature algorithm ( 0503 )" \
@@ -9135,10 +9699,12 @@ run_test "TLS 1.3 m->m: AES_128_CCM_8_SHA256,secp256r1,ecdsa_secp384r1_sha384" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->m: AES_128_CCM_8_SHA256,secp256r1,ecdsa_secp521r1_sha512" \
@@ -9149,7 +9715,7 @@ run_test "TLS 1.3 m->m: AES_128_CCM_8_SHA256,secp256r1,ecdsa_secp521r1_sha512" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-8-SHA256 ( id=4869 )" \
          -s "received signature algorithm: 0x603" \
          -s "got named group: secp256r1(0017)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1305 ) - TLS1-3-AES-128-CCM-8-SHA256" \
          -c "Certificate Verify: Signature algorithm ( 0603 )" \
@@ -9159,11 +9725,13 @@ run_test "TLS 1.3 m->m: AES_128_CCM_8_SHA256,secp256r1,ecdsa_secp521r1_sha512" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -9175,7 +9743,7 @@ run_test "TLS 1.3 m->m: AES_128_CCM_8_SHA256,secp256r1,rsa_pss_rsae_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-8-SHA256 ( id=4869 )" \
          -s "received signature algorithm: 0x804" \
          -s "got named group: secp256r1(0017)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1305 ) - TLS1-3-AES-128-CCM-8-SHA256" \
          -c "Certificate Verify: Signature algorithm ( 0804 )" \
@@ -9185,10 +9753,12 @@ run_test "TLS 1.3 m->m: AES_128_CCM_8_SHA256,secp256r1,rsa_pss_rsae_sha256" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->m: AES_128_CCM_8_SHA256,secp384r1,ecdsa_secp256r1_sha256" \
@@ -9199,7 +9769,7 @@ run_test "TLS 1.3 m->m: AES_128_CCM_8_SHA256,secp384r1,ecdsa_secp256r1_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-8-SHA256 ( id=4869 )" \
          -s "received signature algorithm: 0x403" \
          -s "got named group: secp384r1(0018)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1305 ) - TLS1-3-AES-128-CCM-8-SHA256" \
          -c "Certificate Verify: Signature algorithm ( 0403 )" \
@@ -9209,10 +9779,12 @@ run_test "TLS 1.3 m->m: AES_128_CCM_8_SHA256,secp384r1,ecdsa_secp256r1_sha256" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->m: AES_128_CCM_8_SHA256,secp384r1,ecdsa_secp384r1_sha384" \
@@ -9223,7 +9795,7 @@ run_test "TLS 1.3 m->m: AES_128_CCM_8_SHA256,secp384r1,ecdsa_secp384r1_sha384" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-8-SHA256 ( id=4869 )" \
          -s "received signature algorithm: 0x503" \
          -s "got named group: secp384r1(0018)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1305 ) - TLS1-3-AES-128-CCM-8-SHA256" \
          -c "Certificate Verify: Signature algorithm ( 0503 )" \
@@ -9233,10 +9805,12 @@ run_test "TLS 1.3 m->m: AES_128_CCM_8_SHA256,secp384r1,ecdsa_secp384r1_sha384" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->m: AES_128_CCM_8_SHA256,secp384r1,ecdsa_secp521r1_sha512" \
@@ -9247,7 +9821,7 @@ run_test "TLS 1.3 m->m: AES_128_CCM_8_SHA256,secp384r1,ecdsa_secp521r1_sha512" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-8-SHA256 ( id=4869 )" \
          -s "received signature algorithm: 0x603" \
          -s "got named group: secp384r1(0018)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1305 ) - TLS1-3-AES-128-CCM-8-SHA256" \
          -c "Certificate Verify: Signature algorithm ( 0603 )" \
@@ -9257,11 +9831,13 @@ run_test "TLS 1.3 m->m: AES_128_CCM_8_SHA256,secp384r1,ecdsa_secp521r1_sha512" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -9273,7 +9849,7 @@ run_test "TLS 1.3 m->m: AES_128_CCM_8_SHA256,secp384r1,rsa_pss_rsae_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-8-SHA256 ( id=4869 )" \
          -s "received signature algorithm: 0x804" \
          -s "got named group: secp384r1(0018)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1305 ) - TLS1-3-AES-128-CCM-8-SHA256" \
          -c "Certificate Verify: Signature algorithm ( 0804 )" \
@@ -9283,10 +9859,12 @@ run_test "TLS 1.3 m->m: AES_128_CCM_8_SHA256,secp384r1,rsa_pss_rsae_sha256" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->m: AES_128_CCM_8_SHA256,secp521r1,ecdsa_secp256r1_sha256" \
@@ -9297,7 +9875,7 @@ run_test "TLS 1.3 m->m: AES_128_CCM_8_SHA256,secp521r1,ecdsa_secp256r1_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-8-SHA256 ( id=4869 )" \
          -s "received signature algorithm: 0x403" \
          -s "got named group: secp521r1(0019)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1305 ) - TLS1-3-AES-128-CCM-8-SHA256" \
          -c "Certificate Verify: Signature algorithm ( 0403 )" \
@@ -9307,10 +9885,12 @@ run_test "TLS 1.3 m->m: AES_128_CCM_8_SHA256,secp521r1,ecdsa_secp256r1_sha256" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->m: AES_128_CCM_8_SHA256,secp521r1,ecdsa_secp384r1_sha384" \
@@ -9321,7 +9901,7 @@ run_test "TLS 1.3 m->m: AES_128_CCM_8_SHA256,secp521r1,ecdsa_secp384r1_sha384" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-8-SHA256 ( id=4869 )" \
          -s "received signature algorithm: 0x503" \
          -s "got named group: secp521r1(0019)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1305 ) - TLS1-3-AES-128-CCM-8-SHA256" \
          -c "Certificate Verify: Signature algorithm ( 0503 )" \
@@ -9331,10 +9911,12 @@ run_test "TLS 1.3 m->m: AES_128_CCM_8_SHA256,secp521r1,ecdsa_secp384r1_sha384" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->m: AES_128_CCM_8_SHA256,secp521r1,ecdsa_secp521r1_sha512" \
@@ -9345,7 +9927,7 @@ run_test "TLS 1.3 m->m: AES_128_CCM_8_SHA256,secp521r1,ecdsa_secp521r1_sha512" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-8-SHA256 ( id=4869 )" \
          -s "received signature algorithm: 0x603" \
          -s "got named group: secp521r1(0019)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1305 ) - TLS1-3-AES-128-CCM-8-SHA256" \
          -c "Certificate Verify: Signature algorithm ( 0603 )" \
@@ -9355,11 +9937,13 @@ run_test "TLS 1.3 m->m: AES_128_CCM_8_SHA256,secp521r1,ecdsa_secp521r1_sha512" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -9371,7 +9955,7 @@ run_test "TLS 1.3 m->m: AES_128_CCM_8_SHA256,secp521r1,rsa_pss_rsae_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-8-SHA256 ( id=4869 )" \
          -s "received signature algorithm: 0x804" \
          -s "got named group: secp521r1(0019)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1305 ) - TLS1-3-AES-128-CCM-8-SHA256" \
          -c "Certificate Verify: Signature algorithm ( 0804 )" \
@@ -9381,10 +9965,12 @@ run_test "TLS 1.3 m->m: AES_128_CCM_8_SHA256,secp521r1,rsa_pss_rsae_sha256" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->m: AES_128_CCM_8_SHA256,x25519,ecdsa_secp256r1_sha256" \
@@ -9395,7 +9981,7 @@ run_test "TLS 1.3 m->m: AES_128_CCM_8_SHA256,x25519,ecdsa_secp256r1_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-8-SHA256 ( id=4869 )" \
          -s "received signature algorithm: 0x403" \
          -s "got named group: x25519(001d)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1305 ) - TLS1-3-AES-128-CCM-8-SHA256" \
          -c "Certificate Verify: Signature algorithm ( 0403 )" \
@@ -9405,10 +9991,12 @@ run_test "TLS 1.3 m->m: AES_128_CCM_8_SHA256,x25519,ecdsa_secp256r1_sha256" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->m: AES_128_CCM_8_SHA256,x25519,ecdsa_secp384r1_sha384" \
@@ -9419,7 +10007,7 @@ run_test "TLS 1.3 m->m: AES_128_CCM_8_SHA256,x25519,ecdsa_secp384r1_sha384" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-8-SHA256 ( id=4869 )" \
          -s "received signature algorithm: 0x503" \
          -s "got named group: x25519(001d)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1305 ) - TLS1-3-AES-128-CCM-8-SHA256" \
          -c "Certificate Verify: Signature algorithm ( 0503 )" \
@@ -9429,10 +10017,12 @@ run_test "TLS 1.3 m->m: AES_128_CCM_8_SHA256,x25519,ecdsa_secp384r1_sha384" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->m: AES_128_CCM_8_SHA256,x25519,ecdsa_secp521r1_sha512" \
@@ -9443,7 +10033,7 @@ run_test "TLS 1.3 m->m: AES_128_CCM_8_SHA256,x25519,ecdsa_secp521r1_sha512" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-8-SHA256 ( id=4869 )" \
          -s "received signature algorithm: 0x603" \
          -s "got named group: x25519(001d)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1305 ) - TLS1-3-AES-128-CCM-8-SHA256" \
          -c "Certificate Verify: Signature algorithm ( 0603 )" \
@@ -9453,11 +10043,13 @@ run_test "TLS 1.3 m->m: AES_128_CCM_8_SHA256,x25519,ecdsa_secp521r1_sha512" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -9469,7 +10061,7 @@ run_test "TLS 1.3 m->m: AES_128_CCM_8_SHA256,x25519,rsa_pss_rsae_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-8-SHA256 ( id=4869 )" \
          -s "received signature algorithm: 0x804" \
          -s "got named group: x25519(001d)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1305 ) - TLS1-3-AES-128-CCM-8-SHA256" \
          -c "Certificate Verify: Signature algorithm ( 0804 )" \
@@ -9479,10 +10071,12 @@ run_test "TLS 1.3 m->m: AES_128_CCM_8_SHA256,x25519,rsa_pss_rsae_sha256" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->m: AES_128_CCM_8_SHA256,x448,ecdsa_secp256r1_sha256" \
@@ -9493,7 +10087,7 @@ run_test "TLS 1.3 m->m: AES_128_CCM_8_SHA256,x448,ecdsa_secp256r1_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-8-SHA256 ( id=4869 )" \
          -s "received signature algorithm: 0x403" \
          -s "got named group: x448(001e)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1305 ) - TLS1-3-AES-128-CCM-8-SHA256" \
          -c "Certificate Verify: Signature algorithm ( 0403 )" \
@@ -9503,10 +10097,12 @@ run_test "TLS 1.3 m->m: AES_128_CCM_8_SHA256,x448,ecdsa_secp256r1_sha256" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->m: AES_128_CCM_8_SHA256,x448,ecdsa_secp384r1_sha384" \
@@ -9517,7 +10113,7 @@ run_test "TLS 1.3 m->m: AES_128_CCM_8_SHA256,x448,ecdsa_secp384r1_sha384" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-8-SHA256 ( id=4869 )" \
          -s "received signature algorithm: 0x503" \
          -s "got named group: x448(001e)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1305 ) - TLS1-3-AES-128-CCM-8-SHA256" \
          -c "Certificate Verify: Signature algorithm ( 0503 )" \
@@ -9527,10 +10123,12 @@ run_test "TLS 1.3 m->m: AES_128_CCM_8_SHA256,x448,ecdsa_secp384r1_sha384" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->m: AES_128_CCM_8_SHA256,x448,ecdsa_secp521r1_sha512" \
@@ -9541,7 +10139,7 @@ run_test "TLS 1.3 m->m: AES_128_CCM_8_SHA256,x448,ecdsa_secp521r1_sha512" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-8-SHA256 ( id=4869 )" \
          -s "received signature algorithm: 0x603" \
          -s "got named group: x448(001e)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1305 ) - TLS1-3-AES-128-CCM-8-SHA256" \
          -c "Certificate Verify: Signature algorithm ( 0603 )" \
@@ -9551,11 +10149,13 @@ run_test "TLS 1.3 m->m: AES_128_CCM_8_SHA256,x448,ecdsa_secp521r1_sha512" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
@@ -9567,7 +10167,7 @@ run_test "TLS 1.3 m->m: AES_128_CCM_8_SHA256,x448,rsa_pss_rsae_sha256" \
          -s "server hello, chosen ciphersuite: TLS1-3-AES-128-CCM-8-SHA256 ( id=4869 )" \
          -s "received signature algorithm: 0x804" \
          -s "got named group: x448(001e)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "server hello, chosen ciphersuite: ( 1305 ) - TLS1-3-AES-128-CCM-8-SHA256" \
          -c "Certificate Verify: Signature algorithm ( 0804 )" \
@@ -9577,6 +10177,7 @@ run_test "TLS 1.3 m->m: AES_128_CCM_8_SHA256,x448,rsa_pss_rsae_sha256" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_openssl_tls1_3
@@ -9586,11 +10187,12 @@ run_test "TLS 1.3 O->m: HRR secp256r1 -> secp384r1" \
          0 \
          -s "Protocol is TLSv1.3" \
          -s "got named group: secp384r1(0018)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -s "HRR selected_group: secp384r1"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_openssl_tls1_3
@@ -9600,11 +10202,12 @@ run_test "TLS 1.3 O->m: HRR secp256r1 -> secp521r1" \
          0 \
          -s "Protocol is TLSv1.3" \
          -s "got named group: secp521r1(0019)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -s "HRR selected_group: secp521r1"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_openssl_tls1_3
@@ -9614,11 +10217,12 @@ run_test "TLS 1.3 O->m: HRR secp256r1 -> x25519" \
          0 \
          -s "Protocol is TLSv1.3" \
          -s "got named group: x25519(001d)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -s "HRR selected_group: x25519"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_openssl_tls1_3
@@ -9628,11 +10232,12 @@ run_test "TLS 1.3 O->m: HRR secp256r1 -> x448" \
          0 \
          -s "Protocol is TLSv1.3" \
          -s "got named group: x448(001e)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -s "HRR selected_group: x448"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_openssl_tls1_3
@@ -9642,11 +10247,12 @@ run_test "TLS 1.3 O->m: HRR secp384r1 -> secp256r1" \
          0 \
          -s "Protocol is TLSv1.3" \
          -s "got named group: secp256r1(0017)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -s "HRR selected_group: secp256r1"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_openssl_tls1_3
@@ -9656,11 +10262,12 @@ run_test "TLS 1.3 O->m: HRR secp384r1 -> secp521r1" \
          0 \
          -s "Protocol is TLSv1.3" \
          -s "got named group: secp521r1(0019)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -s "HRR selected_group: secp521r1"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_openssl_tls1_3
@@ -9670,11 +10277,12 @@ run_test "TLS 1.3 O->m: HRR secp384r1 -> x25519" \
          0 \
          -s "Protocol is TLSv1.3" \
          -s "got named group: x25519(001d)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -s "HRR selected_group: x25519"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_openssl_tls1_3
@@ -9684,11 +10292,12 @@ run_test "TLS 1.3 O->m: HRR secp384r1 -> x448" \
          0 \
          -s "Protocol is TLSv1.3" \
          -s "got named group: x448(001e)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -s "HRR selected_group: x448"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_openssl_tls1_3
@@ -9698,11 +10307,12 @@ run_test "TLS 1.3 O->m: HRR secp521r1 -> secp256r1" \
          0 \
          -s "Protocol is TLSv1.3" \
          -s "got named group: secp256r1(0017)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -s "HRR selected_group: secp256r1"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_openssl_tls1_3
@@ -9712,11 +10322,12 @@ run_test "TLS 1.3 O->m: HRR secp521r1 -> secp384r1" \
          0 \
          -s "Protocol is TLSv1.3" \
          -s "got named group: secp384r1(0018)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -s "HRR selected_group: secp384r1"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_openssl_tls1_3
@@ -9726,11 +10337,12 @@ run_test "TLS 1.3 O->m: HRR secp521r1 -> x25519" \
          0 \
          -s "Protocol is TLSv1.3" \
          -s "got named group: x25519(001d)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -s "HRR selected_group: x25519"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_openssl_tls1_3
@@ -9740,11 +10352,12 @@ run_test "TLS 1.3 O->m: HRR secp521r1 -> x448" \
          0 \
          -s "Protocol is TLSv1.3" \
          -s "got named group: x448(001e)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -s "HRR selected_group: x448"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_openssl_tls1_3
@@ -9754,11 +10367,12 @@ run_test "TLS 1.3 O->m: HRR x25519 -> secp256r1" \
          0 \
          -s "Protocol is TLSv1.3" \
          -s "got named group: secp256r1(0017)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -s "HRR selected_group: secp256r1"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_openssl_tls1_3
@@ -9768,11 +10382,12 @@ run_test "TLS 1.3 O->m: HRR x25519 -> secp384r1" \
          0 \
          -s "Protocol is TLSv1.3" \
          -s "got named group: secp384r1(0018)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -s "HRR selected_group: secp384r1"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_openssl_tls1_3
@@ -9782,11 +10397,12 @@ run_test "TLS 1.3 O->m: HRR x25519 -> secp521r1" \
          0 \
          -s "Protocol is TLSv1.3" \
          -s "got named group: secp521r1(0019)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -s "HRR selected_group: secp521r1"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_openssl_tls1_3
@@ -9796,11 +10412,12 @@ run_test "TLS 1.3 O->m: HRR x25519 -> x448" \
          0 \
          -s "Protocol is TLSv1.3" \
          -s "got named group: x448(001e)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -s "HRR selected_group: x448"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_openssl_tls1_3
@@ -9810,11 +10427,12 @@ run_test "TLS 1.3 O->m: HRR x448 -> secp256r1" \
          0 \
          -s "Protocol is TLSv1.3" \
          -s "got named group: secp256r1(0017)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -s "HRR selected_group: secp256r1"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_openssl_tls1_3
@@ -9824,11 +10442,12 @@ run_test "TLS 1.3 O->m: HRR x448 -> secp384r1" \
          0 \
          -s "Protocol is TLSv1.3" \
          -s "got named group: secp384r1(0018)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -s "HRR selected_group: secp384r1"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_openssl_tls1_3
@@ -9838,11 +10457,12 @@ run_test "TLS 1.3 O->m: HRR x448 -> secp521r1" \
          0 \
          -s "Protocol is TLSv1.3" \
          -s "got named group: secp521r1(0019)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -s "HRR selected_group: secp521r1"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_openssl_tls1_3
@@ -9852,11 +10472,12 @@ run_test "TLS 1.3 O->m: HRR x448 -> x25519" \
          0 \
          -s "Protocol is TLSv1.3" \
          -s "got named group: x25519(001d)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -s "HRR selected_group: x25519"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_gnutls_tls1_3
@@ -9868,11 +10489,12 @@ run_test "TLS 1.3 G->m: HRR secp256r1 -> secp384r1" \
          0 \
          -s "Protocol is TLSv1.3" \
          -s "got named group: secp384r1(0018)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -s "HRR selected_group: secp384r1"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_gnutls_tls1_3
@@ -9884,11 +10506,12 @@ run_test "TLS 1.3 G->m: HRR secp256r1 -> secp521r1" \
          0 \
          -s "Protocol is TLSv1.3" \
          -s "got named group: secp521r1(0019)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -s "HRR selected_group: secp521r1"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_gnutls_tls1_3
@@ -9900,11 +10523,12 @@ run_test "TLS 1.3 G->m: HRR secp256r1 -> x25519" \
          0 \
          -s "Protocol is TLSv1.3" \
          -s "got named group: x25519(001d)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -s "HRR selected_group: x25519"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_gnutls_tls1_3
@@ -9916,11 +10540,12 @@ run_test "TLS 1.3 G->m: HRR secp256r1 -> x448" \
          0 \
          -s "Protocol is TLSv1.3" \
          -s "got named group: x448(001e)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -s "HRR selected_group: x448"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_gnutls_tls1_3
@@ -9932,11 +10557,12 @@ run_test "TLS 1.3 G->m: HRR secp384r1 -> secp256r1" \
          0 \
          -s "Protocol is TLSv1.3" \
          -s "got named group: secp256r1(0017)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -s "HRR selected_group: secp256r1"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_gnutls_tls1_3
@@ -9948,11 +10574,12 @@ run_test "TLS 1.3 G->m: HRR secp384r1 -> secp521r1" \
          0 \
          -s "Protocol is TLSv1.3" \
          -s "got named group: secp521r1(0019)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -s "HRR selected_group: secp521r1"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_gnutls_tls1_3
@@ -9964,11 +10591,12 @@ run_test "TLS 1.3 G->m: HRR secp384r1 -> x25519" \
          0 \
          -s "Protocol is TLSv1.3" \
          -s "got named group: x25519(001d)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -s "HRR selected_group: x25519"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_gnutls_tls1_3
@@ -9980,11 +10608,12 @@ run_test "TLS 1.3 G->m: HRR secp384r1 -> x448" \
          0 \
          -s "Protocol is TLSv1.3" \
          -s "got named group: x448(001e)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -s "HRR selected_group: x448"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_gnutls_tls1_3
@@ -9996,11 +10625,12 @@ run_test "TLS 1.3 G->m: HRR secp521r1 -> secp256r1" \
          0 \
          -s "Protocol is TLSv1.3" \
          -s "got named group: secp256r1(0017)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -s "HRR selected_group: secp256r1"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_gnutls_tls1_3
@@ -10012,11 +10642,12 @@ run_test "TLS 1.3 G->m: HRR secp521r1 -> secp384r1" \
          0 \
          -s "Protocol is TLSv1.3" \
          -s "got named group: secp384r1(0018)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -s "HRR selected_group: secp384r1"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_gnutls_tls1_3
@@ -10028,11 +10659,12 @@ run_test "TLS 1.3 G->m: HRR secp521r1 -> x25519" \
          0 \
          -s "Protocol is TLSv1.3" \
          -s "got named group: x25519(001d)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -s "HRR selected_group: x25519"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_gnutls_tls1_3
@@ -10044,11 +10676,12 @@ run_test "TLS 1.3 G->m: HRR secp521r1 -> x448" \
          0 \
          -s "Protocol is TLSv1.3" \
          -s "got named group: x448(001e)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -s "HRR selected_group: x448"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_gnutls_tls1_3
@@ -10060,11 +10693,12 @@ run_test "TLS 1.3 G->m: HRR x25519 -> secp256r1" \
          0 \
          -s "Protocol is TLSv1.3" \
          -s "got named group: secp256r1(0017)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -s "HRR selected_group: secp256r1"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_gnutls_tls1_3
@@ -10076,11 +10710,12 @@ run_test "TLS 1.3 G->m: HRR x25519 -> secp384r1" \
          0 \
          -s "Protocol is TLSv1.3" \
          -s "got named group: secp384r1(0018)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -s "HRR selected_group: secp384r1"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_gnutls_tls1_3
@@ -10092,11 +10727,12 @@ run_test "TLS 1.3 G->m: HRR x25519 -> secp521r1" \
          0 \
          -s "Protocol is TLSv1.3" \
          -s "got named group: secp521r1(0019)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -s "HRR selected_group: secp521r1"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_gnutls_tls1_3
@@ -10108,11 +10744,12 @@ run_test "TLS 1.3 G->m: HRR x25519 -> x448" \
          0 \
          -s "Protocol is TLSv1.3" \
          -s "got named group: x448(001e)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -s "HRR selected_group: x448"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_gnutls_tls1_3
@@ -10124,11 +10761,12 @@ run_test "TLS 1.3 G->m: HRR x448 -> secp256r1" \
          0 \
          -s "Protocol is TLSv1.3" \
          -s "got named group: secp256r1(0017)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -s "HRR selected_group: secp256r1"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_gnutls_tls1_3
@@ -10140,11 +10778,12 @@ run_test "TLS 1.3 G->m: HRR x448 -> secp384r1" \
          0 \
          -s "Protocol is TLSv1.3" \
          -s "got named group: secp384r1(0018)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -s "HRR selected_group: secp384r1"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_gnutls_tls1_3
@@ -10156,11 +10795,12 @@ run_test "TLS 1.3 G->m: HRR x448 -> secp521r1" \
          0 \
          -s "Protocol is TLSv1.3" \
          -s "got named group: secp521r1(0019)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -s "HRR selected_group: secp521r1"
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_gnutls_tls1_3
@@ -10172,12 +10812,13 @@ run_test "TLS 1.3 G->m: HRR x448 -> x25519" \
          0 \
          -s "Protocol is TLSv1.3" \
          -s "got named group: x25519(001d)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -s "HRR selected_group: x25519"
 
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->O: HRR secp256r1 -> secp384r1" \
@@ -10195,6 +10836,7 @@ run_test "TLS 1.3 m->O: HRR secp256r1 -> secp384r1" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->O: HRR secp256r1 -> secp521r1" \
@@ -10212,6 +10854,7 @@ run_test "TLS 1.3 m->O: HRR secp256r1 -> secp521r1" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->O: HRR secp256r1 -> x25519" \
@@ -10229,6 +10872,7 @@ run_test "TLS 1.3 m->O: HRR secp256r1 -> x25519" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->O: HRR secp256r1 -> x448" \
@@ -10246,6 +10890,7 @@ run_test "TLS 1.3 m->O: HRR secp256r1 -> x448" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->O: HRR secp384r1 -> secp256r1" \
@@ -10263,6 +10908,7 @@ run_test "TLS 1.3 m->O: HRR secp384r1 -> secp256r1" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->O: HRR secp384r1 -> secp521r1" \
@@ -10280,6 +10926,7 @@ run_test "TLS 1.3 m->O: HRR secp384r1 -> secp521r1" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->O: HRR secp384r1 -> x25519" \
@@ -10297,6 +10944,7 @@ run_test "TLS 1.3 m->O: HRR secp384r1 -> x25519" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->O: HRR secp384r1 -> x448" \
@@ -10314,6 +10962,7 @@ run_test "TLS 1.3 m->O: HRR secp384r1 -> x448" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->O: HRR secp521r1 -> secp256r1" \
@@ -10331,6 +10980,7 @@ run_test "TLS 1.3 m->O: HRR secp521r1 -> secp256r1" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->O: HRR secp521r1 -> secp384r1" \
@@ -10348,6 +10998,7 @@ run_test "TLS 1.3 m->O: HRR secp521r1 -> secp384r1" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->O: HRR secp521r1 -> x25519" \
@@ -10365,6 +11016,7 @@ run_test "TLS 1.3 m->O: HRR secp521r1 -> x25519" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->O: HRR secp521r1 -> x448" \
@@ -10382,6 +11034,7 @@ run_test "TLS 1.3 m->O: HRR secp521r1 -> x448" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->O: HRR x25519 -> secp256r1" \
@@ -10399,6 +11052,7 @@ run_test "TLS 1.3 m->O: HRR x25519 -> secp256r1" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->O: HRR x25519 -> secp384r1" \
@@ -10416,6 +11070,7 @@ run_test "TLS 1.3 m->O: HRR x25519 -> secp384r1" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->O: HRR x25519 -> secp521r1" \
@@ -10433,6 +11088,7 @@ run_test "TLS 1.3 m->O: HRR x25519 -> secp521r1" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->O: HRR x25519 -> x448" \
@@ -10450,6 +11106,7 @@ run_test "TLS 1.3 m->O: HRR x25519 -> x448" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->O: HRR x448 -> secp256r1" \
@@ -10467,6 +11124,7 @@ run_test "TLS 1.3 m->O: HRR x448 -> secp256r1" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->O: HRR x448 -> secp384r1" \
@@ -10484,6 +11142,7 @@ run_test "TLS 1.3 m->O: HRR x448 -> secp384r1" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->O: HRR x448 -> secp521r1" \
@@ -10501,6 +11160,7 @@ run_test "TLS 1.3 m->O: HRR x448 -> secp521r1" \
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->O: HRR x448 -> x25519" \
@@ -10520,6 +11180,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->G: HRR secp256r1 -> secp384r1" \
@@ -10539,6 +11200,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->G: HRR secp256r1 -> secp521r1" \
@@ -10558,6 +11220,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->G: HRR secp256r1 -> x25519" \
@@ -10577,6 +11240,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->G: HRR secp256r1 -> x448" \
@@ -10596,6 +11260,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->G: HRR secp384r1 -> secp256r1" \
@@ -10615,6 +11280,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->G: HRR secp384r1 -> secp521r1" \
@@ -10634,6 +11300,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->G: HRR secp384r1 -> x25519" \
@@ -10653,6 +11320,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->G: HRR secp384r1 -> x448" \
@@ -10672,6 +11340,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->G: HRR secp521r1 -> secp256r1" \
@@ -10691,6 +11360,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->G: HRR secp521r1 -> secp384r1" \
@@ -10710,6 +11380,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->G: HRR secp521r1 -> x25519" \
@@ -10729,6 +11400,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->G: HRR secp521r1 -> x448" \
@@ -10748,6 +11420,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->G: HRR x25519 -> secp256r1" \
@@ -10767,6 +11440,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->G: HRR x25519 -> secp384r1" \
@@ -10786,6 +11460,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->G: HRR x25519 -> secp521r1" \
@@ -10805,6 +11480,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->G: HRR x25519 -> x448" \
@@ -10824,6 +11500,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->G: HRR x448 -> secp256r1" \
@@ -10843,6 +11520,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->G: HRR x448 -> secp384r1" \
@@ -10862,6 +11540,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->G: HRR x448 -> secp521r1" \
@@ -10881,6 +11560,7 @@ requires_gnutls_next_no_ticket
 requires_gnutls_next_disable_tls13_compat
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->G: HRR x448 -> x25519" \
@@ -10897,10 +11577,12 @@ run_test "TLS 1.3 m->G: HRR x448 -> x25519" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->m: HRR secp256r1 -> secp384r1" \
@@ -10909,7 +11591,7 @@ run_test "TLS 1.3 m->m: HRR secp256r1 -> secp384r1" \
          0 \
          -s "Protocol is TLSv1.3" \
          -s "got named group: secp384r1(0018)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "NamedGroup: secp256r1 ( 17 )" \
          -c "NamedGroup: secp384r1 ( 18 )" \
@@ -10920,10 +11602,12 @@ run_test "TLS 1.3 m->m: HRR secp256r1 -> secp384r1" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->m: HRR secp256r1 -> secp521r1" \
@@ -10932,7 +11616,7 @@ run_test "TLS 1.3 m->m: HRR secp256r1 -> secp521r1" \
          0 \
          -s "Protocol is TLSv1.3" \
          -s "got named group: secp521r1(0019)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "NamedGroup: secp256r1 ( 17 )" \
          -c "NamedGroup: secp521r1 ( 19 )" \
@@ -10943,10 +11627,12 @@ run_test "TLS 1.3 m->m: HRR secp256r1 -> secp521r1" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->m: HRR secp256r1 -> x25519" \
@@ -10955,7 +11641,7 @@ run_test "TLS 1.3 m->m: HRR secp256r1 -> x25519" \
          0 \
          -s "Protocol is TLSv1.3" \
          -s "got named group: x25519(001d)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "NamedGroup: secp256r1 ( 17 )" \
          -c "NamedGroup: x25519 ( 1d )" \
@@ -10966,10 +11652,12 @@ run_test "TLS 1.3 m->m: HRR secp256r1 -> x25519" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->m: HRR secp256r1 -> x448" \
@@ -10978,7 +11666,7 @@ run_test "TLS 1.3 m->m: HRR secp256r1 -> x448" \
          0 \
          -s "Protocol is TLSv1.3" \
          -s "got named group: x448(001e)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "NamedGroup: secp256r1 ( 17 )" \
          -c "NamedGroup: x448 ( 1e )" \
@@ -10989,10 +11677,12 @@ run_test "TLS 1.3 m->m: HRR secp256r1 -> x448" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->m: HRR secp384r1 -> secp256r1" \
@@ -11001,7 +11691,7 @@ run_test "TLS 1.3 m->m: HRR secp384r1 -> secp256r1" \
          0 \
          -s "Protocol is TLSv1.3" \
          -s "got named group: secp256r1(0017)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "NamedGroup: secp384r1 ( 18 )" \
          -c "NamedGroup: secp256r1 ( 17 )" \
@@ -11012,10 +11702,12 @@ run_test "TLS 1.3 m->m: HRR secp384r1 -> secp256r1" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->m: HRR secp384r1 -> secp521r1" \
@@ -11024,7 +11716,7 @@ run_test "TLS 1.3 m->m: HRR secp384r1 -> secp521r1" \
          0 \
          -s "Protocol is TLSv1.3" \
          -s "got named group: secp521r1(0019)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "NamedGroup: secp384r1 ( 18 )" \
          -c "NamedGroup: secp521r1 ( 19 )" \
@@ -11035,10 +11727,12 @@ run_test "TLS 1.3 m->m: HRR secp384r1 -> secp521r1" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->m: HRR secp384r1 -> x25519" \
@@ -11047,7 +11741,7 @@ run_test "TLS 1.3 m->m: HRR secp384r1 -> x25519" \
          0 \
          -s "Protocol is TLSv1.3" \
          -s "got named group: x25519(001d)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "NamedGroup: secp384r1 ( 18 )" \
          -c "NamedGroup: x25519 ( 1d )" \
@@ -11058,10 +11752,12 @@ run_test "TLS 1.3 m->m: HRR secp384r1 -> x25519" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->m: HRR secp384r1 -> x448" \
@@ -11070,7 +11766,7 @@ run_test "TLS 1.3 m->m: HRR secp384r1 -> x448" \
          0 \
          -s "Protocol is TLSv1.3" \
          -s "got named group: x448(001e)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "NamedGroup: secp384r1 ( 18 )" \
          -c "NamedGroup: x448 ( 1e )" \
@@ -11081,10 +11777,12 @@ run_test "TLS 1.3 m->m: HRR secp384r1 -> x448" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->m: HRR secp521r1 -> secp256r1" \
@@ -11093,7 +11791,7 @@ run_test "TLS 1.3 m->m: HRR secp521r1 -> secp256r1" \
          0 \
          -s "Protocol is TLSv1.3" \
          -s "got named group: secp256r1(0017)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "NamedGroup: secp521r1 ( 19 )" \
          -c "NamedGroup: secp256r1 ( 17 )" \
@@ -11104,10 +11802,12 @@ run_test "TLS 1.3 m->m: HRR secp521r1 -> secp256r1" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->m: HRR secp521r1 -> secp384r1" \
@@ -11116,7 +11816,7 @@ run_test "TLS 1.3 m->m: HRR secp521r1 -> secp384r1" \
          0 \
          -s "Protocol is TLSv1.3" \
          -s "got named group: secp384r1(0018)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "NamedGroup: secp521r1 ( 19 )" \
          -c "NamedGroup: secp384r1 ( 18 )" \
@@ -11127,10 +11827,12 @@ run_test "TLS 1.3 m->m: HRR secp521r1 -> secp384r1" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->m: HRR secp521r1 -> x25519" \
@@ -11139,7 +11841,7 @@ run_test "TLS 1.3 m->m: HRR secp521r1 -> x25519" \
          0 \
          -s "Protocol is TLSv1.3" \
          -s "got named group: x25519(001d)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "NamedGroup: secp521r1 ( 19 )" \
          -c "NamedGroup: x25519 ( 1d )" \
@@ -11150,10 +11852,12 @@ run_test "TLS 1.3 m->m: HRR secp521r1 -> x25519" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->m: HRR secp521r1 -> x448" \
@@ -11162,7 +11866,7 @@ run_test "TLS 1.3 m->m: HRR secp521r1 -> x448" \
          0 \
          -s "Protocol is TLSv1.3" \
          -s "got named group: x448(001e)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "NamedGroup: secp521r1 ( 19 )" \
          -c "NamedGroup: x448 ( 1e )" \
@@ -11173,10 +11877,12 @@ run_test "TLS 1.3 m->m: HRR secp521r1 -> x448" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->m: HRR x25519 -> secp256r1" \
@@ -11185,7 +11891,7 @@ run_test "TLS 1.3 m->m: HRR x25519 -> secp256r1" \
          0 \
          -s "Protocol is TLSv1.3" \
          -s "got named group: secp256r1(0017)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "NamedGroup: x25519 ( 1d )" \
          -c "NamedGroup: secp256r1 ( 17 )" \
@@ -11196,10 +11902,12 @@ run_test "TLS 1.3 m->m: HRR x25519 -> secp256r1" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->m: HRR x25519 -> secp384r1" \
@@ -11208,7 +11916,7 @@ run_test "TLS 1.3 m->m: HRR x25519 -> secp384r1" \
          0 \
          -s "Protocol is TLSv1.3" \
          -s "got named group: secp384r1(0018)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "NamedGroup: x25519 ( 1d )" \
          -c "NamedGroup: secp384r1 ( 18 )" \
@@ -11219,10 +11927,12 @@ run_test "TLS 1.3 m->m: HRR x25519 -> secp384r1" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->m: HRR x25519 -> secp521r1" \
@@ -11231,7 +11941,7 @@ run_test "TLS 1.3 m->m: HRR x25519 -> secp521r1" \
          0 \
          -s "Protocol is TLSv1.3" \
          -s "got named group: secp521r1(0019)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "NamedGroup: x25519 ( 1d )" \
          -c "NamedGroup: secp521r1 ( 19 )" \
@@ -11242,10 +11952,12 @@ run_test "TLS 1.3 m->m: HRR x25519 -> secp521r1" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->m: HRR x25519 -> x448" \
@@ -11254,7 +11966,7 @@ run_test "TLS 1.3 m->m: HRR x25519 -> x448" \
          0 \
          -s "Protocol is TLSv1.3" \
          -s "got named group: x448(001e)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "NamedGroup: x25519 ( 1d )" \
          -c "NamedGroup: x448 ( 1e )" \
@@ -11265,10 +11977,12 @@ run_test "TLS 1.3 m->m: HRR x25519 -> x448" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->m: HRR x448 -> secp256r1" \
@@ -11277,7 +11991,7 @@ run_test "TLS 1.3 m->m: HRR x448 -> secp256r1" \
          0 \
          -s "Protocol is TLSv1.3" \
          -s "got named group: secp256r1(0017)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "NamedGroup: x448 ( 1e )" \
          -c "NamedGroup: secp256r1 ( 17 )" \
@@ -11288,10 +12002,12 @@ run_test "TLS 1.3 m->m: HRR x448 -> secp256r1" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->m: HRR x448 -> secp384r1" \
@@ -11300,7 +12016,7 @@ run_test "TLS 1.3 m->m: HRR x448 -> secp384r1" \
          0 \
          -s "Protocol is TLSv1.3" \
          -s "got named group: secp384r1(0018)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "NamedGroup: x448 ( 1e )" \
          -c "NamedGroup: secp384r1 ( 18 )" \
@@ -11311,10 +12027,12 @@ run_test "TLS 1.3 m->m: HRR x448 -> secp384r1" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->m: HRR x448 -> secp521r1" \
@@ -11323,7 +12041,7 @@ run_test "TLS 1.3 m->m: HRR x448 -> secp521r1" \
          0 \
          -s "Protocol is TLSv1.3" \
          -s "got named group: secp521r1(0019)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "NamedGroup: x448 ( 1e )" \
          -c "NamedGroup: secp521r1 ( 19 )" \
@@ -11334,10 +12052,12 @@ run_test "TLS 1.3 m->m: HRR x448 -> secp521r1" \
 
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 run_test "TLS 1.3 m->m: HRR x448 -> x25519" \
@@ -11346,7 +12066,7 @@ run_test "TLS 1.3 m->m: HRR x448 -> x25519" \
          0 \
          -s "Protocol is TLSv1.3" \
          -s "got named group: x25519(001d)" \
-         -s "Certificate verification was skipped" \
+         -s "Verifying peer X.509 certificate... ok" \
          -c "Protocol is TLSv1.3" \
          -c "NamedGroup: x448 ( 1e )" \
          -c "NamedGroup: x25519 ( 1d )" \
