@@ -19,7 +19,8 @@
 #ifndef SHA1_ALT_H
 #define SHA1_ALT_H
 
-typedef struct mbedtls_sha1_context {
+typedef struct mbedtls_sha1_context
+{
     int dummy;
 }
 mbedtls_sha1_context;
