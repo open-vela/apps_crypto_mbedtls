@@ -23,7 +23,6 @@
 #ifndef MBEDTLS_CHECK_CONFIG_H
 #define MBEDTLS_CHECK_CONFIG_H
 
-/* *INDENT-OFF* */
 /*
  * We assume CHAR_BIT is 8 in many places. In practice, this is true on our
  * target platforms, so not an issue, but let's just be extra sure.
@@ -32,8 +31,6 @@
 #if CHAR_BIT != 8
 #error "mbed TLS requires a platform with 8-bit chars"
 #endif
-
-#include <stdint.h>
 
 #if defined(_WIN32)
 #if !defined(MBEDTLS_PLATFORM_C)
@@ -68,10 +65,6 @@
 
 #if defined(MBEDTLS_AESNI_C) && !defined(MBEDTLS_HAVE_ASM)
 #error "MBEDTLS_AESNI_C defined, but not all prerequisites"
-#endif
-
-#if defined(MBEDTLS_AESCE_C) && !defined(MBEDTLS_HAVE_ASM)
-#error "MBEDTLS_AESCE_C defined, but not all prerequisites"
 #endif
 
 #if defined(MBEDTLS_CTR_DRBG_C) && !defined(MBEDTLS_AES_C)
@@ -121,19 +114,15 @@
 #endif
 
 #if defined(MBEDTLS_ECP_RESTARTABLE)           && \
-    ( defined(MBEDTLS_ECDH_COMPUTE_SHARED_ALT) || \
+    ( defined(MBEDTLS_USE_PSA_CRYPTO)          || \
+      defined(MBEDTLS_ECDH_COMPUTE_SHARED_ALT) || \
       defined(MBEDTLS_ECDH_GEN_PUBLIC_ALT)     || \
       defined(MBEDTLS_ECDSA_SIGN_ALT)          || \
       defined(MBEDTLS_ECDSA_VERIFY_ALT)        || \
       defined(MBEDTLS_ECDSA_GENKEY_ALT)        || \
       defined(MBEDTLS_ECP_INTERNAL_ALT)        || \
       defined(MBEDTLS_ECP_ALT) )
-#error "MBEDTLS_ECP_RESTARTABLE defined, but it cannot coexist with an alternative ECP implementation"
-#endif
-
-#if defined(MBEDTLS_ECP_RESTARTABLE)           && \
-    !defined(MBEDTLS_ECP_C)
-#error "MBEDTLS_ECP_RESTARTABLE defined, but not all prerequisites"
+#error "MBEDTLS_ECP_RESTARTABLE defined, but it cannot coexist with an alternative or PSA-based ECP implementation"
 #endif
 
 #if defined(MBEDTLS_ECDSA_DETERMINISTIC) && !defined(MBEDTLS_HMAC_DRBG_C)
@@ -338,7 +327,7 @@
 
 /* Use of EC J-PAKE in TLS requires SHA-256.
  * This will be taken from MD if it is present, or from PSA if MD is absent.
- * Note: MBEDTLS_ECJPAKE_C depends on MBEDTLS_MD_C || MBEDTLS_PSA_CRYPTO_C. */
+ * Note: ECJPAKE_C depends on MD_C || PSA_CRYPTO_C. */
 #if defined(MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED) &&                    \
     !( defined(MBEDTLS_MD_C) && defined(MBEDTLS_SHA256_C) ) &&          \
     !( !defined(MBEDTLS_MD_C) && defined(PSA_WANT_ALG_SHA_256) )
@@ -699,6 +688,10 @@
 #error "MBEDTLS_X509_RSASSA_PSS_SUPPORT defined, but not all prerequisites"
 #endif
 
+#if defined(MBEDTLS_SHA384_C) && !defined(MBEDTLS_SHA512_C)
+#error "MBEDTLS_SHA384_C defined without MBEDTLS_SHA512_C"
+#endif
+
 #if defined(MBEDTLS_SHA512_USE_A64_CRYPTO_IF_PRESENT) && \
     defined(MBEDTLS_SHA512_USE_A64_CRYPTO_ONLY)
 #error "Must only define one of MBEDTLS_SHA512_USE_A64_CRYPTO_*"
@@ -752,6 +745,14 @@
 
 #if defined(MBEDTLS_SHA512_USE_A64_CRYPTO_ONLY) && !defined(__aarch64__)
 #error "MBEDTLS_SHA512_USE_A64_CRYPTO_ONLY defined on non-Aarch64 system"
+#endif
+
+#if defined(MBEDTLS_SHA224_C) && !defined(MBEDTLS_SHA256_C)
+#error "MBEDTLS_SHA224_C defined without MBEDTLS_SHA256_C"
+#endif
+
+#if defined(MBEDTLS_SHA256_C) && !defined(MBEDTLS_SHA224_C)
+#error "MBEDTLS_SHA256_C defined without MBEDTLS_SHA224_C"
 #endif
 
 #if defined(MBEDTLS_SHA256_USE_A64_CRYPTO_IF_PRESENT) && \
@@ -841,18 +842,11 @@
         "but no key exchange methods defined with MBEDTLS_KEY_EXCHANGE_xxxx"
 #endif
 
+/* Early data requires PSK related mode defined */
 #if defined(MBEDTLS_SSL_EARLY_DATA) && \
-    ( !defined(MBEDTLS_SSL_SESSION_TICKETS) || \
-      ( !defined(MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_ENABLED) && \
-        !defined(MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_EPHEMERAL_ENABLED) ) )
+        ( !defined(MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_ENABLED) && \
+          !defined(MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_EPHEMERAL_ENABLED))
 #error "MBEDTLS_SSL_EARLY_DATA  defined, but not all prerequisites"
-#endif
-
-#if defined(MBEDTLS_SSL_EARLY_DATA) && defined(MBEDTLS_SSL_SRV_C) && \
-    ( !defined(MBEDTLS_SSL_MAX_EARLY_DATA_SIZE)     || \
-      ( MBEDTLS_SSL_MAX_EARLY_DATA_SIZE < 0 )       || \
-      ( MBEDTLS_SSL_MAX_EARLY_DATA_SIZE > UINT32_MAX ) )
-#error "MBEDTLS_SSL_MAX_EARLY_DATA_SIZE MUST be defined and in range(0..UINT32_MAX)"
 #endif
 
 #if defined(MBEDTLS_SSL_PROTO_DTLS)     && \
@@ -862,10 +856,6 @@
 
 #if defined(MBEDTLS_SSL_CLI_C) && !defined(MBEDTLS_SSL_TLS_C)
 #error "MBEDTLS_SSL_CLI_C defined, but not all prerequisites"
-#endif
-
-#if defined(MBEDTLS_SSL_ASYNC_PRIVATE) && !defined(MBEDTLS_X509_CRT_PARSE_C)
-#error "MBEDTLS_SSL_ASYNC_PRIVATE defined, but not all prerequisites"
 #endif
 
 #if defined(MBEDTLS_SSL_TLS_C) && ( !defined(MBEDTLS_CIPHER_C) ||     \
@@ -912,19 +902,6 @@
     MBEDTLS_SSL_CID_OUT_LEN_MAX > 255
 #error "MBEDTLS_SSL_CID_OUT_LEN_MAX too large (max 255)"
 #endif
-
-#if defined(MBEDTLS_SSL_DTLS_CONNECTION_ID_COMPAT)     &&                 \
-    !defined(MBEDTLS_SSL_DTLS_CONNECTION_ID)
-#error "MBEDTLS_SSL_DTLS_CONNECTION_ID_COMPAT defined, but not all prerequisites"
-#endif
-
-#if defined(MBEDTLS_SSL_DTLS_CONNECTION_ID_COMPAT) && MBEDTLS_SSL_DTLS_CONNECTION_ID_COMPAT != 0
-#if defined(MBEDTLS_DEPRECATED_REMOVED)
-#error "MBEDTLS_SSL_DTLS_CONNECTION_ID_COMPAT is deprecated and will be removed in a future version of Mbed TLS"
-#elif defined(MBEDTLS_DEPRECATED_WARNING)
-#warning "MBEDTLS_SSL_DTLS_CONNECTION_ID_COMPAT is deprecated and will be removed in a future version of Mbed TLS"
-#endif
-#endif /* MBEDTLS_SSL_DTLS_CONNECTION_ID_COMPAT && MBEDTLS_SSL_DTLS_CONNECTION_ID_COMPAT != 0 */
 
 #if defined(MBEDTLS_SSL_ENCRYPT_THEN_MAC) &&   \
     !defined(MBEDTLS_SSL_PROTO_TLS1_2)
@@ -1017,11 +994,6 @@
 #error "MBEDTLS_X509_CSR_WRITE_C defined, but not all prerequisites"
 #endif
 
-#if defined(MBEDTLS_X509_TRUSTED_CERTIFICATE_CALLBACK) && \
-            ( !defined(MBEDTLS_X509_CRT_PARSE_C) )
-#error "MBEDTLS_X509_TRUSTED_CERTIFICATE_CALLBACK defined, but not all prerequisites"
-#endif
-
 #if defined(MBEDTLS_HAVE_INT32) && defined(MBEDTLS_HAVE_INT64)
 #error "MBEDTLS_HAVE_INT32 and MBEDTLS_HAVE_INT64 cannot be defined simultaneously"
 #endif /* MBEDTLS_HAVE_INT32 && MBEDTLS_HAVE_INT64 */
@@ -1090,14 +1062,6 @@
 #error "MBEDTLS_SSL_TRUNCATED_HMAC was removed in Mbed TLS 3.0. See https://github.com/Mbed-TLS/mbedtls/issues/4341"
 #endif
 
-#if defined(MBEDTLS_PKCS7_C) && ( ( !defined(MBEDTLS_ASN1_PARSE_C) ) || \
-    ( !defined(MBEDTLS_OID_C) ) || ( !defined(MBEDTLS_PK_PARSE_C) ) || \
-    ( !defined(MBEDTLS_X509_CRT_PARSE_C) ) ||\
-    ( !defined(MBEDTLS_X509_CRL_PARSE_C) ) || ( !defined(MBEDTLS_BIGNUM_C) ) || \
-    ( !defined(MBEDTLS_MD_C) ) )
-#error  "MBEDTLS_PKCS7_C is defined, but not all prerequisites"
-#endif
-
 /*
  * Avoid warning from -pedantic. This is a convenient place for this
  * workaround since this is included by every single file before the
@@ -1105,5 +1069,4 @@
  */
 typedef int mbedtls_iso_c_forbids_empty_translation_units;
 
-/* *INDENT-ON* */
 #endif /* MBEDTLS_CHECK_CONFIG_H */
