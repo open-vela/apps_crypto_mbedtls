@@ -263,7 +263,7 @@ const selftest_t selftests[] =
     { "sha512", mbedtls_sha512_self_test },
 #endif
 #if defined(MBEDTLS_SHA3_C)
-    {"sha3", mbedtls_sha3_self_test},
+    { "sha3", mbedtls_sha3_self_test },
 #endif
 #if defined(MBEDTLS_ARC4_C)
     {"arc4", mbedtls_arc4_self_test},
