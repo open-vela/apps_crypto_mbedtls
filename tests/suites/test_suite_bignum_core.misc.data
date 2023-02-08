@@ -167,6 +167,9 @@ mpi_core_lt_ct:"2B5":"2B4":0
 mbedtls_mpi_core_lt_ct: x<y (1 limb)
 mpi_core_lt_ct:"2B5":"2B6":1
 
+mbedtls_mpi_core_lt_ct: x=y (0 limbs)
+mpi_core_lt_ct:"":"":0
+
 mbedtls_mpi_core_lt_ct: x>y (63 bit x, y first byte greater)
 mpi_core_lt_ct:"7FFFFFFFFFFFFFFF":"00000000000000FF":0
 
@@ -241,69 +244,6 @@ mpi_core_lt_ct:"11FFFFFFFFFFFFFFFF":"FF1111111111111111":1
 
 mbedtls_mpi_core_lt_ct: x>y (alternating limbs)
 mpi_core_lt_ct:"FF1111111111111111":"11FFFFFFFFFFFFFFFF":0
-
-Test mbedtls_mpi_core_uint_le_mpi: 0 (1 limb)
-mpi_core_uint_le_mpi:"00"
-
-Test mbedtls_mpi_core_uint_le_mpi: 0 (>=2 limbs)
-mpi_core_uint_le_mpi:"000000000000000000"
-
-Test mbedtls_mpi_core_uint_le_mpi: 1 (1 limb)
-mpi_core_uint_le_mpi:"01"
-
-Test mbedtls_mpi_core_uint_le_mpi: 1 (>=2 limbs)
-mpi_core_uint_le_mpi:"000000000000000001"
-
-Test mbedtls_mpi_core_uint_le_mpi: 42 (1 limb)
-mpi_core_uint_le_mpi:"2a"
-
-Test mbedtls_mpi_core_uint_le_mpi: 42 (>=2 limbs)
-mpi_core_uint_le_mpi:"000000000000000042"
-
-Test mbedtls_mpi_core_uint_le_mpi: 2^31-1
-mpi_core_uint_le_mpi:"7fffffff"
-
-Test mbedtls_mpi_core_uint_le_mpi: 2^31-1 with leading zero limb
-mpi_core_uint_le_mpi:"00000000007fffffff"
-
-Test mbedtls_mpi_core_uint_le_mpi: 2^32-1
-mpi_core_uint_le_mpi:"ffffffff"
-
-Test mbedtls_mpi_core_uint_le_mpi: 2^32-1 with leading zero limb
-mpi_core_uint_le_mpi:"0000000000ffffffff"
-
-Test mbedtls_mpi_core_uint_le_mpi: 2^32
-mpi_core_uint_le_mpi:"10000000"
-
-Test mbedtls_mpi_core_uint_le_mpi: 2^32 with leading zero limb
-mpi_core_uint_le_mpi:"000000000010000000"
-
-Test mbedtls_mpi_core_uint_le_mpi: 2^32+1
-mpi_core_uint_le_mpi:"10000001"
-
-Test mbedtls_mpi_core_uint_le_mpi: 2^32+1 with leading zero limb
-mpi_core_uint_le_mpi:"000000000010000001"
-
-Test mbedtls_mpi_core_uint_le_mpi: 2^63-1
-mpi_core_uint_le_mpi:"7fffffffffffffff"
-
-Test mbedtls_mpi_core_uint_le_mpi: 2^63-1 with leading zero limb
-mpi_core_uint_le_mpi:"007fffffffffffffff"
-
-Test mbedtls_mpi_core_uint_le_mpi: 2^64-1
-mpi_core_uint_le_mpi:"ffffffffffffffff"
-
-Test mbedtls_mpi_core_uint_le_mpi: 2^64-1 with leading zero limb
-mpi_core_uint_le_mpi:"00ffffffffffffffff"
-
-Test mbedtls_mpi_core_uint_le_mpi: 2^64
-mpi_core_uint_le_mpi:"010000000000000000"
-
-Test mbedtls_mpi_core_uint_le_mpi: 2^64+1
-mpi_core_uint_le_mpi:"010000000000000001"
-
-Test mbedtls_mpi_core_uint_le_mpi: 2^64+2
-mpi_core_uint_le_mpi:"010000000000000002"
 
 mbedtls_mpi_core_cond_assign: 1 limb
 mpi_core_cond_assign:"FFFFFFFF":"11111111":4
@@ -490,43 +430,3 @@ mpi_core_fill_random:42:0:-1:0:MBEDTLS_ERR_MPI_BAD_INPUT_DATA
 
 Fill random core: 42 bytes, 5 missing limbs
 mpi_core_fill_random:42:0:-5:0:MBEDTLS_ERR_MPI_BAD_INPUT_DATA
-
-# BEGIN MERGE SLOT 1
-
-# END MERGE SLOT 1
-
-# BEGIN MERGE SLOT 2
-
-# END MERGE SLOT 2
-
-# BEGIN MERGE SLOT 3
-
-# END MERGE SLOT 3
-
-# BEGIN MERGE SLOT 4
-
-# END MERGE SLOT 4
-
-# BEGIN MERGE SLOT 5
-
-# END MERGE SLOT 5
-
-# BEGIN MERGE SLOT 6
-
-# END MERGE SLOT 6
-
-# BEGIN MERGE SLOT 7
-
-# END MERGE SLOT 7
-
-# BEGIN MERGE SLOT 8
-
-# END MERGE SLOT 8
-
-# BEGIN MERGE SLOT 9
-
-# END MERGE SLOT 9
-
-# BEGIN MERGE SLOT 10
-
-# END MERGE SLOT 10
