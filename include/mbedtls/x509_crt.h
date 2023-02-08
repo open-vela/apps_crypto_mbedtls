@@ -103,56 +103,6 @@ typedef struct mbedtls_x509_crt {
 mbedtls_x509_crt;
 
 /**
- * From RFC 5280 section 4.2.1.6:
- * OtherName ::= SEQUENCE {
- *      type-id    OBJECT IDENTIFIER,
- *      value      [0] EXPLICIT ANY DEFINED BY type-id }
- *
- * Future versions of the library may add new fields to this structure or
- * to its embedded union and structure.
- */
-typedef struct mbedtls_x509_san_other_name {
-    /**
-     * The type_id is an OID as defined in RFC 5280.
-     * To check the value of the type id, you should use
-     * \p MBEDTLS_OID_CMP with a known OID mbedtls_x509_buf.
-     */
-    mbedtls_x509_buf type_id;                   /**< The type id. */
-    union {
-        /**
-         * From RFC 4108 section 5:
-         * HardwareModuleName ::= SEQUENCE {
-         *                         hwType OBJECT IDENTIFIER,
-         *                         hwSerialNum OCTET STRING }
-         */
-        struct {
-            mbedtls_x509_buf oid;               /**< The object identifier. */
-            mbedtls_x509_buf val;               /**< The named value. */
-        }
-        hardware_module_name;
-    }
-    value;
-}
-mbedtls_x509_san_other_name;
-
-/**
- * A structure for holding the parsed Subject Alternative Name,
- * according to type.
- *
- * Future versions of the library may add new fields to this structure or
- * to its embedded union and structure.
- */
-typedef struct mbedtls_x509_subject_alternative_name {
-    int type;                              /**< The SAN type, value of MBEDTLS_X509_SAN_XXX. */
-    union {
-        mbedtls_x509_san_other_name other_name; /**< The otherName supported type. */
-        mbedtls_x509_buf   unstructured_name; /**< The buffer for the un constructed types. Only dnsName currently supported */
-    }
-    san; /**< A union of the supported SAN types */
-}
-mbedtls_x509_subject_alternative_name;
-
-/**
  * Build flag from an algorithm/curve identifier (pk, md, ecp)
  * Since 0 is always XXX_NONE, ignore it.
  */
@@ -197,7 +147,7 @@ mbedtls_x509_crt_profile;
 #define MBEDTLS_X509_CRT_VERSION_2              1
 #define MBEDTLS_X509_CRT_VERSION_3              2
 
-#define MBEDTLS_X509_RFC5280_MAX_SERIAL_LEN 32
+#define MBEDTLS_X509_RFC5280_MAX_SERIAL_LEN 20
 #define MBEDTLS_X509_RFC5280_UTC_TIME_LEN   15
 
 #if !defined(MBEDTLS_X509_MAX_FILE_PATH_LEN)
@@ -277,7 +227,8 @@ mbedtls_x509_crt_profile;
  */
 typedef struct mbedtls_x509write_cert {
     int MBEDTLS_PRIVATE(version);
-    mbedtls_mpi MBEDTLS_PRIVATE(serial);
+    unsigned char MBEDTLS_PRIVATE(serial)[MBEDTLS_X509_RFC5280_MAX_SERIAL_LEN];
+    size_t MBEDTLS_PRIVATE(serial_len);
     mbedtls_pk_context *MBEDTLS_PRIVATE(subject_key);
     mbedtls_pk_context *MBEDTLS_PRIVATE(issuer_key);
     mbedtls_asn1_named_data *MBEDTLS_PRIVATE(subject);
@@ -589,36 +540,6 @@ int mbedtls_x509_crt_parse_file(mbedtls_x509_crt *chain, const char *path);
 int mbedtls_x509_crt_parse_path(mbedtls_x509_crt *chain, const char *path);
 
 #endif /* MBEDTLS_FS_IO */
-/**
- * \brief          This function parses an item in the SubjectAlternativeNames
- *                 extension.
- *
- * \param san_buf  The buffer holding the raw data item of the subject
- *                 alternative name.
- * \param san      The target structure to populate with the parsed presentation
- *                 of the subject alternative name encoded in \p san_raw.
- *
- * \note           Only "dnsName" and "otherName" of type hardware_module_name
- *                 as defined in RFC 4180 is supported.
- *
- * \note           This function should be called on a single raw data of
- *                 subject alternative name. For example, after successful
- *                 certificate parsing, one must iterate on every item in the
- *                 \p crt->subject_alt_names sequence, and pass it to
- *                 this function.
- *
- * \warning        The target structure contains pointers to the raw data of the
- *                 parsed certificate, and its lifetime is restricted by the
- *                 lifetime of the certificate.
- *
- * \return         \c 0 on success
- * \return         #MBEDTLS_ERR_X509_FEATURE_UNAVAILABLE for an unsupported
- *                 SAN type.
- * \return         Another negative value for any other failure.
- */
-int mbedtls_x509_parse_subject_alt_name(const mbedtls_x509_buf *san_buf,
-                                        mbedtls_x509_subject_alternative_name *san);
-
 #if !defined(MBEDTLS_X509_REMOVE_INFO)
 /**
  * \brief          Returns an informational string about the
@@ -986,15 +907,43 @@ void mbedtls_x509write_crt_init(mbedtls_x509write_cert *ctx);
  */
 void mbedtls_x509write_crt_set_version(mbedtls_x509write_cert *ctx, int version);
 
+#if defined(MBEDTLS_BIGNUM_C) && !defined(MBEDTLS_DEPRECATED_REMOVED)
 /**
  * \brief           Set the serial number for a Certificate.
+ *
+ * \deprecated      This function is deprecated and will be removed in a
+ *                  future version of the library. Please use
+ *                  mbedtls_x509write_crt_set_serial_raw() instead.
+ *
+ * \note            Even though the MBEDTLS_BIGNUM_C guard looks redundant since
+ *                  X509 depends on PK and PK depends on BIGNUM, this emphasizes
+ *                  a direct dependency between X509 and BIGNUM which is going
+ *                  to be deprecated in the future.
  *
  * \param ctx       CRT context to use
  * \param serial    serial number to set
  *
  * \return          0 if successful
  */
-int mbedtls_x509write_crt_set_serial(mbedtls_x509write_cert *ctx, const mbedtls_mpi *serial);
+int MBEDTLS_DEPRECATED mbedtls_x509write_crt_set_serial(
+    mbedtls_x509write_cert *ctx, const mbedtls_mpi *serial);
+#endif // MBEDTLS_BIGNUM_C && !MBEDTLS_DEPRECATED_REMOVED
+
+/**
+ * \brief           Set the serial number for a Certificate.
+ *
+ * \param ctx          CRT context to use
+ * \param serial       A raw array of bytes containing the serial number in big
+ *                     endian format
+ * \param serial_len   Length of valid bytes (expressed in bytes) in \p serial
+ *                     input buffer
+ *
+ * \return          0 if successful, or
+ *                  MBEDTLS_ERR_X509_BAD_INPUT_DATA if the provided input buffer
+ *                  is too big (longer than MBEDTLS_X509_RFC5280_MAX_SERIAL_LEN)
+ */
+int mbedtls_x509write_crt_set_serial_raw(mbedtls_x509write_cert *ctx,
+                                         unsigned char *serial, size_t serial_len);
 
 /**
  * \brief           Set the validity period for a Certificate

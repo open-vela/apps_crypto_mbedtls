@@ -1768,6 +1768,9 @@ component_test_full_no_deprecated () {
 
     msg "test: make, full_no_deprecated config" # ~ 5s
     make test
+
+    msg "test: ensure that X509 has no direct dependency on BIGNUM_C"
+    not grep mbedtls_mpi library/libmbedx509.a
 }
 
 component_test_full_no_deprecated_deprecated_warning () {
@@ -1969,6 +1972,7 @@ component_build_module_alt () {
     # aesni.c and padlock.c reference mbedtls_aes_context fields directly.
     scripts/config.py unset MBEDTLS_AESNI_C
     scripts/config.py unset MBEDTLS_PADLOCK_C
+    scripts/config.py unset MBEDTLS_AESCE_C
     # MBEDTLS_ECP_RESTARTABLE is documented as incompatible.
     scripts/config.py unset MBEDTLS_ECP_RESTARTABLE
     # You can only have one threading implementation: alt or pthread, not both.
@@ -3333,6 +3337,7 @@ component_test_have_int32 () {
     scripts/config.py unset MBEDTLS_HAVE_ASM
     scripts/config.py unset MBEDTLS_AESNI_C
     scripts/config.py unset MBEDTLS_PADLOCK_C
+    scripts/config.py unset MBEDTLS_AESCE_C
     make CC=gcc CFLAGS='-Werror -Wall -Wextra -DMBEDTLS_HAVE_INT32'
 
     msg "test: gcc, force 32-bit bignum limbs"
@@ -3344,6 +3349,7 @@ component_test_have_int64 () {
     scripts/config.py unset MBEDTLS_HAVE_ASM
     scripts/config.py unset MBEDTLS_AESNI_C
     scripts/config.py unset MBEDTLS_PADLOCK_C
+    scripts/config.py unset MBEDTLS_AESCE_C
     make CC=gcc CFLAGS='-Werror -Wall -Wextra -DMBEDTLS_HAVE_INT64'
 
     msg "test: gcc, force 64-bit bignum limbs"
