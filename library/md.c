@@ -868,10 +868,10 @@ mbedtls_md_type_t mbedtls_md_get_type(const mbedtls_md_info_t *md_info)
 static const int supported_digests[] = {
 
 #if defined(MBEDTLS_SHA3_C)
-        MBEDTLS_MD_SHA3_512,
-        MBEDTLS_MD_SHA3_384,
-        MBEDTLS_MD_SHA3_256,
-        MBEDTLS_MD_SHA3_224,
+    MBEDTLS_MD_SHA3_512,
+    MBEDTLS_MD_SHA3_384,
+    MBEDTLS_MD_SHA3_256,
+    MBEDTLS_MD_SHA3_224,
 #endif
 
 #if defined(MBEDTLS_MD_CAN_SHA512)
