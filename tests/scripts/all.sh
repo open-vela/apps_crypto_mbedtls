@@ -2108,10 +2108,6 @@ config_psa_crypto_config_ecdsa_use_psa () {
     # TODO: make these work - #6862
     scripts/config.py unset MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED
     scripts/config.py unset MBEDTLS_KEY_EXCHANGE_ECDH_ECDSA_ENABLED
-    # Restartable feature is not yet supported by PSA. Once it will in
-    # the future, the following line could be removed (see issues
-    # 6061, 6332 and following ones)
-    scripts/config.py unset MBEDTLS_ECP_RESTARTABLE
 }
 
 # Keep in sync with component_test_psa_crypto_config_reference_ecdsa_use_psa
@@ -2129,9 +2125,8 @@ component_test_psa_crypto_config_accel_ecdsa_use_psa () {
     scripts/config.py -f include/psa/crypto_config.h unset PSA_WANT_ALG_STREAM_CIPHER
     scripts/config.py -f include/psa/crypto_config.h unset PSA_WANT_ALG_ECB_NO_PADDING
 
-    # SHA-1 and all variants of SHA-2 are needed for ECDSA and X.509 tests,
+    # All SHA-2 variants are needed for ECDSA signature tests,
     # but only SHA-256 is enabled by default, so enable the others.
-    scripts/config.py -f tests/include/test/drivers/config_test_driver.h set MBEDTLS_SHA1_C
     scripts/config.py -f tests/include/test/drivers/config_test_driver.h set MBEDTLS_SHA224_C
     scripts/config.py -f tests/include/test/drivers/config_test_driver.h set MBEDTLS_SHA384_C
     scripts/config.py -f tests/include/test/drivers/config_test_driver.h set MBEDTLS_SHA512_C
@@ -3270,7 +3265,7 @@ component_test_m32_o0 () {
 }
 support_test_m32_o0 () {
     case $(uname -m) in
-        amd64|x86_64) true;;
+        *64*) true;;
         *) false;;
     esac
 }
