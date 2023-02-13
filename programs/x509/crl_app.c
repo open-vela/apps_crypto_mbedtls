@@ -70,7 +70,7 @@ int main(int argc, char *argv[])
      */
     mbedtls_x509_crl_init(&crl);
 
-    if (argc < 2) {
+    if (argc == 0) {
 usage:
         mbedtls_printf(USAGE);
         goto exit;
