@@ -1374,6 +1374,11 @@ int report_cid_usage(mbedtls_ssl_context *ssl,
 #endif /* MBEDTLS_SSL_DTLS_CONNECTION_ID */
 
 #if defined(MBEDTLS_SSL_SESSION_TICKETS) && defined(MBEDTLS_HAVE_TIME)
+static inline void put_unaligned_uint32(void *p, uint32_t x)
+{
+    memcpy(p, &x, sizeof(x));
+}
+
 /* Functions for session ticket tests */
 int dummy_ticket_write(void *p_ticket, const mbedtls_ssl_session *session,
                        unsigned char *start, const unsigned char *end,
@@ -1387,7 +1392,7 @@ int dummy_ticket_write(void *p_ticket, const mbedtls_ssl_session *session,
     if (end - p < 4) {
         return MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL;
     }
-    *((uint32_t *) p) = 7 * 24 * 3600;
+    put_unaligned_uint32(p, 7 * 24 * 3600);
     *ticket_lifetime = 7 * 24 * 3600;
     p += 4;
 
@@ -1633,7 +1638,7 @@ int main(int argc, char *argv[])
     signal(SIGINT, term_handler);
 #endif
 
-    if (argc == 0) {
+    if (argc < 2) {
 usage:
         if (ret == 0) {
             ret = 1;
