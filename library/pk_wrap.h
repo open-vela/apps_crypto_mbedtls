@@ -31,10 +31,6 @@
 #include "psa/crypto.h"
 #endif /* MBEDTLS_PSA_CRYPTO_C */
 
-#if defined(MBEDTLS_PK_CAN_ECDSA_VERIFY) || defined(MBEDTLS_PK_CAN_ECDSA_SIGN)
-#define MBEDTLS_PK_CAN_ECDSA_SOME
-#endif
-
 struct mbedtls_pk_info_t {
     /** Public key type */
     mbedtls_pk_type_t type;
@@ -129,7 +125,7 @@ extern const mbedtls_pk_info_t mbedtls_eckey_info;
 extern const mbedtls_pk_info_t mbedtls_eckeydh_info;
 #endif
 
-#if defined(MBEDTLS_PK_CAN_ECDSA_SOME)
+#if defined(MBEDTLS_ECDSA_C)
 extern const mbedtls_pk_info_t mbedtls_ecdsa_info;
 #endif
 
