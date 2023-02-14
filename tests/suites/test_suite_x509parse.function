@@ -1169,6 +1169,30 @@ exit:
 }
 /* END_CASE */
 
+/* BEGIN_CASE depends_on:MBEDTLS_FS_IO:MBEDTLS_X509_CSR_PARSE_C:!MBEDTLS_X509_REMOVE_INFO */
+void mbedtls_x509_csr_parse_file(char *csr_file, char *ref_out, int ref_ret)
+{
+    mbedtls_x509_csr csr;
+    char my_out[1000];
+    int my_ret;
+
+    mbedtls_x509_csr_init(&csr);
+    memset(my_out, 0, sizeof(my_out));
+
+    my_ret = mbedtls_x509_csr_parse_file(&csr, csr_file);
+    TEST_ASSERT(my_ret == ref_ret);
+
+    if (ref_ret == 0) {
+        size_t my_out_len = mbedtls_x509_csr_info(my_out, sizeof(my_out), "", &csr);
+        TEST_ASSERT(my_out_len == strlen(ref_out));
+        TEST_ASSERT(strcmp(my_out, ref_out) == 0);
+    }
+
+exit:
+    mbedtls_x509_csr_free(&csr);
+}
+/* END_CASE */
+
 /* BEGIN_CASE depends_on:MBEDTLS_FS_IO:MBEDTLS_X509_CRT_PARSE_C */
 void mbedtls_x509_crt_parse_path(char *crt_path, int ret, int nb_crt)
 {
@@ -1217,9 +1241,9 @@ void mbedtls_x509_crt_verify_max(char *ca_file, char *chain_dir, int nb_int,
 
     /* Load a chain with nb_int intermediates (from 01 to nb_int),
      * plus one "end-entity" cert (nb_int + 1) */
-    ret = mbedtls_snprintf(file_buf, sizeof file_buf, "%s/c%02d.pem", chain_dir,
+    ret = mbedtls_snprintf(file_buf, sizeof(file_buf), "%s/c%02d.pem", chain_dir,
                            nb_int + 1);
-    TEST_ASSERT(ret > 0 && (size_t) ret < sizeof file_buf);
+    TEST_ASSERT(ret > 0 && (size_t) ret < sizeof(file_buf));
     TEST_ASSERT(mbedtls_x509_crt_parse_file(&chain, file_buf) == 0);
 
     /* Try to verify that chain */
@@ -1312,13 +1336,13 @@ void x509_oid_numstr(data_t *oid_buf, char *numstr, int blen, int ret)
     mbedtls_x509_buf oid;
     char num_buf[100];
 
-    memset(num_buf, 0x2a, sizeof num_buf);
+    memset(num_buf, 0x2a, sizeof(num_buf));
 
     oid.tag = MBEDTLS_ASN1_OID;
     oid.p   = oid_buf->x;
     oid.len   = oid_buf->len;
 
-    TEST_ASSERT((size_t) blen <= sizeof num_buf);
+    TEST_ASSERT((size_t) blen <= sizeof(num_buf));
 
     TEST_ASSERT(mbedtls_oid_get_numeric_string(num_buf, blen, &oid) == ret);
 
