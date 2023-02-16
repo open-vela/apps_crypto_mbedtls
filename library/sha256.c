@@ -37,40 +37,6 @@
 #if defined(__aarch64__)
 #  if defined(MBEDTLS_SHA256_USE_A64_CRYPTO_IF_PRESENT) || \
     defined(MBEDTLS_SHA256_USE_A64_CRYPTO_ONLY)
-/* *INDENT-OFF* */
-#    if !defined(__ARM_FEATURE_CRYPTO)
-#      if defined(__clang__)
-#        if __clang_major__ < 4
-#          error "A more recent Clang is required for MBEDTLS_SHA256_USE_A64_CRYPTO_*"
-#        elif __clang_major__ < 18
-           /* TODO: Re-consider above after https://reviews.llvm.org/D131064
-            *       merged.
-            *
-            * The intrinsic declaration are guarded with ACLE predefined macros
-            * in clang, and those macros are only enabled with command line.
-            * Define the macros can enable those declaration and avoid compile
-            * error on it.
-            */
-#          define __ARM_FEATURE_CRYPTO 1
-#        endif
-#        pragma clang attribute push (__attribute__((target("crypto"))), apply_to=function)
-#        define MBEDTLS_POP_TARGET_PRAGMA
-#      elif defined(__GNUC__)
-         /* FIXME: GCC-5 annouce crypto extension, but some intrinsic are missed.
-          *        Known miss intrinsic can be workaround.
-          */
-#        if __GNUC__ < 6
-#          error "A more recent GCC is required for MBEDTLS_SHA256_USE_A64_CRYPTO_*"
-#        else
-#          pragma GCC push_options
-#          pragma GCC target ("arch=armv8-a+crypto")
-#          define MBEDTLS_POP_TARGET_PRAGMA
-#        endif
-#      else
-#        error "Only GCC and Clang supported for MBEDTLS_SHA256_USE_A64_CRYPTO_*"
-#      endif
-#    endif
-/* *INDENT-ON* */
 #    include <arm_neon.h>
 #  endif
 #  if defined(MBEDTLS_SHA256_USE_A64_CRYPTO_IF_PRESENT)
@@ -386,15 +352,6 @@ int mbedtls_internal_sha256_process_a64_crypto(mbedtls_sha256_context *ctx,
                                                             SHA256_BLOCK_SIZE) ==
             SHA256_BLOCK_SIZE) ? 0 : -1;
 }
-
-#if defined(MBEDTLS_POP_TARGET_PRAGMA)
-#if defined(__clang__)
-#pragma clang attribute pop
-#elif defined(__GNUC__)
-#pragma GCC pop_options
-#endif
-#undef MBEDTLS_POP_TARGET_PRAGMA
-#endif
 
 #endif /* MBEDTLS_SHA256_USE_A64_CRYPTO_IF_PRESENT || MBEDTLS_SHA256_USE_A64_CRYPTO_ONLY */
 
