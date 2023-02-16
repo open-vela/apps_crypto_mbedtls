@@ -911,6 +911,70 @@ ec_prv.pk8param.pem: ec_prv.pk8param.der
 	$(OPENSSL) pkey -in $< -inform DER -out $@
 all_final += ec_prv.pk8param.pem
 
+ec_prv.sec1.comp.pem: ec_prv.sec1.pem
+	$(OPENSSL) ec -in $< -out $@ -conv_form compressed
+all_final += ec_prv.sec1.comp.pem
+
+ec_224_prv.comp.pem: ec_224_prv.pem
+	$(OPENSSL) ec -in $< -out $@ -conv_form compressed
+all_final += ec_224_prv.comp.pem
+
+ec_256_prv.comp.pem: ec_256_prv.pem
+	$(OPENSSL) ec -in $< -out $@ -conv_form compressed
+all_final += ec_256_prv.comp.pem
+
+ec_384_prv.comp.pem: ec_384_prv.pem
+	$(OPENSSL) ec -in $< -out $@ -conv_form compressed
+all_final += ec_384_prv.comp.pem
+
+ec_521_prv.comp.pem: ec_521_prv.pem
+	$(OPENSSL) ec -in $< -out $@ -conv_form compressed
+all_final += ec_521_prv.comp.pem
+
+ec_bp256_prv.comp.pem: ec_bp256_prv.pem
+	$(OPENSSL) ec -in $< -out $@ -conv_form compressed
+all_final += ec_bp256_prv.comp.pem
+
+ec_bp384_prv.comp.pem: ec_bp384_prv.pem
+	$(OPENSSL) ec -in $< -out $@ -conv_form compressed
+all_final += ec_bp384_prv.comp.pem
+
+ec_bp512_prv.comp.pem: ec_bp512_prv.pem
+	$(OPENSSL) ec -in $< -out $@ -conv_form compressed
+all_final += ec_bp512_prv.comp.pem
+
+ec_pub.comp.pem: ec_pub.pem
+	$(OPENSSL) ec -pubin -in $< -out $@ -conv_form compressed
+all_final += ec_pub.comp.pem
+
+ec_224_pub.comp.pem: ec_224_pub.pem
+	$(OPENSSL) ec -pubin -in $< -out $@ -conv_form compressed
+all_final += ec_224_pub.comp.pem
+
+ec_256_pub.comp.pem: ec_256_pub.pem
+	$(OPENSSL) ec -pubin -in $< -out $@ -conv_form compressed
+all_final += ec_256_pub.comp.pem
+
+ec_384_pub.comp.pem: ec_384_pub.pem
+	$(OPENSSL) ec -pubin -in $< -out $@ -conv_form compressed
+all_final += ec_384_pub.comp.pem
+
+ec_521_pub.comp.pem: ec_521_pub.pem
+	$(OPENSSL) ec -pubin -in $< -out $@ -conv_form compressed
+all_final += ec_521_pub.comp.pem
+
+ec_bp256_pub.comp.pem: ec_bp256_pub.pem
+	$(OPENSSL) ec -pubin -in $< -out $@ -conv_form compressed
+all_final += ec_bp256_pub.comp.pem
+
+ec_bp384_pub.comp.pem: ec_bp384_pub.pem
+	$(OPENSSL) ec -pubin -in $< -out $@ -conv_form compressed
+all_final += ec_bp384_pub.comp.pem
+
+ec_bp512_pub.comp.pem: ec_bp512_pub.pem
+	$(OPENSSL) ec -pubin -in $< -out $@ -conv_form compressed
+all_final += ec_bp512_pub.comp.pem
+
 ################################################################
 ### Generate CSRs for X.509 write test suite
 ################################################################
@@ -1205,10 +1269,6 @@ $(pkcs7_test_file):
 	echo -e "Hello\xd" > $@
 all_final += $(pkcs7_test_file)
 
-pkcs7_zerolendata.bin:
-	printf '' > $@
-all_final += pkcs7_zerolendata.bin
-
 pkcs7_data_1.bin:
 	echo -e "2\xd" > $@
 all_final += pkcs7_data_1.bin
@@ -1241,11 +1301,6 @@ all_final += pkcs7-rsa-sha256-1.der
 pkcs7-rsa-sha256-2.der: $(pkcs7_test_cert_2)
 	$(OPENSSL) x509 -in pkcs7-rsa-sha256-2.crt -out $@ -outform DER
 all_final += pkcs7-rsa-sha256-2.der
-
-# pkcs7 signature file over zero-len data
-pkcs7_zerolendata_detached.der: pkcs7_zerolendata.bin pkcs7-rsa-sha256-1.key pkcs7-rsa-sha256-1.crt
-	$(OPENSSL) smime -sign -md sha256 -nocerts -noattr -in pkcs7_zerolendata.bin -inkey pkcs7-rsa-sha256-1.key -outform DER -binary -signer pkcs7-rsa-sha256-1.crt -out pkcs7_zerolendata_detached.der
-all_final += pkcs7_zerolendata_detached.der
 
 # pkcs7 signature file with CERT
 pkcs7_data_cert_signed_sha256.der: $(pkcs7_test_file) $(pkcs7_test_cert_1)
