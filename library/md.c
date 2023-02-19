@@ -23,7 +23,7 @@
 
 #include "common.h"
 
-#if defined(MBEDTLS_MD_LIGHT)
+#if defined(MBEDTLS_MD_C)
 
 #include "mbedtls/md.h"
 #include "md_wrap.h"
@@ -110,7 +110,6 @@ const mbedtls_md_info_t mbedtls_sha512_info = {
 /*
  * Reminder: update profiles in x509_crt.c when adding a new hash!
  */
-#if defined(MBEDTLS_MD_C)
 static const int supported_digests[] = {
 
 #if defined(MBEDTLS_SHA512_C)
@@ -192,7 +191,6 @@ const mbedtls_md_info_t *mbedtls_md_info_from_string(const char *md_name)
 #endif
     return NULL;
 }
-#endif /* MBEDTLS_MD_C */
 
 const mbedtls_md_info_t *mbedtls_md_info_from_type(mbedtls_md_type_t md_type)
 {
@@ -230,7 +228,6 @@ const mbedtls_md_info_t *mbedtls_md_info_from_type(mbedtls_md_type_t md_type)
     }
 }
 
-#if defined(MBEDTLS_MD_C)
 const mbedtls_md_info_t *mbedtls_md_info_from_ctx(
     const mbedtls_md_context_t *ctx)
 {
@@ -240,7 +237,6 @@ const mbedtls_md_info_t *mbedtls_md_info_from_ctx(
 
     return ctx->MBEDTLS_PRIVATE(md_info);
 }
-#endif /* MBEDTLS_MD_C */
 
 void mbedtls_md_init(mbedtls_md_context_t *ctx)
 {
@@ -590,7 +586,7 @@ int mbedtls_md(const mbedtls_md_info_t *md_info, const unsigned char *input, siz
     }
 }
 
-#if defined(MBEDTLS_FS_IO) && defined(MBEDTLS_MD_C)
+#if defined(MBEDTLS_FS_IO)
 int mbedtls_md_file(const mbedtls_md_info_t *md_info, const char *path, unsigned char *output)
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
@@ -639,9 +635,8 @@ cleanup:
 
     return ret;
 }
-#endif /* MBEDTLS_FS_IO && MBEDTLS_MD_C */
+#endif /* MBEDTLS_FS_IO */
 
-#if defined(MBEDTLS_MD_C)
 int mbedtls_md_hmac_starts(mbedtls_md_context_t *ctx, const unsigned char *key, size_t keylen)
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
@@ -778,7 +773,46 @@ cleanup:
 
     return ret;
 }
-#endif /* MBEDTLS_MD_C */
+
+int mbedtls_md_process(mbedtls_md_context_t *ctx, const unsigned char *data)
+{
+    if (ctx == NULL || ctx->md_info == NULL) {
+        return MBEDTLS_ERR_MD_BAD_INPUT_DATA;
+    }
+
+    switch (ctx->md_info->type) {
+#if defined(MBEDTLS_MD5_C)
+        case MBEDTLS_MD_MD5:
+            return mbedtls_internal_md5_process(ctx->md_ctx, data);
+#endif
+#if defined(MBEDTLS_RIPEMD160_C)
+        case MBEDTLS_MD_RIPEMD160:
+            return mbedtls_internal_ripemd160_process(ctx->md_ctx, data);
+#endif
+#if defined(MBEDTLS_SHA1_C)
+        case MBEDTLS_MD_SHA1:
+            return mbedtls_internal_sha1_process(ctx->md_ctx, data);
+#endif
+#if defined(MBEDTLS_SHA224_C)
+        case MBEDTLS_MD_SHA224:
+            return mbedtls_internal_sha256_process(ctx->md_ctx, data);
+#endif
+#if defined(MBEDTLS_SHA256_C)
+        case MBEDTLS_MD_SHA256:
+            return mbedtls_internal_sha256_process(ctx->md_ctx, data);
+#endif
+#if defined(MBEDTLS_SHA384_C)
+        case MBEDTLS_MD_SHA384:
+            return mbedtls_internal_sha512_process(ctx->md_ctx, data);
+#endif
+#if defined(MBEDTLS_SHA512_C)
+        case MBEDTLS_MD_SHA512:
+            return mbedtls_internal_sha512_process(ctx->md_ctx, data);
+#endif
+        default:
+            return MBEDTLS_ERR_MD_BAD_INPUT_DATA;
+    }
+}
 
 unsigned char mbedtls_md_get_size(const mbedtls_md_info_t *md_info)
 {
@@ -798,7 +832,6 @@ mbedtls_md_type_t mbedtls_md_get_type(const mbedtls_md_info_t *md_info)
     return md_info->type;
 }
 
-#if defined(MBEDTLS_MD_C)
 const char *mbedtls_md_get_name(const mbedtls_md_info_t *md_info)
 {
     if (md_info == NULL) {
@@ -807,6 +840,5 @@ const char *mbedtls_md_get_name(const mbedtls_md_info_t *md_info)
 
     return md_info->name;
 }
-#endif /* MBEDTLS_MD_C */
 
-#endif /* MBEDTLS_MD_LIGHT */
+#endif /* MBEDTLS_MD_C */
