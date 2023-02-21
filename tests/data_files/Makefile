@@ -911,6 +911,70 @@ ec_prv.pk8param.pem: ec_prv.pk8param.der
 	$(OPENSSL) pkey -in $< -inform DER -out $@
 all_final += ec_prv.pk8param.pem
 
+ec_prv.sec1.comp.pem: ec_prv.sec1.pem
+	$(OPENSSL) ec -in $< -out $@ -conv_form compressed
+all_final += ec_prv.sec1.comp.pem
+
+ec_224_prv.comp.pem: ec_224_prv.pem
+	$(OPENSSL) ec -in $< -out $@ -conv_form compressed
+all_final += ec_224_prv.comp.pem
+
+ec_256_prv.comp.pem: ec_256_prv.pem
+	$(OPENSSL) ec -in $< -out $@ -conv_form compressed
+all_final += ec_256_prv.comp.pem
+
+ec_384_prv.comp.pem: ec_384_prv.pem
+	$(OPENSSL) ec -in $< -out $@ -conv_form compressed
+all_final += ec_384_prv.comp.pem
+
+ec_521_prv.comp.pem: ec_521_prv.pem
+	$(OPENSSL) ec -in $< -out $@ -conv_form compressed
+all_final += ec_521_prv.comp.pem
+
+ec_bp256_prv.comp.pem: ec_bp256_prv.pem
+	$(OPENSSL) ec -in $< -out $@ -conv_form compressed
+all_final += ec_bp256_prv.comp.pem
+
+ec_bp384_prv.comp.pem: ec_bp384_prv.pem
+	$(OPENSSL) ec -in $< -out $@ -conv_form compressed
+all_final += ec_bp384_prv.comp.pem
+
+ec_bp512_prv.comp.pem: ec_bp512_prv.pem
+	$(OPENSSL) ec -in $< -out $@ -conv_form compressed
+all_final += ec_bp512_prv.comp.pem
+
+ec_pub.comp.pem: ec_pub.pem
+	$(OPENSSL) ec -pubin -in $< -out $@ -conv_form compressed
+all_final += ec_pub.comp.pem
+
+ec_224_pub.comp.pem: ec_224_pub.pem
+	$(OPENSSL) ec -pubin -in $< -out $@ -conv_form compressed
+all_final += ec_224_pub.comp.pem
+
+ec_256_pub.comp.pem: ec_256_pub.pem
+	$(OPENSSL) ec -pubin -in $< -out $@ -conv_form compressed
+all_final += ec_256_pub.comp.pem
+
+ec_384_pub.comp.pem: ec_384_pub.pem
+	$(OPENSSL) ec -pubin -in $< -out $@ -conv_form compressed
+all_final += ec_384_pub.comp.pem
+
+ec_521_pub.comp.pem: ec_521_pub.pem
+	$(OPENSSL) ec -pubin -in $< -out $@ -conv_form compressed
+all_final += ec_521_pub.comp.pem
+
+ec_bp256_pub.comp.pem: ec_bp256_pub.pem
+	$(OPENSSL) ec -pubin -in $< -out $@ -conv_form compressed
+all_final += ec_bp256_pub.comp.pem
+
+ec_bp384_pub.comp.pem: ec_bp384_pub.pem
+	$(OPENSSL) ec -pubin -in $< -out $@ -conv_form compressed
+all_final += ec_bp384_pub.comp.pem
+
+ec_bp512_pub.comp.pem: ec_bp512_pub.pem
+	$(OPENSSL) ec -pubin -in $< -out $@ -conv_form compressed
+all_final += ec_bp512_pub.comp.pem
+
 ################################################################
 ### Generate CSRs for X.509 write test suite
 ################################################################
@@ -1198,6 +1262,7 @@ tls13_certs: ecdsa_secp521r1.crt ecdsa_secp521r1.key
 # PKCS7 test data
 pkcs7_test_cert_1 = pkcs7-rsa-sha256-1.crt
 pkcs7_test_cert_2 = pkcs7-rsa-sha256-2.crt
+pkcs7_test_cert_3 = pkcs7-rsa-sha256-3.crt
 pkcs7_test_file = pkcs7_data.bin
 
 $(pkcs7_test_file):
@@ -1218,6 +1283,15 @@ pkcs7-rsa-sha256-2.crt:
 	$(OPENSSL) req -x509 -subj="/C=NL/O=PKCS7/CN=PKCS7 Cert 2" -sha256 -nodes -days 365  -newkey rsa:2048 -keyout pkcs7-rsa-sha256-2.key -out pkcs7-rsa-sha256-2.crt
 	cat pkcs7-rsa-sha256-2.crt pkcs7-rsa-sha256-2.key > pkcs7-rsa-sha256-2.pem
 all_final += pkcs7-rsa-sha256-2.crt
+
+pkcs7-rsa-sha256-3.crt:
+	$(OPENSSL) req -x509 -subj="/C=NL/O=PKCS7/CN=PKCS7 Cert 3" -sha256 -nodes -days 365  -newkey rsa:2048 -keyout pkcs7-rsa-sha256-3.key -out pkcs7-rsa-sha256-3.crt
+	cat pkcs7-rsa-sha256-3.crt pkcs7-rsa-sha256-3.key > pkcs7-rsa-sha256-3.pem
+all_final += pkcs7-rsa-sha256-3.crt
+
+pkcs7-rsa-expired.crt:
+	$(FAKETIME) -f -3650d $(OPENSSL) req -x509 -subj="/C=NL/O=PKCS7/CN=PKCS7 Cert Expired" -sha256 -nodes -days 365  -newkey rsa:2048 -keyout pkcs7-rsa-expired.key -out pkcs7-rsa-expired.crt
+all_final += pkcs7-rsa-expired.crt
 
 # Convert signing certs to DER for testing PEM-free builds
 pkcs7-rsa-sha256-1.der: $(pkcs7_test_cert_1)
@@ -1248,10 +1322,20 @@ pkcs7_data_without_cert_signed.der: $(pkcs7_test_file) $(pkcs7_test_cert_1)
 	$(OPENSSL) smime -sign -binary -in pkcs7_data.bin -out $@ -md sha256 -signer pkcs7-rsa-sha256-1.pem -nocerts -noattr -outform DER -out $@
 all_final += pkcs7_data_without_cert_signed.der
 
-# pkcs7 signature file with multiple signers
+# pkcs7 signature file with signature
+pkcs7_data_with_signature.der: $(pkcs7_test_file) $(pkcs7_test_cert_1)
+	$(OPENSSL) smime -sign -binary -in pkcs7_data.bin -out $@ -md sha256 -signer pkcs7-rsa-sha256-1.pem -nocerts -noattr -nodetach -outform DER -out $@
+all_final += pkcs7_data_with_signature.der
+
+# pkcs7 signature file with two signers
 pkcs7_data_multiple_signed.der: $(pkcs7_test_file) $(pkcs7_test_cert_1) $(pkcs7_test_cert_2)
 	$(OPENSSL) smime -sign -binary -in pkcs7_data.bin -out $@ -md sha256 -signer pkcs7-rsa-sha256-1.pem -signer pkcs7-rsa-sha256-2.pem -nocerts -noattr -outform DER -out $@
 all_final += pkcs7_data_multiple_signed.der
+
+# pkcs7 signature file with three signers
+pkcs7_data_3_signed.der: $(pkcs7_test_file) $(pkcs7_test_cert_1) $(pkcs7_test_cert_2) $(pkcs7_test_cert_3)
+	$(OPENSSL) smime -sign -binary -in pkcs7_data.bin -out $@ -md sha256 -signer pkcs7-rsa-sha256-1.pem -signer pkcs7-rsa-sha256-2.pem -signer pkcs7-rsa-sha256-3.pem -nocerts -noattr -outform DER -out $@
+all_final += pkcs7_data_3_signed.der
 
 # pkcs7 signature file with multiple certificates
 pkcs7_data_multiple_certs_signed.der: $(pkcs7_test_file) $(pkcs7_test_cert_1) $(pkcs7_test_cert_2)
