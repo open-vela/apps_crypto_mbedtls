@@ -32,7 +32,8 @@
 
 #if defined(MBEDTLS_TEST_HOOKS) && defined(MBEDTLS_ECP_C)
 
-#if defined(MBEDTLS_ECP_DP_SECP256R1_ENABLED) ||   \
+#if defined(MBEDTLS_ECP_DP_SECP224R1_ENABLED) ||   \
+    defined(MBEDTLS_ECP_DP_SECP256R1_ENABLED) ||   \
     defined(MBEDTLS_ECP_DP_SECP384R1_ENABLED)
 /* Preconditions:
  *   - bits is a multiple of 64 or is 224
@@ -93,13 +94,6 @@ MBEDTLS_STATIC_TESTABLE
 int mbedtls_ecp_mod_p192_raw(mbedtls_mpi_uint *Np, size_t Nn);
 
 #endif /* MBEDTLS_ECP_DP_SECP192R1_ENABLED */
-
-#if defined(MBEDTLS_ECP_DP_SECP224R1_ENABLED)
-
-MBEDTLS_STATIC_TESTABLE
-int ecp_mod_p224_raw(mbedtls_mpi_uint *Np, size_t Nn);
-
-#endif /* MBEDTLS_ECP_DP_SECP224R1_ENABLED */
 
 #if defined(MBEDTLS_ECP_DP_SECP521R1_ENABLED)
 
