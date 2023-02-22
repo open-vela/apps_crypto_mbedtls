@@ -258,8 +258,6 @@ static int ssl_tls13_offered_psks_check_identity_match(
     int *psk_type,
     mbedtls_ssl_session *session)
 {
-    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
-
     ((void) session);
     ((void) obfuscated_ticket_age);
     *psk_type = MBEDTLS_SSL_TLS1_3_PSK_EXTERNAL;
@@ -273,13 +271,9 @@ static int ssl_tls13_offered_psks_check_identity_match(
             session) == SSL_TLS1_3_OFFERED_PSK_MATCH) {
         ssl->handshake->resume = 1;
         *psk_type = MBEDTLS_SSL_TLS1_3_PSK_RESUMPTION;
-        ret = mbedtls_ssl_set_hs_psk(ssl,
-                                     session->resumption_key,
-                                     session->resumption_key_len);
-        if (ret != 0) {
-            MBEDTLS_SSL_DEBUG_RET(1, "mbedtls_ssl_set_hs_psk", ret);
-            return ret;
-        }
+        mbedtls_ssl_set_hs_psk(ssl,
+                               session->resumption_key,
+                               session->resumption_key_len);
 
         MBEDTLS_SSL_DEBUG_BUF(4, "Ticket-resumed PSK:",
                               session->resumption_key,
@@ -305,11 +299,7 @@ static int ssl_tls13_offered_psks_check_identity_match(
         identity_len == ssl->conf->psk_identity_len &&
         mbedtls_ct_memcmp(ssl->conf->psk_identity,
                           identity, identity_len) == 0) {
-        ret = mbedtls_ssl_set_hs_psk(ssl, ssl->conf->psk, ssl->conf->psk_len);
-        if (ret != 0) {
-            MBEDTLS_SSL_DEBUG_RET(1, "mbedtls_ssl_set_hs_psk", ret);
-            return ret;
-        }
+        mbedtls_ssl_set_hs_psk(ssl, ssl->conf->psk, ssl->conf->psk_len);
         return SSL_TLS1_3_OFFERED_PSK_MATCH;
     }
 
@@ -496,7 +486,6 @@ static int ssl_tls13_parse_pre_shared_key_ext(mbedtls_ssl_context *ssl,
                                               const unsigned char *ciphersuites,
                                               const unsigned char *ciphersuites_end)
 {
-    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     const unsigned char *identities = pre_shared_key_ext;
     const unsigned char *p_identity_len;
     size_t identities_len;
@@ -532,12 +521,8 @@ static int ssl_tls13_parse_pre_shared_key_ext(mbedtls_ssl_context *ssl,
     MBEDTLS_SSL_CHK_BUF_READ_PTR(p_binder_len, pre_shared_key_ext_end, binders_len);
     binders_end = p_binder_len + binders_len;
 
-    ret = ssl->handshake->update_checksum(ssl, pre_shared_key_ext,
-                                          identities_end - pre_shared_key_ext);
-    if (0 != ret) {
-        MBEDTLS_SSL_DEBUG_RET(1, ("update_checksum"), ret);
-        return ret;
-    }
+    ssl->handshake->update_checksum(ssl, pre_shared_key_ext,
+                                    identities_end - pre_shared_key_ext);
 
     while (p_identity_len < identities_end && p_binder_len < binders_end) {
         const unsigned char *identity;
@@ -545,6 +530,7 @@ static int ssl_tls13_parse_pre_shared_key_ext(mbedtls_ssl_context *ssl,
         uint32_t obfuscated_ticket_age;
         const unsigned char *binder;
         size_t binder_len;
+        int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
         int psk_type;
         uint16_t cipher_suite;
         const mbedtls_ssl_ciphersuite_t *ciphersuite_info;
@@ -656,13 +642,9 @@ static int ssl_tls13_parse_pre_shared_key_ext(mbedtls_ssl_context *ssl,
     }
 
     /* Update the handshake transcript with the binder list. */
-    ret = ssl->handshake->update_checksum(ssl,
-                                          identities_end,
-                                          (size_t) (binders_end - identities_end));
-    if (0 != ret) {
-        MBEDTLS_SSL_DEBUG_RET(1, ("update_checksum"), ret);
-        return ret;
-    }
+    ssl->handshake->update_checksum(ssl,
+                                    identities_end,
+                                    (size_t) (binders_end - identities_end));
     if (matched_identity == -1) {
         MBEDTLS_SSL_DEBUG_MSG(3, ("No matched PSK or ticket."));
         return MBEDTLS_ERR_SSL_UNKNOWN_IDENTITY;
@@ -1341,15 +1323,6 @@ static int ssl_tls13_parse_client_hello(mbedtls_ssl_context *ssl,
     cipher_suites_len = MBEDTLS_GET_UINT16_BE(p, 0);
     p += 2;
 
-    /*
-     * The length of the ciphersuite list has to be even.
-     */
-    if (cipher_suites_len & 1) {
-        MBEDTLS_SSL_PEND_FATAL_ALERT(MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR,
-                                     MBEDTLS_ERR_SSL_DECODE_ERROR);
-        return MBEDTLS_ERR_SSL_DECODE_ERROR;
-    }
-
     /* Check we have enough data for the ciphersuite list, the legacy
      * compression methods and the length of the extensions.
      *
@@ -1379,11 +1352,8 @@ static int ssl_tls13_parse_client_hello(mbedtls_ssl_context *ssl,
         uint16_t cipher_suite;
         const mbedtls_ssl_ciphersuite_t *ciphersuite_info;
 
-        /*
-         * "cipher_suite_end - p is even" is an invariant of the loop. As
-         * cipher_suites_end - p > 0, we have cipher_suites_end - p >= 2 and
-         * it is thus safe to read two bytes.
-         */
+        MBEDTLS_SSL_CHK_BUF_READ_PTR(p, cipher_suites_end, 2);
+
         cipher_suite = MBEDTLS_GET_UINT16_BE(p, 0);
         ciphersuite_info = ssl_tls13_validate_peer_ciphersuite(
             ssl, cipher_suite);
@@ -1396,7 +1366,6 @@ static int ssl_tls13_parse_client_hello(mbedtls_ssl_context *ssl,
         MBEDTLS_SSL_DEBUG_MSG(2, ("selected ciphersuite: %04x - %s",
                                   cipher_suite,
                                   ciphersuite_info->name));
-        break;
     }
 
     if (handshake->ciphersuite_info == NULL) {
@@ -1404,7 +1373,6 @@ static int ssl_tls13_parse_client_hello(mbedtls_ssl_context *ssl,
                                      MBEDTLS_ERR_SSL_HANDSHAKE_FAILURE);
         return MBEDTLS_ERR_SSL_HANDSHAKE_FAILURE;
     }
-    p = cipher_suites_end;
 
     /* ...
      * opaque legacy_compression_methods<1..2^8-1>;
@@ -1622,13 +1590,9 @@ static int ssl_tls13_parse_client_hello(mbedtls_ssl_context *ssl,
     MBEDTLS_SSL_PRINT_EXTS(3, MBEDTLS_SSL_HS_CLIENT_HELLO,
                            handshake->received_extensions);
 
-    ret = mbedtls_ssl_add_hs_hdr_to_checksum(ssl,
-                                             MBEDTLS_SSL_HS_CLIENT_HELLO,
-                                             p - buf);
-    if (0 != ret) {
-        MBEDTLS_SSL_DEBUG_RET(1, ("mbedtls_ssl_add_hs_hdr_to_checksum"), ret);
-        return ret;
-    }
+    mbedtls_ssl_add_hs_hdr_to_checksum(ssl,
+                                       MBEDTLS_SSL_HS_CLIENT_HELLO,
+                                       p - buf);
 
 #if defined(MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_SOME_PSK_ENABLED)
     /* Update checksum with either
@@ -1639,12 +1603,8 @@ static int ssl_tls13_parse_client_hello(mbedtls_ssl_context *ssl,
     if (mbedtls_ssl_tls13_some_psk_enabled(ssl) &&
         mbedtls_ssl_conf_tls13_some_psk_enabled(ssl) &&
         (handshake->received_extensions & MBEDTLS_SSL_EXT_MASK(PRE_SHARED_KEY))) {
-        ret = handshake->update_checksum(ssl, buf,
-                                         pre_shared_key_ext - buf);
-        if (0 != ret) {
-            MBEDTLS_SSL_DEBUG_RET(1, ("update_checksum"), ret);
-            return ret;
-        }
+        handshake->update_checksum(ssl, buf,
+                                   pre_shared_key_ext - buf);
         ret = ssl_tls13_parse_pre_shared_key_ext(ssl,
                                                  pre_shared_key_ext,
                                                  pre_shared_key_ext_end,
@@ -1660,11 +1620,7 @@ static int ssl_tls13_parse_client_hello(mbedtls_ssl_context *ssl,
     } else
 #endif /* MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_SOME_PSK_ENABLED */
     {
-        ret = handshake->update_checksum(ssl, buf, p - buf);
-        if (0 != ret) {
-            MBEDTLS_SSL_DEBUG_RET(1, ("update_checksum"), ret);
-            return ret;
-        }
+        handshake->update_checksum(ssl, buf, p - buf);
     }
 
     ret = ssl_tls13_determine_key_exchange_mode(ssl);
@@ -2178,8 +2134,8 @@ static int ssl_tls13_write_server_hello(mbedtls_ssl_context *ssl)
                                                            &msg_len,
                                                            0));
 
-    MBEDTLS_SSL_PROC_CHK(mbedtls_ssl_add_hs_msg_to_checksum(
-                             ssl, MBEDTLS_SSL_HS_SERVER_HELLO, buf, msg_len));
+    mbedtls_ssl_add_hs_msg_to_checksum(
+        ssl, MBEDTLS_SSL_HS_SERVER_HELLO, buf, msg_len);
 
     MBEDTLS_SSL_PROC_CHK(mbedtls_ssl_finish_handshake_msg(
                              ssl, buf_len, msg_len));
@@ -2251,8 +2207,8 @@ static int ssl_tls13_write_hello_retry_request(mbedtls_ssl_context *ssl)
                                                            buf + buf_len,
                                                            &msg_len,
                                                            1));
-    MBEDTLS_SSL_PROC_CHK(mbedtls_ssl_add_hs_msg_to_checksum(
-                             ssl, MBEDTLS_SSL_HS_SERVER_HELLO, buf, msg_len));
+    mbedtls_ssl_add_hs_msg_to_checksum(
+        ssl, MBEDTLS_SSL_HS_SERVER_HELLO, buf, msg_len);
 
 
     MBEDTLS_SSL_PROC_CHK(mbedtls_ssl_finish_handshake_msg(ssl, buf_len,
@@ -2350,8 +2306,8 @@ static int ssl_tls13_write_encrypted_extensions(mbedtls_ssl_context *ssl)
     MBEDTLS_SSL_PROC_CHK(ssl_tls13_write_encrypted_extensions_body(
                              ssl, buf, buf + buf_len, &msg_len));
 
-    MBEDTLS_SSL_PROC_CHK(mbedtls_ssl_add_hs_msg_to_checksum(
-                             ssl, MBEDTLS_SSL_HS_ENCRYPTED_EXTENSIONS, buf, msg_len));
+    mbedtls_ssl_add_hs_msg_to_checksum(
+        ssl, MBEDTLS_SSL_HS_ENCRYPTED_EXTENSIONS, buf, msg_len);
 
     MBEDTLS_SSL_PROC_CHK(mbedtls_ssl_finish_handshake_msg(
                              ssl, buf_len, msg_len));
@@ -2483,8 +2439,8 @@ static int ssl_tls13_write_certificate_request(mbedtls_ssl_context *ssl)
         MBEDTLS_SSL_PROC_CHK(ssl_tls13_write_certificate_request_body(
                                  ssl, buf, buf + buf_len, &msg_len));
 
-        MBEDTLS_SSL_PROC_CHK(mbedtls_ssl_add_hs_msg_to_checksum(
-                                 ssl, MBEDTLS_SSL_HS_CERTIFICATE_REQUEST, buf, msg_len));
+        mbedtls_ssl_add_hs_msg_to_checksum(
+            ssl, MBEDTLS_SSL_HS_CERTIFICATE_REQUEST, buf, msg_len);
 
         MBEDTLS_SSL_PROC_CHK(mbedtls_ssl_finish_handshake_msg(
                                  ssl, buf_len, msg_len));
