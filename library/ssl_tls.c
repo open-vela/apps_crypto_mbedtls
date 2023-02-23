@@ -52,8 +52,6 @@
 #include "mbedtls/oid.h"
 #endif
 
-#include "pk_wrap.h"
-
 #if defined(MBEDTLS_TEST_HOOKS)
 static mbedtls_ssl_chk_buf_ptr_args chk_buf_ptr_fail_args;
 
@@ -5326,7 +5324,7 @@ void mbedtls_ssl_config_free(mbedtls_ssl_config *conf)
 }
 
 #if defined(MBEDTLS_PK_C) && \
-    (defined(MBEDTLS_RSA_C) || defined(MBEDTLS_PK_CAN_ECDSA_SOME))
+    (defined(MBEDTLS_RSA_C) || defined(MBEDTLS_ECDSA_C))
 /*
  * Convert between MBEDTLS_PK_XXX and SSL_SIG_XXX
  */
@@ -5337,7 +5335,7 @@ unsigned char mbedtls_ssl_sig_from_pk(mbedtls_pk_context *pk)
         return MBEDTLS_SSL_SIG_RSA;
     }
 #endif
-#if defined(MBEDTLS_PK_CAN_ECDSA_SOME)
+#if defined(MBEDTLS_ECDSA_C)
     if (mbedtls_pk_can_do(pk, MBEDTLS_PK_ECDSA)) {
         return MBEDTLS_SSL_SIG_ECDSA;
     }
@@ -5365,7 +5363,7 @@ mbedtls_pk_type_t mbedtls_ssl_pk_alg_from_sig(unsigned char sig)
         case MBEDTLS_SSL_SIG_RSA:
             return MBEDTLS_PK_RSA;
 #endif
-#if defined(MBEDTLS_PK_CAN_ECDSA_SOME)
+#if defined(MBEDTLS_ECDSA_C)
         case MBEDTLS_SSL_SIG_ECDSA:
             return MBEDTLS_PK_ECDSA;
 #endif
@@ -5373,7 +5371,7 @@ mbedtls_pk_type_t mbedtls_ssl_pk_alg_from_sig(unsigned char sig)
             return MBEDTLS_PK_NONE;
     }
 }
-#endif /* MBEDTLS_PK_C && ( MBEDTLS_RSA_C || MBEDTLS_PK_CAN_ECDSA_SOME ) */
+#endif /* MBEDTLS_PK_C && ( MBEDTLS_RSA_C || MBEDTLS_ECDSA_C ) */
 
 /*
  * Convert from MBEDTLS_SSL_HASH_XXX to MBEDTLS_MD_XXX
