@@ -1219,25 +1219,19 @@ component_test_psa_external_rng_no_drbg_use_psa () {
     tests/ssl-opt.sh -f 'Default\|opaque'
 }
 
-component_test_crypto_full_md_light_only () {
-    msg "build: crypto_full with only the light subset of MD"
+component_test_crypto_full_no_md () {
+    msg "build: crypto_full minus MD"
     scripts/config.py crypto_full
-    # Disable MD
     scripts/config.py unset MBEDTLS_MD_C
-    # Disable direct dependencies of MD
+    # Direct dependencies
     scripts/config.py unset MBEDTLS_HKDF_C
     scripts/config.py unset MBEDTLS_HMAC_DRBG_C
     scripts/config.py unset MBEDTLS_PKCS7_C
-    # Disable indirect dependencies of MD
-    scripts/config.py unset MBEDTLS_ECDSA_DETERMINISTIC # needs HMAC_DRBG
-    # Enable "light" subset of MD
-    make CFLAGS="$ASAN_CFLAGS -DMBEDTLS_MD_LIGHT" LDFLAGS="$ASAN_CFLAGS"
+    # Indirect dependencies
+    scripts/config.py unset MBEDTLS_ECDSA_DETERMINISTIC
+    make
 
-    # Make sure we don't have the HMAC functions, but the hashing functions
-    not grep mbedtls_md_hmac library/md.o
-    grep mbedtls_md library/md.o
-
-    msg "test: crypto_full with only the light subset of MD"
+    msg "test: crypto_full minus MD"
     make test
 }
 
@@ -2351,10 +2345,10 @@ config_psa_crypto_hash_use_psa () {
     scripts/config.py unset MBEDTLS_ENTROPY_C
     scripts/config.py unset MBEDTLS_ENTROPY_NV_SEED # depends on ENTROPY_C
     scripts/config.py unset MBEDTLS_PLATFORM_NV_SEED_ALT # depends on former
-    # Also unset MD_C and things that depend on it.
+    # Also unset MD_C and things that depend on it;
+    # see component_test_crypto_full_no_md.
     if [ "$DRIVER_ONLY" -eq 1 ]; then
         scripts/config.py unset MBEDTLS_MD_C
-        scripts/config.py unset MBEDTLS_MD_LIGHT
     fi
     scripts/config.py unset MBEDTLS_HKDF_C # has independent PSA implementation
     scripts/config.py unset MBEDTLS_HMAC_DRBG_C
