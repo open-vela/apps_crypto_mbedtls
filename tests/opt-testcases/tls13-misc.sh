@@ -87,7 +87,6 @@ requires_all_configs_enabled MBEDTLS_SSL_PROTO_TLS1_3 MBEDTLS_SSL_SESSION_TICKET
                              MBEDTLS_SSL_CLI_C MBEDTLS_DEBUG_C MBEDTLS_HAVE_TIME \
                              MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED \
                              MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_EPHEMERAL_ENABLED
-requires_pk_alg ECDSA
 run_test "TLS 1.3 m->m: Session resumption failure, ticket authentication failed." \
          "$P_SRV debug_level=4 crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13 tickets=8 dummy_ticket=1" \
          "$P_CLI debug_level=4 reco_mode=1 reconnect=1" \
@@ -107,7 +106,6 @@ requires_all_configs_enabled MBEDTLS_SSL_PROTO_TLS1_3 MBEDTLS_SSL_SESSION_TICKET
                              MBEDTLS_SSL_CLI_C MBEDTLS_DEBUG_C MBEDTLS_HAVE_TIME \
                              MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED \
                              MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_EPHEMERAL_ENABLED
-requires_pk_alg ECDSA
 run_test "TLS 1.3 m->m: Session resumption failure, ticket expired." \
          "$P_SRV debug_level=4 crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13 tickets=8 dummy_ticket=2" \
          "$P_CLI debug_level=4 reco_mode=1 reconnect=1" \
@@ -127,7 +125,6 @@ requires_all_configs_enabled MBEDTLS_SSL_PROTO_TLS1_3 MBEDTLS_SSL_SESSION_TICKET
                              MBEDTLS_SSL_CLI_C MBEDTLS_DEBUG_C MBEDTLS_HAVE_TIME \
                              MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED \
                              MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_EPHEMERAL_ENABLED
-requires_pk_alg ECDSA
 run_test "TLS 1.3 m->m: Session resumption failure, invalid start time." \
          "$P_SRV debug_level=4 crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13 tickets=8 dummy_ticket=3" \
          "$P_CLI debug_level=4 reco_mode=1 reconnect=1" \
@@ -147,7 +144,6 @@ requires_all_configs_enabled MBEDTLS_SSL_PROTO_TLS1_3 MBEDTLS_SSL_SESSION_TICKET
                              MBEDTLS_SSL_CLI_C MBEDTLS_DEBUG_C MBEDTLS_HAVE_TIME \
                              MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED \
                              MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_EPHEMERAL_ENABLED
-requires_pk_alg ECDSA
 run_test "TLS 1.3 m->m: Session resumption failure, ticket expired. too old" \
          "$P_SRV debug_level=4 crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13 tickets=8 dummy_ticket=4" \
          "$P_CLI debug_level=4 reco_mode=1 reconnect=1" \
@@ -167,7 +163,6 @@ requires_all_configs_enabled MBEDTLS_SSL_PROTO_TLS1_3 MBEDTLS_SSL_SESSION_TICKET
                              MBEDTLS_SSL_CLI_C MBEDTLS_DEBUG_C MBEDTLS_HAVE_TIME \
                              MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED \
                              MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_EPHEMERAL_ENABLED
-requires_pk_alg ECDSA
 run_test "TLS 1.3 m->m: Session resumption failure, age outside tolerance window, too young." \
          "$P_SRV debug_level=4 crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13 tickets=8 dummy_ticket=5" \
          "$P_CLI debug_level=4 reco_mode=1 reconnect=1" \
@@ -187,7 +182,6 @@ requires_all_configs_enabled MBEDTLS_SSL_PROTO_TLS1_3 MBEDTLS_SSL_SESSION_TICKET
                              MBEDTLS_SSL_CLI_C MBEDTLS_DEBUG_C MBEDTLS_HAVE_TIME \
                              MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED \
                              MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_EPHEMERAL_ENABLED
-requires_pk_alg ECDSA
 run_test "TLS 1.3 m->m: Session resumption failure, age outside tolerance window, too old." \
          "$P_SRV debug_level=4 crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13 tickets=8 dummy_ticket=6" \
          "$P_CLI debug_level=4 reco_mode=1 reconnect=1" \
@@ -278,7 +272,6 @@ requires_all_configs_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE \
                              MBEDTLS_SSL_EARLY_DATA
 requires_any_configs_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_EPHEMERAL_ENABLED \
                              MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_ENABLED
-requires_pk_alg ECDSA
 run_test    "TLS 1.3 m->G: EarlyData: basic check, good" \
             "$G_NEXT_SRV -d 10 --priority=NORMAL:-VERS-ALL:+VERS-TLS1.3:+CIPHER-ALL:+ECDHE-PSK:+PSK --earlydata --disable-client-cert" \
             "$P_CLI debug_level=4 early_data=1 reco_mode=1 reconnect=1 reco_delay=900" \
@@ -302,7 +295,6 @@ requires_all_configs_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE \
                              MBEDTLS_SSL_EARLY_DATA
 requires_any_configs_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_EPHEMERAL_ENABLED \
                              MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_ENABLED
-requires_pk_alg ECDSA
 run_test    "TLS 1.3 m->G: EarlyData: no early_data in NewSessionTicket, good" \
             "$G_NEXT_SRV -d 10 --priority=NORMAL:-VERS-ALL:+VERS-TLS1.3:+CIPHER-ALL:+ECDHE-PSK:+PSK --disable-client-cert" \
             "$P_CLI debug_level=4 early_data=1 reco_mode=1 reconnect=1" \
@@ -337,7 +329,6 @@ requires_all_configs_enabled MBEDTLS_SSL_SESSION_TICKETS \
                              MBEDTLS_SSL_SRV_C MBEDTLS_SSL_CLI_C MBEDTLS_DEBUG_C \
                              MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED \
                              MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_ENABLED
-requires_pk_alg ECDSA
 run_test "TLS 1.3 m->m: Resumption with ticket flags, psk/none." \
          "$P_SRV debug_level=4 crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13 dummy_ticket=7" \
          "$P_CLI debug_level=4 tls13_kex_modes=psk_or_ephemeral reconnect=1" \
@@ -354,7 +345,6 @@ requires_all_configs_enabled MBEDTLS_SSL_SESSION_TICKETS \
                              MBEDTLS_SSL_SRV_C MBEDTLS_SSL_CLI_C MBEDTLS_DEBUG_C \
                              MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED \
                              MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_ENABLED
-requires_pk_alg ECDSA
 run_test "TLS 1.3 m->m: Resumption with ticket flags, psk/psk." \
          "$P_SRV debug_level=4 crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13 dummy_ticket=8" \
          "$P_CLI debug_level=4 tls13_kex_modes=psk_or_ephemeral reconnect=1" \
@@ -367,7 +357,6 @@ requires_all_configs_enabled MBEDTLS_SSL_SESSION_TICKETS \
                              MBEDTLS_SSL_SRV_C MBEDTLS_SSL_CLI_C MBEDTLS_DEBUG_C \
                              MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED \
                              MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_ENABLED
-requires_pk_alg ECDSA
 run_test "TLS 1.3 m->m: Resumption with ticket flags, psk/psk_ephemeral." \
          "$P_SRV debug_level=4 crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13 dummy_ticket=9" \
          "$P_CLI debug_level=4 tls13_kex_modes=psk_or_ephemeral reconnect=1" \
@@ -384,7 +373,6 @@ requires_all_configs_enabled MBEDTLS_SSL_SESSION_TICKETS \
                              MBEDTLS_SSL_SRV_C MBEDTLS_SSL_CLI_C MBEDTLS_DEBUG_C \
                              MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED \
                              MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_ENABLED
-requires_pk_alg ECDSA
 run_test "TLS 1.3 m->m: Resumption with ticket flags, psk/psk_all." \
          "$P_SRV debug_level=4 crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13 dummy_ticket=10" \
          "$P_CLI debug_level=4 tls13_kex_modes=psk_or_ephemeral reconnect=1" \
@@ -397,7 +385,6 @@ requires_all_configs_enabled MBEDTLS_SSL_SESSION_TICKETS \
                              MBEDTLS_SSL_SRV_C MBEDTLS_SSL_CLI_C MBEDTLS_DEBUG_C \
                              MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED \
                              MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_EPHEMERAL_ENABLED
-requires_pk_alg ECDSA
 run_test "TLS 1.3 m->m: Resumption with ticket flags, psk_ephemeral/none." \
          "$P_SRV debug_level=4 crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13 dummy_ticket=7" \
          "$P_CLI debug_level=4 tls13_kex_modes=ephemeral_all reconnect=1" \
@@ -414,7 +401,6 @@ requires_all_configs_enabled MBEDTLS_SSL_SESSION_TICKETS \
                              MBEDTLS_SSL_SRV_C MBEDTLS_SSL_CLI_C MBEDTLS_DEBUG_C \
                              MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED \
                              MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_EPHEMERAL_ENABLED
-requires_pk_alg ECDSA
 run_test "TLS 1.3 m->m: Resumption with ticket flags, psk_ephemeral/psk." \
          "$P_SRV debug_level=4 crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13 dummy_ticket=8" \
          "$P_CLI debug_level=4 tls13_kex_modes=ephemeral_all reconnect=1" \
@@ -431,7 +417,6 @@ requires_all_configs_enabled MBEDTLS_SSL_SESSION_TICKETS \
                              MBEDTLS_SSL_SRV_C MBEDTLS_SSL_CLI_C MBEDTLS_DEBUG_C \
                              MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED \
                              MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_EPHEMERAL_ENABLED
-requires_pk_alg ECDSA
 run_test "TLS 1.3 m->m: Resumption with ticket flags, psk_ephemeral/psk_ephemeral." \
          "$P_SRV debug_level=4 crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13 dummy_ticket=9" \
          "$P_CLI debug_level=4 tls13_kex_modes=ephemeral_all reconnect=1" \
@@ -444,7 +429,6 @@ requires_all_configs_enabled MBEDTLS_SSL_SESSION_TICKETS \
                              MBEDTLS_SSL_SRV_C MBEDTLS_SSL_CLI_C MBEDTLS_DEBUG_C \
                              MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED \
                              MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_EPHEMERAL_ENABLED
-requires_pk_alg ECDSA
 run_test "TLS 1.3 m->m: Resumption with ticket flags, psk_ephemeral/psk_all." \
          "$P_SRV debug_level=4 crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13 dummy_ticket=10" \
          "$P_CLI debug_level=4 tls13_kex_modes=ephemeral_all reconnect=1" \
@@ -458,7 +442,6 @@ requires_all_configs_enabled MBEDTLS_SSL_SESSION_TICKETS \
                              MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED \
                              MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_ENABLED \
                              MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_EPHEMERAL_ENABLED
-requires_pk_alg ECDSA
 run_test "TLS 1.3 m->m: Resumption with ticket flags, psk_all/none." \
          "$P_SRV debug_level=4 crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13 dummy_ticket=7" \
          "$P_CLI debug_level=4 tls13_kex_modes=all reconnect=1" \
@@ -476,7 +459,6 @@ requires_all_configs_enabled MBEDTLS_SSL_SESSION_TICKETS \
                              MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED \
                              MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_ENABLED \
                              MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_EPHEMERAL_ENABLED
-requires_pk_alg ECDSA
 run_test "TLS 1.3 m->m: Resumption with ticket flags, psk_all/psk." \
          "$P_SRV debug_level=4 crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13 dummy_ticket=8" \
          "$P_CLI debug_level=4 tls13_kex_modes=all reconnect=1" \
@@ -490,7 +472,6 @@ requires_all_configs_enabled MBEDTLS_SSL_SESSION_TICKETS \
                              MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED \
                              MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_ENABLED \
                              MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_EPHEMERAL_ENABLED
-requires_pk_alg ECDSA
 run_test "TLS 1.3 m->m: Resumption with ticket flags, psk_all/psk_ephemeral." \
          "$P_SRV debug_level=4 crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13 dummy_ticket=9" \
          "$P_CLI debug_level=4 tls13_kex_modes=all reconnect=1" \
@@ -504,7 +485,6 @@ requires_all_configs_enabled MBEDTLS_SSL_SESSION_TICKETS \
                              MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED \
                              MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_ENABLED \
                              MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_EPHEMERAL_ENABLED
-requires_pk_alg ECDSA
 run_test "TLS 1.3 m->m: Resumption with ticket flags, psk_all/psk_all." \
          "$P_SRV debug_level=4 crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13 dummy_ticket=10" \
          "$P_CLI debug_level=4 tls13_kex_modes=all reconnect=1" \
