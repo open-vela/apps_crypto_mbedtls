@@ -33,11 +33,35 @@
 #include "mbedtls/threading.h"
 
 #include <stddef.h>
+
+#ifndef __STDC_WANT_LIB_EXT1__
+#define __STDC_WANT_LIB_EXT1__ 1
+#endif
 #include <string.h>
+
+#if defined(_WIN32)
+#include <Windows.h>
+#endif
+
+// Detect platforms known to support explicit_bzero()
+#if defined(__GLIBC__) && (__GLIBC__ >= 2) && (__GLIBC_MINOR__ >= 25)
+#define MBEDTLS_PLATFORM_HAS_EXPLICIT_BZERO 1
+#endif
+#if defined(__FreeBSD__) && __FreeBSD_version >= 1100037
+#define MBEDTLS_PLATFORM_HAS_EXPLICIT_BZERO 1
+#endif
+#if defined(__NEWLIB__)
+#define MBEDTLS_PLATFORM_HAS_EXPLICIT_BZERO 1
+#endif
 
 #if !defined(MBEDTLS_PLATFORM_ZEROIZE_ALT)
 /*
- * This implementation should never be optimized out by the compiler
+ * Where possible, we try to detect the presence of a platform-provided
+ * secure memset, such as explicit_bzero(), that is safe against being optimized
+ * out, and use that.
+ *
+ * For other platforms, we provide an implementation that aims not to be
+ * optimized out by the compiler.
  *
  * This implementation for mbedtls_platform_zeroize() was inspired from Colin
  * Percival's blog article at:
@@ -52,11 +76,11 @@
  * (refer to http://www.daemonology.net/blog/2014-09-05-erratum.html for
  * details), optimizations of the following form are still possible:
  *
- * if( memset_func != memset )
- *     memset_func( buf, 0, len );
+ * if (memset_func != memset)
+ *     memset_func(buf, 0, len);
  *
  * Note that it is extremely difficult to guarantee that
- * mbedtls_platform_zeroize() will not be optimized out by aggressive compilers
+ * the memset() call will not be optimized out by aggressive compilers
  * in a portable way. For this reason, Mbed TLS also provides the configuration
  * option MBEDTLS_PLATFORM_ZEROIZE_ALT, which allows users to configure
  * mbedtls_platform_zeroize() to use a suitable implementation for their
@@ -69,7 +93,15 @@ void mbedtls_platform_zeroize(void *buf, size_t len)
     MBEDTLS_INTERNAL_VALIDATE(len == 0 || buf != NULL);
 
     if (len > 0) {
+#if defined(MBEDTLS_PLATFORM_HAS_EXPLICIT_BZERO)
+        explicit_bzero(buf, len);
+#elif defined(__STDC_LIB_EXT1__)
+        memset_s(buf, len, 0, len);
+#elif defined(_WIN32)
+        SecureZeroMemory(buf, len);
+#else
         memset_func(buf, 0, len);
+#endif
     }
 }
 #endif /* MBEDTLS_PLATFORM_ZEROIZE_ALT */
