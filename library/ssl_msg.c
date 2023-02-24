@@ -2639,12 +2639,7 @@ int mbedtls_ssl_write_handshake_msg_ext(mbedtls_ssl_context *ssl,
 
         /* Update running hashes of handshake messages seen */
         if (hs_type != MBEDTLS_SSL_HS_HELLO_REQUEST && update_checksum != 0) {
-            ret = ssl->handshake->update_checksum(ssl, ssl->out_msg,
-                                                  ssl->out_msglen);
-            if (ret != 0) {
-                MBEDTLS_SSL_DEBUG_RET(1, "update_checksum", ret);
-                return ret;
-            }
+            ssl->handshake->update_checksum(ssl, ssl->out_msg, ssl->out_msglen);
         }
     }
 
@@ -3072,17 +3067,12 @@ int mbedtls_ssl_prepare_handshake_record(mbedtls_ssl_context *ssl)
     return 0;
 }
 
-int mbedtls_ssl_update_handshake_status(mbedtls_ssl_context *ssl)
+void mbedtls_ssl_update_handshake_status(mbedtls_ssl_context *ssl)
 {
-    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     mbedtls_ssl_handshake_params * const hs = ssl->handshake;
 
     if (mbedtls_ssl_is_handshake_over(ssl) == 0 && hs != NULL) {
-        ret = ssl->handshake->update_checksum(ssl, ssl->in_msg, ssl->in_hslen);
-        if (ret != 0) {
-            MBEDTLS_SSL_DEBUG_RET(1, "update_checksum", ret);
-            return ret;
-        }
+        ssl->handshake->update_checksum(ssl, ssl->in_msg, ssl->in_hslen);
     }
 
     /* Handshake message is complete, increment counter */
@@ -3113,7 +3103,6 @@ int mbedtls_ssl_update_handshake_status(mbedtls_ssl_context *ssl)
         memset(hs_buf, 0, sizeof(mbedtls_ssl_hs_buffer));
     }
 #endif
-    return 0;
 }
 
 /*
@@ -3939,11 +3928,7 @@ int mbedtls_ssl_read_record(mbedtls_ssl_context *ssl,
 
         if (ssl->in_msgtype == MBEDTLS_SSL_MSG_HANDSHAKE &&
             update_hs_digest == 1) {
-            ret = mbedtls_ssl_update_handshake_status(ssl);
-            if (0 != ret) {
-                MBEDTLS_SSL_DEBUG_RET(1, ("mbedtls_ssl_update_handshake_status"), ret);
-                return ret;
-            }
+            mbedtls_ssl_update_handshake_status(ssl);
         }
     } else {
         MBEDTLS_SSL_DEBUG_MSG(2, ("reuse previously read message"));
@@ -5593,10 +5578,8 @@ int mbedtls_ssl_read(mbedtls_ssl_context *ssl, unsigned char *buf, size_t len)
     n = (len < ssl->in_msglen)
         ? len : ssl->in_msglen;
 
-    if (len != 0) {
-        memcpy(buf, ssl->in_offt, n);
-        ssl->in_msglen -= n;
-    }
+    memcpy(buf, ssl->in_offt, n);
+    ssl->in_msglen -= n;
 
     /* Zeroising the plaintext buffer to erase unused application data
        from the memory. */
@@ -5672,9 +5655,7 @@ static int ssl_write_real(mbedtls_ssl_context *ssl,
          */
         ssl->out_msglen  = len;
         ssl->out_msgtype = MBEDTLS_SSL_MSG_APPLICATION_DATA;
-        if (len > 0) {
-            memcpy(ssl->out_msg, buf, len);
-        }
+        memcpy(ssl->out_msg, buf, len);
 
         if ((ret = mbedtls_ssl_write_record(ssl, SSL_FORCE_FLUSH)) != 0) {
             MBEDTLS_SSL_DEBUG_RET(1, "mbedtls_ssl_write_record", ret);
