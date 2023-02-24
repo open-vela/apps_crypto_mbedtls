@@ -1677,12 +1677,12 @@ static psa_status_t psa_start_key_creation(
  *
  * \retval #PSA_SUCCESS
  *         The key was successfully created.
- * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
- * \retval #PSA_ERROR_INSUFFICIENT_STORAGE
- * \retval #PSA_ERROR_ALREADY_EXISTS
- * \retval #PSA_ERROR_DATA_INVALID
- * \retval #PSA_ERROR_DATA_CORRUPT
- * \retval #PSA_ERROR_STORAGE_FAILURE
+ * \retval #PSA_ERROR_INSUFFICIENT_MEMORY \emptydescription
+ * \retval #PSA_ERROR_INSUFFICIENT_STORAGE \emptydescription
+ * \retval #PSA_ERROR_ALREADY_EXISTS \emptydescription
+ * \retval #PSA_ERROR_DATA_INVALID \emptydescription
+ * \retval #PSA_ERROR_DATA_CORRUPT \emptydescription
+ * \retval #PSA_ERROR_STORAGE_FAILURE \emptydescription
  *
  * \return If this function fails, the key slot is an invalid state.
  *         You must call psa_fail_key_creation() to wipe and free the slot.
@@ -2684,41 +2684,34 @@ static psa_status_t psa_sign_verify_check_alg(int input_is_message,
 }
 
 /**
- * \brief                       For output buffers which contain "tags"
- *                              (outputs that may be checked for validity like
- *                              hashes, MACs and signatures), fill the unused
- *                              part of the output buffer (the whole buffer on
- *                              error, the trailing part on success) with
- *                              something that isn't a valid tag (barring an
- *                              attack on the tag and deliberately-crafted
- *                              input), in case the caller doesn't check the
- *                              return status properly.
+ * \brief                       Fill the unused part of the output buffer (the
+ *                              whole buffer on error, the trailing part on
+ *                              success) with something that isn't a valid
+ *                              signature (barring an attack on the signature
+ *                              and deliberately-crafted input), in case the
+ *                              caller doesn't check the return status properly.
  *
- * \param output_buffer         Pointer to buffer to wipe. May not be NULL
+ * \param output_buffer         pointer to buffer to wipe. May not be NULL
  *                              unless \p output_buffer_size is zero.
- * \param status                Status of function called to generate
+ * \param status                status of function called to generate
  *                              output_buffer originally
  * \param output_buffer_size    Size of output buffer. If zero, \p output_buffer
- *                              could be NULL.
+ *                              could be NULL
  * \param output_buffer_length  Length of data written to output_buffer, must be
  *                              less than \p output_buffer_size
  */
-static void psa_wipe_tag_output_buffer(uint8_t *output_buffer, psa_status_t status,
-                                       size_t output_buffer_size, size_t output_buffer_length)
+static void psa_wipe_output_buffer(uint8_t *output_buffer, psa_status_t status,
+                                   size_t output_buffer_size, size_t output_buffer_length)
 {
-    size_t offset = 0;
-
-    if (output_buffer_size == 0) {
-        /* If output_buffer_size is 0 then we have nothing to do. We must not
-           call memset because output_buffer may be NULL in this case */
-        return;
-    }
-
     if (status == PSA_SUCCESS) {
-        offset = output_buffer_length;
+        memset(output_buffer + output_buffer_length, '!',
+               output_buffer_size - output_buffer_length);
+    } else if (output_buffer_size > 0) {
+        memset(output_buffer, '!', output_buffer_size);
     }
-
-    memset(output_buffer + offset, '!', output_buffer_size - offset);
+    /* If output_buffer_size is 0 then we have nothing to do. We must
+     * not call memset because output_buffer may be NULL in this
+     * case.*/
 }
 
 static psa_status_t psa_sign_internal(mbedtls_svc_key_id_t key,
@@ -2783,8 +2776,8 @@ static psa_status_t psa_sign_internal(mbedtls_svc_key_id_t key,
 
 
 exit:
-    psa_wipe_tag_output_buffer(signature, status, signature_size,
-                               *signature_length);
+    psa_wipe_output_buffer(signature, status, signature_size,
+                           *signature_length);
 
     unlock_status = psa_unlock_key_slot(slot);
 
@@ -3300,8 +3293,8 @@ psa_status_t psa_sign_hash_complete(
 
 exit:
 
-    psa_wipe_tag_output_buffer(signature, status, signature_size,
-                               *signature_length);
+    psa_wipe_output_buffer(signature, status, signature_size,
+                           *signature_length);
 
     if (status != PSA_OPERATION_INCOMPLETE) {
         if (status != PSA_SUCCESS) {
