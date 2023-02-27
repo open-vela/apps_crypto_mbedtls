@@ -140,6 +140,9 @@ test_csr_v3_all_malformed_attributes_extension_request_sequence_len1.csr.der: te
 test_csr_v3_all_malformed_attributes_extension_request_sequence_len2.csr.der: test_csr_v3_all.csr.der
 	(hexdump -ve '1/1 "%.2X"' $< | sed "s/3051300B0603551D0F04/3050300B0603551D0F04/" | xxd -r -p ) > $@
 
+test_cert_rfc822name.crt.der: cert_example_multi.csr
+	$(OPENSSL) x509 -req -CA $(test_ca_crt) -CAkey $(test_ca_key_file_rsa) -extfile $(test_ca_config_file) -outform DER -extensions rfc822name_names -passin "pass:$(test_ca_pwd_rsa)" -set_serial 17 -days 3653 -sha256 -in $< > $@
+
 $(test_ca_key_file_rsa_alt):test-ca.opensslconf
 	$(OPENSSL) genrsa -out $@ 2048
 test-ca-alt.csr: $(test_ca_key_file_rsa_alt) $(test_ca_config_file)
@@ -1275,6 +1278,10 @@ $(pkcs7_test_file):
 	echo -e "Hello\xd" > $@
 all_final += $(pkcs7_test_file)
 
+pkcs7_zerolendata.bin:
+	printf '' > $@
+all_final += pkcs7_zerolendata.bin
+
 pkcs7_data_1.bin:
 	echo -e "2\xd" > $@
 all_final += pkcs7_data_1.bin
@@ -1307,6 +1314,11 @@ all_final += pkcs7-rsa-sha256-1.der
 pkcs7-rsa-sha256-2.der: $(pkcs7_test_cert_2)
 	$(OPENSSL) x509 -in pkcs7-rsa-sha256-2.crt -out $@ -outform DER
 all_final += pkcs7-rsa-sha256-2.der
+
+# pkcs7 signature file over zero-len data
+pkcs7_zerolendata_detached.der: pkcs7_zerolendata.bin pkcs7-rsa-sha256-1.key pkcs7-rsa-sha256-1.crt
+	$(OPENSSL) smime -sign -md sha256 -nocerts -noattr -in pkcs7_zerolendata.bin -inkey pkcs7-rsa-sha256-1.key -outform DER -binary -signer pkcs7-rsa-sha256-1.crt -out pkcs7_zerolendata_detached.der
+all_final += pkcs7_zerolendata_detached.der
 
 # pkcs7 signature file with CERT
 pkcs7_data_cert_signed_sha256.der: $(pkcs7_test_file) $(pkcs7_test_cert_1)
