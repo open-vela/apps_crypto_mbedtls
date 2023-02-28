@@ -140,9 +140,6 @@ test_csr_v3_all_malformed_attributes_extension_request_sequence_len1.csr.der: te
 test_csr_v3_all_malformed_attributes_extension_request_sequence_len2.csr.der: test_csr_v3_all.csr.der
 	(hexdump -ve '1/1 "%.2X"' $< | sed "s/3051300B0603551D0F04/3050300B0603551D0F04/" | xxd -r -p ) > $@
 
-test_cert_rfc822name.crt.der: cert_example_multi.csr
-	$(OPENSSL) x509 -req -CA $(test_ca_crt) -CAkey $(test_ca_key_file_rsa) -extfile $(test_ca_config_file) -outform DER -extensions rfc822name_names -passin "pass:$(test_ca_pwd_rsa)" -set_serial 17 -days 3653 -sha256 -in $< > $@
-
 $(test_ca_key_file_rsa_alt):test-ca.opensslconf
 	$(OPENSSL) genrsa -out $@ 2048
 test-ca-alt.csr: $(test_ca_key_file_rsa_alt) $(test_ca_config_file)
@@ -1371,6 +1368,18 @@ pkcs7_data_signed_badsigner.der: pkcs7_data_cert_signed_sha256.der
 	cp pkcs7_data_cert_signed_sha256.der $@
 	echo -en '\xa1' | dd of=$@ bs=1 seek=918 conv=notrunc
 all_final += pkcs7_data_signed_badsigner.der
+
+# pkcs7 signature file with invalid tag in signerInfo[1].serial after long issuer name
+pkcs7_signerInfo_1_serial_invalid_tag_after_long_name.der: pkcs7_data_multiple_signed.der
+	cp $< $@
+	echo -en '\xa1' | dd of=$@ bs=1 seek=498 conv=notrunc
+all_final += pkcs7_signerInfo_1_serial_invalid_tag_after_long_name.der
+
+# pkcs7 signature file with invalid tag in signerInfo[2]
+pkcs7_signerInfo_2_invalid_tag.der: pkcs7_data_3_signed.der
+	cp $< $@
+	echo -en '\xa1' | dd of=$@ bs=1 seek=810 conv=notrunc
+all_final += pkcs7_signerInfo_2_invalid_tag.der
 
 # pkcs7 file with version 2
 pkcs7_data_cert_signed_v2.der: pkcs7_data_cert_signed_sha256.der
