@@ -130,7 +130,7 @@ inline void mbedtls_put_unaligned_uint64(void *p, uint64_t x)
  * byte from x, where byte 0 is the least significant byte.
  */
 #define MBEDTLS_BYTE_0(x) ((uint8_t) ((x)         & 0xff))
-#define MBEDTLS_BYTE_1(x) ((uint8_t) (((x) >>  8) & 0xff))
+#define MBEDTLS_BYTE_1(x) ((uint8_t) (((x) >> 8) & 0xff))
 #define MBEDTLS_BYTE_2(x) ((uint8_t) (((x) >> 16) & 0xff))
 #define MBEDTLS_BYTE_3(x) ((uint8_t) (((x) >> 24) & 0xff))
 #define MBEDTLS_BYTE_4(x) ((uint8_t) (((x) >> 32) & 0xff))
@@ -239,8 +239,8 @@ static const uint16_t mbedtls_byte_order_detector = { 0x100 };
  *                  byte of the four bytes to build the 32 bits unsigned
  *                  integer from.
  */
-#define MBEDTLS_GET_UINT32_BE(data, offset)                                \
-    ((MBEDTLS_IS_BIG_ENDIAN)                                               \
+#define MBEDTLS_GET_UINT32_BE(data, offset)                              \
+    ((MBEDTLS_IS_BIG_ENDIAN)                                            \
         ? mbedtls_get_unaligned_uint32((data) + (offset))                  \
         : MBEDTLS_BSWAP32(mbedtls_get_unaligned_uint32((data) + (offset))) \
     )
@@ -254,11 +254,11 @@ static const uint16_t mbedtls_byte_order_detector = { 0x100 };
  * \param   offset  Offset from \p data where to put the most significant
  *                  byte of the 32 bits unsigned integer \p n.
  */
-#define MBEDTLS_PUT_UINT32_BE(n, data, offset)                                   \
+#define MBEDTLS_PUT_UINT32_BE(n, data, offset)                             \
     {                                                                            \
-        if (MBEDTLS_IS_BIG_ENDIAN)                                               \
+        if (MBEDTLS_IS_BIG_ENDIAN)                                             \
         {                                                                        \
-            mbedtls_put_unaligned_uint32((data) + (offset), (uint32_t) (n));     \
+            mbedtls_put_unaligned_uint32((data) + (offset), (uint32_t) (n));      \
         }                                                                        \
         else                                                                     \
         {                                                                        \
@@ -275,8 +275,8 @@ static const uint16_t mbedtls_byte_order_detector = { 0x100 };
  *                  byte of the four bytes to build the 32 bits unsigned
  *                  integer from.
  */
-#define MBEDTLS_GET_UINT32_LE(data, offset)                                \
-    ((MBEDTLS_IS_BIG_ENDIAN)                                               \
+#define MBEDTLS_GET_UINT32_LE(data, offset)                              \
+    ((MBEDTLS_IS_BIG_ENDIAN)                                            \
         ? MBEDTLS_BSWAP32(mbedtls_get_unaligned_uint32((data) + (offset))) \
         : mbedtls_get_unaligned_uint32((data) + (offset))                  \
     )
@@ -291,15 +291,15 @@ static const uint16_t mbedtls_byte_order_detector = { 0x100 };
  * \param   offset  Offset from \p data where to put the least significant
  *                  byte of the 32 bits unsigned integer \p n.
  */
-#define MBEDTLS_PUT_UINT32_LE(n, data, offset)                                   \
+#define MBEDTLS_PUT_UINT32_LE(n, data, offset)                             \
     {                                                                            \
-        if (MBEDTLS_IS_BIG_ENDIAN)                                               \
+        if (MBEDTLS_IS_BIG_ENDIAN)                                             \
         {                                                                        \
             mbedtls_put_unaligned_uint32((data) + (offset), MBEDTLS_BSWAP32((uint32_t) (n))); \
         }                                                                        \
         else                                                                     \
         {                                                                        \
-            mbedtls_put_unaligned_uint32((data) + (offset), ((uint32_t) (n)));   \
+            mbedtls_put_unaligned_uint32((data) + (offset), ((uint32_t) (n)));      \
         }                                                                        \
     }
 
@@ -312,8 +312,8 @@ static const uint16_t mbedtls_byte_order_detector = { 0x100 };
  *                  byte of the two bytes to build the 16 bits unsigned
  *                  integer from.
  */
-#define MBEDTLS_GET_UINT16_LE(data, offset)                                \
-    ((MBEDTLS_IS_BIG_ENDIAN)                                               \
+#define MBEDTLS_GET_UINT16_LE(data, offset)                              \
+    ((MBEDTLS_IS_BIG_ENDIAN)                                            \
         ? MBEDTLS_BSWAP16(mbedtls_get_unaligned_uint16((data) + (offset))) \
         : mbedtls_get_unaligned_uint16((data) + (offset))                  \
     )
@@ -327,15 +327,15 @@ static const uint16_t mbedtls_byte_order_detector = { 0x100 };
  * \param   offset  Offset from \p data where to put the least significant
  *                  byte of the 16 bits unsigned integer \p n.
  */
-#define MBEDTLS_PUT_UINT16_LE(n, data, offset)                                   \
+#define MBEDTLS_PUT_UINT16_LE(n, data, offset)                             \
     {                                                                            \
-        if (MBEDTLS_IS_BIG_ENDIAN)                                               \
+        if (MBEDTLS_IS_BIG_ENDIAN)                                             \
         {                                                                        \
             mbedtls_put_unaligned_uint16((data) + (offset), MBEDTLS_BSWAP16((uint16_t) (n))); \
         }                                                                        \
         else                                                                     \
         {                                                                        \
-            mbedtls_put_unaligned_uint16((data) + (offset), (uint16_t) (n));     \
+            mbedtls_put_unaligned_uint16((data) + (offset), (uint16_t) (n));      \
         }                                                                        \
     }
 
@@ -348,8 +348,8 @@ static const uint16_t mbedtls_byte_order_detector = { 0x100 };
  *                  byte of the two bytes to build the 16 bits unsigned
  *                  integer from.
  */
-#define MBEDTLS_GET_UINT16_BE(data, offset)                                \
-    ((MBEDTLS_IS_BIG_ENDIAN)                                               \
+#define MBEDTLS_GET_UINT16_BE(data, offset)                              \
+    ((MBEDTLS_IS_BIG_ENDIAN)                                            \
         ? mbedtls_get_unaligned_uint16((data) + (offset))                  \
         : MBEDTLS_BSWAP16(mbedtls_get_unaligned_uint16((data) + (offset))) \
     )
@@ -363,11 +363,11 @@ static const uint16_t mbedtls_byte_order_detector = { 0x100 };
  * \param   offset  Offset from \p data where to put the most significant
  *                  byte of the 16 bits unsigned integer \p n.
  */
-#define MBEDTLS_PUT_UINT16_BE(n, data, offset)                                   \
+#define MBEDTLS_PUT_UINT16_BE(n, data, offset)                             \
     {                                                                            \
-        if (MBEDTLS_IS_BIG_ENDIAN)                                               \
+        if (MBEDTLS_IS_BIG_ENDIAN)                                             \
         {                                                                        \
-            mbedtls_put_unaligned_uint16((data) + (offset), (uint16_t) (n));     \
+            mbedtls_put_unaligned_uint16((data) + (offset), (uint16_t) (n));      \
         }                                                                        \
         else                                                                     \
         {                                                                        \
@@ -384,11 +384,11 @@ static const uint16_t mbedtls_byte_order_detector = { 0x100 };
  *                  byte of the three bytes to build the 24 bits unsigned
  *                  integer from.
  */
-#define MBEDTLS_GET_UINT24_BE(data, offset)        \
-    (                                              \
-        ((uint32_t) (data)[(offset)] << 16)        \
-        | ((uint32_t) (data)[(offset) + 1] << 8)   \
-        | ((uint32_t) (data)[(offset) + 2])        \
+#define MBEDTLS_GET_UINT24_BE(data, offset)                  \
+    (                                                           \
+        ((uint32_t) (data)[(offset)] << 16)         \
+        | ((uint32_t) (data)[(offset) + 1] << 8)         \
+        | ((uint32_t) (data)[(offset) + 2])         \
     )
 
 /**
@@ -401,8 +401,8 @@ static const uint16_t mbedtls_byte_order_detector = { 0x100 };
  *                  byte of the 24 bits unsigned integer \p n.
  */
 #define MBEDTLS_PUT_UINT24_BE(n, data, offset)                \
-    {                                                         \
-        (data)[(offset)] = MBEDTLS_BYTE_2(n);                 \
+    {                                                               \
+        (data)[(offset)] = MBEDTLS_BYTE_2(n);             \
         (data)[(offset) + 1] = MBEDTLS_BYTE_1(n);             \
         (data)[(offset) + 2] = MBEDTLS_BYTE_0(n);             \
     }
@@ -416,9 +416,9 @@ static const uint16_t mbedtls_byte_order_detector = { 0x100 };
  *                  byte of the three bytes to build the 24 bits unsigned
  *                  integer from.
  */
-#define MBEDTLS_GET_UINT24_LE(data, offset)               \
-    (                                                     \
-        ((uint32_t) (data)[(offset)])                     \
+#define MBEDTLS_GET_UINT24_LE(data, offset)                   \
+    (                                                           \
+        ((uint32_t) (data)[(offset)])         \
         | ((uint32_t) (data)[(offset) + 1] <<  8)         \
         | ((uint32_t) (data)[(offset) + 2] << 16)         \
     )
@@ -433,8 +433,8 @@ static const uint16_t mbedtls_byte_order_detector = { 0x100 };
  *                  byte of the 24 bits unsigned integer \p n.
  */
 #define MBEDTLS_PUT_UINT24_LE(n, data, offset)                \
-    {                                                         \
-        (data)[(offset)] = MBEDTLS_BYTE_0(n);                 \
+    {                                                               \
+        (data)[(offset)] = MBEDTLS_BYTE_0(n);             \
         (data)[(offset) + 1] = MBEDTLS_BYTE_1(n);             \
         (data)[(offset) + 2] = MBEDTLS_BYTE_2(n);             \
     }
@@ -448,8 +448,8 @@ static const uint16_t mbedtls_byte_order_detector = { 0x100 };
  *                  byte of the eight bytes to build the 64 bits unsigned
  *                  integer from.
  */
-#define MBEDTLS_GET_UINT64_BE(data, offset)                                \
-    ((MBEDTLS_IS_BIG_ENDIAN)                                               \
+#define MBEDTLS_GET_UINT64_BE(data, offset)                              \
+    ((MBEDTLS_IS_BIG_ENDIAN)                                            \
         ? mbedtls_get_unaligned_uint64((data) + (offset))                  \
         : MBEDTLS_BSWAP64(mbedtls_get_unaligned_uint64((data) + (offset))) \
     )
@@ -463,11 +463,11 @@ static const uint16_t mbedtls_byte_order_detector = { 0x100 };
  * \param   offset  Offset from \p data where to put the most significant
  *                  byte of the 64 bits unsigned integer \p n.
  */
-#define MBEDTLS_PUT_UINT64_BE(n, data, offset)                                   \
+#define MBEDTLS_PUT_UINT64_BE(n, data, offset)                             \
     {                                                                            \
-        if (MBEDTLS_IS_BIG_ENDIAN)                                               \
+        if (MBEDTLS_IS_BIG_ENDIAN)                                             \
         {                                                                        \
-            mbedtls_put_unaligned_uint64((data) + (offset), (uint64_t) (n));     \
+            mbedtls_put_unaligned_uint64((data) + (offset), (uint64_t) (n));      \
         }                                                                        \
         else                                                                     \
         {                                                                        \
@@ -484,8 +484,8 @@ static const uint16_t mbedtls_byte_order_detector = { 0x100 };
  *                  byte of the eight bytes to build the 64 bits unsigned
  *                  integer from.
  */
-#define MBEDTLS_GET_UINT64_LE(data, offset)                                \
-    ((MBEDTLS_IS_BIG_ENDIAN)                                               \
+#define MBEDTLS_GET_UINT64_LE(data, offset)                              \
+    ((MBEDTLS_IS_BIG_ENDIAN)                                            \
         ? MBEDTLS_BSWAP64(mbedtls_get_unaligned_uint64((data) + (offset))) \
         : mbedtls_get_unaligned_uint64((data) + (offset))                  \
     )
@@ -499,15 +499,15 @@ static const uint16_t mbedtls_byte_order_detector = { 0x100 };
  * \param   offset  Offset from \p data where to put the least significant
  *                  byte of the 64 bits unsigned integer \p n.
  */
-#define MBEDTLS_PUT_UINT64_LE(n, data, offset)                                   \
+#define MBEDTLS_PUT_UINT64_LE(n, data, offset)                             \
     {                                                                            \
-        if (MBEDTLS_IS_BIG_ENDIAN)                                               \
+        if (MBEDTLS_IS_BIG_ENDIAN)                                             \
         {                                                                        \
             mbedtls_put_unaligned_uint64((data) + (offset), MBEDTLS_BSWAP64((uint64_t) (n))); \
         }                                                                        \
         else                                                                     \
         {                                                                        \
-            mbedtls_put_unaligned_uint64((data) + (offset), (uint64_t) (n));     \
+            mbedtls_put_unaligned_uint64((data) + (offset), (uint64_t) (n));      \
         }                                                                        \
     }
 
