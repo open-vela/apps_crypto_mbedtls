@@ -70,10 +70,6 @@
 #error "MBEDTLS_AESNI_C defined, but not all prerequisites"
 #endif
 
-#if defined(MBEDTLS_AESCE_C) && !defined(MBEDTLS_HAVE_ASM)
-#error "MBEDTLS_AESCE_C defined, but not all prerequisites"
-#endif
-
 #if defined(MBEDTLS_CTR_DRBG_C) && !defined(MBEDTLS_AES_C)
 #error "MBEDTLS_CTR_DRBG_C defined, but not all prerequisites"
 #endif
@@ -934,11 +930,6 @@
 #if defined(MBEDTLS_SSL_EXTENDED_MASTER_SECRET) && \
     !defined(MBEDTLS_SSL_PROTO_TLS1_2)
 #error "MBEDTLS_SSL_EXTENDED_MASTER_SECRET defined, but not all prerequisites"
-#endif
-
-#if defined(MBEDTLS_SSL_RENEGOTIATION) && \
-    !defined(MBEDTLS_SSL_PROTO_TLS1_2)
-#error "MBEDTLS_SSL_RENEGOTIATION defined, but not all prerequisites"
 #endif
 
 #if defined(MBEDTLS_SSL_TICKET_C) && ( !defined(MBEDTLS_CIPHER_C) && \
