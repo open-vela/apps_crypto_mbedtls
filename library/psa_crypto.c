@@ -322,6 +322,44 @@ psa_status_t mbedtls_to_psa_error(int ret)
     }
 }
 
+/**
+ * \brief                       For output buffers which contain "tags"
+ *                              (outputs that may be checked for validity like
+ *                              hashes, MACs and signatures), fill the unused
+ *                              part of the output buffer (the whole buffer on
+ *                              error, the trailing part on success) with
+ *                              something that isn't a valid tag (barring an
+ *                              attack on the tag and deliberately-crafted
+ *                              input), in case the caller doesn't check the
+ *                              return status properly.
+ *
+ * \param output_buffer         Pointer to buffer to wipe. May not be NULL
+ *                              unless \p output_buffer_size is zero.
+ * \param status                Status of function called to generate
+ *                              output_buffer originally
+ * \param output_buffer_size    Size of output buffer. If zero, \p output_buffer
+ *                              could be NULL.
+ * \param output_buffer_length  Length of data written to output_buffer, must be
+ *                              less than \p output_buffer_size
+ */
+static void psa_wipe_tag_output_buffer(uint8_t *output_buffer, psa_status_t status,
+                                       size_t output_buffer_size, size_t output_buffer_length)
+{
+    size_t offset = 0;
+
+    if (output_buffer_size == 0) {
+        /* If output_buffer_size is 0 then we have nothing to do. We must not
+           call memset because output_buffer may be NULL in this case */
+        return;
+    }
+
+    if (status == PSA_SUCCESS) {
+        offset = output_buffer_length;
+    }
+
+    memset(output_buffer + offset, '!', output_buffer_size - offset);
+}
+
 
 
 
@@ -2504,10 +2542,7 @@ exit:
         operation->mac_size = 0;
     }
 
-    if (mac_size > operation->mac_size) {
-        memset(&mac[operation->mac_size], '!',
-               mac_size - operation->mac_size);
-    }
+    psa_wipe_tag_output_buffer(mac, status, mac_size, *mac_length);
 
     abort_status = psa_mac_abort(operation);
 
@@ -2601,9 +2636,8 @@ exit:
         *mac_length = mac_size;
         operation_mac_size = 0;
     }
-    if (mac_size > operation_mac_size) {
-        memset(&mac[operation_mac_size], '!', mac_size - operation_mac_size);
-    }
+
+    psa_wipe_tag_output_buffer(mac, status, mac_size, *mac_length);
 
     unlock_status = psa_unlock_key_slot(slot);
 
@@ -2683,37 +2717,6 @@ static psa_status_t psa_sign_verify_check_alg(int input_is_message,
     return PSA_SUCCESS;
 }
 
-/**
- * \brief                       Fill the unused part of the output buffer (the
- *                              whole buffer on error, the trailing part on
- *                              success) with something that isn't a valid
- *                              signature (barring an attack on the signature
- *                              and deliberately-crafted input), in case the
- *                              caller doesn't check the return status properly.
- *
- * \param output_buffer         pointer to buffer to wipe. May not be NULL
- *                              unless \p output_buffer_size is zero.
- * \param status                status of function called to generate
- *                              output_buffer originally
- * \param output_buffer_size    Size of output buffer. If zero, \p output_buffer
- *                              could be NULL
- * \param output_buffer_length  Length of data written to output_buffer, must be
- *                              less than \p output_buffer_size
- */
-static void psa_wipe_output_buffer(uint8_t *output_buffer, psa_status_t status,
-                                   size_t output_buffer_size, size_t output_buffer_length)
-{
-    if (status == PSA_SUCCESS) {
-        memset(output_buffer + output_buffer_length, '!',
-               output_buffer_size - output_buffer_length);
-    } else if (output_buffer_size > 0) {
-        memset(output_buffer, '!', output_buffer_size);
-    }
-    /* If output_buffer_size is 0 then we have nothing to do. We must
-     * not call memset because output_buffer may be NULL in this
-     * case.*/
-}
-
 static psa_status_t psa_sign_internal(mbedtls_svc_key_id_t key,
                                       int input_is_message,
                                       psa_algorithm_t alg,
@@ -2776,8 +2779,8 @@ static psa_status_t psa_sign_internal(mbedtls_svc_key_id_t key,
 
 
 exit:
-    psa_wipe_output_buffer(signature, status, signature_size,
-                           *signature_length);
+    psa_wipe_tag_output_buffer(signature, status, signature_size,
+                               *signature_length);
 
     unlock_status = psa_unlock_key_slot(slot);
 
@@ -3153,16 +3156,17 @@ exit:
 /* Asymmetric interruptible cryptography                        */
 /****************************************************************/
 
+static uint32_t psa_interruptible_max_ops = PSA_INTERRUPTIBLE_MAX_OPS_UNLIMITED;
+
 void psa_interruptible_set_max_ops(uint32_t max_ops)
 {
-    psa_driver_wrapper_interruptible_set_max_ops(max_ops);
+    psa_interruptible_max_ops = max_ops;
 }
 
 uint32_t psa_interruptible_get_max_ops(void)
 {
-    return psa_driver_wrapper_interruptible_get_max_ops();
+    return psa_interruptible_max_ops;
 }
-
 
 uint32_t psa_sign_hash_get_num_ops(
     const psa_sign_hash_interruptible_operation_t *operation)
@@ -3293,8 +3297,8 @@ psa_status_t psa_sign_hash_complete(
 
 exit:
 
-    psa_wipe_output_buffer(signature, status, signature_size,
-                           *signature_length);
+    psa_wipe_tag_output_buffer(signature, status, signature_size,
+                               *signature_length);
 
     if (status != PSA_OPERATION_INCOMPLETE) {
         if (status != PSA_SUCCESS) {
@@ -3458,12 +3462,8 @@ psa_status_t psa_verify_hash_abort(
 /* implementations                                              */
 /****************************************************************/
 
-static uint32_t mbedtls_psa_interruptible_max_ops =
-    PSA_INTERRUPTIBLE_MAX_OPS_UNLIMITED;
-
 void mbedtls_psa_interruptible_set_max_ops(uint32_t max_ops)
 {
-    mbedtls_psa_interruptible_max_ops = max_ops;
 
 #if (defined(MBEDTLS_PSA_BUILTIN_ALG_ECDSA) || \
     defined(MBEDTLS_PSA_BUILTIN_ALG_DETERMINISTIC_ECDSA)) && \
@@ -3476,14 +3476,11 @@ void mbedtls_psa_interruptible_set_max_ops(uint32_t max_ops)
     }
 
     mbedtls_ecp_set_max_ops(max_ops);
+#else
+    (void) max_ops;
 #endif /* defined(MBEDTLS_PSA_BUILTIN_ALG_ECDSA) ||
         * defined(MBEDTLS_PSA_BUILTIN_ALG_DETERMINISTIC_ECDSA) &&
         * defined( MBEDTLS_ECP_RESTARTABLE ) */
-}
-
-uint32_t mbedtls_psa_interruptible_get_max_ops(void)
-{
-    return mbedtls_psa_interruptible_max_ops;
 }
 
 uint32_t mbedtls_psa_sign_hash_get_num_ops(
@@ -3543,11 +3540,6 @@ psa_status_t mbedtls_psa_sign_hash_start(
 
     /* Ensure num_ops is zero'ed in case of context re-use. */
     operation->num_ops = 0;
-
-    /* Ensure default is set even if
-     * mbedtls_psa_interruptible_set_max_ops() has not been called. */
-    mbedtls_psa_interruptible_set_max_ops(
-        mbedtls_psa_interruptible_get_max_ops());
 
     status = mbedtls_psa_ecp_load_representation(attributes->core.type,
                                                  attributes->core.bits,
@@ -3612,6 +3604,9 @@ psa_status_t mbedtls_psa_sign_hash_complete(
 
     mbedtls_mpi_init(&r);
     mbedtls_mpi_init(&s);
+
+    /* Ensure max_ops is set to the current value (or default). */
+    mbedtls_psa_interruptible_set_max_ops(psa_interruptible_get_max_ops());
 
     if (signature_size < 2 * operation->coordinate_bytes) {
         status = PSA_ERROR_BUFFER_TOO_SMALL;
@@ -3764,11 +3759,6 @@ psa_status_t mbedtls_psa_verify_hash_start(
     /* Ensure num_ops is zero'ed in case of context re-use. */
     operation->num_ops = 0;
 
-    /* Ensure default is set even if
-     * mbedtls_psa_interruptible_set_max_ops() has not been called. */
-    mbedtls_psa_interruptible_set_max_ops(
-        mbedtls_psa_interruptible_get_max_ops());
-
     status = mbedtls_psa_ecp_load_representation(attributes->core.type,
                                                  attributes->core.bits,
                                                  key_buffer,
@@ -3852,6 +3842,9 @@ psa_status_t mbedtls_psa_verify_hash_complete(
     defined(MBEDTLS_ECP_RESTARTABLE)
 
     psa_status_t status = PSA_ERROR_CORRUPTION_DETECTED;
+
+    /* Ensure max_ops is set to the current value (or default). */
+    mbedtls_psa_interruptible_set_max_ops(psa_interruptible_get_max_ops());
 
     status = mbedtls_to_psa_error(
         mbedtls_ecdsa_verify_restartable(&operation->ctx->grp,
@@ -4910,18 +4903,14 @@ psa_status_t psa_aead_finish(psa_aead_operation_t *operation,
                                             tag, tag_size, tag_length);
 
 exit:
+
+
     /* In case the operation fails and the user fails to check for failure or
      * the zero tag size, make sure the tag is set to something implausible.
      * Even if the operation succeeds, make sure we clear the rest of the
      * buffer to prevent potential leakage of anything previously placed in
      * the same buffer.*/
-    if (tag != NULL) {
-        if (status != PSA_SUCCESS) {
-            memset(tag, '!', tag_size);
-        } else if (*tag_length < tag_size) {
-            memset(tag + *tag_length, '!', (tag_size - *tag_length));
-        }
-    }
+    psa_wipe_tag_output_buffer(tag, status, tag_size, *tag_length);
 
     psa_aead_abort(operation);
 
