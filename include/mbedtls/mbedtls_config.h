@@ -2066,6 +2066,34 @@
 #define MBEDTLS_AESNI_C
 
 /**
+ * \def MBEDTLS_AESCE_C
+ *
+ * Enable AES crypto extension support on Arm64.
+ *
+ * Module:  library/aesce.c
+ * Caller:  library/aes.c
+ *
+ * Requires: MBEDTLS_HAVE_ASM, MBEDTLS_AES_C
+ *
+ * \note The code uses Neon intrinsics, so \c CFLAGS must be set to a minimum
+ * of \c -march=armv8-a+crypto .
+ *
+ * \warning If the target architecture is set to something that includes the
+ *          SHA3 feature (e.g. `-march=armv8.2-a+sha3`), for example because
+ *          `MBEDTLS_SHA512_USE_A64_CRYPTO_IF_PRESENT` is desired, compilers
+ *          generate code for `MBEDTLS_AESCE_C` that includes instructions
+ *          only present with the (optional) SHA3 feature. This will lead to an
+ *          undefined instruction exception if the code is run on a CPU without
+ *          that feature.
+ *
+ * \warning Runtime detection only works on linux. For non-linux operation
+ *          system, crypto extension MUST be supported by CPU.
+ *
+ * This module adds support for the AES crypto instructions on Arm64
+ */
+#define MBEDTLS_AESCE_C
+
+/**
  * \def MBEDTLS_AES_C
  *
  * Enable the AES block cipher.
@@ -3087,6 +3115,9 @@
  * \note If MBEDTLS_SHA256_USE_A64_CRYPTO_IF_PRESENT is defined when building
  * for a non-Aarch64 build it will be silently ignored.
  *
+ * \note The code uses Neon intrinsics, so \c CFLAGS must be set to a minimum
+ * of \c -march=armv8-a+crypto.
+ *
  * \warning MBEDTLS_SHA256_USE_A64_CRYPTO_IF_PRESENT cannot be defined at the
  * same time as MBEDTLS_SHA256_USE_A64_CRYPTO_ONLY.
  *
@@ -3108,6 +3139,9 @@
  *
  * \note This allows builds with a smaller code size than with
  * MBEDTLS_SHA256_USE_A64_CRYPTO_IF_PRESENT
+ *
+ * \note The code uses Neon intrinsics, so \c CFLAGS must be set to a minimum
+ * of \c -march=armv8-a+crypto.
  *
  * \warning MBEDTLS_SHA256_USE_A64_CRYPTO_ONLY cannot be defined at the same
  * time as MBEDTLS_SHA256_USE_A64_CRYPTO_IF_PRESENT.
@@ -3163,7 +3197,9 @@
  * for a non-Aarch64 build it will be silently ignored.
  *
  * \note The code uses the SHA-512 Neon intrinsics, so requires GCC >= 8 or
- * Clang >= 7.
+ * Clang >= 7, and \c CFLAGS must be set to a minimum of
+ * \c -march=armv8.2-a+sha3. An optimisation level of \c -O3 generates the
+ * fastest code.
  *
  * \warning MBEDTLS_SHA512_USE_A64_CRYPTO_IF_PRESENT cannot be defined at the
  * same time as MBEDTLS_SHA512_USE_A64_CRYPTO_ONLY.
@@ -3188,7 +3224,9 @@
  * MBEDTLS_SHA512_USE_A64_CRYPTO_IF_PRESENT
  *
  * \note The code uses the SHA-512 Neon intrinsics, so requires GCC >= 8 or
- * Clang >= 7.
+ * Clang >= 7, and \c CFLAGS must be set to a minimum of
+ * \c -march=armv8.2-a+sha3. An optimisation level of \c -O3 generates the
+ * fastest code.
  *
  * \warning MBEDTLS_SHA512_USE_A64_CRYPTO_ONLY cannot be defined at the same
  * time as MBEDTLS_SHA512_USE_A64_CRYPTO_IF_PRESENT.
@@ -3549,7 +3587,7 @@
  * comment in the specific module. */
 
 /* MPI / BIGNUM options */
-//#define MBEDTLS_MPI_WINDOW_SIZE            6 /**< Maximum window size used. */
+//#define MBEDTLS_MPI_WINDOW_SIZE            2 /**< Maximum window size used. */
 //#define MBEDTLS_MPI_MAX_SIZE            1024 /**< Maximum number of bytes for usable MPIs. */
 
 /* CTR_DRBG options */
