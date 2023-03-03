@@ -35,13 +35,6 @@
 
 #include <string.h>
 
-#if !defined(MBEDTLS_MD_C)
-#include "mbedtls/psa_util.h"
-#define PSA_TO_MBEDTLS_ERR(status) PSA_TO_MBEDTLS_ERR_LIST(status,   \
-                                                           psa_to_md_errors,              \
-                                                           psa_generic_status_to_mbedtls)
-#endif
-
 #if defined(MBEDTLS_DES_C)
 #include "mbedtls/des.h"
 #endif
@@ -335,7 +328,7 @@ exit:
     if (status == PSA_SUCCESS) {
         status = status_abort;
     }
-    return PSA_TO_MBEDTLS_ERR(status);
+    return mbedtls_md_error_from_psa(status);
 #endif /* !MBEDTLS_MD_C */
 }
 
