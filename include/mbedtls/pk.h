@@ -193,6 +193,10 @@ typedef struct mbedtls_pk_rsassa_pss_options {
 #endif /* PSA_WANT_ALG_ECDSA */
 #endif /* MBEDTLS_USE_PSA_CRYPTO */
 
+#if defined(MBEDTLS_PK_CAN_ECDSA_VERIFY) || defined(MBEDTLS_PK_CAN_ECDSA_SIGN)
+#define MBEDTLS_PK_CAN_ECDSA_SOME
+#endif
+
 /**
  * \brief           Types for interfacing with the debug module
  */
@@ -841,6 +845,9 @@ int mbedtls_pk_parse_key(mbedtls_pk_context *ctx,
  * \note            On entry, ctx must be empty, either freshly initialised
  *                  with mbedtls_pk_init() or reset with mbedtls_pk_free(). If you need a
  *                  specific key type, check the result with mbedtls_pk_can_do().
+ *
+ * \note            For compressed points, see #MBEDTLS_ECP_PF_COMPRESSED for
+ *                  limitations.
  *
  * \note            The key is also checked for correctness.
  *
