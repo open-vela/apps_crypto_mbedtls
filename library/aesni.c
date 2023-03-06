@@ -18,13 +18,20 @@
  */
 
 /*
- * [AES-WP] https://www.intel.com/content/www/us/en/developer/articles/tool/intel-advanced-encryption-standard-aes-instructions-set.html
- * [CLMUL-WP] https://www.intel.com/content/www/us/en/develop/download/intel-carry-less-multiplication-instruction-and-its-usage-for-computing-the-gcm-mode.html
+ * [AES-WP] http://software.intel.com/en-us/articles/intel-advanced-encryption-standard-aes-instructions-set
+ * [CLMUL-WP] http://software.intel.com/en-us/articles/intel-carry-less-multiplication-instruction-and-its-usage-for-computing-the-gcm-mode/
  */
 
 #include "common.h"
 
 #if defined(MBEDTLS_AESNI_C)
+
+#if defined(__has_feature)
+#if __has_feature(memory_sanitizer)
+#warning \
+    "MBEDTLS_AESNI_C is known to cause spurious error reports with some memory sanitizers as they do not understand the assembly code."
+#endif
+#endif
 
 #include "aesni.h"
 
@@ -51,13 +58,6 @@ int mbedtls_aesni_has_support(unsigned int what)
 
     return (c & what) != 0;
 }
-
-#if defined(__has_feature)
-#if __has_feature(memory_sanitizer)
-#warning \
-    "MBEDTLS_AESNI_C is known to cause spurious error reports with some memory sanitizers as they do not understand the assembly code."
-#endif
-#endif
 
 /*
  * Binutils needs to be at least 2.19 to support AES-NI instructions.
@@ -152,7 +152,7 @@ void mbedtls_aesni_gcm_mult(unsigned char c[16],
 
          /*
           * Caryless multiplication xmm2:xmm1 = xmm0 * xmm1
-          * using [CLMUL-WP] algorithm 1 (p. 12).
+          * using [CLMUL-WP] algorithm 1 (p. 13).
           */
          "movdqa %%xmm1, %%xmm2             \n\t" // copy of b1:b0
          "movdqa %%xmm1, %%xmm3             \n\t" // same
@@ -170,7 +170,7 @@ void mbedtls_aesni_gcm_mult(unsigned char c[16],
 
          /*
           * Now shift the result one bit to the left,
-          * taking advantage of [CLMUL-WP] eq 27 (p. 18)
+          * taking advantage of [CLMUL-WP] eq 27 (p. 20)
           */
                              "movdqa %%xmm1, %%xmm3             \n\t" // r1:r0
                              "movdqa %%xmm2, %%xmm4             \n\t" // r3:r2
@@ -188,7 +188,7 @@ void mbedtls_aesni_gcm_mult(unsigned char c[16],
 
          /*
           * Now reduce modulo the GCM polynomial x^128 + x^7 + x^2 + x + 1
-          * using [CLMUL-WP] algorithm 5 (p. 18).
+          * using [CLMUL-WP] algorithm 5 (p. 20).
           * Currently xmm2:xmm1 holds x3:x2:x1:x0 (already shifted).
           */
          /* Step 2 (1) */

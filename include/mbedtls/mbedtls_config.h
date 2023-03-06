@@ -2862,7 +2862,11 @@
 /**
  * \def MBEDTLS_PKCS7_C
  *
- * Enable PKCS #7 core for using PKCS #7-formatted signatures.
+ * This feature is a work in progress and not ready for production. Testing and
+ * validation is incomplete, and handling of malformed inputs may not be robust.
+ * The API may change.
+ *
+ * Enable PKCS7 core for using PKCS7 formatted signatures.
  * RFC Link - https://tools.ietf.org/html/rfc2315
  *
  * Module:  library/pkcs7.c
@@ -2873,7 +2877,7 @@
  *
  * This module is required for the PKCS7 parsing modules.
  */
-#define MBEDTLS_PKCS7_C
+//#define MBEDTLS_PKCS7_C
 
 /**
  * \def MBEDTLS_PKCS12_C
