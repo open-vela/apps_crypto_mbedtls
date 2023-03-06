@@ -22,11 +22,7 @@
 #ifndef PSA_CRYPTO_H
 #define PSA_CRYPTO_H
 
-#if defined(MBEDTLS_PSA_CRYPTO_PLATFORM_FILE)
-#include MBEDTLS_PSA_CRYPTO_PLATFORM_FILE
-#else
 #include "crypto_platform.h"
-#endif
 
 #include <stddef.h>
 
@@ -4221,9 +4217,6 @@ uint32_t psa_interruptible_get_max_ops(void);
  *                              \c psa_sign_hash_interruptible_abort() on
  *                              the operation, a value of 0 will be returned.
  *
- * \note                        This interface is guaranteed re-entrant and
- *                              thus may be called from driver code.
- *
  * \warning                     This is a beta API, and thus subject to change
  *                              at any point. It is not bound by the usual
  *                              interface stability promises.
@@ -4317,23 +4310,23 @@ uint32_t psa_verify_hash_get_num_ops(
  *         The operation started successfully - call \c psa_sign_hash_complete()
  *         with the same context to complete the operation
  *
- * \retval #PSA_ERROR_INVALID_HANDLE \emptydescription
+ * \retval #PSA_ERROR_INVALID_HANDLE
  * \retval #PSA_ERROR_NOT_PERMITTED
  *         The key does not have the #PSA_KEY_USAGE_SIGN_HASH flag, or it does
  *         not permit the requested algorithm.
  * \retval #PSA_ERROR_BAD_STATE
  *         An operation has previously been started on this context, and is
  *         still in progress.
- * \retval #PSA_ERROR_NOT_SUPPORTED \emptydescription
- * \retval #PSA_ERROR_INVALID_ARGUMENT \emptydescription
- * \retval #PSA_ERROR_INSUFFICIENT_MEMORY \emptydescription
- * \retval #PSA_ERROR_COMMUNICATION_FAILURE \emptydescription
- * \retval #PSA_ERROR_HARDWARE_FAILURE \emptydescription
- * \retval #PSA_ERROR_CORRUPTION_DETECTED \emptydescription
- * \retval #PSA_ERROR_STORAGE_FAILURE \emptydescription
- * \retval #PSA_ERROR_DATA_CORRUPT \emptydescription
- * \retval #PSA_ERROR_DATA_INVALID \emptydescription
- * \retval #PSA_ERROR_INSUFFICIENT_ENTROPY \emptydescription
+ * \retval #PSA_ERROR_NOT_SUPPORTED
+ * \retval #PSA_ERROR_INVALID_ARGUMENT
+ * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
+ * \retval #PSA_ERROR_COMMUNICATION_FAILURE
+ * \retval #PSA_ERROR_HARDWARE_FAILURE
+ * \retval #PSA_ERROR_CORRUPTION_DETECTED
+ * \retval #PSA_ERROR_STORAGE_FAILURE
+ * \retval #PSA_ERROR_DATA_CORRUPT
+ * \retval #PSA_ERROR_DATA_INVALID
+ * \retval #PSA_ERROR_INSUFFICIENT_ENTROPY
  * \retval #PSA_ERROR_BAD_STATE
  *         The library has not been previously initialized by psa_crypto_init().
  *         It is implementation-dependent whether a failure to initialize
@@ -4415,19 +4408,19 @@ psa_status_t psa_sign_hash_start(
  *         An operation was not previously started on this context via
  *         \c psa_sign_hash_start().
  *
- * \retval #PSA_ERROR_NOT_SUPPORTED \emptydescription
- * \retval #PSA_ERROR_INVALID_ARGUMENT \emptydescription
- * \retval #PSA_ERROR_INSUFFICIENT_MEMORY \emptydescription
- * \retval #PSA_ERROR_COMMUNICATION_FAILURE \emptydescription
- * \retval #PSA_ERROR_HARDWARE_FAILURE \emptydescription
- * \retval #PSA_ERROR_CORRUPTION_DETECTED \emptydescription
- * \retval #PSA_ERROR_STORAGE_FAILURE \emptydescription
- * \retval #PSA_ERROR_DATA_CORRUPT \emptydescription
- * \retval #PSA_ERROR_DATA_INVALID \emptydescription
- * \retval #PSA_ERROR_INSUFFICIENT_ENTROPY \emptydescription
+ * \retval #PSA_ERROR_NOT_SUPPORTED
+ * \retval #PSA_ERROR_INVALID_ARGUMENT
+ * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
+ * \retval #PSA_ERROR_COMMUNICATION_FAILURE
+ * \retval #PSA_ERROR_HARDWARE_FAILURE
+ * \retval #PSA_ERROR_CORRUPTION_DETECTED
+ * \retval #PSA_ERROR_STORAGE_FAILURE
+ * \retval #PSA_ERROR_DATA_CORRUPT
+ * \retval #PSA_ERROR_DATA_INVALID
+ * \retval #PSA_ERROR_INSUFFICIENT_ENTROPY
  * \retval #PSA_ERROR_BAD_STATE
  *         The library has either not been previously initialized by
- *         psa_crypto_init() or you did not previously call
+ *         psa_crypto_init()  or you did not previously call
  *         psa_sign_hash_start() with this operation object. It is
  *         implementation-dependent whether a failure to initialize results in
  *         this error code.
@@ -4468,7 +4461,7 @@ psa_status_t psa_sign_hash_complete(
  * \retval #PSA_SUCCESS
  *         The operation was aborted successfully.
  *
- * \retval #PSA_ERROR_NOT_SUPPORTED \emptydescription
+ * \retval #PSA_ERROR_NOT_SUPPORTED
  * \retval #PSA_ERROR_BAD_STATE
  *         The library has not been previously initialized by psa_crypto_init().
  *         It is implementation-dependent whether a failure to initialize
@@ -4537,15 +4530,15 @@ psa_status_t psa_sign_hash_abort(
  *         The key does not have the #PSA_KEY_USAGE_VERIFY_HASH flag, or it does
  *         not permit the requested algorithm.
  *
- * \retval #PSA_ERROR_NOT_SUPPORTED \emptydescription
- * \retval #PSA_ERROR_INVALID_ARGUMENT \emptydescription
- * \retval #PSA_ERROR_INSUFFICIENT_MEMORY \emptydescription
- * \retval #PSA_ERROR_COMMUNICATION_FAILURE \emptydescription
- * \retval #PSA_ERROR_HARDWARE_FAILURE \emptydescription
- * \retval #PSA_ERROR_CORRUPTION_DETECTED \emptydescription
- * \retval #PSA_ERROR_STORAGE_FAILURE \emptydescription
- * \retval PSA_ERROR_DATA_CORRUPT \emptydescription
- * \retval PSA_ERROR_DATA_INVALID \emptydescription
+ * \retval #PSA_ERROR_NOT_SUPPORTED
+ * \retval #PSA_ERROR_INVALID_ARGUMENT
+ * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
+ * \retval #PSA_ERROR_COMMUNICATION_FAILURE
+ * \retval #PSA_ERROR_HARDWARE_FAILURE
+ * \retval #PSA_ERROR_CORRUPTION_DETECTED
+ * \retval #PSA_ERROR_STORAGE_FAILURE
+ * \retval PSA_ERROR_DATA_CORRUPT
+ * \retval PSA_ERROR_DATA_INVALID
  * \retval #PSA_ERROR_BAD_STATE
  *         The library has not been previously initialized by psa_crypto_init().
  *         It is implementation-dependent whether a failure to initialize
@@ -4604,23 +4597,23 @@ psa_status_t psa_verify_hash_start(
  *         psa_interruptible_set_max_ops(). There is still work to be done.
  *         Call this function again with the same operation object.
  *
- * \retval #PSA_ERROR_INVALID_HANDLE \emptydescription
+ * \retval #PSA_ERROR_INVALID_HANDLE
  * \retval #PSA_ERROR_INVALID_SIGNATURE
  *         The calculation was performed successfully, but the passed
  *         signature is not a valid signature.
- * \retval #PSA_ERROR_BAD_STATE
+ *\retval #PSA_ERROR_BAD_STATE
  *         An operation was not previously started on this context via
  *         \c psa_verify_hash_start().
- * \retval #PSA_ERROR_NOT_SUPPORTED \emptydescription
- * \retval #PSA_ERROR_INVALID_ARGUMENT \emptydescription
- * \retval #PSA_ERROR_INSUFFICIENT_MEMORY \emptydescription
- * \retval #PSA_ERROR_COMMUNICATION_FAILURE \emptydescription
- * \retval #PSA_ERROR_HARDWARE_FAILURE \emptydescription
- * \retval #PSA_ERROR_CORRUPTION_DETECTED \emptydescription
- * \retval #PSA_ERROR_STORAGE_FAILURE \emptydescription
- * \retval #PSA_ERROR_DATA_CORRUPT \emptydescription
- * \retval #PSA_ERROR_DATA_INVALID \emptydescription
- * \retval #PSA_ERROR_INSUFFICIENT_ENTROPY \emptydescription
+ * \retval #PSA_ERROR_NOT_SUPPORTED
+ * \retval #PSA_ERROR_INVALID_ARGUMENT
+ * \retval #PSA_ERROR_INSUFFICIENT_MEMORY
+ * \retval #PSA_ERROR_COMMUNICATION_FAILURE
+ * \retval #PSA_ERROR_HARDWARE_FAILURE
+ * \retval #PSA_ERROR_CORRUPTION_DETECTED
+ * \retval #PSA_ERROR_STORAGE_FAILURE
+ * \retval #PSA_ERROR_DATA_CORRUPT
+ * \retval #PSA_ERROR_DATA_INVALID
+ * \retval #PSA_ERROR_INSUFFICIENT_ENTROPY
  * \retval #PSA_ERROR_BAD_STATE
  *         The library has either not been previously initialized by
  *         psa_crypto_init() or you did not previously call
@@ -4662,7 +4655,7 @@ psa_status_t psa_verify_hash_complete(
  * \retval #PSA_SUCCESS
  *         The operation was aborted successfully.
  *
- * \retval #PSA_ERROR_NOT_SUPPORTED \emptydescription
+ * \retval #PSA_ERROR_NOT_SUPPORTED
  * \retval #PSA_ERROR_BAD_STATE
  *         The library has not been previously initialized by psa_crypto_init().
  *         It is implementation-dependent whether a failure to initialize
@@ -4684,11 +4677,7 @@ psa_status_t psa_verify_hash_abort(
 
 /* The file "crypto_struct.h" contains definitions for
  * implementation-specific structs that are declared above. */
-#if defined(MBEDTLS_PSA_CRYPTO_STRUCT_FILE)
-#include MBEDTLS_PSA_CRYPTO_STRUCT_FILE
-#else
 #include "crypto_struct.h"
-#endif
 
 /* The file "crypto_extra.h" contains vendor-specific definitions. This
  * can include vendor-defined algorithms, extra functions, etc. */
