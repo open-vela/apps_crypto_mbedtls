@@ -39,13 +39,6 @@
 #include "psa/crypto.h"
 #endif
 
-#if !defined(MBEDTLS_MD5_C)
-#include "mbedtls/psa_util.h"
-#define PSA_TO_MBEDTLS_ERR(status) PSA_TO_MBEDTLS_ERR_LIST(status,          \
-                                                           psa_to_md_errors,                     \
-                                                           psa_generic_status_to_mbedtls)
-#endif
-
 #include "mbedtls/legacy_or_psa.h"
 
 #if defined(MBEDTLS_HAS_ALG_MD5_VIA_MD_OR_PSA_BASED_ON_USE_PSA) &&  \
@@ -243,7 +236,7 @@ static int pem_pbkdf1(unsigned char *key, size_t keylen,
 exit:
     mbedtls_platform_zeroize(md5sum, 16);
 
-    return PSA_TO_MBEDTLS_ERR(status);
+    return mbedtls_md_error_from_psa(status);
 }
 #endif /* MBEDTLS_MD5_C */
 
