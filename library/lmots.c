@@ -41,13 +41,8 @@
 #include "mbedtls/lms.h"
 #include "mbedtls/platform_util.h"
 #include "mbedtls/error.h"
-#include "mbedtls/psa_util.h"
 
 #include "psa/crypto.h"
-
-#define PSA_TO_MBEDTLS_ERR(status) PSA_TO_MBEDTLS_ERR_LIST(status,   \
-                                                           psa_to_lms_errors,             \
-                                                           psa_generic_status_to_mbedtls)
 
 #define PUBLIC_KEY_TYPE_OFFSET     (0)
 #define PUBLIC_KEY_I_KEY_ID_OFFSET (PUBLIC_KEY_TYPE_OFFSET + \
@@ -203,7 +198,7 @@ static int create_digit_array_with_checksum(const mbedtls_lmots_parameters_t *pa
 exit:
     psa_hash_abort(&op);
 
-    return PSA_TO_MBEDTLS_ERR(status);
+    return mbedtls_lms_error_from_psa(status);
 }
 
 /* Hash each element of the string of digits (+ checksum), producing a hash
@@ -326,7 +321,7 @@ exit:
     psa_hash_abort(&op);
     mbedtls_platform_zeroize(tmp_hash, sizeof(tmp_hash));
 
-    return PSA_TO_MBEDTLS_ERR(status);
+    return mbedtls_lms_error_from_psa(status);
 }
 
 /* Combine the hashes of the digit array into a public key. This is used in
@@ -391,10 +386,9 @@ exit:
         psa_hash_abort(&op);
     }
 
-    return PSA_TO_MBEDTLS_ERR(status);
+    return mbedtls_lms_error_from_psa(status);
 }
 
-#if !defined(MBEDTLS_DEPRECATED_REMOVED)
 int mbedtls_lms_error_from_psa(psa_status_t status)
 {
     switch (status) {
@@ -412,7 +406,6 @@ int mbedtls_lms_error_from_psa(psa_status_t status)
             return MBEDTLS_ERR_ERROR_GENERIC_ERROR;
     }
 }
-#endif /* !MBEDTLS_DEPRECATED_REMOVED */
 
 void mbedtls_lmots_public_init(mbedtls_lmots_public_t *ctx)
 {
@@ -689,7 +682,7 @@ int mbedtls_lmots_generate_private_key(mbedtls_lmots_private_t *ctx,
 exit:
     psa_hash_abort(&op);
 
-    return PSA_TO_MBEDTLS_ERR(status);
+    return mbedtls_lms_error_from_psa(status);
 }
 
 int mbedtls_lmots_calculate_public_key(mbedtls_lmots_public_t *ctx,
