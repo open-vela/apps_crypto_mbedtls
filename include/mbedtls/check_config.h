@@ -70,11 +70,8 @@
 #error "MBEDTLS_AESNI_C defined, but not all prerequisites"
 #endif
 
-#if defined(__aarch64__) && defined(__GNUC__)
-/* We don't do anything with MBEDTLS_AESCE_C on systems without ^ these two */
 #if defined(MBEDTLS_AESCE_C) && !defined(MBEDTLS_HAVE_ASM)
 #error "MBEDTLS_AESCE_C defined, but not all prerequisites"
-#endif
 #endif
 
 #if defined(MBEDTLS_CTR_DRBG_C) && !defined(MBEDTLS_AES_C)
@@ -283,8 +280,7 @@
 #endif
 
 #if defined(MBEDTLS_KEY_EXCHANGE_ECDH_ECDSA_ENABLED) &&                 \
-    ( !defined(MBEDTLS_ECDH_C) ||                                       \
-      !(defined(MBEDTLS_ECDSA_C) || defined(PSA_HAVE_FULL_ECDSA)) ||     \
+    ( !defined(MBEDTLS_ECDH_C) || !defined(MBEDTLS_ECDSA_C) ||          \
       !defined(MBEDTLS_X509_CRT_PARSE_C) )
 #error "MBEDTLS_KEY_EXCHANGE_ECDH_ECDSA_ENABLED defined, but not all prerequisites"
 #endif
@@ -317,8 +313,7 @@
 #endif
 
 #if defined(MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED) &&                 \
-    ( !defined(MBEDTLS_ECDH_C) ||                                       \
-      !(defined(MBEDTLS_ECDSA_C) || defined(PSA_HAVE_FULL_ECDSA)) ||     \
+    ( !defined(MBEDTLS_ECDH_C) || !defined(MBEDTLS_ECDSA_C) ||          \
       !defined(MBEDTLS_X509_CRT_PARSE_C) )
 #error "MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED defined, but not all prerequisites"
 #endif
