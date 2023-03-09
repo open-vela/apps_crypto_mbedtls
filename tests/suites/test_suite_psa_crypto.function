@@ -6473,6 +6473,24 @@ exit:
 /* END_CASE */
 
 /* BEGIN_CASE depends_on:MBEDTLS_ECP_RESTARTABLE */
+/**
+ * sign_hash_interruptible() test intentions:
+ *
+ * Note: This test can currently only handle ECDSA.
+ *
+ * 1. Test interruptible sign hash with known outcomes (deterministic ECDSA
+ *    only).
+ *
+ * 2. Test the number of calls to psa_sign_hash_complete() required are as
+ *    expected for different max_ops values.
+ *
+ * 3. Test that the number of ops done prior to start and after abort is zero
+ *    and that each successful stage completes some ops (this is not mandated by
+ *    the PSA specification, but is currently the case).
+ *
+ * 4. Test that calling psa_sign_hash_get_num_ops() multiple times between
+ *    complete() calls does not alter the number of ops returned.
+ */
 void sign_hash_interruptible(int key_type_arg, data_t *key_data,
                              int alg_arg, data_t *input_data,
                              data_t *output_data, int max_ops_arg)
@@ -6629,6 +6647,28 @@ exit:
 /* END_CASE */
 
 /* BEGIN_CASE depends_on:MBEDTLS_ECP_RESTARTABLE */
+/**
+ * sign_hash_fail_interruptible() test intentions:
+ *
+ * Note: This test can currently only handle ECDSA.
+ *
+ * 1. Test that various failure cases for interruptible sign hash fail with the
+ *    correct error codes, and at the correct point (at start or during
+ *    complete).
+ *
+ * 2. Test the number of calls to psa_sign_hash_complete() required are as
+ *    expected for different max_ops values.
+ *
+ * 3. Test that the number of ops done prior to start and after abort is zero
+ *    and that each successful stage completes some ops (this is not mandated by
+ *    the PSA specification, but is currently the case).
+ *
+ * 4. Check that calling complete() when start() fails and complete()
+ *    after completion results in a BAD_STATE error.
+ *
+ * 5. Check that calling start() again after start fails results in a BAD_STATE
+ *    error.
+ */
 void sign_hash_fail_interruptible(int key_type_arg, data_t *key_data,
                                   int alg_arg, data_t *input_data,
                                   int signature_size_arg,
@@ -6684,6 +6724,15 @@ void sign_hash_fail_interruptible(int key_type_arg, data_t *key_data,
     TEST_EQUAL(actual_status, expected_start_status);
 
     if (expected_start_status != PSA_SUCCESS) {
+        /* Emulate poor application code, and call complete anyway, even though
+         * start failed. */
+        actual_status = psa_sign_hash_complete(&operation, signature,
+                                               signature_size,
+                                               &signature_length);
+
+        TEST_EQUAL(actual_status, PSA_ERROR_BAD_STATE);
+
+        /* Test that calling start again after failure also causes BAD_STATE. */
         actual_status = psa_sign_hash_start(&operation, key, alg,
                                             input_data->x, input_data->len);
 
@@ -6816,6 +6865,25 @@ exit:
 /* END_CASE */
 
 /* BEGIN_CASE depends_on:MBEDTLS_ECP_RESTARTABLE */
+/**
+ * sign_verify_hash_interruptible() test intentions:
+ *
+ * Note: This test can currently only handle ECDSA.
+ *
+ * 1. Test that we can sign an input hash with the given key and then afterwards
+ *    verify that signature. This is currently the only way to test non
+ *    deterministic ECDSA, but this test can also handle deterministic.
+ *
+ * 2. Test that after corrupting the hash, the verification detects an invalid
+ *    signature.
+ *
+ * 3. Test the number of calls to psa_sign_hash_complete() required are as
+ *    expected for different max_ops values.
+ *
+ * 4. Test that the number of ops done prior to starting signing and after abort
+ *    is zero and that each successful signing stage completes some ops (this is
+ *    not mandated by the PSA specification, but is currently the case).
+ */
 void sign_verify_hash_interruptible(int key_type_arg, data_t *key_data,
                                     int alg_arg, data_t *input_data,
                                     int max_ops_arg)
@@ -6830,6 +6898,8 @@ void sign_verify_hash_interruptible(int key_type_arg, data_t *key_data,
     psa_key_attributes_t attributes = PSA_KEY_ATTRIBUTES_INIT;
     psa_status_t status = PSA_OPERATION_INCOMPLETE;
     uint32_t max_ops = max_ops_arg;
+    uint32_t num_ops = 0;
+    uint32_t num_ops_prior = 0;
     size_t num_completes = 0;
     size_t min_completes = 0;
     size_t max_completes = 0;
@@ -6864,9 +6934,15 @@ void sign_verify_hash_interruptible(int key_type_arg, data_t *key_data,
     interruptible_signverify_get_minmax_completes(max_ops, PSA_SUCCESS,
                                                   &min_completes, &max_completes);
 
+    num_ops_prior = psa_sign_hash_get_num_ops(&sign_operation);
+    TEST_ASSERT(num_ops_prior == 0);
+
     /* Start performing the signature. */
     PSA_ASSERT(psa_sign_hash_start(&sign_operation, key, alg,
                                    input_data->x, input_data->len));
+
+    num_ops_prior = psa_sign_hash_get_num_ops(&sign_operation);
+    TEST_ASSERT(num_ops_prior == 0);
 
     /* Continue performing the signature until complete. */
     do {
@@ -6876,6 +6952,17 @@ void sign_verify_hash_interruptible(int key_type_arg, data_t *key_data,
                                         &signature_length);
 
         num_completes++;
+
+        if (status == PSA_SUCCESS || status == PSA_OPERATION_INCOMPLETE) {
+            num_ops = psa_sign_hash_get_num_ops(&sign_operation);
+            /* We are asserting here that every complete makes progress
+             * (completes some ops), which is true of the internal
+             * implementation and probably any implementation, however this is
+             * not mandated by the PSA specification. */
+            TEST_ASSERT(num_ops > num_ops_prior);
+
+            num_ops_prior = num_ops;
+        }
     } while (status == PSA_OPERATION_INCOMPLETE);
 
     TEST_ASSERT(status == PSA_SUCCESS);
@@ -6884,6 +6971,9 @@ void sign_verify_hash_interruptible(int key_type_arg, data_t *key_data,
     TEST_LE_U(num_completes, max_completes);
 
     PSA_ASSERT(psa_sign_hash_abort(&sign_operation));
+
+    num_ops = psa_sign_hash_get_num_ops(&sign_operation);
+    TEST_ASSERT(num_ops == 0);
 
     /* Check that the signature length looks sensible. */
     TEST_LE_U(signature_length, signature_size);
@@ -6979,6 +7069,27 @@ exit:
 /* END_CASE */
 
 /* BEGIN_CASE depends_on:MBEDTLS_ECP_RESTARTABLE */
+/**
+ * verify_hash_interruptible() test intentions:
+ *
+ * Note: This test can currently only handle ECDSA.
+ *
+ * 1. Test interruptible verify hash with known outcomes (deterministic ECDSA
+ *    only).
+ *
+ * 2. Test the number of calls to psa_verify_hash_complete() required are as
+ *    expected for different max_ops values.
+ *
+ * 3. Test that the number of ops done prior to start and after abort is zero
+ *    and that each successful stage completes some ops (this is not mandated by
+ *    the PSA specification, but is currently the case).
+ *
+ * 4. Test that calling psa_sign_hash_get_num_ops() multiple times between
+ *    complete() calls does not alter the number of ops returned.
+ *
+ * 5. Test that after corrupting the hash, the verification detects an invalid
+ *    signature.
+ */
 void verify_hash_interruptible(int key_type_arg, data_t *key_data,
                                int alg_arg, data_t *hash_data,
                                data_t *signature_data, int max_ops_arg)
@@ -7062,6 +7173,25 @@ void verify_hash_interruptible(int key_type_arg, data_t *key_data,
     num_ops = psa_verify_hash_get_num_ops(&operation);
     TEST_ASSERT(num_ops == 0);
 
+    if (hash_data->len != 0) {
+        /* Flip a bit in the hash and verify that the signature is now detected
+         * as invalid. Flip a bit at the beginning, not at the end, because
+         * ECDSA may ignore the last few bits of the input. */
+        hash_data->x[0] ^= 1;
+
+        /* Start verification. */
+        PSA_ASSERT(psa_verify_hash_start(&operation, key, alg,
+                                         hash_data->x, hash_data->len,
+                                         signature_data->x, signature_data->len));
+
+        /* Continue performing the signature until complete. */
+        do {
+            status = psa_verify_hash_complete(&operation);
+        } while (status == PSA_OPERATION_INCOMPLETE);
+
+        TEST_ASSERT(status ==  PSA_ERROR_INVALID_SIGNATURE);
+    }
+
 exit:
     psa_reset_key_attributes(&attributes);
     psa_destroy_key(key);
@@ -7104,6 +7234,28 @@ exit:
 /* END_CASE */
 
 /* BEGIN_CASE depends_on:MBEDTLS_ECP_RESTARTABLE */
+/**
+ * verify_hash_fail_interruptible() test intentions:
+ *
+ * Note: This test can currently only handle ECDSA.
+ *
+ * 1. Test that various failure cases for interruptible verify hash fail with
+ *    the correct error codes, and at the correct point (at start or during
+ *    complete).
+ *
+ * 2. Test the number of calls to psa_verify_hash_complete() required are as
+ *    expected for different max_ops values.
+ *
+ * 3. Test that the number of ops done prior to start and after abort is zero
+ *    and that each successful stage completes some ops (this is not mandated by
+ *    the PSA specification, but is currently the case).
+ *
+ * 4. Check that calling complete() when start() fails and complete()
+ *    after completion results in a BAD_STATE error.
+ *
+ * 5. Check that calling start() again after start fails results in a BAD_STATE
+ *    error.
+ */
 void verify_hash_fail_interruptible(int key_type_arg, data_t *key_data,
                                     int alg_arg, data_t *hash_data,
                                     data_t *signature_data,
@@ -7155,6 +7307,13 @@ void verify_hash_fail_interruptible(int key_type_arg, data_t *key_data,
     TEST_EQUAL(actual_status, expected_start_status);
 
     if (expected_start_status != PSA_SUCCESS) {
+        /* Emulate poor application code, and call complete anyway, even though
+         * start failed. */
+        actual_status = psa_verify_hash_complete(&operation);
+
+        TEST_EQUAL(actual_status, PSA_ERROR_BAD_STATE);
+
+        /* Test that calling start again after failure also causes BAD_STATE. */
         actual_status = psa_verify_hash_start(&operation, key, alg,
                                               hash_data->x, hash_data->len,
                                               signature_data->x,
@@ -7207,6 +7366,14 @@ exit:
 /* END_CASE */
 
 /* BEGIN_CASE depends_on:MBEDTLS_ECP_RESTARTABLE */
+/**
+ * interruptible_signverify_hash_state_test() test intentions:
+ *
+ * Note: This test can currently only handle ECDSA.
+ *
+ * 1. Test that calling the various interruptible sign and verify hash functions
+ *    in incorrect orders returns BAD_STATE errors.
+ */
 void interruptible_signverify_hash_state_test(int key_type_arg,
                                               data_t *key_data, int alg_arg, data_t *input_data)
 {
@@ -7354,7 +7521,15 @@ exit:
 /* END_CASE */
 
 /* BEGIN_CASE depends_on:MBEDTLS_ECP_RESTARTABLE */
-void interruptible_signverify_hash_negative_tests(int key_type_arg,
+/**
+ * interruptible_signverify_hash_edgecase_tests() test intentions:
+ *
+ * Note: This test can currently only handle ECDSA.
+ *
+ * 1. Test various edge cases in the interruptible sign and verify hash
+ *    interfaces.
+ */
+void interruptible_signverify_hash_edgecase_tests(int key_type_arg,
                                                   data_t *key_data, int alg_arg, data_t *input_data)
 {
     mbedtls_svc_key_id_t key = MBEDTLS_SVC_KEY_ID_INIT;
@@ -7390,41 +7565,6 @@ void interruptible_signverify_hash_negative_tests(int key_type_arg,
     TEST_ASSERT(signature_size != 0);
     TEST_LE_U(signature_size, PSA_SIGNATURE_MAX_SIZE);
     ASSERT_ALLOC(signature, signature_size);
-
-    /* --- Ensure changing the max ops mid operation works (operation should
-     *     complete successfully after setting max ops to unlimited --- */
-    psa_interruptible_set_max_ops(1);
-
-    PSA_ASSERT(psa_sign_hash_start(&sign_operation, key, alg,
-                                   input_data->x, input_data->len));
-
-    TEST_EQUAL(psa_sign_hash_complete(&sign_operation, signature,
-                                      signature_size,
-                                      &signature_length),
-               PSA_OPERATION_INCOMPLETE);
-
-    psa_interruptible_set_max_ops(PSA_INTERRUPTIBLE_MAX_OPS_UNLIMITED);
-
-    PSA_ASSERT(psa_sign_hash_complete(&sign_operation, signature,
-                                      signature_size,
-                                      &signature_length));
-
-    PSA_ASSERT(psa_sign_hash_abort(&sign_operation));
-
-    psa_interruptible_set_max_ops(1);
-
-    PSA_ASSERT(psa_verify_hash_start(&verify_operation, key, alg,
-                                     input_data->x, input_data->len,
-                                     signature, signature_length));
-
-    TEST_EQUAL(psa_verify_hash_complete(&verify_operation),
-               PSA_OPERATION_INCOMPLETE);
-
-    psa_interruptible_set_max_ops(PSA_INTERRUPTIBLE_MAX_OPS_UNLIMITED);
-
-    PSA_ASSERT(psa_verify_hash_complete(&verify_operation));
-
-    PSA_ASSERT(psa_verify_hash_abort(&verify_operation));
 
     /* --- Change function inputs mid run, to cause an error (sign only,
      *     verify passes all inputs to start. --- */
@@ -7505,8 +7645,22 @@ exit:
 /* END_CASE */
 
 /* BEGIN_CASE depends_on:MBEDTLS_ECP_RESTARTABLE */
-void interruptible_signverify_hash_maxops_tests(int key_type_arg,
-                                                data_t *key_data, int alg_arg, data_t *input_data)
+/**
+ * interruptible_signverify_hash_ops_tests() test intentions:
+ *
+ * Note: This test can currently only handle ECDSA.
+ *
+ * 1. Test that setting max ops is reflected in both interruptible sign and
+ *    verify hash
+ * 2. Test that changing the value of max_ops to unlimited during an operation
+ *    causes that operation to complete in the next call.
+ *
+ * 3. Test that calling get_num_ops() between complete calls gives the same
+ *    result as calling get_num_ops() once at the end of the operation.
+ */
+void interruptible_signverify_hash_ops_tests(int key_type_arg,
+                                             data_t *key_data, int alg_arg,
+                                             data_t *input_data)
 {
     mbedtls_svc_key_id_t key = MBEDTLS_SVC_KEY_ID_INIT;
     psa_key_type_t key_type = key_type_arg;
@@ -7515,6 +7669,10 @@ void interruptible_signverify_hash_maxops_tests(int key_type_arg,
     size_t key_bits;
     unsigned char *signature = NULL;
     size_t signature_size;
+    size_t signature_length = 0xdeadbeef;
+    uint32_t num_ops = 0;
+    psa_status_t status = PSA_ERROR_CORRUPTION_DETECTED;
+
     psa_sign_hash_interruptible_operation_t sign_operation =
         psa_sign_hash_interruptible_operation_init();
     psa_verify_hash_interruptible_operation_t verify_operation =
@@ -7562,6 +7720,111 @@ void interruptible_signverify_hash_maxops_tests(int key_type_arg,
     psa_interruptible_set_max_ops(0xbeef);
 
     TEST_EQUAL(psa_interruptible_get_max_ops(), 0xbeef);
+
+    /* --- Ensure changing the max ops mid operation works (operation should
+     *     complete successfully after setting max ops to unlimited --- */
+    psa_interruptible_set_max_ops(1);
+
+    PSA_ASSERT(psa_sign_hash_start(&sign_operation, key, alg,
+                                   input_data->x, input_data->len));
+
+    TEST_EQUAL(psa_sign_hash_complete(&sign_operation, signature,
+                                      signature_size,
+                                      &signature_length),
+               PSA_OPERATION_INCOMPLETE);
+
+    psa_interruptible_set_max_ops(PSA_INTERRUPTIBLE_MAX_OPS_UNLIMITED);
+
+    PSA_ASSERT(psa_sign_hash_complete(&sign_operation, signature,
+                                      signature_size,
+                                      &signature_length));
+
+    PSA_ASSERT(psa_sign_hash_abort(&sign_operation));
+
+    psa_interruptible_set_max_ops(1);
+
+    PSA_ASSERT(psa_verify_hash_start(&verify_operation, key, alg,
+                                     input_data->x, input_data->len,
+                                     signature, signature_length));
+
+    TEST_EQUAL(psa_verify_hash_complete(&verify_operation),
+               PSA_OPERATION_INCOMPLETE);
+
+    psa_interruptible_set_max_ops(PSA_INTERRUPTIBLE_MAX_OPS_UNLIMITED);
+
+    PSA_ASSERT(psa_verify_hash_complete(&verify_operation));
+
+    PSA_ASSERT(psa_verify_hash_abort(&verify_operation));
+
+    /* --- Test that not calling get_num_ops inbetween complete calls does not
+     *     result in lost ops. ---*/
+
+    psa_interruptible_set_max_ops(1);
+
+    PSA_ASSERT(psa_sign_hash_start(&sign_operation, key, alg,
+                                   input_data->x, input_data->len));
+
+    /* Continue performing the signature until complete. */
+    do {
+        status = psa_sign_hash_complete(&sign_operation, signature,
+                                        signature_size,
+                                        &signature_length);
+
+        num_ops = psa_sign_hash_get_num_ops(&sign_operation);
+
+    } while (status == PSA_OPERATION_INCOMPLETE);
+
+    PSA_ASSERT(status);
+
+    PSA_ASSERT(psa_sign_hash_abort(&sign_operation));
+
+    PSA_ASSERT(psa_sign_hash_start(&sign_operation, key, alg,
+                                   input_data->x, input_data->len));
+
+    /* Continue performing the signature until complete. */
+    do {
+        status = psa_sign_hash_complete(&sign_operation, signature,
+                                        signature_size,
+                                        &signature_length);
+    } while (status == PSA_OPERATION_INCOMPLETE);
+
+    PSA_ASSERT(status);
+
+    TEST_EQUAL(num_ops, psa_sign_hash_get_num_ops(&sign_operation));
+
+    PSA_ASSERT(psa_sign_hash_abort(&sign_operation));
+
+    PSA_ASSERT(psa_verify_hash_start(&verify_operation, key, alg,
+                                     input_data->x, input_data->len,
+                                     signature, signature_length));
+
+    /* Continue performing the verification until complete. */
+    do {
+        status = psa_verify_hash_complete(&verify_operation);
+
+        num_ops = psa_verify_hash_get_num_ops(&verify_operation);
+
+    } while (status == PSA_OPERATION_INCOMPLETE);
+
+    PSA_ASSERT(status);
+
+    PSA_ASSERT(psa_verify_hash_abort(&verify_operation));
+
+    PSA_ASSERT(psa_verify_hash_start(&verify_operation, key, alg,
+                                     input_data->x, input_data->len,
+                                     signature, signature_length));
+
+    /* Continue performing the verification until complete. */
+    do {
+        status = psa_verify_hash_complete(&verify_operation);
+
+    } while (status == PSA_OPERATION_INCOMPLETE);
+
+    PSA_ASSERT(status);
+
+    TEST_EQUAL(num_ops, psa_verify_hash_get_num_ops(&verify_operation));
+
+    PSA_ASSERT(psa_verify_hash_abort(&verify_operation));
 
 exit:
     /*
@@ -7853,7 +8116,11 @@ void asymmetric_encrypt(int key_type_arg,
                                            output, output_size,
                                            &output_length);
     TEST_EQUAL(actual_status, expected_status);
-    TEST_EQUAL(output_length, expected_output_length);
+    if (actual_status == PSA_SUCCESS) {
+        TEST_EQUAL(output_length, expected_output_length);
+    } else {
+        TEST_LE_U(output_length, output_size);
+    }
 
     /* If the label is empty, the test framework puts a non-null pointer
      * in label->x. Test that a null pointer works as well. */
@@ -7868,7 +8135,11 @@ void asymmetric_encrypt(int key_type_arg,
                                                output, output_size,
                                                &output_length);
         TEST_EQUAL(actual_status, expected_status);
-        TEST_EQUAL(output_length, expected_output_length);
+        if (actual_status == PSA_SUCCESS) {
+            TEST_EQUAL(output_length, expected_output_length);
+        } else {
+            TEST_LE_U(output_length, output_size);
+        }
     }
 
 exit:
