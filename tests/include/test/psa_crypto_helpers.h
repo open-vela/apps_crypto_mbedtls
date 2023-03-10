@@ -287,6 +287,7 @@ psa_key_usage_t mbedtls_test_update_key_usage_flags(psa_key_usage_t usage_flags)
 #define PSA_INIT_IF_NO_MD() ((void) 0)
 #define PSA_DONE_IF_NO_MD() ((void) 0)
 #endif
+
 /** \def USE_PSA_INIT
  *
  * Call this macro to initialize the PSA subsystem if #MBEDTLS_USE_PSA_CRYPTO
@@ -312,5 +313,10 @@ psa_key_usage_t mbedtls_test_update_key_usage_flags(psa_key_usage_t usage_flags)
 #define USE_PSA_INIT() ((void) 0)
 #define USE_PSA_DONE() ((void) 0)
 #endif /* !MBEDTLS_USE_PSA_CRYPTO && !MBEDTLS_SSL_PROTO_TLS1_3 */
+
+#if !defined(MBEDTLS_PSA_CRYPTO_C)
+#define PSA_INIT() ((void) 0)
+#define PSA_DONE() ((void) 0)
+#endif /* MBEDTLS_PSA_CRYPTO_C */
 
 #endif /* PSA_CRYPTO_HELPERS_H */
