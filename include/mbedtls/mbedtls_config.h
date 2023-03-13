@@ -705,7 +705,7 @@
  * - Changes the behaviour of TLS 1.2 clients (not servers) when using the
  *   ECDHE-ECDSA key exchange (not other key exchanges) to make all ECC
  *   computations restartable:
- *   - ECDH operations from the key exchange, only for Short Weierstass
+ *   - ECDH operations from the key exchange, only for Short Weierstrass
  *     curves, only when MBEDTLS_USE_PSA_CRYPTO is not enabled.
  *   - verification of the server's key exchange signature;
  *   - verification of the server's certificate chain;
@@ -2875,7 +2875,7 @@
  *           MBEDTLS_X509_CRT_PARSE_C MBEDTLS_X509_CRL_PARSE_C,
  *           MBEDTLS_BIGNUM_C, MBEDTLS_MD_C
  *
- * This module is required for the PKCS #7 parsing modules.
+ * This module is required for the PKCS7 parsing modules.
  */
 //#define MBEDTLS_PKCS7_C
 
