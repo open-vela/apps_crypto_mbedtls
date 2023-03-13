@@ -30,12 +30,6 @@
 
 #include <string.h>
 
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
-#define PSA_TO_MBEDTLS_ERR(status) PSA_TO_MBEDTLS_ERR_LIST(status,   \
-                                                           psa_to_ssl_errors,             \
-                                                           psa_generic_status_to_mbedtls)
-#endif
-
 /*
  * Initialize context
  */
@@ -97,7 +91,7 @@ static int ssl_ticket_gen_key(mbedtls_ssl_ticket_context *ctx,
     psa_set_key_type(&attributes, key->key_type);
     psa_set_key_bits(&attributes, key->key_bits);
 
-    ret = PSA_TO_MBEDTLS_ERR(
+    ret = psa_ssl_status_to_mbedtls(
         psa_import_key(&attributes, buf,
                        PSA_BITS_TO_BYTES(key->key_bits),
                        &key->key));
@@ -139,7 +133,7 @@ static int ssl_ticket_update_keys(mbedtls_ssl_ticket_context *ctx)
 
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
         if ((status = psa_destroy_key(ctx->keys[ctx->active].key)) != PSA_SUCCESS) {
-            return PSA_TO_MBEDTLS_ERR(status);
+            return psa_ssl_status_to_mbedtls(status);
         }
 #endif /* MBEDTLS_USE_PSA_CRYPTO */
 
@@ -175,7 +169,7 @@ int mbedtls_ssl_ticket_rotate(mbedtls_ssl_ticket_context *ctx,
 
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
     if ((status = psa_destroy_key(key->key)) != PSA_SUCCESS) {
-        ret = PSA_TO_MBEDTLS_ERR(status);
+        ret = psa_ssl_status_to_mbedtls(status);
         return ret;
     }
 
@@ -188,7 +182,7 @@ int mbedtls_ssl_ticket_rotate(mbedtls_ssl_ticket_context *ctx,
     if ((status = psa_import_key(&attributes, k,
                                  PSA_BITS_TO_BYTES(key->key_bits),
                                  &key->key)) != PSA_SUCCESS) {
-        ret = PSA_TO_MBEDTLS_ERR(status);
+        ret = psa_ssl_status_to_mbedtls(status);
         return ret;
     }
 #else
@@ -361,7 +355,7 @@ int mbedtls_ssl_ticket_write(void *p_ticket,
                                    state, clear_len,
                                    state, end - state,
                                    &ciph_len)) != PSA_SUCCESS) {
-        ret = PSA_TO_MBEDTLS_ERR(status);
+        ret = psa_ssl_status_to_mbedtls(status);
         goto cleanup;
     }
 #else
@@ -471,7 +465,7 @@ int mbedtls_ssl_ticket_parse(void *p_ticket,
                                    key_name, TICKET_ADD_DATA_LEN,
                                    ticket, enc_len + TICKET_AUTH_TAG_BYTES,
                                    ticket, enc_len, &clear_len)) != PSA_SUCCESS) {
-        ret = PSA_TO_MBEDTLS_ERR(status);
+        ret = psa_ssl_status_to_mbedtls(status);
         goto cleanup;
     }
 #else
