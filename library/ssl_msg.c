@@ -5599,10 +5599,8 @@ int mbedtls_ssl_read(mbedtls_ssl_context *ssl, unsigned char *buf, size_t len)
     n = (len < ssl->in_msglen)
         ? len : ssl->in_msglen;
 
-    if (len != 0) {
-        memcpy(buf, ssl->in_offt, n);
-        ssl->in_msglen -= n;
-    }
+    memcpy(buf, ssl->in_offt, n);
+    ssl->in_msglen -= n;
 
     /* Zeroising the plaintext buffer to erase unused application data
        from the memory. */
@@ -5678,9 +5676,7 @@ static int ssl_write_real(mbedtls_ssl_context *ssl,
          */
         ssl->out_msglen  = len;
         ssl->out_msgtype = MBEDTLS_SSL_MSG_APPLICATION_DATA;
-        if (len > 0) {
-            memcpy(ssl->out_msg, buf, len);
-        }
+        memcpy(ssl->out_msg, buf, len);
 
         if ((ret = mbedtls_ssl_write_record(ssl, SSL_FORCE_FLUSH)) != 0) {
             MBEDTLS_SSL_DEBUG_RET(1, "mbedtls_ssl_write_record", ret);

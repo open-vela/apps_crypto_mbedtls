@@ -147,14 +147,12 @@ extern "C" {
 #endif
 
 #if defined(PSA_WANT_ALG_JPAKE)
-#if !defined(MBEDTLS_PSA_ACCEL_ALG_JPAKE)
 #define MBEDTLS_PSA_BUILTIN_PAKE 1
 #define MBEDTLS_PSA_BUILTIN_ALG_JPAKE 1
 #define MBEDTLS_ECP_DP_SECP256R1_ENABLED
 #define MBEDTLS_BIGNUM_C
 #define MBEDTLS_ECP_C
 #define MBEDTLS_ECJPAKE_C
-#endif /* MBEDTLS_PSA_ACCEL_ALG_JPAKE */
 #endif /* PSA_WANT_ALG_JPAKE */
 
 #if defined(PSA_WANT_ALG_RIPEMD160) && !defined(MBEDTLS_PSA_ACCEL_ALG_RIPEMD160)
@@ -308,6 +306,11 @@ extern "C" {
 #if (defined(PSA_WANT_ALG_GCM) && !defined(MBEDTLS_PSA_ACCEL_ALG_GCM)) || \
     (defined(PSA_WANT_ALG_CCM) && !defined(MBEDTLS_PSA_ACCEL_ALG_CCM))
 #define PSA_HAVE_SOFT_BLOCK_AEAD 1
+#endif
+
+#if defined(PSA_WANT_ALG_ECDSA) && defined(PSA_WANT_KEY_TYPE_ECC_KEY_PAIR) && \
+    defined(PSA_WANT_KEY_TYPE_ECC_PUBLIC_KEY)
+#define PSA_HAVE_FULL_ECDSA 1
 #endif
 
 #if defined(PSA_WANT_KEY_TYPE_AES)
@@ -842,11 +845,6 @@ extern "C" {
 #endif
 
 #endif /* MBEDTLS_PSA_CRYPTO_CONFIG */
-
-#if defined(PSA_WANT_ALG_ECDSA) && defined(PSA_WANT_KEY_TYPE_ECC_KEY_PAIR) && \
-    defined(PSA_WANT_KEY_TYPE_ECC_PUBLIC_KEY)
-#define PSA_HAVE_FULL_ECDSA 1
-#endif
 
 /* These features are always enabled. */
 #define PSA_WANT_KEY_TYPE_DERIVE 1
