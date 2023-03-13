@@ -1344,6 +1344,70 @@ psa_status_t psa_crypto_driver_pake_get_role(
     const psa_crypto_driver_pake_inputs_t *inputs,
     psa_pake_role_t *role);
 
+/** Get the lengths of the user id in bytes from given inputs.
+ *
+ * \param[in]  inputs           Operation inputs.
+ * \param[out] user_len         Return buffer for user id length.
+ *
+ * \retval #PSA_SUCCESS
+ *         Success.
+ * \retval #PSA_ERROR_BAD_STATE
+ *         User id hasn't been set yet.
+ */
+psa_status_t psa_crypto_driver_pake_get_user_len(
+    const psa_crypto_driver_pake_inputs_t *inputs,
+    size_t *user_len);
+
+/** Get the lengths of the peer id in bytes from given inputs.
+ *
+ * \param[in]  inputs           Operation inputs.
+ * \param[out] peer_len         Return buffer for peer id length.
+ *
+ * \retval #PSA_SUCCESS
+ *         Success.
+ * \retval #PSA_ERROR_BAD_STATE
+ *         Peer id hasn't been set yet.
+ */
+psa_status_t psa_crypto_driver_pake_get_peer_len(
+    const psa_crypto_driver_pake_inputs_t *inputs,
+    size_t *peer_len);
+
+/** Get the user id from given inputs.
+ *
+ * \param[in]  inputs           Operation inputs.
+ * \param[out] buffer           Return buffer for user id.
+ * \param      buffer_size      Size of the return buffer in bytes.
+ * \param[out] buffer_length    Actual size of the password in bytes.
+ *
+ * \retval #PSA_SUCCESS
+ *         Success.
+ * \retval #PSA_ERROR_BAD_STATE
+ *         User id hasn't been set yet.
+ * \retval #PSA_ERROR_BUFFER_TOO_SMALL
+ *         The size of the \p buffer is too small.
+ */
+psa_status_t psa_crypto_driver_pake_get_user(
+    const psa_crypto_driver_pake_inputs_t *inputs,
+    uint8_t *buffer, size_t buffer_size, size_t *buffer_length);
+
+/** Get the peer id from given inputs.
+ *
+ * \param[in]  inputs           Operation inputs.
+ * \param[out] buffer           Return buffer for user id.
+ * \param      buffer_size      Size of the return buffer in bytes.
+ * \param[out] buffer_length    Actual size of the password in bytes.
+ *
+ * \retval #PSA_SUCCESS
+ *         Success.
+ * \retval #PSA_ERROR_BAD_STATE
+ *         Peer id hasn't been set yet.
+ * \retval #PSA_ERROR_BUFFER_TOO_SMALL
+ *         The size of the \p buffer is too small.
+ */
+psa_status_t psa_crypto_driver_pake_get_peer(
+    const psa_crypto_driver_pake_inputs_t *inputs,
+    uint8_t *buffer, size_t buffer_size, size_t *buffer_length);
+
 /** Get the cipher suite from given inputs.
  *
  * \param[in]  inputs           Operation inputs.
@@ -1498,6 +1562,7 @@ psa_status_t psa_pake_set_password_key(psa_pake_operation_t *operation,
  *                              been set (psa_pake_set_user() hasn't been
  *                              called yet).
  * \param[in] user_id           The user ID to authenticate with.
+ *                              ("client" or "server")
  * \param user_id_len           Size of the \p user_id buffer in bytes.
  *
  * \retval #PSA_SUCCESS
@@ -1539,6 +1604,7 @@ psa_status_t psa_pake_set_user(psa_pake_operation_t *operation,
  *                              been set (psa_pake_set_peer() hasn't been
  *                              called yet).
  * \param[in] peer_id           The peer's ID to authenticate.
+ *                              ("client" or "server")
  * \param peer_id_len           Size of the \p peer_id buffer in bytes.
  *
  * \retval #PSA_SUCCESS
@@ -1970,6 +2036,10 @@ struct psa_crypto_driver_pake_inputs_s {
     uint8_t *MBEDTLS_PRIVATE(password);
     size_t MBEDTLS_PRIVATE(password_len);
     psa_pake_role_t MBEDTLS_PRIVATE(role);
+    uint8_t *MBEDTLS_PRIVATE(user);
+    size_t MBEDTLS_PRIVATE(user_len);
+    uint8_t *MBEDTLS_PRIVATE(peer);
+    size_t MBEDTLS_PRIVATE(peer_len);
     psa_key_attributes_t MBEDTLS_PRIVATE(attributes);
     psa_pake_cipher_suite_t MBEDTLS_PRIVATE(cipher_suite);
 };
