@@ -70,10 +70,6 @@
 #error "MBEDTLS_AESNI_C defined, but not all prerequisites"
 #endif
 
-#if defined(MBEDTLS_AESCE_C) && !defined(MBEDTLS_HAVE_ASM)
-#error "MBEDTLS_AESCE_C defined, but not all prerequisites"
-#endif
-
 #if defined(MBEDTLS_CTR_DRBG_C) && !defined(MBEDTLS_AES_C)
 #error "MBEDTLS_CTR_DRBG_C defined, but not all prerequisites"
 #endif
@@ -279,20 +275,8 @@
 #error "MBEDTLS_HMAC_DRBG_C defined, but not all prerequisites"
 #endif
 
-/* Helper for ECDSA dependencies, will be undefined at the end of the file */
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
-#if defined(PSA_HAVE_FULL_ECDSA)
-#define MBEDTLS_PK_HAVE_ECDSA
-#endif
-#else /* MBEDTLS_USE_PSA_CRYPTO */
-#if defined(MBEDTLS_ECDSA_C)
-#define MBEDTLS_PK_HAVE_ECDSA
-#endif
-#endif /* MBEDTLS_USE_PSA_CRYPTO */
-
 #if defined(MBEDTLS_KEY_EXCHANGE_ECDH_ECDSA_ENABLED) &&                 \
-    ( !defined(MBEDTLS_ECDH_C) ||                                       \
-      !defined(MBEDTLS_PK_HAVE_ECDSA) ||                                \
+    ( !defined(MBEDTLS_ECDH_C) || !defined(MBEDTLS_ECDSA_C) ||          \
       !defined(MBEDTLS_X509_CRT_PARSE_C) )
 #error "MBEDTLS_KEY_EXCHANGE_ECDH_ECDSA_ENABLED defined, but not all prerequisites"
 #endif
@@ -324,9 +308,8 @@
 #error "MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED defined, but not all prerequisites"
 #endif
 
-#if defined(MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED) &&                \
-    ( !defined(MBEDTLS_ECDH_C) ||                                       \
-      !defined(MBEDTLS_PK_HAVE_ECDSA) ||                                \
+#if defined(MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED) &&                 \
+    ( !defined(MBEDTLS_ECDH_C) || !defined(MBEDTLS_ECDSA_C) ||          \
       !defined(MBEDTLS_X509_CRT_PARSE_C) )
 #error "MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED defined, but not all prerequisites"
 #endif
@@ -725,6 +708,41 @@
 #if defined(MBEDTLS_SHA512_ALT) || defined(MBEDTLS_SHA512_PROCESS_ALT)
 #error "MBEDTLS_SHA512_*ALT can't be used with MBEDTLS_SHA512_USE_A64_CRYPTO_*"
 #endif
+/*
+ * Best performance comes from most recent compilers, with intrinsics and -O3.
+ * Must compile with -march=armv8.2-a+sha3, but we can't detect armv8.2-a, and
+ * can't always detect __ARM_FEATURE_SHA512 (notably clang 7-12).
+ *
+ * GCC < 8 won't work at all (lacks the sha512 instructions)
+ * GCC >= 8 uses intrinsics, sets __ARM_FEATURE_SHA512
+ *
+ * Clang < 7 won't work at all (lacks the sha512 instructions)
+ * Clang 7-12 don't have intrinsics (but we work around that with inline
+ *            assembler) or __ARM_FEATURE_SHA512
+ * Clang == 13.0.0 same as clang 12 (only seen on macOS)
+ * Clang >= 13.0.1 has __ARM_FEATURE_SHA512 and intrinsics
+ */
+#if defined(__aarch64__) && !defined(__ARM_FEATURE_SHA512)
+   /* Test Clang first, as it defines __GNUC__ */
+#  if defined(__clang__)
+#    if __clang_major__ < 7
+#      error "A more recent Clang is required for MBEDTLS_SHA512_USE_A64_CRYPTO_*"
+#    elif __clang_major__ < 13 || \
+         (__clang_major__ == 13 && __clang_minor__ == 0 && __clang_patchlevel__ == 0)
+       /* We implement the intrinsics with inline assembler, so don't error */
+#    else
+#      error "Must use minimum -march=armv8.2-a+sha3 for MBEDTLS_SHA512_USE_A64_CRYPTO_*"
+#    endif
+#  elif defined(__GNUC__)
+#    if __GNUC__ < 8
+#      error "A more recent GCC is required for MBEDTLS_SHA512_USE_A64_CRYPTO_*"
+#    else
+#      error "Must use minimum -march=armv8.2-a+sha3 for MBEDTLS_SHA512_USE_A64_CRYPTO_*"
+#    endif
+#  else
+#    error "Only GCC and Clang supported for MBEDTLS_SHA512_USE_A64_CRYPTO_*"
+#  endif
+#endif
 
 #endif /* MBEDTLS_SHA512_USE_A64_CRYPTO_IF_PRESENT || MBEDTLS_SHA512_USE_A64_CRYPTO_ONLY */
 
@@ -745,7 +763,9 @@
 #if defined(MBEDTLS_SHA256_ALT) || defined(MBEDTLS_SHA256_PROCESS_ALT)
 #error "MBEDTLS_SHA256_*ALT can't be used with MBEDTLS_SHA256_USE_A64_CRYPTO_*"
 #endif
-
+#if defined(__aarch64__) && !defined(__ARM_FEATURE_CRYPTO)
+#error "Must use minimum -march=armv8-a+crypto for MBEDTLS_SHA256_USE_A64_CRYPTO_*"
+#endif
 #endif
 
 #if defined(MBEDTLS_SHA256_USE_A64_CRYPTO_ONLY) && \
@@ -783,7 +803,7 @@
 
 #if defined(MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED)
 #if !( defined(MBEDTLS_ECDH_C) && defined(MBEDTLS_X509_CRT_PARSE_C) && \
-       ( defined(MBEDTLS_PK_HAVE_ECDSA) || defined(MBEDTLS_PKCS1_V21) ) )
+       ( defined(MBEDTLS_ECDSA_C) || defined(MBEDTLS_PKCS1_V21) ) )
 #error "MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED defined, but not all prerequisites"
 #endif
 #endif
@@ -912,11 +932,6 @@
 #error "MBEDTLS_SSL_EXTENDED_MASTER_SECRET defined, but not all prerequisites"
 #endif
 
-#if defined(MBEDTLS_SSL_RENEGOTIATION) && \
-    !defined(MBEDTLS_SSL_PROTO_TLS1_2)
-#error "MBEDTLS_SSL_RENEGOTIATION defined, but not all prerequisites"
-#endif
-
 #if defined(MBEDTLS_SSL_TICKET_C) && ( !defined(MBEDTLS_CIPHER_C) && \
                                        !defined(MBEDTLS_USE_PSA_CRYPTO) )
 #error "MBEDTLS_SSL_TICKET_C defined, but not all prerequisites"
@@ -1020,10 +1035,6 @@
 #error "MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH defined, but not all prerequisites"
 #endif
 
-#if defined(MBEDTLS_SSL_RECORD_SIZE_LIMIT) && ( !defined(MBEDTLS_SSL_PROTO_TLS1_3) )
-#error "MBEDTLS_SSL_RECORD_SIZE_LIMIT defined, but not all prerequisites"
-#endif
-
 #if defined(MBEDTLS_SSL_CONTEXT_SERIALIZATION) && !( defined(MBEDTLS_GCM_C) || defined(MBEDTLS_CCM_C) || defined(MBEDTLS_CHACHAPOLY_C) )
 #error "MBEDTLS_SSL_CONTEXT_SERIALIZATION defined, but not all prerequisites"
 #endif
@@ -1082,9 +1093,6 @@
     ( !defined(MBEDTLS_MD_C) ) )
 #error  "MBEDTLS_PKCS7_C is defined, but not all prerequisites"
 #endif
-
-/* Undefine helper symbols */
-#undef MBEDTLS_PK_HAVE_ECDSA
 
 /*
  * Avoid warning from -pedantic. This is a convenient place for this
