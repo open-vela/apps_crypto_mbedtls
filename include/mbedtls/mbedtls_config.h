@@ -1548,20 +1548,6 @@
 #define MBEDTLS_SSL_MAX_FRAGMENT_LENGTH
 
 /**
- * \def MBEDTLS_SSL_RECORD_SIZE_LIMIT
- *
- * Enable support for RFC 8449 record_size_limit extension in SSL.
- *
- * \warning This extension is currently in development and must NOT be used except
- *          for testing purposes.
- *
- * Requires: MBEDTLS_SSL_PROTO_TLS1_3
- *
- * Uncomment this macro to enable support for the record_size_limit extension
- */
-//#define MBEDTLS_SSL_RECORD_SIZE_LIMIT
-
-/**
  * \def MBEDTLS_SSL_PROTO_TLS1_2
  *
  * Enable support for TLS 1.2 (and DTLS 1.2 if DTLS is enabled).
@@ -2876,7 +2862,11 @@
 /**
  * \def MBEDTLS_PKCS7_C
  *
- * Enable PKCS #7 core for using PKCS #7-formatted signatures.
+ * This feature is a work in progress and not ready for production. Testing and
+ * validation is incomplete, and handling of malformed inputs may not be robust.
+ * The API may change.
+ *
+ * Enable PKCS7 core for using PKCS7 formatted signatures.
  * RFC Link - https://tools.ietf.org/html/rfc2315
  *
  * Module:  library/pkcs7.c
@@ -2885,9 +2875,9 @@
  *           MBEDTLS_X509_CRT_PARSE_C MBEDTLS_X509_CRL_PARSE_C,
  *           MBEDTLS_BIGNUM_C, MBEDTLS_MD_C
  *
- * This module is required for the PKCS #7 parsing modules.
+ * This module is required for the PKCS7 parsing modules.
  */
-#define MBEDTLS_PKCS7_C
+//#define MBEDTLS_PKCS7_C
 
 /**
  * \def MBEDTLS_PKCS12_C
