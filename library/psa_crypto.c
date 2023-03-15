@@ -48,6 +48,7 @@
 
 #include "psa_crypto_random_impl.h"
 
+#include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 #include "mbedtls/platform.h"
@@ -89,10 +90,6 @@
     defined(MBEDTLS_PSA_BUILTIN_ALG_HKDF_EXPAND)
 #define BUILTIN_ALG_ANY_HKDF 1
 #endif
-
-/* The only two JPAKE user/peer identifiers supported for the time being. */
-static const uint8_t jpake_server_id[] = { 's', 'e', 'r', 'v', 'e', 'r' };
-static const uint8_t jpake_client_id[] = { 'c', 'l', 'i', 'e', 'n', 't' };
 
 /****************************************************************/
 /* Global data, support functions and library management */
@@ -1487,15 +1484,14 @@ exit:
     return (status == PSA_SUCCESS) ? unlock_status : status;
 }
 
-MBEDTLS_STATIC_ASSERT(
-    (MBEDTLS_PSA_KA_MASK_EXTERNAL_ONLY & MBEDTLS_PSA_KA_MASK_DUAL_USE) == 0,
-    "One or more key attribute flag is listed as both external-only and dual-use")
-MBEDTLS_STATIC_ASSERT(
-    (PSA_KA_MASK_INTERNAL_ONLY & MBEDTLS_PSA_KA_MASK_DUAL_USE) == 0,
-    "One or more key attribute flag is listed as both internal-only and dual-use")
-MBEDTLS_STATIC_ASSERT(
-    (PSA_KA_MASK_INTERNAL_ONLY & MBEDTLS_PSA_KA_MASK_EXTERNAL_ONLY) == 0,
-    "One or more key attribute flag is listed as both internal-only and external-only")
+#if defined(static_assert)
+static_assert((MBEDTLS_PSA_KA_MASK_EXTERNAL_ONLY & MBEDTLS_PSA_KA_MASK_DUAL_USE) == 0,
+              "One or more key attribute flag is listed as both external-only and dual-use");
+static_assert((PSA_KA_MASK_INTERNAL_ONLY & MBEDTLS_PSA_KA_MASK_DUAL_USE) == 0,
+              "One or more key attribute flag is listed as both internal-only and dual-use");
+static_assert((PSA_KA_MASK_INTERNAL_ONLY & MBEDTLS_PSA_KA_MASK_EXTERNAL_ONLY) == 0,
+              "One or more key attribute flag is listed as both internal-only and external-only");
+#endif
 
 /** Validate that a key policy is internally well-formed.
  *
@@ -1759,10 +1755,11 @@ static psa_status_t psa_finish_key_creation(
             psa_key_slot_number_t slot_number =
                 psa_key_slot_get_slot_number(slot);
 
-            MBEDTLS_STATIC_ASSERT(sizeof(slot_number) ==
-                                  sizeof(data.slot_number),
-                                  "Slot number size does not match psa_se_key_data_storage_t");
-
+#if defined(static_assert)
+            static_assert(sizeof(slot_number) ==
+                          sizeof(data.slot_number),
+                          "Slot number size does not match psa_se_key_data_storage_t");
+#endif
             memcpy(&data.slot_number, &slot_number, sizeof(slot_number));
             status = psa_save_persistent_key(&slot->attr,
                                              (uint8_t *) &data,
@@ -7212,68 +7209,6 @@ psa_status_t psa_crypto_driver_pake_get_role(
     return PSA_SUCCESS;
 }
 
-psa_status_t psa_crypto_driver_pake_get_user_len(
-    const psa_crypto_driver_pake_inputs_t *inputs,
-    size_t *user_len)
-{
-    if (inputs->user_len == 0) {
-        return PSA_ERROR_BAD_STATE;
-    }
-
-    *user_len = inputs->user_len;
-
-    return PSA_SUCCESS;
-}
-
-psa_status_t psa_crypto_driver_pake_get_user(
-    const psa_crypto_driver_pake_inputs_t *inputs,
-    uint8_t *user_id, size_t user_id_size, size_t *user_id_len)
-{
-    if (inputs->user_len == 0) {
-        return PSA_ERROR_BAD_STATE;
-    }
-
-    if (user_id_size < inputs->user_len) {
-        return PSA_ERROR_BUFFER_TOO_SMALL;
-    }
-
-    memcpy(user_id, inputs->user, inputs->user_len);
-    *user_id_len = inputs->user_len;
-
-    return PSA_SUCCESS;
-}
-
-psa_status_t psa_crypto_driver_pake_get_peer_len(
-    const psa_crypto_driver_pake_inputs_t *inputs,
-    size_t *peer_len)
-{
-    if (inputs->peer_len == 0) {
-        return PSA_ERROR_BAD_STATE;
-    }
-
-    *peer_len = inputs->peer_len;
-
-    return PSA_SUCCESS;
-}
-
-psa_status_t psa_crypto_driver_pake_get_peer(
-    const psa_crypto_driver_pake_inputs_t *inputs,
-    uint8_t *peer_id, size_t peer_id_size, size_t *peer_id_length)
-{
-    if (inputs->peer_len == 0) {
-        return PSA_ERROR_BAD_STATE;
-    }
-
-    if (peer_id_size < inputs->peer_len) {
-        return PSA_ERROR_BUFFER_TOO_SMALL;
-    }
-
-    memcpy(peer_id, inputs->peer, inputs->peer_len);
-    *peer_id_length = inputs->peer_len;
-
-    return PSA_SUCCESS;
-}
-
 psa_status_t psa_crypto_driver_pake_get_cipher_suite(
     const psa_crypto_driver_pake_inputs_t *inputs,
     psa_pake_cipher_suite_t *cipher_suite)
@@ -7388,6 +7323,7 @@ psa_status_t psa_pake_set_user(
     size_t user_id_len)
 {
     psa_status_t status = PSA_ERROR_CORRUPTION_DETECTED;
+    (void) user_id;
 
     if (operation->stage != PSA_PAKE_OPERATION_STAGE_COLLECT_INPUTS) {
         status = PSA_ERROR_BAD_STATE;
@@ -7399,30 +7335,7 @@ psa_status_t psa_pake_set_user(
         goto exit;
     }
 
-    if (operation->data.inputs.user_len != 0) {
-        status = PSA_ERROR_BAD_STATE;
-        goto exit;
-    }
-
-    /* Allow only "client" or "server" values (temporary restriction). */
-    if ((user_id_len != sizeof(jpake_server_id) ||
-         memcmp(user_id, jpake_server_id, user_id_len) != 0) &&
-        (user_id_len != sizeof(jpake_client_id) ||
-         memcmp(user_id, jpake_client_id, user_id_len) != 0)) {
-        status = PSA_ERROR_NOT_SUPPORTED;
-        goto exit;
-    }
-
-    operation->data.inputs.user = mbedtls_calloc(1, user_id_len);
-    if (operation->data.inputs.user == NULL) {
-        status = PSA_ERROR_INSUFFICIENT_MEMORY;
-        goto exit;
-    }
-
-    memcpy(operation->data.inputs.user, user_id, user_id_len);
-    operation->data.inputs.user_len = user_id_len;
-
-    return PSA_SUCCESS;
+    return PSA_ERROR_NOT_SUPPORTED;
 exit:
     psa_pake_abort(operation);
     return status;
@@ -7434,6 +7347,7 @@ psa_status_t psa_pake_set_peer(
     size_t peer_id_len)
 {
     psa_status_t status = PSA_ERROR_CORRUPTION_DETECTED;
+    (void) peer_id;
 
     if (operation->stage != PSA_PAKE_OPERATION_STAGE_COLLECT_INPUTS) {
         status = PSA_ERROR_BAD_STATE;
@@ -7445,30 +7359,7 @@ psa_status_t psa_pake_set_peer(
         goto exit;
     }
 
-    if (operation->data.inputs.peer_len != 0) {
-        status = PSA_ERROR_BAD_STATE;
-        goto exit;
-    }
-
-    /* Allow only "client" or "server" values (temporary restriction). */
-    if ((peer_id_len != sizeof(jpake_server_id) ||
-         memcmp(peer_id, jpake_server_id, peer_id_len) != 0) &&
-        (peer_id_len != sizeof(jpake_client_id) ||
-         memcmp(peer_id, jpake_client_id, peer_id_len) != 0)) {
-        status = PSA_ERROR_NOT_SUPPORTED;
-        goto exit;
-    }
-
-    operation->data.inputs.peer = mbedtls_calloc(1, peer_id_len);
-    if (operation->data.inputs.peer == NULL) {
-        status = PSA_ERROR_INSUFFICIENT_MEMORY;
-        goto exit;
-    }
-
-    memcpy(operation->data.inputs.peer, peer_id, peer_id_len);
-    operation->data.inputs.peer_len = peer_id_len;
-
-    return PSA_SUCCESS;
+    return PSA_ERROR_NOT_SUPPORTED;
 exit:
     psa_pake_abort(operation);
     return status;
@@ -7481,24 +7372,22 @@ psa_status_t psa_pake_set_role(
     psa_status_t status = PSA_ERROR_CORRUPTION_DETECTED;
 
     if (operation->stage != PSA_PAKE_OPERATION_STAGE_COLLECT_INPUTS) {
-        status = PSA_ERROR_BAD_STATE;
+        status =  PSA_ERROR_BAD_STATE;
         goto exit;
     }
 
-    switch (operation->alg) {
-#if defined(PSA_WANT_ALG_JPAKE)
-        case PSA_ALG_JPAKE:
-            if (role == PSA_PAKE_ROLE_NONE) {
-                return PSA_SUCCESS;
-            }
-            status = PSA_ERROR_INVALID_ARGUMENT;
-            break;
-#endif
-        default:
-            (void) role;
-            status = PSA_ERROR_NOT_SUPPORTED;
-            goto exit;
+    if (role != PSA_PAKE_ROLE_NONE &&
+        role != PSA_PAKE_ROLE_FIRST &&
+        role != PSA_PAKE_ROLE_SECOND &&
+        role != PSA_PAKE_ROLE_CLIENT &&
+        role != PSA_PAKE_ROLE_SERVER) {
+        status = PSA_ERROR_INVALID_ARGUMENT;
+        goto exit;
     }
+
+    operation->data.inputs.role = role;
+
+    return PSA_SUCCESS;
 exit:
     psa_pake_abort(operation);
     return status;
@@ -7568,27 +7457,15 @@ static psa_status_t psa_pake_complete_inputs(
        with the driver context which will be setup by the driver. */
     psa_crypto_driver_pake_inputs_t inputs = operation->data.inputs;
 
-    if (inputs.password_len == 0) {
+    if (inputs.password_len == 0 ||
+        inputs.role == PSA_PAKE_ROLE_NONE) {
         return PSA_ERROR_BAD_STATE;
     }
 
-    if (operation->alg == PSA_ALG_JPAKE) {
-        if (inputs.user_len == 0 || inputs.peer_len == 0) {
-            return PSA_ERROR_BAD_STATE;
-        }
-        if (memcmp(inputs.user, jpake_client_id, inputs.user_len) == 0 &&
-            memcmp(inputs.peer, jpake_server_id, inputs.peer_len) == 0) {
-            inputs.role = PSA_PAKE_ROLE_CLIENT;
-        } else
-        if (memcmp(inputs.user, jpake_server_id, inputs.user_len) == 0 &&
-            memcmp(inputs.peer, jpake_client_id, inputs.peer_len) == 0) {
-            inputs.role = PSA_PAKE_ROLE_SERVER;
-        }
-
-        if (inputs.role != PSA_PAKE_ROLE_CLIENT &&
-            inputs.role != PSA_PAKE_ROLE_SERVER) {
-            return PSA_ERROR_NOT_SUPPORTED;
-        }
+    if (operation->alg == PSA_ALG_JPAKE &&
+        inputs.role != PSA_PAKE_ROLE_CLIENT &&
+        inputs.role != PSA_PAKE_ROLE_SERVER) {
+        return PSA_ERROR_NOT_SUPPORTED;
     }
 
     /* Clear driver context */
@@ -7599,10 +7476,6 @@ static psa_status_t psa_pake_complete_inputs(
     /* Driver is responsible for creating its own copy of the password. */
     mbedtls_platform_zeroize(inputs.password, inputs.password_len);
     mbedtls_free(inputs.password);
-
-    /* User and peer are translated to role. */
-    mbedtls_free(inputs.user);
-    mbedtls_free(inputs.peer);
 
     if (status == PSA_SUCCESS) {
 #if defined(PSA_WANT_ALG_JPAKE)
@@ -8012,19 +7885,13 @@ psa_status_t psa_pake_abort(
         status = psa_driver_wrapper_pake_abort(operation);
     }
 
-    if (operation->stage == PSA_PAKE_OPERATION_STAGE_COLLECT_INPUTS) {
-        if (operation->data.inputs.password != NULL) {
-            mbedtls_platform_zeroize(operation->data.inputs.password,
-                                     operation->data.inputs.password_len);
-            mbedtls_free(operation->data.inputs.password);
-        }
-        if (operation->data.inputs.user != NULL) {
-            mbedtls_free(operation->data.inputs.user);
-        }
-        if (operation->data.inputs.peer != NULL) {
-            mbedtls_free(operation->data.inputs.peer);
-        }
+    if (operation->stage == PSA_PAKE_OPERATION_STAGE_COLLECT_INPUTS &&
+        operation->data.inputs.password != NULL) {
+        mbedtls_platform_zeroize(operation->data.inputs.password,
+                                 operation->data.inputs.password_len);
+        mbedtls_free(operation->data.inputs.password);
     }
+
     memset(operation, 0, sizeof(psa_pake_operation_t));
 
     return status;
