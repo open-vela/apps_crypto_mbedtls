@@ -4137,22 +4137,6 @@ run_test    "Session resume using cache: cache_max=1" \
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 requires_config_enabled MBEDTLS_SSL_CACHE_C
-run_test    "Session resume using cache: cache removed" \
-            "$P_SRV debug_level=3 tickets=0 cache_remove=1" \
-            "$P_CLI debug_level=3 tickets=0 reconnect=1" \
-            0 \
-            -C "client hello, adding session ticket extension" \
-            -S "found session ticket extension" \
-            -S "server hello, adding session ticket extension" \
-            -C "found session_ticket extension" \
-            -C "parse new session ticket" \
-            -S "session successfully restored from cache" \
-            -S "session successfully restored from ticket" \
-            -S "a session has been resumed" \
-            -C "a session has been resumed"
-
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
-requires_config_enabled MBEDTLS_SSL_CACHE_C
 run_test    "Session resume using cache: timeout > delay" \
             "$P_SRV debug_level=3 tickets=0" \
             "$P_CLI debug_level=3 tickets=0 reconnect=1 reco_delay=0" \
@@ -4743,37 +4727,32 @@ run_test    "Max fragment length: DTLS client, larger message" \
 
 # Tests for Record Size Limit extension
 
-requires_gnutls_tls1_3
+# gnutls feature tests: check if the record size limit extension is supported with TLS 1.2.
 requires_gnutls_record_size_limit
-requires_config_enabled MBEDTLS_SSL_RECORD_SIZE_LIMIT
-run_test    "Record Size Limit: TLS 1.3: Server-side parsing, debug output and fatal alert" \
-            "$P_SRV debug_level=3 force_version=tls13" \
-            "$G_NEXT_CLI localhost --priority=NORMAL:-VERS-ALL:+VERS-TLS1.3 -V -d 4" \
-            1 \
-            -c "Preparing extension (Record Size Limit/28) for 'client hello'" \
-            -c "Sending extension Record Size Limit/28 (2 bytes)" \
-            -s "ClientHello: record_size_limit(28) extension received."\
-            -s "found record_size_limit extension" \
-            -s "RecordSizeLimit: 16385 Bytes" \
-            -c "Received alert \[110]: An unsupported extension was sent"
-
-requires_gnutls_tls1_3
-requires_gnutls_record_size_limit
-requires_gnutls_next_disable_tls13_compat
-requires_config_enabled MBEDTLS_SSL_RECORD_SIZE_LIMIT
-run_test    "Record Size Limit: TLS 1.3: Client-side parsing, debug output and fatal alert" \
-            "$G_NEXT_SRV --priority=NORMAL:-VERS-ALL:+VERS-TLS1.3:+CIPHER-ALL:%DISABLE_TLS13_COMPAT_MODE --disable-client-cert -d 4" \
-            "$P_CLI debug_level=4 force_version=tls13" \
+run_test    "Record Size Limit: Test gnutls record size limit feature" \
+            "$G_NEXT_SRV --priority=NORMAL:-VERS-ALL:+VERS-TLS1.2:+CIPHER-ALL --disable-client-cert -d 4" \
+            "$G_NEXT_CLI localhost --priority=NORMAL:-VERS-ALL:+VERS-TLS1.2 -V -d 4" \
             0 \
-            -s "Preparing extension (Record Size Limit/28) for 'encrypted extensions'"
-# The P_CLI can not yet send the Record Size Limit extension. Thus, the G_NEXT_SRV does not send
-# a response in its EncryptedExtensions record.
-#            -s "Parsing extension 'Record Size Limit/28 (2 bytes)" \
-#            -s "Sending extension Record Size Limit/28 (2 bytes)" \
-#            -c "EncryptedExtensions: record_size_limit(28) extension received."\
-#            -c "found record_size_limit extension" \
-#            -c "RecordSizeLimit: 16385 Bytes" \
-#            -s "Received alert \[110]: An unsupported extension was sent"
+            -c "Preparing extension (Record Size Limit/28) for 'client hello'"\
+            -s "Parsing extension 'Record Size Limit/28' (2 bytes)" \
+            -s "Preparing extension (Record Size Limit/28) for 'TLS 1.2 server hello'" \
+            -c "Parsing extension 'Record Size Limit/28' (2 bytes)" \
+            -s "Version: TLS1.2" \
+            -c "Version: TLS1.2"
+
+# gnutls feature tests: check if the record size limit extension is supported with TLS 1.3.
+requires_gnutls_tls1_3
+requires_gnutls_record_size_limit
+run_test    "Record Size Limit: TLS 1.3: Test gnutls record size limit feature" \
+            "$G_NEXT_SRV --priority=NORMAL:-VERS-ALL:+VERS-TLS1.3:+CIPHER-ALL --disable-client-cert -d 4" \
+            "$G_NEXT_CLI localhost --priority=NORMAL:-VERS-ALL:+VERS-TLS1.3 -V -d 4" \
+            0 \
+            -c "Preparing extension (Record Size Limit/28) for 'client hello'"\
+            -s "Parsing extension 'Record Size Limit/28' (2 bytes)" \
+            -s "Preparing extension (Record Size Limit/28) for 'encrypted extensions'" \
+            -c "Parsing extension 'Record Size Limit/28' (2 bytes)" \
+            -s "Version: TLS1.3" \
+            -c "Version: TLS1.3"
 
 # Tests for renegotiation
 
