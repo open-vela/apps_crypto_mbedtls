@@ -321,7 +321,8 @@ int main(void)
 
 #if defined(MBEDTLS_SSL_CACHE_C)
 #define USAGE_CACHE                                             \
-    "    cache_max=%%d        default: cache default (50)\n"
+    "    cache_max=%%d        default: cache default (50)\n"    \
+    "    cache_remove=%%d     default: 0 (don't remove)\n"
 #if defined(MBEDTLS_HAVE_TIME)
 #define USAGE_CACHE_TIME \
     "    cache_timeout=%%d    default: cache default (1d)\n"
