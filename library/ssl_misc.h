@@ -55,6 +55,7 @@
 #include "mbedtls/ecjpake.h"
 #endif
 
+#include "mbedtls/pk.h"
 #include "common.h"
 
 /* Shorthand for restartable ECC */
@@ -905,14 +906,14 @@ struct mbedtls_ssl_handshake_params {
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
     psa_hash_operation_t fin_sha256_psa;
 #else
-    mbedtls_sha256_context fin_sha256;
+    mbedtls_md_context_t fin_sha256;
 #endif
 #endif
 #if defined(MBEDTLS_HAS_ALG_SHA_384_VIA_MD_OR_PSA_BASED_ON_USE_PSA)
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
     psa_hash_operation_t fin_sha384_psa;
 #else
-    mbedtls_sha512_context fin_sha384;
+    mbedtls_md_context_t fin_sha384;
 #endif
 #endif
 
@@ -2279,7 +2280,7 @@ static inline int mbedtls_ssl_tls13_sig_alg_for_cert_verify_is_supported(
     const uint16_t sig_alg)
 {
     switch (sig_alg) {
-#if defined(MBEDTLS_ECDSA_C)
+#if defined(MBEDTLS_PK_CAN_ECDSA_SOME)
 #if defined(PSA_WANT_ALG_SHA_256) && defined(MBEDTLS_ECP_DP_SECP256R1_ENABLED)
         case MBEDTLS_TLS1_3_SIG_ECDSA_SECP256R1_SHA256:
             break;
@@ -2292,7 +2293,7 @@ static inline int mbedtls_ssl_tls13_sig_alg_for_cert_verify_is_supported(
         case MBEDTLS_TLS1_3_SIG_ECDSA_SECP521R1_SHA512:
             break;
 #endif /* PSA_WANT_ALG_SHA_512 && MBEDTLS_ECP_DP_SECP521R1_ENABLED */
-#endif /* MBEDTLS_ECDSA_C */
+#endif /* MBEDTLS_PK_CAN_ECDSA_SOME */
 
 #if defined(MBEDTLS_PKCS1_V21)
 #if defined(PSA_WANT_ALG_SHA_256)
@@ -2448,7 +2449,7 @@ static inline int mbedtls_ssl_tls12_sig_alg_is_supported(
             break;
 #endif
 
-#if defined(MBEDTLS_ECDSA_C)
+#if defined(MBEDTLS_PK_CAN_ECDSA_SOME)
         case MBEDTLS_SSL_SIG_ECDSA:
             break;
 #endif
@@ -2514,6 +2515,7 @@ psa_status_t mbedtls_ssl_cipher_to_psa(mbedtls_cipher_type_t mbedtls_cipher_type
                                        psa_key_type_t *key_type,
                                        size_t *key_size);
 
+#if !defined(MBEDTLS_DEPRECATED_REMOVED)
 /**
  * \brief       Convert given PSA status to mbedtls error code.
  *
@@ -2521,7 +2523,7 @@ psa_status_t mbedtls_ssl_cipher_to_psa(mbedtls_cipher_type_t mbedtls_cipher_type
  *
  * \return             corresponding mbedtls error code
  */
-static inline int psa_ssl_status_to_mbedtls(psa_status_t status)
+static inline MBEDTLS_DEPRECATED int psa_ssl_status_to_mbedtls(psa_status_t status)
 {
     switch (status) {
         case PSA_SUCCESS:
@@ -2542,6 +2544,7 @@ static inline int psa_ssl_status_to_mbedtls(psa_status_t status)
             return MBEDTLS_ERR_PLATFORM_HW_ACCEL_FAILED;
     }
 }
+#endif /* !MBEDTLS_DEPRECATED_REMOVED */
 #endif /* MBEDTLS_USE_PSA_CRYPTO || MBEDTLS_SSL_PROTO_TLS1_3 */
 
 #if defined(MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED) && \
