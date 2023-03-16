@@ -160,7 +160,7 @@ all: $(BINARIES)
 $(MBEDLIBS):
 	$(MAKE) -C ../library
 
-MBEDTLS_TEST_OBJS=$(patsubst %.c,%.o,$(wildcard src/*.c src/drivers/*.c src/test_helpers/*.c))
+MBEDTLS_TEST_OBJS=$(patsubst %.c,%.o,$(wildcard src/*.c src/drivers/*.c))
 
 mbedtls_test: $(MBEDTLS_TEST_OBJS)
 
@@ -178,10 +178,6 @@ src/%.o : src/%.c $(TEST_OBJS_DEPS)
 	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) -o $@ -c $<
 
 src/drivers/%.o : src/drivers/%.c
-	echo "  CC    $<"
-	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) -o $@ -c $<
-
-src/test_helpers/%.o : src/test_helpers/%.c
 	echo "  CC    $<"
 	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) -o $@ -c $<
 
@@ -221,9 +217,8 @@ $(BINARIES): %$(EXEXT): %.c $(MBEDLIBS) $(TEST_OBJS_DEPS) $(MBEDTLS_TEST_OBJS)
 clean:
 ifndef WINDOWS
 	rm -rf $(BINARIES) *.c *.datax
-	rm -f src/*.o src/drivers/*.o src/test_helpers/*.o src/libmbed*
+	rm -f src/*.o src/drivers/*.o src/libmbed*
 	rm -f include/test/instrument_record_status.h
-	rm -f include/alt-extra/*/*_alt.h
 	rm -rf libtestdriver1
 	rm -f ../library/libtestdriver1.a
 else
@@ -232,7 +227,6 @@ else
 	if exist *.datax del /Q /F *.datax
 	if exist src/*.o del /Q /F src/*.o
 	if exist src/drivers/*.o del /Q /F src/drivers/*.o
-	if exist src/test_helpers/*.o del /Q /F src/test_helpers/*.o
 	if exist src/libmbed* del /Q /F src/libmed*
 	if exist include/test/instrument_record_status.h del /Q /F include/test/instrument_record_status.h
 endif
@@ -249,10 +243,6 @@ check: $(BINARIES)
 	perl scripts/run-test-suites.pl $(TEST_FLAGS) --skip=$(SKIP_TEST_SUITES)
 
 test: check
-
-# Generate variants of some headers for testing
-include/alt-extra/%_alt.h: ../include/%.h
-	perl -p -e 's/^(# *(define|ifndef) +\w+_)H\b/$${1}ALT_H/' $< >$@
 
 # Generate test library
 
