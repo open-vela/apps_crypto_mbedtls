@@ -25,8 +25,6 @@
 
 #if defined(MBEDTLS_SSL_TLS_C)
 
-#include <assert.h>
-
 #include "mbedtls/platform.h"
 
 #include "mbedtls/ssl.h"
@@ -1196,17 +1194,15 @@ static int ssl_handshake_init(mbedtls_ssl_context *ssl)
         size_t sig_algs_len = 0;
         uint16_t *p;
 
-#if defined(static_assert)
-        static_assert(MBEDTLS_SSL_MAX_SIG_ALG_LIST_LEN
-                      <= (SIZE_MAX - (2 * sizeof(uint16_t))),
-                      "MBEDTLS_SSL_MAX_SIG_ALG_LIST_LEN too big");
-#endif
+        MBEDTLS_STATIC_ASSERT(MBEDTLS_SSL_MAX_SIG_ALG_LIST_LEN
+                              <= (SIZE_MAX - (2 * sizeof(uint16_t))),
+                              "MBEDTLS_SSL_MAX_SIG_ALG_LIST_LEN too big");
 
         for (md = sig_hashes; *md != MBEDTLS_MD_NONE; md++) {
             if (mbedtls_ssl_hash_from_md_alg(*md) == MBEDTLS_SSL_HASH_NONE) {
                 continue;
             }
-#if defined(MBEDTLS_ECDSA_C)
+#if defined(MBEDTLS_PK_CAN_ECDSA_SOME)
             sig_algs_len += sizeof(uint16_t);
 #endif
 
@@ -1234,7 +1230,7 @@ static int ssl_handshake_init(mbedtls_ssl_context *ssl)
             if (hash == MBEDTLS_SSL_HASH_NONE) {
                 continue;
             }
-#if defined(MBEDTLS_ECDSA_C)
+#if defined(MBEDTLS_PK_CAN_ECDSA_SOME)
             *p = ((hash << 8) | MBEDTLS_SSL_SIG_ECDSA);
             p++;
 #endif
@@ -1949,14 +1945,19 @@ void mbedtls_ssl_set_verify(mbedtls_ssl_context *ssl,
 #if defined(MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED)
 
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
+static const uint8_t jpake_server_id[] = { 's', 'e', 'r', 'v', 'e', 'r' };
+static const uint8_t jpake_client_id[] = { 'c', 'l', 'i', 'e', 'n', 't' };
+
 static psa_status_t mbedtls_ssl_set_hs_ecjpake_password_common(
     mbedtls_ssl_context *ssl,
     mbedtls_svc_key_id_t pwd)
 {
     psa_status_t status;
-    psa_pake_role_t psa_role;
     psa_pake_cipher_suite_t cipher_suite = psa_pake_cipher_suite_init();
-
+    const uint8_t *user = NULL;
+    size_t user_len = 0;
+    const uint8_t *peer = NULL;
+    size_t peer_len = 0;
     psa_pake_cs_set_algorithm(&cipher_suite, PSA_ALG_JPAKE);
     psa_pake_cs_set_primitive(&cipher_suite,
                               PSA_PAKE_PRIMITIVE(PSA_PAKE_PRIMITIVE_TYPE_ECC,
@@ -1970,12 +1971,23 @@ static psa_status_t mbedtls_ssl_set_hs_ecjpake_password_common(
     }
 
     if (ssl->conf->endpoint == MBEDTLS_SSL_IS_SERVER) {
-        psa_role = PSA_PAKE_ROLE_SERVER;
+        user = jpake_server_id;
+        user_len = sizeof(jpake_server_id);
+        peer = jpake_client_id;
+        peer_len = sizeof(jpake_client_id);
     } else {
-        psa_role = PSA_PAKE_ROLE_CLIENT;
+        user = jpake_client_id;
+        user_len = sizeof(jpake_client_id);
+        peer = jpake_server_id;
+        peer_len = sizeof(jpake_server_id);
     }
 
-    status = psa_pake_set_role(&ssl->handshake->psa_pake_ctx, psa_role);
+    status = psa_pake_set_user(&ssl->handshake->psa_pake_ctx, user, user_len);
+    if (status != PSA_SUCCESS) {
+        return status;
+    }
+
+    status = psa_pake_set_peer(&ssl->handshake->psa_pake_ctx, peer, peer_len);
     if (status != PSA_SUCCESS) {
         return status;
     }
@@ -4979,22 +4991,25 @@ static int ssl_preset_suiteb_ciphersuites[] = {
  */
 static uint16_t ssl_preset_default_sig_algs[] = {
 
-#if defined(MBEDTLS_ECDSA_C) &&  defined(MBEDTLS_HAS_ALG_SHA_256_VIA_MD_OR_PSA_BASED_ON_USE_PSA) && \
+#if defined(MBEDTLS_PK_CAN_ECDSA_SOME) &&  \
+    defined(MBEDTLS_HAS_ALG_SHA_256_VIA_MD_OR_PSA_BASED_ON_USE_PSA) && \
     defined(MBEDTLS_ECP_DP_SECP256R1_ENABLED)
     MBEDTLS_TLS1_3_SIG_ECDSA_SECP256R1_SHA256,
-#endif /* MBEDTLS_ECDSA_C && MBEDTLS_HAS_ALG_SHA_256_VIA_MD_OR_PSA_BASED_ON_USE_PSA &&
+#endif /* MBEDTLS_PK_CAN_ECDSA_SOME && MBEDTLS_HAS_ALG_SHA_256_VIA_MD_OR_PSA_BASED_ON_USE_PSA &&
           MBEDTLS_ECP_DP_SECP256R1_ENABLED */
 
-#if defined(MBEDTLS_ECDSA_C) && defined(MBEDTLS_HAS_ALG_SHA_384_VIA_MD_OR_PSA_BASED_ON_USE_PSA) && \
+#if defined(MBEDTLS_PK_CAN_ECDSA_SOME) && \
+    defined(MBEDTLS_HAS_ALG_SHA_384_VIA_MD_OR_PSA_BASED_ON_USE_PSA) && \
     defined(MBEDTLS_ECP_DP_SECP384R1_ENABLED)
     MBEDTLS_TLS1_3_SIG_ECDSA_SECP384R1_SHA384,
-#endif /* MBEDTLS_ECDSA_C && MBEDTLS_HAS_ALG_SHA_384_VIA_MD_OR_PSA_BASED_ON_USE_PSA&&
+#endif /* MBEDTLS_PK_CAN_ECDSA_SOME && MBEDTLS_HAS_ALG_SHA_384_VIA_MD_OR_PSA_BASED_ON_USE_PSA&&
           MBEDTLS_ECP_DP_SECP384R1_ENABLED */
 
-#if defined(MBEDTLS_ECDSA_C) && defined(MBEDTLS_HAS_ALG_SHA_512_VIA_MD_OR_PSA_BASED_ON_USE_PSA) && \
+#if defined(MBEDTLS_PK_CAN_ECDSA_SOME) && \
+    defined(MBEDTLS_HAS_ALG_SHA_512_VIA_MD_OR_PSA_BASED_ON_USE_PSA) && \
     defined(MBEDTLS_ECP_DP_SECP521R1_ENABLED)
     MBEDTLS_TLS1_3_SIG_ECDSA_SECP521R1_SHA512,
-#endif /* MBEDTLS_ECDSA_C && MBEDTLS_HAS_ALG_SHA_384_VIA_MD_OR_PSA_BASED_ON_USE_PSA&&
+#endif /* MBEDTLS_PK_CAN_ECDSA_SOME && MBEDTLS_HAS_ALG_SHA_384_VIA_MD_OR_PSA_BASED_ON_USE_PSA&&
           MBEDTLS_ECP_DP_SECP521R1_ENABLED */
 
 #if defined(MBEDTLS_X509_RSASSA_PSS_SUPPORT) && \
@@ -5034,7 +5049,7 @@ static uint16_t ssl_preset_default_sig_algs[] = {
 #if defined(MBEDTLS_SSL_PROTO_TLS1_2)
 static uint16_t ssl_tls12_preset_default_sig_algs[] = {
 #if defined(MBEDTLS_HAS_ALG_SHA_512_VIA_MD_OR_PSA_BASED_ON_USE_PSA)
-#if defined(MBEDTLS_ECDSA_C)
+#if defined(MBEDTLS_PK_CAN_ECDSA_SOME)
     MBEDTLS_SSL_TLS12_SIG_AND_HASH_ALG(MBEDTLS_SSL_SIG_ECDSA, MBEDTLS_SSL_HASH_SHA512),
 #endif
 #if defined(MBEDTLS_X509_RSASSA_PSS_SUPPORT)
@@ -5045,7 +5060,7 @@ static uint16_t ssl_tls12_preset_default_sig_algs[] = {
 #endif
 #endif /* MBEDTLS_HAS_ALG_SHA_512_VIA_MD_OR_PSA_BASED_ON_USE_PSA*/
 #if defined(MBEDTLS_HAS_ALG_SHA_384_VIA_MD_OR_PSA_BASED_ON_USE_PSA)
-#if defined(MBEDTLS_ECDSA_C)
+#if defined(MBEDTLS_PK_CAN_ECDSA_SOME)
     MBEDTLS_SSL_TLS12_SIG_AND_HASH_ALG(MBEDTLS_SSL_SIG_ECDSA, MBEDTLS_SSL_HASH_SHA384),
 #endif
 #if defined(MBEDTLS_X509_RSASSA_PSS_SUPPORT)
@@ -5056,7 +5071,7 @@ static uint16_t ssl_tls12_preset_default_sig_algs[] = {
 #endif
 #endif /* MBEDTLS_HAS_ALG_SHA_384_VIA_MD_OR_PSA_BASED_ON_USE_PSA*/
 #if defined(MBEDTLS_HAS_ALG_SHA_256_VIA_MD_OR_PSA_BASED_ON_USE_PSA)
-#if defined(MBEDTLS_ECDSA_C)
+#if defined(MBEDTLS_PK_CAN_ECDSA_SOME)
     MBEDTLS_SSL_TLS12_SIG_AND_HASH_ALG(MBEDTLS_SSL_SIG_ECDSA, MBEDTLS_SSL_HASH_SHA256),
 #endif
 #if defined(MBEDTLS_X509_RSASSA_PSS_SUPPORT)
