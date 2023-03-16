@@ -39,15 +39,13 @@
 #if defined(MBEDTLS_AESNI_C)
 #include "aesni.h"
 #endif
-#if defined(MBEDTLS_AESCE_C)
-#include "aesce.h"
-#endif
 
 #include "mbedtls/platform.h"
 
 #if !defined(MBEDTLS_AES_ALT)
 
-#if defined(MBEDTLS_PADLOCK_C) && defined(MBEDTLS_HAVE_X86)
+#if defined(MBEDTLS_PADLOCK_C) &&                      \
+    (defined(MBEDTLS_HAVE_X86) || defined(MBEDTLS_PADLOCK_ALIGN16))
 static int aes_padlock_ace = -1;
 #endif
 
@@ -529,7 +527,7 @@ int mbedtls_aes_setkey_enc(mbedtls_aes_context *ctx, const unsigned char *key,
 #endif
 
     ctx->rk_offset = 0;
-#if defined(MBEDTLS_PADLOCK_C) && defined(MBEDTLS_HAVE_X86)
+#if defined(MBEDTLS_PADLOCK_C) && defined(MBEDTLS_PADLOCK_ALIGN16)
     if (aes_padlock_ace == -1) {
         aes_padlock_ace = mbedtls_padlock_has_support(MBEDTLS_PADLOCK_ACE);
     }
@@ -543,12 +541,6 @@ int mbedtls_aes_setkey_enc(mbedtls_aes_context *ctx, const unsigned char *key,
 #if defined(MBEDTLS_AESNI_C) && defined(MBEDTLS_HAVE_X86_64)
     if (mbedtls_aesni_has_support(MBEDTLS_AESNI_AES)) {
         return mbedtls_aesni_setkey_enc((unsigned char *) RK, key, keybits);
-    }
-#endif
-
-#if defined(MBEDTLS_AESCE_C) && defined(MBEDTLS_HAVE_ARM64)
-    if (mbedtls_aesce_has_support()) {
-        return mbedtls_aesce_setkey_enc((unsigned char *) RK, key, keybits);
     }
 #endif
 
@@ -634,7 +626,7 @@ int mbedtls_aes_setkey_dec(mbedtls_aes_context *ctx, const unsigned char *key,
     mbedtls_aes_init(&cty);
 
     ctx->rk_offset = 0;
-#if defined(MBEDTLS_PADLOCK_C) && defined(MBEDTLS_HAVE_X86)
+#if defined(MBEDTLS_PADLOCK_C) && defined(MBEDTLS_PADLOCK_ALIGN16)
     if (aes_padlock_ace == -1) {
         aes_padlock_ace = mbedtls_padlock_has_support(MBEDTLS_PADLOCK_ACE);
     }
@@ -656,16 +648,6 @@ int mbedtls_aes_setkey_dec(mbedtls_aes_context *ctx, const unsigned char *key,
     if (mbedtls_aesni_has_support(MBEDTLS_AESNI_AES)) {
         mbedtls_aesni_inverse_key((unsigned char *) RK,
                                   (const unsigned char *) (cty.buf + cty.rk_offset), ctx->nr);
-        goto exit;
-    }
-#endif
-
-#if defined(MBEDTLS_AESCE_C) && defined(MBEDTLS_HAVE_ARM64)
-    if (mbedtls_aesce_has_support()) {
-        mbedtls_aesce_inverse_key(
-            (unsigned char *) RK,
-            (const unsigned char *) (cty.buf + cty.rk_offset),
-            ctx->nr);
         goto exit;
     }
 #endif
@@ -959,12 +941,6 @@ int mbedtls_aes_crypt_ecb(mbedtls_aes_context *ctx,
 #if defined(MBEDTLS_AESNI_C) && defined(MBEDTLS_HAVE_X86_64)
     if (mbedtls_aesni_has_support(MBEDTLS_AESNI_AES)) {
         return mbedtls_aesni_crypt_ecb(ctx, mode, input, output);
-    }
-#endif
-
-#if defined(MBEDTLS_AESCE_C) && defined(MBEDTLS_HAVE_ARM64)
-    if (mbedtls_aesce_has_support()) {
-        return mbedtls_aesce_crypt_ecb(ctx, mode, input, output);
     }
 #endif
 

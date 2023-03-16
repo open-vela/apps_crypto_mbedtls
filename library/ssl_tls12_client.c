@@ -33,9 +33,6 @@
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
 #include "mbedtls/psa_util.h"
 #include "psa/crypto.h"
-#define PSA_TO_MBEDTLS_ERR(status) PSA_TO_MBEDTLS_ERR_LIST(status,   \
-                                                           psa_to_ssl_errors,             \
-                                                           psa_generic_status_to_mbedtls)
 #endif /* MBEDTLS_USE_PSA_CRYPTO */
 
 #include <string.h>
@@ -1093,7 +1090,6 @@ static int ssl_parse_use_srtp_ext(mbedtls_ssl_context *ssl,
 MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_parse_hello_verify_request(mbedtls_ssl_context *ssl)
 {
-    int ret = MBEDTLS_ERR_SSL_FEATURE_UNAVAILABLE;
     const unsigned char *p = ssl->in_msg + mbedtls_ssl_hs_hdr_len(ssl);
     uint16_t dtls_legacy_version;
 
@@ -1164,11 +1160,7 @@ static int ssl_parse_hello_verify_request(mbedtls_ssl_context *ssl)
 
     /* Start over at ClientHello */
     ssl->state = MBEDTLS_SSL_CLIENT_HELLO;
-    ret = mbedtls_ssl_reset_checksum(ssl);
-    if (0 != ret) {
-        MBEDTLS_SSL_DEBUG_RET(1, ("mbedtls_ssl_reset_checksum"), ret);
-        return ret;
-    }
+    mbedtls_ssl_reset_checksum(ssl);
 
     mbedtls_ssl_recv_flight_completed(ssl);
 
@@ -2954,7 +2946,7 @@ ecdh_calc_secret:
         status = psa_generate_key(&key_attributes,
                                   &handshake->ecdh_psa_privkey);
         if (status != PSA_SUCCESS) {
-            return PSA_TO_MBEDTLS_ERR(status);
+            return psa_ssl_status_to_mbedtls(status);
         }
 
         /* Export the public part of the ECDH private key from PSA.
@@ -2971,7 +2963,7 @@ ecdh_calc_secret:
         if (status != PSA_SUCCESS) {
             psa_destroy_key(handshake->ecdh_psa_privkey);
             handshake->ecdh_psa_privkey = MBEDTLS_SVC_KEY_ID_INIT;
-            return PSA_TO_MBEDTLS_ERR(status);
+            return psa_ssl_status_to_mbedtls(status);
         }
 
         *p = (unsigned char) own_pubkey_len;
@@ -3003,9 +2995,9 @@ ecdh_calc_secret:
         handshake->ecdh_psa_privkey = MBEDTLS_SVC_KEY_ID_INIT;
 
         if (status != PSA_SUCCESS) {
-            return PSA_TO_MBEDTLS_ERR(status);
+            return psa_ssl_status_to_mbedtls(status);
         } else if (destruction_status != PSA_SUCCESS) {
-            return PSA_TO_MBEDTLS_ERR(destruction_status);
+            return psa_ssl_status_to_mbedtls(destruction_status);
         }
 
         /* Write the ECDH computation length before the ECDH computation */
@@ -3291,11 +3283,7 @@ static int ssl_write_certificate_verify(mbedtls_ssl_context *ssl)
 sign:
 #endif
 
-    ret = ssl->handshake->calc_verify(ssl, hash, &hashlen);
-    if (0 != ret) {
-        MBEDTLS_SSL_DEBUG_RET(1, ("calc_verify"), ret);
-        return ret;
-    }
+    ssl->handshake->calc_verify(ssl, hash, &hashlen);
 
     /*
      * digitally-signed struct {
