@@ -104,7 +104,6 @@ mbedtls_md_type_t mbedtls_hash_info_md_from_psa(psa_algorithm_t psa_alg)
     return entry->md_type;
 }
 
-#if !defined(MBEDTLS_DEPRECATED_REMOVED)
 int mbedtls_md_error_from_psa(psa_status_t status)
 {
     switch (status) {
@@ -120,4 +119,3 @@ int mbedtls_md_error_from_psa(psa_status_t status)
             return MBEDTLS_ERR_PLATFORM_HW_ACCEL_FAILED;
     }
 }
-#endif /* !MBEDTLS_DEPRECATED_REMOVED */
