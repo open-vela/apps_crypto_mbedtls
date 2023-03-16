@@ -66,10 +66,6 @@
 #error "MBEDTLS_HAVE_TIME_DATE without MBEDTLS_HAVE_TIME does not make sense"
 #endif
 
-#if defined(MBEDTLS_AESNI_C) && !defined(MBEDTLS_HAVE_ASM)
-#error "MBEDTLS_AESNI_C defined, but not all prerequisites"
-#endif
-
 #if defined(MBEDTLS_AESCE_C) && !defined(MBEDTLS_HAVE_ASM)
 #error "MBEDTLS_AESCE_C defined, but not all prerequisites"
 #endif
@@ -279,20 +275,8 @@
 #error "MBEDTLS_HMAC_DRBG_C defined, but not all prerequisites"
 #endif
 
-/* Helper for ECDSA dependencies, will be undefined at the end of the file */
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
-#if defined(PSA_HAVE_FULL_ECDSA)
-#define MBEDTLS_PK_HAVE_ECDSA
-#endif
-#else /* MBEDTLS_USE_PSA_CRYPTO */
-#if defined(MBEDTLS_ECDSA_C)
-#define MBEDTLS_PK_HAVE_ECDSA
-#endif
-#endif /* MBEDTLS_USE_PSA_CRYPTO */
-
 #if defined(MBEDTLS_KEY_EXCHANGE_ECDH_ECDSA_ENABLED) &&                 \
-    ( !defined(MBEDTLS_ECDH_C) ||                                       \
-      !defined(MBEDTLS_PK_HAVE_ECDSA) ||                                \
+    ( !defined(MBEDTLS_ECDH_C) || !defined(MBEDTLS_ECDSA_C) ||          \
       !defined(MBEDTLS_X509_CRT_PARSE_C) )
 #error "MBEDTLS_KEY_EXCHANGE_ECDH_ECDSA_ENABLED defined, but not all prerequisites"
 #endif
@@ -324,9 +308,8 @@
 #error "MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED defined, but not all prerequisites"
 #endif
 
-#if defined(MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED) &&                \
-    ( !defined(MBEDTLS_ECDH_C) ||                                       \
-      !defined(MBEDTLS_PK_HAVE_ECDSA) ||                                \
+#if defined(MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED) &&                 \
+    ( !defined(MBEDTLS_ECDH_C) || !defined(MBEDTLS_ECDSA_C) ||          \
       !defined(MBEDTLS_X509_CRT_PARSE_C) )
 #error "MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED defined, but not all prerequisites"
 #endif
@@ -783,7 +766,7 @@
 
 #if defined(MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED)
 #if !( defined(MBEDTLS_ECDH_C) && defined(MBEDTLS_X509_CRT_PARSE_C) && \
-       ( defined(MBEDTLS_PK_HAVE_ECDSA) || defined(MBEDTLS_PKCS1_V21) ) )
+       ( defined(MBEDTLS_ECDSA_C) || defined(MBEDTLS_PKCS1_V21) ) )
 #error "MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED defined, but not all prerequisites"
 #endif
 #endif
@@ -1078,9 +1061,6 @@
     ( !defined(MBEDTLS_MD_C) ) )
 #error  "MBEDTLS_PKCS7_C is defined, but not all prerequisites"
 #endif
-
-/* Undefine helper symbols */
-#undef MBEDTLS_PK_HAVE_ECDSA
 
 /*
  * Avoid warning from -pedantic. This is a convenient place for this
