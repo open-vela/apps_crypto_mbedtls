@@ -55,7 +55,7 @@
  *      library/padlock.h
  *
  * Required by:
- *      MBEDTLS_AESNI_C (on some platforms)
+ *      MBEDTLS_AESNI_C
  *      MBEDTLS_PADLOCK_C
  *
  * Comment to disable the use of assembly code.
@@ -2018,32 +2018,14 @@
 /**
  * \def MBEDTLS_AESNI_C
  *
- * Enable AES-NI support on x86-64 or x86-32.
- *
- * \note AESNI is only supported with certain compilers and target options:
- * - Visual Studio 2013: supported.
- * - GCC, x86-64, target not explicitly supporting AESNI:
- *   requires MBEDTLS_HAVE_ASM.
- * - GCC, x86-32, target not explicitly supporting AESNI:
- *   not supported.
- * - GCC, x86-64 or x86-32, target supporting AESNI: supported.
- *   For this assembly-less implementation, you must currently compile
- *   `library/aesni.c` and `library/aes.c` with machine options to enable
- *   SSE2 and AESNI instructions: `gcc -msse2 -maes -mpclmul` or
- *   `clang -maes -mpclmul`.
- * - Non-x86 targets: this option is silently ignored.
- * - Other compilers: this option is silently ignored.
- *
- * \note
- * Above, "GCC" includes compatible compilers such as Clang.
- * The limitations on target support are likely to be relaxed in the future.
+ * Enable AES-NI support on x86-64.
  *
  * Module:  library/aesni.c
  * Caller:  library/aes.c
  *
- * Requires: MBEDTLS_HAVE_ASM (on some platforms, see note)
+ * Requires: MBEDTLS_HAVE_ASM
  *
- * This modules adds support for the AES-NI instructions on x86.
+ * This modules adds support for the AES-NI instructions on x86-64
  */
 #define MBEDTLS_AESNI_C
 
@@ -2056,17 +2038,6 @@
  * Caller:  library/aes.c
  *
  * Requires: MBEDTLS_HAVE_ASM, MBEDTLS_AES_C
- *
- * \note The code uses Neon intrinsics, so \c CFLAGS must be set to a minimum
- * of \c -march=armv8-a+crypto .
- *
- * \warning If the target architecture is set to something that includes the
- *          SHA3 feature (e.g. `-march=armv8.2-a+sha3`), for example because
- *          `MBEDTLS_SHA512_USE_A64_CRYPTO_IF_PRESENT` is desired, compilers
- *          generate code for `MBEDTLS_AESCE_C` that includes instructions
- *          only present with the (optional) SHA3 feature. This will lead to an
- *          undefined instruction exception if the code is run on a CPU without
- *          that feature.
  *
  * \warning Runtime detection only works on linux. For non-linux operation
  *          system, crypto extension MUST be supported by CPU.
@@ -2880,11 +2851,7 @@
 /**
  * \def MBEDTLS_PKCS7_C
  *
- * This feature is a work in progress and not ready for production. Testing and
- * validation is incomplete, and handling of malformed inputs may not be robust.
- * The API may change.
- *
- * Enable PKCS7 core for using PKCS7 formatted signatures.
+ * Enable PKCS #7 core for using PKCS #7-formatted signatures.
  * RFC Link - https://tools.ietf.org/html/rfc2315
  *
  * Module:  library/pkcs7.c
@@ -2893,9 +2860,9 @@
  *           MBEDTLS_X509_CRT_PARSE_C MBEDTLS_X509_CRL_PARSE_C,
  *           MBEDTLS_BIGNUM_C, MBEDTLS_MD_C
  *
- * This module is required for the PKCS7 parsing modules.
+ * This module is required for the PKCS #7 parsing modules.
  */
-//#define MBEDTLS_PKCS7_C
+#define MBEDTLS_PKCS7_C
 
 /**
  * \def MBEDTLS_PKCS12_C
