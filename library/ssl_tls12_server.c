@@ -1510,9 +1510,10 @@ read_record_header:
             MBEDTLS_TLS_SIG_NONE
         };
 
-        MBEDTLS_STATIC_ASSERT(sizeof(default_sig_algs) / sizeof(default_sig_algs[0])
-                              <= MBEDTLS_RECEIVED_SIG_ALGS_SIZE,
-                              "default_sig_algs is too big");
+#if defined(static_assert)
+        static_assert(sizeof(default_sig_algs) / sizeof(default_sig_algs[0]) <=
+                      MBEDTLS_RECEIVED_SIG_ALGS_SIZE, "default_sig_algs is too big");
+#endif
 
         memcpy(received_sig_algs, default_sig_algs, sizeof(default_sig_algs));
     }
