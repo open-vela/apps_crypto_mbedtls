@@ -20,9 +20,10 @@
 
 /*
  * Ensure gmtime_r is available even with -std=c99; must be defined before
- * mbedtls_config.h, which pulls in glibc's features.h. Harmless on other platforms.
+ * mbedtls_config.h, which pulls in glibc's features.h. Harmless on other platforms
+ * except OpenBSD, where it stops us accessing explicit_bzero.
  */
-#if !defined(_POSIX_C_SOURCE)
+#if !defined(_POSIX_C_SOURCE) && !defined(__OpenBSD__)
 #define _POSIX_C_SOURCE 200112L
 #endif
 
@@ -51,11 +52,20 @@
 // Detect platforms known to support explicit_bzero()
 #if defined(__GLIBC__) && (__GLIBC__ >= 2) && (__GLIBC_MINOR__ >= 25)
 #define MBEDTLS_PLATFORM_HAS_EXPLICIT_BZERO 1
-#elif defined(__FreeBSD__) && (__FreeBSD_version >= 1100037)
+#elif (defined(__FreeBSD__) && (__FreeBSD_version >= 1100037)) || defined(__OpenBSD__)
 #define MBEDTLS_PLATFORM_HAS_EXPLICIT_BZERO 1
 #endif
 
 #if !defined(MBEDTLS_PLATFORM_ZEROIZE_ALT)
+
+#undef HAVE_MEMORY_SANITIZER
+#if defined(__has_feature)
+#if __has_feature(memory_sanitizer)
+#include <sanitizer/msan_interface.h>
+#define HAVE_MEMORY_SANITIZER
+#endif
+#endif
+
 /*
  * Where possible, we try to detect the presence of a platform-provided
  * secure memset, such as explicit_bzero(), that is safe against being optimized
@@ -99,6 +109,15 @@ void mbedtls_platform_zeroize(void *buf, size_t len)
     if (len > 0) {
 #if defined(MBEDTLS_PLATFORM_HAS_EXPLICIT_BZERO)
         explicit_bzero(buf, len);
+#if defined(HAVE_MEMORY_SANITIZER)
+        /* You'd think that Msan would recognize explicit_bzero() as
+         * equivalent to bzero(), but it actually doesn't on several
+         * platforms, including Linux (Ubuntu 20.04).
+         * https://github.com/google/sanitizers/issues/1507
+         * https://github.com/openssh/openssh-portable/commit/74433a19bb6f4cef607680fa4d1d7d81ca3826aa
+         */
+        __msan_unpoison(buf, len);
+#endif
 #elif defined(__STDC_LIB_EXT1__)
         memset_s(buf, len, 0, len);
 #elif defined(_WIN32)
