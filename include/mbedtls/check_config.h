@@ -70,8 +70,11 @@
 #error "MBEDTLS_AESNI_C defined, but not all prerequisites"
 #endif
 
+#if defined(__aarch64__) && defined(__GNUC__)
+/* We don't do anything with MBEDTLS_AESCE_C on systems without ^ these two */
 #if defined(MBEDTLS_AESCE_C) && !defined(MBEDTLS_HAVE_ASM)
 #error "MBEDTLS_AESCE_C defined, but not all prerequisites"
+#endif
 #endif
 
 #if defined(MBEDTLS_CTR_DRBG_C) && !defined(MBEDTLS_AES_C)
@@ -1018,6 +1021,10 @@
 
 #if defined(MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH) && ( !defined(MBEDTLS_SSL_MAX_FRAGMENT_LENGTH) )
 #error "MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH defined, but not all prerequisites"
+#endif
+
+#if defined(MBEDTLS_SSL_RECORD_SIZE_LIMIT) && ( !defined(MBEDTLS_SSL_PROTO_TLS1_3) )
+#error "MBEDTLS_SSL_RECORD_SIZE_LIMIT defined, but not all prerequisites"
 #endif
 
 #if defined(MBEDTLS_SSL_CONTEXT_SERIALIZATION) && !( defined(MBEDTLS_GCM_C) || defined(MBEDTLS_CCM_C) || defined(MBEDTLS_CHACHAPOLY_C) )
