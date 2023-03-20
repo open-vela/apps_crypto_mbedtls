@@ -571,8 +571,6 @@
 #define MBEDTLS_TLS_EXT_ENCRYPT_THEN_MAC            22 /* 0x16 */
 #define MBEDTLS_TLS_EXT_EXTENDED_MASTER_SECRET  0x0017 /* 23 */
 
-#define MBEDTLS_TLS_EXT_RECORD_SIZE_LIMIT           28 /* RFC 8449 (implemented for TLS 1.3 only) */
-
 #define MBEDTLS_TLS_EXT_SESSION_TICKET              35
 
 #define MBEDTLS_TLS_EXT_PRE_SHARED_KEY              41 /* RFC 8446 TLS 1.3 */
@@ -601,8 +599,22 @@
  * Size defines
  */
 #if !defined(MBEDTLS_PSK_MAX_LEN)
-#define MBEDTLS_PSK_MAX_LEN            32 /* 256 bits */
+/*
+ * If the library supports TLS 1.3 tickets and the cipher suite
+ * TLS1-3-AES-256-GCM-SHA384, set the PSK maximum length to 48 instead of 32.
+ * That way, the TLS 1.3 client and server are able to resume sessions where
+ * the cipher suite is TLS1-3-AES-256-GCM-SHA384 (pre-shared keys are 48
+ * bytes long in that case).
+ */
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3) && \
+    defined(MBEDTLS_SSL_SESSION_TICKETS) && \
+    defined(MBEDTLS_AES_C) && defined(MBEDTLS_GCM_C) && \
+    defined(MBEDTLS_HAS_ALG_SHA_384_VIA_MD_OR_PSA_BASED_ON_USE_PSA)
+#define MBEDTLS_PSK_MAX_LEN 48 /* 384 bits */
+#else
+#define MBEDTLS_PSK_MAX_LEN 32 /* 256 bits */
 #endif
+#endif /* !MBEDTLS_PSK_MAX_LEN */
 
 /* Dummy type used only for its size */
 union mbedtls_ssl_premaster_secret {
