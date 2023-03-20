@@ -60,7 +60,10 @@
 #if !defined(MBEDTLS_MD_C)
 #include "psa/crypto.h"
 #include "mbedtls/psa_util.h"
-#endif /* MBEDTLS_MD_C */
+#define PSA_TO_MBEDTLS_ERR(status) PSA_TO_MBEDTLS_ERR_LIST(status,   \
+                                                           psa_to_md_errors,              \
+                                                           psa_generic_status_to_mbedtls)
+#endif /* !MBEDTLS_MD_C */
 #endif /* MBEDTLS_PKCS1_V21 */
 
 #include "mbedtls/platform.h"
@@ -500,24 +503,9 @@ int mbedtls_rsa_set_padding(mbedtls_rsa_context *ctx, int padding,
 }
 
 /*
- * Get padding mode of initialized RSA context
- */
-int mbedtls_rsa_get_padding_mode(const mbedtls_rsa_context *ctx)
-{
-    return ctx->padding;
-}
-
-/*
- * Get hash identifier of mbedtls_md_type_t type
- */
-int mbedtls_rsa_get_md_alg(const mbedtls_rsa_context *ctx)
-{
-    return ctx->hash_id;
-}
-
-/*
  * Get length in bytes of RSA modulus
  */
+
 size_t mbedtls_rsa_get_len(const mbedtls_rsa_context *ctx)
 {
     return ctx->len;
@@ -1171,7 +1159,7 @@ exit:
 #else
     psa_hash_abort(&op);
 
-    return mbedtls_md_error_from_psa(status);
+    return PSA_TO_MBEDTLS_ERR(status);
 #endif
 }
 
@@ -1251,7 +1239,7 @@ exit:
 exit:
     psa_hash_abort(&op);
 
-    return mbedtls_md_error_from_psa(status);
+    return PSA_TO_MBEDTLS_ERR(status);
 #endif /* !MBEDTLS_MD_C */
 }
 
@@ -1284,7 +1272,7 @@ static int compute_hash(mbedtls_md_type_t md_alg,
 
     status = psa_hash_compute(alg, input, ilen, output, out_size, &out_len);
 
-    return mbedtls_md_error_from_psa(status);
+    return PSA_TO_MBEDTLS_ERR(status);
 #endif /* !MBEDTLS_MD_C */
 }
 #endif /* MBEDTLS_PKCS1_V21 */
@@ -2356,7 +2344,7 @@ void mbedtls_rsa_free(mbedtls_rsa_context *ctx)
 
 #if defined(MBEDTLS_SELF_TEST)
 
-#include "mbedtls/sha1.h"
+#include "mbedtls/md.h"
 
 /*
  * Example RSA-1024 keypair, for test purposes
@@ -2520,7 +2508,8 @@ int mbedtls_rsa_self_test(int verbose)
         mbedtls_printf("  PKCS#1 data sign  : ");
     }
 
-    if (mbedtls_sha1(rsa_plaintext, PT_LEN, sha1sum) != 0) {
+    if (mbedtls_md(mbedtls_md_info_from_type(MBEDTLS_MD_SHA1),
+                   rsa_plaintext, PT_LEN, sha1sum) != 0) {
         if (verbose != 0) {
             mbedtls_printf("failed\n");
         }
