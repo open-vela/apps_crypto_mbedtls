@@ -34,10 +34,6 @@
 #include "ssl_tls13_keys.h"
 #include "ssl_debug_helpers.h"
 
-#define PSA_TO_MBEDTLS_ERR(status) PSA_TO_MBEDTLS_ERR_LIST(status,   \
-                                                           psa_to_ssl_errors,             \
-                                                           psa_generic_status_to_mbedtls)
-
 /* Write extensions */
 
 /*
@@ -192,7 +188,7 @@ static int ssl_tls13_reset_key_share(mbedtls_ssl_context *ssl)
         /* Destroy generated private key. */
         status = psa_destroy_key(ssl->handshake->ecdh_psa_privkey);
         if (status != PSA_SUCCESS) {
-            ret = PSA_TO_MBEDTLS_ERR(status);
+            ret = psa_ssl_status_to_mbedtls(status);
             MBEDTLS_SSL_DEBUG_RET(1, "psa_destroy_key", ret);
             return ret;
         }
@@ -1274,7 +1270,7 @@ int mbedtls_ssl_tls13_finalize_client_hello(mbedtls_ssl_context *ssl)
             ssl->session_negotiate->ciphersuite);
         ssl->handshake->ciphersuite_info = ciphersuite_info;
 
-        /* Enable psk and psk_ephemeral to make stage early happy */
+        /* Enable psk and psk_ephermal to make stage early happy */
         ssl->handshake->key_exchange_mode =
             MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_ALL;
 
@@ -2117,10 +2113,9 @@ static int ssl_tls13_parse_encrypted_extensions(mbedtls_ssl_context *ssl,
     extensions_len = MBEDTLS_GET_UINT16_BE(p, 0);
     p += 2;
 
+    MBEDTLS_SSL_DEBUG_BUF(3, "encrypted extensions", p, extensions_len);
     MBEDTLS_SSL_CHK_BUF_READ_PTR(p, end, extensions_len);
     extensions_end = p + extensions_len;
-
-    MBEDTLS_SSL_DEBUG_BUF(3, "encrypted extensions", p, extensions_len);
 
     handshake->received_extensions = MBEDTLS_SSL_EXT_MASK_NONE;
 
@@ -2172,19 +2167,6 @@ static int ssl_tls13_parse_encrypted_extensions(mbedtls_ssl_context *ssl,
 
                 break;
 #endif /* MBEDTLS_SSL_EARLY_DATA */
-
-#if defined(MBEDTLS_SSL_RECORD_SIZE_LIMIT)
-            case MBEDTLS_TLS_EXT_RECORD_SIZE_LIMIT:
-                MBEDTLS_SSL_DEBUG_MSG(3, ("found record_size_limit extension"));
-
-                ret = mbedtls_ssl_tls13_parse_record_size_limit_ext(ssl, p, p + extension_data_len);
-
-                /* TODO: Return unconditionally here until we handle the record size limit correctly.
-                 *            Once handled correctly, only return in case of errors. */
-                return ret;
-
-                break;
-#endif /* MBEDTLS_SSL_RECORD_SIZE_LIMIT */
 
             default:
                 MBEDTLS_SSL_PRINT_EXT(

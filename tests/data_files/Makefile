@@ -1006,7 +1006,7 @@ all_final += server1.req.sha256
 
 server1.req.sha256.ext: server1.key
 	# Generating this with OpenSSL as a comparison point to test we're getting the same result
-	openssl req -new -out $@ -key $< -subj '/C=NL/O=PolarSSL/CN=PolarSSL Server 1' -sha256 -addext "extendedKeyUsage=serverAuth" -addext "subjectAltName=URI:http://pki.example.com/,IP:127.1.1.0,DNS:example.com"
+	openssl req -new -out $@ -key $< -subj '/C=NL/O=PolarSSL/CN=PolarSSL Server 1' -sha256 -addext "extendedKeyUsage=serverAuth"
 all_final += server1.req.sha256.ext
 
 server1.req.sha384: server1.key
@@ -1306,11 +1306,6 @@ pkcs7-rsa-expired.crt:
 	$(FAKETIME) -f -3650d $(OPENSSL) req -x509 -subj="/C=NL/O=PKCS7/CN=PKCS7 Cert Expired" -sha256 -nodes -days 365  -newkey rsa:2048 -keyout pkcs7-rsa-expired.key -out pkcs7-rsa-expired.crt
 all_final += pkcs7-rsa-expired.crt
 
-# File with an otherwise valid signature signed with an expired cert
-pkcs7_data_rsa_expired.der: pkcs7-rsa-expired.key pkcs7-rsa-expired.crt pkcs7_data.bin
-	$(OPENSSL) smime -sign -binary -in pkcs7_data.bin -out $@ -md sha256 -inkey pkcs7-rsa-expired.key -signer pkcs7-rsa-expired.crt -noattr -outform DER -out $@
-all_final += pkcs7_data_rsa_expired.der
-
 # Convert signing certs to DER for testing PEM-free builds
 pkcs7-rsa-sha256-1.der: $(pkcs7_test_cert_1)
 	$(OPENSSL) x509 -in pkcs7-rsa-sha256-1.crt -out $@ -outform DER
@@ -1319,10 +1314,6 @@ all_final += pkcs7-rsa-sha256-1.der
 pkcs7-rsa-sha256-2.der: $(pkcs7_test_cert_2)
 	$(OPENSSL) x509 -in pkcs7-rsa-sha256-2.crt -out $@ -outform DER
 all_final += pkcs7-rsa-sha256-2.der
-
-pkcs7-rsa-expired.der: pkcs7-rsa-expired.crt
-	$(OPENSSL) x509 -in pkcs7-rsa-expired.crt -out $@ -outform DER
-all_final += pkcs7-rsa-expired.der
 
 # pkcs7 signature file over zero-len data
 pkcs7_zerolendata_detached.der: pkcs7_zerolendata.bin pkcs7-rsa-sha256-1.key pkcs7-rsa-sha256-1.crt
@@ -1392,38 +1383,6 @@ pkcs7_signerInfo_2_invalid_tag.der: pkcs7_data_3_signed.der
 	cp $< $@
 	echo 'a1' | xxd -r -p | dd of=$@ bs=1 seek=810 conv=notrunc
 all_final += pkcs7_signerInfo_2_invalid_tag.der
-
-# pkcs7 signature file with corrupted signer info[1]
-pkcs7_data_signed_badsigner1_badsize.der: pkcs7_data_3_signed.der
-	cp pkcs7_data_3_signed.der $@
-	echo '72' | xxd -p -r | dd of=$@ bs=1 seek=438 conv=notrunc
-all_final += pkcs7_data_signed_badsigner1_badsize.der
-
-pkcs7_data_signed_badsigner1_badtag.der: pkcs7_data_3_signed.der
-	cp pkcs7_data_3_signed.der $@
-	echo 'a1' | xxd -p -r | dd of=$@ bs=1 seek=442 conv=notrunc
-all_final += pkcs7_data_signed_badsigner1_badtag.der
-
-pkcs7_data_signed_badsigner1_fuzzbad.der: pkcs7_data_3_signed.der
-	cp pkcs7_data_3_signed.der $@
-	echo 'a1' | xxd -p -r | dd of=$@ bs=1 seek=550 conv=notrunc
-all_final += pkcs7_data_signed_badsigner1_fuzzbad.der
-
-# pkcs7 signature file with corrupted signer info[2]
-pkcs7_data_signed_badsigner2_badsize.der: pkcs7_data_3_signed.der
-	cp pkcs7_data_3_signed.der $@
-	echo '72'| xxd -p -r | dd of=$@ bs=1 seek=813 conv=notrunc
-all_final += pkcs7_data_signed_badsigner2_badsize
-
-pkcs7_data_signed_badsigner2_badtag.der: pkcs7_data_3_signed.der
-	cp pkcs7_data_3_signed.der $@
-	echo 'a1'| xxd -p -r | dd of=$@ bs=1 seek=817 conv=notrunc
-all_final += pkcs7_data_signed_badsigner2_badtag
-
-pkcs7_data_signed_badsigner2_fuzzbad.der: pkcs7_data_3_signed.der
-	cp pkcs7_data_3_signed.der $@
-	echo 'a1'| xxd -p -r | dd of=$@ bs=1 seek=925 conv=notrunc
-all_final += pkcs7_data_signed_badsigner2_fuzzbad
 
 # pkcs7 file with version 2
 pkcs7_data_cert_signed_v2.der: pkcs7_data_cert_signed_sha256.der

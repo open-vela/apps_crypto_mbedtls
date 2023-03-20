@@ -70,11 +70,8 @@
 #error "MBEDTLS_AESNI_C defined, but not all prerequisites"
 #endif
 
-#if defined(__aarch64__) && defined(__GNUC__)
-/* We don't do anything with MBEDTLS_AESCE_C on systems without ^ these two */
 #if defined(MBEDTLS_AESCE_C) && !defined(MBEDTLS_HAVE_ASM)
 #error "MBEDTLS_AESCE_C defined, but not all prerequisites"
-#endif
 #endif
 
 #if defined(MBEDTLS_CTR_DRBG_C) && !defined(MBEDTLS_AES_C)
@@ -282,20 +279,8 @@
 #error "MBEDTLS_HMAC_DRBG_C defined, but not all prerequisites"
 #endif
 
-/* Helper for ECDSA dependencies, will be undefined at the end of the file */
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
-#if defined(PSA_HAVE_FULL_ECDSA)
-#define MBEDTLS_PK_HAVE_ECDSA
-#endif
-#else /* MBEDTLS_USE_PSA_CRYPTO */
-#if defined(MBEDTLS_ECDSA_C)
-#define MBEDTLS_PK_HAVE_ECDSA
-#endif
-#endif /* MBEDTLS_USE_PSA_CRYPTO */
-
 #if defined(MBEDTLS_KEY_EXCHANGE_ECDH_ECDSA_ENABLED) &&                 \
-    ( !defined(MBEDTLS_ECDH_C) ||                                       \
-      !defined(MBEDTLS_PK_HAVE_ECDSA) ||                                \
+    ( !defined(MBEDTLS_ECDH_C) || !defined(MBEDTLS_ECDSA_C) ||          \
       !defined(MBEDTLS_X509_CRT_PARSE_C) )
 #error "MBEDTLS_KEY_EXCHANGE_ECDH_ECDSA_ENABLED defined, but not all prerequisites"
 #endif
@@ -327,9 +312,8 @@
 #error "MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED defined, but not all prerequisites"
 #endif
 
-#if defined(MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED) &&                \
-    ( !defined(MBEDTLS_ECDH_C) ||                                       \
-      !defined(MBEDTLS_PK_HAVE_ECDSA) ||                                \
+#if defined(MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED) &&                 \
+    ( !defined(MBEDTLS_ECDH_C) || !defined(MBEDTLS_ECDSA_C) ||          \
       !defined(MBEDTLS_X509_CRT_PARSE_C) )
 #error "MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED defined, but not all prerequisites"
 #endif
@@ -786,7 +770,7 @@
 
 #if defined(MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED)
 #if !( defined(MBEDTLS_ECDH_C) && defined(MBEDTLS_X509_CRT_PARSE_C) && \
-       ( defined(MBEDTLS_PK_HAVE_ECDSA) || defined(MBEDTLS_PKCS1_V21) ) )
+       ( defined(MBEDTLS_ECDSA_C) || defined(MBEDTLS_PKCS1_V21) ) )
 #error "MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED defined, but not all prerequisites"
 #endif
 #endif
@@ -1023,10 +1007,6 @@
 #error "MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH defined, but not all prerequisites"
 #endif
 
-#if defined(MBEDTLS_SSL_RECORD_SIZE_LIMIT) && ( !defined(MBEDTLS_SSL_PROTO_TLS1_3) )
-#error "MBEDTLS_SSL_RECORD_SIZE_LIMIT defined, but not all prerequisites"
-#endif
-
 #if defined(MBEDTLS_SSL_CONTEXT_SERIALIZATION) && !( defined(MBEDTLS_GCM_C) || defined(MBEDTLS_CCM_C) || defined(MBEDTLS_CHACHAPOLY_C) )
 #error "MBEDTLS_SSL_CONTEXT_SERIALIZATION defined, but not all prerequisites"
 #endif
@@ -1085,9 +1065,6 @@
     ( !defined(MBEDTLS_MD_C) ) )
 #error  "MBEDTLS_PKCS7_C is defined, but not all prerequisites"
 #endif
-
-/* Undefine helper symbols */
-#undef MBEDTLS_PK_HAVE_ECDSA
 
 /*
  * Avoid warning from -pedantic. This is a convenient place for this
