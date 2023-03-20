@@ -34,6 +34,12 @@
 
 #include <string.h>
 
+#if defined(MBEDTLS_USE_PSA_CRYPTO)
+#define PSA_TO_MBEDTLS_ERR(status) PSA_TO_MBEDTLS_ERR_LIST(status,   \
+                                                           psa_to_ssl_errors,             \
+                                                           psa_generic_status_to_mbedtls)
+#endif
+
 #if defined(MBEDTLS_ECP_C)
 #include "mbedtls/ecp.h"
 #endif
@@ -1504,10 +1510,9 @@ read_record_header:
             MBEDTLS_TLS_SIG_NONE
         };
 
-#if defined(static_assert)
-        static_assert(sizeof(default_sig_algs) / sizeof(default_sig_algs[0]) <=
-                      MBEDTLS_RECEIVED_SIG_ALGS_SIZE, "default_sig_algs is too big");
-#endif
+        MBEDTLS_STATIC_ASSERT(sizeof(default_sig_algs) / sizeof(default_sig_algs[0])
+                              <= MBEDTLS_RECEIVED_SIG_ALGS_SIZE,
+                              "default_sig_algs is too big");
 
         memcpy(received_sig_algs, default_sig_algs, sizeof(default_sig_algs));
     }
@@ -2588,7 +2593,7 @@ static int ssl_get_ecdh_params_from_cert(mbedtls_ssl_context *ssl)
                                             &key_attributes);
             if (status != PSA_SUCCESS) {
                 ssl->handshake->ecdh_psa_privkey = MBEDTLS_SVC_KEY_ID_INIT;
-                return psa_ssl_status_to_mbedtls(status);
+                return PSA_TO_MBEDTLS_ERR(status);
             }
 
             ssl->handshake->ecdh_psa_type = psa_get_key_type(&key_attributes);
@@ -2635,7 +2640,7 @@ static int ssl_get_ecdh_params_from_cert(mbedtls_ssl_context *ssl)
             status = psa_import_key(&key_attributes, buf, key_len,
                                     &ssl->handshake->ecdh_psa_privkey);
             if (status != PSA_SUCCESS) {
-                ret = psa_ssl_status_to_mbedtls(status);
+                ret = PSA_TO_MBEDTLS_ERR(status);
                 goto cleanup;
             }
 
@@ -2956,7 +2961,7 @@ curve_matching_done:
         status = psa_generate_key(&key_attributes,
                                   &handshake->ecdh_psa_privkey);
         if (status != PSA_SUCCESS) {
-            ret = psa_ssl_status_to_mbedtls(status);
+            ret = PSA_TO_MBEDTLS_ERR(status);
             MBEDTLS_SSL_DEBUG_RET(1, "psa_generate_key", ret);
             return ret;
         }
@@ -2980,7 +2985,7 @@ curve_matching_done:
                                        own_pubkey, own_pubkey_max_len,
                                        &len);
         if (status != PSA_SUCCESS) {
-            ret = psa_ssl_status_to_mbedtls(status);
+            ret = PSA_TO_MBEDTLS_ERR(status);
             MBEDTLS_SSL_DEBUG_RET(1, "psa_export_public_key", ret);
             (void) psa_destroy_key(handshake->ecdh_psa_privkey);
             handshake->ecdh_psa_privkey = MBEDTLS_SVC_KEY_ID_INIT;
@@ -3688,7 +3693,7 @@ static int ssl_parse_client_key_exchange(mbedtls_ssl_context *ssl)
             handshake->premaster, sizeof(handshake->premaster),
             &handshake->pmslen);
         if (status != PSA_SUCCESS) {
-            ret = psa_ssl_status_to_mbedtls(status);
+            ret = PSA_TO_MBEDTLS_ERR(status);
             MBEDTLS_SSL_DEBUG_RET(1, "psa_raw_key_agreement", ret);
             if (handshake->ecdh_psa_privkey_is_external == 0) {
                 (void) psa_destroy_key(handshake->ecdh_psa_privkey);
@@ -3701,7 +3706,7 @@ static int ssl_parse_client_key_exchange(mbedtls_ssl_context *ssl)
             status = psa_destroy_key(handshake->ecdh_psa_privkey);
 
             if (status != PSA_SUCCESS) {
-                ret = psa_ssl_status_to_mbedtls(status);
+                ret = PSA_TO_MBEDTLS_ERR(status);
                 MBEDTLS_SSL_DEBUG_RET(1, "psa_destroy_key", ret);
                 return ret;
             }
@@ -3894,9 +3899,9 @@ static int ssl_parse_client_key_exchange(mbedtls_ssl_context *ssl)
         handshake->ecdh_psa_privkey = MBEDTLS_SVC_KEY_ID_INIT;
 
         if (status != PSA_SUCCESS) {
-            return psa_ssl_status_to_mbedtls(status);
+            return PSA_TO_MBEDTLS_ERR(status);
         } else if (destruction_status != PSA_SUCCESS) {
-            return psa_ssl_status_to_mbedtls(destruction_status);
+            return PSA_TO_MBEDTLS_ERR(destruction_status);
         }
 
         /* Write the ECDH computation length before the ECDH computation */
