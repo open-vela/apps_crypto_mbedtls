@@ -55,7 +55,6 @@
 #include "mbedtls/ecjpake.h"
 #endif
 
-#include "mbedtls/pk.h"
 #include "common.h"
 
 /* Shorthand for restartable ECC */
@@ -107,7 +106,6 @@
 #define MBEDTLS_SSL_EXT_ID_ENCRYPT_THEN_MAC           25
 #define MBEDTLS_SSL_EXT_ID_EXTENDED_MASTER_SECRET     26
 #define MBEDTLS_SSL_EXT_ID_SESSION_TICKET             27
-#define MBEDTLS_SSL_EXT_ID_RECORD_SIZE_LIMIT          28
 
 /* Utility for translating IANA extension type. */
 uint32_t mbedtls_ssl_get_extension_id(unsigned int extension_type);
@@ -168,7 +166,6 @@ uint32_t mbedtls_ssl_get_extension_mask(unsigned int extension_type);
      MBEDTLS_SSL_EXT_MASK(CERT_AUTH)                              | \
      MBEDTLS_SSL_EXT_MASK(POST_HANDSHAKE_AUTH)                    | \
      MBEDTLS_SSL_EXT_MASK(SIG_ALG_CERT)                           | \
-     MBEDTLS_SSL_EXT_MASK(RECORD_SIZE_LIMIT)                      | \
      MBEDTLS_SSL_TLS1_3_EXT_MASK_UNRECOGNIZED)
 
 /* RFC 8446 section 4.2. Allowed extensions for EncryptedExtensions */
@@ -181,8 +178,7 @@ uint32_t mbedtls_ssl_get_extension_mask(unsigned int extension_type);
      MBEDTLS_SSL_EXT_MASK(ALPN)                                   | \
      MBEDTLS_SSL_EXT_MASK(CLI_CERT_TYPE)                          | \
      MBEDTLS_SSL_EXT_MASK(SERV_CERT_TYPE)                         | \
-     MBEDTLS_SSL_EXT_MASK(EARLY_DATA)                             | \
-     MBEDTLS_SSL_EXT_MASK(RECORD_SIZE_LIMIT))
+     MBEDTLS_SSL_EXT_MASK(EARLY_DATA))
 
 /* RFC 8446 section 4.2. Allowed extensions for CertificateRequest */
 #define MBEDTLS_SSL_TLS1_3_ALLOWED_EXTS_OF_CR                                  \
@@ -909,14 +905,14 @@ struct mbedtls_ssl_handshake_params {
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
     psa_hash_operation_t fin_sha256_psa;
 #else
-    mbedtls_md_context_t fin_sha256;
+    mbedtls_sha256_context fin_sha256;
 #endif
 #endif
 #if defined(MBEDTLS_HAS_ALG_SHA_384_VIA_MD_OR_PSA_BASED_ON_USE_PSA)
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
     psa_hash_operation_t fin_sha384_psa;
 #else
-    mbedtls_md_context_t fin_sha384;
+    mbedtls_sha512_context fin_sha384;
 #endif
 #endif
 
@@ -2283,7 +2279,7 @@ static inline int mbedtls_ssl_tls13_sig_alg_for_cert_verify_is_supported(
     const uint16_t sig_alg)
 {
     switch (sig_alg) {
-#if defined(MBEDTLS_PK_CAN_ECDSA_SOME)
+#if defined(MBEDTLS_ECDSA_C)
 #if defined(PSA_WANT_ALG_SHA_256) && defined(MBEDTLS_ECP_DP_SECP256R1_ENABLED)
         case MBEDTLS_TLS1_3_SIG_ECDSA_SECP256R1_SHA256:
             break;
@@ -2296,7 +2292,7 @@ static inline int mbedtls_ssl_tls13_sig_alg_for_cert_verify_is_supported(
         case MBEDTLS_TLS1_3_SIG_ECDSA_SECP521R1_SHA512:
             break;
 #endif /* PSA_WANT_ALG_SHA_512 && MBEDTLS_ECP_DP_SECP521R1_ENABLED */
-#endif /* MBEDTLS_PK_CAN_ECDSA_SOME */
+#endif /* MBEDTLS_ECDSA_C */
 
 #if defined(MBEDTLS_PKCS1_V21)
 #if defined(PSA_WANT_ALG_SHA_256)
@@ -2452,7 +2448,7 @@ static inline int mbedtls_ssl_tls12_sig_alg_is_supported(
             break;
 #endif
 
-#if defined(MBEDTLS_PK_CAN_ECDSA_SOME)
+#if defined(MBEDTLS_ECDSA_C)
         case MBEDTLS_SSL_SIG_ECDSA:
             break;
 #endif
@@ -2518,7 +2514,6 @@ psa_status_t mbedtls_ssl_cipher_to_psa(mbedtls_cipher_type_t mbedtls_cipher_type
                                        psa_key_type_t *key_type,
                                        size_t *key_size);
 
-#if !defined(MBEDTLS_DEPRECATED_REMOVED)
 /**
  * \brief       Convert given PSA status to mbedtls error code.
  *
@@ -2526,7 +2521,7 @@ psa_status_t mbedtls_ssl_cipher_to_psa(mbedtls_cipher_type_t mbedtls_cipher_type
  *
  * \return             corresponding mbedtls error code
  */
-static inline MBEDTLS_DEPRECATED int psa_ssl_status_to_mbedtls(psa_status_t status)
+static inline int psa_ssl_status_to_mbedtls(psa_status_t status)
 {
     switch (status) {
         case PSA_SUCCESS:
@@ -2547,7 +2542,6 @@ static inline MBEDTLS_DEPRECATED int psa_ssl_status_to_mbedtls(psa_status_t stat
             return MBEDTLS_ERR_PLATFORM_HW_ACCEL_FAILED;
     }
 }
-#endif /* !MBEDTLS_DEPRECATED_REMOVED */
 #endif /* MBEDTLS_USE_PSA_CRYPTO || MBEDTLS_SSL_PROTO_TLS1_3 */
 
 #if defined(MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED) && \
@@ -2664,16 +2658,6 @@ int mbedtls_ssl_parse_server_name_ext(mbedtls_ssl_context *ssl,
                                       const unsigned char *buf,
                                       const unsigned char *end);
 #endif /* MBEDTLS_SSL_SERVER_NAME_INDICATION */
-
-#if defined(MBEDTLS_SSL_RECORD_SIZE_LIMIT)
-#define MBEDTLS_SSL_RECORD_SIZE_LIMIT_EXTENSION_DATA_LENGTH (2)
-#define MBEDTLS_SSL_RECORD_SIZE_LIMIT_MIN (64)
-
-MBEDTLS_CHECK_RETURN_CRITICAL
-int mbedtls_ssl_tls13_parse_record_size_limit_ext(mbedtls_ssl_context *ssl,
-                                                  const unsigned char *buf,
-                                                  const unsigned char *end);
-#endif /* MBEDTLS_SSL_RECORD_SIZE_LIMIT */
 
 #if defined(MBEDTLS_SSL_ALPN)
 MBEDTLS_CHECK_RETURN_CRITICAL
