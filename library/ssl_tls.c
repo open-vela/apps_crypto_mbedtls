@@ -25,8 +25,6 @@
 
 #if defined(MBEDTLS_SSL_TLS_C)
 
-#include <assert.h>
-
 #include "mbedtls/platform.h"
 
 #include "mbedtls/ssl.h"
@@ -593,6 +591,9 @@ uint32_t mbedtls_ssl_get_extension_id(unsigned int extension_type)
         case MBEDTLS_TLS_EXT_EXTENDED_MASTER_SECRET:
             return MBEDTLS_SSL_EXT_ID_EXTENDED_MASTER_SECRET;
 
+        case MBEDTLS_TLS_EXT_RECORD_SIZE_LIMIT:
+            return MBEDTLS_SSL_EXT_ID_RECORD_SIZE_LIMIT;
+
         case MBEDTLS_TLS_EXT_SESSION_TICKET:
             return MBEDTLS_SSL_EXT_ID_SESSION_TICKET;
 
@@ -635,7 +636,8 @@ static const char *extension_name_table[] = {
     [MBEDTLS_SSL_EXT_ID_SUPPORTED_POINT_FORMATS] = "supported_point_formats",
     [MBEDTLS_SSL_EXT_ID_ENCRYPT_THEN_MAC] = "encrypt_then_mac",
     [MBEDTLS_SSL_EXT_ID_EXTENDED_MASTER_SECRET] = "extended_master_secret",
-    [MBEDTLS_SSL_EXT_ID_SESSION_TICKET] = "session_ticket"
+    [MBEDTLS_SSL_EXT_ID_SESSION_TICKET] = "session_ticket",
+    [MBEDTLS_SSL_EXT_ID_RECORD_SIZE_LIMIT] = "record_size_limit"
 };
 
 static unsigned int extension_type_table[] = {
@@ -666,7 +668,8 @@ static unsigned int extension_type_table[] = {
     [MBEDTLS_SSL_EXT_ID_SUPPORTED_POINT_FORMATS] = MBEDTLS_TLS_EXT_SUPPORTED_POINT_FORMATS,
     [MBEDTLS_SSL_EXT_ID_ENCRYPT_THEN_MAC] = MBEDTLS_TLS_EXT_ENCRYPT_THEN_MAC,
     [MBEDTLS_SSL_EXT_ID_EXTENDED_MASTER_SECRET] = MBEDTLS_TLS_EXT_EXTENDED_MASTER_SECRET,
-    [MBEDTLS_SSL_EXT_ID_SESSION_TICKET] = MBEDTLS_TLS_EXT_SESSION_TICKET
+    [MBEDTLS_SSL_EXT_ID_SESSION_TICKET] = MBEDTLS_TLS_EXT_SESSION_TICKET,
+    [MBEDTLS_SSL_EXT_ID_RECORD_SIZE_LIMIT] = MBEDTLS_TLS_EXT_RECORD_SIZE_LIMIT
 };
 
 const char *mbedtls_ssl_get_extension_name(unsigned int extension_type)
@@ -1196,11 +1199,9 @@ static int ssl_handshake_init(mbedtls_ssl_context *ssl)
         size_t sig_algs_len = 0;
         uint16_t *p;
 
-#if defined(static_assert)
-        static_assert(MBEDTLS_SSL_MAX_SIG_ALG_LIST_LEN
-                      <= (SIZE_MAX - (2 * sizeof(uint16_t))),
-                      "MBEDTLS_SSL_MAX_SIG_ALG_LIST_LEN too big");
-#endif
+        MBEDTLS_STATIC_ASSERT(MBEDTLS_SSL_MAX_SIG_ALG_LIST_LEN
+                              <= (SIZE_MAX - (2 * sizeof(uint16_t))),
+                              "MBEDTLS_SSL_MAX_SIG_ALG_LIST_LEN too big");
 
         for (md = sig_hashes; *md != MBEDTLS_MD_NONE; md++) {
             if (mbedtls_ssl_hash_from_md_alg(*md) == MBEDTLS_SSL_HASH_NONE) {
@@ -1949,14 +1950,19 @@ void mbedtls_ssl_set_verify(mbedtls_ssl_context *ssl,
 #if defined(MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED)
 
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
+static const uint8_t jpake_server_id[] = { 's', 'e', 'r', 'v', 'e', 'r' };
+static const uint8_t jpake_client_id[] = { 'c', 'l', 'i', 'e', 'n', 't' };
+
 static psa_status_t mbedtls_ssl_set_hs_ecjpake_password_common(
     mbedtls_ssl_context *ssl,
     mbedtls_svc_key_id_t pwd)
 {
     psa_status_t status;
-    psa_pake_role_t psa_role;
     psa_pake_cipher_suite_t cipher_suite = psa_pake_cipher_suite_init();
-
+    const uint8_t *user = NULL;
+    size_t user_len = 0;
+    const uint8_t *peer = NULL;
+    size_t peer_len = 0;
     psa_pake_cs_set_algorithm(&cipher_suite, PSA_ALG_JPAKE);
     psa_pake_cs_set_primitive(&cipher_suite,
                               PSA_PAKE_PRIMITIVE(PSA_PAKE_PRIMITIVE_TYPE_ECC,
@@ -1970,12 +1976,23 @@ static psa_status_t mbedtls_ssl_set_hs_ecjpake_password_common(
     }
 
     if (ssl->conf->endpoint == MBEDTLS_SSL_IS_SERVER) {
-        psa_role = PSA_PAKE_ROLE_SERVER;
+        user = jpake_server_id;
+        user_len = sizeof(jpake_server_id);
+        peer = jpake_client_id;
+        peer_len = sizeof(jpake_client_id);
     } else {
-        psa_role = PSA_PAKE_ROLE_CLIENT;
+        user = jpake_client_id;
+        user_len = sizeof(jpake_client_id);
+        peer = jpake_server_id;
+        peer_len = sizeof(jpake_server_id);
     }
 
-    status = psa_pake_set_role(&ssl->handshake->psa_pake_ctx, psa_role);
+    status = psa_pake_set_user(&ssl->handshake->psa_pake_ctx, user, user_len);
+    if (status != PSA_SUCCESS) {
+        return status;
+    }
+
+    status = psa_pake_set_peer(&ssl->handshake->psa_pake_ctx, peer, peer_len);
     if (status != PSA_SUCCESS) {
         return status;
     }
