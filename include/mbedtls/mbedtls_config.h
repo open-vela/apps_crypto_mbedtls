@@ -55,7 +55,6 @@
  *      library/padlock.h
  *
  * Required by:
- *      MBEDTLS_AESCE_C
  *      MBEDTLS_AESNI_C
  *      MBEDTLS_PADLOCK_C
  *
