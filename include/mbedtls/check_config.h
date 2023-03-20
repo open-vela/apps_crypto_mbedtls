@@ -66,8 +66,15 @@
 #error "MBEDTLS_HAVE_TIME_DATE without MBEDTLS_HAVE_TIME does not make sense"
 #endif
 
+#if defined(MBEDTLS_AESNI_C) && !defined(MBEDTLS_HAVE_ASM)
+#error "MBEDTLS_AESNI_C defined, but not all prerequisites"
+#endif
+
+#if defined(__aarch64__) && defined(__GNUC__)
+/* We don't do anything with MBEDTLS_AESCE_C on systems without ^ these two */
 #if defined(MBEDTLS_AESCE_C) && !defined(MBEDTLS_HAVE_ASM)
 #error "MBEDTLS_AESCE_C defined, but not all prerequisites"
+#endif
 #endif
 
 #if defined(MBEDTLS_CTR_DRBG_C) && !defined(MBEDTLS_AES_C)
@@ -286,6 +293,17 @@
 #endif
 #endif /* MBEDTLS_USE_PSA_CRYPTO */
 
+/* Helper for JPAKE dependencies, will be undefined at the end of the file */
+#if defined(MBEDTLS_USE_PSA_CRYPTO)
+#if defined(PSA_HAVE_FULL_JPAKE)
+#define MBEDTLS_PK_HAVE_JPAKE
+#endif
+#else /* MBEDTLS_USE_PSA_CRYPTO */
+#if defined(MBEDTLS_ECJPAKE_C)
+#define MBEDTLS_PK_HAVE_JPAKE
+#endif
+#endif /* MBEDTLS_USE_PSA_CRYPTO */
+
 #if defined(MBEDTLS_KEY_EXCHANGE_ECDH_ECDSA_ENABLED) &&                 \
     ( !defined(MBEDTLS_ECDH_C) ||                                       \
       !defined(MBEDTLS_PK_HAVE_ECDSA) ||                                \
@@ -340,7 +358,7 @@
 #endif
 
 #if defined(MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED) &&                    \
-    ( !defined(MBEDTLS_ECJPAKE_C) ||                                    \
+    ( !defined(MBEDTLS_PK_HAVE_JPAKE) ||                                    \
       !defined(MBEDTLS_ECP_DP_SECP256R1_ENABLED) )
 #error "MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED defined, but not all prerequisites"
 #endif
@@ -1016,6 +1034,10 @@
 #error "MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH defined, but not all prerequisites"
 #endif
 
+#if defined(MBEDTLS_SSL_RECORD_SIZE_LIMIT) && ( !defined(MBEDTLS_SSL_PROTO_TLS1_3) )
+#error "MBEDTLS_SSL_RECORD_SIZE_LIMIT defined, but not all prerequisites"
+#endif
+
 #if defined(MBEDTLS_SSL_CONTEXT_SERIALIZATION) && !( defined(MBEDTLS_GCM_C) || defined(MBEDTLS_CCM_C) || defined(MBEDTLS_CHACHAPOLY_C) )
 #error "MBEDTLS_SSL_CONTEXT_SERIALIZATION defined, but not all prerequisites"
 #endif
@@ -1077,6 +1099,7 @@
 
 /* Undefine helper symbols */
 #undef MBEDTLS_PK_HAVE_ECDSA
+#undef MBEDTLS_PK_HAVE_JPAKE
 
 /*
  * Avoid warning from -pedantic. This is a convenient place for this
