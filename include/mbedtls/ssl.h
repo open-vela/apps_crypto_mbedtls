@@ -139,6 +139,8 @@
 #define MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL                  -0x6A00
 /* Error space gap */
 /** No data of requested type currently available on underlying transport. */
+#define MBEDTLS_ERR_SSL_NO_USABLE_CIPHERSUITE             -0x6980
+/**< None of the common ciphersuites is usable (eg, no suitable certificate, see debug messages). */
 #define MBEDTLS_ERR_SSL_WANT_READ                         -0x6900
 /** Connection requires a write call. */
 #define MBEDTLS_ERR_SSL_WANT_WRITE                        -0x6880
@@ -264,6 +266,9 @@
  * - RFC 8446: see section 4.2.1
  */
 #define MBEDTLS_SSL_MAJOR_VERSION_3             3
+#define MBEDTLS_SSL_MINOR_VERSION_0             0   /*!< SSL v3.0 */
+#define MBEDTLS_SSL_MINOR_VERSION_1             1   /*!< TLS v1.0 */
+#define MBEDTLS_SSL_MINOR_VERSION_2             2   /*!< TLS v1.1 */
 #define MBEDTLS_SSL_MINOR_VERSION_3             3   /*!< TLS v1.2 */
 #define MBEDTLS_SSL_MINOR_VERSION_4             4   /*!< TLS v1.3 */
 #endif /* MBEDTLS_DEPRECATED_REMOVED */
@@ -685,6 +690,7 @@ typedef enum {
     MBEDTLS_SSL_HANDSHAKE_WRAPUP,
 
     MBEDTLS_SSL_NEW_SESSION_TICKET,
+    MBEDTLS_SSL_SERVER_NEW_SESSION_TICKET,
     MBEDTLS_SSL_SERVER_HELLO_VERIFY_REQUEST_SENT,
     MBEDTLS_SSL_HELLO_RETRY_REQUEST,
     MBEDTLS_SSL_ENCRYPTED_EXTENSIONS,
