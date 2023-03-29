@@ -151,6 +151,7 @@ class KeyType:
     } # type: Dict[str, Tuple[int, ...]]
     KEY_TYPE_SIZES = {
         'PSA_KEY_TYPE_AES': (128, 192, 256), # exhaustive
+        'PSA_KEY_TYPE_ARC4': (8, 128, 2048), # extremes + sensible
         'PSA_KEY_TYPE_ARIA': (128, 192, 256), # exhaustive
         'PSA_KEY_TYPE_CAMELLIA': (128, 192, 256), # exhaustive
         'PSA_KEY_TYPE_CHACHA20': (256,), # exhaustive

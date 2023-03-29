@@ -79,6 +79,7 @@ OBJS_CRYPTO= \
 	     aes.o \
 	     aesni.o \
 	     aesce.o \
+	     arc4.o \
 	     aria.o \
 	     asn1parse.o \
 	     asn1write.o \
@@ -87,6 +88,7 @@ OBJS_CRYPTO= \
 	     bignum_core.o \
 	     bignum_mod.o \
 	     bignum_mod_raw.o \
+	     blowfish.o \
 	     camellia.o \
 	     ccm.o \
 	     chacha20.o \
@@ -113,6 +115,8 @@ OBJS_CRYPTO= \
 	     lmots.o \
 	     lms.o \
 	     md.o \
+	     md2.o \
+	     md4.o \
 	     md5.o \
 	     memory_buffer_alloc.o \
 	     nist_kw.o \
@@ -153,6 +157,7 @@ OBJS_CRYPTO= \
 	     timing.o \
 	     version.o \
 	     version_features.o \
+	     xtea.o \
 	     # This line is intentionally left blank
 
 include ../3rdparty/Makefile.inc
