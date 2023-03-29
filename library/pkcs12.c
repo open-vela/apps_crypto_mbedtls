@@ -42,6 +42,10 @@
                                                            psa_generic_status_to_mbedtls)
 #endif
 
+#if defined(MBEDTLS_ARC4_C)
+#include "mbedtls/arc4.h"
+#endif
+
 #if defined(MBEDTLS_DES_C)
 #include "mbedtls/des.h"
 #endif
@@ -137,11 +141,52 @@ static int pkcs12_pbe_derive_key_iv(mbedtls_asn1_buf *pbe_params, mbedtls_md_typ
 
 #undef PKCS12_MAX_PWDLEN
 
+int mbedtls_pkcs12_pbe_sha1_rc4_128(mbedtls_asn1_buf *pbe_params, int mode,
+                             const unsigned char *pwd,  size_t pwdlen,
+                             const unsigned char *data, size_t len,
+                             unsigned char *output)
+{
+#if !defined(MBEDTLS_ARC4_C)
+    ((void) pbe_params);
+    ((void) mode);
+    ((void) pwd);
+    ((void) pwdlen);
+    ((void) data);
+    ((void) len);
+    ((void) output);
+    return( MBEDTLS_ERR_PKCS12_FEATURE_UNAVAILABLE );
+#else
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+    unsigned char key[16];
+    mbedtls_arc4_context ctx;
+    ((void) mode);
+
+    mbedtls_arc4_init( &ctx );
+
+    if( ( ret = pkcs12_pbe_derive_key_iv( pbe_params, MBEDTLS_MD_SHA1,
+                                          pwd, pwdlen,
+                                          key, 16, NULL, 0 ) ) != 0 )
+    {
+        return( ret );
+    }
+
+    mbedtls_arc4_setup( &ctx, key, 16 );
+    if( ( ret = mbedtls_arc4_crypt( &ctx, len, data, output ) ) != 0 )
+        goto exit;
+
+exit:
+    mbedtls_platform_zeroize( key, sizeof( key ) );
+    mbedtls_arc4_free( &ctx );
+
+    return( ret );
+#endif /* MBEDTLS_ARC4_C */
+}
+
 int mbedtls_pkcs12_pbe(mbedtls_asn1_buf *pbe_params, int mode,
-                       mbedtls_cipher_type_t cipher_type, mbedtls_md_type_t md_type,
-                       const unsigned char *pwd,  size_t pwdlen,
-                       const unsigned char *data, size_t len,
-                       unsigned char *output)
+                mbedtls_cipher_type_t cipher_type, mbedtls_md_type_t md_type,
+                const unsigned char *pwd,  size_t pwdlen,
+                const unsigned char *data, size_t len,
+                unsigned char *output)
 {
     int ret, keylen = 0;
     unsigned char key[32];

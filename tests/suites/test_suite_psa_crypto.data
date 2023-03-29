@@ -1471,6 +1471,14 @@ PSA hash setup: good, SHA-512
 depends_on:PSA_WANT_ALG_SHA_512
 hash_setup:PSA_ALG_SHA_512:PSA_SUCCESS
 
+PSA hash setup: good, MD2
+depends_on:PSA_WANT_ALG_MD2
+hash_setup:PSA_ALG_MD2:PSA_SUCCESS
+
+PSA hash setup: good, MD4
+depends_on:PSA_WANT_ALG_MD4
+hash_setup:PSA_ALG_MD4:PSA_SUCCESS
+
 PSA hash setup: good, MD5
 depends_on:PSA_WANT_ALG_MD5
 hash_setup:PSA_ALG_MD5:PSA_SUCCESS
@@ -1571,6 +1579,14 @@ hash_compute_compare:PSA_ALG_SHA_384:"31f5ca":"78d54b943421fdf7ba90a7fb9637c2073
 PSA hash compute: good, SHA-512
 depends_on:PSA_WANT_ALG_SHA_512
 hash_compute_compare:PSA_ALG_SHA_512:"de4c90":"33ce98281045a5c4c9df0363d8196f1d7dfcd5ee46ac89776fd8a4344c12f123a66788af5bd41ceff1941aa5637654b4064c88c14e00465ab79a2fc6c97e1014"
+
+PSA hash compute: good, MD2
+depends_on:PSA_WANT_ALG_MD2
+hash_compute_compare:PSA_ALG_MD2:"616263":"da853b0d3f88d99b30283a69e6ded6bb"
+
+PSA hash compute: good, MD4
+depends_on:PSA_WANT_ALG_MD4
+hash_compute_compare:PSA_ALG_MD4:"616263":"a448017aaf21d8525fc10ae87aa6729d"
 
 PSA hash compute: good, MD5
 depends_on:PSA_WANT_ALG_MD5

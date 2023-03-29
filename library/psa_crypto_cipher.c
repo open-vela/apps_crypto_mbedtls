@@ -143,6 +143,11 @@ const mbedtls_cipher_info_t *mbedtls_cipher_info_from_psa(
             cipher_id_tmp = MBEDTLS_CIPHER_ID_CAMELLIA;
             break;
 #endif
+#if defined(MBEDTLS_PSA_BUILTIN_KEY_TYPE_ARC4)
+        case PSA_KEY_TYPE_ARC4:
+            cipher_id_tmp = MBEDTLS_CIPHER_ID_ARC4;
+            break;
+#endif
 #if defined(MBEDTLS_PSA_BUILTIN_KEY_TYPE_CHACHA20)
         case PSA_KEY_TYPE_CHACHA20:
             cipher_id_tmp = MBEDTLS_CIPHER_ID_CHACHA20;
