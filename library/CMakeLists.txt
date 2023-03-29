@@ -14,6 +14,7 @@ set(src_crypto
     aes.c
     aesni.c
     aesce.c
+    arc4.c
     aria.c
     asn1parse.c
     asn1write.c
@@ -22,6 +23,7 @@ set(src_crypto
     bignum_core.c
     bignum_mod.c
     bignum_mod_raw.c
+    blowfish.c
     camellia.c
     ccm.c
     chacha20.c
@@ -48,6 +50,8 @@ set(src_crypto
     lmots.c
     lms.c
     md.c
+    md2.c
+    md4.c
     md5.c
     memory_buffer_alloc.c
     nist_kw.c
@@ -88,6 +92,7 @@ set(src_crypto
     timing.c
     version.c
     version_features.c
+    xtea.c
 )
 
 set(src_x509
