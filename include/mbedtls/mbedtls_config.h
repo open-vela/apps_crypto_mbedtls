@@ -312,14 +312,16 @@
  * Uncomment a macro to enable alternate implementation of the corresponding
  * module.
  *
- * \warning   MD5, DES and SHA-1 are considered weak and their
+ * \warning   MD2, MD4, MD5, ARC4, DES and SHA-1 are considered weak and their
  *            use constitutes a security risk. If possible, we recommend
  *            avoiding dependencies on them, and considering stronger message
  *            digests and ciphers instead.
  *
  */
 //#define MBEDTLS_AES_ALT
+//#define MBEDTLS_ARC4_ALT
 //#define MBEDTLS_ARIA_ALT
+//#define MBEDTLS_BLOWFISH_ALT
 //#define MBEDTLS_CAMELLIA_ALT
 //#define MBEDTLS_CCM_ALT
 //#define MBEDTLS_CHACHA20_ALT
@@ -330,6 +332,8 @@
 //#define MBEDTLS_ECJPAKE_ALT
 //#define MBEDTLS_GCM_ALT
 //#define MBEDTLS_NIST_KW_ALT
+//#define MBEDTLS_MD2_ALT
+//#define MBEDTLS_MD4_ALT
 //#define MBEDTLS_MD5_ALT
 //#define MBEDTLS_POLY1305_ALT
 //#define MBEDTLS_RIPEMD160_ALT
@@ -337,6 +341,7 @@
 //#define MBEDTLS_SHA1_ALT
 //#define MBEDTLS_SHA256_ALT
 //#define MBEDTLS_SHA512_ALT
+//#define MBEDTLS_XTEA_ALT
 
 /*
  * When replacing the elliptic curve module, please consider, that it is
@@ -372,7 +377,7 @@
  * Uncomment a macro to enable alternate implementation of the corresponding
  * function.
  *
- * \warning   MD5, DES and SHA-1 are considered weak and their use
+ * \warning   MD2, MD4, MD5, DES and SHA-1 are considered weak and their use
  *            constitutes a security risk. If possible, we recommend avoiding
  *            dependencies on them, and considering stronger message digests
  *            and ciphers instead.
@@ -386,6 +391,8 @@
  *            implementation should be provided for mbedtls_ecdsa_sign_det_ext().
  *
  */
+//#define MBEDTLS_MD2_PROCESS_ALT
+//#define MBEDTLS_MD4_PROCESS_ALT
 //#define MBEDTLS_MD5_PROCESS_ALT
 //#define MBEDTLS_RIPEMD160_PROCESS_ALT
 //#define MBEDTLS_SHA1_PROCESS_ALT
@@ -2181,6 +2188,24 @@
 #define MBEDTLS_AES_C
 
 /**
+ * \def MBEDTLS_ARC4_C
+ *
+ * Enable the ARCFOUR stream cipher.
+ *
+ * Module:  library/arc4.c
+ * Caller:  library/cipher.c
+ *
+ * This module enables the following ciphersuites (if other requisites are
+ * enabled as well):
+ *
+ * \warning   ARC4 is considered a weak cipher and its use constitutes a
+ *            security risk. If possible, we recommend avoidng dependencies on
+ *            it, and considering stronger ciphers instead.
+ *
+ */
+#define MBEDTLS_ARC4_C
+
+/**
  * \def MBEDTLS_ASN1_PARSE_C
  *
  * Enable the generic ASN1 parser.
@@ -2729,6 +2754,40 @@
  * Uncomment to enable generic message digest wrappers.
  */
 #define MBEDTLS_MD_C
+
+/**
+ * \def MBEDTLS_MD2_C
+ *
+ * Enable the MD2 hash algorithm.
+ *
+ * Module:  library/md2.c
+ * Caller:
+ *
+ * Uncomment to enable support for (rare) MD2-signed X.509 certs.
+ *
+ * \warning   MD2 is considered a weak message digest and its use constitutes a
+ *            security risk. If possible, we recommend avoiding dependencies on
+ *            it, and considering stronger message digests instead.
+ *
+ */
+//#define MBEDTLS_MD2_C
+
+/**
+ * \def MBEDTLS_MD4_C
+ *
+ * Enable the MD4 hash algorithm.
+ *
+ * Module:  library/md4.c
+ * Caller:
+ *
+ * Uncomment to enable support for (rare) MD4-signed X.509 certs.
+ *
+ * \warning   MD4 is considered a weak message digest and its use constitutes a
+ *            security risk. If possible, we recommend avoiding dependencies on
+ *            it, and considering stronger message digests instead.
+ *
+ */
+//#define MBEDTLS_MD4_C
 
 /**
  * \def MBEDTLS_MD5_C
@@ -3504,6 +3563,16 @@
  * This module is required for X.509 certificate request writing.
  */
 #define MBEDTLS_X509_CSR_WRITE_C
+
+/**
+ * \def MBEDTLS_XTEA_C
+ *
+ * Enable the XTEA block cipher.
+ *
+ * Module:  library/xtea.c
+ * Caller:
+ */
+#define MBEDTLS_XTEA_C
 
 /** \} name SECTION: mbed TLS modules */
 

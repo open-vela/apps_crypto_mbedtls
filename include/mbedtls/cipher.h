@@ -41,7 +41,7 @@
 #define MBEDTLS_CIPHER_MODE_WITH_PADDING
 #endif
 
-#if defined(MBEDTLS_CIPHER_NULL_CIPHER) || \
+#if defined(MBEDTLS_ARC4_C) || defined(MBEDTLS_CIPHER_NULL_CIPHER) || \
     defined(MBEDTLS_CHACHA20_C)
 #define MBEDTLS_CIPHER_MODE_STREAM
 #endif
@@ -71,7 +71,7 @@ extern "C" {
 /**
  * \brief     Supported cipher types.
  *
- * \warning   DES/3DES are considered weak ciphers and their use
+ * \warning   RC4 and DES/3DES are considered weak ciphers and their use
  *            constitutes a security risk. We recommend considering stronger
  *            ciphers instead.
  */
@@ -82,6 +82,8 @@ typedef enum {
     MBEDTLS_CIPHER_ID_DES,       /**< The DES cipher. \warning DES is considered weak. */
     MBEDTLS_CIPHER_ID_3DES,      /**< The Triple DES cipher. \warning 3DES is considered weak. */
     MBEDTLS_CIPHER_ID_CAMELLIA,  /**< The Camellia cipher. */
+    MBEDTLS_CIPHER_ID_BLOWFISH,  /**< The Blowfish cipher. */
+    MBEDTLS_CIPHER_ID_ARC4,      /**< The RC4 cipher. */
     MBEDTLS_CIPHER_ID_ARIA,      /**< The Aria cipher. */
     MBEDTLS_CIPHER_ID_CHACHA20,  /**< The ChaCha20 cipher. */
 } mbedtls_cipher_id_t;
@@ -89,7 +91,7 @@ typedef enum {
 /**
  * \brief     Supported {cipher type, cipher mode} pairs.
  *
- * \warning   DES/3DES are considered weak ciphers and their use
+ * \warning   RC4 and DES/3DES are considered weak ciphers and their use
  *            constitutes a security risk. We recommend considering stronger
  *            ciphers instead.
  */
@@ -132,6 +134,11 @@ typedef enum {
     MBEDTLS_CIPHER_DES_EDE_CBC,          /**< DES cipher with EDE CBC mode. \warning 3DES is considered weak. */
     MBEDTLS_CIPHER_DES_EDE3_ECB,         /**< DES cipher with EDE3 ECB mode. \warning 3DES is considered weak. */
     MBEDTLS_CIPHER_DES_EDE3_CBC,         /**< DES cipher with EDE3 CBC mode. \warning 3DES is considered weak. */
+    MBEDTLS_CIPHER_BLOWFISH_ECB,         /**< Blowfish cipher with ECB mode. \warning Blowfish is considered weak. */
+    MBEDTLS_CIPHER_BLOWFISH_CBC,         /**< Blowfish cipher with CBC mode. \warning Blowfish is considered weak. */
+    MBEDTLS_CIPHER_BLOWFISH_CFB64,       /**< Blowfish cipher with CFB64 mode. \warning Blowfish is considered weak. */
+    MBEDTLS_CIPHER_BLOWFISH_CTR,         /**< Blowfish cipher with CTR mode. \warning Blowfish is considered weak. */
+    MBEDTLS_CIPHER_ARC4_128,             /**< RC4 cipher with 128-bit mode. \warning RC4 is considered weak. */
     MBEDTLS_CIPHER_AES_128_CCM,          /**< AES cipher with 128-bit CCM mode. */
     MBEDTLS_CIPHER_AES_192_CCM,          /**< AES cipher with 192-bit CCM mode. */
     MBEDTLS_CIPHER_AES_256_CCM,          /**< AES cipher with 256-bit CCM mode. */
