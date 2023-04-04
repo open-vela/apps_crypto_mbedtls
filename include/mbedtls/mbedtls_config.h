@@ -24,6 +24,8 @@
  *  limitations under the License.
  */
 
+#include <nuttx/config.h>
+
 /**
  * This is an optional version symbol that enables compatibility handling of
  * config files.
@@ -185,7 +187,9 @@
  *
  * Enable this layer to allow use of alternative memory allocators.
  */
-//#define MBEDTLS_PLATFORM_MEMORY
+#ifdef CONFIG_MBEDTLS_PLATFORM_MEMORY
+#define MBEDTLS_PLATFORM_MEMORY
+#endif
 
 /**
  * \def MBEDTLS_PLATFORM_NO_STD_FUNCTIONS
@@ -477,7 +481,9 @@
  *
  * Uncomment to use your own hardware entropy collector.
  */
-//#define MBEDTLS_ENTROPY_HARDWARE_ALT
+#ifdef CONFIG_MBEDTLS_ENTROPY_HARDWARE_ALT
+#define MBEDTLS_ENTROPY_HARDWARE_ALT
+#endif
 
 /**
  * \def MBEDTLS_AES_ROM_TABLES
@@ -497,7 +503,9 @@
  * This option is independent of \c MBEDTLS_AES_FEWER_TABLES.
  *
  */
-//#define MBEDTLS_AES_ROM_TABLES
+#ifdef CONFIG_MBEDTLS_AES_ROM_TABLES
+#define MBEDTLS_AES_ROM_TABLES
+#endif
 
 /**
  * \def MBEDTLS_AES_FEWER_TABLES
@@ -1068,7 +1076,9 @@
  *
  * Uncomment this macro to disable the built-in platform entropy functions.
  */
-//#define MBEDTLS_NO_PLATFORM_ENTROPY
+#ifdef CONFIG_MBEDTLS_NO_PLATFORM_ENTROPY
+#define MBEDTLS_NO_PLATFORM_ENTROPY
+#endif
 
 /**
  * \def MBEDTLS_ENTROPY_FORCE_SHA256
@@ -1315,7 +1325,9 @@
  *
  * Enable the checkup functions (*_self_test).
  */
+#ifdef CONFIG_MBEDTLS_SELF_TEST
 #define MBEDTLS_SELF_TEST
+#endif
 
 /**
  * \def MBEDTLS_SHA256_SMALLER
@@ -1515,8 +1527,9 @@
  * Comment this macro to disable storing the peer's certificate
  * after the handshake.
  */
+#ifdef CONFIG_MBEDTLS_SSL_KEEP_PEER_CERTIFICATE
 #define MBEDTLS_SSL_KEEP_PEER_CERTIFICATE
-
+#endif
 /**
  * \def MBEDTLS_SSL_RENEGOTIATION
  *
@@ -1715,7 +1728,9 @@
  *
  * Comment this macro to disable support for DTLS
  */
+#ifdef CONFIG_MBEDTLS_SSL_PROTO_DTLS
 #define MBEDTLS_SSL_PROTO_DTLS
+#endif
 
 /**
  * \def MBEDTLS_SSL_ALPN
@@ -1724,7 +1739,9 @@
  *
  * Comment this macro to disable support for ALPN.
  */
+#ifdef CONFIG_MBEDTLS_SSL_ALPN
 #define MBEDTLS_SSL_ALPN
+#endif
 
 /**
  * \def MBEDTLS_SSL_DTLS_ANTI_REPLAY
@@ -1739,7 +1756,9 @@
  *
  * Comment this to disable anti-replay in DTLS.
  */
+#ifdef CONFIG_MBEDTLS_SSL_DTLS_ANTI_REPLAY
 #define MBEDTLS_SSL_DTLS_ANTI_REPLAY
+#endif
 
 /**
  * \def MBEDTLS_SSL_DTLS_HELLO_VERIFY
@@ -1757,7 +1776,9 @@
  *
  * Comment this to disable support for HelloVerifyRequest.
  */
+#ifdef CONFIG_MBEDTLS_SSL_DTLS_HELLO_VERIFY
 #define MBEDTLS_SSL_DTLS_HELLO_VERIFY
+#endif
 
 /**
  * \def MBEDTLS_SSL_DTLS_SRTP
@@ -1804,7 +1825,9 @@
  *
  * Comment this to disable support for clients reusing the source port.
  */
+#ifdef CONFIG_MBEDTLS_SSL_DTLS_CLIENT_PORT_REUSE
 #define MBEDTLS_SSL_DTLS_CLIENT_PORT_REUSE
+#endif
 
 /**
  * \def MBEDTLS_SSL_SESSION_TICKETS
@@ -1917,7 +1940,7 @@
  *
  * Uncomment this to enable pthread mutexes.
  */
-//#define MBEDTLS_THREADING_PTHREAD
+#define MBEDTLS_THREADING_PTHREAD
 
 /**
  * \def MBEDTLS_USE_PSA_CRYPTO
@@ -2060,7 +2083,9 @@
  *
  * This modules adds support for the AES-NI instructions on x86.
  */
+#ifdef CONFIG_MBEDTLS_AESNI_C
 #define MBEDTLS_AESNI_C
+#endif
 
 /**
  * \def MBEDTLS_AESCE_C
@@ -2216,6 +2241,17 @@
 #define MBEDTLS_BIGNUM_C
 
 /**
+ * \def MBEDTLS_BLOWFISH_C
+ *
+ * Enable the Blowfish block cipher.
+ *
+ * Module:  library/blowfish.c
+ */
+#ifdef CONFIG_MBEDTLS_BLOWFISH_C
+#define MBEDTLS_BLOWFISH_C
+#endif
+
+/**
  * \def MBEDTLS_CAMELLIA_C
  *
  * Enable the Camellia block cipher.
@@ -2268,7 +2304,9 @@
  *      MBEDTLS_TLS_PSK_WITH_CAMELLIA_128_GCM_SHA256
  *      MBEDTLS_TLS_PSK_WITH_CAMELLIA_128_CBC_SHA256
  */
+#ifdef CONFIG_MBEDTLS_CAMELLIA_C
 #define MBEDTLS_CAMELLIA_C
+#endif
 
 /**
  * \def MBEDTLS_ARIA_C
@@ -2395,7 +2433,10 @@
  * Requires: MBEDTLS_CIPHER_C, MBEDTLS_AES_C or MBEDTLS_DES_C
  *
  */
+
+#ifdef CONFIG_MBEDTLS_CMAC_C
 #define MBEDTLS_CMAC_C
+#endif
 
 /**
  * \def MBEDTLS_CTR_DRBG_C
@@ -2430,7 +2471,9 @@
  *
  * This module provides debugging functions.
  */
+#ifdef CONFIG_MBEDTLS_DEBUG_C
 #define MBEDTLS_DEBUG_C
+#endif
 
 /**
  * \def MBEDTLS_DES_C
@@ -2778,7 +2821,9 @@
  *
  * This modules adds support for the VIA PadLock on x86.
  */
+#ifdef CONFIG_MBEDTLS_PADLOCK_C
 #define MBEDTLS_PADLOCK_C
+#endif
 
 /**
  * \def MBEDTLS_PEM_PARSE_C
@@ -3274,7 +3319,9 @@
  *
  * This module is required for SSL/TLS server support.
  */
+#ifdef CONFIG_MBEDTLS_SSL_SRV_C
 #define MBEDTLS_SSL_SRV_C
+#endif
 
 /**
  * \def MBEDTLS_SSL_TLS_C
@@ -3312,7 +3359,7 @@
  *
  * Enable this layer to allow use of mutexes within mbed TLS
  */
-//#define MBEDTLS_THREADING_C
+#define MBEDTLS_THREADING_C
 
 /**
  * \def MBEDTLS_TIMING_C
@@ -3336,7 +3383,9 @@
  *
  * Module:  library/timing.c
  */
+#ifdef CONFIG_MBEDTLS_TIMING_C
 #define MBEDTLS_TIMING_C
+#endif
 
 /**
  * \def MBEDTLS_VERSION_C
@@ -3624,8 +3673,13 @@
 //#define MBEDTLS_HMAC_DRBG_MAX_SEED_INPUT      384 /**< Maximum size of (re)seed buffer */
 
 /* ECP options */
-//#define MBEDTLS_ECP_WINDOW_SIZE            4 /**< Maximum window size used */
-//#define MBEDTLS_ECP_FIXED_POINT_OPTIM      1 /**< Enable fixed-point speed-up */
+//#define MBEDTLS_ECP_MAX_BITS             521 /**< Maximum bit size of groups */
+#ifdef CONFIG_MBEDTLS_ECP_WINDOW_SIZE
+#define MBEDTLS_ECP_WINDOW_SIZE            CONFIG_MBEDTLS_ECP_WINDOW_SIZE /**< Maximum window size used */
+#endif
+#ifndef CONFIG_MBEDTLS_ECP_FIXED_POINT_OPTIM
+#define MBEDTLS_ECP_FIXED_POINT_OPTIM      0 /**< Disable fixed-point speed-up */
+#endif
 
 /* Entropy options */
 //#define MBEDTLS_ENTROPY_MAX_SOURCES                20 /**< Maximum number of sources supported */
@@ -3740,7 +3794,9 @@
  *
  * Uncomment to set the maximum plaintext size of the incoming I/O buffer.
  */
-//#define MBEDTLS_SSL_IN_CONTENT_LEN              16384
+#ifdef CONFIG_MBEDTLS_SSL_MAX_CONTENT_LEN
+#define MBEDTLS_SSL_IN_CONTENT_LEN             CONFIG_MBEDTLS_SSL_MAX_CONTENT_LEN
+#endif
 
 /** \def MBEDTLS_SSL_CID_IN_LEN_MAX
  *
@@ -3790,7 +3846,9 @@
  *
  * Uncomment to set the maximum plaintext size of the outgoing I/O buffer.
  */
-//#define MBEDTLS_SSL_OUT_CONTENT_LEN             16384
+#ifdef CONFIG_MBEDTLS_SSL_MAX_CONTENT_LEN
+#define MBEDTLS_SSL_OUT_CONTENT_LEN             CONFIG_MBEDTLS_SSL_MAX_CONTENT_LEN
+#endif
 
 /** \def MBEDTLS_SSL_DTLS_MAX_BUFFERING
  *
