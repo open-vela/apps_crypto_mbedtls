@@ -23,6 +23,9 @@
 
 #include <stddef.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** Constant-time buffer comparison without branches.
  *
@@ -42,5 +45,9 @@
 int mbedtls_ct_memcmp(const void *a,
                       const void *b,
                       size_t n);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* MBEDTLS_CONSTANT_TIME_H */
