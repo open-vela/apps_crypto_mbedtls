@@ -867,13 +867,6 @@ mbedtls_md_type_t mbedtls_md_get_type(const mbedtls_md_info_t *md_info)
  */
 static const int supported_digests[] = {
 
-#if defined(MBEDTLS_SHA3_C)
-    MBEDTLS_MD_SHA3_512,
-    MBEDTLS_MD_SHA3_384,
-    MBEDTLS_MD_SHA3_256,
-    MBEDTLS_MD_SHA3_224,
-#endif
-
 #if defined(MBEDTLS_MD_CAN_SHA512)
     MBEDTLS_MD_SHA512,
 #endif
@@ -899,6 +892,13 @@ static const int supported_digests[] = {
 
 #if defined(MBEDTLS_MD_CAN_MD5)
     MBEDTLS_MD_MD5,
+#endif
+
+#if defined(MBEDTLS_SHA3_C)
+    MBEDTLS_MD_SHA3_512,
+    MBEDTLS_MD_SHA3_384,
+    MBEDTLS_MD_SHA3_256,
+    MBEDTLS_MD_SHA3_224,
 #endif
 
     MBEDTLS_MD_NONE
@@ -954,14 +954,11 @@ const mbedtls_md_info_t *mbedtls_md_info_from_string(const char *md_name)
 #if defined(MBEDTLS_SHA3_C)
     if (!strcmp("SHA3-224", md_name)) {
         return mbedtls_md_info_from_type(MBEDTLS_MD_SHA3_224);
-    }
-    if (!strcmp("SHA3-256", md_name)) {
+    } else if (!strcmp("SHA3-256", md_name)) {
         return mbedtls_md_info_from_type(MBEDTLS_MD_SHA3_256);
-    }
-    if (!strcmp("SHA3-384", md_name)) {
+    } else if (!strcmp("SHA3-384", md_name)) {
         return mbedtls_md_info_from_type(MBEDTLS_MD_SHA3_384);
-    }
-    if (!strcmp("SHA3-512", md_name)) {
+    } else if (!strcmp("SHA3-512", md_name)) {
         return mbedtls_md_info_from_type(MBEDTLS_MD_SHA3_512);
     }
 #endif
