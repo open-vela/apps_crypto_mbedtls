@@ -157,7 +157,7 @@ typedef enum {
     MBEDTLS_MD_SHA3_512,    /**< The SHA3-512 message digest. */
 } mbedtls_md_type_t;
 
-#if defined(MBEDTLS_SHA512_C) || defined(MBEDTLS_SHA3_C)
+#if defined(MBEDTLS_MD_CAN_SHA512) || defined(MBEDTLS_SHA3_C)
 #define MBEDTLS_MD_MAX_SIZE         64  /* longest known is SHA512 */
 #elif defined(MBEDTLS_MD_CAN_SHA384)
 #define MBEDTLS_MD_MAX_SIZE         48  /* longest known is SHA384 */
@@ -172,7 +172,7 @@ typedef enum {
 
 #if defined(MBEDTLS_SHA3_C)
 #define MBEDTLS_MD_MAX_BLOCK_SIZE         144 /* the longest known is SHA3-224 */
-#elif defined(MBEDTLS_SHA512_C)
+#elif defined(MBEDTLS_MD_CAN_SHA512)
 #define MBEDTLS_MD_MAX_BLOCK_SIZE         128
 #else
 #define MBEDTLS_MD_MAX_BLOCK_SIZE         64
