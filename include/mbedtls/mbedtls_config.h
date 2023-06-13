@@ -746,7 +746,9 @@
  *
  * Uncomment this macro to enable restartable ECC computations.
  */
-//#define MBEDTLS_ECP_RESTARTABLE
+#ifdef CONFIG_MBEDTLS_ECP_RESTARTABLE
+#define MBEDTLS_ECP_RESTARTABLE
+#endif
 
 /**
  * \def MBEDTLS_ECDSA_DETERMINISTIC
