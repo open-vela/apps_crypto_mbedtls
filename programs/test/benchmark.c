@@ -550,7 +550,7 @@ int main(int argc, char *argv[])
         for (i = 1; i < argc; i++) {
             if (strcmp(argv[i], "md4") == 0) {
                 todo.md4 = 1;
-            } else if (strcmp(argv[i], "md5") == 0)
+            } else if (strcmp(argv[i], "md5") == 0) {
                 todo.md5 = 1;
             } else if (strcmp(argv[i], "ripemd160") == 0) {
                 todo.ripemd160 = 1;
