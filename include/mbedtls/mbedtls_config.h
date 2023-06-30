@@ -2845,7 +2845,9 @@
  *
  * This module provides networking routines.
  */
+#ifdef CONFIG_MBEDTLS_NET_C
 #define MBEDTLS_NET_C
+#endif
 
 /**
  * \def MBEDTLS_OID_C
