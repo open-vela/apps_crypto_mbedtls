@@ -24,8 +24,6 @@
  *  limitations under the License.
  */
 
-#include <nuttx/config.h>
-
 /**
  * This is an optional version symbol that enables compatibility handling of
  * config files.
@@ -187,9 +185,7 @@
  *
  * Enable this layer to allow use of alternative memory allocators.
  */
-#ifdef CONFIG_MBEDTLS_PLATFORM_MEMORY
-#define MBEDTLS_PLATFORM_MEMORY
-#endif
+//#define MBEDTLS_PLATFORM_MEMORY
 
 /**
  * \def MBEDTLS_PLATFORM_NO_STD_FUNCTIONS
@@ -312,16 +308,14 @@
  * Uncomment a macro to enable alternate implementation of the corresponding
  * module.
  *
- * \warning   MD2, MD4, MD5, ARC4, DES and SHA-1 are considered weak and their
+ * \warning   MD5, DES and SHA-1 are considered weak and their
  *            use constitutes a security risk. If possible, we recommend
  *            avoiding dependencies on them, and considering stronger message
  *            digests and ciphers instead.
  *
  */
 //#define MBEDTLS_AES_ALT
-//#define MBEDTLS_ARC4_ALT
 //#define MBEDTLS_ARIA_ALT
-//#define MBEDTLS_BLOWFISH_ALT
 //#define MBEDTLS_CAMELLIA_ALT
 //#define MBEDTLS_CCM_ALT
 //#define MBEDTLS_CHACHA20_ALT
@@ -332,8 +326,6 @@
 //#define MBEDTLS_ECJPAKE_ALT
 //#define MBEDTLS_GCM_ALT
 //#define MBEDTLS_NIST_KW_ALT
-//#define MBEDTLS_MD2_ALT
-//#define MBEDTLS_MD4_ALT
 //#define MBEDTLS_MD5_ALT
 //#define MBEDTLS_POLY1305_ALT
 //#define MBEDTLS_RIPEMD160_ALT
@@ -341,7 +333,6 @@
 //#define MBEDTLS_SHA1_ALT
 //#define MBEDTLS_SHA256_ALT
 //#define MBEDTLS_SHA512_ALT
-//#define MBEDTLS_XTEA_ALT
 
 /*
  * When replacing the elliptic curve module, please consider, that it is
@@ -377,7 +368,7 @@
  * Uncomment a macro to enable alternate implementation of the corresponding
  * function.
  *
- * \warning   MD2, MD4, MD5, DES and SHA-1 are considered weak and their use
+ * \warning   MD5, DES and SHA-1 are considered weak and their use
  *            constitutes a security risk. If possible, we recommend avoiding
  *            dependencies on them, and considering stronger message digests
  *            and ciphers instead.
@@ -391,8 +382,6 @@
  *            implementation should be provided for mbedtls_ecdsa_sign_det_ext().
  *
  */
-//#define MBEDTLS_MD2_PROCESS_ALT
-//#define MBEDTLS_MD4_PROCESS_ALT
 //#define MBEDTLS_MD5_PROCESS_ALT
 //#define MBEDTLS_RIPEMD160_PROCESS_ALT
 //#define MBEDTLS_SHA1_PROCESS_ALT
@@ -488,9 +477,7 @@
  *
  * Uncomment to use your own hardware entropy collector.
  */
-#ifdef CONFIG_MBEDTLS_ENTROPY_HARDWARE_ALT
-#define MBEDTLS_ENTROPY_HARDWARE_ALT
-#endif
+//#define MBEDTLS_ENTROPY_HARDWARE_ALT
 
 /**
  * \def MBEDTLS_AES_ROM_TABLES
@@ -510,9 +497,7 @@
  * This option is independent of \c MBEDTLS_AES_FEWER_TABLES.
  *
  */
-#ifdef CONFIG_MBEDTLS_AES_ROM_TABLES
-#define MBEDTLS_AES_ROM_TABLES
-#endif
+//#define MBEDTLS_AES_ROM_TABLES
 
 /**
  * \def MBEDTLS_AES_FEWER_TABLES
@@ -746,9 +731,7 @@
  *
  * Uncomment this macro to enable restartable ECC computations.
  */
-#ifdef CONFIG_MBEDTLS_ECP_RESTARTABLE
-#define MBEDTLS_ECP_RESTARTABLE
-#endif
+//#define MBEDTLS_ECP_RESTARTABLE
 
 /**
  * \def MBEDTLS_ECDSA_DETERMINISTIC
@@ -1085,9 +1068,7 @@
  *
  * Uncomment this macro to disable the built-in platform entropy functions.
  */
-#ifdef CONFIG_MBEDTLS_NO_PLATFORM_ENTROPY
-#define MBEDTLS_NO_PLATFORM_ENTROPY
-#endif
+//#define MBEDTLS_NO_PLATFORM_ENTROPY
 
 /**
  * \def MBEDTLS_ENTROPY_FORCE_SHA256
@@ -1334,9 +1315,7 @@
  *
  * Enable the checkup functions (*_self_test).
  */
-#ifdef CONFIG_MBEDTLS_SELF_TEST
 #define MBEDTLS_SELF_TEST
-#endif
 
 /**
  * \def MBEDTLS_SHA256_SMALLER
@@ -1536,9 +1515,8 @@
  * Comment this macro to disable storing the peer's certificate
  * after the handshake.
  */
-#ifdef CONFIG_MBEDTLS_SSL_KEEP_PEER_CERTIFICATE
 #define MBEDTLS_SSL_KEEP_PEER_CERTIFICATE
-#endif
+
 /**
  * \def MBEDTLS_SSL_RENEGOTIATION
  *
@@ -1737,9 +1715,7 @@
  *
  * Comment this macro to disable support for DTLS
  */
-#ifdef CONFIG_MBEDTLS_SSL_PROTO_DTLS
 #define MBEDTLS_SSL_PROTO_DTLS
-#endif
 
 /**
  * \def MBEDTLS_SSL_ALPN
@@ -1748,9 +1724,7 @@
  *
  * Comment this macro to disable support for ALPN.
  */
-#ifdef CONFIG_MBEDTLS_SSL_ALPN
 #define MBEDTLS_SSL_ALPN
-#endif
 
 /**
  * \def MBEDTLS_SSL_DTLS_ANTI_REPLAY
@@ -1765,9 +1739,7 @@
  *
  * Comment this to disable anti-replay in DTLS.
  */
-#ifdef CONFIG_MBEDTLS_SSL_DTLS_ANTI_REPLAY
 #define MBEDTLS_SSL_DTLS_ANTI_REPLAY
-#endif
 
 /**
  * \def MBEDTLS_SSL_DTLS_HELLO_VERIFY
@@ -1785,9 +1757,7 @@
  *
  * Comment this to disable support for HelloVerifyRequest.
  */
-#ifdef CONFIG_MBEDTLS_SSL_DTLS_HELLO_VERIFY
 #define MBEDTLS_SSL_DTLS_HELLO_VERIFY
-#endif
 
 /**
  * \def MBEDTLS_SSL_DTLS_SRTP
@@ -1834,9 +1804,7 @@
  *
  * Comment this to disable support for clients reusing the source port.
  */
-#ifdef CONFIG_MBEDTLS_SSL_DTLS_CLIENT_PORT_REUSE
 #define MBEDTLS_SSL_DTLS_CLIENT_PORT_REUSE
-#endif
 
 /**
  * \def MBEDTLS_SSL_SESSION_TICKETS
@@ -1949,7 +1917,7 @@
  *
  * Uncomment this to enable pthread mutexes.
  */
-#define MBEDTLS_THREADING_PTHREAD
+//#define MBEDTLS_THREADING_PTHREAD
 
 /**
  * \def MBEDTLS_USE_PSA_CRYPTO
@@ -2092,9 +2060,7 @@
  *
  * This modules adds support for the AES-NI instructions on x86.
  */
-#ifdef CONFIG_MBEDTLS_AESNI_C
 #define MBEDTLS_AESNI_C
-#endif
 
 /**
  * \def MBEDTLS_AESCE_C
@@ -2190,24 +2156,6 @@
 #define MBEDTLS_AES_C
 
 /**
- * \def MBEDTLS_ARC4_C
- *
- * Enable the ARCFOUR stream cipher.
- *
- * Module:  library/arc4.c
- * Caller:  library/cipher.c
- *
- * This module enables the following ciphersuites (if other requisites are
- * enabled as well):
- *
- * \warning   ARC4 is considered a weak cipher and its use constitutes a
- *            security risk. If possible, we recommend avoidng dependencies on
- *            it, and considering stronger ciphers instead.
- *
- */
-#define MBEDTLS_ARC4_C
-
-/**
  * \def MBEDTLS_ASN1_PARSE_C
  *
  * Enable the generic ASN1 parser.
@@ -2268,17 +2216,6 @@
 #define MBEDTLS_BIGNUM_C
 
 /**
- * \def MBEDTLS_BLOWFISH_C
- *
- * Enable the Blowfish block cipher.
- *
- * Module:  library/blowfish.c
- */
-#ifdef CONFIG_MBEDTLS_BLOWFISH_C
-#define MBEDTLS_BLOWFISH_C
-#endif
-
-/**
  * \def MBEDTLS_CAMELLIA_C
  *
  * Enable the Camellia block cipher.
@@ -2331,9 +2268,7 @@
  *      MBEDTLS_TLS_PSK_WITH_CAMELLIA_128_GCM_SHA256
  *      MBEDTLS_TLS_PSK_WITH_CAMELLIA_128_CBC_SHA256
  */
-#ifdef CONFIG_MBEDTLS_CAMELLIA_C
 #define MBEDTLS_CAMELLIA_C
-#endif
 
 /**
  * \def MBEDTLS_ARIA_C
@@ -2460,10 +2395,7 @@
  * Requires: MBEDTLS_CIPHER_C, MBEDTLS_AES_C or MBEDTLS_DES_C
  *
  */
-
-#ifdef CONFIG_MBEDTLS_CMAC_C
 #define MBEDTLS_CMAC_C
-#endif
 
 /**
  * \def MBEDTLS_CTR_DRBG_C
@@ -2498,9 +2430,7 @@
  *
  * This module provides debugging functions.
  */
-#ifdef CONFIG_MBEDTLS_DEBUG_C
 #define MBEDTLS_DEBUG_C
-#endif
 
 /**
  * \def MBEDTLS_DES_C
@@ -2758,40 +2688,6 @@
 #define MBEDTLS_MD_C
 
 /**
- * \def MBEDTLS_MD2_C
- *
- * Enable the MD2 hash algorithm.
- *
- * Module:  library/md2.c
- * Caller:
- *
- * Uncomment to enable support for (rare) MD2-signed X.509 certs.
- *
- * \warning   MD2 is considered a weak message digest and its use constitutes a
- *            security risk. If possible, we recommend avoiding dependencies on
- *            it, and considering stronger message digests instead.
- *
- */
-//#define MBEDTLS_MD2_C
-
-/**
- * \def MBEDTLS_MD4_C
- *
- * Enable the MD4 hash algorithm.
- *
- * Module:  library/md4.c
- * Caller:
- *
- * Uncomment to enable support for (rare) MD4-signed X.509 certs.
- *
- * \warning   MD4 is considered a weak message digest and its use constitutes a
- *            security risk. If possible, we recommend avoiding dependencies on
- *            it, and considering stronger message digests instead.
- *
- */
-//#define MBEDTLS_MD4_C
-
-/**
  * \def MBEDTLS_MD5_C
  *
  * Enable the MD5 hash algorithm.
@@ -2845,9 +2741,7 @@
  *
  * This module provides networking routines.
  */
-#ifdef CONFIG_MBEDTLS_NET_C
 #define MBEDTLS_NET_C
-#endif
 
 /**
  * \def MBEDTLS_OID_C
@@ -2884,9 +2778,7 @@
  *
  * This modules adds support for the VIA PadLock on x86.
  */
-#ifdef CONFIG_MBEDTLS_PADLOCK_C
 #define MBEDTLS_PADLOCK_C
-#endif
 
 /**
  * \def MBEDTLS_PEM_PARSE_C
@@ -3382,9 +3274,7 @@
  *
  * This module is required for SSL/TLS server support.
  */
-#ifdef CONFIG_MBEDTLS_SSL_SRV_C
 #define MBEDTLS_SSL_SRV_C
-#endif
 
 /**
  * \def MBEDTLS_SSL_TLS_C
@@ -3422,7 +3312,7 @@
  *
  * Enable this layer to allow use of mutexes within mbed TLS
  */
-#define MBEDTLS_THREADING_C
+//#define MBEDTLS_THREADING_C
 
 /**
  * \def MBEDTLS_TIMING_C
@@ -3446,9 +3336,7 @@
  *
  * Module:  library/timing.c
  */
-#ifdef CONFIG_MBEDTLS_TIMING_C
 #define MBEDTLS_TIMING_C
-#endif
 
 /**
  * \def MBEDTLS_VERSION_C
@@ -3567,16 +3455,6 @@
  * This module is required for X.509 certificate request writing.
  */
 #define MBEDTLS_X509_CSR_WRITE_C
-
-/**
- * \def MBEDTLS_XTEA_C
- *
- * Enable the XTEA block cipher.
- *
- * Module:  library/xtea.c
- * Caller:
- */
-#define MBEDTLS_XTEA_C
 
 /** \} name SECTION: mbed TLS modules */
 
@@ -3746,13 +3624,8 @@
 //#define MBEDTLS_HMAC_DRBG_MAX_SEED_INPUT      384 /**< Maximum size of (re)seed buffer */
 
 /* ECP options */
-//#define MBEDTLS_ECP_MAX_BITS             521 /**< Maximum bit size of groups */
-#ifdef CONFIG_MBEDTLS_ECP_WINDOW_SIZE
-#define MBEDTLS_ECP_WINDOW_SIZE            CONFIG_MBEDTLS_ECP_WINDOW_SIZE /**< Maximum window size used */
-#endif
-#ifndef CONFIG_MBEDTLS_ECP_FIXED_POINT_OPTIM
-#define MBEDTLS_ECP_FIXED_POINT_OPTIM      0 /**< Disable fixed-point speed-up */
-#endif
+//#define MBEDTLS_ECP_WINDOW_SIZE            4 /**< Maximum window size used */
+//#define MBEDTLS_ECP_FIXED_POINT_OPTIM      1 /**< Enable fixed-point speed-up */
 
 /* Entropy options */
 //#define MBEDTLS_ENTROPY_MAX_SOURCES                20 /**< Maximum number of sources supported */
@@ -3867,9 +3740,7 @@
  *
  * Uncomment to set the maximum plaintext size of the incoming I/O buffer.
  */
-#ifdef CONFIG_MBEDTLS_SSL_MAX_CONTENT_LEN
-#define MBEDTLS_SSL_IN_CONTENT_LEN             CONFIG_MBEDTLS_SSL_MAX_CONTENT_LEN
-#endif
+//#define MBEDTLS_SSL_IN_CONTENT_LEN              16384
 
 /** \def MBEDTLS_SSL_CID_IN_LEN_MAX
  *
@@ -3919,9 +3790,7 @@
  *
  * Uncomment to set the maximum plaintext size of the outgoing I/O buffer.
  */
-#ifdef CONFIG_MBEDTLS_SSL_MAX_CONTENT_LEN
-#define MBEDTLS_SSL_OUT_CONTENT_LEN             CONFIG_MBEDTLS_SSL_MAX_CONTENT_LEN
-#endif
+//#define MBEDTLS_SSL_OUT_CONTENT_LEN             16384
 
 /** \def MBEDTLS_SSL_DTLS_MAX_BUFFERING
  *
