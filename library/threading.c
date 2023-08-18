@@ -189,5 +189,8 @@ mbedtls_threading_mutex_t mbedtls_threading_readdir_mutex MUTEX_INIT;
 #if defined(THREADING_USE_GMTIME)
 mbedtls_threading_mutex_t mbedtls_threading_gmtime_mutex MUTEX_INIT;
 #endif
+#if defined(MBEDTLS_X509_CRT_POOL)
+mbedtls_threading_mutex_t mbedtls_threading_x509crtpool_mutex MUTEX_INIT;
+#endif
 
 #endif /* MBEDTLS_THREADING_C */
