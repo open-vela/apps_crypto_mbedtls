@@ -78,6 +78,10 @@
 #endif /* !_WIN32 || EFIX64 || EFI32 */
 #endif
 
+#if defined(MBEDTLS_X509_CRT_POOL)
+#include "x509_crt_pool.h"
+#endif
+
 /*
  * Item in a verification chain: cert and flags for it
  */
@@ -995,6 +999,12 @@ static int x509_crt_parse_der_core(mbedtls_x509_crt *crt,
     end = crt_end = p + len;
     crt->raw.len = crt_end - buf;
     if (make_copy != 0) {
+#if defined(MBEDTLS_X509_CRT_POOL)
+        crt->raw.p = p = x509_crt_pool_ref_buf(buf, crt->raw.len);
+        if(crt->raw.p == NULL) {
+            return MBEDTLS_ERR_X509_ALLOC_FAILED;
+        }
+#else
         /* Create and populate a new buffer for the raw field. */
         crt->raw.p = p = mbedtls_calloc(1, crt->raw.len);
         if (crt->raw.p == NULL) {
@@ -1002,6 +1012,7 @@ static int x509_crt_parse_der_core(mbedtls_x509_crt *crt,
         }
 
         memcpy(crt->raw.p, buf, crt->raw.len);
+#endif
         crt->own_buffer = 1;
 
         p += crt->raw.len - len;
@@ -2839,8 +2850,12 @@ void mbedtls_x509_crt_free(mbedtls_x509_crt *crt)
         mbedtls_asn1_sequence_free(cert_cur->certificate_policies.next);
 
         if (cert_cur->raw.p != NULL && cert_cur->own_buffer) {
+#if defined(MBEDTLS_X509_CRT_POOL)
+            x509_crt_pool_unref_buf(cert_cur->raw.p);
+#else
             mbedtls_platform_zeroize(cert_cur->raw.p, cert_cur->raw.len);
             mbedtls_free(cert_cur->raw.p);
+#endif
         }
 
         cert_prv = cert_cur;

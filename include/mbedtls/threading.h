@@ -108,6 +108,10 @@ extern mbedtls_threading_mutex_t mbedtls_threading_readdir_mutex;
 extern mbedtls_threading_mutex_t mbedtls_threading_gmtime_mutex;
 #endif /* MBEDTLS_HAVE_TIME_DATE && !MBEDTLS_PLATFORM_GMTIME_R_ALT */
 
+#if defined(MBEDTLS_X509_CRT_POOL)
+extern mbedtls_threading_mutex_t mbedtls_threading_x509crtpool_mutex;
+#endif
+
 #endif /* MBEDTLS_THREADING_C */
 
 #ifdef __cplusplus
