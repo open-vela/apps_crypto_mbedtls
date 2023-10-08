@@ -1415,7 +1415,15 @@ int mbedtls_rsa_rsaes_pkcs1_v15_encrypt(mbedtls_rsa_context *ctx,
         memcpy(p, input, ilen);
     }
 
-    return mbedtls_rsa_public(ctx, output, output);
+    if (mbedtls_rsa_check_pubkey(ctx) == 0) {
+        ret = mbedtls_rsa_public(ctx, output, output);
+    } else if (mbedtls_rsa_check_privkey(ctx) == 0) {
+        ret = mbedtls_rsa_private(ctx, f_rng, p_rng, output, output);
+    } else {
+        ret = MBEDTLS_ERR_RSA_BAD_INPUT_DATA;
+    }
+
+    return ret;
 }
 #endif /* MBEDTLS_PKCS1_V15 */
 
@@ -1601,7 +1609,13 @@ int mbedtls_rsa_rsaes_pkcs1_v15_decrypt(mbedtls_rsa_context *ctx,
         return MBEDTLS_ERR_RSA_BAD_INPUT_DATA;
     }
 
-    ret = mbedtls_rsa_private(ctx, f_rng, p_rng, input, buf);
+    if (mbedtls_rsa_check_privkey(ctx) == 0) {
+        ret = mbedtls_rsa_private(ctx, f_rng, p_rng, input, buf);
+    } else if (mbedtls_rsa_check_pubkey(ctx) == 0) {
+        ret = mbedtls_rsa_public(ctx, input, buf);
+    } else {
+        ret = MBEDTLS_ERR_RSA_BAD_INPUT_DATA;
+    }
 
     if (ret != 0) {
         goto cleanup;
