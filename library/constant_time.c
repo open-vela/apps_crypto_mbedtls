@@ -945,9 +945,10 @@ int mbedtls_ct_rsaes_pkcs1_v15_unpadding(unsigned char *input,
     bad |= input[0];
 
 
-    /* Decode EME-PKCS1-v1_5 padding: 0x00 || 0x02 || PS || 0x00
+    /* Decode EME-PKCS1-v1_5 padding: 0x00 || 0x01 || PS || 0x00
+     * Decode EME-PKCS1-v1_5 padding: 0x00 || 0x02 || PS || 0x00
      * where PS must be at least 8 nonzero bytes. */
-    bad |= input[1] ^ MBEDTLS_RSA_CRYPT;
+    bad |= input[1] ^ MBEDTLS_RSA_CRYPT && input[1] ^ MBEDTLS_RSA_SIGN;
 
     /* Read the whole buffer. Set pad_done to nonzero if we find
      * the 0x00 byte and remember the padding length in pad_count. */
