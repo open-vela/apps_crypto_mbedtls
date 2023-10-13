@@ -1377,6 +1377,7 @@ int mbedtls_rsa_rsaes_pkcs1_v15_encrypt(mbedtls_rsa_context *ctx,
     size_t nb_pad, olen;
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     unsigned char *p = output;
+    int is_priv = 0;
 
     olen = ctx->len;
 
@@ -1393,7 +1394,14 @@ int mbedtls_rsa_rsaes_pkcs1_v15_encrypt(mbedtls_rsa_context *ctx,
         return MBEDTLS_ERR_RSA_BAD_INPUT_DATA;
     }
 
-    *p++ = MBEDTLS_RSA_CRYPT;
+    if (mbedtls_rsa_check_privkey(ctx) == 0) {
+        *p++ = MBEDTLS_RSA_SIGN;
+        is_priv = 1;
+    } else if (mbedtls_rsa_check_pubkey(ctx) == 0) {
+        *p++ = MBEDTLS_RSA_CRYPT;
+    } else {
+        return MBEDTLS_ERR_RSA_BAD_INPUT_DATA;
+    }
 
     while (nb_pad-- > 0) {
         int rng_dl = 100;
@@ -1415,12 +1423,10 @@ int mbedtls_rsa_rsaes_pkcs1_v15_encrypt(mbedtls_rsa_context *ctx,
         memcpy(p, input, ilen);
     }
 
-    if (mbedtls_rsa_check_pubkey(ctx) == 0) {
+    if (is_priv == 0) {
         ret = mbedtls_rsa_public(ctx, output, output);
-    } else if (mbedtls_rsa_check_privkey(ctx) == 0) {
-        ret = mbedtls_rsa_private(ctx, f_rng, p_rng, output, output);
     } else {
-        ret = MBEDTLS_ERR_RSA_BAD_INPUT_DATA;
+        ret = mbedtls_rsa_private(ctx, f_rng, p_rng, output, output);
     }
 
     return ret;
