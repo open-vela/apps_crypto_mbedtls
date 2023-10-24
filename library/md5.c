@@ -395,6 +395,14 @@ int mbedtls_md5_self_test(int verbose)
     int i, ret = 0;
     unsigned char md5sum[16];
 
+    if (verbose != 0) {
+#if defined(MBEDTLS_MD5_ALT)
+        mbedtls_printf("  MD5 note: alternative implementation.\n");
+#else /* MBEDTLS_MD5_ALT */
+        mbedtls_printf("  MD5 note: built-in implementation.\n");
+#endif /* MBEDTLS_MD5_ALT */
+    }
+
     for (i = 0; i < 7; i++) {
         if (verbose != 0) {
             mbedtls_printf("  MD5 test #%d: ", i + 1);

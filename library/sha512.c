@@ -1090,6 +1090,14 @@ exit:
 #if defined(MBEDTLS_SHA512_C)
 int mbedtls_sha512_self_test(int verbose)
 {
+    if (verbose != 0) {
+#if defined(MBEDTLS_SHA512_ALT)
+        mbedtls_printf("  SHA512 note: alternative implementation.\n");
+#else /* MBEDTLS_SHA512_ALT */
+        mbedtls_printf("  SHA512 note: built-in implementation.\n");
+#endif /* MBEDTLS_SHA512_ALT */
+    }
+
     return mbedtls_sha512_common_self_test(verbose, 0);
 }
 #endif /* MBEDTLS_SHA512_C */
@@ -1097,6 +1105,14 @@ int mbedtls_sha512_self_test(int verbose)
 #if defined(MBEDTLS_SHA384_C)
 int mbedtls_sha384_self_test(int verbose)
 {
+    if (verbose != 0) {
+#if defined(MBEDTLS_SHA512_ALT)
+        mbedtls_printf("  SHA384 note: alternative implementation.\n");
+#else /* MBEDTLS_SHA512_ALT */
+        mbedtls_printf("  SHA384 note: built-in implementation.\n");
+#endif /* MBEDTLS_SHA512_ALT */
+    }
+
     return mbedtls_sha512_common_self_test(verbose, 1);
 }
 #endif /* MBEDTLS_SHA384_C */
