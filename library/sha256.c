@@ -923,6 +923,14 @@ exit:
 #if defined(MBEDTLS_SHA256_C)
 int mbedtls_sha256_self_test(int verbose)
 {
+    if (verbose != 0) {
+#if defined(MBEDTLS_SHA256_ALT)
+        mbedtls_printf("  SHA256 note: alternative implementation.\n");
+#else /* MBEDTLS_SHA256_ALT */
+        mbedtls_printf("  SHA256 note: built-in implementation.\n");
+#endif /* MBEDTLS_SHA256_ALT */
+    }
+
     return mbedtls_sha256_common_self_test(verbose, 0);
 }
 #endif /* MBEDTLS_SHA256_C */
@@ -930,6 +938,14 @@ int mbedtls_sha256_self_test(int verbose)
 #if defined(MBEDTLS_SHA224_C)
 int mbedtls_sha224_self_test(int verbose)
 {
+    if (verbose != 0) {
+#if defined(MBEDTLS_SHA256_ALT)
+        mbedtls_printf("  SHA224 note: alternative implementation.\n");
+#else /* MBEDTLS_SHA256_ALT */
+        mbedtls_printf("  SHA224 note: built-in implementation.\n");
+#endif /* MBEDTLS_SHA256_ALT */
+    }
+
     return mbedtls_sha256_common_self_test(verbose, 1);
 }
 #endif /* MBEDTLS_SHA224_C */
