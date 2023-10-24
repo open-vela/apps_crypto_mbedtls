@@ -424,6 +424,14 @@ int mbedtls_sha1_self_test(int verbose)
 
     mbedtls_sha1_init(&ctx);
 
+    if (verbose != 0) {
+#if defined(MBEDTLS_SHA1_ALT)
+        mbedtls_printf("  SHA1 note: alternative implementation.\n");
+#else /* MBEDTLS_SHA1_ALT */
+        mbedtls_printf("  SHA1 note: built-in implementation.\n");
+#endif /* MBEDTLS_SHA1_ALT */
+    }
+
     /*
      * SHA-1
      */
