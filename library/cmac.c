@@ -160,7 +160,7 @@ static void cmac_pad(unsigned char padded_block[MBEDTLS_CIPHER_BLKSIZE_MAX],
     size_t j;
 
     for (j = 0; j < padded_block_len; j++) {
-        if (j < last_block_len) {
+        if (j < last_block_len && j < MBEDTLS_CIPHER_BLKSIZE_MAX) {
             padded_block[j] = last_block[j];
         } else if (j == last_block_len) {
             padded_block[j] = 0x80;
