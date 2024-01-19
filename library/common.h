@@ -110,6 +110,12 @@ static inline const unsigned char *mbedtls_buffer_offset_const(
     return p == NULL ? NULL : p + n;
 }
 
+/* Always inline mbedtls_xor for similar reasons as mbedtls_xor_no_simd. */
+#if defined(__IAR_SYSTEMS_ICC__)
+#pragma inline = forced
+#elif defined(__GNUC__)
+__attribute__((always_inline))
+#endif
 /**
  * Perform a fast block XOR operation, such that
  * r[i] = a[i] ^ b[i] where 0 <= i < n
@@ -121,7 +127,10 @@ static inline const unsigned char *mbedtls_buffer_offset_const(
  * \param   b Pointer to input (buffer of at least \p n bytes)
  * \param   n Number of bytes to process.
  */
-inline void mbedtls_xor(unsigned char *r, const unsigned char *a, const unsigned char *b, size_t n)
+static inline void mbedtls_xor(unsigned char *r,
+                               const unsigned char *a,
+                               const unsigned char *b,
+                               size_t n)
 {
     size_t i = 0;
 #if defined(MBEDTLS_EFFICIENT_UNALIGNED_ACCESS)
