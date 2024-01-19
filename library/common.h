@@ -129,9 +129,12 @@ inline void mbedtls_xor(unsigned char *r, const unsigned char *a, const unsigned
         uint32_t x = mbedtls_get_unaligned_uint32(a + i) ^ mbedtls_get_unaligned_uint32(b + i);
         mbedtls_put_unaligned_uint32(r + i, x);
     }
+    if (n % 4 != 0)
 #endif
-    for (; i < n; i++) {
-        r[i] = a[i] ^ b[i];
+    {
+        for (; i < n; i++) {
+            r[i] = a[i] ^ b[i];
+        }
     }
 }
 
