@@ -76,6 +76,10 @@
 #include "psa_crypto_se.h"
 #endif
 
+#if defined(MBEDTLS_PSA_CRYPTODEV_ALT)
+#include "psa_crypto_se_alt.h"
+#endif
+
 psa_status_t psa_driver_wrapper_init( void )
 {
     psa_status_t status = PSA_ERROR_CORRUPTION_DETECTED;
@@ -135,6 +139,9 @@ psa_status_t psa_driver_wrapper_sign_message(
         case PSA_KEY_LOCATION_LOCAL_STORAGE:
             /* Key is stored in the slot in export representation, so
              * cycle through all known transparent accelerators */
+#if defined(MBEDTLS_PSA_CRYPTODEV_ALT)
+        case PSA_KEY_LOCATION_LOCAL_CRYPTODEV:
+#endif
 #if defined(PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT)
 #if defined(PSA_CRYPTO_DRIVER_TEST)
             status = mbedtls_test_transparent_signature_sign_message(
@@ -209,6 +216,9 @@ psa_status_t psa_driver_wrapper_verify_message(
         case PSA_KEY_LOCATION_LOCAL_STORAGE:
             /* Key is stored in the slot in export representation, so
              * cycle through all known transparent accelerators */
+#if defined(MBEDTLS_PSA_CRYPTODEV_ALT)
+        case PSA_KEY_LOCATION_LOCAL_CRYPTODEV:
+#endif
 #if defined(PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT)
 #if defined(PSA_CRYPTO_DRIVER_TEST)
             status = mbedtls_test_transparent_signature_verify_message(
@@ -296,6 +306,9 @@ psa_status_t psa_driver_wrapper_sign_hash(
         case PSA_KEY_LOCATION_LOCAL_STORAGE:
             /* Key is stored in the slot in export representation, so
              * cycle through all known transparent accelerators */
+#if defined(MBEDTLS_PSA_CRYPTODEV_ALT)
+        case PSA_KEY_LOCATION_LOCAL_CRYPTODEV:
+#endif
 #if defined(PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT)
 #if defined(PSA_CRYPTO_DRIVER_TEST)
             status = mbedtls_test_transparent_signature_sign_hash( attributes,
@@ -380,6 +393,9 @@ psa_status_t psa_driver_wrapper_verify_hash(
         case PSA_KEY_LOCATION_LOCAL_STORAGE:
             /* Key is stored in the slot in export representation, so
              * cycle through all known transparent accelerators */
+#if defined(MBEDTLS_PSA_CRYPTODEV_ALT)
+        case PSA_KEY_LOCATION_LOCAL_CRYPTODEV:
+#endif
 #if defined(PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT)
 #if defined(PSA_CRYPTO_DRIVER_TEST)
             status = mbedtls_test_transparent_signature_verify_hash(
@@ -490,7 +506,9 @@ psa_status_t psa_driver_wrapper_sign_hash_start(
         case PSA_KEY_LOCATION_LOCAL_STORAGE:
             /* Key is stored in the slot in export representation, so
              * cycle through all known transparent accelerators */
-
+#if defined(MBEDTLS_PSA_CRYPTODEV_ALT)
+        case PSA_KEY_LOCATION_LOCAL_CRYPTODEV:
+#endif
 #if defined(PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT)
 #if defined(PSA_CRYPTO_DRIVER_TEST)
 
@@ -590,7 +608,9 @@ psa_status_t psa_driver_wrapper_verify_hash_start(
         case PSA_KEY_LOCATION_LOCAL_STORAGE:
             /* Key is stored in the slot in export representation, so
              * cycle through all known transparent accelerators */
-
+#if defined(MBEDTLS_PSA_CRYPTODEV_ALT)
+        case PSA_KEY_LOCATION_LOCAL_CRYPTODEV:
+#endif
 #if defined(PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT)
 #if defined(PSA_CRYPTO_DRIVER_TEST)
 
@@ -796,6 +816,9 @@ psa_status_t psa_driver_wrapper_generate_key(
     switch( location )
     {
         case PSA_KEY_LOCATION_LOCAL_STORAGE:
+#if defined(MBEDTLS_PSA_CRYPTODEV_ALT)
+        case PSA_KEY_LOCATION_LOCAL_CRYPTODEV:
+#endif
 #if defined(PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT)
             /* Transparent drivers are limited to generating asymmetric keys */
             if( PSA_KEY_TYPE_IS_ASYMMETRIC( attributes->core.type ) )
@@ -884,6 +907,9 @@ psa_status_t psa_driver_wrapper_import_key(
         case PSA_KEY_LOCATION_LOCAL_STORAGE:
             /* Key is stored in the slot in export representation, so
              * cycle through all known transparent accelerators */
+#if defined(MBEDTLS_PSA_CRYPTODEV_ALT)
+        case PSA_KEY_LOCATION_LOCAL_CRYPTODEV:
+#endif
 #if defined(PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT)
 
 #if (defined(PSA_CRYPTO_DRIVER_TEST) )
@@ -968,6 +994,9 @@ psa_status_t psa_driver_wrapper_export_key(
     switch( location )
     {
         case PSA_KEY_LOCATION_LOCAL_STORAGE:
+#if defined(MBEDTLS_PSA_CRYPTODEV_ALT)
+        case PSA_KEY_LOCATION_LOCAL_CRYPTODEV:
+#endif
             return( psa_export_key_internal( attributes,
                                              key_buffer,
                                              key_buffer_size,
@@ -1035,6 +1064,9 @@ psa_status_t psa_driver_wrapper_export_public_key(
         case PSA_KEY_LOCATION_LOCAL_STORAGE:
             /* Key is stored in the slot in export representation, so
              * cycle through all known transparent accelerators */
+#if defined(MBEDTLS_PSA_CRYPTODEV_ALT)
+        case PSA_KEY_LOCATION_LOCAL_CRYPTODEV:
+#endif
 #if defined(PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT)
 
 #if (defined(PSA_CRYPTO_DRIVER_TEST) )
@@ -1194,6 +1226,9 @@ psa_status_t psa_driver_wrapper_cipher_encrypt(
     switch( location )
     {
         case PSA_KEY_LOCATION_LOCAL_STORAGE:
+#if defined(MBEDTLS_PSA_CRYPTODEV_ALT)
+        case PSA_KEY_LOCATION_LOCAL_CRYPTODEV:
+#endif
             /* Key is stored in the slot in export representation, so
              * cycle through all known transparent accelerators */
 #if defined(PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT)
@@ -1284,6 +1319,9 @@ psa_status_t psa_driver_wrapper_cipher_decrypt(
     switch( location )
     {
         case PSA_KEY_LOCATION_LOCAL_STORAGE:
+#if defined(MBEDTLS_PSA_CRYPTODEV_ALT)
+        case PSA_KEY_LOCATION_LOCAL_CRYPTODEV:
+#endif
             /* Key is stored in the slot in export representation, so
              * cycle through all known transparent accelerators */
 #if defined(PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT)
@@ -1363,6 +1401,9 @@ psa_status_t psa_driver_wrapper_cipher_encrypt_setup(
         case PSA_KEY_LOCATION_LOCAL_STORAGE:
             /* Key is stored in the slot in export representation, so
              * cycle through all known transparent accelerators */
+#if defined(MBEDTLS_PSA_CRYPTODEV_ALT)
+        case PSA_KEY_LOCATION_LOCAL_CRYPTODEV:
+#endif
 #if defined(PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT)
 #if defined(PSA_CRYPTO_DRIVER_TEST)
             status = mbedtls_test_transparent_cipher_encrypt_setup(
@@ -1436,6 +1477,9 @@ psa_status_t psa_driver_wrapper_cipher_decrypt_setup(
         case PSA_KEY_LOCATION_LOCAL_STORAGE:
             /* Key is stored in the slot in export representation, so
              * cycle through all known transparent accelerators */
+#if defined(MBEDTLS_PSA_CRYPTODEV_ALT)
+        case PSA_KEY_LOCATION_LOCAL_CRYPTODEV:
+#endif
 #if defined(PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT)
 #if defined(PSA_CRYPTO_DRIVER_TEST)
             status = mbedtls_test_transparent_cipher_decrypt_setup(
@@ -1836,7 +1880,9 @@ psa_status_t psa_driver_wrapper_aead_encrypt(
         case PSA_KEY_LOCATION_LOCAL_STORAGE:
             /* Key is stored in the slot in export representation, so
              * cycle through all known transparent accelerators */
-
+#if defined(MBEDTLS_PSA_CRYPTODEV_ALT)
+        case PSA_KEY_LOCATION_LOCAL_CRYPTODEV:
+#endif
 #if defined(PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT)
 #if defined(PSA_CRYPTO_DRIVER_TEST)
             status = mbedtls_test_transparent_aead_encrypt(
@@ -1888,7 +1934,9 @@ psa_status_t psa_driver_wrapper_aead_decrypt(
         case PSA_KEY_LOCATION_LOCAL_STORAGE:
             /* Key is stored in the slot in export representation, so
              * cycle through all known transparent accelerators */
-
+#if defined(MBEDTLS_PSA_CRYPTODEV_ALT)
+        case PSA_KEY_LOCATION_LOCAL_CRYPTODEV:
+#endif
 #if defined(PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT)
 #if defined(PSA_CRYPTO_DRIVER_TEST)
             status = mbedtls_test_transparent_aead_decrypt(
@@ -1937,7 +1985,9 @@ psa_status_t psa_driver_wrapper_aead_encrypt_setup(
         case PSA_KEY_LOCATION_LOCAL_STORAGE:
             /* Key is stored in the slot in export representation, so
              * cycle through all known transparent accelerators */
-
+#if defined(MBEDTLS_PSA_CRYPTODEV_ALT)
+        case PSA_KEY_LOCATION_LOCAL_CRYPTODEV:
+#endif
 #if defined(PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT)
 #if defined(PSA_CRYPTO_DRIVER_TEST)
             operation->id = MBEDTLS_TEST_TRANSPARENT_DRIVER_ID;
@@ -1985,7 +2035,9 @@ psa_status_t psa_driver_wrapper_aead_decrypt_setup(
         case PSA_KEY_LOCATION_LOCAL_STORAGE:
             /* Key is stored in the slot in export representation, so
              * cycle through all known transparent accelerators */
-
+#if defined(MBEDTLS_PSA_CRYPTODEV_ALT)
+        case PSA_KEY_LOCATION_LOCAL_CRYPTODEV:
+#endif
 #if defined(PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT)
 #if defined(PSA_CRYPTO_DRIVER_TEST)
             operation->id = MBEDTLS_TEST_TRANSPARENT_DRIVER_ID;
@@ -2321,6 +2373,9 @@ psa_status_t psa_driver_wrapper_mac_compute(
         case PSA_KEY_LOCATION_LOCAL_STORAGE:
             /* Key is stored in the slot in export representation, so
              * cycle through all known transparent accelerators */
+#if defined(MBEDTLS_PSA_CRYPTODEV_ALT)
+        case PSA_KEY_LOCATION_LOCAL_CRYPTODEV:
+#endif
 #if defined(PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT)
 #if defined(PSA_CRYPTO_DRIVER_TEST)
             status = mbedtls_test_transparent_mac_compute(
@@ -2385,6 +2440,9 @@ psa_status_t psa_driver_wrapper_mac_sign_setup(
         case PSA_KEY_LOCATION_LOCAL_STORAGE:
             /* Key is stored in the slot in export representation, so
              * cycle through all known transparent accelerators */
+#if defined(MBEDTLS_PSA_CRYPTODEV_ALT)
+        case PSA_KEY_LOCATION_LOCAL_CRYPTODEV:
+#endif
 #if defined(PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT)
 #if defined(PSA_CRYPTO_DRIVER_TEST)
             status = mbedtls_test_transparent_mac_sign_setup(
@@ -2457,6 +2515,9 @@ psa_status_t psa_driver_wrapper_mac_verify_setup(
         case PSA_KEY_LOCATION_LOCAL_STORAGE:
             /* Key is stored in the slot in export representation, so
              * cycle through all known transparent accelerators */
+#if defined(MBEDTLS_PSA_CRYPTODEV_ALT)
+        case PSA_KEY_LOCATION_LOCAL_CRYPTODEV:
+#endif
 #if defined(PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT)
 #if defined(PSA_CRYPTO_DRIVER_TEST)
             status = mbedtls_test_transparent_mac_verify_setup(
@@ -2657,6 +2718,9 @@ psa_status_t psa_driver_wrapper_asymmetric_encrypt(
         case PSA_KEY_LOCATION_LOCAL_STORAGE:
             /* Key is stored in the slot in export representation, so
              * cycle through all known transparent accelerators */
+#if defined(MBEDTLS_PSA_CRYPTODEV_ALT)
+        case PSA_KEY_LOCATION_LOCAL_CRYPTODEV:
+#endif
 #if defined(PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT)
 #if defined(PSA_CRYPTO_DRIVER_TEST)
             status = mbedtls_test_transparent_asymmetric_encrypt( attributes,
@@ -2715,6 +2779,9 @@ psa_status_t psa_driver_wrapper_asymmetric_decrypt(
         case PSA_KEY_LOCATION_LOCAL_STORAGE:
             /* Key is stored in the slot in export representation, so
              * cycle through all known transparent accelerators */
+#if defined(MBEDTLS_PSA_CRYPTODEV_ALT)
+        case PSA_KEY_LOCATION_LOCAL_CRYPTODEV:
+#endif
 #if defined(PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT)
 #if defined(PSA_CRYPTO_DRIVER_TEST)
             status = mbedtls_test_transparent_asymmetric_decrypt( attributes,
@@ -2779,6 +2846,9 @@ psa_status_t psa_driver_wrapper_key_agreement(
         case PSA_KEY_LOCATION_LOCAL_STORAGE:
             /* Key is stored in the slot in export representation, so
              * cycle through all known transparent accelerators */
+#if defined(MBEDTLS_PSA_CRYPTODEV_ALT)
+        case PSA_KEY_LOCATION_LOCAL_CRYPTODEV:
+#endif
 #if defined(PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT)
 #if defined(PSA_CRYPTO_DRIVER_TEST)
             status =
@@ -2840,6 +2910,9 @@ psa_status_t psa_driver_wrapper_pake_setup(
         case PSA_KEY_LOCATION_LOCAL_STORAGE:
             /* Key is stored in the slot in export representation, so
              * cycle through all known transparent accelerators */
+#if defined(MBEDTLS_PSA_CRYPTODEV_ALT)
+        case PSA_KEY_LOCATION_LOCAL_CRYPTODEV:
+#endif
 #if defined(PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT)
 #if defined(PSA_CRYPTO_DRIVER_TEST)
             status = mbedtls_test_transparent_pake_setup(
