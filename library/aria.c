@@ -60,7 +60,7 @@
 static inline uint32_t aria_p1(uint32_t x)
 {
     uint32_t r;
-    __asm("rev16 %0, %1" : "=l" (r) : "l" (x));
+    __asm("rev16 %0, %1" : "=r" (r) : "r" (x));
     return r;
 }
 #define ARIA_P1 aria_p1
