@@ -750,7 +750,7 @@
               [b]      "=&r" (tmp_b),                        \
               [in]     "+r"  (s),                            \
               [acc]    "+r"  (d),                            \
-              [carry]  "+l"  (c)                             \
+              [carry]  "+r"  (c)                             \
             : [scalar] "r"   (b)                             \
             : "memory"                                       \
         );                                                   \
@@ -790,7 +790,7 @@
               [b1]     "=&r" (tmp_b1),                       \
               [in]     "+r"  (s),                            \
               [acc]    "+r"  (d),                            \
-              [carry]  "+l"  (c)                             \
+              [carry]  "+r"  (c)                             \
             : [scalar] "r"   (b)                             \
             : "memory"                                       \
         );                                                   \
