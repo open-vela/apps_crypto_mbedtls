@@ -2558,6 +2558,9 @@ find_parent:
 #if __has_include(<arpa/inet.h>)
 #include <arpa/inet.h>
 #endif
+#else
+#include <sys/socket.h>
+#include <arpa/inet.h>
 #endif
 
 /* Use whether or not AF_INET6 is defined to indicate whether or not to use
