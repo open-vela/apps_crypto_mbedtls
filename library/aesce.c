@@ -39,16 +39,8 @@
 #define MBEDTLS_ENABLE_ARM_CRYPTO_EXTENSIONS_COMPILER_FLAG
 #endif
 
-#include <string.h>
-#include "common.h"
-
-#if defined(MBEDTLS_AESCE_C)
-
-#include "aesce.h"
-
-#if defined(MBEDTLS_HAVE_ARM64)
-
-#if !defined(__ARM_FEATURE_AES) || defined(MBEDTLS_ENABLE_ARM_CRYPTO_EXTENSIONS_COMPILER_FLAG)
+#if defined(__aarch64__) && (!defined(__ARM_FEATURE_AES) || \
+        defined(MBEDTLS_ENABLE_ARM_CRYPTO_EXTENSIONS_COMPILER_FLAG))
 #   if defined(__clang__)
 #       if __clang_major__ < 4
 #           error "A more recent Clang is required for MBEDTLS_AESCE_C"
@@ -65,7 +57,16 @@
 #   else
 #       error "Only GCC and Clang supported for MBEDTLS_AESCE_C"
 #   endif
-#endif /* !__ARM_FEATURE_AES || MBEDTLS_ENABLE_ARM_CRYPTO_EXTENSIONS_COMPILER_FLAG */
+#endif
+
+#include <string.h>
+#include "common.h"
+
+#if defined(MBEDTLS_AESCE_C)
+
+#include "aesce.h"
+
+#if defined(MBEDTLS_HAVE_ARM64)
 
 #include <arm_neon.h>
 
@@ -397,6 +398,10 @@ void mbedtls_aesce_gcm_mult(unsigned char c[16],
 
 #endif /* MBEDTLS_GCM_C */
 
+#endif /* MBEDTLS_HAVE_ARM64 */
+
+#endif /* MBEDTLS_AESCE_C */
+
 #if defined(MBEDTLS_POP_TARGET_PRAGMA)
 #if defined(__clang__)
 #pragma clang attribute pop
@@ -405,7 +410,3 @@ void mbedtls_aesce_gcm_mult(unsigned char c[16],
 #endif
 #undef MBEDTLS_POP_TARGET_PRAGMA
 #endif
-
-#endif /* MBEDTLS_HAVE_ARM64 */
-
-#endif /* MBEDTLS_AESCE_C */
