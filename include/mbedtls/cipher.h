@@ -101,9 +101,19 @@ typedef enum {
     MBEDTLS_CIPHER_AES_128_ECB,          /**< AES cipher with 128-bit ECB mode. */
     MBEDTLS_CIPHER_AES_192_ECB,          /**< AES cipher with 192-bit ECB mode. */
     MBEDTLS_CIPHER_AES_256_ECB,          /**< AES cipher with 256-bit ECB mode. */
+#if defined(MBEDTLS_AES_ALT)
+    MBEDTLS_CIPHER_AES_128_ECB_KEYID,    /**< AES cipher with 128-bit ECB mode in keyid type. */
+    MBEDTLS_CIPHER_AES_192_ECB_KEYID,    /**< AES cipher with 192-bit ECB mode in keyid type. */
+    MBEDTLS_CIPHER_AES_256_ECB_KEYID,    /**< AES cipher with 256-bit ECB mode in keyid type. */
+#endif
     MBEDTLS_CIPHER_AES_128_CBC,          /**< AES cipher with 128-bit CBC mode. */
     MBEDTLS_CIPHER_AES_192_CBC,          /**< AES cipher with 192-bit CBC mode. */
     MBEDTLS_CIPHER_AES_256_CBC,          /**< AES cipher with 256-bit CBC mode. */
+#if defined(MBEDTLS_AES_ALT)
+    MBEDTLS_CIPHER_AES_128_CBC_KEYID,    /**< AES cipher with 128-bit CBC mode in keyid type. */
+    MBEDTLS_CIPHER_AES_192_CBC_KEYID,    /**< AES cipher with 192-bit CBC mode in keyid type. */
+    MBEDTLS_CIPHER_AES_256_CBC_KEYID,    /**< AES cipher with 256-bit CBC mode in keyid type. */
+#endif
     MBEDTLS_CIPHER_AES_128_CFB128,       /**< AES cipher with 128-bit CFB128 mode. */
     MBEDTLS_CIPHER_AES_192_CFB128,       /**< AES cipher with 192-bit CFB128 mode. */
     MBEDTLS_CIPHER_AES_256_CFB128,       /**< AES cipher with 256-bit CFB128 mode. */
