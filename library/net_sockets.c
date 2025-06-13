@@ -152,7 +152,11 @@ static int check_fd(int fd, int for_select)
      * that are strictly less than FD_SETSIZE. This is a limitation of the
      * fd_set type. Error out early, because attempting to call FD_SET on a
      * large file descriptor is a buffer overflow on typical platforms. */
+#ifdef CONFIG_FDCHECK
+    if (for_select && fdcheck_restore(fd) >= FD_SETSIZE) {
+#else
     if (for_select && fd >= FD_SETSIZE) {
+#endif
         return MBEDTLS_ERR_NET_POLL_FAILED;
     }
 #endif
