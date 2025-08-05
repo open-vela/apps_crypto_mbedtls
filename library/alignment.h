@@ -121,7 +121,12 @@ __attribute__((always_inline))
 #endif
 static inline void mbedtls_put_unaligned_uint32(void *p, uint32_t x)
 {
-    memcpy(p, &x, sizeof(x));
+    uint8_t *dst = (uint8_t *)p;
+
+    dst[0] = (x >>  0) & 0xFF;
+    dst[1] = (x >>  8) & 0xFF;
+    dst[2] = (x >> 16) & 0xFF;
+    dst[3] = (x >> 24) & 0xFF;
 }
 
 /**
