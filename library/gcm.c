@@ -400,7 +400,7 @@ static int gcm_mask(mbedtls_gcm_context *ctx,
     size_t olen = 0;
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
 
-    if (offset + use_len >= 16)
+    if (offset + use_len > 16)
       {
         return MBEDTLS_ERR_GCM_BAD_INPUT;
       }
