@@ -404,7 +404,7 @@ static const mbedtls_cipher_info_t aes_256_ecb_info = {
 
 #if defined(MBEDTLS_AES_ALT)
 static const mbedtls_cipher_info_t aes_128_ecb_keyid_info = {
-    MBEDTLS_CIPHER_AES_128_ECB,
+    MBEDTLS_CIPHER_AES_128_ECB_KEYID,
     MBEDTLS_MODE_ECB,
     32,
     "AES-128-ECB-KEYID",
@@ -415,7 +415,7 @@ static const mbedtls_cipher_info_t aes_128_ecb_keyid_info = {
 };
 
 static const mbedtls_cipher_info_t aes_192_ecb_keyid_info = {
-    MBEDTLS_CIPHER_AES_192_ECB,
+    MBEDTLS_CIPHER_AES_192_ECB_KEYID,
     MBEDTLS_MODE_ECB,
     32,
     "AES-192-ECB-KEYID",
@@ -426,7 +426,7 @@ static const mbedtls_cipher_info_t aes_192_ecb_keyid_info = {
 };
 
 static const mbedtls_cipher_info_t aes_256_ecb_keyid_info = {
-    MBEDTLS_CIPHER_AES_256_ECB,
+    MBEDTLS_CIPHER_AES_256_ECB_KEYID,
     MBEDTLS_MODE_ECB,
     32,
     "AES-256-ECB-KEYID",
